@@ -6,9 +6,9 @@ version + routes. That is fine for in-house experimentation, but a real
 plugin marketplace needs three things on top:
 
 1. A **declared capability** list. Plugins must enumerate the
-   permissions they want (``http.routes``, ``host.filesystem``,
-   ``host.network``, ``models.download``). The host decides whether to
-   honour each capability.
+   permissions they want (``http.routes``, ``jobs.register``,
+   ``host.filesystem``, ``host.network``, ``models.download``). The host
+   decides whether to honour each capability.
 2. A **lock file** that records the expected SHA-256 of every file the
    plugin ships. The loader refuses to mount a plugin whose contents
    drift from the lock.
@@ -43,6 +43,7 @@ MANIFEST_VERSION = 1
 # new permissions land alongside the runtime that enforces them.
 SUPPORTED_CAPABILITIES = (
     "http.routes",         # register Flask routes under /plugins/<name>/
+    "jobs.register",       # register async background jobs through plugin_job
     "host.filesystem",     # may touch the user's filesystem outside ~/.opencut
     "host.network",        # may make outbound HTTP/Network requests
     "models.download",     # may download model weights at runtime
@@ -175,6 +176,32 @@ def validate_manifest_schema(manifest: dict) -> ManifestValidationResult:
         for r in routes:
             if not isinstance(r, dict) or "path" not in r:
                 result.errors.append(f"routes: each entry must be an object with a 'path' field, got {r!r}")
+                break
+
+    jobs = manifest.get("jobs") or []
+    if not isinstance(jobs, list):
+        result.errors.append("jobs: must be a list")
+    else:
+        if jobs and "jobs.register" not in capabilities:
+            result.errors.append("jobs: declaring jobs requires the jobs.register capability")
+        seen_job_ids = set()
+        for job in jobs:
+            if not isinstance(job, dict):
+                result.errors.append(f"jobs: each entry must be an object, got {job!r}")
+                break
+            job_id = job.get("id")
+            if not isinstance(job_id, str) or not job_id or not all(c.isalnum() or c in "-_" for c in job_id):
+                result.errors.append(f"jobs: invalid id {job_id!r}; use alphanumeric / dash / underscore")
+                break
+            if job_id in seen_job_ids:
+                result.errors.append(f"jobs: duplicate id {job_id!r}")
+                break
+            seen_job_ids.add(job_id)
+            if "label" in job and not isinstance(job["label"], str):
+                result.errors.append(f"jobs.{job_id}.label: must be a string")
+                break
+            if "description" in job and not isinstance(job["description"], str):
+                result.errors.append(f"jobs.{job_id}.description: must be a string")
                 break
 
     result.valid = not result.errors

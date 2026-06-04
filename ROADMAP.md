@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.93
+**Version**: 4.94
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,522 routes, 107 blueprints, 599 core modules, 8,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -195,6 +195,8 @@
 > **v4.92 status (2026-06-04, continuation pass)**: closed **N4** from the May 26 continuation queue by adding a decorator-level disk preflight gate for heavyweight async routes. `opencut/core/preflight.py` estimates per-operation disk budgets, `@async_job(..., disk_operation=...)` now returns HTTP 507 before job creation when the output volume is under budget, and 12 caption/audio/export/video-AI jobs are wired into the gate.
 >
 > **v4.93 status (2026-06-04, continuation pass)**: closed **N5** from the May 26 continuation queue by adding resumability metadata to async jobs, durable running-job persistence before worker dispatch, SQLite resume columns, and a CSRF-protected `POST /jobs/<job_id>/resume` route. Resume dispatch replays the persisted endpoint/payload only for interrupted jobs whose current route is still marked `resumable=True`; transcription, WhisperX, Demucs separation, export/export-preset, and depth-estimation jobs now opt into the path. Route manifest now reports **1,522 routes / 107 blueprints** and extended MCP exposes **1,465** opt-in route tools.
+>
+> **v4.94 status (2026-06-04, continuation pass)**: closed **N7** from the May 26 continuation queue by adding a plugin job-registration API. Plugin manifests can now declare `jobs` entries gated by the new `jobs.register` capability, plugin route modules can wrap endpoints with `plugin_job(...)`, and loaded plugin jobs run through the same `@async_job` lifecycle, status tracking, resumability metadata, and global concurrency cap as core jobs. The bundled `long-job-demo` example demonstrates `/plugins/long-job-demo/start`, and plugins without `host.filesystem` are confined to their own `data/` directory for path-like job payload fields.
 
 ---
 
@@ -327,6 +329,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_job_resume.py tests/t
 
 ---
 
+## 2026-06-04 v4.94 Plugin Job Registration (N7)
+
+N7 is closed. Plugins can now register long-running background work without spawning raw threads or bypassing the core job tracker.
+
+| Surface | Status |
+|---|---|
+| Manifest schema | `plugin.json` supports a `jobs` list, and declared jobs require the `jobs.register` capability. |
+| Plugin SDK | `opencut.core.plugins.plugin_job(...)` wraps plugin routes with the normal `@async_job` machinery and namespaces job types as `plugin:<plugin>:<job>`. |
+| Runtime enforcement | The plugin loader refuses decorated jobs that are not declared in the manifest, refuses job decorators without `jobs.register`, and confines path-like payload fields to the plugin `data/` directory unless `host.filesystem` is declared. |
+| Example plugin | `opencut/data/example_plugins/long-job-demo/` demonstrates `POST /plugins/long-job-demo/start` starting a tracked resumable plugin job. |
+| Coverage | `tests/test_plugins.py` and `tests/test_plugin_manifest.py` pin manifest validation, declared-job dispatch, manifest mismatch rejection, filesystem confinement, CSRF inheritance, and the bundled example manifest. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_plugins.py tests/test_plugin_manifest.py -q -p no:cacheprovider -o addopts=""` passed (`29 passed`) and touched Python files compile.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -336,7 +354,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_job_resume.py tests/t
 - [x] **P1 — E11 webhook signatures mandatory by default** — closed in v4.91 with signed-by-default HTTP registration, explicit unsigned opt-in, warning-file creation, and focused tests.
 - [x] **P1 — N4 disk preflight in heavy routes** — closed in v4.92 with a decorator-level disk gate, operation budgets, 507 responses, and coverage across 12 heavyweight async jobs.
 - [x] **P1 — N5 job resume for interrupted jobs** — closed in v4.93 with resumability metadata, durable running-job persistence, persisted endpoint/payload replay, `POST /jobs/<job_id>/resume`, and coverage for checkpointable caption/audio/export/depth jobs.
-- [ ] **P1 — N7 plugin job-registration API** — let signed/capability-scoped plugins register namespaced background jobs through the existing async-job machinery.
+- [x] **P1 — N7 plugin job-registration API** — closed in v4.94 with a `jobs.register` capability, `plugin_job(...)` decorator, manifest/job mismatch checks, filesystem-scope enforcement, and a `long-job-demo` example plugin.
 - [ ] **P1 — N8 third-party agent-skill loader** — load validated user skills from `~/.opencut/skills/<id>/`.
 - [ ] **P1 — E14 F236 CEP parity** — add CEP-side discoverability for caption display settings already shipped in UXP.
 - [ ] **P2 — N9 enriched job metadata** — add peak resource fields and explicit exit reasons to persisted job history.
@@ -347,13 +365,13 @@ Validation after the batch: `py -3.12 -m pytest tests/test_job_resume.py tests/t
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
-> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N7, N8, N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
+> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N8, N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
-These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (plugin jobs = N7, user skills = N8, job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
+These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (user skills = N8, job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
 
 ### Quick Wins
 

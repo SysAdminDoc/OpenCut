@@ -12,7 +12,7 @@ OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1–N6, E11) is now shipped through v4.93; the strongest remaining
+(N1–N7, E11) is now shipped through v4.94; the strongest remaining
 direction is **not** another wave of model surfaces but making the existing
 surface easier to run, debug, resume, extend, and trust.
 
@@ -97,7 +97,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Review bundles + markers | `/review*`, `/collab*` | `core/review*`, `annotations.py` | mature (F225–F229) | tested |
 | Shorts A/B variants | route/skill | `core/ab_variant.py`, `best_take.py` | shipped | tested |
 | MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,465 opt-in | tested |
-| Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; no hot-reload, no backup on uninstall | partial |
+| Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; background jobs now use the core async-job tracker; no hot-reload, no backup on uninstall | partial |
 | Agent skills | built-in only | `core/agent_skills.py` | user loader not implemented (N8) | tested (built-ins) |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
 
