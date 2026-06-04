@@ -8,7 +8,7 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.210 docs; E15
+route escape hatch are now represented as shipped in the live v4.211 docs; E15
 also has its fourth through one-hundred-sixth rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-24 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-25 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -48,7 +48,8 @@ coverage; RA-21 captures the release-metadata proof/retraction follow-up. Cycle
 Node pin follow-up. Cycle 12 checked GitHub Actions immutable-reference posture;
 RA-23 captures the workflow action SHA-pin follow-up. Cycle 13 checked Release
 Full `GITHUB_TOKEN` least-privilege posture; RA-24 captures the job-permission
-scoping follow-up.
+scoping follow-up. Cycle 14 checked Docker dependency install-surface drift;
+RA-25 captures the container dependency guard follow-up.
 
 ## Executive Summary
 
@@ -58,7 +59,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.210; the strongest remaining direction is **not** another wave of
+rolling in v4.211; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -139,6 +140,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     Full grants workflow-wide `contents: write`, while PR Fast and the Adobe
     tracker use narrower permissions. Only release upload paths need write
     access. [Verified]
+25. **Align Docker dependency installs with tracked Python install surfaces**
+    (RA-25) — the Dockerfile still installs retired `deep-translator` and
+    `pydub` packages even though the audited source install surfaces removed
+    them. [Verified]
 
 ## Evidence Reviewed
 
@@ -399,6 +404,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-24 Release Full token permissions** needs read-only default permissions
   for build/test/package jobs, narrow `contents: write` only around release
   uploads, and a workflow guard test against broad workflow-level write scope.
+- **RA-25 Docker dependency surface** needs Docker installs to consume the
+  canonical requirements/extras or a guarded minimal list that excludes retired
+  `deep-translator` and `pydub` names.
 
 ## Research Inputs (archived)
 
@@ -411,8 +419,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE11.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE11.md) — Release Full CEP panel Node runtime pin follow-up (RA-22).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE12.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE12.md) — GitHub Actions full-SHA pinning follow-up (RA-23).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE13.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE13.md) — Release Full `GITHUB_TOKEN` job-permission scoping follow-up (RA-24).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE14.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE14.md) — Docker dependency install-surface drift follow-up (RA-25).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-24 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-25 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
