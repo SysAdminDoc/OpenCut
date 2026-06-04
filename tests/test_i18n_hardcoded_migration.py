@@ -156,6 +156,17 @@ MIGRATED_KEYS = (
     "toast.no_cuts_detected",
     "toast.no_cuts_selected",
     "toast.history_missing_output_path",
+    # Fifteenth batch (preset save/load/delete feedback).
+    "toast.enter_preset_name",
+    "toast.preset_saved",
+    "toast.preset_saved_toast",
+    "toast.preset_save_failed",
+    "toast.select_preset_first",
+    "toast.preset_loaded",
+    "toast.preset_loaded_toast",
+    "toast.preset_deleted",
+    "toast.preset_deleted_toast",
+    "toast.select_preset_export_first",
 )
 
 
@@ -746,6 +757,57 @@ EXPECTED_CALLS = (
         "toast.applying_to_selection",
         re.compile(r't\(\s*"toast\.applying_to_selection"'),
         re.compile(r'showToast\(\s*"Applying \'"\s*\+\s*entry\.type'),
+    ),
+    # --- Fifteenth batch --------------------------------------------
+    (
+        "toast.enter_preset_name",
+        re.compile(r't\(\s*"toast\.enter_preset_name"'),
+        re.compile(r'showAlert\(\s*"Enter a preset name\."\s*\)'),
+    ),
+    (
+        "toast.preset_saved",
+        re.compile(r't\(\s*"toast\.preset_saved"'),
+        re.compile(r'showAlert\(\s*"Preset saved: "'),
+    ),
+    (
+        "toast.preset_saved_toast",
+        re.compile(r't\(\s*"toast\.preset_saved_toast"'),
+        re.compile(r'showToast\(\s*"Preset \'"'),
+    ),
+    (
+        "toast.preset_save_failed",
+        re.compile(r't\(\s*"toast\.preset_save_failed"'),
+        re.compile(r'showAlert\(\s*"Failed to save preset\."\s*\)'),
+    ),
+    (
+        "toast.select_preset_first",
+        re.compile(r't\(\s*"toast\.select_preset_first"'),
+        re.compile(r'showAlert\(\s*"Select a preset first\."\s*\)'),
+    ),
+    (
+        "toast.preset_loaded",
+        re.compile(r't\(\s*"toast\.preset_loaded"'),
+        re.compile(r'showAlert\(\s*"Preset loaded: "'),
+    ),
+    (
+        "toast.preset_loaded_toast",
+        re.compile(r't\(\s*"toast\.preset_loaded_toast"'),
+        re.compile(r'showToast\(\s*"Preset loaded"'),
+    ),
+    (
+        "toast.preset_deleted",
+        re.compile(r't\(\s*"toast\.preset_deleted"'),
+        re.compile(r'showAlert\(\s*"Preset deleted: "'),
+    ),
+    (
+        "toast.preset_deleted_toast",
+        re.compile(r't\(\s*"toast\.preset_deleted_toast"'),
+        re.compile(r'showToast\(\s*"Preset deleted"'),
+    ),
+    (
+        "toast.select_preset_export_first",
+        re.compile(r't\(\s*"toast\.select_preset_export_first"'),
+        re.compile(r'showToast\(\s*"Select a preset to export first"'),
     ),
 )
 

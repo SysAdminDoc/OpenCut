@@ -9536,29 +9536,29 @@
 
         el.savePresetBtn.addEventListener("click", function () {
             var name = el.presetNameInput ? el.presetNameInput.value.trim() : "";
-            if (!name) { showAlert("Enter a preset name."); return; }
+            if (!name) { showAlert(t("toast.enter_preset_name", "Enter a preset name.")); return; }
             var settings = collectCurrentSettings();
             api("POST", "/presets/save", { name: name, settings: settings }, function (err, data) {
                 if (!err && data && data.success) {
-                    showAlert("Preset saved: " + name);
-                    showToast("Preset '" + name + "' saved", "success");
+                    showAlert(t("toast.preset_saved", "Preset saved: {name}").replace("{name}", name));
+                    showToast(t("toast.preset_saved_toast", "Preset '{name}' saved").replace("{name}", name), "success");
                     el.presetNameInput.value = "";
                     refreshPresetList();
                 } else {
-                    showAlert("Failed to save preset.");
+                    showAlert(t("toast.preset_save_failed", "Failed to save preset."));
                 }
             });
         });
 
         if (el.loadPresetBtn) el.loadPresetBtn.addEventListener("click", function () {
-            if (!el.presetSelect || !el.presetSelect.value) { showAlert("Select a preset first."); return; }
+            if (!el.presetSelect || !el.presetSelect.value) { showAlert(t("toast.select_preset_first", "Select a preset first.")); return; }
             api("GET", "/presets", null, function (err, data) {
                 if (!err && data) {
                     var preset = data[el.presetSelect.value];
                     if (preset && preset.settings) {
                         applyPresetSettings(preset.settings);
-                        showAlert("Preset loaded: " + el.presetSelect.value);
-                        showToast("Preset loaded", "info");
+                        showAlert(t("toast.preset_loaded", "Preset loaded: {name}").replace("{name}", el.presetSelect.value));
+                        showToast(t("toast.preset_loaded_toast", "Preset loaded"), "info");
                     }
                 }
             });
@@ -9569,8 +9569,8 @@
             var name = el.presetSelect.value;
             api("POST", "/presets/delete", { name: name }, function (err, data) {
                 if (!err && data && data.success) {
-                    showAlert("Preset deleted: " + name);
-                    showToast("Preset deleted", "success");
+                    showAlert(t("toast.preset_deleted", "Preset deleted: {name}").replace("{name}", name));
+                    showToast(t("toast.preset_deleted_toast", "Preset deleted"), "success");
                     refreshPresetList();
                 }
             });
@@ -9643,7 +9643,7 @@
 
     function exportPresetFile() {
         if (!el.presetSelect || !el.presetSelect.value) {
-            showToast("Select a preset to export first", "error");
+            showToast(t("toast.select_preset_export_first", "Select a preset to export first"), "error");
             return;
         }
         var presetName = el.presetSelect.value;
