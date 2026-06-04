@@ -14255,23 +14255,72 @@
     // v1.5.0 — NLP Tab Functions
     // ================================================================
 
+    function formatSearchFilesIndexed(count) {
+        return t("search.files_indexed", "{count} file{plural} indexed")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
+    }
+
+    function formatSearchSegments(count) {
+        return t("search.segments_count", "{count} segment{plural}")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
+    }
+
+    function formatSearchProjectClips(count) {
+        return t("search.project_clip_count", "{count} project clip{plural}")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
+    }
+
+    function formatSearchIndexCount(totalFiles, totalSegments) {
+        var countLabel = formatSearchFilesIndexed(totalFiles);
+        if (totalSegments) {
+            countLabel = t("search.files_with_segments", "{files} • {segments}")
+                .replace("{files}", countLabel)
+                .replace("{segments}", formatSearchSegments(totalSegments));
+        }
+        return countLabel;
+    }
+
+    function formatSearchIndexedAcross(totalFiles, totalSegments) {
+        return t("search.indexed_across", "{files} indexed across {segments}.")
+            .replace("{files}", formatSearchFilesIndexed(totalFiles))
+            .replace("{segments}", formatSearchSegments(totalSegments));
+    }
+
+    function formatSearchIndexingProgress(indexed, total) {
+        return t("search.indexing_progress", "Indexed {indexed} of {total}.")
+            .replace("{indexed}", indexed)
+            .replace("{total}", formatSearchProjectClips(total));
+    }
+
+    function formatSearchIndexingToast(indexed, total, errorCount) {
+        var issues = errorCount
+            ? t("search.indexing_toast_issues", " with {count} issue{plural}")
+                .replace("{count}", errorCount)
+                .replace("{plural}", errorCount === 1 ? "" : "s")
+            : "";
+        return t("search.indexing_complete_toast", "Indexed {indexed} of {total}{issues}.")
+            .replace("{indexed}", indexed)
+            .replace("{total}", formatSearchProjectClips(total))
+            .replace("{issues}", issues);
+    }
+
     function renderSearchIndexStats(stats) {
         var statsEl = document.getElementById("searchIndexStats");
         footageIndex = stats || {};
         _lastSearchIndexStats = footageIndex;
         var totalFiles = Number((stats && stats.total_files) || 0);
         var totalSegments = Number((stats && stats.total_segments) || 0);
-        var countLabel = totalFiles + " file" + (totalFiles === 1 ? "" : "s") + " indexed";
-        if (totalSegments) {
-            countLabel += " • " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s");
-        }
+        var countLabel = formatSearchIndexCount(totalFiles, totalSegments);
         setStatusPill(
             "searchIndexPill",
-            totalFiles ? "Ready" : "Empty",
+            totalFiles ? t("search.index_ready_pill", "Ready") : t("search.index_empty_pill", "Empty"),
             totalFiles ? "success" : "empty",
-            totalFiles ? "Footage search library ready." : "Index project clips to build the footage library."
+            totalFiles ? t("search.index_ready_title", "Footage search library ready.") : t("search.index_empty_title", "Index project clips to build the footage library.")
         );
-        setTextAndTitle("searchIndexCount", totalFiles ? countLabel : "0 files indexed", totalFiles ? countLabel : "0 files indexed");
+        setTextAndTitle("searchIndexCount", countLabel, countLabel);
         if (el.clearSearchIndexBtn) {
             el.clearSearchIndexBtn.disabled = !connected || !totalFiles;
         }
@@ -14281,18 +14330,18 @@
             setStatusLine(
                 "searchStatus",
                 connected
-                    ? "Index project clips, then search with descriptive phrases to surface the right moment faster."
-                    : "Reconnect the backend to search the footage library.",
+                    ? t("search.index_empty_status", "Index project clips, then search with descriptive phrases to surface the right moment faster.")
+                    : t("search.index_reconnect_status", "Reconnect the backend to search the footage library."),
                 connected ? "idle" : "warning"
             );
             return;
         }
         setHintState(
             statsEl,
-            totalFiles + " file" + (totalFiles === 1 ? "" : "s") + " indexed across " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s") + ".",
+            formatSearchIndexedAcross(totalFiles, totalSegments),
             "success"
         );
-        setStatusLine("searchStatus", "Library ready. Search with descriptive phrases and click a result to load it into the workspace.", "ready");
+        setStatusLine("searchStatus", t("search.index_ready_status", "Library ready. Search with descriptive phrases and click a result to load it into the workspace."), "ready");
     }
 
     function refreshSearchIndexStatus(options) {
@@ -14301,11 +14350,11 @@
             if (err || !data) {
                 if (!options.silent) {
                     if (document.getElementById("searchIndexStats")) {
-                        setHintState(document.getElementById("searchIndexStats"), "Couldn't refresh footage index status right now.", "warning");
+                        setHintState(document.getElementById("searchIndexStats"), t("search.refresh_failed_hint", "Couldn't refresh footage index status right now."), "warning");
                     }
-                    setStatusPill("searchIndexPill", "Unavailable", "warning", "Couldn't refresh footage index status.");
-                    setTextAndTitle("searchIndexCount", "Check backend connection", "Check backend connection");
-                    setStatusLine("searchStatus", "Couldn't refresh the footage library right now. Check the backend connection and try again.", "warning");
+                    setStatusPill("searchIndexPill", t("search.index_unavailable_pill", "Unavailable"), "warning", t("search.refresh_failed_title", "Couldn't refresh footage index status."));
+                    setTextAndTitle("searchIndexCount", t("search.check_backend_connection", "Check backend connection"), t("search.check_backend_connection", "Check backend connection"));
+                    setStatusLine("searchStatus", t("search.refresh_failed_status", "Couldn't refresh the footage library right now. Check the backend connection and try again."), "warning");
                 }
                 return;
             }
@@ -14318,29 +14367,32 @@
         var totalFiles = Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
         var btn = document.getElementById("clearSearchIndexBtn");
         if (!totalFiles) {
-            setStatusLine("searchStatus", "The footage library is already empty.", "idle");
+            setStatusLine("searchStatus", t("search.already_empty_status", "The footage library is already empty."), "idle");
             return;
         }
         if (typeof window !== "undefined" && typeof window.confirm === "function") {
-            var confirmed = window.confirm("Clear the indexed footage library? You can rebuild it anytime from project clips.");
+            var confirmed = window.confirm(t("search.clear_confirm", "Clear the indexed footage library? You can rebuild it anytime from project clips."));
             if (!confirmed) return;
         }
         var originalBtnText = rememberButtonText(btn);
         if (btn) {
             btn.disabled = true;
-            setButtonText(btn, "Clearing…");
+            setButtonText(btn, t("search.clearing_button", "Clearing…"));
         }
-        setStatusPill("searchIndexPill", "Clearing", "working", "Clearing indexed footage library.");
-        setStatusLine("searchStatus", "Clearing indexed footage and resetting search state…", "working");
+        setStatusPill("searchIndexPill", t("search.clearing_pill", "Clearing"), "working", t("search.clearing_title", "Clearing indexed footage library."));
+        setStatusLine("searchStatus", t("search.clearing_status", "Clearing indexed footage and resetting search state…"), "working");
         api("DELETE", "/search/index", null, function (err, data) {
             if (btn) {
                 btn.disabled = false;
                 setButtonText(btn, originalBtnText);
             }
             if (err || (data && data.error)) {
-                if (statsEl) setHintState(statsEl, "Couldn't clear the footage library just now.", "error");
-                setStatusLine("searchStatus", "Couldn't clear the footage library just now. Try again in a moment.", "error");
-                showAlert("Failed to clear footage index: " + (data ? data.error : "Network error"));
+                if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage library just now."), "error");
+                setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage library just now. Try again in a moment."), "error");
+                showAlert(
+                    t("search.clear_failed_alert", "Failed to clear footage index: {error}")
+                        .replace("{error}", data ? data.error : t("search.network_error", "Network error"))
+                );
                 return;
             }
             renderSearchIndexStats({ total_files: 0, total_segments: 0 });
@@ -14361,25 +14413,30 @@
         var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
         if (!paths.length) {
             if (document.getElementById("searchIndexStats")) {
-                setHintState(document.getElementById("searchIndexStats"), "No project media was found to index yet.", "warning");
+                setHintState(document.getElementById("searchIndexStats"), t("search.no_media_hint", "No project media was found to index yet."), "warning");
             }
-            setStatusLine("searchStatus", "No project media is available to index yet.", "warning");
-            showAlert("No project media found.");
+            setStatusLine("searchStatus", t("search.no_media_status", "No project media is available to index yet."), "warning");
+            showAlert(t("search.no_media_alert", "No project media found."));
             return;
         }
         var btn = document.getElementById("indexAllClipsBtn");
         if (currentJob || jobStarting) {
-            setStatusLine("searchStatus", "Another task is already in progress. Cancel it from the processing bar before re-indexing.", "warning");
-            showAlert("Another task is in progress. You can cancel it from the processing bar above.");
+            setStatusLine("searchStatus", t("search.task_in_progress_status", "Another task is already in progress. Cancel it from the processing bar before re-indexing."), "warning");
+            showAlert(t("search.task_in_progress_alert", "Another task is in progress. You can cancel it from the processing bar above."));
             return;
         }
         var originalBtnText = rememberButtonText(btn);
-        if (btn) { btn.disabled = true; setButtonText(btn, "Indexing…"); }
+        if (btn) { btn.disabled = true; setButtonText(btn, t("search.indexing_button", "Indexing…")); }
         if (document.getElementById("searchIndexStats")) {
-            setHintState(document.getElementById("searchIndexStats"), "Indexing " + paths.length + " project clip" + (paths.length === 1 ? "" : "s") + ". This can take a moment.", "info");
+            setHintState(
+                document.getElementById("searchIndexStats"),
+                t("search.indexing_hint", "Indexing {clips}. This can take a moment.")
+                    .replace("{clips}", formatSearchProjectClips(paths.length)),
+                "info"
+            );
         }
-        setStatusPill("searchIndexPill", "Indexing", "working", "Building the searchable footage library.");
-        setStatusLine("searchStatus", "Indexing project media and building the footage library…", "working");
+        setStatusPill("searchIndexPill", t("search.indexing_pill", "Indexing"), "working", t("search.indexing_title", "Building the searchable footage library."));
+        setStatusLine("searchStatus", t("search.indexing_status", "Indexing project media and building the footage library…"), "working");
         startJob("/search/index", { files: paths, no_input: true }, {
             onComplete: function (result) {
                 var indexed = Number((result && result.indexed) || 0);
@@ -14390,15 +14447,16 @@
                     if (document.getElementById("searchIndexStats")) {
                         setHintState(
                             document.getElementById("searchIndexStats"),
-                            "Indexed " + indexed + " of " + total + " project clips. Some items still need attention.",
+                            t("search.indexing_partial_hint", "{progress} Some items still need attention.")
+                                .replace("{progress}", formatSearchIndexingProgress(indexed, total)),
                             "warning"
                         );
                     }
-                    setStatusLine("searchStatus", "Indexing finished with a few issues. Search is available, but some clips need attention.", "warning");
+                    setStatusLine("searchStatus", t("search.indexing_partial_status", "Indexing finished with a few issues. Search is available, but some clips need attention."), "warning");
                 } else {
-                    setStatusLine("searchStatus", "Library index updated. Search is ready to use.", "success");
+                    setStatusLine("searchStatus", t("search.indexing_complete_status", "Library index updated. Search is ready to use."), "success");
                 }
-                showToast("Indexed " + indexed + " of " + total + " project clips" + (errors.length ? " with " + errors.length + " issue" + (errors.length === 1 ? "" : "s") : "") + ".", errors.length ? "warning" : "success");
+                showToast(formatSearchIndexingToast(indexed, total, errors.length), errors.length ? "warning" : "success");
             },
             onFinally: function () {
                 if (btn) {
@@ -14408,9 +14466,9 @@
             },
             onStartError: function () {
                 if (document.getElementById("searchIndexStats")) {
-                    setHintState(document.getElementById("searchIndexStats"), "Couldn't start footage indexing. Check the backend connection and try again.", "error");
+                    setHintState(document.getElementById("searchIndexStats"), t("search.indexing_failed_hint", "Couldn't start footage indexing. Check the backend connection and try again."), "error");
                 }
-                setStatusLine("searchStatus", "Couldn't start indexing right now. Check the backend connection and try again.", "error");
+                setStatusLine("searchStatus", t("search.indexing_failed_status", "Couldn't start indexing right now. Check the backend connection and try again."), "error");
                 if (btn) {
                     btn.disabled = false;
                     setButtonText(btn, originalBtnText);
@@ -14422,8 +14480,8 @@
     function runFootageSearch() {
         var query = ((document.getElementById("footageSearchQuery") || {}).value || "").trim();
         if (!query) {
-            setStatusLine("searchStatus", "Enter a descriptive query to search the footage library.", "warning");
-            showAlert("Enter a search query.");
+            setStatusLine("searchStatus", t("search.query_required_status", "Enter a descriptive query to search the footage library."), "warning");
+            showAlert(t("search.query_required_alert", "Enter a search query."));
             return;
         }
         var searchBtn = document.getElementById("runFootageSearchBtn");
@@ -14431,10 +14489,14 @@
         var maxResults = parseInt((document.getElementById("footageSearchMax") || {}).value || "10");
         if (searchBtn) {
             searchBtn.disabled = true;
-            setButtonText(searchBtn, "Searching…");
+            setButtonText(searchBtn, t("search.searching_button", "Searching…"));
         }
-        setStatusLine("searchStatus", "Searching the indexed footage library…", "working");
-        renderSearchResultsEmpty("Searching footage", "Looking for the best matches across indexed project clips.", "info");
+        setStatusLine("searchStatus", t("search.searching_status", "Searching the indexed footage library…"), "working");
+        renderSearchResultsEmpty(
+            t("search.searching_title", "Searching footage"),
+            t("search.searching_body", "Looking for the best matches across indexed project clips."),
+            "info"
+        );
         api("POST", "/search/footage", { query: query, top_k: maxResults }, function (err, data) {
             var res = document.getElementById("footageSearchResults");
             if (searchBtn) {
@@ -14516,7 +14578,7 @@
                     if (typeof r.score === "number") {
                         var score = document.createElement("span");
                         score.className = "footage-result-score";
-                        score.textContent = "Score " + safeFixed(r.score, 2);
+                        score.textContent = t("search.result_score", "Score {score}").replace("{score}", safeFixed(r.score, 2));
                         meta.appendChild(score);
                     }
                     item.appendChild(meta);
@@ -14525,7 +14587,13 @@
             }
             res.innerHTML = "";
             res.appendChild(frag);
-            setStatusLine("searchStatus", results.length + " match" + (results.length === 1 ? "" : "es") + " ready. Click a result to load it into the workspace.", "ready");
+            setStatusLine(
+                "searchStatus",
+                t("search.results_ready_status", "{count} match{plural} ready. Click a result to load it into the workspace.")
+                    .replace("{count}", results.length)
+                    .replace("{plural}", results.length === 1 ? "" : "es"),
+                "ready"
+            );
         });
     }
 
@@ -14549,7 +14617,7 @@
             _selectedFootageSearchPath = p;
             var label = item.dataset.name || p.split(/[/\\]/).pop();
             selectFile(p, label);
-            setStatusLine("searchStatus", "Loaded '" + label + "' into the workspace.", "success", p);
+            setStatusLine("searchStatus", t("search.result_loaded_status", "Loaded '{name}' into the workspace.").replace("{name}", label), "success", p);
         });
     }
 
