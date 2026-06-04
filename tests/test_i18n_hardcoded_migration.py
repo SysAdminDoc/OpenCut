@@ -952,6 +952,12 @@ MIGRATED_KEYS = (
     "timeline.otio_error",
     "timeline.otio_exported",
     "timeline.otio_saved",
+    # Sixty-fifth batch (clipboard and generated output feedback).
+    "common.copied_to_clipboard",
+    "common.copy_failed",
+    "transcript.copy_not_supported",
+    "transcript.summary_copied",
+    "video.broll_generated",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5138,6 +5144,32 @@ EXPECTED_CALLS = (
         "timeline.otio_saved",
         re.compile(r't\(\s*"timeline\.otio_saved"'),
         re.compile(r'setHintState\(otioRes,\s*"Saved: "\s*\+'),
+    ),
+    # --- Sixty-fifth batch ----------------------------------------
+    (
+        "common.copied_to_clipboard",
+        re.compile(r't\(\s*"common\.copied_to_clipboard"'),
+        re.compile(r'showAlert\("Copied to clipboard!"'),
+    ),
+    (
+        "common.copy_failed",
+        re.compile(r't\(\s*"common\.copy_failed"'),
+        re.compile(r'(showAlert|showToast)\("Copy failed"'),
+    ),
+    (
+        "transcript.copy_not_supported",
+        re.compile(r't\(\s*"transcript\.copy_not_supported"'),
+        re.compile(r'showToast\("Copy not supported"'),
+    ),
+    (
+        "transcript.summary_copied",
+        re.compile(r't\(\s*"transcript\.summary_copied"'),
+        re.compile(r'showToast\("Summary copied"'),
+    ),
+    (
+        "video.broll_generated",
+        re.compile(r't\(\s*"video\.broll_generated"'),
+        re.compile(r'showToast\("B-roll generated: "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

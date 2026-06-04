@@ -15191,7 +15191,8 @@
         if (job.type !== "broll-generate" || job.status !== "complete" || !job.result) return;
         var path = job.result.output_path;
         if (path) {
-            showToast("B-roll generated: " + path.split("/").pop().split("\\").pop(), "success");
+            showToast(t("video.broll_generated", "B-roll generated: {name}")
+                .replace("{name}", path.split("/").pop().split("\\").pop()), "success");
         }
     });
 
@@ -15449,11 +15450,13 @@
         _on("copyChaptersBtn", "click", function () {
             var text = el.ytChaptersText ? el.ytChaptersText.value : "";
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function () { showAlert("Copied to clipboard!"); }).catch(function () { showAlert("Copy failed"); });
+                navigator.clipboard.writeText(text)
+                    .then(function () { showAlert(t("common.copied_to_clipboard", "Copied to clipboard!")); })
+                    .catch(function () { showAlert(t("common.copy_failed", "Copy failed")); });
             } else if (el.ytChaptersText) {
                 el.ytChaptersText.select();
                 document.execCommand("copy");
-                showAlert("Copied to clipboard!");
+                showAlert(t("common.copied_to_clipboard", "Copied to clipboard!"));
             }
         });
 
@@ -15707,9 +15710,11 @@
         if (el.copySummaryBtn) el.copySummaryBtn.addEventListener("click", function () {
             var text = el.summaryContent ? el.summaryContent.textContent : "";
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function () { showToast("Summary copied", "success"); }).catch(function () { showToast("Copy failed", "warning"); });
+                navigator.clipboard.writeText(text)
+                    .then(function () { showToast(t("transcript.summary_copied", "Summary copied"), "success"); })
+                    .catch(function () { showToast(t("common.copy_failed", "Copy failed"), "warning"); });
             } else {
-                showToast("Copy not supported", "warning");
+                showToast(t("transcript.copy_not_supported", "Copy not supported"), "warning");
             }
         });
 
