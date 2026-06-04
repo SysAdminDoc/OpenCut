@@ -4644,7 +4644,7 @@
                 // Validate auth URL before passing to shell — prevent command injection
                 var authUrl = String(r.auth_url);
                 if (!/^https?:\/\//i.test(authUrl)) {
-                    showAlert("Invalid authorization URL received from server.");
+                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from server."));
                     return;
                 }
                 // Open OAuth URL in user's browser
@@ -4653,9 +4653,11 @@
                 } else {
                     window.open(authUrl, "_blank");
                 }
-            showToast("Opening " + platform + " authorization page…", "info");
+                var _oauthOpeningTemplate = t("toast.oauth_opening_auth_page", "Opening {platform} authorization page…");
+                showToast(_oauthOpeningTemplate.replace("{platform}", platform), "info");
             } else {
-                showAlert("OAuth not configured for " + platform + ". Set API credentials in environment variables.");
+                var _oauthConfigTemplate = t("toast.oauth_not_configured", "OAuth not configured for {platform}. Set API credentials in environment variables.");
+                showAlert(_oauthConfigTemplate.replace("{platform}", platform));
             }
         });
     }
@@ -4705,7 +4707,7 @@
 
     function wsConnect() {
         if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) {
-            showToast("Live updates are already connected", "info");
+            showToast(t("toast.live_updates_already_connected", "Live updates are already connected"), "info");
             return;
         }
         var port = 5680;
@@ -4713,7 +4715,7 @@
         try {
             _ws = new WebSocket(url);
         } catch (e) {
-            showToast("Could not open the live-updates bridge", "warning");
+            showToast(t("toast.live_updates_bridge_open_failed", "Could not open the live-updates bridge"), "warning");
             return;
         }
 
@@ -4722,7 +4724,7 @@
             _ws.send(JSON.stringify({ type: "identify", client_type: "cep", id: "cep-1" }));
             _ws.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error", "timeline"] }, id: "sub-1" }));
             _updateWsStatus();
-            showToast("Live updates connected", "success");
+            showToast(t("toast.live_updates_connected", "Live updates connected"), "success");
         };
 
         _ws.onmessage = function (evt) {
@@ -4895,10 +4897,10 @@
         api("POST", "/ws/start", {}, function (err, r) {
             if (err) { showAlert("WS start error: " + err.message); return; }
             if (r && r.success) {
-                showToast("Live-updates bridge started", "success");
+                showToast(t("toast.live_updates_bridge_started", "Live-updates bridge started"), "success");
                 setTimeout(function () { wsConnect(); }, 500);
             } else {
-                showAlert(r && r.error ? r.error : "Failed to start WebSocket bridge");
+                showAlert(r && r.error ? r.error : t("toast.live_updates_bridge_start_failed", "Failed to start WebSocket bridge"));
             }
         });
     }
@@ -4908,7 +4910,7 @@
         api("POST", "/ws/stop", {}, function (err, r) {
             if (err) return;
             if (r && r.success) {
-                showToast("Live-updates bridge stopped", "success");
+                showToast(t("toast.live_updates_bridge_stopped", "Live-updates bridge stopped"), "success");
                 _updateWsStatus();
             }
         });

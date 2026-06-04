@@ -55,6 +55,16 @@ MIGRATED_KEYS = (
     "toast.multimodal_diarization_installed",
     "toast.watermark_remover_installed",
     "toast.watermark_region_autofilled",
+    # Fifth batch (OAuth/live-update bridge feedback).
+    "toast.oauth_invalid_url",
+    "toast.oauth_opening_auth_page",
+    "toast.oauth_not_configured",
+    "toast.live_updates_already_connected",
+    "toast.live_updates_bridge_open_failed",
+    "toast.live_updates_connected",
+    "toast.live_updates_bridge_started",
+    "toast.live_updates_bridge_start_failed",
+    "toast.live_updates_bridge_stopped",
 )
 
 
@@ -175,6 +185,52 @@ EXPECTED_CALLS = (
         "toast.watermark_region_autofilled",
         re.compile(r't\(\s*"toast\.watermark_region_autofilled"'),
         re.compile(r'showToast\(\s*"Watermark detected'),
+    ),
+    # --- Fifth batch ------------------------------------------------
+    (
+        "toast.oauth_invalid_url",
+        re.compile(r't\(\s*"toast\.oauth_invalid_url"'),
+        re.compile(r'showAlert\(\s*"Invalid authorization URL received from server\."\s*\)'),
+    ),
+    (
+        "toast.oauth_opening_auth_page",
+        re.compile(r't\(\s*"toast\.oauth_opening_auth_page"'),
+        re.compile(r'showToast\(\s*"Opening "'),
+    ),
+    (
+        "toast.oauth_not_configured",
+        re.compile(r't\(\s*"toast\.oauth_not_configured"'),
+        re.compile(r'showAlert\(\s*"OAuth not configured for '),
+    ),
+    (
+        "toast.live_updates_already_connected",
+        re.compile(r't\(\s*"toast\.live_updates_already_connected"'),
+        re.compile(r'showToast\(\s*"Live updates are already connected"'),
+    ),
+    (
+        "toast.live_updates_bridge_open_failed",
+        re.compile(r't\(\s*"toast\.live_updates_bridge_open_failed"'),
+        re.compile(r'showToast\(\s*"Could not open the live-updates bridge"'),
+    ),
+    (
+        "toast.live_updates_connected",
+        re.compile(r't\(\s*"toast\.live_updates_connected"'),
+        re.compile(r'showToast\(\s*"Live updates connected"'),
+    ),
+    (
+        "toast.live_updates_bridge_started",
+        re.compile(r't\(\s*"toast\.live_updates_bridge_started"'),
+        re.compile(r'showToast\(\s*"Live-updates bridge started"'),
+    ),
+    (
+        "toast.live_updates_bridge_start_failed",
+        re.compile(r't\(\s*"toast\.live_updates_bridge_start_failed"'),
+        re.compile(r':\s*"Failed to start WebSocket bridge"'),
+    ),
+    (
+        "toast.live_updates_bridge_stopped",
+        re.compile(r't\(\s*"toast\.live_updates_bridge_stopped"'),
+        re.compile(r'showToast\(\s*"Live-updates bridge stopped"'),
     ),
 )
 
