@@ -4318,34 +4318,59 @@
             stats += esc(r.summary) + "<br>";
         }
         if (r.segments !== undefined) {
-            stats += Number(r.segments) + " segments";
+            var segmentCount = Number(r.segments);
+            stats += t("progress.result_segments", "{count} segment{plural}")
+                .replace("{count}", segmentCount)
+                .replace("{plural}", segmentCount === 1 ? "" : "s");
         }
         if (r.filler_stats) {
-            stats += " | " + Number(r.filler_stats.removed_fillers) + " fillers removed (" + safeFixed(r.filler_stats.total_filler_time, 1) + "s)";
+            var fillerCount = Number(r.filler_stats.removed_fillers);
+            stats += " | " + t("progress.result_fillers_removed", "{count} filler{plural} removed ({seconds}s)")
+                .replace("{count}", fillerCount)
+                .replace("{plural}", fillerCount === 1 ? "" : "s")
+                .replace("{seconds}", safeFixed(r.filler_stats.total_filler_time, 1));
         }
         if (r.caption_segments !== undefined) {
-            stats += (stats ? " | " : "") + Number(r.caption_segments) + " captions, " + Number(r.words || 0) + " words";
+            var captionCount = Number(r.caption_segments);
+            var wordCount = Number(r.words || 0);
+            stats += (stats ? " | " : "") + t("progress.result_captions_words", "{captions} caption{caption_plural}, {words} word{word_plural}")
+                .replace("{captions}", captionCount)
+                .replace("{caption_plural}", captionCount === 1 ? "" : "s")
+                .replace("{words}", wordCount)
+                .replace("{word_plural}", wordCount === 1 ? "" : "s");
         }
         if (r.style) {
-            stats += " | Style: " + esc(r.style);
+            stats += " | " + t("progress.result_style", "Style: {style}")
+                .replace("{style}", esc(r.style));
         }
         // Audio results
         if (r.effect && !r.method) {
-            stats += (stats ? "<br>" : "") + "Effect applied: " + esc(r.effect);
+            stats += (stats ? "<br>" : "") + t("progress.result_effect_applied", "Effect applied: {effect}")
+                .replace("{effect}", esc(r.effect));
         }
         if (r.method && r.strength !== undefined) {
-            stats += (stats ? "<br>" : "") + "Denoise: " + esc(r.method) + " (" + safeFixed(r.strength * 100, 0) + "% strength)";
+            stats += (stats ? "<br>" : "") + t("progress.result_denoise", "Denoise: {method} ({strength}% strength)")
+                .replace("{method}", esc(r.method))
+                .replace("{strength}", safeFixed(r.strength * 100, 0));
         }
         if (r.preset && r.target_loudness !== undefined) {
-            stats += (stats ? "<br>" : "") + "Normalized to " + safeFixed(r.target_loudness, 1) + " LUFS (" + esc(r.preset) + ")";
+            stats += (stats ? "<br>" : "") + t("progress.result_normalized_to", "Normalized to {target} LUFS ({preset})")
+                .replace("{target}", safeFixed(r.target_loudness, 1))
+                .replace("{preset}", esc(r.preset));
             if (r.input_loudness !== undefined) {
-                stats += " | Was: " + safeFixed(r.input_loudness, 1) + " LUFS";
+                stats += " | " + t("progress.result_loudness_was", "Was: {lufs} LUFS")
+                    .replace("{lufs}", safeFixed(r.input_loudness, 1));
             }
         }
         if (r.bpm) {
-            stats += (stats ? "<br>" : "") + "BPM: " + safeFixed(r.bpm, 0) + " | " + (r.total_beats != null ? Number(r.total_beats) : 0) + " beats";
+            var beatCount = r.total_beats != null ? Number(r.total_beats) : 0;
+            stats += (stats ? "<br>" : "") + t("progress.result_bpm_beats", "BPM: {bpm} | {beats} beat{plural}")
+                .replace("{bpm}", safeFixed(r.bpm, 0))
+                .replace("{beats}", beatCount)
+                .replace("{plural}", beatCount === 1 ? "" : "s");
             if (r.confidence !== undefined) {
-                stats += " | Confidence: " + safeFixed(r.confidence * 100, 0) + "%";
+                stats += " | " + t("progress.result_confidence", "Confidence: {percent}%")
+                    .replace("{percent}", safeFixed(r.confidence * 100, 0));
             }
         }
         // Stem separation
@@ -4355,20 +4380,33 @@
                 var fname = r.output_paths[i].split(/[/\\]/).pop();
                 stemNames.push(esc(fname));
             }
-            stats += (stats ? "<br>" : "") + r.output_paths.length + " stems: " + stemNames.join(", ");
+            stats += (stats ? "<br>" : "") + t("progress.result_stems", "{count} stem{plural}: {names}")
+                .replace("{count}", r.output_paths.length)
+                .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
+                .replace("{names}", stemNames.join(", "));
         }
         // Scene detection
         if (r.total_scenes) {
-            stats += (stats ? "<br>" : "") + "Scenes: " + Number(r.total_scenes) + " | Avg: " + safeFixed(r.avg_scene_length, 1) + "s";
+            stats += (stats ? "<br>" : "") + t("progress.result_scenes", "Scenes: {count} | Avg: {seconds}s")
+                .replace("{count}", Number(r.total_scenes))
+                .replace("{seconds}", safeFixed(r.avg_scene_length, 1));
         }
         if (r.indexed !== undefined && r.total !== undefined) {
-            stats += (stats ? "<br>" : "") + Number(r.indexed) + " of " + Number(r.total) + " files indexed";
+            stats += (stats ? "<br>" : "") + t("progress.result_files_indexed", "{indexed} of {total} files indexed")
+                .replace("{indexed}", Number(r.indexed))
+                .replace("{total}", Number(r.total));
             if (r.errors && r.errors.length) {
-                stats += " | " + Number(r.errors.length) + " error" + (r.errors.length === 1 ? "" : "s");
+                stats += " | " + t("progress.result_errors", "{count} error{plural}")
+                    .replace("{count}", Number(r.errors.length))
+                    .replace("{plural}", r.errors.length === 1 ? "" : "s");
             }
         }
 
-        var resultPath = r.xml_path || r.output_path || r.overlay_path || (r.output_paths ? r.output_paths.length + " files exported" : "");
+        var resultPath = r.xml_path || r.output_path || r.overlay_path || (r.output_paths
+            ? t("progress.result_files_exported", "{count} file{plural} exported")
+                .replace("{count}", r.output_paths.length)
+                .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
+            : "");
         el.resultsStats.innerHTML = stats || t("progress.success_summary", "The run finished successfully.");
         el.resultsPath.textContent = resultPath;
         el.resultsPath.title = resultPath || "";

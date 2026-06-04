@@ -1,12 +1,12 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.169
+**Version**: 4.170
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
-**Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
+**Root summaries**: [TODO.md](TODO.md) is the compact active execution queue, [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
-> **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
+> **⚡ Active work** is summarized in [TODO.md](TODO.md), with detailed ledger history in [ROADMAP.md](ROADMAP.md) and older wave detail in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
 > and the wave sections in this file (L through T). Wave R (v1.52→v1.55) is the most recent committed plan.
 > Wave S (v1.56→v1.58) is the post-May-2026 OSS research pass.
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
@@ -16,8 +16,9 @@
 
 ## Implementer Instructions
 
-- Treat this roadmap as the active build queue, with `PROJECT_CONTEXT.md` as the
-  cross-tool operating summary and `COMPLETED.md` as the shipped-work digest.
+- Treat `TODO.md` as the compact active build queue and this roadmap as the
+  detailed ledger, with `PROJECT_CONTEXT.md` as the cross-tool operating summary
+  and `COMPLETED.md` as the shipped-work digest.
 - Keep source-of-truth counts generated. Regenerate route/API/MCP manifests
   before claiming route, blueprint, or tool totals, and keep version sync on
   v1.32.0 until the release metadata changes.
@@ -366,6 +367,8 @@
 > **v4.168 status (2026-06-04, research-only advisory refresh)**: route/version/i18n governance checks stayed green, but a fresh `py -3.12 -m opencut.tools.pip_audit_extras --json` failed the optional `pyproject[all]` target with five unwaived Torch/Transformers advisories while `requirements.txt` remained clean. RA-15 now tracks the build-lane decision: upgrade, split optional GPU/depth extras, or document narrowly scoped waivers so release smoke does not fail on surprise advisory drift.
 >
 > **v4.169 status (2026-06-04, continuation pass)**: advanced **E15** with a seventy-first rolling i18n batch. Loudness error fallback, recent-files labels, watermark detection progress/error copy, reframe output dimensions, journal context-only tooltips, disconnected status metrics, clip-preview fallback copy, and quick-workflow preset-missing alerts now route through `t(...)`, bringing the guarded migration ledger to 989 keys across seventy-one rounds while improving drift to 1,397 keys / 1,271 consumers / 126 dead / 0 missing.
+>
+> **v4.170 status (2026-06-04, continuation pass)**: advanced **E15** with a seventy-second rolling i18n batch. Central job result summaries now route segments, filler removal, captions/words, audio processing details, beat detection, stem outputs, scene counts, indexed-file counts, error totals, and exported-file fallbacks through `t(...)`; `TODO.md` now carries the compact active execution queue, and drift reports 1,412 keys / 1,286 consumers / 126 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -1658,6 +1661,23 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.170 CEP i18n Migration Batch 72 (E15)
+
+E15 remains open. This batch moved central job result-summary copy out of bare English and added a compact active queue file.
+
+| Surface | Status |
+|---|---|
+| Result stats | Segments, filler-removal totals, caption/word totals, styles, audio effects, denoise strength, loudness normalization, beat detection, stems, scenes, indexed-file counts, and error totals now resolve through `t(...)`. |
+| Export fallback | Multi-output result fallbacks now use a locale key instead of hardcoded "files exported" copy. |
+| Active queue | `TODO.md` now consolidates the next implementation order while `ROADMAP.md` remains the detailed ledger and `COMPLETED.md` / `ROADMAP-COMPLETED.md` remain shipped-work archives. |
+| Locale ledger | `locales/en.json` now carries 15 additional `progress.result_*` keys, bringing the guarded migration ledger to 1,004 keys across seventy-two rounds. |
+| Drift posture | `i18n-drift` reports 1,412 keys, 1,286 consumers, 126 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts each new result-summary key, `t(...)` call site, and absence of the previous bare-English result forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed (`22 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/sync_version.py --check` passed, `git diff --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,412 keys, 1,286 consumers, 126 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -1674,7 +1694,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.169 with the seventy-first guarded status/media-preview/quick-workflow feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.170 with the seventy-second guarded central job result-summary batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
