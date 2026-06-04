@@ -922,6 +922,20 @@ MIGRATED_KEYS = (
     "workflow.saved_empty_title",
     "workflow.saved_loading_label",
     "workflow.saved_loading_title",
+    # Sixty-second batch (activity/job-history feedback).
+    "history.activity",
+    "history.apply_action_selection_title",
+    "history.apply_selection",
+    "history.apply_selection_short_title",
+    "history.apply_selection_title",
+    "history.empty_hint",
+    "history.empty_title",
+    "history.interrupted_jobs",
+    "history.open_activity",
+    "history.rerun",
+    "history.rerun_original_title",
+    "history.rerun_same_job_title",
+    "history.reveal_output_title",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4970,6 +4984,72 @@ EXPECTED_CALLS = (
         "workflow.saved_loading_title",
         re.compile(r't\(\s*"workflow\.saved_loading_title"'),
         re.compile(r'\?\s*"Loading the saved custom workflow library\."'),
+    ),
+    # --- Sixty-second batch ----------------------------------------
+    (
+        "history.activity",
+        re.compile(r't\(\s*"history\.activity"'),
+        re.compile(r'setToggleButtonCount\(el\.jobHistoryToggle,\s*"Activity"'),
+    ),
+    (
+        "history.apply_action_selection_title",
+        re.compile(r't\(\s*"history\.apply_action_selection_title"'),
+        re.compile(r'applyBtn\.title\s*=\s*"Run the same action on \'" \+'),
+    ),
+    (
+        "history.apply_selection",
+        re.compile(r't\(\s*"history\.apply_selection"'),
+        re.compile(r'(?:_sessionCtxActionBtn\(\s*"Apply to selection"|applyBtn\.textContent\s*=\s*"Apply to selection")'),
+    ),
+    (
+        "history.apply_selection_short_title",
+        re.compile(r't\(\s*"history\.apply_selection_short_title"'),
+        re.compile(r'^\s*"Re-run on the currently selected clip",', re.MULTILINE),
+    ),
+    (
+        "history.apply_selection_title",
+        re.compile(r't\(\s*"history\.apply_selection_title"'),
+        re.compile(r'applyBtn\.title\s*=\s*"Run this job on the currently selected clip with the same parameters"'),
+    ),
+    (
+        "history.empty_hint",
+        re.compile(r't\(\s*"history\.empty_hint"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No activity yet",\s*"Completed runs, exports, and timeline write-backs'),
+    ),
+    (
+        "history.empty_title",
+        re.compile(r't\(\s*"history\.empty_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No activity yet"'),
+    ),
+    (
+        "history.interrupted_jobs",
+        re.compile(r't\(\s*"history\.interrupted_jobs"'),
+        re.compile(r'msg\.textContent\s*=\s*interrupted\.length\s*\+'),
+    ),
+    (
+        "history.open_activity",
+        re.compile(r't\(\s*"history\.open_activity"'),
+        re.compile(r'openHistory\.textContent\s*=\s*"Open activity"'),
+    ),
+    (
+        "history.rerun",
+        re.compile(r't\(\s*"history\.rerun"'),
+        re.compile(r'(?:_sessionCtxActionBtn\(\s*"Re-run"|rerunBtn\.textContent\s*=\s*"Re-run")'),
+    ),
+    (
+        "history.rerun_original_title",
+        re.compile(r't\(\s*"history\.rerun_original_title"'),
+        re.compile(r'rerunBtn\.title\s*=\s*"Re-run on the original clip with the same parameters"'),
+    ),
+    (
+        "history.rerun_same_job_title",
+        re.compile(r't\(\s*"history\.rerun_same_job_title"'),
+        re.compile(r'_sessionCtxActionBtn\("Re-run",\s*"Run the same job again"'),
+    ),
+    (
+        "history.reveal_output_title",
+        re.compile(r't\(\s*"history\.reveal_output_title"'),
+        re.compile(r'revealBtn\.title\s*=\s*"Reveal output in file manager"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

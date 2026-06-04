@@ -8290,13 +8290,13 @@
             warn.setAttribute("role", "status");
             var msg = document.createElement("span");
             msg.className = "session-context-interrupted-msg";
-            msg.textContent = interrupted.length +
-                " job" + (interrupted.length === 1 ? "" : "s") +
-                " interrupted when the server restarted.";
+            msg.textContent = t("history.interrupted_jobs", "{count} job{plural} interrupted when the server restarted.")
+                .replace("{count}", interrupted.length)
+                .replace("{plural}", interrupted.length === 1 ? "" : "s");
             var openHistory = document.createElement("button");
             openHistory.type = "button";
             openHistory.className = "session-context-action session-context-interrupted-btn";
-            openHistory.textContent = "Open activity";
+            openHistory.textContent = t("history.open_activity", "Open activity");
             openHistory.addEventListener("click", function () {
                 dismissSessionContext();
                 if (el.jobHistory && !el.jobHistory.classList.contains("open")) {
@@ -8355,19 +8355,19 @@
 
         var outputPath = _sessionCtxResultPath(job);
         if (outputPath) {
-            var openBtn = _sessionCtxActionBtn("Open", "Open output file", function () {
+            var openBtn = _sessionCtxActionBtn(t("output.open", "Open"), t("output.open_title", "Open output file"), function () {
                 _sessionCtxOpenPath(outputPath, "open");
             });
             actions.appendChild(openBtn);
 
-            var revealBtn = _sessionCtxActionBtn("Reveal", "Reveal in file manager", function () {
+            var revealBtn = _sessionCtxActionBtn(t("output.reveal", "Reveal"), t("output.reveal_title", "Reveal in file manager"), function () {
                 _sessionCtxOpenPath(outputPath, "reveal");
             });
             actions.appendChild(revealBtn);
         }
 
         if (job.endpoint && job.payload) {
-            var rerunBtn = _sessionCtxActionBtn("Re-run", "Run the same job again", function () {
+            var rerunBtn = _sessionCtxActionBtn(t("history.rerun", "Re-run"), t("history.rerun_same_job_title", "Run the same job again"), function () {
                 _sessionCtxRerun(job);
             });
             actions.appendChild(rerunBtn);
@@ -8376,8 +8376,8 @@
             var originalPath = (job.payload && job.payload.filepath) || "";
             if (originalPath && selectedPath && selectedPath !== originalPath) {
                 var applyBtn = _sessionCtxActionBtn(
-                    "Apply to selection",
-                    "Re-run on the currently selected clip",
+                    t("history.apply_selection", "Apply to selection"),
+                    t("history.apply_selection_short_title", "Re-run on the currently selected clip"),
                     function () { _sessionCtxApplyToSelection(job); }
                 );
                 actions.appendChild(applyBtn);
@@ -8628,9 +8628,9 @@
             var applyBtn = document.createElement("button");
             applyBtn.type = "button";
             applyBtn.className = "btn btn-ghost btn-sm";
-            applyBtn.textContent = "Apply to selection";
-            applyBtn.title = "Run the same action on '" +
-                (selectedName || "selection") + "' with the same params";
+            applyBtn.textContent = t("history.apply_selection", "Apply to selection");
+            applyBtn.title = t("history.apply_action_selection_title", "Run the same action on '{selection}' with the same params")
+                .replace("{selection}", selectedName || t("toast.selection_target", "selection"));
             applyBtn.addEventListener("click", function () {
                 _journalApplyToSelection(entry);
             });
@@ -9824,12 +9824,12 @@
 
     function renderJobHistory() {
         if (!el.jobHistory || !el.jobHistoryToggle) return;
-        setToggleButtonCount(el.jobHistoryToggle, "Activity", jobHistoryList.length);
+        setToggleButtonCount(el.jobHistoryToggle, t("history.activity", "Activity"), jobHistoryList.length);
         el.jobHistory.innerHTML = "";
         if (!jobHistoryList.length) {
             el.jobHistory.innerHTML = buildEmptyHintMarkup(
-                "No activity yet",
-                "Completed runs, exports, and timeline write-backs will appear here so you can reopen outputs or rerun the same workflow.",
+                t("history.empty_title", "No activity yet"),
+                t("history.empty_hint", "Completed runs, exports, and timeline write-backs will appear here so you can reopen outputs or rerun the same workflow."),
                 "info"
             );
             return;
@@ -9900,16 +9900,16 @@
                 openBtn.type = "button";
                 openBtn.className = "btn-sm job-history-open";
                 openBtn.setAttribute("data-idx", String(i));
-                openBtn.title = "Open output file";
-                openBtn.textContent = "Open";
+                openBtn.title = t("output.open_title", "Open output file");
+                openBtn.textContent = t("output.open", "Open");
                 actions.appendChild(openBtn);
 
                 var revealBtn = document.createElement("button");
                 revealBtn.type = "button";
                 revealBtn.className = "btn-sm job-history-reveal";
                 revealBtn.setAttribute("data-idx", String(i));
-                revealBtn.title = "Reveal output in file manager";
-                revealBtn.textContent = "Reveal";
+                revealBtn.title = t("history.reveal_output_title", "Reveal output in file manager");
+                revealBtn.textContent = t("output.reveal", "Reveal");
                 actions.appendChild(revealBtn);
             }
 
@@ -9918,8 +9918,8 @@
                 rerunBtn.type = "button";
                 rerunBtn.className = "btn-sm job-history-rerun";
                 rerunBtn.setAttribute("data-idx", String(i));
-                rerunBtn.title = "Re-run on the original clip with the same parameters";
-                rerunBtn.textContent = "Re-run";
+                rerunBtn.title = t("history.rerun_original_title", "Re-run on the original clip with the same parameters");
+                rerunBtn.textContent = t("history.rerun", "Re-run");
                 actions.appendChild(rerunBtn);
             }
 
@@ -9928,8 +9928,8 @@
                 applyBtn.type = "button";
                 applyBtn.className = "btn-sm job-history-apply";
                 applyBtn.setAttribute("data-idx", String(i));
-                applyBtn.title = "Run this job on the currently selected clip with the same parameters";
-                applyBtn.textContent = "Apply to selection";
+                applyBtn.title = t("history.apply_selection_title", "Run this job on the currently selected clip with the same parameters");
+                applyBtn.textContent = t("history.apply_selection", "Apply to selection");
                 actions.appendChild(applyBtn);
             }
 
