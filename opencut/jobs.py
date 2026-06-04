@@ -88,6 +88,8 @@ _SENSITIVE_PAYLOAD_KEY_RE = re.compile(
     r")([_\-\s.]|$)",
     re.IGNORECASE,
 )
+_TERMINAL_JOB_STATUSES = frozenset({"complete", "error", "cancelled", "interrupted"})
+_JOB_RESOURCE_FIELDS = ("peak_vram_mb", "peak_cpu_pct", "peak_rss_mb")
 
 
 class JobRegistry:
@@ -145,6 +147,33 @@ def apply_config(config: OpenCutConfig) -> None:
         _JOB_STUCK_TIMEOUT = int(config.job_stuck_timeout)
 
 
+def _classify_exit_reason(status: str, *, error: str = "", code: str = "", exc=None) -> str:
+    try:
+        from opencut.core.job_diagnostics import classify_exit_reason
+
+        return classify_exit_reason(status, error=error, code=code, exc=exc)
+    except Exception:  # noqa: BLE001 - terminal updates must not fail
+        status_key = str(status or "").lower()
+        if status_key in ("complete", "cancelled", "interrupted"):
+            return status_key
+        if status_key == "error":
+            return "error"
+        return ""
+
+
+def _stop_resource_sampler(sampler) -> dict:
+    if sampler is None:
+        return {}
+    try:
+        snapshot = sampler.stop()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not fail jobs
+        logger.debug("Failed to stop resource sampler: %s", exc)
+        return {}
+    if not isinstance(snapshot, dict):
+        return {}
+    return {field: snapshot.get(field) for field in _JOB_RESOURCE_FIELDS}
+
+
 def _new_job(job_type: str, filepath: str, *,
              resumable: bool = False,
              partial_output_path: str = "",
@@ -174,6 +203,10 @@ def _new_job(job_type: str, filepath: str, *,
             "partial_output_path": str(partial_output_path or ""),
             "resume_source_job_id": str(resume_source_job_id or ""),
             "resume_attempt": _coerce_nonnegative_int(resume_attempt, 0),
+            "peak_vram_mb": None,
+            "peak_cpu_pct": None,
+            "peak_rss_mb": None,
+            "exit_reason": "",
             "_thread": None,
         }
     _start_periodic_cleanup()
@@ -205,23 +238,36 @@ def _list_jobs_copy() -> list:
 def _update_job(job_id: str, **kwargs):
     """Update job fields. Records timing data on completion."""
     job_copy_to_persist = None
+    status_update = kwargs.get("status")
+    if status_update in _TERMINAL_JOB_STATUSES and not kwargs.get("exit_reason"):
+        kwargs["exit_reason"] = _classify_exit_reason(
+            status_update,
+            error=kwargs.get("error", ""),
+            code=kwargs.get("code", ""),
+        )
     with job_lock:
         if job_id in jobs:
             jobs[job_id].update(kwargs)
+            job = jobs[job_id]
+            if status_update in _TERMINAL_JOB_STATUSES and not job.get("completed_at"):
+                job["completed_at"] = time.time()
             # Record timing data when a job completes for future estimates.
             # Prefer ``started_at`` over ``created`` so the recorded elapsed
             # excludes queue wait time — otherwise a job that waited 30s in
             # the priority queue would inflate the historical ratio used by
             # compute_estimate() and mislead future estimates.
-            if kwargs.get("status") == "complete":
-                job = jobs[job_id]
+            if status_update == "complete":
                 now = time.time()
                 start = job.get("started_at") or job.get("created", now)
                 elapsed = max(0.0, now - start)
                 _schedule_record_time(job.get("type", ""), elapsed, job.get("filepath", ""))
-            # Persist terminal job states to SQLite
-            if kwargs.get("status") in ("complete", "error", "cancelled"):
-                job_copy_to_persist = jobs[job_id].copy()
+            resource_update = any(field in kwargs for field in _JOB_RESOURCE_FIELDS)
+            terminal_update = status_update in _TERMINAL_JOB_STATUSES
+            existing_terminal = job.get("status") in _TERMINAL_JOB_STATUSES
+            # Persist terminal job states to SQLite; if a cancellation raced
+            # ahead of the worker's sampler shutdown, persist the late peaks.
+            if terminal_update or (existing_terminal and resource_update):
+                job_copy_to_persist = job.copy()
                 _job_processes.pop(job_id, None)
     if job_copy_to_persist is not None:
         _persist_job(job_copy_to_persist)
@@ -261,6 +307,10 @@ def _emit_job_webhook(job_dict):
             "result": job_dict.get("result"),
             "error": job_dict.get("error"),
             "progress": job_dict.get("progress"),
+            "exit_reason": job_dict.get("exit_reason"),
+            "peak_vram_mb": job_dict.get("peak_vram_mb"),
+            "peak_cpu_pct": job_dict.get("peak_cpu_pct"),
+            "peak_rss_mb": job_dict.get("peak_rss_mb"),
         }
         try:
             fire_event(event_type, details, job_id=str(job_dict.get("id") or ""))
@@ -495,6 +545,8 @@ def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
         job["status"] = "cancelled"
         job["message"] = message
         job["progress"] = 0
+        job["exit_reason"] = "cancelled"
+        job["completed_at"] = time.time()
         cancelled_job = job.copy()
 
     _kill_job_process(job_id)
@@ -584,6 +636,8 @@ def _cleanup_old_jobs():
                 j["status"] = "error"
                 j["error"] = f"Job timed out (stuck for >{stuck_hrs:.0f} hours)"
                 j["message"] = "Timed out"
+                j["exit_reason"] = "timeout"
+                j["completed_at"] = now
                 logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, age)
                 jobs_to_persist.append(j.copy())
                 if jid in _job_processes:
@@ -830,6 +884,7 @@ def async_job(job_type: str, *, filepath_required: bool = True,
 
             def _process():
                 _thread_local.job_id = job_id
+                resource_sampler = None
                 try:
                     from opencut.server import _log_thread_local
                     _log_thread_local.job_id = job_id
@@ -840,12 +895,27 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         _update_job(job_id, message="Cancelled before starting", progress=0)
                         return
                     _update_job(job_id, started_at=time.time())
+                    try:
+                        from opencut.core.job_diagnostics import JobResourceSampler
+
+                        resource_sampler = JobResourceSampler()
+                        resource_sampler.start()
+                    except Exception as exc:  # noqa: BLE001 - diagnostics only
+                        logger.debug("Failed to start resource sampler for %s: %s", job_id, exc)
+                        resource_sampler = None
                     result = f(job_id, filepath, data)
+                    resource_update = _stop_resource_sampler(resource_sampler)
+                    resource_sampler = None
                     if not _is_cancelled(job_id):
                         _update_job(job_id, status="complete", progress=100,
-                                    result=result, message="Done")
+                                    result=result, message="Done",
+                                    **resource_update)
+                    else:
+                        _update_job(job_id, exit_reason="cancelled", **resource_update)
                 except Exception as e:
                     logger.exception("Job %s error in %s", job_id, job_type)
+                    resource_update = _stop_resource_sampler(resource_sampler)
+                    resource_sampler = None
                     update = {
                         "status": "error",
                         "error": str(e),
@@ -857,6 +927,13 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         update["retry_after"] = getattr(e, "retry_after")
                     if getattr(e, "queue_depth", None) is not None:
                         update["queue_depth"] = getattr(e, "queue_depth")
+                    update["exit_reason"] = _classify_exit_reason(
+                        "error",
+                        error=str(e),
+                        code=str(update.get("code") or ""),
+                        exc=e,
+                    )
+                    update.update(resource_update)
                     try:
                         from opencut.core.install_hints import suggestion_for_exception
 
@@ -867,6 +944,9 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         pass
                     _update_job(job_id, **update)
                 finally:
+                    resource_update = _stop_resource_sampler(resource_sampler)
+                    if resource_update:
+                        _update_job(job_id, **resource_update)
                     _thread_local.job_id = ""
                     try:
                         from opencut.server import _log_thread_local

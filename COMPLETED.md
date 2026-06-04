@@ -35,6 +35,7 @@ Last consolidated: 2026-06-04.
 | Plugin job registration | The May 26 plan now has N7 closed: plugin manifests can declare background jobs, and plugin routes can enqueue namespaced jobs through the core async-job tracker. |
 | Third-party agent skills | The May 26 plan now has N8 closed: validated user skills load from `~/.opencut/skills/<id>/`, share the `/agent/skills` catalogue, and reject unavailable route references at load time. |
 | CEP caption display settings | The May 26 plan now has E14 closed: the CEP Captions tab exposes the F236 display-settings card with token loading, live preview, and parity tests. |
+| Enriched job metadata | The May 26 plan now has N9 closed: live status, persisted history, diagnostics, and webhooks expose peak resource fields plus explicit terminal exit reasons. |
 
 ## Historical Detail
 

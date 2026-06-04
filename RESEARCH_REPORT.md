@@ -6,13 +6,14 @@ are archived under [docs/archive/research](docs/archive/research/).
 Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03;
 freshness refresh: 2026-06-04.
 
-2026-06-04 freshness refresh: the N8 third-party skill loader and E14 CEP
-caption display-settings parity work are now represented as shipped in the live
-v4.96 docs, so no new duplicate extensibility/accessibility rows were promoted.
-Focused verification passed for the N8 skill tests and the E14 CEP/UXP caption
-display-setting UI gates; the route manifest remained at 1,522 routes / 107
-blueprints, and `py -3.12 scripts/sync_version.py --check` kept v1.32.0 in
-sync. Current
+2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
+caption display-settings parity work, and N9 enriched job metadata are now
+represented as shipped in the live v4.97 docs, so no new duplicate
+extensibility/accessibility/observability rows were promoted. Focused
+verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
+UI gates, and N9 job metadata gates; the route manifest now reports 1,523
+routes / 107 blueprints, and `py -3.12 scripts/sync_version.py --check` kept
+v1.32.0 in sync. Current
 external anchors still support the existing backlog shape: Adobe documents UXP
 as the Premiere v25.6+ extensibility path (`https://developer.adobe.com/premiere-pro/uxp/`),
 Adobe's UXP API guidance warns that newer UXP APIs fail on older host versions
@@ -23,17 +24,17 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
-N9/N10/E12/E13/E15 plus external F202/F252 and the RA-03..RA-10 research
-items below.
+N10/E12/E13/E15 plus external F202/F252 and the RA-03..RA-10 research items
+below.
 
 ## Executive Summary
 
 OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
-(1,522 routes / 107 blueprints / ~599 core modules, 8,700+ tests) that exposes
+(1,523 routes / 107 blueprints / ~599 core modules, 8,700+ tests) that exposes
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1–N8, E11, E14) is now shipped through v4.96; the strongest remaining
+(N1–N9, E11, E14) is now shipped through v4.97; the strongest remaining
 direction is **not** another wave of model surfaces but making the existing
 surface easier to run, debug, resume, extend, and trust.
 
@@ -46,7 +47,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
    error envelope users actually copy into bug reports. [Verified]
 2. **`PRAGMA user_version` schema versioning** for the two SQLite stores
    (RA-05) — migrations are currently ad-hoc `ALTER TABLE` in try/except; N5
-   has now added resume columns and N9 will add more metadata. [Verified]
+   added resume columns and N9 has now added more metadata. [Verified]
 3. **Guard + back up destructive wipes** (RA-06) — `journal.clear_all()`, plugin
    `uninstall`, and the cache-clear route delete user state with no dry-run,
    confirm token, or recoverable backup. [Verified]
@@ -68,8 +69,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 ## Evidence Reviewed
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
-  start of this pass. The N1–N8/E11/E14 continuation queue is now closed
-  through v4.96, with the earlier checkpoints in `b228e42`, `ae25c96`,
+  start of this pass. The N1–N9/E11/E14 continuation queue is now closed
+  through v4.97, with the earlier checkpoints in `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
@@ -117,7 +118,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Audio cleanup / pro chain | `/audio*` | `core/audio_*` | mature | tested |
 | Review bundles + markers | `/review*`, `/collab*` | `core/review*`, `annotations.py` | mature (F225–F229) | tested |
 | Shorts A/B variants | route/skill | `core/ab_variant.py`, `best_take.py` | shipped | tested |
-| MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,465 opt-in | tested |
+| MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,466 opt-in | tested |
 | Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; background jobs now use the core async-job tracker; no hot-reload, no backup on uninstall | partial |
 | Agent skills | built-in + validated user packages | `core/agent_skills.py` | user loader shipped (N8); no marketplace UI | tested |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
@@ -146,8 +147,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 - **Major — no `request_id` in error bodies.** Header-only correlation forces
   users to read response headers to file a useful bug report. → RA-04.
-- **Major — ad-hoc SQLite migrations, no `user_version`.** N5 has added
-  columns and N9 will add more onto a versionless schema; no downgrade
+- **Major — ad-hoc SQLite migrations, no `user_version`.** N5 and N9 added
+  columns onto a versionless schema; no downgrade
   detection. → RA-05.
 - **Major — destructive wipes without guard/backup.** `journal.clear_all()`
   (the rollback ledger), plugin uninstall, cache clear. → RA-06.
@@ -206,9 +207,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 ## Open Questions
 
-- **RA-05 after N5:** N5 shipped with an idempotent ad-hoc migration to avoid
-  blocking crash-recovery work, but `PRAGMA user_version` remains the right
-  follow-up before N9 adds more job metadata columns.
+- **RA-05 after N5/N9:** N5 and N9 shipped with idempotent ad-hoc migrations to
+  avoid blocking crash-recovery and observability work, but `PRAGMA
+  user_version` remains the right follow-up now that `jobs.db` has more
+  additive columns.
 - **RA-09 round-trip fidelity** cannot be verified without a live Premiere
   install. [Needs validation] — needs a real export→edit→import loop before
   committing to a styling-metadata schema.
