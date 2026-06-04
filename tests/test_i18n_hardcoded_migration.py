@@ -29,6 +29,63 @@ EN_JSON = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "locales" /
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
 
 
+WORKSPACE_METADATA_CALLS = (
+    # Twenty-ninth batch (workspace header/stage metadata).
+    ("tabs.cut_desc", re.compile(r'cut:\s*"Remove dead space')),
+    ("tabs.captions_desc", re.compile(r'captions:\s*"Transcribe, edit')),
+    ("tabs.audio_desc", re.compile(r'audio:\s*"Repair dialogue')),
+    ("tabs.video_desc", re.compile(r'video:\s*"Analyze, repair')),
+    ("tabs.export_desc", re.compile(r'export:\s*"Package deliverables')),
+    ("tabs.timeline_desc", re.compile(r'timeline:\s*"Send markers')),
+    ("tabs.search_desc", re.compile(r'nlp:\s*"Search footage')),
+    ("tabs.settings_desc", re.compile(r'settings:\s*"Manage backend health')),
+    (
+        "tabs.default_desc",
+        re.compile(r'\|\|\s*"Focused tools for the current editing workflow\."'),
+    ),
+    ("workspace.cut_kicker", re.compile(r'kicker:\s*"Cut Pass"')),
+    ("workspace.cut_idle_title", re.compile(r'idleTitle:\s*"Select media to start the cut pass\."')),
+    ("workspace.cut_idle_copy", re.compile(r'idleCopy:\s*"Choose a source')),
+    ("workspace.cut_ready_title", re.compile(r'readyTitle:\s*"Cut tools are ready')),
+    ("workspace.cut_ready_copy", re.compile(r'readyCopy:\s*"Run cleanup')),
+    ("workspace.captions_kicker", re.compile(r'kicker:\s*"Transcript Flow"')),
+    ("workspace.captions_idle_title", re.compile(r'idleTitle:\s*"Select media to build transcript')),
+    ("workspace.captions_idle_copy", re.compile(r'idleCopy:\s*"Create captions')),
+    ("workspace.captions_ready_title", re.compile(r'readyTitle:\s*"Caption tools are ready')),
+    ("workspace.captions_ready_copy", re.compile(r'readyCopy:\s*"Transcribe once')),
+    ("workspace.audio_kicker", re.compile(r'kicker:\s*"Audio Pass"')),
+    ("workspace.audio_idle_title", re.compile(r'idleTitle:\s*"Select media to start the audio pass\."')),
+    ("workspace.audio_idle_copy", re.compile(r'idleCopy:\s*"Denoise, normalize')),
+    ("workspace.audio_ready_title", re.compile(r'readyTitle:\s*"Audio tools are ready')),
+    ("workspace.audio_ready_copy", re.compile(r'readyCopy:\s*"Move from repair')),
+    ("workspace.video_kicker", re.compile(r'kicker:\s*"Finishing"')),
+    ("workspace.video_idle_title", re.compile(r'idleTitle:\s*"Select media to start finishing\."')),
+    ("workspace.video_idle_copy", re.compile(r'idleCopy:\s*"Analyze scenes')),
+    ("workspace.video_ready_title", re.compile(r'readyTitle:\s*"Video tools are ready')),
+    ("workspace.video_ready_copy", re.compile(r'readyCopy:\s*"Explore crops')),
+    ("workspace.export_kicker", re.compile(r'kicker:\s*"Delivery"')),
+    ("workspace.export_idle_title", re.compile(r'idleTitle:\s*"Prepare delivery settings')),
+    ("workspace.export_idle_copy", re.compile(r'idleCopy:\s*"Set platform presets')),
+    ("workspace.export_ready_title", re.compile(r'readyTitle:\s*"Delivery tools are ready')),
+    ("workspace.export_ready_copy", re.compile(r'readyCopy:\s*"Package exports')),
+    ("workspace.timeline_kicker", re.compile(r'kicker:\s*"Write-Back"')),
+    ("workspace.timeline_idle_title", re.compile(r'idleTitle:\s*"Prepare timeline changes')),
+    ("workspace.timeline_idle_copy", re.compile(r'idleCopy:\s*"Review cuts')),
+    ("workspace.timeline_ready_title", re.compile(r'readyTitle:\s*"Timeline tools are ready')),
+    ("workspace.timeline_ready_copy", re.compile(r'readyCopy:\s*"Send markers')),
+    ("workspace.search_kicker", re.compile(r'kicker:\s*"Library Search"')),
+    ("workspace.search_idle_title", re.compile(r'idleTitle:\s*"Search footage and route commands\."')),
+    ("workspace.search_idle_copy", re.compile(r'idleCopy:\s*"Index media')),
+    ("workspace.search_ready_title", re.compile(r'readyTitle:\s*"Search tools are ready')),
+    ("workspace.search_ready_copy", re.compile(r'readyCopy:\s*"Keep the current clip')),
+    ("workspace.settings_kicker", re.compile(r'kicker:\s*"Studio Control"')),
+    ("workspace.settings_idle_title", re.compile(r'idleTitle:\s*"Review studio health')),
+    ("workspace.settings_idle_copy", re.compile(r'idleCopy:\s*"Check backend status')),
+    ("workspace.settings_ready_title", re.compile(r'readyTitle:\s*"Settings are ready')),
+    ("workspace.settings_ready_copy", re.compile(r'readyCopy:\s*"Keep backend health')),
+)
+
+
 MIGRATED_KEYS = (
     # First batch (the explicit RESEARCH_FEATURE_PLAN E6 list)
     "toast.server_reconnected",
@@ -2045,6 +2102,22 @@ class TestI18nHardcodedMigration(unittest.TestCase):
                 self.assertNotRegex(
                     self.js, banned_re,
                     f"main.js still contains bare-English showToast for {key!r}",
+                )
+
+    def test_workspace_metadata_routes_through_t(self):
+        for key, banned_re in WORKSPACE_METADATA_CALLS:
+            with self.subTest(key=key):
+                self.assertIn(key, self.en, f"en.json missing migrated key {key!r}")
+                self.assertTrue(self.en[key].strip(), f"en.json {key!r} has empty value")
+                self.assertRegex(
+                    self.js,
+                    re.compile(r't\(\s*["\']' + re.escape(key) + r'["\']'),
+                    f"main.js does not invoke t({key!r}, …) — migration may have reverted",
+                )
+                self.assertNotRegex(
+                    self.js,
+                    banned_re,
+                    f"main.js still contains bare-English workspace metadata for {key!r}",
                 )
 
 

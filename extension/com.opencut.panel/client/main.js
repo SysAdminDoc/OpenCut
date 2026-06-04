@@ -2807,74 +2807,96 @@
     // Tab Navigation
     // ================================================================
     var TAB_DESCRIPTIONS = {
-        cut: "Remove dead space, clean fillers, and review pacing from the active source.",
-        captions: "Transcribe, edit, style, translate, and export caption assets.",
-        audio: "Repair dialogue, balance stems, check loudness, and prep timing cues.",
-        video: "Analyze, repair, reframe, and finish image treatments for delivery.",
-        export: "Package deliverables, presets, thumbnails, and repeatable workflows.",
-        timeline: "Send markers, cuts, bins, and sequence changes back to Premiere.",
-        nlp: "Search footage and route editing commands from one command surface.",
-        settings: "Manage backend health, models, defaults, templates, and diagnostics."
+        cut: function () { return t("tabs.cut_desc", "Remove dead space, clean fillers, and review pacing from the active source."); },
+        captions: function () { return t("tabs.captions_desc", "Transcribe, edit, style, translate, and export caption assets."); },
+        audio: function () { return t("tabs.audio_desc", "Repair dialogue, balance stems, check loudness, and prep timing cues."); },
+        video: function () { return t("tabs.video_desc", "Analyze, repair, reframe, and finish image treatments for delivery."); },
+        export: function () { return t("tabs.export_desc", "Package deliverables, presets, thumbnails, and repeatable workflows."); },
+        timeline: function () { return t("tabs.timeline_desc", "Send markers, cuts, bins, and sequence changes back to Premiere."); },
+        nlp: function () { return t("tabs.search_desc", "Search footage and route editing commands from one command surface."); },
+        settings: function () { return t("tabs.settings_desc", "Manage backend health, models, defaults, templates, and diagnostics."); },
+        fallback: function () { return t("tabs.default_desc", "Focused tools for the current editing workflow."); }
     };
 
     var WORKSPACE_STAGE_META = {
-        cut: {
-            kicker: "Cut Pass",
-            idleTitle: "Select media to start the cut pass.",
-            idleCopy: "Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace.",
-            readyTitle: "Cut tools are ready for the active source.",
-            readyCopy: "Run cleanup, review proposed edits, and send approved changes back to Premiere."
+        cut: function () {
+            return {
+                kicker: t("workspace.cut_kicker", "Cut Pass"),
+                idleTitle: t("workspace.cut_idle_title", "Select media to start the cut pass."),
+                idleCopy: t("workspace.cut_idle_copy", "Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace."),
+                readyTitle: t("workspace.cut_ready_title", "Cut tools are ready for the active source."),
+                readyCopy: t("workspace.cut_ready_copy", "Run cleanup, review proposed edits, and send approved changes back to Premiere.")
+            };
         },
-        captions: {
-            kicker: "Transcript Flow",
-            idleTitle: "Select media to build transcript assets.",
-            idleCopy: "Create captions, subtitles, transcript cleanup, chapters, and translations from one source.",
-            readyTitle: "Caption tools are ready for the active source.",
-            readyCopy: "Transcribe once, keep the text editable, then style, review, and export."
+        captions: function () {
+            return {
+                kicker: t("workspace.captions_kicker", "Transcript Flow"),
+                idleTitle: t("workspace.captions_idle_title", "Select media to build transcript assets."),
+                idleCopy: t("workspace.captions_idle_copy", "Create captions, subtitles, transcript cleanup, chapters, and translations from one source."),
+                readyTitle: t("workspace.captions_ready_title", "Caption tools are ready for the active source."),
+                readyCopy: t("workspace.captions_ready_copy", "Transcribe once, keep the text editable, then style, review, and export.")
+            };
         },
-        audio: {
-            kicker: "Audio Pass",
-            idleTitle: "Select media to start the audio pass.",
-            idleCopy: "Denoise, normalize, loudness-match, split stems, and build timing markers from one source.",
-            readyTitle: "Audio tools are ready for the active source.",
-            readyCopy: "Move from repair to loudness to music-aware timing without reloading media."
+        audio: function () {
+            return {
+                kicker: t("workspace.audio_kicker", "Audio Pass"),
+                idleTitle: t("workspace.audio_idle_title", "Select media to start the audio pass."),
+                idleCopy: t("workspace.audio_idle_copy", "Denoise, normalize, loudness-match, split stems, and build timing markers from one source."),
+                readyTitle: t("workspace.audio_ready_title", "Audio tools are ready for the active source."),
+                readyCopy: t("workspace.audio_ready_copy", "Move from repair to loudness to music-aware timing without reloading media.")
+            };
         },
-        video: {
-            kicker: "Finishing",
-            idleTitle: "Select media to start finishing.",
-            idleCopy: "Analyze scenes, reframe shots, enhance image quality, and create social versions from one source.",
-            readyTitle: "Video tools are ready for the active source.",
-            readyCopy: "Explore crops, color, scene detection, and short-form outputs without duplicate setup."
+        video: function () {
+            return {
+                kicker: t("workspace.video_kicker", "Finishing"),
+                idleTitle: t("workspace.video_idle_title", "Select media to start finishing."),
+                idleCopy: t("workspace.video_idle_copy", "Analyze scenes, reframe shots, enhance image quality, and create social versions from one source."),
+                readyTitle: t("workspace.video_ready_title", "Video tools are ready for the active source."),
+                readyCopy: t("workspace.video_ready_copy", "Explore crops, color, scene detection, and short-form outputs without duplicate setup.")
+            };
         },
-        export: {
-            kicker: "Delivery",
-            idleTitle: "Prepare delivery settings and workflows.",
-            idleCopy: "Set platform presets, batch workflows, transcript exports, and thumbnails before the final pass.",
-            readyTitle: "Delivery tools are ready for the active source.",
-            readyCopy: "Package exports, workflow presets, thumbnails, and handoff assets from the same context."
+        export: function () {
+            return {
+                kicker: t("workspace.export_kicker", "Delivery"),
+                idleTitle: t("workspace.export_idle_title", "Prepare delivery settings and workflows."),
+                idleCopy: t("workspace.export_idle_copy", "Set platform presets, batch workflows, transcript exports, and thumbnails before the final pass."),
+                readyTitle: t("workspace.export_ready_title", "Delivery tools are ready for the active source."),
+                readyCopy: t("workspace.export_ready_copy", "Package exports, workflow presets, thumbnails, and handoff assets from the same context.")
+            };
         },
-        timeline: {
-            kicker: "Write-Back",
-            idleTitle: "Prepare timeline changes for Premiere.",
-            idleCopy: "Review cuts, markers, OTIO, renaming, and export tasks before writing back.",
-            readyTitle: "Timeline tools are ready for the active source.",
-            readyCopy: "Send markers, multicam prep, clip management, and approved write-back actions to Premiere."
+        timeline: function () {
+            return {
+                kicker: t("workspace.timeline_kicker", "Write-Back"),
+                idleTitle: t("workspace.timeline_idle_title", "Prepare timeline changes for Premiere."),
+                idleCopy: t("workspace.timeline_idle_copy", "Review cuts, markers, OTIO, renaming, and export tasks before writing back."),
+                readyTitle: t("workspace.timeline_ready_title", "Timeline tools are ready for the active source."),
+                readyCopy: t("workspace.timeline_ready_copy", "Send markers, multicam prep, clip management, and approved write-back actions to Premiere.")
+            };
         },
-        nlp: {
-            kicker: "Library Search",
-            idleTitle: "Search footage and route commands.",
-            idleCopy: "Index media, find clips by meaning, and send the next action to the right toolset.",
-            readyTitle: "Search tools are ready for the active source.",
-            readyCopy: "Keep the current clip in context while you search, compare, and route follow-up actions."
+        nlp: function () {
+            return {
+                kicker: t("workspace.search_kicker", "Library Search"),
+                idleTitle: t("workspace.search_idle_title", "Search footage and route commands."),
+                idleCopy: t("workspace.search_idle_copy", "Index media, find clips by meaning, and send the next action to the right toolset."),
+                readyTitle: t("workspace.search_ready_title", "Search tools are ready for the active source."),
+                readyCopy: t("workspace.search_ready_copy", "Keep the current clip in context while you search, compare, and route follow-up actions.")
+            };
         },
-        settings: {
-            kicker: "Studio Control",
-            idleTitle: "Review studio health and defaults.",
-            idleCopy: "Check backend status, models, engine routing, templates, and diagnostics from one control center.",
-            readyTitle: "Settings are ready for this session.",
-            readyCopy: "Keep backend health, models, templates, engine routing, and diagnostics aligned with the current workflow."
+        settings: function () {
+            return {
+                kicker: t("workspace.settings_kicker", "Studio Control"),
+                idleTitle: t("workspace.settings_idle_title", "Review studio health and defaults."),
+                idleCopy: t("workspace.settings_idle_copy", "Check backend status, models, engine routing, templates, and diagnostics from one control center."),
+                readyTitle: t("workspace.settings_ready_title", "Settings are ready for this session."),
+                readyCopy: t("workspace.settings_ready_copy", "Keep backend health, models, templates, engine routing, and diagnostics aligned with the current workflow.")
+            };
         }
     };
+
+    function getWorkspaceStageMeta(tabName) {
+        var factory = WORKSPACE_STAGE_META[tabName] || WORKSPACE_STAGE_META.cut;
+        return factory();
+    }
 
     function getActiveNavTabName() {
         var activeNav = document.querySelector(".nav-tab.active");
@@ -2895,14 +2917,15 @@
             el.contentTitle.textContent = titleText || tabName;
         }
         if (el.contentSubtitle) {
-            el.contentSubtitle.textContent = TAB_DESCRIPTIONS[tabName] || "Focused tools for the current editing workflow.";
+            var descriptionFactory = TAB_DESCRIPTIONS[tabName] || TAB_DESCRIPTIONS.fallback;
+            el.contentSubtitle.textContent = descriptionFactory();
         }
         updateWorkspaceStageSession(titleText || tabName);
     }
 
     function updateWorkspaceStageSession(activeTitle) {
         var activeTab = getActiveNavTabName();
-        var stageMeta = WORKSPACE_STAGE_META[activeTab] || WORKSPACE_STAGE_META.cut;
+        var stageMeta = getWorkspaceStageMeta(activeTab);
         var stageKicker = stageMeta.kicker;
         var stageTitle = stageMeta.idleTitle;
         var stageCopy = stageMeta.idleCopy;
@@ -11761,6 +11784,12 @@
             var translated = t(k, fallback);
             if (labelTarget) labelTarget.textContent = translated;
             else els[i].textContent = translated;
+        }
+        if (el.contentSubtitle) {
+            updateContentHeader(
+                getActiveNavTabName(),
+                el.contentTitle ? el.contentTitle.textContent : getActiveNavTabName()
+            );
         }
     }
 
