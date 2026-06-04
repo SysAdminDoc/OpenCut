@@ -8213,18 +8213,22 @@
     function getNotificationHeading(tone, message) {
         var lower = String(message || "").toLowerCase();
         if (tone === "success") {
-            return /(saved|loaded|opened|exported|copied|ready)/.test(lower) ? "Ready" : "Done";
+            return /(saved|loaded|opened|exported|copied|ready)/.test(lower)
+                ? t("notification.heading_ready", "Ready")
+                : t("notification.heading_done", "Done");
         }
         if (tone === "warning") {
-            return /(select|choose|enter|required)/.test(lower) ? "Action needed" : "Heads up";
+            return /(select|choose|enter|required)/.test(lower)
+                ? t("notification.heading_action_needed", "Action needed")
+                : t("notification.heading_heads_up", "Heads up");
         }
         if (tone === "error") {
-            return "Needs attention";
+            return t("notification.heading_needs_attention", "Needs attention");
         }
         if (/(step \d+\/\d+|installing|reinstalling|restarting|loading|checking|processing|transcribing|translating|burning|indexing)/.test(lower)) {
-            return "In progress";
+            return t("notification.heading_in_progress", "In progress");
         }
-        return "Status update";
+        return t("notification.heading_status_update", "Status update");
     }
 
     function getNotificationIconSvg(tone) {
@@ -8291,18 +8295,25 @@
     function _sessionCtxRelativeTime(unixSec) {
         if (!unixSec) return "";
         var delta = Date.now() / 1000 - unixSec;
-        if (delta < 45) return "just now";
-        if (delta < 90) return "1 min ago";
-        if (delta < 3600) return Math.round(delta / 60) + " min ago";
-        if (delta < 7200) return "1 hr ago";
-        if (delta < 86400) return Math.round(delta / 3600) + " hr ago";
-        if (delta < 172800) return "yesterday";
-        return Math.round(delta / 86400) + " days ago";
+        if (delta < 45) return t("session.relative_just_now", "just now");
+        if (delta < 90) return t("session.relative_minute", "1 min ago");
+        if (delta < 3600) {
+            return t("session.relative_minutes", "{count} min ago")
+                .replace("{count}", Math.round(delta / 60));
+        }
+        if (delta < 7200) return t("session.relative_hour", "1 hr ago");
+        if (delta < 86400) {
+            return t("session.relative_hours", "{count} hr ago")
+                .replace("{count}", Math.round(delta / 3600));
+        }
+        if (delta < 172800) return t("session.relative_yesterday", "yesterday");
+        return t("session.relative_days", "{count} days ago")
+            .replace("{count}", Math.round(delta / 86400));
     }
 
     function _sessionCtxClipName(job) {
         var path = job.filepath || "";
-        if (!path) return "No clip";
+        if (!path) return t("session.no_clip", "No clip");
         var parts = path.split(/[\\/]/);
         return parts[parts.length - 1] || path;
     }
@@ -8326,7 +8337,7 @@
 
         el.sessionContext.classList.remove("hidden");
         el.sessionContextBody.innerHTML =
-            '<div class="session-context-loading">Loading recent work…</div>';
+            '<div class="session-context-loading">' + esc(t("session.loading_recent_work", "Loading recent work…")) + '</div>';
 
         var historyPending = true, interruptedPending = true;
         var historyData = [], interruptedData = [];
@@ -9877,10 +9888,10 @@
     }
 
     function getJobHistoryStatusLabel(status) {
-        if (status === "error") return "Needs attention";
-        if (status === "cancelled") return "Cancelled";
-        if (status === "running") return "Running";
-        return "Complete";
+        if (status === "error") return t("history.status_needs_attention", "Needs attention");
+        if (status === "cancelled") return t("history.status_cancelled", "Cancelled");
+        if (status === "running") return t("history.status_running", "Running");
+        return t("history.status_complete", "Complete");
     }
 
     function getJobHistorySourcePath(entry) {
