@@ -3,14 +3,13 @@
 Root synthesis of current research and planning inputs. Detailed research plans
 are archived under [docs/archive/research](docs/archive/research/).
 
-Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03;
-freshness refresh: 2026-06-04.
+Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.129 docs; E15
-also has its fourth through thirty-second rolling i18n batches recorded there. No new duplicate
+route escape hatch are now represented as shipped in the live v4.130 docs; E15
+also has its fourth through thirty-third rolling i18n batches recorded there. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
 verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
@@ -30,6 +29,8 @@ Generative Extend remains a current Premiere feature
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
 E15 plus external F202/F252 and the RA-01..RA-12 research items below.
+Cycle 2 added UXP packaging-trust guardrails from Adobe's current manifest,
+filesystem, API-reference, changelog, and Hybrid Plugin build docs.
 
 ## Executive Summary
 
@@ -39,7 +40,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.129; the strongest remaining direction is **not** another wave of
+rolling in v4.130; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -70,12 +71,18 @@ opportunities it surfaced — all net-new versus the open continuation queue:
    differentiator OpenCut does not yet match. [Likely]
 10. **"Magic clips" long-form-to-shorts macro** (RA-10) — 2026 table-stakes for
     the shorts persona; composable from existing primitives. [Likely]
+11. **Minimize UXP filesystem permissions** (RA-11) — the base UXP manifest still
+    asks for `fullAccess` even though picker-based `request` access should cover
+    normal import/export browsing. [Verified]
+12. **Add F253 Hybrid Plugin package validation** (RA-12) — Adobe now documents
+    Premiere 26.2 `.uxpaddon` support; OpenCut should validate package layout and
+    platform binaries before treating native add-ons as distribution-ready. [Verified]
 
 ## Evidence Reviewed
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
   start of this pass. The N1-N10/E11/E12/E13/E14 continuation queue is now closed
-  through v4.100, E15 has v4.101-v4.129 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
+  through v4.100, E15 has v4.101-v4.130 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
@@ -90,13 +97,22 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **Extensibility:** `opencut/core/agent_skills.py` (N8 user loader now scans
   validated `~/.opencut/skills/<id>/` packages), `opencut/routes/plugins.py` (install requires
   restart to load routes; uninstall `shutil.rmtree` with no backup).
+- **UXP packaging:** `extension/com.opencut.uxp/manifest.json`
+  (`localFileSystem: "fullAccess"`), `extension/com.opencut.uxp/main.js`
+  picker helpers, `docs/UXP_MIGRATION.md` F253 residual plan, and Adobe's UXP
+  manifest/filesystem/Hybrid Plugin docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`,
+  `https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/`,
+  `https://developer.adobe.com/premiere-pro/uxp/changelog/`,
+  `https://developer.adobe.com/premiere-pro/uxp/plugins/hybrid-plugins/build/`).
 - **Security/bind:** `opencut/server.py` loopback default + `OPENCUT_ALLOW_REMOTE`
   gate + F112 token requirement on remote bind — confirmed sound.
 - **External sources (2026):** Adobe Firefly AI Assistant launch + Premiere
   Generative Extend ([news.adobe.com](https://news.adobe.com/news/2026/04/adobe-new-creative-agent),
   [helpx.adobe.com generative-extend](https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html));
   AutoCut vs Submagic caption comparison ([autocut.com](https://www.autocut.com/en/blogs/AutoCut-vs-Submagic/));
-  Submagic 2026 review / Magic Clips ([max-productive.ai](https://max-productive.ai/ai-tools/submagic/)).
+  Submagic 2026 review / Magic Clips ([max-productive.ai](https://max-productive.ai/ai-tools/submagic/));
+  Adobe UXP manifest/filesystem guidance and Premiere 26.2 Hybrid Plugin docs
+  (links in UXP packaging bullet above).
 - **Unverifiable here:** live coverage floor (F205 runs time out on this VM),
   live Premiere round-trip behavior (no Premiere on this machine), live Apple
   notarization (needs secrets + macOS runner).
@@ -128,6 +144,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; background jobs now use the core async-job tracker; no hot-reload, no backup on uninstall | partial |
 | Agent skills | built-in + validated user packages | `core/agent_skills.py` | user loader shipped (N8); no marketplace UI | tested |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
+| UXP packaging trust | manifest + release gates | `extension/com.opencut.uxp/manifest.json`, `bolt-webview/uxp.config.ts`, `docs/UXP_MIGRATION.md` | new RA-11/RA-12 guardrail work | planned |
 
 ## Competitive Landscape
 
@@ -165,6 +182,13 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   RA-08.
 - **Cosmetic — Ruff/Python target skew** and **requirements/pyproject pin
   drift.** → RA-01, RA-02.
+- **Packaging trust — base UXP requests broad filesystem access.** Adobe
+  recommends `request` for user-selected files and warns users may deny
+  `fullAccess`; OpenCut should reserve broad/direct path access for justified
+  hybrid or direct-path cases. → RA-11.
+- **Packaging trust — F253 lacks a pre-native package validator.** Hybrid
+  `.uxpaddon` work now has official Premiere 26.2 documentation; CI should catch
+  broken addon folder/architecture layouts before distribution. → RA-12.
 
 ## Architecture & Technical Findings
 
@@ -181,6 +205,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   lint target skew (RA-01), not vulnerable pins.
 - **Release automation** is extensive (route manifest, OpenAPI, version sync,
   release smoke with 16 chained gates, signing/notarization wiring).
+- **UXP distribution posture** should split base-package trust from optional
+  Hybrid Plugin power: the base panel can likely use picker-scoped filesystem
+  access, while F253 native add-ons need a stricter package validator and host
+  version/capability gate.
 
 ## Security / Privacy / Data Safety
 
@@ -191,6 +219,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **Data-safety gap** [Verified]: destructive local-state wipes lack the
   dry-run/confirm/backup posture the project applies elsewhere (RA-06). This is
   the top safety item in this pass.
+- **Install-trust gap** [Verified]: broad UXP `fullAccess` is avoidable if
+  picker-scoped access covers current import/export browse flows (RA-11).
 
 ## UX & Accessibility
 
@@ -199,6 +229,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   remain in place.
 - The competitive UX gap is timeline-native caption round-trip (RA-09), where a
   reviewer would otherwise choose AutoCut.
+- The distribution UX gap is trust at install time: a least-privilege UXP
+  manifest and validated optional Hybrid Plugin package make the post-CEP path
+  easier to accept in Adobe Marketplace or enterprise installs (RA-11/RA-12).
 
 ## Explicit Non-Goals
 
@@ -222,6 +255,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   committing to a styling-metadata schema.
 - **Coverage floor** (F205) remains unmeasured on this VM (runs time out); not a
   blocker for these doc-only additions.
+- **RA-11 live permission behavior** needs a UDT smoke after switching to
+  `request`, because picker token persistence and project-folder export behavior
+  must be validated in Premiere rather than inferred from docs alone.
 
 ## Research Inputs (archived)
 

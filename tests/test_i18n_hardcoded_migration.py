@@ -417,6 +417,25 @@ MIGRATED_KEYS = (
     "error.gpu_out_of_memory",
     "error.file_not_found_reselect",
     "error.too_many_jobs",
+    # Thirty-third batch (helper/status microcopy).
+    "alert.issue_bundle_url",
+    "alert.no_demo_footage",
+    "audio.measuring",
+    "common.auto",
+    "interview.server_disconnected",
+    "interview.select_clip_to_run",
+    "interview.runs_on",
+    "social.view_on",
+    "social.connected_as",
+    "social.uploaded_to",
+    "toast.bridgetalk_async_ready",
+    "toast.demo_fetch_failed",
+    "toast.demo_loaded",
+    "toast.issue_report_opened",
+    "video.realesrgan_not_installed",
+    "video.rembg_not_installed",
+    "video.watermark_detected_region",
+    "video.watermark_not_detected",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2047,6 +2066,97 @@ EXPECTED_CALLS = (
         "error.too_many_jobs",
         re.compile(r't\(\s*"error\.too_many_jobs"'),
         re.compile(r'msg:\s*"Too many jobs running'),
+    ),
+    # --- Thirty-third batch -----------------------------------------
+    (
+        "alert.issue_bundle_url",
+        re.compile(r't\(\s*"alert\.issue_bundle_url"'),
+        re.compile(r'showAlert\(\s*"Issue bundle URL'),
+    ),
+    (
+        "alert.no_demo_footage",
+        re.compile(r't\(\s*"alert\.no_demo_footage"'),
+        re.compile(r'showAlert\(\s*"No demo footage found'),
+    ),
+    (
+        "audio.measuring",
+        re.compile(r't\(\s*"audio\.measuring"'),
+        re.compile(r'meterLUFS\.textContent\s*=\s*"Measuring'),
+    ),
+    (
+        "common.auto",
+        re.compile(r't\(\s*"common\.auto"'),
+        re.compile(r'data\.method\s*\|\|\s*"auto"'),
+    ),
+    (
+        "interview.server_disconnected",
+        re.compile(r't\(\s*"interview\.server_disconnected"'),
+        re.compile(r'interviewPolishHint\.textContent\s*=\s*"Server disconnected'),
+    ),
+    (
+        "interview.select_clip_to_run",
+        re.compile(r't\(\s*"interview\.select_clip_to_run"'),
+        re.compile(r'interviewPolishHint\.textContent\s*=\s*"Select a clip to run'),
+    ),
+    (
+        "interview.runs_on",
+        re.compile(r't\(\s*"interview\.runs_on"'),
+        re.compile(r'interviewPolishHint\.textContent\s*=\s*"Runs on'),
+    ),
+    (
+        "social.view_on",
+        re.compile(r't\(\s*"social\.view_on"'),
+        re.compile(r'textContent\s*=\s*"View on "\s*\+'),
+    ),
+    (
+        "social.connected_as",
+        re.compile(r't\(\s*"social\.connected_as"'),
+        re.compile(r'textContent\s*=\s*"Connected as "\s*\+'),
+    ),
+    (
+        "social.uploaded_to",
+        re.compile(r't\(\s*"social\.uploaded_to"'),
+        re.compile(r'showToast\(\s*"Uploaded to "\s*\+'),
+    ),
+    (
+        "toast.bridgetalk_async_ready",
+        re.compile(r't\(\s*"toast\.bridgetalk_async_ready"'),
+        re.compile(r'showToast\(\s*"BridgeTalk async ready"'),
+    ),
+    (
+        "toast.demo_fetch_failed",
+        re.compile(r't\(\s*"toast\.demo_fetch_failed"'),
+        re.compile(r'showToast\(\s*"Demo fetch failed"'),
+    ),
+    (
+        "toast.demo_loaded",
+        re.compile(r't\(\s*"toast\.demo_loaded"'),
+        re.compile(r'showToast\(\s*"Loaded demo footage'),
+    ),
+    (
+        "toast.issue_report_opened",
+        re.compile(r't\(\s*"toast\.issue_report_opened"'),
+        re.compile(r'showToast\(\s*"Issue report opened'),
+    ),
+    (
+        "video.realesrgan_not_installed",
+        re.compile(r't\(\s*"video\.realesrgan_not_installed"'),
+        re.compile(r'textContent\s*=\s*"Real-ESRGAN not installed'),
+    ),
+    (
+        "video.rembg_not_installed",
+        re.compile(r't\(\s*"video\.rembg_not_installed"'),
+        re.compile(r'textContent\s*=\s*"rembg not installed'),
+    ),
+    (
+        "video.watermark_detected_region",
+        re.compile(r't\(\s*"video\.watermark_detected_region"'),
+        re.compile(r'setHintState\(resEl,\s*"Detected at'),
+    ),
+    (
+        "video.watermark_not_detected",
+        re.compile(r't\(\s*"video\.watermark_not_detected"'),
+        re.compile(r'setHintState\(resEl,\s*"No watermark detected'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
