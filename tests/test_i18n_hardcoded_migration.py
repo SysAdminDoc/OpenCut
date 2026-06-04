@@ -891,6 +891,19 @@ MIGRATED_KEYS = (
     "deliverables.project_folder_title",
     "deliverables.project_output_label",
     "deliverables.vfx_sheet_label",
+    # Sixtieth batch (timeline multicam/repeat feedback).
+    "timeline.multicam_cuts_applied",
+    "timeline.multicam_cuts_generated",
+    "timeline.multicam_speaker_label",
+    "timeline.multicam_track_label",
+    "timeline.no_cuts_available",
+    "timeline.no_multicam_cuts",
+    "timeline.no_repeat_cuts",
+    "timeline.no_repeats_found",
+    "timeline.no_rules_yet",
+    "timeline.repeat_badge",
+    "timeline.repeat_cuts_ready",
+    "timeline.repeat_found_summary",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4792,6 +4805,67 @@ EXPECTED_CALLS = (
         "deliverables.vfx_sheet_label",
         re.compile(r't\(\s*"deliverables\.vfx_sheet_label"'),
         re.compile(r'"vfx-sheet":\s*"VFX Sheet"'),
+    ),
+    # --- Sixtieth batch --------------------------------------------
+    (
+        "timeline.multicam_cuts_applied",
+        re.compile(r't\(\s*"timeline\.multicam_cuts_applied"'),
+        re.compile(r'showToast\("Multicam cuts applied: "\s*\+'),
+    ),
+    (
+        "timeline.multicam_cuts_generated",
+        re.compile(r't\(\s*"timeline\.multicam_cuts_generated"'),
+        re.compile(r'sum\.textContent\s*=\s*\(r\.total_cuts.*\+\s*" cuts generated\."'),
+    ),
+    (
+        "timeline.multicam_speaker_label",
+        re.compile(r't\(\s*"timeline\.multicam_speaker_label"'),
+        re.compile(r'multicam-track-label">Speaker \'\s*\+'),
+    ),
+    (
+        "timeline.multicam_track_label",
+        re.compile(r't\(\s*"timeline\.multicam_track_label"'),
+        re.compile(r'multicam-track-arrow">\\u2192 Track'),
+    ),
+    (
+        "timeline.no_cuts_available",
+        re.compile(r't\(\s*"timeline\.no_cuts_available"'),
+        re.compile(r'showAlert\("No cuts available\. Run Silence Removal or Repeat Detection first\."'),
+    ),
+    (
+        "timeline.no_multicam_cuts",
+        re.compile(r't\(\s*"timeline\.no_multicam_cuts"'),
+        re.compile(r'showAlert\("No multicam cuts available\."'),
+    ),
+    (
+        "timeline.no_repeat_cuts",
+        re.compile(r't\(\s*"timeline\.no_repeat_cuts"'),
+        re.compile(r'showAlert\("No repeat cuts available\."'),
+    ),
+    (
+        "timeline.no_repeats_found",
+        re.compile(r't\(\s*"timeline\.no_repeats_found"'),
+        re.compile(r'<div class="hint">No repeats found\.</div>'),
+    ),
+    (
+        "timeline.no_rules_yet",
+        re.compile(r't\(\s*"timeline\.no_rules_yet"'),
+        re.compile(r'container\.innerHTML\s*=\s*\'<div class="hint">No rules yet\. Click "\+ Add Rule"\.'),
+    ),
+    (
+        "timeline.repeat_badge",
+        re.compile(r't\(\s*"timeline\.repeat_badge"'),
+        re.compile(r'analysis-item-badge">Repeat'),
+    ),
+    (
+        "timeline.repeat_cuts_ready",
+        re.compile(r't\(\s*"timeline\.repeat_cuts_ready"'),
+        re.compile(r'tlStatus\) tlStatus\.textContent\s*=\s*repeatCutsData\.length\s*\+\s*" repeat cuts ready to review\."'),
+    ),
+    (
+        "timeline.repeat_found_summary",
+        re.compile(r't\(\s*"timeline\.repeat_found_summary"'),
+        re.compile(r'sum\.textContent\s*=\s*"Found "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
