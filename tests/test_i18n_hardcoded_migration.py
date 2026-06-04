@@ -1079,6 +1079,27 @@ MIGRATED_KEYS = (
     "media.meta_resolution",
     "media.meta_transcript_cached",
     "media.meta_video",
+    # Seventy-fifth batch (notification and history status labels).
+    "history.status_cancelled",
+    "history.status_complete",
+    "history.status_needs_attention",
+    "history.status_running",
+    "notification.heading_action_needed",
+    "notification.heading_done",
+    "notification.heading_heads_up",
+    "notification.heading_in_progress",
+    "notification.heading_needs_attention",
+    "notification.heading_ready",
+    "notification.heading_status_update",
+    "session.loading_recent_work",
+    "session.no_clip",
+    "session.relative_days",
+    "session.relative_hour",
+    "session.relative_hours",
+    "session.relative_just_now",
+    "session.relative_minute",
+    "session.relative_minutes",
+    "session.relative_yesterday",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5868,6 +5889,107 @@ EXPECTED_CALLS = (
         "media.meta_video",
         re.compile(r't\(\s*"media\.meta_video"'),
         re.compile(r'data\.video\.width\s*\+\s*"x"\s*\+\s*data\.video\.height\s*\+\s*" @ "'),
+    ),
+    # --- Seventy-fifth batch -------------------------------------
+    (
+        "history.status_cancelled",
+        re.compile(r't\(\s*"history\.status_cancelled"'),
+        re.compile(r'if \(status === "cancelled"\) return "Cancelled"'),
+    ),
+    (
+        "history.status_complete",
+        re.compile(r't\(\s*"history\.status_complete"'),
+        re.compile(r'return "Complete";\s*\n\s*}\s*\n\s*function getJobHistorySourcePath'),
+    ),
+    (
+        "history.status_needs_attention",
+        re.compile(r't\(\s*"history\.status_needs_attention"'),
+        re.compile(r'if \(status === "error"\) return "Needs attention"'),
+    ),
+    (
+        "history.status_running",
+        re.compile(r't\(\s*"history\.status_running"'),
+        re.compile(r'if \(status === "running"\) return "Running"'),
+    ),
+    (
+        "notification.heading_action_needed",
+        re.compile(r't\(\s*"notification\.heading_action_needed"'),
+        re.compile(r'\?\s*"Action needed"\s*:\s*"Heads up"'),
+    ),
+    (
+        "notification.heading_done",
+        re.compile(r't\(\s*"notification\.heading_done"'),
+        re.compile(r'\?\s*"Ready"\s*:\s*"Done"'),
+    ),
+    (
+        "notification.heading_heads_up",
+        re.compile(r't\(\s*"notification\.heading_heads_up"'),
+        re.compile(r'\?\s*"Action needed"\s*:\s*"Heads up"'),
+    ),
+    (
+        "notification.heading_in_progress",
+        re.compile(r't\(\s*"notification\.heading_in_progress"'),
+        re.compile(r'return "In progress";'),
+    ),
+    (
+        "notification.heading_needs_attention",
+        re.compile(r't\(\s*"notification\.heading_needs_attention"'),
+        re.compile(r'if \(tone === "error"\) {\s*return "Needs attention";'),
+    ),
+    (
+        "notification.heading_ready",
+        re.compile(r't\(\s*"notification\.heading_ready"'),
+        re.compile(r'\?\s*"Ready"\s*:\s*"Done"'),
+    ),
+    (
+        "notification.heading_status_update",
+        re.compile(r't\(\s*"notification\.heading_status_update"'),
+        re.compile(r'return "Status update";'),
+    ),
+    (
+        "session.loading_recent_work",
+        re.compile(r't\(\s*"session\.loading_recent_work"'),
+        re.compile(r'session-context-loading">Loading recent work…</div>'),
+    ),
+    (
+        "session.no_clip",
+        re.compile(r't\(\s*"session\.no_clip"'),
+        re.compile(r'if \(!path\) return "No clip"'),
+    ),
+    (
+        "session.relative_days",
+        re.compile(r't\(\s*"session\.relative_days"'),
+        re.compile(r'Math\.round\(delta / 86400\)\s*\+\s*" days ago"'),
+    ),
+    (
+        "session.relative_hour",
+        re.compile(r't\(\s*"session\.relative_hour"'),
+        re.compile(r'return "1 hr ago"'),
+    ),
+    (
+        "session.relative_hours",
+        re.compile(r't\(\s*"session\.relative_hours"'),
+        re.compile(r'Math\.round\(delta / 3600\)\s*\+\s*" hr ago"'),
+    ),
+    (
+        "session.relative_just_now",
+        re.compile(r't\(\s*"session\.relative_just_now"'),
+        re.compile(r'return "just now"'),
+    ),
+    (
+        "session.relative_minute",
+        re.compile(r't\(\s*"session\.relative_minute"'),
+        re.compile(r'return "1 min ago"'),
+    ),
+    (
+        "session.relative_minutes",
+        re.compile(r't\(\s*"session\.relative_minutes"'),
+        re.compile(r'Math\.round\(delta / 60\)\s*\+\s*" min ago"'),
+    ),
+    (
+        "session.relative_yesterday",
+        re.compile(r't\(\s*"session\.relative_yesterday"'),
+        re.compile(r'return "yesterday"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
