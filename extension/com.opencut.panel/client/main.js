@@ -6913,7 +6913,8 @@
         if (!el.capDispPreviewBox || !el.capDispPreviewArea || !el.capDispPreviewSample) return;
         var styles = (payload && payload.preview_css) ? payload.preview_css : {};
         el.capDispPreviewBox.hidden = false;
-        el.capDispPreviewSample.textContent = (payload && payload.sample_text) || "Caption preview";
+        el.capDispPreviewSample.textContent = (payload && payload.sample_text)
+            || t("captions.display_preview_placeholder", "Caption preview");
         el.capDispPreviewSample.removeAttribute("style");
         if (styles.windowColor) {
             el.capDispPreviewArea.style.backgroundColor = styles.windowColor;
@@ -6928,18 +6929,20 @@
 
     function refreshCaptionDisplayPreview() {
         if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = true;
-        setCaptionDisplayStatus("Rendering preview...", "working");
+        setCaptionDisplayStatus(t("captions.display_rendering_preview", "Rendering preview..."), "working");
         api("POST", "/captions/display-settings/preview", {
             settings: readCaptionDisplaySettings(),
-            sample_text: "The quick brown fox jumps over the lazy dog."
+            sample_text: t("captions.display_sample_text", "The quick brown fox jumps over the lazy dog.")
         }, function (err, data) {
             if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = false;
             if (err || !data || data.error) {
-                setCaptionDisplayStatus("Preview failed: " + ((data && data.error) || (err && err.message) || "unknown"), "error");
+                var previewError = (data && data.error) || (err && err.message) || t("toast.unknown_error", "Unknown error");
+                setCaptionDisplayStatus(t("captions.display_preview_failed", "Preview failed: {error}")
+                    .replace("{error}", previewError), "error");
                 return;
             }
             applyCaptionDisplayPreview(data);
-            setCaptionDisplayStatus("Preview updated. These display tokens apply to caption burn-in.", "success");
+            setCaptionDisplayStatus(t("captions.display_preview_updated", "Preview updated. These display tokens apply to caption burn-in."), "success");
         });
     }
 
@@ -6951,14 +6954,14 @@
             var select = el[spec.id];
             if (select && defaults[spec.key]) select.value = defaults[spec.key];
         }
-        setCaptionDisplayStatus("Reset to FCC defaults. Click Preview to re-render.", "idle");
+        setCaptionDisplayStatus(t("captions.display_reset_defaults", "Reset to FCC defaults. Click Preview to re-render."), "idle");
     }
 
     function loadCaptionDisplayTokens() {
-        setCaptionDisplayStatus("Loading tokens...", "working");
+        setCaptionDisplayStatus(t("captions.display_loading_tokens", "Loading tokens..."), "working");
         api("GET", "/captions/display-settings/tokens", null, function (err, data) {
             if (err || !data || data.error) {
-                setCaptionDisplayStatus("Could not load FCC token schema.", "error");
+                setCaptionDisplayStatus(t("captions.display_schema_load_failed", "Could not load FCC token schema."), "error");
                 return;
             }
             populateCaptionDisplaySelects(data);
@@ -6968,7 +6971,7 @@
                     node.nodeValue = node.nodeValue.replace("2026-08-17", data.compliance_date);
                 }
             }
-            setCaptionDisplayStatus("Defaults loaded. Adjust tokens then Preview.", "idle");
+            setCaptionDisplayStatus(t("captions.display_defaults_loaded", "Defaults loaded. Adjust tokens then Preview."), "idle");
         });
     }
 

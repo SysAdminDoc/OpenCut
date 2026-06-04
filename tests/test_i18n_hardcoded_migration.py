@@ -206,6 +206,16 @@ MIGRATED_KEYS = (
     "transcript.editor_info",
     "transcript.editor_empty",
     "transcript.segment_textarea_label",
+    # Nineteenth batch (caption display-settings status feedback).
+    "captions.display_preview_placeholder",
+    "captions.display_rendering_preview",
+    "captions.display_sample_text",
+    "captions.display_preview_failed",
+    "captions.display_preview_updated",
+    "captions.display_reset_defaults",
+    "captions.display_loading_tokens",
+    "captions.display_schema_load_failed",
+    "captions.display_defaults_loaded",
 )
 
 
@@ -1030,6 +1040,52 @@ EXPECTED_CALLS = (
         "transcript.segment_textarea_label",
         re.compile(r't\(\s*"transcript\.segment_textarea_label"'),
         re.compile(r'aria-label="Transcript segment \'\s*\+\s*\(i \+ 1\)'),
+    ),
+    # --- Nineteenth batch -------------------------------------------
+    (
+        "captions.display_preview_placeholder",
+        re.compile(r't\(\s*"captions\.display_preview_placeholder"'),
+        re.compile(r'\|\|\s*"Caption preview"'),
+    ),
+    (
+        "captions.display_rendering_preview",
+        re.compile(r't\(\s*"captions\.display_rendering_preview"'),
+        re.compile(r'setCaptionDisplayStatus\("Rendering preview\.\.\."'),
+    ),
+    (
+        "captions.display_sample_text",
+        re.compile(r't\(\s*"captions\.display_sample_text"'),
+        re.compile(r'sample_text:\s*"The quick brown fox jumps over the lazy dog\."'),
+    ),
+    (
+        "captions.display_preview_failed",
+        re.compile(r't\(\s*"captions\.display_preview_failed"'),
+        re.compile(r'setCaptionDisplayStatus\("Preview failed: "\s*\+'),
+    ),
+    (
+        "captions.display_preview_updated",
+        re.compile(r't\(\s*"captions\.display_preview_updated"'),
+        re.compile(r'setCaptionDisplayStatus\("Preview updated\. These display tokens apply to caption burn-in\."'),
+    ),
+    (
+        "captions.display_reset_defaults",
+        re.compile(r't\(\s*"captions\.display_reset_defaults"'),
+        re.compile(r'setCaptionDisplayStatus\("Reset to FCC defaults\. Click Preview to re-render\."'),
+    ),
+    (
+        "captions.display_loading_tokens",
+        re.compile(r't\(\s*"captions\.display_loading_tokens"'),
+        re.compile(r'setCaptionDisplayStatus\("Loading tokens\.\.\."'),
+    ),
+    (
+        "captions.display_schema_load_failed",
+        re.compile(r't\(\s*"captions\.display_schema_load_failed"'),
+        re.compile(r'setCaptionDisplayStatus\("Could not load FCC token schema\."'),
+    ),
+    (
+        "captions.display_defaults_loaded",
+        re.compile(r't\(\s*"captions\.display_defaults_loaded"'),
+        re.compile(r'setCaptionDisplayStatus\("Defaults loaded\. Adjust tokens then Preview\."'),
     ),
 )
 
