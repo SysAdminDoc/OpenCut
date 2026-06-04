@@ -8,8 +8,8 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.137 docs; E15
-also has its fourth through fortieth rolling i18n batches recorded there. No new duplicate
+route escape hatch are now represented as shipped in the live v4.138 docs; E15
+also has its fourth through forty-first rolling i18n batches recorded there. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
 verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
@@ -28,10 +28,10 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
-E15 plus external F202/F252 and the RA-01..RA-13 research items below.
-Cycles 2 and 3 added UXP packaging-trust guardrails from Adobe's current
-manifest, filesystem, API-reference, changelog, Hybrid Plugin, and
-external-process docs.
+E15 plus external F202/F252 and the RA-01..RA-14 research items below.
+Cycles 2 through 4 added UXP packaging-trust guardrails from Adobe's current
+manifest, filesystem, API-reference, changelog, Hybrid Plugin, external-process,
+and WebView docs.
 
 ## Executive Summary
 
@@ -41,7 +41,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.137; the strongest remaining direction is **not** another wave of
+rolling in v4.138; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -82,12 +82,16 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     OAuth browser handoff uses `shell.openExternal` without a manifest
     `launchProcess` scheme allowlist, consent-dialog developer text, or denial
     result handling. [Verified]
+14. **Split UXP WebView dev and release bridge permissions** (RA-14) — the
+    dormant Bolt/WebView scaffold currently requires `localAndRemote` message
+    bridging and dev localhost domains even though release cutover should use
+    packaged local WebView content. [Verified]
 
 ## Evidence Reviewed
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
   start of this pass. The N1-N10/E11/E12/E13/E14 continuation queue is now closed
-  through v4.100, E15 has v4.101-v4.137 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
+  through v4.100, E15 has v4.101-v4.138 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
@@ -284,7 +288,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-13 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-14 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes

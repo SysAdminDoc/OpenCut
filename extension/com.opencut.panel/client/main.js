@@ -7462,14 +7462,14 @@
     var settingsLoaded = false;
     var _settingsStudioState = {
         backend: {
-            label: "Checking...",
+            label: t("settings.studio_backend_checking", "Checking..."),
             state: "working",
-            title: "Checking the local OpenCut backend."
+            title: t("settings.studio_backend_checking_title", "Checking the local OpenCut backend.")
         },
         speech: {
-            label: "Checking transcription...",
+            label: t("settings.studio_speech_checking", "Checking transcription..."),
             state: "working",
-            title: "Checking transcription readiness."
+            title: t("settings.studio_speech_checking_title", "Checking transcription readiness.")
         },
         bridge: {
             label: t("ws.studio_checking", "Checking live updates..."),
@@ -7495,14 +7495,14 @@
     function renderSettingsStudioOverview() {
         setStatusPill(
             "settingsBackendPill",
-            (_settingsStudioState.backend && _settingsStudioState.backend.label) || "Checking...",
+            (_settingsStudioState.backend && _settingsStudioState.backend.label) || t("settings.studio_backend_checking", "Checking..."),
             (_settingsStudioState.backend && _settingsStudioState.backend.state) || "working",
-            (_settingsStudioState.backend && _settingsStudioState.backend.title) || "Checking the local OpenCut backend."
+            (_settingsStudioState.backend && _settingsStudioState.backend.title) || t("settings.studio_backend_checking_title", "Checking the local OpenCut backend.")
         );
         setTextAndTitle(
             "settingsSpeechSummary",
-            (_settingsStudioState.speech && _settingsStudioState.speech.label) || "Checking transcription...",
-            (_settingsStudioState.speech && _settingsStudioState.speech.title) || "Checking transcription readiness."
+            (_settingsStudioState.speech && _settingsStudioState.speech.label) || t("settings.studio_speech_checking", "Checking transcription..."),
+            (_settingsStudioState.speech && _settingsStudioState.speech.title) || t("settings.studio_speech_checking_title", "Checking transcription readiness.")
         );
         setTextAndTitle(
             "settingsBridgeSummary",
@@ -7523,10 +7523,16 @@
 
         if (_settingsStudioState.backend && _settingsStudioState.backend.state === "error") {
             lineState = "error";
-            lineMessage = "Reconnect the local backend to restore captions, search, settings sync, and delivery tools.";
+            lineMessage = t(
+                "settings.studio_backend_reconnect",
+                "Reconnect the local backend to restore captions, search, settings sync, and delivery tools."
+            );
         } else if (_settingsStudioState.speech && _settingsStudioState.speech.state === "error") {
             lineState = "warning";
-            lineMessage = "Transcription still needs attention before captions, search indexing, and chapter generation will feel reliable.";
+            lineMessage = t(
+                "settings.studio_speech_warning",
+                "Transcription still needs attention before captions, search indexing, and chapter generation will feel reliable."
+            );
         } else if (_settingsStudioState.bridge && (_settingsStudioState.bridge.state === "warning" || _settingsStudioState.bridge.state === "error")) {
             lineState = "warning";
             lineMessage = t(
@@ -7547,13 +7553,24 @@
     function syncSettingsBackendSummary(ok) {
         if (ok) {
             var portLabel = (el.backendPort && el.backendPort.textContent) || BACKEND.replace("http://127.0.0.1:", "Port ");
-            setSettingsStudioState("backend", "Connected", "ready", portLabel + " is responding for local processing.");
+            setSettingsStudioState(
+                "backend",
+                t("settings.studio_backend_connected", "Connected"),
+                "ready",
+                t("settings.studio_backend_connected_title", "{port} is responding for local processing.")
+                    .replace("{port}", portLabel)
+            );
             return;
         }
-        setSettingsStudioState("backend", "Offline", "error", "Reconnect the local OpenCut backend to restore settings sync and processing.");
+        setSettingsStudioState(
+            "backend",
+            t("settings.studio_backend_offline", "Offline"),
+            "error",
+            t("settings.studio_backend_offline_title", "Reconnect the local OpenCut backend to restore settings sync and processing.")
+        );
         setStatusLine(
             "systemStatusLine",
-            "Reconnect the backend to review GPU acceleration, logs, and local service details.",
+            t("settings.system_reconnect_details", "Reconnect the backend to review GPU acceleration, logs, and local service details."),
             "warning"
         );
     }
@@ -7561,25 +7578,25 @@
     function updateWhisperSettingsState(healthData) {
         if (!healthData || healthData.status !== "ok") {
             if (el.whisperStatusText) {
-                el.whisperStatusText.textContent = "Unavailable";
+                el.whisperStatusText.textContent = t("whisper.status_unavailable", "Unavailable");
                 el.whisperStatusText.setAttribute("data-state", "error");
-                el.whisperStatusText.title = "Reconnect the backend to review transcription readiness.";
+                el.whisperStatusText.title = t("whisper.reconnect_status_title", "Reconnect the backend to review transcription readiness.");
             }
             if (el.whisperDeviceText) {
-                el.whisperDeviceText.textContent = "Reconnect backend";
+                el.whisperDeviceText.textContent = t("whisper.reconnect_backend", "Reconnect backend");
                 el.whisperDeviceText.setAttribute("data-state", "warning");
-                el.whisperDeviceText.title = "Reconnect the backend to inspect transcription device settings.";
+                el.whisperDeviceText.title = t("whisper.reconnect_device_title", "Reconnect the backend to inspect transcription device settings.");
             }
             setStatusLine(
                 "whisperStatusLine",
-                "Reconnect the backend before reviewing or installing transcription services.",
+                t("whisper.reconnect_status", "Reconnect the backend before reviewing or installing transcription services."),
                 "warning"
             );
             setSettingsStudioState(
                 "speech",
-                "Status unavailable",
+                t("whisper.speech_status_unavailable", "Status unavailable"),
                 "error",
-                "Reconnect the backend to review Whisper readiness."
+                t("whisper.speech_reconnect_title", "Reconnect the backend to review Whisper readiness.")
             );
             return;
         }
@@ -7622,25 +7639,25 @@
         }
 
         if (el.whisperStatusText) {
-            el.whisperStatusText.textContent = "Not installed";
+            el.whisperStatusText.textContent = t("whisper.not_installed", "Not installed");
             el.whisperStatusText.setAttribute("data-state", "error");
-            el.whisperStatusText.title = "Install Whisper to unlock transcription workflows.";
+            el.whisperStatusText.title = t("whisper.install_status_title", "Install Whisper to unlock transcription workflows.");
         }
         if (el.whisperDeviceText) {
-            el.whisperDeviceText.textContent = "Install required";
+            el.whisperDeviceText.textContent = t("whisper.install_required", "Install required");
             el.whisperDeviceText.setAttribute("data-state", "warning");
-            el.whisperDeviceText.title = "Install Whisper before captions, search indexing, and chapter generation will run.";
+            el.whisperDeviceText.title = t("whisper.install_required_title", "Install Whisper before captions, search indexing, and chapter generation will run.");
         }
         setStatusLine(
             "whisperStatusLine",
-            "Install Whisper to enable transcription, subtitle export, search indexing, and transcript-driven tools.",
+            t("whisper.install_status", "Install Whisper to enable transcription, subtitle export, search indexing, and transcript-driven tools."),
             "warning"
         );
         setSettingsStudioState(
             "speech",
-            "Install Whisper",
+            t("whisper.install_label", "Install Whisper"),
             "error",
-            "Install Whisper to enable captions, search indexing, and transcript-driven tools."
+            t("whisper.install_summary", "Install Whisper to enable captions, search indexing, and transcript-driven tools.")
         );
     }
 
@@ -7650,7 +7667,7 @@
         var state = connected ? "success" : "warning";
 
         if (!connected) {
-            message = "Reconnect the backend to review GPU acceleration, logs, and local service details.";
+            message = t("settings.system_reconnect_details", "Reconnect the backend to review GPU acceleration, logs, and local service details.");
             setStatusLine("systemStatusLine", message, state, message);
             return;
         }
@@ -7686,7 +7703,7 @@
                 updateWhisperSettingsState(null);
                 setStatusLine(
                     "systemStatusLine",
-                    "Reconnect the backend to review GPU acceleration, logs, and local service details.",
+                    t("settings.system_reconnect_details", "Reconnect the backend to review GPU acceleration, logs, and local service details."),
                     "warning"
                 );
                 return;
