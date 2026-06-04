@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.215
+**Version**: 4.216
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 15 - 2026-06-04.
+> Last researched: Cycle 16 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-26.
+  RA-01..RA-27.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -459,6 +459,8 @@
 > **v4.214 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 15 researcher note into the canonical roadmap surfaces. RA-26 now tracks Docker runtime documentation, non-root volume-home examples, and the explicit HTTP-only vs WebSocket-capable container posture.
 >
 > **v4.215 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-ninth rolling i18n batch covering Styled Captions model and language controls. The i18n drift gate now reports 1,739 keys / 1,631 consumers / 108 dead / 0 missing.
+>
+> **v4.216 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 16 researcher note into the canonical roadmap surfaces. RA-27 now tracks Docker GPU compose launch command drift so README and compose profile/file references stay aligned.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2392,6 +2394,20 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.216 Research Queue Consolidation (RA-27)
+
+Cycle 16 is consolidated into the canonical queue. The new RA-27 item covers Docker GPU onboarding command drift that is separate from RA-25's dependency install-surface guard and RA-26's runtime port/volume posture.
+
+| Surface | Status |
+|---|---|
+| Research input | `docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE16.md` checked README Docker GPU launch commands against the tracked compose files and GPU profile configuration. |
+| Promoted item | RA-27 tracks aligning README, compose comments, and docs/config tests so Docker GPU onboarding does not point users at a missing compose file. |
+| Local evidence | `README.md` references `docker-compose -f docker-compose.gpu.yml up`; only `docker-compose.yml` is tracked; `docker-compose.yml` defines `opencut-server-gpu` under `profiles: [gpu]` and comments `docker compose --profile gpu up`. |
+
+Validation after the consolidation: `py -3.12 -m pytest tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed, and `git diff --check` passed.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2589,6 +2605,17 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
   as HTTP-only or deliberately made WebSocket-capable with aligned examples,
   ports, bind host, and drift tests.
 
+### Researcher Queue (Cycle 16 - 2026-06-04)
+
+- [x] 🔬 `docker-gpu-compose-command-refresh-2026-06-04` - checked README
+  Docker launch commands against the actual compose files. README tells users
+  to run `docker-compose -f docker-compose.gpu.yml up` for GPU mode, but the
+  repo has no `docker-compose.gpu.yml`. The only compose file defines the GPU
+  service under `profiles: [gpu]`, and its inline comment says to use
+  `docker compose --profile gpu up`. Promoted RA-27 so README and compose
+  comments converge on one tracked GPU launch command, with a guard against
+  missing compose-file references.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2608,7 +2635,8 @@ supply-chain trust. Cycle 13 adds a Release Full `GITHUB_TOKEN`
 least-privilege guardrail for workflow/job permission scoping. Cycle 14 adds a
 Docker install-surface guardrail for retired Python dependencies. Cycle 15 adds
 a Docker runtime parity guardrail for non-root volume paths and WebSocket port
-posture.
+posture. Cycle 16 adds a Docker GPU compose command guardrail so onboarding
+docs cannot reference an absent compose file.
 
 ### Quick Wins
 
@@ -2630,6 +2658,7 @@ posture.
 - [ ] **P2 — RA-24 Scope Release Full `GITHUB_TOKEN` permissions by job** — Why: Release Full runs lint, tests, package builds, code signing, and notarization before artifact/release upload, so workflow-level `contents: write` unnecessarily broadens the blast radius of earlier steps and third-party actions. GitHub workflow syntax documents that job-level `permissions` can grant only the minimum required access, `contents: read` is sufficient for source reads, and `contents: write` allows release creation. Evidence: `.github/workflows/build.yml` declares workflow-level `permissions: contents: write`; its `gh release upload` steps are tag/manual release upload paths using `GH_TOKEN`; `.github/workflows/pr-fast.yml` uses workflow-level `permissions: contents: read`; `.github/workflows/adobe-premierepro-versions.yml` scopes `contents: read` plus `issues: write` to the one job that opens issues; GitHub docs describe job-level `GITHUB_TOKEN` permission scoping (`https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#permissions`). Touches: `.github/workflows/build.yml`, workflow-shape guard tests, and release-maintenance docs. Acceptance: Release Full defaults to read-only permissions for build/test/package jobs; only tag/manual release upload jobs or steps receive `contents: write`; guard tests fail if workflow-wide `contents: write` returns without an explicit allowlisted reason. Verify: focused workflow-permission pytest plus one Release Full tag/manual dry run confirming uploads still work. Complexity: S-M.
 - [ ] **P1 — RA-25 Align Docker dependency installs with tracked Python install surfaces** — Why: Docker is a user-facing packaging path, but its handwritten dependency list has drifted from the audited install surface. It still installs `deep-translator` after F094 removed that known no-fix advisory path, and it still installs `pydub` after F123 removed the unused dependency for Python 3.13 compatibility. Evidence: `Dockerfile` installs `pydub` and `deep-translator`; `requirements.txt` comments that pydub is retired; `pyproject.toml` extras omit pydub; `tests/test_audioop_shim.py` asserts OpenCut has no pydub imports and extras do not pin it; `tests/test_dependency_surface.py` forbids deep-translator in source install surfaces but omits Dockerfile. Touches: `Dockerfile`, `tests/test_dependency_surface.py`, and release/container docs. Acceptance: Docker installs from the same canonical requirements/extras used by source installs or has a guard-tested minimal list that excludes `deep-translator` and `pydub`; tests fail if Dockerfile reintroduces dependency names banned from the audited install surfaces. Verify: focused dependency-surface test plus a parse-only Dockerfile smoke in release CI, with real `docker build` evidence captured separately when Docker is available. Complexity: S.
 - [ ] **P2 — RA-26 Align Docker runtime docs, volume home, and WebSocket exposure** — Why: Docker is advertised as a supported launch path, while OpenCut docs describe real-time WebSocket progress on port 5680. The Dockerfile quick-start still points users at `/root/.opencut` even though the final image runs as `opencut` with `HOME=/home/opencut`, and compose does not publish the WebSocket port that the image exposes and docs advertise. Evidence: `Dockerfile` quick-start comments mount `/root/.opencut`; the final image creates `opencut` and sets `HOME=/home/opencut`; `docker-compose.yml` mounts `/home/opencut/.opencut` but publishes only `5679:5679`; `Dockerfile` exposes `5679 5680`; README and `PROJECT_CONTEXT.md` document the WebSocket bridge on 5680; `opencut.core.ws_bridge.WebSocketBridge` defaults to host `127.0.0.1` and port 5680, and `/system/websocket/start` does not override that host. Touches: `Dockerfile`, `docker-compose.yml`, Docker/README docs, and a container config drift test. Acceptance: either Docker is explicitly documented as HTTP-only, or compose/direct-run examples expose and bind the WebSocket bridge in a deliberate way; all quick-start volume examples use `/home/opencut/.opencut`; tests fail if Dockerfile examples, compose mounts, exposed ports, and documented runtime ports diverge again. Verify: focused Docker config test plus a Docker compose smoke that confirms `/health` and the chosen WebSocket posture. Complexity: S-M.
+- [ ] **P3 — RA-27 Fix Docker GPU compose launch command drift** — Why: Docker is presented as an easy install path, but the documented GPU command currently references a file that is not tracked. Users following the README will fail before reaching the existing GPU compose profile. Evidence: `README.md` says `docker-compose -f docker-compose.gpu.yml up`; `rg --files` shows only `docker-compose.yml`; `docker-compose.yml` defines `opencut-server-gpu` with `profiles: [gpu]` and comments `docker compose --profile gpu up`. Touches: README Docker launch docs, `docker-compose.yml` comments if needed, and a lightweight docs/config drift test. Acceptance: README and compose agree on one GPU launch command, either by adding the missing file or using the existing profile syntax; tests fail if README references a compose file that is absent from the repo. Verify: focused docs/config pytest plus `docker compose config --profile gpu` when Docker Compose is available. Complexity: S.
 
 ### Larger Bets
 
