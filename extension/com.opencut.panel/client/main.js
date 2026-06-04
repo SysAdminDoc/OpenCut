@@ -1806,7 +1806,12 @@
         }
         if (el.connDot) {
             el.connDot.className = state === "online" ? "conn-dot on" : "conn-dot off";
-            el.connDot.setAttribute("aria-label", state === "online" ? "Server connected" : "Server disconnected");
+            el.connDot.setAttribute(
+                "aria-label",
+                state === "online"
+                    ? t("conn.dot_connected", "Server connected")
+                    : t("conn.dot_disconnected", "Server disconnected")
+            );
         }
         updateShellState();
         updateWorkspaceStageSession();
@@ -2125,10 +2130,11 @@
                     showToast(t("toast.server_reconnected", "Server reconnected"), "success");
                 }
                 connected = true;
-                setConnectionBadge("online", "Connected");
+                setConnectionBadge("online", t("conn.connected", "Connected"));
                 if (data.csrf_token) csrfToken = data.csrf_token;
                 if (data.capabilities) capabilities = data.capabilities;
-                el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
+                el.backendPort.textContent = t("conn.port", "Port {port}")
+                    .replace("{port}", BACKEND.replace("http://127.0.0.1:", ""));
                 syncSettingsBackendSummary(true);
                 updateButtons();
                 loadCapabilities();
@@ -2164,7 +2170,9 @@
             }
             if (connected && el.serverStatusBanner) {
                 el.serverStatusBanner.classList.remove("hidden");
-        if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting…";
+                if (el.serverStatusMsg) {
+                    el.serverStatusMsg.textContent = t("conn.reconnecting", "Server disconnected. Reconnecting…");
+                }
             }
             connected = false;
             syncSettingsBackendSummary(false);
@@ -2199,8 +2207,13 @@
                             BACKEND = testUrl;
                             connected = true;
                             if (data.csrf_token) csrfToken = data.csrf_token;
-                            setConnectionBadge("online", "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : ""));
-                            el.backendPort.textContent = "Port " + port;
+                            setConnectionBadge(
+                                "online",
+                                port !== BACKEND_BASE_PORT
+                                    ? t("conn.connected_port", "Connected (:{port})").replace("{port}", port)
+                                    : t("conn.connected", "Connected")
+                            );
+                            el.backendPort.textContent = t("conn.port", "Port {port}").replace("{port}", port);
                             syncSettingsBackendSummary(true);
                             if (data.capabilities) capabilities = data.capabilities;
                             healthBackoff = HEALTH_MS;
@@ -2231,7 +2244,7 @@
         function finishScan() {
             portScanPending = false;
             connected = false;
-            setConnectionBadge("offline", "Disconnected");
+            setConnectionBadge("offline", t("conn.disconnected", "Disconnected"));
             // Clear capability cache so buttons get re-evaluated when server returns
             capabilitiesLoaded = false;
             capabilities = {};
@@ -2289,10 +2302,10 @@
         var delay = PROJECT_MEDIA_RETRY_DELAYS[_projectMediaRetryCount];
         _projectMediaRetryCount++;
         if (!projectMedia.length) {
-        setProjectMediaPlaceholder("Scanning Premiere project media…");
+            setProjectMediaPlaceholder(t("media.scanning_premiere", "Scanning Premiere project media…"));
         }
         if (!_projectMediaRetryNoticeShown && _projectMediaRetryCount > 1) {
-        showToast(t("toast.refreshing_media", "Refreshing Premiere project media…"), "info");
+            showToast(t("toast.refreshing_media", "Refreshing Premiere project media…"), "info");
             _projectMediaRetryNoticeShown = true;
         }
         console.warn("[OpenCut] Retrying project media scan in " + delay + "ms:", reason || "pending");
@@ -2313,7 +2326,7 @@
         if (data.error) {
             console.warn("[OpenCut] getProjectMedia error:", data.error);
             if (!scheduleProjectMediaRetry(data.error) && !projectMedia.length) {
-                setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                setProjectMediaPlaceholder(t("media.load_failed", "Couldn't load Premiere project media"));
             }
             return false;
         }
@@ -2336,7 +2349,7 @@
 
         if (inPremiere && Number(data.rootChildren || 0) > 0) {
             if (!scheduleProjectMediaRetry("project items present but media list is empty") && !projectMedia.length) {
-                setProjectMediaPlaceholder("No importable project media found");
+                setProjectMediaPlaceholder(t("media.no_importable", "No importable project media found"));
             }
             return false;
         }
@@ -2524,12 +2537,14 @@
         var placeholder = document.createElement("option");
         placeholder.value = "";
         placeholder.selected = true;
-        placeholder.textContent = files.length ? "-- Select a clip --" : "No project media found";
+        placeholder.textContent = files.length
+            ? t("media.select_clip_placeholder", "-- Select a clip --")
+            : t("media.no_project_media", "No project media found");
         frag.appendChild(placeholder);
         for (var i = 0; i < files.length; i++) {
             var clip = files[i] || {};
             var clipPath = clip.path || "";
-            var clipName = clip.name || (clipPath ? clipPath.split(/[/\\]/).pop() : "Untitled clip");
+            var clipName = clip.name || (clipPath ? clipPath.split(/[/\\]/).pop() : t("media.untitled_clip", "Untitled clip"));
             var option = document.createElement("option");
             option.value = clipPath;
             option.textContent = clipName;
@@ -2592,14 +2607,14 @@
             _scanInProgress = false;
             if (!result || result === "null" || result === "undefined") {
                 if (!scheduleProjectMediaRetry("empty ExtendScript response") && !projectMedia.length) {
-                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                    setProjectMediaPlaceholder(t("media.load_failed", "Couldn't load Premiere project media"));
                 }
                 return;
             }
             if (isEvalScriptFailure(result)) {
                 console.error("scanProjectMedia ExtendScript error:", result);
                 if (!scheduleProjectMediaRetry(result) && !projectMedia.length) {
-                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                    setProjectMediaPlaceholder(t("media.load_failed", "Couldn't load Premiere project media"));
                 }
                 return;
             }
@@ -2609,8 +2624,11 @@
             } catch (e) {
                 console.error("scanProjectMedia parse error:", e, result);
                 if (!scheduleProjectMediaRetry("parse error") && !projectMedia.length) {
-                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
-                    showAlert("Couldn't read project media. Make sure a project is open in Premiere Pro.");
+                    setProjectMediaPlaceholder(t("media.load_failed", "Couldn't load Premiere project media"));
+                    showAlert(t(
+                        "media.read_failed",
+                        "Couldn't read project media. Make sure a project is open in Premiere Pro."
+                    ));
                 }
             }
         });
@@ -3488,7 +3506,10 @@
         api("GET", "/video/ai/capabilities", null, function (err, data) {
             if (err || !data || data.error) return;
             if (data.gpu_name) {
-                setConnectionBadge("online", "Connected (" + data.gpu_name + ")");
+                setConnectionBadge(
+                    "online",
+                    t("conn.connected_gpu", "Connected ({gpu})").replace("{gpu}", data.gpu_name)
+                );
             }
         });
     }
