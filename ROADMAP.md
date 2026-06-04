@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.154
+**Version**: 4.168
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 4 - 2026-06-04.
+> Last researched: Cycle 5 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -26,7 +26,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-14.
+  RA-01..RA-15.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -362,6 +362,8 @@
 > **v4.166 status (2026-06-04, continuation pass)**: advanced **E15** with a sixty-ninth rolling i18n batch. Preflight modal accessibility labels, titles, readiness/blocking copy, file fallbacks, section headers, run-anyway labels, and the shared cancel button now route through `t(...)`, bringing the guarded migration ledger to 965 keys across sixty-nine rounds while keeping drift at 1,378 keys / 1,248 consumers / 130 dead / 0 missing.
 
 > **v4.167 status (2026-06-04, continuation pass)**: advanced **E15** with a seventieth rolling i18n batch. Processing cancel states, audio-preview rendering feedback, sequence-assistant empty/loading/error/detail/action copy, and the shared Apply button now route through `t(...)`, bringing the guarded migration ledger to 978 keys across seventy rounds while keeping drift at 1,390 keys / 1,261 consumers / 129 dead / 0 missing.
+>
+> **v4.168 status (2026-06-04, research-only advisory refresh)**: route/version/i18n governance checks stayed green, but a fresh `py -3.12 -m opencut.tools.pip_audit_extras --json` failed the optional `pyproject[all]` target with five unwaived Torch/Transformers advisories while `requirements.txt` remained clean. RA-15 now tracks the build-lane decision: upgrade, split optional GPU/depth extras, or document narrowly scoped waivers so release smoke does not fail on surprise advisory drift.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -1695,12 +1697,25 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
   WebViews on `localOnly` message bridging and prevents dev localhost domains or
   remote bridge access from leaking into Marketplace packages.
 
+### Researcher Queue (Cycle 5 - 2026-06-04)
+
+- [x] 🔬 `python-advisory-refresh-2026-06-04` - re-ran
+  `py -3.12 -m opencut.tools.pip_audit_extras --json` after the latest E15
+  batches. `requirements.txt` stayed clean, but `pyproject[all]` failed with
+  five unwaived live advisories: four against resolved `torch==2.8.0`
+  (PYSEC-2025-203/204/206 fixed in 2.9.0, and PYSEC-2026-139 with no fixed
+  version) plus `transformers==4.57.6` PYSEC-2025-217 (checkpoint-conversion
+  deserialization, no fixed version). Promoted RA-15 so the build lane either
+  upgrades, splits, or documents narrowly justified waivers before release-smoke
+  `pip-audit` fails late on optional `[all]` drift.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
 Cycles 2 through 4 add Premiere-UXP packaging trust guardrails based on Adobe's
 current manifest/filesystem/Hybrid Plugin/external-process/WebView docs and the
-live OpenCut UXP manifest.
+live OpenCut UXP manifest. Cycle 5 adds a Python optional-extra advisory
+gate-failure item from the current `pip-audit` result.
 
 ### Quick Wins
 
@@ -1710,6 +1725,7 @@ live OpenCut UXP manifest.
 - [ ] **P2 — RA-11 Minimize UXP filesystem permissions before Marketplace packaging** — Why: Adobe's UXP filesystem guidance says `fullAccess` can make users deny installation and recommends `request` for user-selected files; OpenCut's current UXP manifest still declares `localFileSystem: "fullAccess"` even though the panel's file/folder browse helpers use picker APIs (`getFileForOpening`, `getFolder`). Evidence: Adobe filesystem guide (`https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/`) recommends `request` for user-selected files and reserves `fullAccess` for unrestricted path access; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) list `plugin` / `request` / `fullAccess`; local evidence: `extension/com.opencut.uxp/manifest.json` line 37 and `extension/com.opencut.uxp/main.js` file browse helpers. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `docs/UXP_MACOS_HTTP.md`, and a manifest-permission guard test. Acceptance: base UXP packages use the least-privilege permission that still supports picker-based imports/exports; any remaining direct-path/fullAccess need is documented as a separate F253/hybrid-only requirement; tests fail if base UXP returns to broad filesystem access without an allowlisted reason. Verify: focused manifest-permission pytest plus manual UXP picker smoke in UDT. Complexity: S-M.
 - [ ] **P2 — RA-13 Declare and harden UXP external-launch permissions** — Why: the UXP panel calls `shell.openExternal(r.data.auth_url)` for social OAuth, but the live manifest has no `requiredPermissions.launchProcess` scheme allowlist and the call currently omits the consent-dialog developer text and result handling that Adobe documents for Premiere UXP external launches. Evidence: Adobe's Premiere UXP external-process guide (`https://developer.adobe.com/premiere-pro/uxp/resources/recipes/external-process/`) says plugins cannot launch external processes by default, must declare `launchProcess.schemes` for `openExternal`, always require user consent, should provide clear `developerText`, and should handle denial/error return values; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) list `launchProcess` as the permission for `shell.openPath()` / `shell.openExternal()` and advise accurate least-privilege permissions; local evidence: `extension/com.opencut.uxp/main.js` `socialConnectUxp()` calls `shell.openExternal(r.data.auth_url)` and `extension/com.opencut.uxp/manifest.json` lacks `launchProcess`. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, the OAuth launcher wrapper in UXP/WebView host code, localized consent/fallback copy, and static manifest-source guard tests. Acceptance: base UXP packages declare only the schemes actually needed for OAuth browser handoff (for example `https`, not broad custom schemes); every `shell.openExternal` call passes localized, user-readable consent text, checks the returned error/denial string, and falls back to manual URL copy/open instructions; tests fail if source adds an external launch without a matching manifest scheme and consent text. Verify: focused UXP manifest/source pytest plus manual UDT OAuth-launch smoke that records consent approval and denial paths. Complexity: S-M.
 - [ ] **P2 — RA-14 Split UXP WebView dev and release bridge permissions** — Why: OpenCut's dormant Bolt/WebView scaffold hard-codes `enableMessageBridge: "localAndRemote"` and includes Vite dev localhost domains even though the planned live WebView UI is packaged local content; Adobe's current WebView docs now document `localOnly` for local content, warn that broad WebView domains can affect performance/security/privacy and may be blocked by enterprises, and recommend specified domain arrays instead of broad access. Evidence: Adobe WebView API docs (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/reference-js/global-members/html-elements/html-web-view-element`) describe `localOnly`, `localAndRemote`, `allowLocalRendering`, resource cost, and the domain warning; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) define WebView permissions; local evidence: `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` sets `enableMessageBridge: "localAndRemote"` and `DEV_WEBVIEW_DOMAINS`, while `tests/test_uxp_webview_scaffold.py` currently asserts the broad bridge value. Touches: `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, generated WebView manifest path, F252 WebView scaffold tests, and `docs/UXP_MIGRATION.md`. Acceptance: development builds can retain localhost WebView domains and remote bridge access behind an explicit dev mode, but release/Marketplace builds use packaged local WebView content, `allowLocalRendering: "yes"`, `domains: []` or a documented minimum list, and `enableMessageBridge: "localOnly"`; tests fail if dev domains or `localAndRemote` leak into the release manifest. Verify: focused WebView manifest pytest plus UDT smoke after F252 cutover. Complexity: S-M.
+- [ ] **P1 — RA-15 Burn down new `pyproject[all]` Torch/Transformers advisory failures** — Why: release policy says undocumented Python advisories fail release smoke, and a fresh `py -3.12 -m opencut.tools.pip_audit_extras --json` now fails the optional `[all]` target even though `requirements.txt` is clean. Evidence: local audit output on 2026-06-04 reports unallowed `torch==2.8.0` PYSEC-2025-203/204/206 (fixed in 2.9.0), `torch` PYSEC-2026-139 (no fixed version), and `transformers==4.57.6` PYSEC-2025-217 (no fixed version); `docs/PYTHON_ADVISORIES.md` currently waives only BasicSR CVE-2024-27763 and Transformers CVE-2026-1839; OSV records each advisory at `https://osv.dev/vulnerability/PYSEC-2025-203`, `https://osv.dev/vulnerability/PYSEC-2025-204`, `https://osv.dev/vulnerability/PYSEC-2025-206`, `https://osv.dev/vulnerability/PYSEC-2026-139`, and `https://osv.dev/vulnerability/PYSEC-2025-217`. Touches: `pyproject.toml`, `docs/PYTHON_ADVISORIES.md`, `opencut/tools/pip_audit_extras.py`, `tests/test_pip_audit_extras.py`, and possibly optional-extra constraints/splits. Acceptance: `python -m opencut.tools.pip_audit_extras --json --extra all` returns `status: "ok"` with zero unallowed vulnerabilities by upgrading Torch-compatible extras to 2.9+ where resolver-compatible, splitting GPU/depth extras so `[all]` does not force known-vulnerable Torch, or adding narrowly justified no-fix waivers with docs/tests. Verify: `py -3.12 -m opencut.tools.pip_audit_extras --json --extra all` and `py -3.12 -m pytest tests/test_pip_audit_extras.py -q`. Complexity: S-M.
 
 ### Larger Bets
 
