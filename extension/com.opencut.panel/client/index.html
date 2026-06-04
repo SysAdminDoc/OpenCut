@@ -1593,32 +1593,32 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
-                                <span data-i18n="subtabs.sfx">SFX &amp; Tone Generator</span>
+                                <span data-i18n="audio.sfx_tone_generator_title">SFX &amp; Tone Generator</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="audio.sfx_desc">Create swooshes, impacts, risers, and tones for transitions and alerts. No extra installs needed.</p>
 
                         <div class="form-group">
-                            <label for="sfxType">Generator</label>
+                            <label for="sfxType" data-i18n="forms.generator">Generator</label>
                             <select id="sfxType">
-                                <option value="sfx" selected>Sound Effects</option>
-                                <option value="tone">Tone Generator</option>
+                                <option value="sfx" selected data-i18n="audio.sfx_generator_sound_effects">Sound Effects</option>
+                                <option value="tone" data-i18n="audio.sfx_generator_tone">Tone Generator</option>
                             </select>
                         </div>
 
                         <!-- SFX params -->
                         <div id="sfxPresetParams">
                             <div class="form-group">
-                                <label for="sfxPreset">SFX Preset</label>
+                                <label for="sfxPreset" data-i18n="audio.sfx_preset">SFX Preset</label>
                                 <select id="sfxPreset">
-                                    <option value="swoosh">Swoosh (transition)</option>
-                                    <option value="impact">Impact (bass hit)</option>
-                                    <option value="rise">Rise / Riser</option>
-                                    <option value="drop">Drop (bass)</option>
-                                    <option value="click">Click (UI)</option>
-                                    <option value="beep">Beep (alert)</option>
-                                    <option value="white_noise">White Noise</option>
-                                    <option value="countdown_tick">Countdown Tick</option>
+                                    <option value="swoosh" data-i18n="audio.sfx_preset_swoosh">Swoosh (transition)</option>
+                                    <option value="impact" data-i18n="audio.sfx_preset_impact">Impact (bass hit)</option>
+                                    <option value="rise" data-i18n="audio.sfx_preset_rise">Rise / Riser</option>
+                                    <option value="drop" data-i18n="audio.sfx_preset_drop">Drop (bass)</option>
+                                    <option value="click" data-i18n="audio.sfx_preset_click">Click (UI)</option>
+                                    <option value="beep" data-i18n="audio.sfx_preset_beep">Beep (alert)</option>
+                                    <option value="white_noise" data-i18n="audio.sfx_preset_white_noise">White Noise</option>
+                                    <option value="countdown_tick" data-i18n="audio.sfx_preset_countdown_tick">Countdown Tick</option>
                                 </select>
                             </div>
                         </div>
@@ -1626,16 +1626,16 @@
                         <!-- Tone params -->
                         <div id="sfxToneParams" class="hidden">
                             <div class="form-group">
-                                <label for="toneWaveform">Waveform</label>
+                                <label for="toneWaveform" data-i18n="forms.waveform">Waveform</label>
                                 <select id="toneWaveform">
-                                    <option value="sine">Sine</option>
-                                    <option value="square">Square</option>
-                                    <option value="sawtooth">Sawtooth</option>
-                                    <option value="triangle">Triangle</option>
+                                    <option value="sine" data-i18n="audio.waveform_sine">Sine</option>
+                                    <option value="square" data-i18n="audio.waveform_square">Square</option>
+                                    <option value="sawtooth" data-i18n="audio.waveform_sawtooth">Sawtooth</option>
+                                    <option value="triangle" data-i18n="audio.waveform_triangle">Triangle</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="toneFreq">Frequency (Hz)</label>
+                                <label for="toneFreq" data-i18n="audio.frequency_hz">Frequency (Hz)</label>
                                 <div class="slider-row">
                                     <input type="range" id="toneFreq" min="40" max="8000" value="440" step="10">
                                     <span class="slider-val" id="toneFreqVal">440</span>
@@ -1644,7 +1644,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="sfxDuration">Duration (sec)</label>
+                            <label for="sfxDuration" data-i18n="forms.duration">Duration (sec)</label>
                             <div class="slider-row">
                                 <input type="range" id="sfxDuration" min="0.1" max="10" value="1.0" step="0.1">
                                 <span class="slider-val" id="sfxDurationVal">1.0</span>
@@ -1653,7 +1653,7 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="sfxAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runSfxBtn" data-i18n="audio.sfx_generate">Generate Sound</button>

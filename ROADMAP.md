@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.234
+**Version**: 4.235
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -497,6 +497,8 @@
 > **v4.233 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-third rolling i18n batch covering the Audio Effects form shell. The i18n drift gate now reports 1,895 keys / 1,806 consumers / 89 dead / 0 missing.
 >
 > **v4.234 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-fourth rolling i18n batch covering the Audio TTS form shell. The i18n drift gate now reports 1,913 keys / 1,828 consumers / 85 dead / 0 missing.
+>
+> **v4.235 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-fifth rolling i18n batch covering the Audio SFX and Tone form shell. The i18n drift gate now reports 1,930 keys / 1,848 consumers / 82 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2742,6 +2744,22 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-04 v4.235 CEP i18n Migration Batch 125 (E15)
+
+E15 remains open. This batch migrates the Audio SFX and Tone Generator form shell while preserving generator, preset, waveform, frequency, and duration values sent to the backend.
+
+| Surface | Status |
+|---|---|
+| SFX controls | Card title, Generator label/options, SFX Preset label/options, Waveform label/options, Frequency label, Duration label, auto-import copy, and Generate Sound action now expose static locale hooks. |
+| Shared keys | The form consumes existing `forms.generator`, `forms.waveform`, `forms.duration`, and `common.auto_import_result` keys while adding SFX-specific generator, preset, waveform, and title copy. |
+| Locale ledger | `locales/en.json` now carries 17 additional Audio SFX/Tone keys, bringing the guarded migration ledger to 1,524 keys across one hundred twenty-five rounds. |
+| Drift posture | `i18n-drift` reports 1,930 keys, 1,848 consumers, 82 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Audio SFX/Tone static HTML hooks and matching locale keys. |
+
+Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/i18n_lint.py --json` reported 1,930 keys, 1,848 consumers, 82 dead keys, and 0 missing keys, and `git diff --check` passed. Focused pytest, ruff, and version-sync gates were rerun before commit.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2758,7 +2776,7 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.234 with the one-hundred-twenty-fourth guarded Audio TTS form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.235 with the one-hundred-twenty-fifth guarded Audio SFX and Tone Generator form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
