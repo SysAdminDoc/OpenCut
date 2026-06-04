@@ -1119,29 +1119,29 @@
                         <p class="card-desc" data-i18n="captions.burnin_desc">Permanently burn captions into the video. Use when your platform doesn't support subtitle files.</p>
 
                         <div class="form-group">
-                            <label for="burninStyle">Burn-in Style</label>
+                            <label for="burninStyle" data-i18n="forms.burnin_style">Burn-in Style</label>
                             <select id="burninStyle">
-                                <option value="default">Default White</option>
-                                <option value="bold_yellow">Bold Yellow</option>
-                                <option value="boxed_dark">Dark Box</option>
-                                <option value="neon_cyan">Neon Cyan</option>
-                                <option value="cinematic_serif">Cinematic Serif</option>
-                                <option value="top_center">Top Center</option>
+                                <option value="default" data-i18n="captions.burnin_style_default_white">Default White</option>
+                                <option value="bold_yellow" data-i18n="captions.burnin_style_bold_yellow">Bold Yellow</option>
+                                <option value="boxed_dark" data-i18n="captions.burnin_style_dark_box">Dark Box</option>
+                                <option value="neon_cyan" data-i18n="captions.burnin_style_neon_cyan">Neon Cyan</option>
+                                <option value="cinematic_serif" data-i18n="captions.burnin_style_cinematic_serif">Cinematic Serif</option>
+                                <option value="top_center" data-i18n="captions.burnin_style_top_center">Top Center</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="burninModel">Whisper Model</label>
+                            <label for="burninModel" data-i18n="forms.model">Whisper Model</label>
                             <select id="burninModel">
-                                <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
-                                <option value="small">Small (accurate)</option>
+                                <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
+                                <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
+                                <option value="small" data-i18n="captions.model_small_accurate">Small (accurate)</option>
                             </select>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="burninAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runBurninBtn" disabled data-i18n="captions.burnin_run">Burn Captions into Video</button>
