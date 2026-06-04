@@ -137,6 +137,17 @@ MIGRATED_KEYS = (
     "toast.revert_failed",
     "toast.journal_revert_update_failed",
     "toast.reverted_action",
+    # Thirteenth batch (transcript cache, preview, and polish feedback).
+    "toast.used_cached_transcript",
+    "toast.preview_failed",
+    "toast.preview_failed_http",
+    "toast.preview_network_error",
+    "toast.running_suggestion",
+    "toast.polish_cache_clear_failed",
+    "toast.polish_cache_cleared",
+    "toast.polish_cache_empty",
+    "toast.polish_batch_requires_two",
+    "toast.polish_batch_progress",
 )
 
 
@@ -635,6 +646,57 @@ EXPECTED_CALLS = (
         "toast.reverted_action",
         re.compile(r't\(\s*"toast\.reverted_action"'),
         re.compile(r'showToast\(\s*"Reverted: "'),
+    ),
+    # --- Thirteenth batch -------------------------------------------
+    (
+        "toast.used_cached_transcript",
+        re.compile(r't\(\s*"toast\.used_cached_transcript"'),
+        re.compile(r'showToast\(\s*"Used cached transcript'),
+    ),
+    (
+        "toast.preview_failed",
+        re.compile(r't\(\s*"toast\.preview_failed"'),
+        re.compile(r'showAlert\(\s*"Preview failed: "'),
+    ),
+    (
+        "toast.preview_failed_http",
+        re.compile(r't\(\s*"toast\.preview_failed_http"'),
+        re.compile(r'showAlert\(\s*"Preview failed \(HTTP "'),
+    ),
+    (
+        "toast.preview_network_error",
+        re.compile(r't\(\s*"toast\.preview_network_error"'),
+        re.compile(r'showAlert\(\s*"Preview network error"\s*\)'),
+    ),
+    (
+        "toast.running_suggestion",
+        re.compile(r't\(\s*"toast\.running_suggestion"'),
+        re.compile(r'showToast\(\s*"Running "\s*\+\s*sug\.title'),
+    ),
+    (
+        "toast.polish_cache_clear_failed",
+        re.compile(r't\(\s*"toast\.polish_cache_clear_failed"'),
+        re.compile(r'showAlert\(\s*"Couldn\'t clear cache: "'),
+    ),
+    (
+        "toast.polish_cache_cleared",
+        re.compile(r't\(\s*"toast\.polish_cache_cleared"'),
+        re.compile(r'showToast\(\s*"Cached transcript cleared for this clip\."'),
+    ),
+    (
+        "toast.polish_cache_empty",
+        re.compile(r't\(\s*"toast\.polish_cache_empty"'),
+        re.compile(r'showToast\(\s*"No cached transcript to clear\."'),
+    ),
+    (
+        "toast.polish_batch_requires_two",
+        re.compile(r't\(\s*"toast\.polish_batch_requires_two"'),
+        re.compile(r'showAlert\(\s*"Add at least 2 files to the batch picker first\."'),
+    ),
+    (
+        "toast.polish_batch_progress",
+        re.compile(r't\(\s*"toast\.polish_batch_progress"'),
+        re.compile(r'showToast\(\s*"Polishing "'),
     ),
 )
 
