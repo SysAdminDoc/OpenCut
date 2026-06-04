@@ -597,6 +597,21 @@ MIGRATED_KEYS = (
     "whisper.ready_label",
     "whisper.ready_status",
     "whisper.ready_summary",
+    # Forty-third batch (settings GPU/restart and CPU-toggle states).
+    "settings.backend_restarting_label",
+    "settings.backend_restarting_status",
+    "settings.backend_restarting_title",
+    "settings.system_gpu_gb",
+    "settings.system_gpu_loading",
+    "settings.system_gpu_memory_available",
+    "settings.system_gpu_none_detected",
+    "settings.system_gpu_ready",
+    "settings.system_gpu_vram_gb",
+    "settings.system_no_gpu",
+    "whisper.cpu_mode_enabled_status",
+    "whisper.gpu_preferred_status",
+    "whisper.gpu_preferred_summary",
+    "whisper.ready_default_label",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -3091,6 +3106,79 @@ EXPECTED_CALLS = (
         "whisper.ready_summary",
         re.compile(r't\(\s*"whisper\.ready_summary"'),
         re.compile(r':\s*backendName \+ " is ready for transcript-driven workflows\."'),
+    ),
+    # --- Forty-third batch -----------------------------------------
+    (
+        "settings.backend_restarting_label",
+        re.compile(r't\(\s*"settings\.backend_restarting_label"'),
+        re.compile(r'setSettingsStudioState\(\s*"backend",\s*"Restarting"'),
+    ),
+    (
+        "settings.backend_restarting_status",
+        re.compile(r't\(\s*"settings\.backend_restarting_status"'),
+        re.compile(r'setStatusLine\(\s*"systemStatusLine",\s*"Restarting the local backend'),
+    ),
+    (
+        "settings.backend_restarting_title",
+        re.compile(r't\(\s*"settings\.backend_restarting_title"'),
+        re.compile(
+            r'setSettingsStudioState\(\s*"backend",\s*"Restarting",\s*"working",\s*"Restarting the local OpenCut backend\."'
+        ),
+    ),
+    (
+        "settings.system_gpu_gb",
+        re.compile(r't\(\s*"settings\.system_gpu_gb"'),
+        re.compile(r'safeFixed\(data\.vram_mb / 1024, 1\) \+ " GB"'),
+    ),
+    (
+        "settings.system_gpu_loading",
+        re.compile(r't\(\s*"settings\.system_gpu_loading"'),
+        re.compile(r'message = portLabel \+ " is active\. GPU details are still loading\."'),
+    ),
+    (
+        "settings.system_gpu_memory_available",
+        re.compile(r't\(\s*"settings\.system_gpu_memory_available"'),
+        re.compile(r':\s*"GPU memory available"'),
+    ),
+    (
+        "settings.system_gpu_none_detected",
+        re.compile(r't\(\s*"settings\.system_gpu_none_detected"'),
+        re.compile(r':\s*"None detected"'),
+    ),
+    (
+        "settings.system_gpu_ready",
+        re.compile(r't\(\s*"settings\.system_gpu_ready"'),
+        re.compile(r'message = gpuData\.name \+ " is ready with "'),
+    ),
+    (
+        "settings.system_gpu_vram_gb",
+        re.compile(r't\(\s*"settings\.system_gpu_vram_gb"'),
+        re.compile(r'safeFixed\(gpuData\.vram_mb / 1024, 1\) \+ " GB VRAM"'),
+    ),
+    (
+        "settings.system_no_gpu",
+        re.compile(r't\(\s*"settings\.system_no_gpu"'),
+        re.compile(r'message = "No GPU detected\. OpenCut will fall back to CPU for heavier processing on " \+ portLabel'),
+    ),
+    (
+        "whisper.cpu_mode_enabled_status",
+        re.compile(r't\(\s*"whisper\.cpu_mode_enabled_status"'),
+        re.compile(r'setStatusLine\(\s*"whisperStatusLine",\s*"CPU mode is enabled\. Transcription will be slower'),
+    ),
+    (
+        "whisper.gpu_preferred_status",
+        re.compile(r't\(\s*"whisper\.gpu_preferred_status"'),
+        re.compile(r'setStatusLine\(\s*"whisperStatusLine",\s*"Transcription will prefer GPU acceleration when available'),
+    ),
+    (
+        "whisper.gpu_preferred_summary",
+        re.compile(r't\(\s*"whisper\.gpu_preferred_summary"'),
+        re.compile(r'setSettingsStudioState\(\s*"speech",\s*"Whisper ready",\s*"ready",\s*"Transcription will prefer GPU acceleration when available\."'),
+    ),
+    (
+        "whisper.ready_default_label",
+        re.compile(r't\(\s*"whisper\.ready_default_label"'),
+        re.compile(r'setSettingsStudioState\(\s*"speech",\s*"Whisper ready"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

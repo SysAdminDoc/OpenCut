@@ -7680,19 +7680,26 @@
         }
 
         if (gpuData && gpuData.available) {
-            var vramText = gpuData.vram_mb != null ? safeFixed(gpuData.vram_mb / 1024, 1) + " GB VRAM" : "GPU memory available";
-            message = gpuData.name + " is ready with " + vramText + ". " + portLabel + " is active for local processing.";
+            var vramText = gpuData.vram_mb != null
+                ? t("settings.system_gpu_vram_gb", "{gb} GB VRAM").replace("{gb}", safeFixed(gpuData.vram_mb / 1024, 1))
+                : t("settings.system_gpu_memory_available", "GPU memory available");
+            message = t("settings.system_gpu_ready", "{gpu} is ready with {vram}. {port} is active for local processing.")
+                .replace("{gpu}", gpuData.name)
+                .replace("{vram}", vramText)
+                .replace("{port}", portLabel);
             setStatusLine("systemStatusLine", message, "success", message);
             return;
         }
 
         if (gpuData && gpuData.available === false) {
-            message = "No GPU detected. OpenCut will fall back to CPU for heavier processing on " + portLabel + ".";
+            message = t("settings.system_no_gpu", "No GPU detected. OpenCut will fall back to CPU for heavier processing on {port}.")
+                .replace("{port}", portLabel);
             setStatusLine("systemStatusLine", message, "warning", message);
             return;
         }
 
-        message = portLabel + " is active. GPU details are still loading.";
+        message = t("settings.system_gpu_loading", "{port} is active. GPU details are still loading.")
+            .replace("{port}", portLabel);
         setStatusLine("systemStatusLine", message, "working", message);
     }
 
@@ -7726,8 +7733,10 @@
         // GPU info
         api("GET", "/system/gpu", null, function (err, data) {
             if (!err && data) {
-                el.gpuName.textContent = data.available ? data.name : "None detected";
-                el.gpuVram.textContent = data.available ? safeFixed(data.vram_mb / 1024, 1) + " GB" : "--";
+                el.gpuName.textContent = data.available ? data.name : t("settings.system_gpu_none_detected", "None detected");
+                el.gpuVram.textContent = data.available
+                    ? t("settings.system_gpu_gb", "{gb} GB").replace("{gb}", safeFixed(data.vram_mb / 1024, 1))
+                    : "--";
                 updateSystemSettingsState(data);
                 return;
             }
@@ -7775,33 +7784,33 @@
         api("POST", "/whisper/settings", { cpu_mode: cpuMode }, function (err, data) {
             if (!err && data && data.success) {
                 if (cpuMode) {
-                    el.whisperDeviceText.textContent = "CPU forced";
+                    el.whisperDeviceText.textContent = t("whisper.cpu_forced", "CPU forced");
                     el.whisperDeviceText.setAttribute("data-state", "warning");
                     setStatusLine(
                         "whisperStatusLine",
-                        "CPU mode is enabled. Transcription will be slower, but it can be more stable on unsupported or memory-constrained GPUs.",
+                        t("whisper.cpu_mode_enabled_status", "CPU mode is enabled. Transcription will be slower, but it can be more stable on unsupported or memory-constrained GPUs."),
                         "warning"
                     );
                     setSettingsStudioState(
                         "speech",
-                        "Whisper ready on CPU",
+                        t("whisper.ready_cpu_label", "Whisper ready on CPU"),
                         "ready",
-                        "Transcription is available in CPU mode for stability."
+                        t("whisper.ready_cpu_summary", "Transcription is available in CPU mode for stability.")
                     );
                     showAlert(t("toast.whisper_cpu_mode_enabled", "CPU mode enabled. Transcription may be slower but more stable."));
                 } else {
-                    el.whisperDeviceText.textContent = "Auto (GPU if available)";
+                    el.whisperDeviceText.textContent = t("whisper.auto_gpu_device", "Auto (GPU if available)");
                     el.whisperDeviceText.setAttribute("data-state", "idle");
                     setStatusLine(
                         "whisperStatusLine",
-                        "Transcription will prefer GPU acceleration when available and fall back gracefully when it is not.",
+                        t("whisper.gpu_preferred_status", "Transcription will prefer GPU acceleration when available and fall back gracefully when it is not."),
                         "success"
                     );
                     setSettingsStudioState(
                         "speech",
-                        "Whisper ready",
+                        t("whisper.ready_default_label", "Whisper ready"),
                         "ready",
-                        "Transcription will prefer GPU acceleration when available."
+                        t("whisper.gpu_preferred_summary", "Transcription will prefer GPU acceleration when available.")
                     );
                     showAlert(t("toast.whisper_cpu_mode_disabled", "CPU mode disabled. Whisper will try to use GPU."));
                 }
@@ -7817,14 +7826,14 @@
         showAlert(t("toast.restarting_backend", "Restarting backend…"));
         setStatusLine(
             "systemStatusLine",
-            "Restarting the local backend. Processing controls will come back as soon as the service responds again.",
+            t("settings.backend_restarting_status", "Restarting the local backend. Processing controls will come back as soon as the service responds again."),
             "working"
         );
         setSettingsStudioState(
             "backend",
-            "Restarting",
+            t("settings.backend_restarting_label", "Restarting"),
             "working",
-            "Restarting the local OpenCut backend."
+            t("settings.backend_restarting_title", "Restarting the local OpenCut backend.")
         );
         api("POST", "/shutdown", {}, function () {
             // Backend will shut down, then auto-restart via launcher
