@@ -281,6 +281,14 @@ HTML_STATIC_SHELL_CALLS = (
     ("highlights.emotion_missing", "data-i18n"),
     ("common.install_now", "data-i18n"),
     ("install.requires", "data-i18n"),
+    # One-hundred-seventh batch (Captions quick-action static shell HTML).
+    ("captions.auto_subtitle", "data-i18n"),
+    ("quick_actions.auto_subtitle_title", "data-i18n-title"),
+    ("quick_actions.auto_subtitle_meta", "data-i18n"),
+    ("quick_actions.preset_tag", "data-i18n"),
+    ("captions.translate", "data-i18n"),
+    ("quick_actions.translate_title", "data-i18n-title"),
+    ("quick_actions.translate_meta", "data-i18n"),
 )
 
 
@@ -1643,6 +1651,12 @@ MIGRATED_KEYS = (
     "highlights.min_duration_aria",
     "highlights.range_to",
     "install.requires",
+    # One-hundred-seventh batch (Captions quick-action static shell HTML).
+    "captions.auto_subtitle",
+    "quick_actions.auto_subtitle_meta",
+    "quick_actions.auto_subtitle_title",
+    "quick_actions.translate_meta",
+    "quick_actions.translate_title",
 )
 
 
