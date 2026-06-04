@@ -11,12 +11,12 @@ OpenCut is already extremely broad. The highest-value research direction is not
 another large wave of model surfaces. It is making existing work easier to run,
 debug, resume, extend, and trust.
 
-The May 26 research pass identified the strongest v1.33+ opportunities. N1 is
-now closed in `ROADMAP.md` v4.87; the remaining queue is tracked in
+The May 26 research pass identified the strongest v1.33+ opportunities. N1 and
+N2 are now closed in `ROADMAP.md` v4.87-v4.88; the remaining queue is tracked in
 `ROADMAP.md` under "Active Continuation Queue (May 26 Plan)".
 
 1. Content-addressable transcript cache by audio hash. **Shipped in v4.87.**
-2. `missing_dependency()` responses that name the exact pip extra.
+2. `missing_dependency()` responses that name the exact pip extra. **Shipped in v4.88.**
 3. GPU semaphore acquire-wait behavior instead of instant contention failures.
 4. Disk preflight on heavyweight render/model routes.
 5. Resumable interrupted jobs.
