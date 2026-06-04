@@ -8352,7 +8352,7 @@
                 var steps = (job.result && job.result.steps) || [];
                 for (var i = 0; i < steps.length; i++) {
                     if (steps[i].key === "transcribe" && steps[i].cached) {
-                        showToast("Used cached transcript (saved ~2 min).", "info");
+                        showToast(t("toast.used_cached_transcript", "Used cached transcript (saved ~2 min)."), "info");
                         break;
                     }
                 }
@@ -8565,9 +8565,10 @@
                 reader.onload = function () {
                     try {
                         var err = JSON.parse(reader.result);
-                        showAlert("Preview failed: " + (err.error || "Unknown"));
+                        showAlert(t("toast.preview_failed", "Preview failed: {error}")
+                            .replace("{error}", err.error || t("toast.unknown_error", "Unknown error")));
                     } catch (e) {
-                        showAlert("Preview failed (HTTP " + xhr.status + ")");
+                        showAlert(t("toast.preview_failed_http", "Preview failed (HTTP {status})").replace("{status}", xhr.status));
                     }
                 };
                 reader.readAsText(xhr.response);
@@ -8576,7 +8577,7 @@
         xhr.onerror = function () {
             btn.disabled = false;
             btn.textContent = origText;
-            showAlert("Preview network error");
+            showAlert(t("toast.preview_network_error", "Preview network error"));
         };
         xhr.send(JSON.stringify(body));
     }
@@ -8694,7 +8695,7 @@
         apply.textContent = "Apply";
         apply.addEventListener("click", function () {
             if (!sug.action || !sug.action.endpoint) return;
-            showToast("Running " + sug.title + "…", "info");
+            showToast(t("toast.running_suggestion", "Running {title}…").replace("{title}", sug.title), "info");
             startJob(sug.action.endpoint, sug.action.payload || {});
         });
         actions.appendChild(apply);
@@ -8790,14 +8791,14 @@
                 api("DELETE", "/interview-polish/state",
                     { filepath: selectedPath }, function (err, data) {
                         if (err) {
-                            showAlert("Couldn't clear cache: " +
-                                (err.error || err.message || err));
+                            showAlert(t("toast.polish_cache_clear_failed", "Couldn't clear cache: {error}")
+                                .replace("{error}", err.error || err.message || err));
                             return;
                         }
                         if (data && data.removed) {
-                            showToast("Cached transcript cleared for this clip.", "success");
+                            showToast(t("toast.polish_cache_cleared", "Cached transcript cleared for this clip."), "success");
                         } else {
-                            showToast("No cached transcript to clear.", "info");
+                            showToast(t("toast.polish_cache_empty", "No cached transcript to clear."), "info");
                         }
                     });
             });
@@ -8828,7 +8829,7 @@
     function runInterviewPolishBatch() {
         if (_polishActive) return;
         if (!_batchFiles || _batchFiles.length < 2) {
-            showAlert("Add at least 2 files to the batch picker first.");
+            showAlert(t("toast.polish_batch_requires_two", "Add at least 2 files to the batch picker first."));
             return;
         }
         _polishBatchQueue = _batchFiles.slice();
@@ -8851,8 +8852,10 @@
         if (el.polishBatchBtn) el.polishBatchBtn.disabled = true;
         if (el.polishResult) el.polishResult.classList.add("hidden");
         _renderPolishRunning();
-        showToast("Polishing " + (idx + 1) + " of " + total + ": " +
-                  filepath.split(/[\\/]/).pop(), "info");
+        showToast(t("toast.polish_batch_progress", "Polishing {current} of {total}: {filename}")
+            .replace("{current}", idx + 1)
+            .replace("{total}", total)
+            .replace("{filename}", filepath.split(/[\\/]/).pop()), "info");
 
         var payload = {
             filepath: filepath,
