@@ -7602,38 +7602,45 @@
         }
 
         var caps = healthData.capabilities || {};
-        var backendName = caps.whisper_backend || "Whisper";
+        var backendName = caps.whisper_backend || t("whisper.backend_default", "Whisper");
         var installed = !!caps.captions;
         var cpuMode = !!caps.whisper_cpu_mode;
-        var deviceLabel = cpuMode ? "CPU forced" : "Auto (GPU if available)";
+        var deviceLabel = cpuMode
+            ? t("whisper.cpu_forced", "CPU forced")
+            : t("whisper.auto_gpu_device", "Auto (GPU if available)");
 
         if (installed) {
             if (el.whisperStatusText) {
-                el.whisperStatusText.textContent = "Installed";
+                el.whisperStatusText.textContent = t("whisper.installed", "Installed");
                 el.whisperStatusText.setAttribute("data-state", "ready");
-                el.whisperStatusText.title = backendName + " is available for transcription workflows.";
+                el.whisperStatusText.title = t("whisper.installed_title", "{backend} is available for transcription workflows.")
+                    .replace("{backend}", backendName);
             }
             if (el.whisperDeviceText) {
                 el.whisperDeviceText.textContent = deviceLabel;
                 el.whisperDeviceText.setAttribute("data-state", cpuMode ? "warning" : "idle");
                 el.whisperDeviceText.title = cpuMode
-                    ? "CPU mode is enabled for stability."
-                    : "OpenCut will prefer GPU acceleration when available.";
+                    ? t("whisper.cpu_mode_title", "CPU mode is enabled for stability.")
+                    : t("whisper.gpu_preferred_title", "OpenCut will prefer GPU acceleration when available.");
             }
             setStatusLine(
                 "whisperStatusLine",
                 cpuMode
-                    ? "Transcription is ready in CPU mode. Use this when GPU runs are unstable."
-                    : backendName + " is ready for captions, search indexing, and chapter generation.",
+                    ? t("whisper.ready_cpu_status", "Transcription is ready in CPU mode. Use this when GPU runs are unstable.")
+                    : t("whisper.ready_status", "{backend} is ready for captions, search indexing, and chapter generation.")
+                        .replace("{backend}", backendName),
                 cpuMode ? "warning" : "success"
             );
             setSettingsStudioState(
                 "speech",
-                cpuMode ? "Whisper ready on CPU" : backendName + " ready",
+                cpuMode
+                    ? t("whisper.ready_cpu_label", "Whisper ready on CPU")
+                    : t("whisper.ready_label", "{backend} ready").replace("{backend}", backendName),
                 "ready",
                 cpuMode
-                    ? "Transcription is available in CPU mode for stability."
-                    : backendName + " is ready for transcript-driven workflows."
+                    ? t("whisper.ready_cpu_summary", "Transcription is available in CPU mode for stability.")
+                    : t("whisper.ready_summary", "{backend} is ready for transcript-driven workflows.")
+                        .replace("{backend}", backendName)
             );
             return;
         }

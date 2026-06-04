@@ -583,6 +583,20 @@ MIGRATED_KEYS = (
     "whisper.speech_reconnect_title",
     "whisper.speech_status_unavailable",
     "whisper.status_unavailable",
+    # Forty-second batch (Whisper installed/ready availability states).
+    "whisper.auto_gpu_device",
+    "whisper.backend_default",
+    "whisper.cpu_forced",
+    "whisper.cpu_mode_title",
+    "whisper.gpu_preferred_title",
+    "whisper.installed",
+    "whisper.installed_title",
+    "whisper.ready_cpu_label",
+    "whisper.ready_cpu_status",
+    "whisper.ready_cpu_summary",
+    "whisper.ready_label",
+    "whisper.ready_status",
+    "whisper.ready_summary",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -3011,6 +3025,72 @@ EXPECTED_CALLS = (
         "whisper.status_unavailable",
         re.compile(r't\(\s*"whisper\.status_unavailable"'),
         re.compile(r'el\.whisperStatusText\.textContent = "Unavailable"'),
+    ),
+    # --- Forty-second batch ----------------------------------------
+    (
+        "whisper.auto_gpu_device",
+        re.compile(r't\(\s*"whisper\.auto_gpu_device"'),
+        re.compile(r':\s*"Auto \(GPU if available\)"'),
+    ),
+    (
+        "whisper.backend_default",
+        re.compile(r't\(\s*"whisper\.backend_default"'),
+        re.compile(r'caps\.whisper_backend \|\| "Whisper"'),
+    ),
+    (
+        "whisper.cpu_forced",
+        re.compile(r't\(\s*"whisper\.cpu_forced"'),
+        re.compile(r'\?\s*"CPU forced"'),
+    ),
+    (
+        "whisper.cpu_mode_title",
+        re.compile(r't\(\s*"whisper\.cpu_mode_title"'),
+        re.compile(r'\?\s*"CPU mode is enabled for stability\."'),
+    ),
+    (
+        "whisper.gpu_preferred_title",
+        re.compile(r't\(\s*"whisper\.gpu_preferred_title"'),
+        re.compile(r':\s*"OpenCut will prefer GPU acceleration when available\."'),
+    ),
+    (
+        "whisper.installed",
+        re.compile(r't\(\s*"whisper\.installed"'),
+        re.compile(r'el\.whisperStatusText\.textContent = "Installed"'),
+    ),
+    (
+        "whisper.installed_title",
+        re.compile(r't\(\s*"whisper\.installed_title"'),
+        re.compile(r'el\.whisperStatusText\.title = backendName \+ " is available for transcription workflows\."'),
+    ),
+    (
+        "whisper.ready_cpu_label",
+        re.compile(r't\(\s*"whisper\.ready_cpu_label"'),
+        re.compile(r'cpuMode \? "Whisper ready on CPU"'),
+    ),
+    (
+        "whisper.ready_cpu_status",
+        re.compile(r't\(\s*"whisper\.ready_cpu_status"'),
+        re.compile(r'\?\s*"Transcription is ready in CPU mode\. Use this when GPU runs are unstable\."'),
+    ),
+    (
+        "whisper.ready_cpu_summary",
+        re.compile(r't\(\s*"whisper\.ready_cpu_summary"'),
+        re.compile(r'\?\s*"Transcription is available in CPU mode for stability\."'),
+    ),
+    (
+        "whisper.ready_label",
+        re.compile(r't\(\s*"whisper\.ready_label"'),
+        re.compile(r':\s*backendName \+ " ready"'),
+    ),
+    (
+        "whisper.ready_status",
+        re.compile(r't\(\s*"whisper\.ready_status"'),
+        re.compile(r':\s*backendName \+ " is ready for captions, search indexing, and chapter generation\."'),
+    ),
+    (
+        "whisper.ready_summary",
+        re.compile(r't\(\s*"whisper\.ready_summary"'),
+        re.compile(r':\s*backendName \+ " is ready for transcript-driven workflows\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
