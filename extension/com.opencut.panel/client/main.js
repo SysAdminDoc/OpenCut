@@ -141,14 +141,14 @@
 
     // ---- Keyboard Shortcut Registry (Phase 3.4) ----
     var DEFAULT_SHORTCUTS = {
-        "silence-detect": { keys: "Ctrl+Shift+S", label: "Detect Silence" },
-        "caption-generate": { keys: "Ctrl+Shift+C", label: "Generate Captions" },
-        "audio-normalize": { keys: "Ctrl+Shift+N", label: "Normalize Audio" },
-        "audio-denoise": { keys: "Ctrl+Shift+D", label: "Denoise Audio" },
-        "export-video": { keys: "Ctrl+Shift+E", label: "Export Video" },
-        "command-palette": { keys: "Ctrl+K", label: "Command Palette" },
-        "cancel-job": { keys: "Escape", label: "Cancel Current Job" },
-        "quick-workflow": { keys: "Ctrl+Shift+W", label: "Run Quick Workflow" }
+        "silence-detect": { keys: "Ctrl+Shift+S", labelKey: "silence.detect", labelFallback: "Detect Silence" },
+        "caption-generate": { keys: "Ctrl+Shift+C", labelKey: "shortcuts.captions", labelFallback: "Generate Captions" },
+        "audio-normalize": { keys: "Ctrl+Shift+N", labelKey: "shortcuts.normalize", labelFallback: "Normalize Audio" },
+        "audio-denoise": { keys: "Ctrl+Shift+D", labelKey: "shortcuts.denoise", labelFallback: "Denoise Audio" },
+        "export-video": { keys: "Ctrl+Shift+E", labelKey: "shortcuts.export", labelFallback: "Export Video" },
+        "command-palette": { keys: "Ctrl+K", labelKey: "shortcuts.command_palette", labelFallback: "Command Palette" },
+        "cancel-job": { keys: "Escape", labelKey: "shortcuts.cancel", labelFallback: "Cancel Current Job" },
+        "quick-workflow": { keys: "Ctrl+Shift+W", labelKey: "shortcuts.workflow", labelFallback: "Run Quick Workflow" }
     };
     var _shortcutRegistry = {};
     var WORKSPACE_STATE_KEY = "opencut_workspace_state";
@@ -168,11 +168,36 @@
             if (DEFAULT_SHORTCUTS.hasOwnProperty(id)) {
                 _shortcutRegistry[id] = {
                     keys: (saved[id] && saved[id].keys) ? saved[id].keys : DEFAULT_SHORTCUTS[id].keys,
-                    label: DEFAULT_SHORTCUTS[id].label
+                    label: getShortcutDefaultLabel(id, DEFAULT_SHORTCUTS[id])
                 };
             }
         }
         return _shortcutRegistry;
+    }
+
+    function getShortcutDefaultLabel(id, shortcut) {
+        if (!shortcut) return "";
+        switch (id) {
+            case "silence-detect":
+                return t("silence.detect", shortcut.labelFallback || "Detect Silence");
+            case "caption-generate":
+                return t("shortcuts.captions", shortcut.labelFallback || "Generate Captions");
+            case "audio-normalize":
+                return t("shortcuts.normalize", shortcut.labelFallback || "Normalize Audio");
+            case "audio-denoise":
+                return t("shortcuts.denoise", shortcut.labelFallback || "Denoise Audio");
+            case "export-video":
+                return t("shortcuts.export", shortcut.labelFallback || "Export Video");
+            case "command-palette":
+                return t("shortcuts.command_palette", shortcut.labelFallback || "Command Palette");
+            case "cancel-job":
+                return t("shortcuts.cancel", shortcut.labelFallback || "Cancel Current Job");
+            case "quick-workflow":
+                return t("shortcuts.workflow", shortcut.labelFallback || "Run Quick Workflow");
+            default:
+                break;
+        }
+        return shortcut.label || "";
     }
 
     function normalizeWorkspaceState(saved) {
@@ -1009,9 +1034,20 @@
     }
 
     var NUMERIC_INPUT_PAIRS = [
-        { minId: "highlightMinDur", maxId: "highlightMaxDur", label: "Highlight duration" },
-        { minId: "shortsMinDur", maxId: "shortsMaxDur", label: "Short duration" }
+        { minId: "highlightMinDur", maxId: "highlightMaxDur", labelKey: "forms.highlight_duration", labelFallback: "Highlight duration" },
+        { minId: "shortsMinDur", maxId: "shortsMaxDur", labelKey: "forms.short_duration", labelFallback: "Short duration" }
     ];
+
+    function getNumericInputPairLabel(pair) {
+        if (!pair) return "";
+        if (pair.minId === "highlightMinDur") {
+            return t("forms.highlight_duration", pair.labelFallback || "Highlight duration");
+        }
+        if (pair.minId === "shortsMinDur") {
+            return t("forms.short_duration", pair.labelFallback || "Short duration");
+        }
+        return pair.labelFallback || "";
+    }
 
     function enforceNumericInputPair(input) {
         var i;
@@ -1028,10 +1064,10 @@
             if (!isFinite(minValue) || !isFinite(maxValue) || minValue <= maxValue) return null;
             if (input === minInput) {
                 maxInput.value = minInput.value;
-                return { label: pair.label, value: maxInput.value };
+                return { label: getNumericInputPairLabel(pair), value: maxInput.value };
             }
             minInput.value = maxInput.value;
-            return { label: pair.label, value: minInput.value };
+            return { label: getNumericInputPairLabel(pair), value: minInput.value };
         }
         return null;
     }
@@ -1047,10 +1083,20 @@
             normalized = normalizeNumberInputValue(input);
             paired = enforceNumericInputPair(input);
             if (normalized && normalized.changed && normalized.notify) {
-                showToast((normalized.label || "Value") + " adjusted to " + normalized.value + ".", "info");
+                showToast(
+                    t("toast.number_adjusted", "{label} adjusted to {value}.")
+                        .replace("{label}", normalized.label || t("common.value", "Value"))
+                        .replace("{value}", normalized.value),
+                    "info"
+                );
             }
             if (paired) {
-                showToast(paired.label + " kept in range at " + paired.value + ".", "info");
+                showToast(
+                    t("toast.number_kept_in_range", "{label} kept in range at {value}.")
+                        .replace("{label}", paired.label)
+                        .replace("{value}", paired.value),
+                    "info"
+                );
             }
             input.removeAttribute("aria-invalid");
         }, true);
@@ -11927,6 +11973,7 @@
             if (lang === "en") {
                 _currentLang = "en";
                 applyI18nToDOM();
+                loadShortcuts();
                 return;
             }
             _loadJson(lang, function (localeData) {
@@ -11941,6 +11988,7 @@
                     showToast("Language '" + lang + "' not available yet, using English", "info");
                 }
                 applyI18nToDOM();
+                loadShortcuts();
             });
         });
     }
