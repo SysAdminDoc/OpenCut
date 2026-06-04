@@ -1234,6 +1234,9 @@ MIGRATED_KEYS = (
     "error.http_status",
     "error.network",
     "error.timeout",
+    # Ninety-third batch (CEP bridge/output type fallbacks).
+    "error.cep_node_bridge_unavailable",
+    "output.type_generic",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6731,6 +6734,17 @@ EXPECTED_CALLS = (
         "error.timeout",
         re.compile(r't\(\s*"error\.timeout"'),
         re.compile(r'new Error\("Timeout"\)'),
+    ),
+    # --- Ninety-third batch ---------------------------------------
+    (
+        "error.cep_node_bridge_unavailable",
+        re.compile(r't\(\s*"error\.cep_node_bridge_unavailable"'),
+        re.compile(r'new Error\("CEP Node bridge unavailable"\)'),
+    ),
+    (
+        "output.type_generic",
+        re.compile(r't\(\s*"output\.type_generic"'),
+        re.compile(r'return\s+match\s*\?\s*match\[1\]\.toUpperCase\(\)\s*:\s*"Output"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

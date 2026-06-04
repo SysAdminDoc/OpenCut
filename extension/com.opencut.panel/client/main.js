@@ -7955,7 +7955,7 @@
         var localRequire = window.cep_node && window.cep_node.require ? window.cep_node.require : null;
         var localProcess = window.cep_node && window.cep_node.process ? window.cep_node.process : null;
         try {
-            if (!localRequire) throw new Error("CEP Node bridge unavailable");
+            if (!localRequire) throw new Error(t("error.cep_node_bridge_unavailable", "CEP Node bridge unavailable"));
             var childProcess = localRequire("child_process");
             var os = localRequire("os");
             var home = os.homedir ? os.homedir() : ((localProcess && localProcess.env && (localProcess.env.USERPROFILE || localProcess.env.HOME)) || "");
@@ -11530,7 +11530,7 @@
         if (item && item.type) return item.type;
         var path = getOutputItemPath(item) || (item && item.name) || "";
         var match = path.match(/\.([A-Za-z0-9]+)$/);
-        return match ? match[1].toUpperCase() : "Output";
+        return match ? match[1].toUpperCase() : t("output.type_generic", "Output");
     }
 
     function getOutputItemMetaBits(item) {
