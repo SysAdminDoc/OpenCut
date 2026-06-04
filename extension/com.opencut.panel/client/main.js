@@ -14080,26 +14080,42 @@
             updateButtons();
             return;
         }
+        var binNamePlaceholder = esc(t("timeline.smart_bin_name_placeholder", "Bin name"));
+        var binValuePlaceholder = esc(t("timeline.smart_bin_value_placeholder", "Value"));
+        var removeLabel = esc(t("timeline.smart_bin_remove", "Remove"));
+        var ruleTypeLabels = {
+            contains: t("timeline.smart_bin_rule_contains", "Contains"),
+            starts_with: t("timeline.smart_bin_rule_starts_with", "Starts with"),
+            ends_with: t("timeline.smart_bin_rule_ends_with", "Ends with"),
+            type_is: t("timeline.smart_bin_rule_type_is", "Type is"),
+            duration_gt: t("timeline.smart_bin_rule_duration_gt", "Duration >"),
+            duration_lt: t("timeline.smart_bin_rule_duration_lt", "Duration <")
+        };
+        var fieldLabels = {
+            name: t("timeline.smart_bin_field_name", "Name"),
+            type: t("timeline.smart_bin_field_type", "Type"),
+            duration: t("timeline.smart_bin_field_duration", "Duration")
+        };
         var html = "";
         for (var i = 0; i < smartBinRules.length; i++) {
             var r = smartBinRules[i];
             html += '<div class="smart-bin-rule" data-idx="' + i + '">'
                 + '<div class="smart-bin-rule-main">'
-                + '<input type="text" class="text-input bin-name" data-idx="' + i + '" placeholder="Bin name" value="' + esc(r.bin_name) + '">'
-                + '<button type="button" class="bin-rule-remove" data-idx="' + i + '">Remove</button>'
+                + '<input type="text" class="text-input bin-name" data-idx="' + i + '" placeholder="' + binNamePlaceholder + '" value="' + esc(r.bin_name) + '">'
+                + '<button type="button" class="bin-rule-remove" data-idx="' + i + '">' + removeLabel + '</button>'
                 + '</div>'
                 + '<div class="smart-bin-rule-fields">'
                 + '<select class="bin-rule-type" data-idx="' + i + '">'
                 + ['contains','starts_with','ends_with','type_is','duration_gt','duration_lt'].map(function(v) {
-                    return '<option value="' + v + '"' + (r.rule_type === v ? ' selected' : '') + '>' + v + '</option>';
+                    return '<option value="' + v + '"' + (r.rule_type === v ? ' selected' : '') + '>' + esc(ruleTypeLabels[v] || v) + '</option>';
                 }).join('')
                 + '</select>'
                 + '<select class="bin-field" data-idx="' + i + '">'
                 + ['name','type','duration'].map(function(v) {
-                    return '<option value="' + v + '"' + (r.field === v ? ' selected' : '') + '>' + v + '</option>';
+                    return '<option value="' + v + '"' + (r.field === v ? ' selected' : '') + '>' + esc(fieldLabels[v] || v) + '</option>';
                 }).join('')
                 + '</select>'
-                + '<input type="text" class="text-input bin-value" data-idx="' + i + '" placeholder="Value" value="' + esc(r.value) + '">'
+                + '<input type="text" class="text-input bin-value" data-idx="' + i + '" placeholder="' + binValuePlaceholder + '" value="' + esc(r.value) + '">'
                 + '</div>'
                 + '</div>';
         }

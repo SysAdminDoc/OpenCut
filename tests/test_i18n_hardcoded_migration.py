@@ -1130,6 +1130,19 @@ MIGRATED_KEYS = (
     "progress.estimate_seconds",
     "timeline.silence_cuts_ready",
     "workflow.saved_option_steps",
+    # Seventy-ninth batch (smart-bin rule editor labels).
+    "timeline.smart_bin_field_duration",
+    "timeline.smart_bin_field_name",
+    "timeline.smart_bin_field_type",
+    "timeline.smart_bin_name_placeholder",
+    "timeline.smart_bin_remove",
+    "timeline.smart_bin_rule_contains",
+    "timeline.smart_bin_rule_duration_gt",
+    "timeline.smart_bin_rule_duration_lt",
+    "timeline.smart_bin_rule_ends_with",
+    "timeline.smart_bin_rule_starts_with",
+    "timeline.smart_bin_rule_type_is",
+    "timeline.smart_bin_value_placeholder",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6158,6 +6171,67 @@ EXPECTED_CALLS = (
         "workflow.saved_option_steps",
         re.compile(r't\(\s*"workflow\.saved_option_steps"'),
         re.compile(r'data\[i\]\.name\s*\+\s*" \("\s*\+\s*\(data\[i\]\.steps \|\| \[\]\)\.length\s*\+\s*" steps\)"'),
+    ),
+    # --- Seventy-ninth batch --------------------------------------
+    (
+        "timeline.smart_bin_field_duration",
+        re.compile(r't\(\s*"timeline\.smart_bin_field_duration"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_field_name",
+        re.compile(r't\(\s*"timeline\.smart_bin_field_name"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_field_type",
+        re.compile(r't\(\s*"timeline\.smart_bin_field_type"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_name_placeholder",
+        re.compile(r't\(\s*"timeline\.smart_bin_name_placeholder"'),
+        re.compile(r'placeholder="Bin name"'),
+    ),
+    (
+        "timeline.smart_bin_remove",
+        re.compile(r't\(\s*"timeline\.smart_bin_remove"'),
+        re.compile(r'>Remove</button>'),
+    ),
+    (
+        "timeline.smart_bin_rule_contains",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_contains"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_rule_duration_gt",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_duration_gt"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_rule_duration_lt",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_duration_lt"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_rule_ends_with",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_ends_with"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_rule_starts_with",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_starts_with"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_rule_type_is",
+        re.compile(r't\(\s*"timeline\.smart_bin_rule_type_is"'),
+        re.compile(r"\+ '>' \+ v \+ '</option>'"),
+    ),
+    (
+        "timeline.smart_bin_value_placeholder",
+        re.compile(r't\(\s*"timeline\.smart_bin_value_placeholder"'),
+        re.compile(r'placeholder="Value"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
