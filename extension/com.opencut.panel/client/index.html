@@ -1067,16 +1067,16 @@
                         <p class="card-desc" data-i18n="captions.karaoke_desc">Word-by-word karaoke-style captions with smooth fill animation. Perfect for lyric videos and music content.</p>
 
                         <div class="form-group">
-                            <label for="karaokeModel">Whisper Model</label>
+                            <label for="karaokeModel" data-i18n="forms.model">Whisper Model</label>
                             <select id="karaokeModel">
-                                <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
-                                <option value="small">Small (best timing)</option>
+                                <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
+                                <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
+                                <option value="small" data-i18n="captions.model_small_best_timing">Small (best timing)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="karaokeFont">Font</label>
+                            <label for="karaokeFont" data-i18n="forms.font">Font</label>
                             <select id="karaokeFont">
                                 <option value="Arial" selected>Arial</option>
                                 <option value="Impact">Impact</option>
@@ -1086,7 +1086,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="karaokeFontSize">Font Size</label>
+                            <label for="karaokeFontSize" data-i18n="forms.font_size">Font Size</label>
                             <div class="slider-row">
                                 <input type="range" id="karaokeFontSize" min="24" max="96" value="48" step="4">
                                 <span class="slider-val" id="karaokeFontSizeVal">48</span>
@@ -1095,14 +1095,14 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="karaokeDiarize">
-                            Enable speaker labels (requires HuggingFace token)
+                            <span data-i18n="captions.enable_speaker_labels">Enable speaker labels (requires HuggingFace token)</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runKaraokeBtn" disabled data-i18n="captions.karaoke_generate">Generate Karaoke</button>
 
                         <div class="hint hidden" id="karaokeHint">
-                            WhisperX not installed (required for word-level timing).
-                            <button type="button" class="btn-install" id="installWhisperxBtn">Install WhisperX</button>
+                            <span data-i18n="captions.whisperx_not_installed">WhisperX not installed (required for word-level timing).</span>
+                            <button type="button" class="btn-install" id="installWhisperxBtn" data-i18n="install.whisperx">Install WhisperX</button>
                         </div>
                     </section>
                 </div>

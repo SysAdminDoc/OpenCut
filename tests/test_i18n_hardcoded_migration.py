@@ -457,6 +457,16 @@ HTML_STATIC_SHELL_CALLS = (
     ("formats.ass", "data-i18n"),
     ("captions.nllb_not_installed", "data-i18n"),
     ("install.nllb", "data-i18n"),
+    # One-hundred-fifteenth batch (Karaoke Captions form shell HTML).
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small_best_timing", "data-i18n"),
+    ("forms.font", "data-i18n"),
+    ("forms.font_size", "data-i18n"),
+    ("captions.enable_speaker_labels", "data-i18n"),
+    ("captions.whisperx_not_installed", "data-i18n"),
+    ("install.whisperx", "data-i18n"),
 )
 
 
@@ -1940,6 +1950,11 @@ MIGRATED_KEYS = (
     "language.thai",
     "language.turkish",
     "language.vietnamese",
+    # One-hundred-fifteenth batch (Karaoke Captions form shell HTML).
+    "captions.enable_speaker_labels",
+    "captions.model_small_best_timing",
+    "captions.whisperx_not_installed",
+    "install.whisperx",
 )
 
 
