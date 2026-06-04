@@ -4640,7 +4640,7 @@
     function socialConnect() {
         var platform = (document.getElementById("socialPlatform") || {}).value || "youtube";
         api("POST", "/social/auth-url", { platform: platform }, function(err, r) {
-            if (err) { showAlert("OAuth error: " + err.message); return; }
+            if (err) { showAlert(t("toast.oauth_error", "OAuth error: {error}").replace("{error}", err.message)); return; }
             if (r && r.auth_url) {
                 // Validate auth URL before passing to shell — prevent command injection
                 var authUrl = String(r.auth_url);
@@ -4896,7 +4896,7 @@
 
     function wsStartBridge() {
         api("POST", "/ws/start", {}, function (err, r) {
-            if (err) { showAlert("WS start error: " + err.message); return; }
+            if (err) { showAlert(t("toast.ws_start_error", "WS start error: {error}").replace("{error}", err.message)); return; }
             if (r && r.success) {
                 showToast(t("toast.live_updates_bridge_started", "Live-updates bridge started"), "success");
                 setTimeout(function () { wsConnect(); }, 500);
@@ -5066,7 +5066,7 @@
                     var domainLabel = humanizeEngineDomain(dom);
                     var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : "Auto";
                     api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
-                        if (perr) { showAlert("Error: " + perr.message); loadEngineRegistry(); return; }
+                        if (perr) { showAlert(t("toast.engine_preference_error", "Error: {error}").replace("{error}", perr.message)); loadEngineRegistry(); return; }
                         if (r && r.success) {
                             showToast(
                                 eng
@@ -5076,7 +5076,7 @@
                             );
                             loadEngineRegistry();
                         } else {
-                            showAlert(r && r.error ? r.error : "Failed to save preference");
+                            showAlert(r && r.error ? r.error : t("toast.preference_save_failed", "Failed to save preference"));
                             loadEngineRegistry();
                         }
                     });
@@ -7364,7 +7364,7 @@
         } catch (e) {
             // Node not available - show path as fallback
             var fallback = isWin ? "%USERPROFILE%\\.opencut\\server.log" : "~/.opencut/server.log";
-            showAlert("Log file: " + fallback);
+            showAlert(t("toast.log_file_path", "Log file: {path}").replace("{path}", fallback));
         }
     }
 
@@ -7400,7 +7400,7 @@
         };
         try {
             localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
-            showToast("Settings saved", "success");
+            showToast(t("toast.settings_saved", "Settings saved"), "success");
         } catch (e) {
             // localStorage may not be available in CEP
         }
@@ -7537,7 +7537,7 @@
         loadStylePreview();
         setTimeout(function () {
             el.refreshAllBtn.classList.remove("spinning");
-            showAlert("Refreshed");
+            showAlert(t("toast.refreshed", "Refreshed"));
         }, 2500);
     }
 
