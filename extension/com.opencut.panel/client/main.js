@@ -13303,10 +13303,10 @@
         if (options && options.localOnly) return;
         api("POST", "/settings/llm", cfg, function (err) {
             if (err) {
-                if (!options || !options.silent) showToast("Failed to save LLM settings", "error");
+                if (!options || !options.silent) showToast(t("llm.save_failed", "Failed to save LLM settings"), "error");
                 return;
             }
-            if (options && options.toastSuccess) showToast("LLM settings saved", "success");
+            if (options && options.toastSuccess) showToast(t("llm.saved", "LLM settings saved"), "success");
         });
     }
 
@@ -13367,7 +13367,7 @@
             }
             refreshLlmStatusLine("Connected to " + resp.provider + " / " + resp.model + ".", "success");
             saveLLMSettings({ silent: true });
-            showToast("LLM connected", "success");
+            showToast(t("llm.connected", "LLM connected"), "success");
         });
     }
 
@@ -13380,8 +13380,8 @@
             if (err) console.warn("API call failed:", err);
         });
         api("POST", "/settings/auto-zoom", { zoom_amount: zoom, easing: easing }, function (err) {
-            if (err) showToast("Failed to save defaults", "error");
-            else showToast("Defaults saved", "success");
+            if (err) showToast(t("defaults.save_failed", "Failed to save defaults"), "error");
+            else showToast(t("defaults.saved", "Defaults saved"), "success");
         });
     }
 
@@ -13444,7 +13444,7 @@
     function runSummarize() {
         var llm = getLLMConfig();
         if (el.summaryResult) el.summaryResult.classList.remove("hidden");
-        if (el.summaryContent) el.summaryContent.textContent = "Summarizing…";
+        if (el.summaryContent) el.summaryContent.textContent = t("transcript.summarizing", "Summarizing...");
         startJob("/transcript/summarize", {
             filepath: selectedPath,
             style: "bullets",
@@ -13458,7 +13458,7 @@
     // --- Generate LUT from Reference ---
     function runGenerateLut() {
         var refPath = el.lutRefPath ? el.lutRefPath.value.trim() : "";
-        if (!refPath) { showAlert("Select a reference image."); return; }
+        if (!refPath) { showAlert(t("video.select_reference_image", "Select a reference image.")); return; }
         var lutName = el.lutRefName ? el.lutRefName.value.trim() : "";
         if (!lutName) lutName = "custom_ref";
         startJob("/video/lut/generate-from-ref", {
