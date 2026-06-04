@@ -1534,34 +1534,34 @@
                         <p class="card-desc" data-i18n="audio.tts_desc">Generate voiceovers and narration from text. 400+ natural voices in 75+ languages.</p>
 
                         <div class="form-group">
-                            <label for="ttsEngine">Engine</label>
+                            <label for="ttsEngine" data-i18n="forms.engine">Engine</label>
                             <select id="ttsEngine">
-                                <option value="edge" selected>Edge TTS (online, free)</option>
-                                <option value="kokoro">Kokoro (offline, 350MB)</option>
+                                <option value="edge" selected data-i18n="audio.tts_engine_edge">Edge TTS (online, free)</option>
+                                <option value="kokoro" data-i18n="audio.tts_engine_kokoro">Kokoro (offline, 350MB)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="ttsVoice">Voice</label>
+                            <label for="ttsVoice" data-i18n="forms.voice">Voice</label>
                             <select id="ttsVoice">
-                                <option value="en-US-AriaNeural">Aria (US Female)</option>
-                                <option value="en-US-GuyNeural">Guy (US Male)</option>
-                                <option value="en-US-JennyNeural">Jenny (US Female)</option>
-                                <option value="en-US-RogerNeural">Roger (US Male, Narration)</option>
-                                <option value="en-GB-SoniaNeural">Sonia (UK Female)</option>
-                                <option value="en-GB-RyanNeural">Ryan (UK Male)</option>
-                                <option value="es-MX-DaliaNeural">Dalia (Spanish Female)</option>
-                                <option value="fr-FR-DeniseNeural">Denise (French Female)</option>
-                                <option value="de-DE-KatjaNeural">Katja (German Female)</option>
-                                <option value="ja-JP-NanamiNeural">Nanami (Japanese Female)</option>
-                                <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao (Chinese Female)</option>
-                                <option value="ko-KR-SunHiNeural">Sun-Hi (Korean Female)</option>
-                                <option value="pt-BR-FranciscaNeural">Francisca (Portuguese Female)</option>
+                                <option value="en-US-AriaNeural" data-i18n="audio.tts_voice_aria_us_female">Aria (US Female)</option>
+                                <option value="en-US-GuyNeural" data-i18n="audio.tts_voice_guy_us_male">Guy (US Male)</option>
+                                <option value="en-US-JennyNeural" data-i18n="audio.tts_voice_jenny_us_female">Jenny (US Female)</option>
+                                <option value="en-US-RogerNeural" data-i18n="audio.tts_voice_roger_us_male_narration">Roger (US Male, Narration)</option>
+                                <option value="en-GB-SoniaNeural" data-i18n="audio.tts_voice_sonia_uk_female">Sonia (UK Female)</option>
+                                <option value="en-GB-RyanNeural" data-i18n="audio.tts_voice_ryan_uk_male">Ryan (UK Male)</option>
+                                <option value="es-MX-DaliaNeural" data-i18n="audio.tts_voice_dalia_spanish_female">Dalia (Spanish Female)</option>
+                                <option value="fr-FR-DeniseNeural" data-i18n="audio.tts_voice_denise_french_female">Denise (French Female)</option>
+                                <option value="de-DE-KatjaNeural" data-i18n="audio.tts_voice_katja_german_female">Katja (German Female)</option>
+                                <option value="ja-JP-NanamiNeural" data-i18n="audio.tts_voice_nanami_japanese_female">Nanami (Japanese Female)</option>
+                                <option value="zh-CN-XiaoxiaoNeural" data-i18n="audio.tts_voice_xiaoxiao_chinese_female">Xiaoxiao (Chinese Female)</option>
+                                <option value="ko-KR-SunHiNeural" data-i18n="audio.tts_voice_sunhi_korean_female">Sun-Hi (Korean Female)</option>
+                                <option value="pt-BR-FranciscaNeural" data-i18n="audio.tts_voice_francisca_portuguese_female">Francisca (Portuguese Female)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="ttsRate">Speed</label>
+                            <label for="ttsRate" data-i18n="forms.speed">Speed</label>
                             <div class="slider-row">
                                 <input type="range" id="ttsRate" min="-50" max="100" value="0" step="5">
                                 <span class="slider-val" id="ttsRateVal">+0%</span>
@@ -1569,20 +1569,20 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="ttsText">Text</label>
-                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak…"></textarea>
+                            <label for="ttsText" data-i18n="forms.text">Text</label>
+                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak…" data-i18n-placeholder="audio.tts_text_placeholder"></textarea>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="ttsAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runTtsBtn" data-i18n="audio.tts_generate">Generate Speech</button>
 
                         <div class="hint hidden" id="ttsHint">
-                            Edge TTS not installed.
-                            <button type="button" class="btn-install" id="installEdgeTtsBtn">Install Edge TTS</button>
+                            <span data-i18n="audio.edge_tts_not_installed">Edge TTS not installed.</span>
+                            <button type="button" class="btn-install" id="installEdgeTtsBtn" data-i18n="install.edge_tts">Install Edge TTS</button>
                         </div>
                     </section>
                 </div>
