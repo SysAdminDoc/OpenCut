@@ -52,7 +52,7 @@ def video_ai_capabilities():
 
 @video_ai_bp.route("/video/ai/upscale", methods=["POST"])
 @require_csrf
-@async_job("upscale")
+@async_job("upscale", disk_operation="video_ai_heavy")
 def video_ai_upscale(job_id, filepath, data):
     """AI upscale video using Real-ESRGAN."""
     output_dir = data.get("output_dir", "")
@@ -132,7 +132,7 @@ def video_ai_rembg(job_id, filepath, data):
 
 @video_ai_bp.route("/video/ai/interpolate", methods=["POST"])
 @require_csrf
-@async_job("interpolate")
+@async_job("interpolate", disk_operation="video_ai_heavy")
 def video_ai_interpolate(job_id, filepath, data):
     """AI frame interpolation."""
     output_dir = data.get("output_dir", "")
@@ -167,7 +167,7 @@ def video_ai_interpolate(job_id, filepath, data):
 
 @video_ai_bp.route("/video/ai/denoise", methods=["POST"])
 @require_csrf
-@async_job("denoise")
+@async_job("denoise", disk_operation="video_ai_heavy")
 def video_ai_denoise(job_id, filepath, data):
     """AI video noise reduction."""
     output_dir = data.get("output_dir", "")

@@ -30,6 +30,7 @@ Last consolidated: 2026-06-04.
 | Resource contention | The May 26 plan now has N3 closed: GPU semaphore contention waits up to 30 seconds by default and returns retry metadata when the wait budget is exhausted. |
 | Webhook discoverability | The May 26 plan now has N6 closed: `/webhooks/event-types`, `/api/webhooks/event-types`, and `/mcp/info` expose webhook event names, canonical replacements, schema pointers, and legacy aliases. |
 | Webhook trust | The May 26 plan now has E11 closed: new HTTP webhook registrations require an HMAC secret unless the caller explicitly opts into unsigned local testing. |
+| Disk preflight | The May 26 plan now has N4 closed: heavyweight async jobs run output-volume disk checks before job creation and return 507 with required/free/output-dir metadata when space is insufficient. |
 
 ## Historical Detail
 

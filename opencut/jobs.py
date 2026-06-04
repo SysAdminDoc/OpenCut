@@ -598,7 +598,9 @@ def _cleanup_old_jobs():
 
 def async_job(job_type: str, *, filepath_required: bool = True,
               filepath_param: str = "filepath",
-              pre_validate=None):
+              pre_validate=None,
+              disk_operation: Optional[str] = None,
+              disk_required_mb: Optional[int] = None):
     """
     Decorator that wraps a route handler in the standard async job pattern.
 
@@ -628,6 +630,11 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             response — useful for routes like ``/captions/translate`` that
             need a list of segments instead of a filepath, so the client
             sees the error immediately instead of via job polling.
+        disk_operation: Optional operation key for disk preflight. When set,
+            the wrapper estimates required space and returns HTTP 507 before
+            creating a job if the output volume is below the budget.
+        disk_required_mb: Optional fixed preflight budget. When set without
+            ``disk_operation``, the job type is used as the operation key.
 
     Usage::
 
@@ -721,6 +728,40 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         "code": "INVALID_INPUT",
                         "suggestion": "Check the request body against the route's documented schema.",
                     }), 400
+
+            if disk_operation or disk_required_mb is not None:
+                try:
+                    from opencut.core.preflight import ensure_disk_for
+
+                    disk = ensure_disk_for(
+                        disk_operation or job_type,
+                        filepath,
+                        data,
+                        required_mb=disk_required_mb,
+                    )
+                except ValueError as e:
+                    return jsonify({
+                        "error": str(e),
+                        "code": "INVALID_INPUT",
+                        "suggestion": "Check the output path or output directory.",
+                    }), 400
+                if not disk.get("ok", True):
+                    output_dir = disk.get("output_dir", "")
+                    required_mb = int(disk.get("required_mb") or 0)
+                    free_mb = int(disk.get("free_mb") or 0)
+                    return jsonify({
+                        "error": "Insufficient disk space",
+                        "code": "INSUFFICIENT_STORAGE",
+                        "operation": disk.get("operation") or job_type,
+                        "required_mb": required_mb,
+                        "free_mb": free_mb,
+                        "output_dir": output_dir,
+                        "note": disk.get("note", ""),
+                        "suggestion": (
+                            "Free disk space or choose another output directory "
+                            f"with at least {required_mb} MB available."
+                        ),
+                    }), 507
 
             if should_skip_install_in_testing(job_type):
                 component_name = data.get("component") or job_type

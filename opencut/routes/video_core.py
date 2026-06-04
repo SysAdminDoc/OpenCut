@@ -463,7 +463,7 @@ def video_scenes(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_core_bp.route("/export-video", methods=["POST"])
 @require_csrf
-@async_job("export")
+@async_job("export", disk_operation="video_export")
 def export_video(job_id, filepath, data):
     """Render a new video file with silences removed (no visible cuts)."""
     output_dir = data.get("output_dir", "")
@@ -747,7 +747,7 @@ def export_presets_list():
 
 @video_core_bp.route("/export/preset", methods=["POST"])
 @require_csrf
-@async_job("export_preset")
+@async_job("export_preset", disk_operation="video_export")
 def export_with_preset_route(job_id, filepath, data):
     """Export video using a preset profile."""
     output_dir = data.get("output_dir", "")

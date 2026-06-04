@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.91
+**Version**: 4.92
 **Updated**: 2026-06-04
-**Baseline**: v1.32.0 (1,521 routes, 107 blueprints, 598 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,521 routes, 107 blueprints, 599 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
@@ -191,6 +191,8 @@
 > **v4.90 status (2026-06-04, continuation pass)**: closed **N6** from the May 26 continuation queue by adding `GET /webhooks/event-types` and `/api/webhooks/event-types` for webhook event discovery. `opencut/core/webhook_system.py` now exports a validated event catalogue with canonical names, legacy aliases, deprecation metadata, and schema pointers; `/mcp/info` also exposes the event-type discovery pointer for tooling.
 >
 > **v4.91 status (2026-06-04, continuation pass)**: closed **E11** from the May 26 continuation queue by making new HTTP webhook registrations require a non-empty HMAC signing secret by default. Unsigned webhook registration now requires explicit `?allow_unsigned=true` opt-in for local testing and writes a one-time `webhooks_unsigned.txt` warning in the OpenCut user directory.
+>
+> **v4.92 status (2026-06-04, continuation pass)**: closed **N4** from the May 26 continuation queue by adding a decorator-level disk preflight gate for heavyweight async routes. `opencut/core/preflight.py` estimates per-operation disk budgets, `@async_job(..., disk_operation=...)` now returns HTTP 507 before job creation when the output volume is under budget, and 12 caption/audio/export/video-AI jobs are wired into the gate.
 
 ---
 
@@ -291,6 +293,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_dev_scripting.py -q -
 
 ---
 
+## 2026-06-04 v4.92 Disk Preflight (N4)
+
+N4 is closed. Heavy async routes now fail before job creation when the intended output volume does not have enough free space for the operation budget.
+
+| Surface | Status |
+|---|---|
+| Preflight facade | `opencut/core/preflight.py` estimates required megabytes from source-file size and operation ratios, resolves `output_dir` / `output_path`, and delegates free-space probing to `disk_monitor.preflight()`. |
+| Decorator hook | `@async_job(..., disk_operation=..., disk_required_mb=...)` runs the check synchronously after request/path validation and before `_new_job()`. |
+| Failure contract | Low-space requests return HTTP 507 with `{code, operation, required_mb, free_mb, output_dir, note}` and no `job_id`. Invalid output paths remain HTTP 400. |
+| Wired routes | Disk gates cover captions/transcript/WhisperX/full pipeline/burn-in, Demucs separation, DeepFilter, export/export-preset, and heavy video AI upscale/interpolate/denoise routes. |
+| Coverage | `tests/test_disk_preflight.py` pins budget estimation, structured preflight payloads, 507 behavior, pass-through job creation, and the route annotations. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_disk_preflight.py -q -p no:cacheprovider -o addopts=""` passed (`5 passed`) and touched Python files compile.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -298,7 +316,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_dev_scripting.py -q -
 - [x] **P0 — N3 GPU semaphore default-wait 30s** — closed in v4.89 with a 30-second default wait, zero-second env override, `GPU_BUSY` retry metadata, async job status propagation, and focused wait tests.
 - [x] **P1 — N6 `GET /webhooks/event-types`** — closed in v4.90 with canonical and `/api` discovery routes, core event metadata, legacy alias mapping, MCP info discoverability, generated surface refresh, and focused tests.
 - [x] **P1 — E11 webhook signatures mandatory by default** — closed in v4.91 with signed-by-default HTTP registration, explicit unsigned opt-in, warning-file creation, and focused tests.
-- [ ] **P1 — N4 disk preflight in heavy routes** — wire `disk_monitor.preflight()` into the most disk-intensive async jobs.
+- [x] **P1 — N4 disk preflight in heavy routes** — closed in v4.92 with a decorator-level disk gate, operation budgets, 507 responses, and coverage across 12 heavyweight async jobs.
 - [ ] **P1 — N5 job resume for interrupted jobs** — add resumability metadata and a resume route for checkpointable jobs.
 - [ ] **P1 — N7 plugin job-registration API** — let signed/capability-scoped plugins register namespaced background jobs through the existing async-job machinery.
 - [ ] **P1 — N8 third-party agent-skill loader** — load validated user skills from `~/.opencut/skills/<id>/`.
