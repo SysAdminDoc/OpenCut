@@ -941,6 +941,17 @@ MIGRATED_KEYS = (
     "audio.waveform_load_failed_detail",
     "media.drop_path_unavailable",
     "media.file_loaded",
+    # Sixty-fourth batch (NLP command and OTIO export feedback).
+    "common.unknown",
+    "nlp.confidence_label",
+    "nlp.enter_command",
+    "nlp.route_error",
+    "nlp.route_label",
+    "timeline.exporting",
+    "timeline.no_markers_available",
+    "timeline.otio_error",
+    "timeline.otio_exported",
+    "timeline.otio_saved",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5076,6 +5087,57 @@ EXPECTED_CALLS = (
         "media.file_loaded",
         re.compile(r't\(\s*"media\.file_loaded"'),
         re.compile(r'showToast\("File loaded: "\s*\+'),
+    ),
+    # --- Sixty-fourth batch ----------------------------------------
+    (
+        "common.unknown",
+        re.compile(r't\(\s*"common\.unknown"'),
+        re.compile(r'err\s*\?\s*err\.message\s*:\s*"Unknown"'),
+    ),
+    (
+        "nlp.confidence_label",
+        re.compile(r't\(\s*"nlp\.confidence_label"'),
+        re.compile(r'confEl\.textContent\s*=\s*"Confidence: "\s*\+'),
+    ),
+    (
+        "nlp.enter_command",
+        re.compile(r't\(\s*"nlp\.enter_command"'),
+        re.compile(r'showAlert\("Enter a command\."'),
+    ),
+    (
+        "nlp.route_error",
+        re.compile(r't\(\s*"nlp\.route_error"'),
+        re.compile(r'routeEl\.textContent\s*=\s*"Error: "\s*\+'),
+    ),
+    (
+        "nlp.route_label",
+        re.compile(r't\(\s*"nlp\.route_label"'),
+        re.compile(r'routeEl\.textContent\s*=\s*"Route: "\s*\+'),
+    ),
+    (
+        "timeline.exporting",
+        re.compile(r't\(\s*"timeline\.exporting"'),
+        re.compile(r'setButtonText\(otioBtn,\s*"Exporting…"'),
+    ),
+    (
+        "timeline.no_markers_available",
+        re.compile(r't\(\s*"timeline\.no_markers_available"'),
+        re.compile(r'showAlert\("No markers available\. Run Beat Detection or Chapter Generation first\."'),
+    ),
+    (
+        "timeline.otio_error",
+        re.compile(r't\(\s*"timeline\.otio_error"'),
+        re.compile(r'setHintState\(otioRes,\s*"Error: "\s*\+'),
+    ),
+    (
+        "timeline.otio_exported",
+        re.compile(r't\(\s*"timeline\.otio_exported"'),
+        re.compile(r'showToast\("OTIO exported: "\s*\+'),
+    ),
+    (
+        "timeline.otio_saved",
+        re.compile(r't\(\s*"timeline\.otio_saved"'),
+        re.compile(r'setHintState\(otioRes,\s*"Saved: "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

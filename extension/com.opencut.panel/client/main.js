@@ -14840,7 +14840,7 @@
 
     function runNlpCommand() {
         var text = (document.getElementById("nlpCommandText") || {}).value || "";
-        if (!text) { showAlert("Enter a command."); return; }
+        if (!text) { showAlert(t("nlp.enter_command", "Enter a command.")); return; }
         var provider = (document.getElementById("nlpLlmProvider") || {}).value || "ollama";
         var btn = document.getElementById("runNlpCommandBtn");
         var originalBtnText = rememberButtonText(btn);
@@ -14856,11 +14856,14 @@
             var outEl = document.getElementById("nlpCommandOutput");
             if (res) res.classList.remove("hidden");
             if (err || !data) {
-                if (routeEl) routeEl.textContent = "Error: " + (err ? err.message : "Unknown");
+                if (routeEl) routeEl.textContent = t("nlp.route_error", "Error: {error}")
+                    .replace("{error}", err ? err.message : t("common.unknown", "Unknown"));
                 return;
             }
-            if (routeEl) routeEl.textContent = "Route: " + (data.route || "unknown");
-            if (confEl) confEl.textContent = "Confidence: " + safeFixed((data.confidence || 0) * 100, 0) + "%";
+            if (routeEl) routeEl.textContent = t("nlp.route_label", "Route: {route}")
+                .replace("{route}", data.route || t("common.unknown", "Unknown").toLowerCase());
+            if (confEl) confEl.textContent = t("nlp.confidence_label", "Confidence: {percent}%")
+                .replace("{percent}", safeFixed((data.confidence || 0) * 100, 0));
             if (outEl) outEl.textContent = data.result ? JSON.stringify(data.result, null, 2) : "";
             // Auto-execute matched route if high confidence — uses snapshot from command time
             if (data.route && data.confidence > 0.6 && data.params) {
@@ -14903,24 +14906,34 @@
                 } else if (chaptersData && chaptersData.length) {
                     payload.markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || "Chapter" }; });
                 } else {
-                    showAlert("No markers available. Run Beat Detection or Chapter Generation first.");
+                    showAlert(t("timeline.no_markers_available", "No markers available. Run Beat Detection or Chapter Generation first."));
                     return;
                 }
             }
             otioBtn.disabled = true;
             var originalOtioText = rememberButtonText(otioBtn);
-            setButtonText(otioBtn, "Exporting…");
+            setButtonText(otioBtn, t("timeline.exporting", "Exporting…"));
             api("POST", "/timeline/export-otio", payload, function (err, data) {
                 otioBtn.disabled = false;
                 setButtonText(otioBtn, originalOtioText);
                 if (err || !data || data.error) {
                     var otioRes = document.getElementById("otioResult");
-                    setHintState(otioRes, "Error: " + ((data && data.error) || (err && err.message) || "Unknown"), "error");
+                    setHintState(
+                        otioRes,
+                        t("timeline.otio_error", "Error: {error}")
+                            .replace("{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown")),
+                        "error"
+                    );
                     return;
                 }
-                showToast("OTIO exported: " + (data.output_path || "").split(/[/\\]/).pop(), "success");
+                showToast(t("timeline.otio_exported", "OTIO exported: {name}")
+                    .replace("{name}", (data.output_path || "").split(/[/\\]/).pop()), "success");
                 var otioRes = document.getElementById("otioResult");
-                setHintState(otioRes, "Saved: " + (data.output_path || ""), "success");
+                setHintState(
+                    otioRes,
+                    t("timeline.otio_saved", "Saved: {path}").replace("{path}", data.output_path || ""),
+                    "success"
+                );
             });
         });
         // OTIO install button
