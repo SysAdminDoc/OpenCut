@@ -63,6 +63,7 @@ class TestI18nDrift(unittest.TestCase):
             '<button data-i18n="audio.duck">Duck</button>'
             '<input data-i18n-placeholder="audio.placeholder">'
             '<div data-i18n-title="video.title_tip"></div>'
+            '<optgroup data-i18n-label="video.option_group"></optgroup>'
             '<a data-i18n-aria-label="video.aria_close"></a>'
         )
         found = set(self.mod.HTML_I18N_RE.findall(html))
@@ -70,6 +71,7 @@ class TestI18nDrift(unittest.TestCase):
             "audio.duck",
             "audio.placeholder",
             "video.title_tip",
+            "video.option_group",
             "video.aria_close",
         })
 

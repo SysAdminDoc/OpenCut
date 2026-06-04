@@ -10,7 +10,8 @@ hardcoded English instead of going through ``t("…", fallback)``.
 
 This linter:
   1. Extracts every key in ``en.json``.
-  2. Walks ``index.html`` for ``data-i18n[-title|-placeholder|-aria-label]=…``
+  2. Walks ``index.html`` for
+     ``data-i18n[-title|-label|-placeholder|-aria-label]=…``
      attributes.
   3. Walks ``main.js`` for ``t("…")`` / ``t('…')`` calls.
   4. Reports:
@@ -45,9 +46,10 @@ MAIN_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
 # real keys are cleaned up.
 DEAD_KEY_BASELINE = 150
 
-# data-i18n="…" / data-i18n-title="…" / data-i18n-placeholder="…" / data-i18n-aria-label="…"
+# data-i18n="…" / data-i18n-title="…" / data-i18n-label="…" /
+# data-i18n-placeholder="…" / data-i18n-aria-label="…"
 HTML_I18N_RE = re.compile(
-    r'data-i18n(?:-(?:title|placeholder|aria-label))?="([^"]+)"'
+    r'data-i18n(?:-(?:title|label|placeholder|aria-label))?="([^"]+)"'
 )
 
 # t("key") / t('key') — key must look like an i18n key (dotted lowercase + underscore).
