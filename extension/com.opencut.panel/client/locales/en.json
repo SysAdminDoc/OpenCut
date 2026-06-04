@@ -301,6 +301,8 @@
   "engines.unavailable_title": "Engine routing is unavailable right now.",
   "engines.warning_label": "{count} needs review",
   "engines.warning_summary": "{count} editing domain{plural} {verb} still missing an available engine. Auto routing remains active for the rest.",
+  "engines.verb_are": "are",
+  "engines.verb_is": "is",
   "favorites.title": "Favorites",
   "favorites.added": "Added to favorites: {name}",
   "favorites.op_denoise": "Denoise Audio",
