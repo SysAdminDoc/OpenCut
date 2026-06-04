@@ -2005,6 +2005,10 @@
     // Backend Communication
     // ================================================================
     var _inflightRequests = {};
+    function formatHttpStatusError(status) {
+        return t("error.http_status", "HTTP {status}").replace("{status}", status);
+    }
+
     function refreshCsrfToken(callback, timeout) {
         callback = typeof callback === "function" ? callback : function () {};
         var xhr = new XMLHttpRequest();
@@ -2067,7 +2071,7 @@
                                 _send(true);
                                 return;
                             }
-                            err = new Error(message || "HTTP 403");
+                            err = new Error(message || formatHttpStatusError(403));
                             err.status = xhr.status;
                             callback(err, data);
                         }, timeout);
@@ -2076,7 +2080,7 @@
                 }
                 // Treat non-2xx HTTP responses as errors
                 if (!err && xhr.status >= 400) {
-                    err = new Error((data && data.error) ? data.error : "HTTP " + xhr.status);
+                    err = new Error((data && data.error) ? data.error : formatHttpStatusError(xhr.status));
                     err.status = xhr.status;
                 }
                 callback(err, data);
@@ -2084,13 +2088,13 @@
             };
             xhr.onerror = function () {
                 delete _inflightRequests[key];
-                var err = new Error("Network error");
+                var err = new Error(t("error.network", "Network error"));
                 callback(err, null);
                 _notifyPending(err, null);
             };
             xhr.ontimeout = function () {
                 delete _inflightRequests[key];
-                var err = new Error("Timeout");
+                var err = new Error(t("error.timeout", "Timeout"));
                 callback(err, null);
                 _notifyPending(err, null);
             };
