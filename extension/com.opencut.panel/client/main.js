@@ -5192,37 +5192,41 @@
         if (!grid) return;
         setSettingsStudioState(
             "engines",
-            "Checking availability...",
+            t("engines.checking_availability", "Checking availability..."),
             "working",
-            "Checking installed engines for each editing domain."
+            t("engines.checking_installed_title", "Checking installed engines for each editing domain.")
         );
         setStatusLine(
             "engineRegistryStatus",
-            "Checking which local engines are installed for each editing domain.",
+            t("engines.checking_status", "Checking which local engines are installed for each editing domain."),
             "working"
         );
         grid.innerHTML = buildEmptyHintMarkup(
-            "Loading engine routing…",
-            "Checking which engines are installed and available for this machine.",
+            t("engines.loading_title", "Loading engine routing…"),
+            t("engines.loading_body", "Checking which engines are installed and available for this machine."),
             "info"
         );
 
         api("GET", "/engines", null, function (err, r) {
             if (err || !r || !r.engines) {
+                var reconnectInventory = t(
+                    "engines.inventory_reconnect",
+                    "Reconnect the backend or refresh availability to pull the latest engine inventory."
+                );
                 setSettingsStudioState(
                     "engines",
-                    "Routing unavailable",
+                    t("engines.routing_unavailable", "Routing unavailable"),
                     "error",
-                    "Reconnect the backend or refresh availability to review engine routing."
+                    t("engines.routing_unavailable_title", "Reconnect the backend or refresh availability to review engine routing.")
                 );
                 setStatusLine(
                     "engineRegistryStatus",
-                    "Reconnect the backend or refresh availability to pull the latest engine inventory.",
+                    reconnectInventory,
                     "error"
                 );
                 grid.innerHTML = buildEmptyHintMarkup(
-                    "Engine routing is unavailable right now.",
-                    "Reconnect the backend or refresh availability to pull the latest engine inventory.",
+                    t("engines.unavailable_title", "Engine routing is unavailable right now."),
+                    reconnectInventory,
                     "error"
                 );
                 return;
@@ -7416,9 +7420,9 @@
             title: t("ws.studio_checking_title", "Checking the live updates bridge.")
         },
         engines: {
-            label: "Refresh availability",
+            label: t("engines.settings_refresh_label", "Refresh availability"),
             state: "idle",
-            title: "Refresh engine availability to review Auto routing and pinned domains."
+            title: t("engines.settings_refresh_title", "Refresh engine availability to review Auto routing and pinned domains.")
         }
     };
 
@@ -7450,12 +7454,15 @@
         );
         setTextAndTitle(
             "settingsEngineSummary",
-            (_settingsStudioState.engines && _settingsStudioState.engines.label) || "Refresh availability",
-            (_settingsStudioState.engines && _settingsStudioState.engines.title) || "Refresh engine availability to review routing."
+            (_settingsStudioState.engines && _settingsStudioState.engines.label) || t("engines.settings_refresh_label", "Refresh availability"),
+            (_settingsStudioState.engines && _settingsStudioState.engines.title) || t("engines.settings_refresh_title", "Refresh engine availability to review Auto routing and pinned domains.")
         );
 
         var lineState = "success";
-        var lineMessage = "The local studio is ready for captions, search, routing, and longer editorial runs.";
+        var lineMessage = t(
+            "engines.overview_ready",
+            "The local studio is ready for captions, search, routing, and longer editorial runs."
+        );
 
         if (_settingsStudioState.backend && _settingsStudioState.backend.state === "error") {
             lineState = "error";
@@ -7471,7 +7478,10 @@
             );
         } else if (_settingsStudioState.engines && (_settingsStudioState.engines.state === "warning" || _settingsStudioState.engines.state === "error")) {
             lineState = _settingsStudioState.engines.state === "error" ? "error" : "warning";
-            lineMessage = "Refresh engine routing after installs finish so Auto can make the best local decisions for this machine.";
+            lineMessage = t(
+                "engines.overview_warning",
+                "Refresh engine routing after installs finish so Auto can make the best local decisions for this machine."
+            );
         }
 
         setStatusLine("settingsOverviewStatus", lineMessage, lineState, lineMessage);
