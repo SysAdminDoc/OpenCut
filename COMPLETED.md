@@ -27,6 +27,7 @@ Last consolidated: 2026-06-04.
 | Research closures | The May 25 plan closed or advanced route-surface, agent, UXP MCP, sequence-index, shorts-variant, enhance macro, test-breadth, i18n, a11y, security, and CI governance items. |
 | Performance and recovery | The May 26 plan now has N1 closed: transcripts are cached by source SHA-256 plus backend/settings, with shared core integration and cache stats/clear routes. |
 | Dependency guidance | The May 26 plan now has N2 closed: optional-dependency failures surface OpenCut extra commands, package hints, and GPU/VRAM notes through structured errors and async job status. |
+| Resource contention | The May 26 plan now has N3 closed: GPU semaphore contention waits up to 30 seconds by default and returns retry metadata when the wait budget is exhausted. |
 
 ## Historical Detail
 

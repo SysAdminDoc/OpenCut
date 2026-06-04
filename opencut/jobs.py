@@ -764,6 +764,12 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         "error": str(e),
                         "message": f"Error: {e}",
                     }
+                    if getattr(e, "code", ""):
+                        update["code"] = getattr(e, "code")
+                    if getattr(e, "retry_after", None) is not None:
+                        update["retry_after"] = getattr(e, "retry_after")
+                    if getattr(e, "queue_depth", None) is not None:
+                        update["queue_depth"] = getattr(e, "queue_depth")
                     try:
                         from opencut.core.install_hints import suggestion_for_exception
 

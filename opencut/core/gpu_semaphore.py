@@ -22,13 +22,14 @@ Configuration
 - ``OPENCUT_MAX_GPU_JOBS`` env var sets the concurrent limit.
   Defaults to **3** — two live models + one warming / freeing.
 - ``OPENCUT_GPU_ACQUIRE_TIMEOUT`` seconds a request waits for a slot
-  before returning 429 ``GPU_BUSY``. Defaults to 0 (non-blocking:
-  immediate 429).
+  before returning 429 ``GPU_BUSY``. Defaults to 30 seconds; set 0 for
+  the previous non-blocking behavior.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 import time
@@ -48,7 +49,25 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
 
 
 MAX_CONCURRENT_GPU_JOBS = _env_int("OPENCUT_MAX_GPU_JOBS", 3, 1, 32)
-ACQUIRE_TIMEOUT = max(0.0, float(os.environ.get("OPENCUT_GPU_ACQUIRE_TIMEOUT") or "0") or 0.0)
+DEFAULT_ACQUIRE_TIMEOUT = 30.0
+MAX_ACQUIRE_TIMEOUT = 600.0
+
+
+def _env_float(name: str, default: float, lo: float, hi: float) -> float:
+    raw = os.environ.get(name)
+    try:
+        val = float(default if raw is None or raw.strip() == "" else raw.strip())
+    except (TypeError, ValueError):
+        val = default
+    return max(lo, min(hi, val))
+
+
+ACQUIRE_TIMEOUT = _env_float(
+    "OPENCUT_GPU_ACQUIRE_TIMEOUT",
+    DEFAULT_ACQUIRE_TIMEOUT,
+    0.0,
+    MAX_ACQUIRE_TIMEOUT,
+)
 
 _semaphore = threading.Semaphore(MAX_CONCURRENT_GPU_JOBS)
 _state_lock = threading.Lock()
@@ -66,6 +85,7 @@ class GpuSemaphoreStatus:
     rejected_total: int
     acquired_total: int
     acquire_timeout_seconds: float
+    queue_depth: int
 
     def to_dict(self) -> Dict[str, object]:
         return {
@@ -75,7 +95,20 @@ class GpuSemaphoreStatus:
             "rejected_total": self.rejected_total,
             "acquired_total": self.acquired_total,
             "acquire_timeout_seconds": self.acquire_timeout_seconds,
+            "queue_depth": self.queue_depth,
         }
+
+
+class GpuBusyError(RuntimeError):
+    """Raised when a GPU slot cannot be acquired within the wait budget."""
+
+    code = "GPU_BUSY"
+    status_code = 429
+
+    def __init__(self, message: str, *, retry_after: int, queue_depth: int):
+        self.retry_after = int(max(1, retry_after))
+        self.queue_depth = int(max(1, queue_depth))
+        super().__init__(message)
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +125,7 @@ def status() -> GpuSemaphoreStatus:
             rejected_total=_rejected_count,
             acquired_total=_total_acquires,
             acquire_timeout_seconds=ACQUIRE_TIMEOUT,
+            queue_depth=_queue_depth_unlocked(),
         )
 
 
@@ -113,6 +147,26 @@ def acquire(timeout: Optional[float] = None) -> bool:
         else:
             _rejected_count += 1
     return bool(got)
+
+
+def retry_after_seconds(timeout: Optional[float] = None) -> int:
+    """Return a bounded Retry-After value for a failed acquire attempt."""
+    wait = ACQUIRE_TIMEOUT if timeout is None else max(0.0, float(timeout))
+    if wait <= 0:
+        return 1
+    return int(max(1, min(MAX_ACQUIRE_TIMEOUT, math.ceil(wait))))
+
+
+def queue_depth() -> int:
+    """Return how many requests are effectively waiting behind active work."""
+    with _state_lock:
+        return _queue_depth_unlocked()
+
+
+def _queue_depth_unlocked() -> int:
+    if _active_count < MAX_CONCURRENT_GPU_JOBS:
+        return 0
+    return max(1, _active_count - MAX_CONCURRENT_GPU_JOBS + 1)
 
 
 def release() -> None:
@@ -174,13 +228,24 @@ def gpu_exclusive(
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not acquire(timeout=timeout):
+                retry_after = retry_after_seconds(timeout)
+                depth = queue_depth()
                 msg = (
                     f"GPU_BUSY: {MAX_CONCURRENT_GPU_JOBS} concurrent GPU "
-                    "jobs already running. Retry shortly."
+                    f"jobs already running. Retry after {retry_after}s."
                 )
                 if fail_fast_raises:
-                    raise RuntimeError(msg)
-                return {"error": "GPU_BUSY", "message": msg}
+                    raise GpuBusyError(
+                        msg,
+                        retry_after=retry_after,
+                        queue_depth=depth,
+                    )
+                return {
+                    "error": "GPU_BUSY",
+                    "message": msg,
+                    "retry_after": retry_after,
+                    "queue_depth": depth,
+                }
             try:
                 return func(*args, **kwargs)
             finally:
