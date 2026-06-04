@@ -876,39 +876,39 @@
                 <div class="sub-panel" id="sub-cap-subtitle">
                     <section class="card">
                         <div class="form-group">
-                            <label for="subModel">Model</label>
+                            <label for="subModel" data-i18n="forms.model">Model</label>
                             <select id="subModel">
-                                <option value="tiny">Tiny (fastest)</option>
-                                <option value="base">Base (balanced)</option>
-                                <option value="small">Small (good)</option>
-                                <option value="medium">Medium (great)</option>
-                                <option value="turbo" selected>Turbo (fast + accurate)</option>
-                                <option value="large-v3">Large v3 (best accuracy)</option>
-                                <option value="distil-large-v3.5">Distil v3.5 (fast + great)</option>
-                                <option value="distil-large-v3">Distil v3 (fast + good)</option>
+                                <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
+                                <option value="base" data-i18n="captions.model_base">Base (balanced)</option>
+                                <option value="small" data-i18n="captions.model_small">Small (good)</option>
+                                <option value="medium" data-i18n="captions.model_medium">Medium (great)</option>
+                                <option value="turbo" selected data-i18n="captions.model_turbo">Turbo (fast + accurate)</option>
+                                <option value="large-v3" data-i18n="captions.model_large_v3">Large v3 (best accuracy)</option>
+                                <option value="distil-large-v3.5" data-i18n="captions.model_distil_large_v35">Distil v3.5 (fast + great)</option>
+                                <option value="distil-large-v3" data-i18n="captions.model_distil_large_v3">Distil v3 (fast + good)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="subLang">Language</label>
+                            <label for="subLang" data-i18n="forms.language">Language</label>
                             <select id="subLang">
-                                <option value="">Auto-detect</option>
-                                <option value="en">English</option>
-                                <option value="es">Spanish</option>
-                                <option value="fr">French</option>
-                                <option value="de">German</option>
-                                <option value="ja">Japanese</option>
-                                <option value="ko">Korean</option>
-                                <option value="zh">Chinese</option>
-                                <option value="pt">Portuguese</option>
+                                <option value="" data-i18n="language.auto_detect">Auto-detect</option>
+                                <option value="en" data-i18n="language.english">English</option>
+                                <option value="es" data-i18n="language.spanish">Spanish</option>
+                                <option value="fr" data-i18n="language.french">French</option>
+                                <option value="de" data-i18n="language.german">German</option>
+                                <option value="ja" data-i18n="language.japanese">Japanese</option>
+                                <option value="ko" data-i18n="language.korean">Korean</option>
+                                <option value="zh" data-i18n="language.chinese">Chinese</option>
+                                <option value="pt" data-i18n="language.portuguese">Portuguese</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="subFormat">Format</label>
+                            <label for="subFormat" data-i18n="forms.format">Format</label>
                             <select id="subFormat">
-                                <option value="srt">SRT (SubRip)</option>
-                                <option value="vtt">WebVTT</option>
-                                <option value="ass">ASS (Karaoke)</option>
-                                <option value="json">JSON (Word-level)</option>
+                                <option value="srt" data-i18n="formats.srt_subrip">SRT (SubRip)</option>
+                                <option value="vtt" data-i18n="formats.webvtt">WebVTT</option>
+                                <option value="ass" data-i18n="formats.ass_karaoke">ASS (Karaoke)</option>
+                                <option value="json" data-i18n="formats.json_word_level">JSON (Word-level)</option>
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runSubtitleBtn" disabled data-i18n="captions.subtitle_export">Export Subtitles</button>

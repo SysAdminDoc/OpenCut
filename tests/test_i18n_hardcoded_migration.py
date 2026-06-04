@@ -368,6 +368,31 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.whisper_not_installed", "data-i18n"),
     ("whisper.install_now", "data-i18n"),
     ("common.or_manually", "data-i18n"),
+    # One-hundred-twelfth batch (Subtitle Export form shell HTML).
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small", "data-i18n"),
+    ("captions.model_medium", "data-i18n"),
+    ("captions.model_turbo", "data-i18n"),
+    ("captions.model_large_v3", "data-i18n"),
+    ("captions.model_distil_large_v35", "data-i18n"),
+    ("captions.model_distil_large_v3", "data-i18n"),
+    ("forms.language", "data-i18n"),
+    ("language.auto_detect", "data-i18n"),
+    ("language.english", "data-i18n"),
+    ("language.spanish", "data-i18n"),
+    ("language.french", "data-i18n"),
+    ("language.german", "data-i18n"),
+    ("language.japanese", "data-i18n"),
+    ("language.korean", "data-i18n"),
+    ("language.chinese", "data-i18n"),
+    ("language.portuguese", "data-i18n"),
+    ("forms.format", "data-i18n"),
+    ("formats.srt_subrip", "data-i18n"),
+    ("formats.webvtt", "data-i18n"),
+    ("formats.ass_karaoke", "data-i18n"),
+    ("formats.json_word_level", "data-i18n"),
 )
 
 
@@ -1808,6 +1833,10 @@ MIGRATED_KEYS = (
     "captions.whisper_not_installed",
     "common.comma_separated",
     "common.or_manually",
+    "formats.ass_karaoke",
+    "formats.json_word_level",
+    "formats.srt_subrip",
+    "formats.webvtt",
     "whisper.install_now",
 )
 
