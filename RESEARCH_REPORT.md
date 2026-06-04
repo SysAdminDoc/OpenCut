@@ -8,8 +8,8 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.221 docs; E15
-also has its fourth through one-hundred-thirteenth rolling i18n batches recorded there, and `TODO.md`
+route escape hatch are now represented as shipped in the live v4.222 docs; E15
+also has its fourth through one-hundred-fourteenth rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
@@ -56,7 +56,9 @@ commands against tracked files and profile comments; RA-27 captures the missing
 compose-file command drift follow-up.
 Cycle 17 checked README non-badge route/module/blueprint count claims against
 generated route truth and badge-sync coverage; RA-28 captures the README
-non-badge generated-count gate follow-up.
+non-badge generated-count gate follow-up. Cycle 18 rechecked Docker CI and
+release-smoke coverage, promoting no new row because RA-25 through RA-27 already
+cover the Docker build/config/health validation shape.
 
 ## Executive Summary
 
@@ -66,7 +68,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.221; the strongest remaining direction is **not** another wave of
+rolling in v4.222; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -451,6 +453,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE15.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE15.md) — Docker runtime docs, volume-home, and WebSocket exposure follow-up (RA-26).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE16.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE16.md) — Docker GPU compose launch command follow-up (RA-27).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md) — README non-badge generated-count drift follow-up (RA-28).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md) — duplicate Docker CI/release-smoke coverage recheck; no new RA row promoted.
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
 - [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-28 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
