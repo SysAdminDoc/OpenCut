@@ -544,6 +544,14 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.demucs_not_installed", "data-i18n"),
     ("install.demucs", "data-i18n"),
     ("common.or_manually", "data-i18n"),
+    # One-hundred-twenty-first batch (Audio denoise form shell HTML).
+    ("forms.method", "data-i18n"),
+    ("audio.denoise_method_standard", "data-i18n"),
+    ("audio.denoise_method_bandpass", "data-i18n"),
+    ("forms.strength", "data-i18n"),
+    ("audio.denoise_strength_hint", "data-i18n"),
+    ("audio.preview_10s", "data-i18n"),
+    ("audio.denoise_preview_10s_title", "data-i18n-title"),
 )
 
 
@@ -2082,6 +2090,12 @@ MIGRATED_KEYS = (
     "quick_actions.audio_studio_label",
     "quick_actions.audio_studio_meta",
     "quick_actions.audio_studio_title",
+    # One-hundred-twenty-first batch (Audio denoise form shell HTML).
+    "audio.denoise_method_bandpass",
+    "audio.denoise_method_standard",
+    "audio.denoise_preview_10s_title",
+    "audio.denoise_strength_hint",
+    "audio.preview_10s",
 )
 
 
