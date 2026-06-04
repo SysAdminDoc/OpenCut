@@ -811,6 +811,15 @@ MIGRATED_KEYS = (
     "timeline.markers_added",
     "timeline.no_beat_markers",
     "timeline.premiere_required",
+    # Fifty-third batch (timeline marker/project item feedback).
+    "timeline.exported_clips",
+    "timeline.get_markers_first",
+    "timeline.items_load_failed",
+    "timeline.markers_read_failed",
+    "timeline.no_items_loaded",
+    "timeline.no_markers_found",
+    "timeline.read_markers_failed",
+    "timeline.unexpected_response",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4340,6 +4349,47 @@ EXPECTED_CALLS = (
         "timeline.premiere_required",
         re.compile(r't\(\s*"timeline\.premiere_required"'),
         re.compile(r'showAlert\("Premiere Pro connection required\."'),
+    ),
+    # --- Fifty-third batch -----------------------------------------
+    (
+        "timeline.exported_clips",
+        re.compile(r't\(\s*"timeline\.exported_clips"'),
+        re.compile(r'sum\.textContent\s*=\s*"Exported "\s*\+\s*\(r\.count \|\| r\.exported \|\| 0\)'),
+    ),
+    (
+        "timeline.get_markers_first",
+        re.compile(r't\(\s*"timeline\.get_markers_first"'),
+        re.compile(r'showAlert\("Get sequence markers first\."'),
+    ),
+    (
+        "timeline.items_load_failed",
+        re.compile(r't\(\s*"timeline\.items_load_failed"'),
+        re.compile(r'showAlert\("Error loading items: "'),
+    ),
+    (
+        "timeline.markers_read_failed",
+        re.compile(r't\(\s*"timeline\.markers_read_failed"'),
+        re.compile(r'innerHTML\s*=\s*\'<div class="hint">Could not read sequence markers\.</div>\''),
+    ),
+    (
+        "timeline.no_items_loaded",
+        re.compile(r't\(\s*"timeline\.no_items_loaded"'),
+        re.compile(r'innerHTML\s*=\s*\'<div class="hint">No items loaded\.</div>\''),
+    ),
+    (
+        "timeline.no_markers_found",
+        re.compile(r't\(\s*"timeline\.no_markers_found"'),
+        re.compile(r'innerHTML\s*=\s*\'<div class="hint">No markers found in sequence\.</div>\''),
+    ),
+    (
+        "timeline.read_markers_failed",
+        re.compile(r't\(\s*"timeline\.read_markers_failed"'),
+        re.compile(r'showAlert\("Error reading markers: "'),
+    ),
+    (
+        "timeline.unexpected_response",
+        re.compile(r't\(\s*"timeline\.unexpected_response"'),
+        re.compile(r'\|\|\s*"Unexpected Premiere response"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
