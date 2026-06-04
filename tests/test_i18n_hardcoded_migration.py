@@ -387,6 +387,20 @@ MIGRATED_KEYS = (
     "progress.unknown_error",
     "progress.finished",
     "progress.success_summary",
+    # Thirty-first batch (central cleaned error guidance).
+    "error.route_not_found",
+    "error.backend_problem",
+    "error.request_retry",
+    "error.backend_unreachable",
+    "error.source_missing",
+    "error.file_permission",
+    "error.timeout_retry",
+    "error.install_from_settings",
+    "error.memory_retry",
+    "error.permission_check",
+    "error.file_moved",
+    "error.operation_timeout",
+    "error.server_running",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1865,6 +1879,82 @@ EXPECTED_CALLS = (
         "progress.success_summary",
         re.compile(r't\(\s*"progress\.success_summary"'),
         re.compile(r'stats\s*\|\|\s*"The run finished successfully\."'),
+    ),
+    # --- Thirty-first batch ----------------------------------------
+    (
+        "error.route_not_found",
+        re.compile(r't\(\s*"error\.route_not_found"'),
+        re.compile(r'return\s+"OpenCut couldn\'t find the local route'),
+    ),
+    (
+        "error.backend_problem",
+        re.compile(r't\(\s*"error\.backend_problem"'),
+        re.compile(r'return\s+"OpenCut hit a local backend problem'),
+    ),
+    (
+        "error.request_retry",
+        re.compile(r't\(\s*"error\.request_retry"'),
+        re.compile(r'return\s+"OpenCut couldn\'t complete that request'),
+    ),
+    (
+        "error.backend_unreachable",
+        re.compile(r't\(\s*"error\.backend_unreachable"'),
+        re.compile(r'return\s+"OpenCut couldn\'t reach the local backend'),
+    ),
+    (
+        "progress.busy",
+        re.compile(r't\(\s*"progress\.busy"'),
+        re.compile(r'return\s+"OpenCut is already processing another task\.'),
+    ),
+    (
+        "toast.choose_source_first",
+        re.compile(r't\(\s*"toast\.choose_source_first"'),
+        re.compile(r'return\s+"Choose a source in Media before running this tool\."'),
+    ),
+    (
+        "error.source_missing",
+        re.compile(r't\(\s*"error\.source_missing"'),
+        re.compile(r'return\s+"OpenCut couldn\'t find that source anymore'),
+    ),
+    (
+        "error.file_permission",
+        re.compile(r't\(\s*"error\.file_permission"'),
+        re.compile(r'return\s+"OpenCut doesn\'t have permission to read or write'),
+    ),
+    (
+        "error.timeout_retry",
+        re.compile(r't\(\s*"error\.timeout_retry"'),
+        re.compile(r'return\s+"That run took too long to finish'),
+    ),
+    (
+        "error.install_from_settings",
+        re.compile(r't\(\s*"error\.install_from_settings"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 You can install'),
+    ),
+    (
+        "error.memory_retry",
+        re.compile(r't\(\s*"error\.memory_retry"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 Try a smaller file'),
+    ),
+    (
+        "error.permission_check",
+        re.compile(r't\(\s*"error\.permission_check"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 The file may be locked'),
+    ),
+    (
+        "error.file_moved",
+        re.compile(r't\(\s*"error\.file_moved"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 The file may have been moved'),
+    ),
+    (
+        "error.operation_timeout",
+        re.compile(r't\(\s*"error\.operation_timeout"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 The operation took too long'),
+    ),
+    (
+        "error.server_running",
+        re.compile(r't\(\s*"error\.server_running"'),
+        re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 Make sure the OpenCut server is running'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
