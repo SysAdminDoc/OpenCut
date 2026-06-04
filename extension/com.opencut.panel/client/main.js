@@ -8891,8 +8891,12 @@
         el.polishInterviewBtn.disabled = !selectedPath;
         el.polishInterviewBtn.textContent = "Polish this interview";
         if (el.polishBatchBtn) el.polishBatchBtn.disabled = false;
-        showAlert("Batch polish done: " + ok + " succeeded" +
-                  (failed ? ", " + failed + " failed" : "") + ".");
+        var failedPart = failed
+            ? t("toast.polish_batch_failed_part", ", {count} failed").replace("{count}", failed)
+            : "";
+        showAlert(t("toast.polish_batch_done", "Batch polish done: {ok} succeeded{failed}.")
+            .replace("{ok}", ok)
+            .replace("{failed}", failedPart));
         _polishBatchQueue = null;
         _polishBatchResults = null;
     }
@@ -8907,8 +8911,8 @@
                 if (!confirm("Clear all journal entries? This does not undo anything in Premiere.")) return;
                 updateJournalSummary([], "Clearing the journal history. This does not undo anything in Premiere.", "working");
                 api("POST", "/journal/clear", {}, function (err) {
-                    if (err) { showAlert("Could not clear: " + (err.error || err)); return; }
-                    showToast("Journal cleared", "success");
+                    if (err) { showAlert(t("toast.journal_clear_failed", "Could not clear: {error}").replace("{error}", err.error || err)); return; }
+                    showToast(t("toast.journal_cleared", "Journal cleared"), "success");
                     renderJournalList();
                 });
             });
@@ -9025,7 +9029,7 @@
         var list = document.getElementById("cutReviewList");
         if (!panel || !list) return;
         if (!cuts || !cuts.length) {
-            showAlert("No cuts detected in this clip.");
+            showAlert(t("toast.no_cuts_detected", "No cuts detected in this clip."));
             return;
         }
 
@@ -9124,7 +9128,7 @@
             }
 
             if (!selected.length) {
-                showAlert("No cuts selected. Select at least one cut to apply.");
+                showAlert(t("toast.no_cuts_selected", "No cuts selected. Select at least one cut to apply."));
                 return;
             }
 
@@ -9402,7 +9406,7 @@
             if (openBtn || revealBtn) {
                 var outputPath = getJobHistoryOutputPath(entry);
                 if (!outputPath) {
-                    showToast("This history item is missing an output path.", "warning");
+                    showToast(t("toast.history_missing_output_path", "This history item is missing an output path."), "warning");
                     return;
                 }
                 _sessionCtxOpenPath(outputPath, openBtn ? "open" : "reveal");
@@ -9414,7 +9418,9 @@
                 // Clone so we don't mutate the stored payload
                 var payload = JSON.parse(JSON.stringify(entry.payload));
                 payload.filepath = selectedPath;
-                showToast("Applying '" + entry.type + "' to " + (selectedName || "selection") + "…", "info");
+                showToast(t("toast.applying_to_selection", "Applying {action} to {target}…")
+                    .replace("{action}", "'" + entry.type + "'")
+                    .replace("{target}", selectedName || t("toast.selection_target", "selection")), "info");
                 startJob(entry.endpoint, payload);
             } else {
                 startJob(entry.endpoint, entry.payload);
