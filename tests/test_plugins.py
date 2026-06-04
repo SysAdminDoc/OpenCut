@@ -2,8 +2,24 @@
 
 import json
 import textwrap
+from concurrent.futures import Future
 
 import pytest
+
+
+def _inline_pool():
+    class InlinePool:
+        def submit(self, job_id, fn):
+            future = Future()
+            try:
+                fn()
+            except BaseException as exc:  # noqa: BLE001
+                future.set_exception(exc)
+            else:
+                future.set_result(None)
+            return future
+
+    return InlinePool()
 
 
 class TestPluginDiscovery:
@@ -158,9 +174,11 @@ class TestPluginRoutes:
             {
                 "name": plugin_name,
                 "version": "1.0.0",
-                "description": "CSRF guard regression test",
+                "description": "CSRF guard test",
                 "author": "tests",
                 "path": str(plugin_dir),
+                "capabilities": ["http.routes"],
+                "jobs": [],
                 "ui": None,
             },
         )
@@ -178,6 +196,200 @@ class TestPluginRoutes:
         )
         assert allowed.status_code == 200
         assert allowed.get_json() == {"ok": True}
+
+        with _plugins_lock:
+            _loaded_plugins.pop(plugin_name, None)
+
+    def test_plugin_job_route_starts_async_job(self, tmp_path, monkeypatch):
+        from flask import Flask
+
+        from opencut.core.plugins import _loaded_plugins, _plugins_lock, load_plugin_routes
+        from opencut.jobs import jobs, job_lock
+        from opencut.security import get_csrf_token
+
+        monkeypatch.setattr("opencut.workers.get_pool", lambda: _inline_pool())
+        monkeypatch.setattr("opencut.jobs._persist_job", lambda job_dict, *, sync=False: None)
+
+        plugin_name = "long-job-demo"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                from flask import Blueprint
+                from opencut.core.plugins import plugin_job
+
+                plugin_bp = Blueprint("long_job_demo", __name__)
+
+                @plugin_bp.route("/start", methods=["POST"])
+                @plugin_job(
+                    "long-job-demo",
+                    "render_preview",
+                    label="Render Preview",
+                    filepath_required=False,
+                    resumable=True,
+                )
+                def start(job_id, filepath, data):
+                    return {
+                        "plugin": "long-job-demo",
+                        "job": "render_preview",
+                        "payload": data,
+                    }
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        with _plugins_lock:
+            _loaded_plugins.pop(plugin_name, None)
+        with job_lock:
+            jobs.clear()
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Long job demo",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes", "jobs.register"],
+                "jobs": [{"id": "render_preview", "label": "Render Preview"}],
+                "ui": None,
+            },
+        )
+
+        client = app.test_client()
+        response = client.post(
+            f"/plugins/{plugin_name}/start",
+            json={"quality": "draft"},
+            headers={"X-OpenCut-Token": get_csrf_token()},
+        )
+        body = response.get_json()
+
+        assert response.status_code == 200
+        assert body["job_id"]
+        with job_lock:
+            job = jobs[body["job_id"]]
+        assert job["type"] == "plugin:long-job-demo:render_preview"
+        assert job["status"] == "complete"
+        assert job["resumable"] is True
+        assert job["result"]["plugin"] == "long-job-demo"
+
+        loaded = app.view_functions
+        assert loaded
+        with _plugins_lock:
+            _loaded_plugins.pop(plugin_name, None)
+
+    def test_plugin_job_must_be_declared_in_manifest(self, tmp_path):
+        from flask import Flask
+
+        from opencut.core.plugins import _loaded_plugins, _plugin_contexts, _plugins_lock, load_plugin_routes
+
+        plugin_name = "undeclared-job"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                from flask import Blueprint
+                from opencut.core.plugins import plugin_job
+
+                plugin_bp = Blueprint("undeclared_job", __name__)
+
+                @plugin_bp.route("/start", methods=["POST"])
+                @plugin_job("undeclared-job", "hidden_task", filepath_required=False)
+                def start(job_id, filepath, data):
+                    return {"ok": True}
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        with _plugins_lock:
+            _loaded_plugins.pop(plugin_name, None)
+            _plugin_contexts.pop(plugin_name, None)
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert not load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Undeclared job",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes", "jobs.register"],
+                "jobs": [{"id": "other_task"}],
+                "ui": None,
+            },
+        )
+        with _plugins_lock:
+            assert plugin_name not in _loaded_plugins
+            assert plugin_name not in _plugin_contexts
+
+    def test_plugin_job_without_filesystem_capability_rejects_host_paths(self, tmp_path, monkeypatch):
+        from flask import Flask
+
+        from opencut.core.plugins import _loaded_plugins, _plugins_lock, load_plugin_routes
+        from opencut.security import get_csrf_token
+
+        monkeypatch.setattr("opencut.jobs._persist_job", lambda job_dict, *, sync=False: None)
+
+        plugin_name = "path-guard-job"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                from flask import Blueprint
+                from opencut.core.plugins import plugin_job
+
+                plugin_bp = Blueprint("path_guard_job", __name__)
+
+                @plugin_bp.route("/start", methods=["POST"])
+                @plugin_job("path-guard-job", "scan", filepath_required=False)
+                def start(job_id, filepath, data):
+                    return {"ok": True}
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        with _plugins_lock:
+            _loaded_plugins.pop(plugin_name, None)
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Path guard job",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes", "jobs.register"],
+                "jobs": [{"id": "scan"}],
+                "ui": None,
+            },
+        )
+
+        outside = tmp_path / "outside.txt"
+        outside.write_text("nope", encoding="utf-8")
+        response = app.test_client().post(
+            f"/plugins/{plugin_name}/start",
+            json={"input_path": str(outside)},
+            headers={"X-OpenCut-Token": get_csrf_token()},
+        )
+        body = response.get_json()
+
+        assert response.status_code == 400
+        assert body["code"] == "INVALID_INPUT"
+        assert "host.filesystem" in body["error"]
 
         with _plugins_lock:
             _loaded_plugins.pop(plugin_name, None)

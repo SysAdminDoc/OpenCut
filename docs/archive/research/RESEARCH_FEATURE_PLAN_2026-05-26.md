@@ -380,7 +380,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ### Documentation gaps
 
-- `CONTRIBUTING.md` documents the route-pattern conventions well; missing: how to author a plugin and how to author an agent skill. Both deserve `docs/PLUGIN_AUTHORING.md` and `docs/SKILL_AUTHORING.md` once N7 and N8 land.
+- `CONTRIBUTING.md` documents the route-pattern conventions well. N7 added `docs/PLUGIN_AUTHORING.md`; N8 should add `docs/SKILL_AUTHORING.md` when third-party skills land.
 - The 47 model cards (`docs/MODELS.md`) need a per-card "install hint" pointer once N2 lands.
 
 ### Release & build gaps (unchanged from prior plan)
@@ -439,10 +439,11 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: kill worker mid-job, restart, `POST /jobs/{id}/resume`, output equals fresh-run baseline.
   - Status: closed in ROADMAP v4.93 with resumable async-job metadata, durable running-job persistence, `POST /jobs/<job_id>/resume`, and route coverage for captions/transcript/WhisperX, Demucs separation, export/export-preset, and depth-estimate-v2.
 
-- [ ] **P1 — N7 plugin job-registration API**
+- [x] **P1 — N7 plugin job-registration API**
   - Why: plugin authors can register routes but not background work.
   - Touches: `opencut/core/plugins.py`, `opencut/core/plugin_manifest.py`, `opencut/jobs.py`, add `example_plugins/long-job-demo/`.
   - Acceptance: example plugin's `/plugins/long-job-demo/start` enqueues a real `@async_job`-tracked job.
+  - Status: closed in ROADMAP v4.94 with `jobs.register`, `plugin_job(...)`, manifest/decorator cross-checks, filesystem-scope enforcement, and `opencut/data/example_plugins/long-job-demo/`.
 
 - [ ] **P1 — N8 third-party agent-skill loader**
   - Why: today skills are built-in only.
@@ -496,7 +497,7 @@ For each item below: where it lives, what works, what was deferred.
 
 - **N1 transcript cache.** Shipped in `ROADMAP.md` v4.87; every Whisper caller now shares the core persistent cache.
 - **N5 job resume.** Shipped in `ROADMAP.md` v4.93 with incremental per-route opt-in for the checkpointable caption, Demucs, export, and depth jobs; future work can deepen per-job checkpoint formats.
-- **N7 + N8 plugin/skill extensibility.** When community plugins ship background jobs and community skills ship via folder-drop, OpenCut becomes a *platform* instead of a feature-bag. Adopt the Obsidian capability-enforcement pattern (not just declaration).
+- **N7 + N8 plugin/skill extensibility.** N7 is shipped for plugin background jobs; N8 remains the folder-drop skill-loader half. Adopt the Obsidian capability-enforcement pattern (not just declaration) for the remaining skill work.
 
 ---
 

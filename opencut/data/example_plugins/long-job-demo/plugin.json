@@ -1,0 +1,29 @@
+{
+  "name": "long-job-demo",
+  "version": "1.0.0",
+  "description": "Demonstrates a plugin-registered OpenCut async job",
+  "author": "OpenCut",
+  "api_version": 1,
+  "enabled": true,
+  "capabilities": ["http.routes", "jobs.register"],
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/start",
+      "description": "Start the demo background job"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "render_preview",
+      "label": "Render Preview",
+      "description": "Runs a short multi-step demo task through the standard async job tracker",
+      "resumable": true
+    }
+  ],
+  "ui": {
+    "tab": "developer",
+    "label": "Long Job Demo",
+    "icon": "timer"
+  }
+}
