@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T02:48:07Z",
-  "total_routes": 1522,
+  "generated_at": "2026-06-04T03:54:18Z",
+  "total_routes": 1523,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 15,
-    "GET": 380,
+    "GET": 381,
     "PATCH": 1,
     "POST": 1128,
     "PUT": 2
@@ -492,9 +492,9 @@
       ]
     },
     "jobs": {
-      "route_count": 14,
+      "route_count": 15,
       "method_counts": {
-        "GET": 9,
+        "GET": 10,
         "POST": 5
       },
       "sample_rules": [
@@ -7542,6 +7542,14 @@
         "GET"
       ],
       "endpoint": "jobs.list_jobs",
+      "blueprint": "jobs"
+    },
+    {
+      "rule": "/jobs/<job_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "jobs.job_detail",
       "blueprint": "jobs"
     },
     {

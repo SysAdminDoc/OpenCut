@@ -138,6 +138,10 @@ class JobStatusResult:
     message: str = ""
     result: Optional[dict] = None
     error: Optional[str] = None
+    exit_reason: str = ""
+    peak_vram_mb: int = 0
+    peak_cpu_pct: int = 0
+    peak_rss_mb: int = 0
 
     def to_dict(self) -> dict:
         return _strip_none(asdict(self))
@@ -643,6 +647,7 @@ _OPENAPI_SCHEMA_ROUTES = (
     (JobStatsResult, ("/jobs/stats",)),
     (JobStatusResult, (
         "/agent/plan/<plan_id>",
+        "/jobs/<job_id>",
         "/jobs/<job_id>/diagnostics",
         "/status/<job_id>",
     )),
