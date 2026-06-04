@@ -8501,10 +8501,13 @@
                     ? t("journal.context_only", "Context only")
                     : t("journal.waiting_reversible", "Waiting for first reversible action")),
             revertibleCount
-                ? revertibleCount + " recent journal entr" + (revertibleCount === 1 ? "y is" : "ies are") + " ready to revert automatically."
+                ? t("journal.revertible_ready_title", "{count} recent journal {entryWord} {verb} ready to revert automatically.")
+                    .replace("{count}", revertibleCount)
+                    .replace("{entryWord}", revertibleCount === 1 ? "entry" : "entries")
+                    .replace("{verb}", revertibleCount === 1 ? "is" : "are")
                 : (recentCount
-                    ? "The recent journal entries are recorded for context, but none can be reverted automatically."
-                    : "Automatic rollback will appear here when supported actions are recorded.")
+                    ? t("journal.context_only_title", "The recent journal entries are recorded for context, but none can be reverted automatically.")
+                    : t("journal.rollback_waiting_title", "Automatic rollback will appear here when supported actions are recorded."))
         );
 
         if (statusMessage) {
@@ -8515,19 +8518,22 @@
         if (!recentCount) {
             setStatusLine(
                 "journalStatusLine",
-                "Run an action that writes to Premiere and it will appear here with any available rollback support.",
+                t("journal.empty_status", "Run an action that writes to Premiere and it will appear here with any available rollback support."),
                 "idle"
             );
         } else if (revertibleCount) {
             setStatusLine(
                 "journalStatusLine",
-                revertibleCount + " recent action" + (revertibleCount === 1 ? " is" : "s are") + " still undo-ready. Review them before manual timeline edits drift too far.",
+                t("journal.undo_ready_status", "{count} recent action{plural} {verb} still undo-ready. Review them before manual timeline edits drift too far.")
+                    .replace("{count}", revertibleCount)
+                    .replace("{plural}", revertibleCount === 1 ? "" : "s")
+                    .replace("{verb}", revertibleCount === 1 ? "is" : "are"),
                 "success"
             );
         } else {
             setStatusLine(
                 "journalStatusLine",
-                "Recent actions are recorded for context, but the current set does not include any automatic rollback steps.",
+                t("journal.no_rollback_status", "Recent actions are recorded for context, but the current set does not include any automatic rollback steps."),
                 "warning"
             );
         }
@@ -8536,29 +8542,30 @@
     function renderJournalList() {
         if (!el.journalList) return;
         el.journalList.innerHTML = buildEmptyHintMarkup(
-            "Loading timeline history…",
-            "Reviewing recent timeline-affecting actions and any available rollback support.",
+            t("journal.loading_title", "Loading timeline history…"),
+            t("journal.loading_body", "Reviewing recent timeline-affecting actions and any available rollback support."),
             "info"
         );
-        updateJournalSummary([], "Loading recent timeline operations and rollback availability.", "working");
+        updateJournalSummary([], t("journal.loading_status", "Loading recent timeline operations and rollback availability."), "working");
         api("GET", "/journal/list?limit=30", null, function (err, data) {
             if (err) {
                 el.journalList.innerHTML = buildEmptyHintMarkup(
-                    "Journal unavailable",
-                    "Couldn't load timeline history right now. Reconnect the backend or refresh the journal to try again.",
+                    t("journal.unavailable_title", "Journal unavailable"),
+                    t("journal.unavailable_body", "Couldn't load timeline history right now. Reconnect the backend or refresh the journal to try again."),
                     "error"
                 );
                 updateJournalSummary(
                     [],
-                    "Couldn't load timeline history: " + (err.error || err.message || "Unknown error") + ".",
+                    t("journal.unavailable_status", "Couldn't load timeline history: {error}.")
+                        .replace("{error}", err.error || err.message || t("toast.unknown_error", "Unknown error")),
                     "error"
                 );
                 return;
             }
             if (!Array.isArray(data) || !data.length) {
                 el.journalList.innerHTML = buildEmptyHintMarkup(
-                    "No timeline actions yet",
-                    "Run an action that writes to Premiere and it will appear here with any available rollback support.",
+                    t("journal.no_actions_title", "No timeline actions yet"),
+                    t("journal.empty_status", "Run an action that writes to Premiere and it will appear here with any available rollback support."),
                     "info"
                 );
                 updateJournalSummary([]);
@@ -9467,8 +9474,8 @@
         }
         if (el.journalClearBtn) {
             el.journalClearBtn.addEventListener("click", function () {
-                if (!confirm("Clear all journal entries? This does not undo anything in Premiere.")) return;
-                updateJournalSummary([], "Clearing the journal history. This does not undo anything in Premiere.", "working");
+                if (!confirm(t("journal.clear_confirm", "Clear all journal entries? This does not undo anything in Premiere."))) return;
+                updateJournalSummary([], t("journal.clearing_status", "Clearing the journal history. This does not undo anything in Premiere."), "working");
                 api("POST", "/journal/clear", {}, function (err) {
                     if (err) { showAlert(t("toast.journal_clear_failed", "Could not clear: {error}").replace("{error}", err.error || err)); return; }
                     showToast(t("toast.journal_cleared", "Journal cleared"), "success");

@@ -969,6 +969,22 @@ MIGRATED_KEYS = (
     "journal.reverting",
     "journal.undo_ready",
     "journal.waiting_reversible",
+    # Sixty-seventh batch (journal loading and status feedback).
+    "journal.clear_confirm",
+    "journal.clearing_status",
+    "journal.context_only_title",
+    "journal.empty_status",
+    "journal.loading_body",
+    "journal.loading_status",
+    "journal.loading_title",
+    "journal.no_actions_title",
+    "journal.no_rollback_status",
+    "journal.revertible_ready_title",
+    "journal.rollback_waiting_title",
+    "journal.undo_ready_status",
+    "journal.unavailable_body",
+    "journal.unavailable_status",
+    "journal.unavailable_title",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5235,6 +5251,82 @@ EXPECTED_CALLS = (
         "journal.waiting_reversible",
         re.compile(r't\(\s*"journal\.waiting_reversible"'),
         re.compile(r':\s*\(recentCount\s*\?\s*"Context only"\s*:\s*"Waiting for first reversible action"\)'),
+    ),
+    # --- Sixty-seventh batch ----------------------------------------
+    (
+        "journal.clear_confirm",
+        re.compile(r't\(\s*"journal\.clear_confirm"'),
+        re.compile(r'confirm\("Clear all journal entries\? This does not undo anything in Premiere\."'),
+    ),
+    (
+        "journal.clearing_status",
+        re.compile(r't\(\s*"journal\.clearing_status"'),
+        re.compile(r'updateJournalSummary\(\[\],\s*"Clearing the journal history\.'),
+    ),
+    (
+        "journal.context_only_title",
+        re.compile(r't\(\s*"journal\.context_only_title"'),
+        re.compile(r'recentCount\s*\?\s*"The recent journal entries are recorded for context'),
+    ),
+    (
+        "journal.empty_status",
+        re.compile(r't\(\s*"journal\.empty_status"'),
+        re.compile(r'setStatusLine\(\s*"journalStatusLine",\s*"Run an action that writes to Premiere'),
+    ),
+    (
+        "journal.loading_body",
+        re.compile(r't\(\s*"journal\.loading_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Loading timeline history…",\s*"Reviewing recent timeline-affecting actions'),
+    ),
+    (
+        "journal.loading_status",
+        re.compile(r't\(\s*"journal\.loading_status"'),
+        re.compile(r'updateJournalSummary\(\[\],\s*"Loading recent timeline operations'),
+    ),
+    (
+        "journal.loading_title",
+        re.compile(r't\(\s*"journal\.loading_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Loading timeline history…"'),
+    ),
+    (
+        "journal.no_actions_title",
+        re.compile(r't\(\s*"journal\.no_actions_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No timeline actions yet"'),
+    ),
+    (
+        "journal.no_rollback_status",
+        re.compile(r't\(\s*"journal\.no_rollback_status"'),
+        re.compile(r'setStatusLine\(\s*"journalStatusLine",\s*"Recent actions are recorded for context'),
+    ),
+    (
+        "journal.revertible_ready_title",
+        re.compile(r't\(\s*"journal\.revertible_ready_title"'),
+        re.compile(r'revertibleCount\s*\+\s*" recent journal entr"'),
+    ),
+    (
+        "journal.rollback_waiting_title",
+        re.compile(r't\(\s*"journal\.rollback_waiting_title"'),
+        re.compile(r':\s*"Automatic rollback will appear here when supported actions are recorded\."'),
+    ),
+    (
+        "journal.undo_ready_status",
+        re.compile(r't\(\s*"journal\.undo_ready_status"'),
+        re.compile(r'revertibleCount\s*\+\s*" recent action"'),
+    ),
+    (
+        "journal.unavailable_body",
+        re.compile(r't\(\s*"journal\.unavailable_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Journal unavailable",\s*"Couldn\'t load timeline history right now'),
+    ),
+    (
+        "journal.unavailable_status",
+        re.compile(r't\(\s*"journal\.unavailable_status"'),
+        re.compile(r'"Couldn\'t load timeline history: "\s*\+'),
+    ),
+    (
+        "journal.unavailable_title",
+        re.compile(r't\(\s*"journal\.unavailable_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Journal unavailable"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
