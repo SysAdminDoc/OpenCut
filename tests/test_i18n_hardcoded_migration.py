@@ -241,6 +241,12 @@ HTML_STATIC_SHELL_CALLS = (
     ("cut.custom_fillers_placeholder", "data-i18n-placeholder"),
     ("cut.filler_backend_missing", "data-i18n"),
     ("install.crisper_whisper", "data-i18n"),
+    # One-hundred-third batch (Full Pipeline preset static shell HTML).
+    ("cut.full_preset_youtube", "data-i18n"),
+    ("cut.full_preset_default", "data-i18n"),
+    ("cut.full_preset_aggressive", "data-i18n"),
+    ("cut.full_preset_conservative", "data-i18n"),
+    ("cut.full_preset_podcast", "data-i18n"),
 )
 
 
@@ -1566,6 +1572,12 @@ MIGRATED_KEYS = (
     "cut.filler_model_medium",
     "cut.filler_model_small",
     "cut.filler_model_tiny",
+    # One-hundred-third batch (Full Pipeline preset static shell HTML).
+    "cut.full_preset_aggressive",
+    "cut.full_preset_conservative",
+    "cut.full_preset_default",
+    "cut.full_preset_podcast",
+    "cut.full_preset_youtube",
     "cut.whisper_model",
     "install.crisper_whisper",
 )
