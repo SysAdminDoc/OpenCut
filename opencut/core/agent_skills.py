@@ -1,21 +1,28 @@
-"""Built-in agent skill catalogue.
+"""Agent skill catalogue.
 
-Skills are lightweight, inspectable orchestration packages.  Each built-in
-skill lives under ``opencut/data/builtin_skills/<skill-id>/`` with a
+Skills are lightweight, inspectable orchestration packages.  Built-in skills
+live under ``opencut/data/builtin_skills/<skill-id>/`` and user-installed
+skills live under ``~/.opencut/skills/<skill-id>/``.  Each package contains a
 ``SKILL.md`` front matter block and a structured ``plan.json``.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from opencut.helpers import OPENCUT_DIR
 
 BUILTIN_SKILLS_DIR = Path(__file__).resolve().parents[1] / "data" / "builtin_skills"
+USER_SKILLS_DIR = Path(OPENCUT_DIR) / "skills"
+ROUTE_MANIFEST_PATH = Path(__file__).resolve().parents[1] / "_generated" / "route_manifest.json"
 SUPPORTED_SCHEMA_MAJOR = 1
 _SKILL_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
+logger = logging.getLogger("opencut")
 
 
 class SkillLoadError(ValueError):
@@ -24,7 +31,7 @@ class SkillLoadError(ValueError):
 
 @dataclass(frozen=True)
 class AgentSkill:
-    """A parsed built-in agent skill."""
+    """A parsed agent skill."""
 
     skill_id: str
     metadata: Dict[str, Any]
@@ -32,11 +39,13 @@ class AgentSkill:
     plan: Dict[str, Any]
     manifest_path: Path
     plan_path: Path
+    source: str = "builtin"
 
     def summary(self) -> Dict[str, Any]:
         """Return the compact skill shape used by list endpoints."""
         return {
             "id": self.skill_id,
+            "source": self.source,
             "name": str(self.metadata.get("title") or self.metadata.get("name") or self.skill_id),
             "description": str(self.metadata.get("description") or ""),
             "version": str(self.metadata.get("version") or ""),
@@ -107,7 +116,31 @@ def parse_skill_markdown(text: str) -> Tuple[Dict[str, Any], str]:
     return metadata, instructions
 
 
-def validate_skill_plan(skill_id: str, plan: Dict[str, Any]) -> List[str]:
+def _load_route_method_pairs() -> Set[Tuple[str, str]]:
+    """Return the generated host route/method set used for skill validation."""
+    try:
+        data = json.loads(ROUTE_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Cannot load route manifest for skill validation: %s", exc)
+        return set()
+
+    pairs: Set[Tuple[str, str]] = set()
+    for route in data.get("routes", []):
+        if not isinstance(route, dict):
+            continue
+        rule = str(route.get("rule") or "")
+        if not rule:
+            continue
+        for method in route.get("methods") or []:
+            pairs.add((str(method).upper(), rule))
+    return pairs
+
+
+def validate_skill_plan(
+    skill_id: str,
+    plan: Dict[str, Any],
+    available_routes: Optional[Set[Tuple[str, str]]] = None,
+) -> List[str]:
     """Return human-readable validation errors for a skill plan."""
     errors: List[str] = []
     schema_version = plan.get("schema_version")
@@ -142,12 +175,21 @@ def validate_skill_plan(skill_id: str, plan: Dict[str, Any]) -> List[str]:
         method = step.get("method", "POST")
         if method not in {"GET", "POST", "DELETE", "PUT", "PATCH"}:
             errors.append(f"step {index} has unsupported method {method!r}")
+        elif available_routes is not None and isinstance(endpoint, str):
+            if (method, endpoint) not in available_routes:
+                errors.append(f"step {index} references unavailable route {method} {endpoint}")
         if not isinstance(step.get("params", {}), dict):
             errors.append(f"step {index} params must be an object")
     return errors
 
 
-def _load_skill_dir(skill_dir: Path) -> AgentSkill:
+def _load_skill_dir(
+    skill_dir: Path,
+    *,
+    source: str,
+    validate_routes: bool = False,
+    available_routes: Optional[Set[Tuple[str, str]]] = None,
+) -> AgentSkill:
     manifest_path = skill_dir / "SKILL.md"
     plan_path = skill_dir / "plan.json"
     if not manifest_path.is_file():
@@ -159,9 +201,14 @@ def _load_skill_dir(skill_dir: Path) -> AgentSkill:
     skill_id = str(metadata.get("id") or metadata.get("name") or skill_dir.name).strip()
     if not _SKILL_ID_RE.match(skill_id):
         raise SkillLoadError(f"Invalid skill id: {skill_id!r}")
+    if skill_id != skill_dir.name:
+        raise SkillLoadError("Skill id must match the skill directory name")
 
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
-    errors = validate_skill_plan(skill_id, plan)
+    route_pairs = available_routes if available_routes is not None else (
+        _load_route_method_pairs() if validate_routes else None
+    )
+    errors = validate_skill_plan(skill_id, plan, available_routes=route_pairs)
     if errors:
         raise SkillLoadError("; ".join(errors))
 
@@ -172,22 +219,76 @@ def _load_skill_dir(skill_dir: Path) -> AgentSkill:
         plan=plan,
         manifest_path=manifest_path,
         plan_path=plan_path,
+        source=source,
     )
+
+
+def _list_skill_dir(
+    base_dir: Path,
+    *,
+    source: str,
+    category: str = "",
+    validate_routes: bool = False,
+) -> List[AgentSkill]:
+    """Load all skills under a base directory, optionally filtering by category."""
+    if not base_dir.is_dir():
+        return []
+    category = category.strip().lower()
+    route_pairs = _load_route_method_pairs() if validate_routes else None
+    skills: List[AgentSkill] = []
+    for child in sorted(base_dir.iterdir(), key=lambda p: p.name):
+        if not child.is_dir():
+            continue
+        try:
+            skill = _load_skill_dir(
+                child,
+                source=source,
+                validate_routes=validate_routes,
+                available_routes=route_pairs,
+            )
+        except (SkillLoadError, json.JSONDecodeError, OSError) as exc:
+            if source == "user":
+                logger.warning("Skipping invalid user skill %s: %s", child.name, exc)
+                continue
+            raise
+        if category and str(skill.metadata.get("category", "")).lower() != category:
+            continue
+        skills.append(skill)
+    return skills
 
 
 def list_builtin_skills(category: str = "") -> List[AgentSkill]:
     """Load all built-in skills, optionally filtering by category."""
-    if not BUILTIN_SKILLS_DIR.is_dir():
-        return []
-    category = category.strip().lower()
-    skills: List[AgentSkill] = []
-    for child in sorted(BUILTIN_SKILLS_DIR.iterdir(), key=lambda p: p.name):
-        if not child.is_dir():
-            continue
-        skill = _load_skill_dir(child)
-        if category and str(skill.metadata.get("category", "")).lower() != category:
+    return _list_skill_dir(BUILTIN_SKILLS_DIR, source="builtin", category=category)
+
+
+def list_user_skills(category: str = "") -> List[AgentSkill]:
+    """Load validated user-installed skills from ``~/.opencut/skills``."""
+    return _list_skill_dir(
+        USER_SKILLS_DIR,
+        source="user",
+        category=category,
+        validate_routes=True,
+    )
+
+
+def list_skills(category: str = "") -> List[AgentSkill]:
+    """Load the combined built-in + user skill catalogue.
+
+    Built-in skill IDs win on collision so user packages cannot shadow a
+    bundled workflow.
+    """
+    skills = list_builtin_skills(category=category)
+    seen = {skill.skill_id for skill in skills}
+    for skill in list_user_skills(category=category):
+        if skill.skill_id in seen:
+            logger.warning(
+                "Skipping user skill %s because a built-in skill uses that id",
+                skill.skill_id,
+            )
             continue
         skills.append(skill)
+        seen.add(skill.skill_id)
     return skills
 
 
@@ -199,4 +300,28 @@ def get_builtin_skill(skill_id: str) -> Optional[AgentSkill]:
     skill_dir = BUILTIN_SKILLS_DIR / skill_id
     if not skill_dir.is_dir():
         return None
-    return _load_skill_dir(skill_dir)
+    return _load_skill_dir(skill_dir, source="builtin")
+
+
+def get_user_skill(skill_id: str) -> Optional[AgentSkill]:
+    """Return a validated user skill by id, or ``None`` when unavailable."""
+    skill_id = skill_id.strip()
+    if not _SKILL_ID_RE.match(skill_id):
+        return None
+    skill_dir = USER_SKILLS_DIR / skill_id
+    if not skill_dir.is_dir():
+        return None
+    try:
+        return _load_skill_dir(skill_dir, source="user", validate_routes=True)
+    except (SkillLoadError, json.JSONDecodeError, OSError) as exc:
+        logger.warning("Skipping invalid user skill %s: %s", skill_id, exc)
+        return None
+
+
+def get_skill(skill_id: str) -> Optional[AgentSkill]:
+    """Return a built-in or user skill by id.
+
+    Built-ins are resolved first to avoid user packages shadowing bundled
+    workflows.
+    """
+    return get_builtin_skill(skill_id) or get_user_skill(skill_id)
