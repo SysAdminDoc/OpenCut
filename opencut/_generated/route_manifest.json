@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T01:30:08Z",
-  "total_routes": 1519,
+  "generated_at": "2026-06-04T02:10:39Z",
+  "total_routes": 1521,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 15,
-    "GET": 378,
+    "GET": 380,
     "PATCH": 1,
     "POST": 1127,
     "PUT": 2
@@ -316,10 +316,10 @@
       ]
     },
     "dev_scripting": {
-      "route_count": 17,
+      "route_count": 19,
       "method_counts": {
         "DELETE": 2,
-        "GET": 4,
+        "GET": 6,
         "POST": 11
       },
       "sample_rules": [
@@ -3861,6 +3861,14 @@
         "DELETE"
       ],
       "endpoint": "dev_scripting.webhook_delete",
+      "blueprint": "dev_scripting"
+    },
+    {
+      "rule": "/api/webhooks/event-types",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.webhook_event_types",
       "blueprint": "dev_scripting"
     },
     {
@@ -13313,6 +13321,14 @@
       ],
       "endpoint": "utility.webhook_test",
       "blueprint": "utility"
+    },
+    {
+      "rule": "/webhooks/event-types",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.webhook_event_types",
+      "blueprint": "dev_scripting"
     },
     {
       "rule": "/webhooks/events",

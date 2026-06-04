@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 14,
-    "GET": 368,
+    "GET": 369,
     "PATCH": 1,
     "POST": 1078,
     "PUT": 2
   },
   "response_schema_count": 99,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1463,
+  "tool_count": 1464,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -11651,6 +11651,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_webhook_config"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /webhooks/event-types"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /webhooks/event-types.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "dev_scripting",
+        "endpoint": "dev_scripting.webhook_event_types",
+        "generated": true,
+        "method": "GET",
+        "path": "/webhooks/event-types",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_webhooks_event_types"
     },
     {
       "annotations": {

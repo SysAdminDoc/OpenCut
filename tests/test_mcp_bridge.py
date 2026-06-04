@@ -47,6 +47,15 @@ class TestMcpBridgeRoutes(unittest.TestCase):
         self.assertEqual(body["transport"], "uxp-bridge")
         self.assertIn("/mcp/call", body["endpoints"])
         self.assertIn("/mcp/tools", body["endpoints"])
+        self.assertEqual(
+            body["webhook_event_types"]["endpoint"],
+            "/webhooks/event-types",
+        )
+        self.assertIn("job.complete", body["webhook_event_types"]["events"])
+        self.assertEqual(
+            body["webhook_event_types"]["legacy_aliases"]["job_complete"],
+            "job.complete",
+        )
 
     def test_tools_curated_only(self):
         resp = self.client.get("/mcp/tools?include_extended=false")

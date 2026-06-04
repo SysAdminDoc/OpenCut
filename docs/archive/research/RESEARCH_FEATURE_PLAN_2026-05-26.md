@@ -76,7 +76,7 @@ Identical to the 2026-05-25 plan's §Current Product Map — 10 workflows. Refer
 - macOS source launcher; notarization tooling in place, GitHub Secrets pending (F202).
 - Linux source launcher + Flatpak/AppImage build wiring (F249); Flathub submission pending.
 - Docker CPU + GPU.
-- MCP server (curated 39 + opt-in 1,463 as of `ROADMAP.md` v4.87) + UXP MCP bridge `/mcp/*` (F146).
+- MCP server (curated 39 + opt-in 1,464 as of `ROADMAP.md` v4.90) + UXP MCP bridge `/mcp/*` (F146).
 
 ### Notable surfaces added since 2026-05-25
 - `/agent/chat/*` (F143/F144) + UXP Agent tab.
@@ -202,12 +202,13 @@ For each item below: where it lives, what works, what was deferred.
 
 ### N6 — `GET /webhooks/event-types` discovery endpoint (P1)
 
+- **Status:** Shipped in `ROADMAP.md` v4.90. `/webhooks/event-types` and `/api/webhooks/event-types` return canonical event metadata plus legacy aliases; `/mcp/info` advertises the discovery surface for tooling.
 - **User problem:** A webhook author has no way to enumerate the events they can subscribe to. They read `core/webhook_system.py` source.
 - **Evidence (Verified):** `grep -rn "GET /webhooks/events" opencut/routes/` returns nothing. The dispatcher fires by string, the catalogue is encoded as constants.
 - **Proposed behavior:**
   - New `GET /webhooks/event-types` returning `{events: [{name, since_version, deprecated, schema_pointer}], legacy_aliases: {old: new}}`.
   - Also surface in `GET /mcp/info` (per F146) and OpenAPI for tooling discovery.
-- **Implementation areas:** `opencut/core/webhook_system.py` (export a `list_events()`), `opencut/routes/webhooks_routes.py` (new GET).
+- **Implementation areas:** `opencut/core/webhook_system.py` (export a `list_events()`), `opencut/routes/dev_scripting_routes.py` (new GET), `opencut/routes/mcp_bridge_routes.py` (tooling pointer).
 - **Risks:** None — additive.
 - **Verification plan:** smoke test asserts every event the code can fire is in the list.
 - **Complexity:** S. **Priority: P1.**
@@ -413,9 +414,9 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: a contended GPU acquire waits for a released slot by default; explicit zero-second override remains non-blocking; timeout responses/status include retry metadata.
   - Verify: `py -3.12 -m pytest tests/test_gpu_semaphore_wait.py -q -p no:cacheprovider -o addopts=""`.
 
-- [ ] **P1 — N6 `GET /webhooks/event-types`**
+- [x] **P1 — N6 `GET /webhooks/event-types`**
   - Why: webhook authors can't enumerate without reading source.
-  - Touches: `opencut/core/webhook_system.py`, `opencut/routes/webhook_routes.py` (or wherever the webhook routes live).
+  - Touches: `opencut/core/webhook_system.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/mcp_bridge_routes.py`.
   - Acceptance: GET returns `{events: [...], legacy_aliases: {...}}`; smoke test asserts every fired event is listed.
 
 - [ ] **P1 — E11 webhook signatures mandatory by default**
@@ -526,7 +527,7 @@ For each item below: where it lives, what works, what was deferred.
 | `gpu_semaphore.py:51` defaults to `ACQUIRE_TIMEOUT=0` | Yes, P0 | **CORRECT** | Plan item N3. |
 | `disk_monitor.preflight()` exists but routes don't call it | Yes, P1 | **CORRECT** | Plan item N4. |
 | `mark_interrupted()` flips status only; no resume | Yes, P1 | **CORRECT** | Plan item N5. |
-| Webhook event types hard-coded; no discovery endpoint | Yes, P2 | **CORRECT** (`GET /webhooks/event-types` does not exist) | Plan item N6. |
+| Webhook event types hard-coded; no discovery endpoint | Yes, P2 | **SHIPPED** in `ROADMAP.md` v4.90 after the original audit found no discovery route. | Plan item N6. |
 | Skills are built-in only | Yes, P2 | **CORRECT** | Plan item N8. |
 | Plugin job-registration not wired | Implied | **CORRECT** (grep shows no `register_job` in `plugins.py`) | Plan item N7. |
 | `missing_dependency` suggestion is generic | Yes, P0 | **CORRECT** (`errors.py:144-150`) | Plan item N2. |
