@@ -1017,6 +1017,20 @@ MIGRATED_KEYS = (
     "preflight.run_anyway_may_fail",
     "preflight.title",
     "preflight.warning_section",
+    # Seventieth batch (assistant, preview, and cancel feedback).
+    "assistant.analyze_failed",
+    "assistant.default_track",
+    "assistant.dismiss",
+    "assistant.dismissed_empty",
+    "assistant.empty_good",
+    "assistant.gaps_intro",
+    "assistant.loading",
+    "assistant.open_sequence_required",
+    "assistant.premiere_required",
+    "assistant.why_suggestion",
+    "common.apply",
+    "preview.rendering",
+    "progress.cancelling",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5516,6 +5530,72 @@ EXPECTED_CALLS = (
         "preflight.warning_section",
         re.compile(r't\(\s*"preflight\.warning_section"'),
         re.compile(r'addSection\("Heads-up"'),
+    ),
+    # --- Seventieth batch ----------------------------------------
+    (
+        "assistant.analyze_failed",
+        re.compile(r't\(\s*"assistant\.analyze_failed"'),
+        re.compile(r'_assistantRender\(null,\s*"Couldn\'t analyze: "\s*\+'),
+    ),
+    (
+        "assistant.default_track",
+        re.compile(r't\(\s*"assistant\.default_track"'),
+        re.compile(r'esc\(g\.track\s*\|\|\s*"audio"\)'),
+    ),
+    (
+        "assistant.dismiss",
+        re.compile(r't\(\s*"assistant\.dismiss"'),
+        re.compile(r'dismiss\.textContent\s*=\s*"Dismiss"'),
+    ),
+    (
+        "assistant.dismissed_empty",
+        re.compile(r't\(\s*"assistant\.dismissed_empty"'),
+        re.compile(r'_assistantRender\(\[\],\s*"All suggestions dismissed\. Refresh to re-scan\."'),
+    ),
+    (
+        "assistant.empty_good",
+        re.compile(r't\(\s*"assistant\.empty_good"'),
+        re.compile(r'empty\.textContent\s*=\s*emptyMsg\s*\|\|\s*"Your sequence looks good — no obvious next edits\."'),
+    ),
+    (
+        "assistant.gaps_intro",
+        re.compile(r't\(\s*"assistant\.gaps_intro"'),
+        re.compile(r'intro\.textContent\s*=\s*"Top "\s*\+'),
+    ),
+    (
+        "assistant.loading",
+        re.compile(r't\(\s*"assistant\.loading"'),
+        re.compile(r'innerHTML\s*=\s*\'<div class="assistant-loading">Scanning sequence…</div>\''),
+    ),
+    (
+        "assistant.open_sequence_required",
+        re.compile(r't\(\s*"assistant\.open_sequence_required"'),
+        re.compile(r'_bail\("Open a sequence in Premiere and try again\."\)'),
+    ),
+    (
+        "assistant.premiere_required",
+        re.compile(r't\(\s*"assistant\.premiere_required"'),
+        re.compile(r'_bail\("Premiere Pro connection required\."\)'),
+    ),
+    (
+        "assistant.why_suggestion",
+        re.compile(r't\(\s*"assistant\.why_suggestion"'),
+        re.compile(r'summary\.textContent\s*=\s*"Why this suggestion\?"'),
+    ),
+    (
+        "common.apply",
+        re.compile(r'apply\.textContent\s*=\s*t\(\s*"common\.apply"'),
+        re.compile(r'apply\.textContent\s*=\s*"Apply"'),
+    ),
+    (
+        "preview.rendering",
+        re.compile(r't\(\s*"preview\.rendering"'),
+        re.compile(r'btn\.textContent\s*=\s*"Rendering…"'),
+    ),
+    (
+        "progress.cancelling",
+        re.compile(r't\(\s*"progress\.cancelling"'),
+        re.compile(r'setButtonText\(el\.(?:processingCancel|cancelBtn),\s*"Cancelling…"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

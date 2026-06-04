@@ -4377,10 +4377,10 @@
         if (currentJob) {
             var cancellingJob = currentJob;
             rememberButtonText(el.processingCancel);
-            setButtonText(el.processingCancel, "Cancelling…");
+            setButtonText(el.processingCancel, t("progress.cancelling", "Cancelling…"));
             el.processingCancel.disabled = true;
             rememberButtonText(el.cancelBtn);
-            setButtonText(el.cancelBtn, "Cancelling…");
+            setButtonText(el.cancelBtn, t("progress.cancelling", "Cancelling…"));
             el.cancelBtn.disabled = true;
             // Close SSE/poll FIRST to prevent "complete" events from firing
             if (pollTimer) {
@@ -9127,7 +9127,7 @@
     function renderAudioPreview(body, audioEl, btn) {
         btn.disabled = true;
         var origText = btn.textContent;
-        btn.textContent = "Rendering…";
+        btn.textContent = t("preview.rendering", "Rendering…");
         audioEl.classList.add("hidden");
 
         // Manual XHR so we can get a Blob response (api() wraps JSON only).
@@ -9185,7 +9185,7 @@
             var empty = document.createElement("div");
             empty.className = "assistant-empty";
             empty.textContent = emptyMsg ||
-                "Your sequence looks good — no obvious next edits.";
+                t("assistant.empty_good", "Your sequence looks good — no obvious next edits.");
             el.assistantBody.appendChild(empty);
             return;
         }
@@ -9205,9 +9205,10 @@
         if (Array.isArray(det.gaps) && det.gaps.length) {
             var intro = document.createElement("div");
             intro.className = "assistant-detail-intro";
-            intro.textContent = "Top " + det.gaps.length + " of " +
-                (det.total_gaps || det.gaps.length) + " gaps above " +
-                (det.min_threshold_sec || 0.8) + "s:";
+            intro.textContent = t("assistant.gaps_intro", "Top {shown} of {total} gaps above {threshold}s:")
+                .replace("{shown}", det.gaps.length)
+                .replace("{total}", det.total_gaps || det.gaps.length)
+                .replace("{threshold}", det.min_threshold_sec || 0.8);
             wrap.appendChild(intro);
 
             var tbl = document.createElement("div");
@@ -9218,7 +9219,7 @@
                 row.className = "assistant-detail-row";
                 row.innerHTML =
                     '<span class="assistant-detail-cell">' +
-                        esc(g.track || "audio") + '</span>' +
+                        esc(g.track || t("assistant.default_track", "audio")) + '</span>' +
                     '<span class="assistant-detail-cell assistant-detail-time">' +
                         fmtDur(g.start) + " → " + fmtDur(g.end) + '</span>' +
                     '<span class="assistant-detail-cell assistant-detail-metric">' +
@@ -9268,7 +9269,7 @@
             detailsBlock.className = "assistant-suggestion-details";
             var summary = document.createElement("summary");
             summary.className = "assistant-suggestion-details-summary";
-            summary.textContent = "Why this suggestion?";
+            summary.textContent = t("assistant.why_suggestion", "Why this suggestion?");
             detailsBlock.appendChild(summary);
             var inner = _assistantDetailView(sug);
             if (inner) detailsBlock.appendChild(inner);
@@ -9281,7 +9282,7 @@
         var apply = document.createElement("button");
         apply.type = "button";
         apply.className = "btn btn-primary btn-sm";
-        apply.textContent = "Apply";
+        apply.textContent = t("common.apply", "Apply");
         apply.addEventListener("click", function () {
             if (!sug.action || !sug.action.endpoint) return;
             showToast(t("toast.running_suggestion", "Running {title}…").replace("{title}", sug.title), "info");
@@ -9292,7 +9293,7 @@
         var dismiss = document.createElement("button");
         dismiss.type = "button";
         dismiss.className = "btn btn-ghost btn-sm";
-        dismiss.textContent = "Dismiss";
+        dismiss.textContent = t("assistant.dismiss", "Dismiss");
         dismiss.addEventListener("click", function () {
             if (_assistantDismissed.indexOf(sug.id) === -1) {
                 _assistantDismissed.push(sug.id);
@@ -9304,7 +9305,7 @@
             }, function () {});
             card.remove();
             if (!el.assistantBody.querySelector(".assistant-suggestion")) {
-                _assistantRender([], "All suggestions dismissed. Refresh to re-scan.");
+                _assistantRender([], t("assistant.dismissed_empty", "All suggestions dismissed. Refresh to re-scan."));
             }
         });
         actions.appendChild(dismiss);
@@ -9317,7 +9318,7 @@
         if (!el.assistantBody || _assistantLoading) return;
         _assistantLoading = true;
         el.assistantBody.innerHTML =
-            '<div class="assistant-loading">Scanning sequence…</div>';
+            '<div class="assistant-loading">' + esc(t("assistant.loading", "Scanning sequence…")) + '</div>';
 
         function _bail(msg) {
             _assistantLoading = false;
@@ -9325,14 +9326,14 @@
         }
 
         if (!inPremiere) {
-            _bail("Premiere Pro connection required.");
+            _bail(t("assistant.premiere_required", "Premiere Pro connection required."));
             return;
         }
         jsx("ocGetSequenceInfo()", function (result) {
             var seq = null;
             try { seq = JSON.parse(result || "{}"); } catch (_) {}
             if (!seq || seq.error || !seq.tracks) {
-                _bail("Open a sequence in Premiere and try again.");
+                _bail(t("assistant.open_sequence_required", "Open a sequence in Premiere and try again."));
                 return;
             }
             // Use the Premiere project path as the sequence key so persisted
@@ -9345,8 +9346,8 @@
             }, function (err, data) {
                 _assistantLoading = false;
                 if (err) {
-                    _assistantRender(null, "Couldn't analyze: " +
-                        (err.error || err.message || "Unknown"));
+                    _assistantRender(null, t("assistant.analyze_failed", "Couldn't analyze: {error}")
+                        .replace("{error}", err.error || err.message || t("common.unknown", "Unknown")));
                     return;
                 }
                 _assistantRender(data.suggestions || []);
