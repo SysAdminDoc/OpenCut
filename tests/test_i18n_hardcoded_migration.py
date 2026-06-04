@@ -685,6 +685,27 @@ MIGRATED_KEYS = (
     "search.segments_count",
     "search.task_in_progress_alert",
     "search.task_in_progress_status",
+    # Forty-sixth batch (settings diagnostics/dependency feedback).
+    "settings.clear_log_failed",
+    "settings.crash_log_cleared",
+    "settings.deps_checking_body",
+    "settings.deps_checking_status",
+    "settings.deps_checking_title",
+    "settings.deps_empty_body",
+    "settings.deps_empty_status",
+    "settings.deps_empty_title",
+    "settings.deps_healthy_status",
+    "settings.deps_missing_status",
+    "settings.deps_missing_version",
+    "settings.deps_ok_version",
+    "settings.deps_unavailable_body",
+    "settings.deps_unavailable_status",
+    "settings.deps_unavailable_title",
+    "settings.export_failed",
+    "settings.exported",
+    "settings.import_failed",
+    "settings.import_invalid_file",
+    "settings.imported",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -3612,6 +3633,107 @@ EXPECTED_CALLS = (
         "search.task_in_progress_status",
         re.compile(r't\(\s*"search\.task_in_progress_status"'),
         re.compile(r'setStatusLine\("searchStatus",\s*"Another task is already in progress\.'),
+    ),
+    # --- Forty-sixth batch -----------------------------------------
+    (
+        "settings.clear_log_failed",
+        re.compile(r't\(\s*"settings\.clear_log_failed"'),
+        re.compile(r'showToast\("Couldn\'t clear the log file"'),
+    ),
+    (
+        "settings.crash_log_cleared",
+        re.compile(r't\(\s*"settings\.crash_log_cleared"'),
+        re.compile(r'showToast\("Crash log cleared"'),
+    ),
+    (
+        "settings.deps_checking_body",
+        re.compile(r't\(\s*"settings\.deps_checking_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Checking dependencies…",\s*"Reviewing local packages'),
+    ),
+    (
+        "settings.deps_checking_status",
+        re.compile(r't\(\s*"settings\.deps_checking_status"'),
+        re.compile(r'setStatusLine\(\s*"depsStatusLine",\s*"Checking local dependencies'),
+    ),
+    (
+        "settings.deps_checking_title",
+        re.compile(r't\(\s*"settings\.deps_checking_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Checking dependencies…"'),
+    ),
+    (
+        "settings.deps_empty_body",
+        re.compile(r't\(\s*"settings\.deps_empty_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No dependency results yet",\s*"The backend returned'),
+    ),
+    (
+        "settings.deps_empty_status",
+        re.compile(r't\(\s*"settings\.deps_empty_status"'),
+        re.compile(r'setStatusLine\(\s*"depsStatusLine",\s*"No dependency results were returned\.'),
+    ),
+    (
+        "settings.deps_empty_title",
+        re.compile(r't\(\s*"settings\.deps_empty_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No dependency results yet"'),
+    ),
+    (
+        "settings.deps_healthy_status",
+        re.compile(r't\(\s*"settings\.deps_healthy_status"'),
+        re.compile(r'installedCount \+ " dependency check"'),
+    ),
+    (
+        "settings.deps_missing_status",
+        re.compile(r't\(\s*"settings\.deps_missing_status"'),
+        re.compile(r'missingCount \+ " dependency check"'),
+    ),
+    (
+        "settings.deps_missing_version",
+        re.compile(r't\(\s*"settings\.deps_missing_version"'),
+        re.compile(r': "missing";'),
+    ),
+    (
+        "settings.deps_ok_version",
+        re.compile(r't\(\s*"settings\.deps_ok_version"'),
+        re.compile(r': "OK"\)\.toString\(\)\.substring'),
+    ),
+    (
+        "settings.deps_unavailable_body",
+        re.compile(r't\(\s*"settings\.deps_unavailable_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Dependency health unavailable",\s*"Reconnect the backend'),
+    ),
+    (
+        "settings.deps_unavailable_status",
+        re.compile(r't\(\s*"settings\.deps_unavailable_status"'),
+        re.compile(r'setStatusLine\(\s*"depsStatusLine",\s*"Couldn\'t read dependency health\.'),
+    ),
+    (
+        "settings.deps_unavailable_title",
+        re.compile(r't\(\s*"settings\.deps_unavailable_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Dependency health unavailable"'),
+    ),
+    (
+        "settings.export_failed",
+        re.compile(r't\(\s*"settings\.export_failed"'),
+        re.compile(r'showToast\("Couldn\'t export settings"'),
+    ),
+    (
+        "settings.exported",
+        re.compile(r't\(\s*"settings\.exported"'),
+        re.compile(r'showToast\("Settings exported"'),
+    ),
+    (
+        "settings.import_failed",
+        re.compile(r't\(\s*"settings\.import_failed"'),
+        re.compile(r'showToast\("Couldn\'t import settings"'),
+    ),
+    (
+        "settings.import_invalid_file",
+        re.compile(r't\(\s*"settings\.import_invalid_file"'),
+        re.compile(r'showToast\("This file doesn\'t contain valid OpenCut settings"'),
+    ),
+    (
+        "settings.imported",
+        re.compile(r't\(\s*"settings\.imported"'),
+        re.compile(r'showToast\("Settings imported: " \+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
