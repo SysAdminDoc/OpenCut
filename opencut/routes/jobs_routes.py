@@ -67,6 +67,23 @@ def list_jobs():
     return jsonify(_list_jobs_copy())
 
 
+@jobs_bp.route("/jobs/<job_id>", methods=["GET"])
+def job_detail(job_id):
+    """Return one live or persisted job record."""
+    safe = _get_job_copy(job_id)
+    if safe:
+        return jsonify(safe)
+    try:
+        from opencut.job_store import get_job as db_get_job
+
+        persisted = db_get_job(job_id)
+    except ImportError:
+        persisted = None
+    if not persisted:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(persisted)
+
+
 # ---------------------------------------------------------------------------
 # Server-Sent Events (SSE) job stream
 # ---------------------------------------------------------------------------

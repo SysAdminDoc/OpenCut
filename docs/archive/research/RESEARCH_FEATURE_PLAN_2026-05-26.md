@@ -325,7 +325,7 @@ For each item below: where it lives, what works, what was deferred.
 | No transcript cache → repeated Whisper cost | P0 | `core/captions.py` no cache hooks | N1 |
 | Subprocess stderr not request-ID-tagged | P2 | `request_correlation.py` filter scope | N10 |
 | Plugin capabilities declared but enforcement light | P2 | `plugins.py` doesn't intercept `open()`/`requests.get()` | (deferred — needs a runtime trace) |
-| No `peak_vram_mb` / `exit_reason` per job | P2 | `job_store.py` schema | N9 |
+| No `peak_vram_mb` / `exit_reason` per job | P2 | `job_store.py` schema | N9 — shipped v4.97 |
 | Untrusted plugin manifest could declare jobs | P2 (when N7 lands) | Future — gate behind capability check | N7 verification |
 
 **Recovery & rollback needs**
@@ -337,7 +337,7 @@ For each item below: where it lives, what works, what was deferred.
 **Logging & diagnostics needs**
 
 - Request-ID propagation (N10).
-- `peak_vram_mb` + `exit_reason` (N9).
+- `peak_vram_mb` + `exit_reason` (N9, shipped v4.97).
 - Eventually: structured-log JSON output to a configurable log sink (Sentry/GlitchTip already present per F250; the structured-log writer needs to reach FFmpeg too).
 
 ---
@@ -461,8 +461,9 @@ For each item below: where it lives, what works, what was deferred.
 
 ### Phase 2 — Observability & extensibility polish
 
-- [ ] **P2 — N9 enriched job metadata (peak_vram_mb, exit_reason)**
+- [x] **P2 — N9 enriched job metadata (peak_vram_mb, exit_reason)**
   - Touches: `opencut/job_store.py`, `opencut/jobs.py`, `opencut/core/job_diagnostics.py`.
+  - Status: closed in ROADMAP v4.97 with persisted peak resource fields, explicit terminal exit reasons, resource sampling, diagnostics metadata, generated surface refreshes, and `GET /jobs/<job_id>`.
 
 - [ ] **P2 — N10 request-ID propagation into subprocess stderr**
   - Touches: `opencut/helpers.py::run_ffmpeg`, `opencut/core/request_correlation.py`.
@@ -519,7 +520,7 @@ For each item below: where it lives, what works, what was deferred.
 
 1. **What's the realistic Whisper baseline on this machine?** N1's 200ms cache-hit target assumes a faster cold path than typical. Needs a 5-minute benchmark on a 1-min, 10-min, and 60-min clip to set the acceptance criterion. **Needs live validation.**
 2. **Is the `OPENCUT_GPU_ACQUIRE_TIMEOUT=0` default intentional?** The doc-comment at `gpu_semaphore.py:24` describes it as "seconds a request waits for a slot" — singular form suggests the design intent was a wait, not an instant reject. Worth confirming with the original author before changing the default. **Likely the default is unintentional**, but ask before flipping.
-3. **Are the existing 4 audit-batch commits' allowlist values (e.g., `safe_int` ranges) preserved on schema migrations?** N9's `job_store.py` migration is purely additive (`ALTER TABLE … ADD COLUMN`), so backwards-compatible, but worth a `python -m opencut.tools.migrate_jobs_db` dry-run.
+3. **Are the existing 4 audit-batch commits' allowlist values (e.g., `safe_int` ranges) preserved on schema migrations?** N9's `job_store.py` migration is purely additive (`ALTER TABLE ... ADD COLUMN`), so backwards-compatible, but worth a future `PRAGMA user_version` migration pass.
 4. **Should plugin-registered jobs share the global `MAX_CONCURRENT_JOBS=10` cap, or have a per-plugin sub-cap?** Pick before N7 ships; default to global cap for simplicity, add per-plugin later when a real plugin abuses the cap.
 
 ---

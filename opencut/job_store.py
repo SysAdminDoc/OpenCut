@@ -23,6 +23,10 @@ Schema::
         partial_output_path TEXT DEFAULT '',
         resume_source_job_id TEXT DEFAULT '',
         resume_attempt INTEGER DEFAULT 0,
+        peak_vram_mb INTEGER DEFAULT NULL,
+        peak_cpu_pct INTEGER DEFAULT NULL,
+        peak_rss_mb INTEGER DEFAULT NULL,
+        exit_reason TEXT DEFAULT '',
         created_at  REAL NOT NULL,
         started_at  REAL DEFAULT NULL,
         completed_at REAL DEFAULT NULL
@@ -84,6 +88,15 @@ def _coerce_offset(value, default=0):
         return max(0, int(value))
     except (TypeError, ValueError):
         return default
+
+
+def _coerce_optional_nonnegative_int(value):
+    if value is None or value == "":
+        return None
+    try:
+        return max(0, int(round(float(value))))
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 def _get_conn() -> sqlite3.Connection:
@@ -178,6 +191,10 @@ def init_db():
                 partial_output_path TEXT DEFAULT '',
                 resume_source_job_id TEXT DEFAULT '',
                 resume_attempt INTEGER DEFAULT 0,
+                peak_vram_mb INTEGER DEFAULT NULL,
+                peak_cpu_pct INTEGER DEFAULT NULL,
+                peak_rss_mb INTEGER DEFAULT NULL,
+                exit_reason TEXT DEFAULT '',
                 created_at   REAL NOT NULL,
                 started_at   REAL DEFAULT NULL,
                 completed_at REAL DEFAULT NULL
@@ -189,6 +206,10 @@ def init_db():
             "partial_output_path": "ALTER TABLE jobs ADD COLUMN partial_output_path TEXT DEFAULT ''",
             "resume_source_job_id": "ALTER TABLE jobs ADD COLUMN resume_source_job_id TEXT DEFAULT ''",
             "resume_attempt": "ALTER TABLE jobs ADD COLUMN resume_attempt INTEGER DEFAULT 0",
+            "peak_vram_mb": "ALTER TABLE jobs ADD COLUMN peak_vram_mb INTEGER DEFAULT NULL",
+            "peak_cpu_pct": "ALTER TABLE jobs ADD COLUMN peak_cpu_pct INTEGER DEFAULT NULL",
+            "peak_rss_mb": "ALTER TABLE jobs ADD COLUMN peak_rss_mb INTEGER DEFAULT NULL",
+            "exit_reason": "ALTER TABLE jobs ADD COLUMN exit_reason TEXT DEFAULT ''",
         }
         for column, statement in migrations.items():
             if column not in columns:
@@ -247,6 +268,21 @@ def save_job(job_dict):
             resume_attempt = max(0, int(job_dict.get("resume_attempt") or 0))
         except (TypeError, ValueError):
             resume_attempt = 0
+    peak_vram_mb = (
+        _coerce_optional_nonnegative_int(job_dict.get("peak_vram_mb"))
+        if "peak_vram_mb" in job_dict else None
+    )
+    peak_cpu_pct = (
+        _coerce_optional_nonnegative_int(job_dict.get("peak_cpu_pct"))
+        if "peak_cpu_pct" in job_dict else None
+    )
+    peak_rss_mb = (
+        _coerce_optional_nonnegative_int(job_dict.get("peak_rss_mb"))
+        if "peak_rss_mb" in job_dict else None
+    )
+    exit_reason = ""
+    if "exit_reason" in job_dict:
+        exit_reason = str(job_dict.get("exit_reason") or "")
 
     now = time.time()
     completed_at = job_dict.get("completed_at")
@@ -258,9 +294,10 @@ def save_job(job_dict):
         INSERT INTO jobs (id, type, filepath, status, progress, message,
                           result_json, error, endpoint, payload_json,
                           resumable, partial_output_path, resume_source_job_id,
-                          resume_attempt,
+                          resume_attempt, peak_vram_mb, peak_cpu_pct,
+                          peak_rss_mb, exit_reason,
                           created_at, started_at, completed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             type = COALESCE(NULLIF(excluded.type, ''), jobs.type),
             filepath = COALESCE(NULLIF(excluded.filepath, ''), jobs.filepath),
@@ -275,6 +312,10 @@ def save_job(job_dict):
             partial_output_path = COALESCE(NULLIF(excluded.partial_output_path, ''), jobs.partial_output_path),
             resume_source_job_id = COALESCE(NULLIF(excluded.resume_source_job_id, ''), jobs.resume_source_job_id),
             resume_attempt = COALESCE(excluded.resume_attempt, jobs.resume_attempt),
+            peak_vram_mb = COALESCE(excluded.peak_vram_mb, jobs.peak_vram_mb),
+            peak_cpu_pct = COALESCE(excluded.peak_cpu_pct, jobs.peak_cpu_pct),
+            peak_rss_mb = COALESCE(excluded.peak_rss_mb, jobs.peak_rss_mb),
+            exit_reason = COALESCE(NULLIF(excluded.exit_reason, ''), jobs.exit_reason),
             created_at = MIN(jobs.created_at, excluded.created_at),
             started_at = COALESCE(jobs.started_at, excluded.started_at),
             completed_at = COALESCE(excluded.completed_at, jobs.completed_at)
@@ -293,6 +334,10 @@ def save_job(job_dict):
         partial_output_path,
         resume_source_job_id,
         resume_attempt,
+        peak_vram_mb,
+        peak_cpu_pct,
+        peak_rss_mb,
+        exit_reason,
         job_dict.get("created", now),
         started_at,
         completed_at,
@@ -349,6 +394,7 @@ def mark_interrupted():
     count = conn.execute(
         "UPDATE jobs SET status = 'interrupted', "
         "message = 'Server restarted during processing', "
+        "exit_reason = 'interrupted', "
         "completed_at = ? WHERE status = 'running'",
         (time.time(),)
     ).rowcount
@@ -412,6 +458,10 @@ def _row_to_dict(row):
         "partial_output_path": row["partial_output_path"] or "",
         "resume_source_job_id": row["resume_source_job_id"] or "",
         "resume_attempt": int(row["resume_attempt"] or 0),
+        "peak_vram_mb": row["peak_vram_mb"] if row["peak_vram_mb"] is not None else None,
+        "peak_cpu_pct": row["peak_cpu_pct"] if row["peak_cpu_pct"] is not None else None,
+        "peak_rss_mb": row["peak_rss_mb"] if row["peak_rss_mb"] is not None else None,
+        "exit_reason": row["exit_reason"] or "",
     }
     if row["result_json"]:
         try:
