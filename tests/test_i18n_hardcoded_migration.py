@@ -256,6 +256,21 @@ MIGRATED_KEYS = (
     "batch.no_files",
     "batch.add_hint",
     "batch.remove",
+    # Twenty-fifth batch (batch run status/progress feedback).
+    "batch.starting_status",
+    "batch.starting_summary",
+    "batch.error_status",
+    "batch.unknown",
+    "batch.unknown_error",
+    "batch.start_failed_summary",
+    "batch.running_status",
+    "batch.running_summary",
+    "batch.poll_failed_status",
+    "batch.poll_failed_summary",
+    "batch.progress_status",
+    "batch.processing_summary",
+    "batch.finished_summary",
+    "batch.complete",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1378,6 +1393,77 @@ EXPECTED_CALLS = (
         re.compile(
             r'class="batch-file-remove"\s+data-idx="\'\s*\+\s*i\s*\+\s*\'">Remove</button>'
         ),
+    ),
+    # --- Twenty-fifth batch ----------------------------------------
+    (
+        "batch.starting_status",
+        re.compile(r't\(\s*"batch\.starting_status"'),
+        re.compile(r'textContent\s*=\s*"Starting batch: "\s*\+\s*paths\.length'),
+    ),
+    (
+        "batch.starting_summary",
+        re.compile(r't\(\s*"batch\.starting_summary"'),
+        re.compile(r'updateBatchSummary\("Starting batch processing for "\s*\+\s*paths\.length'),
+    ),
+    (
+        "batch.error_status",
+        re.compile(r't\(\s*"batch\.error_status"'),
+        re.compile(r'textContent\s*=\s*"Batch error: "\s*\+'),
+    ),
+    (
+        "batch.unknown",
+        re.compile(r't\(\s*"batch\.unknown"'),
+        re.compile(r'\(data\s*&&\s*data\.error\)\s*\|\|\s*"Unknown"'),
+    ),
+    (
+        "batch.unknown_error",
+        re.compile(r't\(\s*"batch\.unknown_error"'),
+        re.compile(r'Batch couldn\'t start:[\s\S]{0,180}\|\|\s*"Unknown error"'),
+    ),
+    (
+        "batch.start_failed_summary",
+        re.compile(r't\(\s*"batch\.start_failed_summary"'),
+        re.compile(r'updateBatchSummary\(\s*"Batch couldn\'t start: "\s*\+'),
+    ),
+    (
+        "batch.running_status",
+        re.compile(r't\(\s*"batch\.running_status"'),
+        re.compile(r'textContent\s*=\s*"Batch running: 0/"\s*\+\s*data\.total'),
+    ),
+    (
+        "batch.running_summary",
+        re.compile(r't\(\s*"batch\.running_summary"'),
+        re.compile(r'updateBatchSummary\("Batch is running across "\s*\+\s*data\.total'),
+    ),
+    (
+        "batch.poll_failed_status",
+        re.compile(r't\(\s*"batch\.poll_failed_status"'),
+        re.compile(r'textContent\s*=\s*"Batch poll failed after 10 errors"'),
+    ),
+    (
+        "batch.poll_failed_summary",
+        re.compile(r't\(\s*"batch\.poll_failed_summary"'),
+        re.compile(r'updateBatchSummary\(\s*"Batch status polling failed repeatedly\.'),
+    ),
+    (
+        "batch.progress_status",
+        re.compile(r't\(\s*"batch\.progress_status"'),
+        re.compile(r'textContent\s*=\s*\r?\n?\s*"Batch "\s*\+\s*d2\.status'),
+    ),
+    (
+        "batch.processing_summary",
+        re.compile(r't\(\s*"batch\.processing_summary"'),
+        re.compile(r'\?\s*"Batch is processing "\s*\+'),
+    ),
+    (
+        "batch.finished_summary",
+        re.compile(r't\(\s*"batch\.finished_summary"'),
+        re.compile(r':\s*"Batch finished: "\s*\+'),
+    ),
+    (
+        "batch.complete",
+        re.compile(r't\(\s*"batch\.complete"'),
+        re.compile(r'showAlert\("Batch complete: "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

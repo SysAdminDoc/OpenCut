@@ -5494,8 +5494,13 @@
 
         var op = el.batchOperation.value;
         el.batchResults.classList.remove("hidden");
-        el.batchStatusText.textContent = "Starting batch: " + paths.length + " files…";
-        updateBatchSummary("Starting batch processing for " + paths.length + " clips.", "working");
+        el.batchStatusText.textContent = t("batch.starting_status", "Starting batch: {count} files…")
+            .replace("{count}", paths.length);
+        updateBatchSummary(
+            t("batch.starting_summary", "Starting batch processing for {count} clips.")
+                .replace("{count}", paths.length),
+            "working"
+        );
 
         api("POST", "/batch/create", {
             operation: op,
@@ -5503,17 +5508,27 @@
             params: { output_dir: projectFolder },
         }, function (err, data) {
             if (err || !data || data.error) {
-                el.batchStatusText.textContent = "Batch error: " + ((data && data.error) || "Unknown");
+                var batchStatusError = (data && data.error) || t("batch.unknown", "Unknown");
+                var batchSummaryError = (data && data.error) || (err && err.message) ||
+                    t("batch.unknown_error", "Unknown error");
+                el.batchStatusText.textContent = t("batch.error_status", "Batch error: {error}")
+                    .replace("{error}", batchStatusError);
                 updateBatchSummary(
-                    "Batch couldn't start: " + ((data && data.error) || (err && err.message) || "Unknown error") + ".",
+                    t("batch.start_failed_summary", "Batch couldn't start: {error}.")
+                        .replace("{error}", batchSummaryError),
                     "error"
                 );
                 return;
             }
             var batchId = data.batch_id;
             _currentBatchId = batchId;
-            el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete…";
-            updateBatchSummary("Batch is running across " + data.total + " clips.", "working");
+            el.batchStatusText.textContent = t("batch.running_status", "Batch running: 0/{total} complete…")
+                .replace("{total}", data.total);
+            updateBatchSummary(
+                t("batch.running_summary", "Batch is running across {total} clips.")
+                    .replace("{total}", data.total),
+                "working"
+            );
             // Poll for status (with error limit to prevent infinite polling).
             // Starting a new batch replaces the active timer, so capture the
             // local timer ref + batchId in the callback so an in-flight poll
@@ -5535,9 +5550,15 @@
                         if (pollErrors >= 10) {
                             clearInterval(_thisTimer);
                             if (batchPollTimer === _thisTimer) batchPollTimer = null;
-                            el.batchStatusText.textContent = "Batch poll failed after 10 errors";
+                            el.batchStatusText.textContent = t(
+                                "batch.poll_failed_status",
+                                "Batch poll failed after 10 errors"
+                            );
                             updateBatchSummary(
-                                "Batch status polling failed repeatedly. Results may still finish in the background.",
+                                t(
+                                    "batch.poll_failed_summary",
+                                    "Batch status polling failed repeatedly. Results may still finish in the background."
+                                ),
                                 "error"
                             );
                         }
@@ -5545,19 +5566,43 @@
                     }
                     pollErrors = 0;
                     var res = d2.results || {};
-                    el.batchStatusText.textContent =
-                        "Batch " + d2.status + ": " + (d2.completed || 0) + "/" + (d2.total || 0) +
-                        " (" + (res.success || 0) + " ok, " + (res.failed || 0) + " failed)";
+                    var completedCount = d2.completed || 0;
+                    var totalCount = d2.total || 0;
+                    var successCount = res.success || 0;
+                    var failedCount = res.failed || 0;
+                    el.batchStatusText.textContent = t(
+                        "batch.progress_status",
+                        "Batch {status}: {completed}/{total} ({success} ok, {failed} failed)"
+                    )
+                        .replace("{status}", d2.status)
+                        .replace("{completed}", completedCount)
+                        .replace("{total}", totalCount)
+                        .replace("{success}", successCount)
+                        .replace("{failed}", failedCount);
                     updateBatchSummary(
                         d2.status === "running"
-                            ? "Batch is processing " + (d2.completed || 0) + " of " + (d2.total || 0) + " clips. " + (res.success || 0) + " finished cleanly so far."
-                            : "Batch finished: " + (res.success || 0) + " succeeded and " + (res.failed || 0) + " failed.",
-                        d2.status === "running" ? "working" : ((res.failed || 0) ? "warning" : "success")
+                            ? t(
+                                "batch.processing_summary",
+                                "Batch is processing {completed} of {total} clips. {success} finished cleanly so far."
+                            )
+                                .replace("{completed}", completedCount)
+                                .replace("{total}", totalCount)
+                                .replace("{success}", successCount)
+                            : t(
+                                "batch.finished_summary",
+                                "Batch finished: {success} succeeded and {failed} failed."
+                            )
+                                .replace("{success}", successCount)
+                                .replace("{failed}", failedCount),
+                        d2.status === "running" ? "working" : (failedCount ? "warning" : "success")
                     );
                     if (d2.status !== "running") {
                         clearInterval(_thisTimer);
                         if (batchPollTimer === _thisTimer) batchPollTimer = null;
-                        showAlert("Batch complete: " + (res.success || 0) + " succeeded");
+                        showAlert(
+                            t("batch.complete", "Batch complete: {success} succeeded")
+                                .replace("{success}", successCount)
+                        );
                     }
                 });
             }, 2000);
