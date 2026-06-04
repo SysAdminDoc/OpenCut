@@ -175,8 +175,9 @@ For each item below: where it lives, what works, what was deferred.
 
 ### N4 — Disk preflight wired into heavy routes (P1)
 
+- **Status:** Shipped in `ROADMAP.md` v4.92. `@async_job(..., disk_operation=...)` now runs decorator-level disk preflight for 12 heavyweight caption/audio/export/video-AI jobs and returns HTTP 507 before job creation when the output volume is under budget.
 - **User problem:** A render fills the disk mid-write → output corrupted, user loses all in-flight work.
-- **Evidence (Verified):** `opencut/core/disk_monitor.py` has `preflight()`. `grep -lr "disk_monitor.preflight" opencut/routes/` returns nothing. The function exists, no route calls it.
+- **Original evidence (Verified):** `opencut/core/disk_monitor.py` had `preflight()`, but the original audit found no route wiring.
 - **Proposed behavior:**
   - New `opencut/core/preflight.py` thin façade: `ensure_disk_for(operation, source_path)` returns `(ok: bool, required_mb: int, free_mb: int)`.
   - Per-operation budgets in a dict: `transcribe: 1.5x audio size`, `demucs: 4x input`, `depth: 6x input`, `video_export: source size × 1.2`, etc. (Empirical; ratchet from production telemetry later.)
@@ -427,9 +428,9 @@ For each item below: where it lives, what works, what was deferred.
 
 ### Phase 1 — Resource and recovery (next 2 weeks)
 
-- [ ] **P1 — N4 disk preflight in heavy routes**
+- [x] **P1 — N4 disk preflight in heavy routes**
   - Why: prevents the worst-case "render fills disk, corrupts output" mode.
-  - Touches: `opencut/core/preflight.py` (new), `opencut/jobs.py`, 6 affected routes.
+  - Touches: `opencut/core/preflight.py` (new), `opencut/jobs.py`, 12 affected route jobs.
   - Acceptance: heavy routes return 507 with `{required_mb, free_mb, output_dir}` on synthetic small-disk fixture; honest jobs unchanged.
 
 - [ ] **P1 — N5 job resume for interrupted jobs**
@@ -526,7 +527,7 @@ For each item below: where it lives, what works, what was deferred.
 | `Install.bat` doesn't auto-escalate on non-admin | Yes, P0 | **WRONG** — `Start-Process -Verb RunAs` is correct shape | Removed. Worth a separate live-run check on a clean Windows VM. |
 | `telemetry_aptabase.py` exists at that path | Yes | **PARTIAL** — file path wrong; integration shape correct | Re-verify before any further telemetry recommendation. |
 | `gpu_semaphore.py:51` defaults to `ACQUIRE_TIMEOUT=0` | Yes, P0 | **CORRECT** | Plan item N3. |
-| `disk_monitor.preflight()` exists but routes don't call it | Yes, P1 | **CORRECT** | Plan item N4. |
+| `disk_monitor.preflight()` exists but routes don't call it | Yes, P1 | **SHIPPED** in `ROADMAP.md` v4.92 after the original audit found no route wiring. | Plan item N4. |
 | `mark_interrupted()` flips status only; no resume | Yes, P1 | **CORRECT** | Plan item N5. |
 | Webhook event types hard-coded; no discovery endpoint | Yes, P2 | **SHIPPED** in `ROADMAP.md` v4.90 after the original audit found no discovery route. | Plan item N6. |
 | Skills are built-in only | Yes, P2 | **CORRECT** | Plan item N8. |
