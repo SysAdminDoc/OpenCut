@@ -259,6 +259,17 @@ HTML_STATIC_SHELL_CALLS = (
     ("trim.quality_high", "data-i18n"),
     ("trim.quality_medium", "data-i18n"),
     ("trim.quality_low", "data-i18n"),
+    # One-hundred-fifth batch (Auto-Edit form static shell HTML).
+    ("cut.detection_method", "data-i18n"),
+    ("auto_edit.method_motion", "data-i18n"),
+    ("auto_edit.method_audio", "data-i18n"),
+    ("auto_edit.method_both", "data-i18n"),
+    ("auto_edit.motion_threshold", "data-i18n"),
+    ("auto_edit.motion_threshold_title", "data-i18n-title"),
+    ("auto_edit.margin", "data-i18n"),
+    ("auto_edit.margin_title", "data-i18n-title"),
+    ("auto_edit.min_clip_length", "data-i18n"),
+    ("auto_edit.min_clip_length_title", "data-i18n-title"),
 )
 
 
@@ -1602,6 +1613,16 @@ MIGRATED_KEYS = (
     "trim.quality_medium",
     "trim.start_hint",
     "trim.start_time",
+    # One-hundred-fifth batch (Auto-Edit form static shell HTML).
+    "auto_edit.margin",
+    "auto_edit.margin_title",
+    "auto_edit.method_audio",
+    "auto_edit.method_both",
+    "auto_edit.method_motion",
+    "auto_edit.min_clip_length",
+    "auto_edit.min_clip_length_title",
+    "auto_edit.motion_threshold",
+    "auto_edit.motion_threshold_title",
 )
 
 
