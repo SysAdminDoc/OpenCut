@@ -8,8 +8,8 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.175 docs; E15
-also has its fourth through seventy-seventh rolling i18n batches recorded there, and `TODO.md`
+route escape hatch are now represented as shipped in the live v4.176 docs; E15
+also has its fourth through seventy-eighth rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
@@ -45,7 +45,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.175; the strongest remaining direction is **not** another wave of
+rolling in v4.176; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -98,7 +98,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
   start of this pass. The N1-N10/E11/E12/E13/E14 continuation queue is now closed
-  through v4.100, E15 has v4.101-v4.175 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
+  through v4.100, E15 has v4.101-v4.176 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,

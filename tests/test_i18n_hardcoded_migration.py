@@ -1125,6 +1125,11 @@ MIGRATED_KEYS = (
     "llm.provider_configured_status",
     "llm.provider_unreachable",
     "llm.testing_connection_status",
+    # Seventy-eighth batch (workflow option and processing estimate labels).
+    "progress.estimate_minutes",
+    "progress.estimate_seconds",
+    "timeline.silence_cuts_ready",
+    "workflow.saved_option_steps",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6132,6 +6137,27 @@ EXPECTED_CALLS = (
         "llm.testing_connection_status",
         re.compile(r't\(\s*"llm\.testing_connection_status"'),
         re.compile(r'refreshLlmStatusLine\("Testing "\s*\+\s*humanizeLlmProvider'),
+    ),
+    # --- Seventy-eighth batch -------------------------------------
+    (
+        "progress.estimate_minutes",
+        re.compile(r't\(\s*"progress\.estimate_minutes"'),
+        re.compile(r'Math\.floor\(secs / 60\)\s*\+\s*"m "\s*\+\s*\(secs % 60\)\s*\+\s*"s est\."'),
+    ),
+    (
+        "progress.estimate_seconds",
+        re.compile(r't\(\s*"progress\.estimate_seconds"'),
+        re.compile(r'el\.processingEstimate\.textContent\s*=\s*secs\s*\+\s*"s est\."'),
+    ),
+    (
+        "timeline.silence_cuts_ready",
+        re.compile(r't\(\s*"timeline\.silence_cuts_ready"'),
+        re.compile(r'job\.result\.cuts\.length\s*\+\s*" silence cuts ready to review\."'),
+    ),
+    (
+        "workflow.saved_option_steps",
+        re.compile(r't\(\s*"workflow\.saved_option_steps"'),
+        re.compile(r'data\[i\]\.name\s*\+\s*" \("\s*\+\s*\(data\[i\]\.steps \|\| \[\]\)\.length\s*\+\s*" steps\)"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
