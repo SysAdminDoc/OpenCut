@@ -8983,8 +8983,8 @@
         overlay.className = "preflight-overlay";
         overlay.setAttribute("role", "dialog");
         overlay.setAttribute("aria-modal", "true");
-        overlay.setAttribute("aria-label", "Preflight check for " +
-            (report.pipeline_label || report.pipeline));
+        overlay.setAttribute("aria-label", t("preflight.aria_label", "Preflight check for {pipeline}")
+            .replace("{pipeline}", report.pipeline_label || report.pipeline));
 
         var box = document.createElement("div");
         box.className = "preflight-modal";
@@ -8993,13 +8993,14 @@
         header.className = "preflight-header";
         var h = document.createElement("div");
         h.className = "preflight-title";
-        h.textContent = "Preflight: " + (report.pipeline_label || report.pipeline);
+        h.textContent = t("preflight.title", "Preflight: {pipeline}")
+            .replace("{pipeline}", report.pipeline_label || report.pipeline);
         header.appendChild(h);
         var sub = document.createElement("div");
         sub.className = "preflight-sub";
         sub.textContent = report.pass
-            ? "Ready to run. Some optional checks won't be available."
-            : "Fix the items below before running.";
+            ? t("preflight.ready_with_warnings", "Ready to run. Some optional checks won't be available.")
+            : t("preflight.fix_before_running", "Fix the items below before running.");
         header.appendChild(sub);
         box.appendChild(header);
 
@@ -9032,13 +9033,13 @@
         }
 
         if (report.file && !report.file.ok) {
-            addSection("Input file", [{
-                label: "File",
-                detail: (report.file.detail || "not found")
+            addSection(t("preflight.input_file_section", "Input file"), [{
+                label: t("preflight.file_label", "File"),
+                detail: (report.file.detail || t("preflight.file_not_found", "not found"))
             }], "blocking");
         }
-        addSection("Fix before running", report.blocking, "blocking");
-        addSection("Heads-up", report.warnings, "warning");
+        addSection(t("preflight.blocking_section", "Fix before running"), report.blocking, "blocking");
+        addSection(t("preflight.warning_section", "Heads-up"), report.warnings, "warning");
 
         box.appendChild(body);
 
@@ -9047,7 +9048,7 @@
         var cancel = document.createElement("button");
         cancel.type = "button";
         cancel.className = "btn btn-ghost";
-        cancel.textContent = "Cancel";
+        cancel.textContent = t("common.cancel", "Cancel");
         cancel.addEventListener("click", function () {
             document.body.removeChild(overlay);
             cb(false);
@@ -9055,7 +9056,9 @@
         var run = document.createElement("button");
         run.type = "button";
         run.className = "btn " + (report.pass ? "btn-primary" : "btn-ghost");
-        run.textContent = report.pass ? "Run anyway" : "Run anyway (may fail)";
+        run.textContent = report.pass
+            ? t("preflight.run_anyway", "Run anyway")
+            : t("preflight.run_anyway_may_fail", "Run anyway (may fail)");
         run.addEventListener("click", function () {
             document.body.removeChild(overlay);
             cb(true);
