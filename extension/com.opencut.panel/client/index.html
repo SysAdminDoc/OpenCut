@@ -1254,29 +1254,29 @@
             <!-- ======== TAB: AUDIO ======== -->
             <div class="nav-panel" id="panel-audio" role="tabpanel" aria-label="Audio">
                 <div class="quick-actions" id="quickActionsAudio">
-                    <button type="button" class="quick-action-btn" id="quickStudioAudio" disabled title="Denoise + normalize + loudness match">
+                    <button type="button" class="quick-action-btn" id="quickStudioAudio" disabled title="Denoise + normalize + loudness match" data-i18n-title="quick_actions.audio_studio_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5h2.25l1.25-3.5 2.1 7 1.55-4.25h3.85"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Studio Polish</span>
-                                <span class="quick-action-meta">Cleaner dialogue with matched loudness</span>
+                                <span class="btn-label" data-i18n="quick_actions.audio_studio_label">Studio Polish</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.audio_studio_meta">Cleaner dialogue with matched loudness</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
-                    <button type="button" class="quick-action-btn" id="quickDenoise" disabled title="One-click noise removal">
+                    <button type="button" class="quick-action-btn" id="quickDenoise" disabled title="One-click noise removal" data-i18n-title="quick_actions.audio_denoise_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.25a5 5 0 1 1 8.7 3.35"/><path d="M10 6.25v4.5"/><path d="m8 14.5 4-2"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Quick Denoise</span>
-                                <span class="quick-action-meta">Remove room noise without leaving the panel</span>
+                                <span class="btn-label" data-i18n="quick_actions.audio_denoise_label">Quick Denoise</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.audio_denoise_meta">Remove room noise without leaving the panel</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="audioSubTabs">
@@ -1299,52 +1299,52 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
-                                <span data-i18n="audio.separate">AI Stem Separation</span>
+                                <span data-i18n="audio.stem_separation_title">AI Stem Separation</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="audio.separate_desc">Split audio into vocals, drums, bass, and instruments. Extract vocals for remixes or remove music from dialogue.</p>
                         
                         <div class="form-group">
-                            <label for="separateModel">Model</label>
+                            <label for="separateModel" data-i18n="forms.model">Model</label>
                             <select id="separateModel">
-                                <option value="htdemucs" selected>HTDemucs (recommended)</option>
-                                <option value="htdemucs_ft">HTDemucs Fine-Tuned (best quality)</option>
-                                <option value="htdemucs_6s">HTDemucs 6-Stem (piano/guitar)</option>
-                                <option value="mdx_extra">MDX Extra (fast)</option>
+                                <option value="htdemucs" selected data-i18n="audio.model_htdemucs">HTDemucs (recommended)</option>
+                                <option value="htdemucs_ft" data-i18n="audio.model_htdemucs_ft">HTDemucs Fine-Tuned (best quality)</option>
+                                <option value="htdemucs_6s" data-i18n="audio.model_htdemucs_6s">HTDemucs 6-Stem (piano/guitar)</option>
+                                <option value="mdx_extra" data-i18n="audio.model_mdx_extra">MDX Extra (fast)</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="stemVocals">Output Stems</label>
+                            <label for="stemVocals" data-i18n="forms.output_stems">Output Stems</label>
                             <div class="stem-checks">
-                                <label class="stem-check"><input type="checkbox" id="stemVocals" checked><span class="stem-icon">🎤</span> Vocals</label>
-                                <label class="stem-check"><input type="checkbox" id="stemInstrumental" checked><span class="stem-icon">🎵</span> Instrumental</label>
-                                <label class="stem-check"><input type="checkbox" id="stemDrums"><span class="stem-icon">🥁</span> Drums</label>
-                                <label class="stem-check"><input type="checkbox" id="stemBass"><span class="stem-icon">🎸</span> Bass</label>
-                                <label class="stem-check"><input type="checkbox" id="stemOther"><span class="stem-icon">🎹</span> Other</label>
+                                <label class="stem-check"><input type="checkbox" id="stemVocals" checked><span class="stem-icon">🎤</span> <span data-i18n="audio.stem_vocals">Vocals</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemInstrumental" checked><span class="stem-icon">🎵</span> <span data-i18n="audio.stem_instrumental">Instrumental</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemDrums"><span class="stem-icon">🥁</span> <span data-i18n="audio.stem_drums">Drums</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemBass"><span class="stem-icon">🎸</span> <span data-i18n="audio.stem_bass">Bass</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemOther"><span class="stem-icon">🎹</span> <span data-i18n="audio.stem_other">Other</span></label>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="separateFormat">Output Format</label>
+                            <label for="separateFormat" data-i18n="forms.output_format">Output Format</label>
                             <select id="separateFormat">
-                                <option value="wav" selected>WAV (lossless)</option>
-                                <option value="mp3">MP3 (320kbps)</option>
-                                <option value="flac">FLAC (lossless compressed)</option>
+                                <option value="wav" selected data-i18n="formats.wav_lossless">WAV (lossless)</option>
+                                <option value="mp3" data-i18n="formats.mp3_320">MP3 (320kbps)</option>
+                                <option value="flac" data-i18n="formats.flac_lossless_compressed">FLAC (lossless compressed)</option>
                             </select>
                         </div>
                         
                         <label class="checkbox-row">
                             <input type="checkbox" id="separateImport" checked>
-                            Auto-import stems to project
+                            <span data-i18n="audio.auto_import_stems">Auto-import stems to project</span>
                         </label>
                         
-                        <button type="button" class="btn-primary" id="runSeparateBtn" disabled data-i18n="audio.separate">Separate Audio</button>
+                        <button type="button" class="btn-primary" id="runSeparateBtn" disabled data-i18n="audio.separate_action">Separate Audio</button>
                         
                         <div class="hint hidden" id="separateHint">
-                            Demucs not installed.
-                            <button type="button" class="btn-install" id="installDemucsBtn">Install Demucs</button>
-                            <div class="install-alt">Or manually: <code>pip install demucs</code></div>
+                            <span data-i18n="audio.demucs_not_installed">Demucs not installed.</span>
+                            <button type="button" class="btn-install" id="installDemucsBtn" data-i18n="install.demucs">Install Demucs</button>
+                            <div class="install-alt"><span data-i18n="common.or_manually">Or manually:</span> <code>pip install demucs</code></div>
                         </div>
                     </section>
                 </div>
