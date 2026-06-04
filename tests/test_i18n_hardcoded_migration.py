@@ -86,6 +86,17 @@ MIGRATED_KEYS = (
     "toast.burning_in_captions_step",
     "toast.rendering_animated_captions_step",
     "toast.translating_captions_step",
+    # Eighth batch (Whisper/settings status feedback).
+    "toast.installing_faster_whisper",
+    "toast.reinstalling_whisper",
+    "toast.clearing_whisper_cache",
+    "toast.whisper_cache_cleared",
+    "toast.whisper_cache_clear_errors",
+    "toast.whisper_cache_clear_failed",
+    "toast.whisper_cpu_mode_enabled",
+    "toast.whisper_cpu_mode_disabled",
+    "toast.settings_update_failed",
+    "toast.restarting_backend",
 )
 
 
@@ -349,6 +360,57 @@ EXPECTED_CALLS = (
         "toast.translating_captions_step",
         re.compile(r't\(\s*"toast\.translating_captions_step"'),
         re.compile(r'showAlert\(\s*"Step 2/2: Translating captions'),
+    ),
+    # --- Eighth batch -----------------------------------------------
+    (
+        "toast.installing_faster_whisper",
+        re.compile(r't\(\s*"toast\.installing_faster_whisper"'),
+        re.compile(r'showAlert\(\s*"Installing faster-whisper'),
+    ),
+    (
+        "toast.reinstalling_whisper",
+        re.compile(r't\(\s*"toast\.reinstalling_whisper"'),
+        re.compile(r'showAlert\(\s*"Reinstalling Whisper"'),
+    ),
+    (
+        "toast.clearing_whisper_cache",
+        re.compile(r't\(\s*"toast\.clearing_whisper_cache"'),
+        re.compile(r'showAlert\(\s*"Clearing Whisper cache'),
+    ),
+    (
+        "toast.whisper_cache_cleared",
+        re.compile(r't\(\s*"toast\.whisper_cache_cleared"'),
+        re.compile(r'showAlert\(\s*"Cache cleared! Cleared "'),
+    ),
+    (
+        "toast.whisper_cache_clear_errors",
+        re.compile(r't\(\s*"toast\.whisper_cache_clear_errors"'),
+        re.compile(r'showAlert\(\s*"Cache clear had errors: "'),
+    ),
+    (
+        "toast.whisper_cache_clear_failed",
+        re.compile(r't\(\s*"toast\.whisper_cache_clear_failed"'),
+        re.compile(r'showAlert\(\s*"Failed to clear cache\."\s*\)'),
+    ),
+    (
+        "toast.whisper_cpu_mode_enabled",
+        re.compile(r't\(\s*"toast\.whisper_cpu_mode_enabled"'),
+        re.compile(r'showAlert\(\s*"CPU mode enabled\. Transcription may be slower but more stable\."\s*\)'),
+    ),
+    (
+        "toast.whisper_cpu_mode_disabled",
+        re.compile(r't\(\s*"toast\.whisper_cpu_mode_disabled"'),
+        re.compile(r'showAlert\(\s*"CPU mode disabled\. Whisper will try to use GPU\."\s*\)'),
+    ),
+    (
+        "toast.settings_update_failed",
+        re.compile(r't\(\s*"toast\.settings_update_failed"'),
+        re.compile(r'showAlert\(\s*"Failed to update settings\."\s*\)'),
+    ),
+    (
+        "toast.restarting_backend",
+        re.compile(r't\(\s*"toast\.restarting_backend"'),
+        re.compile(r'showAlert\(\s*"Restarting backend'),
     ),
 )
 
