@@ -573,6 +573,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.deepfilter_not_installed", "data-i18n"),
     ("install.deepfilter", "data-i18n"),
     ("common.or_manually", "data-i18n"),
+    # One-hundred-twenty-third batch (Audio Effects form shell HTML).
+    ("forms.effect", "data-i18n"),
+    ("audio.effect_reverb_room", "data-i18n"),
+    ("audio.effect_echo", "data-i18n"),
+    ("audio.effect_pitch_up", "data-i18n"),
+    ("audio.effect_pitch_down", "data-i18n"),
+    ("audio.effect_bass_boost", "data-i18n"),
+    ("audio.effect_treble_boost", "data-i18n"),
+    ("audio.effect_telephone", "data-i18n"),
+    ("audio.effect_radio", "data-i18n"),
+    ("audio.effect_slow_mo_voice", "data-i18n"),
+    ("audio.effect_chipmunk", "data-i18n"),
+    ("audio.apply_effect", "data-i18n"),
 )
 
 
@@ -2132,6 +2145,18 @@ MIGRATED_KEYS = (
     "audio.studio_effects_pedalboard_title",
     "install.deepfilter",
     "install.pedalboard",
+    # One-hundred-twenty-third batch (Audio Effects form shell HTML).
+    "audio.apply_effect",
+    "audio.effect_bass_boost",
+    "audio.effect_chipmunk",
+    "audio.effect_echo",
+    "audio.effect_pitch_down",
+    "audio.effect_pitch_up",
+    "audio.effect_radio",
+    "audio.effect_reverb_room",
+    "audio.effect_slow_mo_voice",
+    "audio.effect_telephone",
+    "audio.effect_treble_boost",
 )
 
 
