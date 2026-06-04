@@ -289,6 +289,22 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.translate", "data-i18n"),
     ("quick_actions.translate_title", "data-i18n-title"),
     ("quick_actions.translate_meta", "data-i18n"),
+    # One-hundred-eighth batch (Caption display-settings static shell HTML).
+    ("captions.display_settings_title", "data-i18n"),
+    ("captions.display_notice", "data-i18n"),
+    ("captions.display_fcc_source", "data-i18n"),
+    ("forms.font", "data-i18n"),
+    ("captions.display_size", "data-i18n"),
+    ("captions.display_text_color", "data-i18n"),
+    ("captions.display_text_opacity", "data-i18n"),
+    ("captions.display_background_color", "data-i18n"),
+    ("captions.display_background_opacity", "data-i18n"),
+    ("captions.display_edge_style", "data-i18n"),
+    ("captions.display_preview_action", "data-i18n"),
+    ("captions.display_reset_action", "data-i18n"),
+    ("captions.display_loading_tokens", "data-i18n"),
+    ("captions.display_preview_label", "data-i18n"),
+    ("captions.display_preview_placeholder", "data-i18n"),
 )
 
 
@@ -1657,6 +1673,19 @@ MIGRATED_KEYS = (
     "quick_actions.auto_subtitle_title",
     "quick_actions.translate_meta",
     "quick_actions.translate_title",
+    # One-hundred-eighth batch (Caption display-settings static shell HTML).
+    "captions.display_background_color",
+    "captions.display_background_opacity",
+    "captions.display_edge_style",
+    "captions.display_fcc_source",
+    "captions.display_notice",
+    "captions.display_preview_action",
+    "captions.display_preview_label",
+    "captions.display_reset_action",
+    "captions.display_settings_title",
+    "captions.display_size",
+    "captions.display_text_color",
+    "captions.display_text_opacity",
 )
 
 
