@@ -167,6 +167,14 @@ MIGRATED_KEYS = (
     "toast.preset_deleted",
     "toast.preset_deleted_toast",
     "toast.select_preset_export_first",
+    # Sixteenth batch (preset file import/export feedback).
+    "toast.preset_export_load_failed",
+    "toast.preset_exported",
+    "toast.preset_invalid_missing_fields",
+    "toast.preset_invalid_settings_object",
+    "toast.preset_imported",
+    "toast.preset_import_failed",
+    "toast.preset_invalid_format",
 )
 
 
@@ -808,6 +816,42 @@ EXPECTED_CALLS = (
         "toast.select_preset_export_first",
         re.compile(r't\(\s*"toast\.select_preset_export_first"'),
         re.compile(r'showToast\(\s*"Select a preset to export first"'),
+    ),
+    # --- Sixteenth batch --------------------------------------------
+    (
+        "toast.preset_export_load_failed",
+        re.compile(r't\(\s*"toast\.preset_export_load_failed"'),
+        re.compile(r'showToast\(\s*"Could not load preset for export"'),
+    ),
+    (
+        "toast.preset_exported",
+        re.compile(r't\(\s*"toast\.preset_exported"'),
+        re.compile(r'showToast\(\s*"Preset exported: "'),
+    ),
+    (
+        "toast.preset_invalid_missing_fields",
+        re.compile(r't\(\s*"toast\.preset_invalid_missing_fields"'),
+        re.compile(r'showToast\(\s*"Invalid preset file: missing required fields"'),
+    ),
+    (
+        "toast.preset_invalid_settings_object",
+        re.compile(r't\(\s*"toast\.preset_invalid_settings_object"'),
+        re.compile(r'showToast\(\s*"Invalid preset file: settings must be an object"'),
+    ),
+    (
+        "toast.preset_imported",
+        re.compile(r't\(\s*"toast\.preset_imported"'),
+        re.compile(r'showToast\(\s*"Preset imported: "'),
+    ),
+    (
+        "toast.preset_import_failed",
+        re.compile(r't\(\s*"toast\.preset_import_failed"'),
+        re.compile(r'showToast\(\s*"Failed to import preset"'),
+    ),
+    (
+        "toast.preset_invalid_format",
+        re.compile(r't\(\s*"toast\.preset_invalid_format"'),
+        re.compile(r'showToast\(\s*"Invalid preset file format"'),
     ),
 )
 
