@@ -1213,6 +1213,17 @@ MIGRATED_KEYS = (
     "palette.tool_repeat_detection",
     "palette.tool_thumbnails",
     "palette.tool_titles",
+    # Eighty-ninth batch (command palette workflow/search tool names).
+    "palette.tool_ai_command",
+    "palette.tool_auto_shorts",
+    "palette.tool_auto_zoom",
+    "palette.tool_color_match",
+    "palette.tool_deliverables",
+    "palette.tool_footage_search",
+    "palette.tool_loudness_match",
+    "palette.tool_multicam_switcher",
+    "palette.tool_project_templates",
+    "palette.tool_workflow_presets",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6620,6 +6631,57 @@ EXPECTED_CALLS = (
     (
         "palette.tool_titles",
         re.compile(r't\(\s*"palette\.tool_titles"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    # --- Eighty-ninth batch ----------------------------------------
+    (
+        "palette.tool_ai_command",
+        re.compile(r't\(\s*"palette\.tool_ai_command"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_auto_shorts",
+        re.compile(r't\(\s*"palette\.tool_auto_shorts"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_auto_zoom",
+        re.compile(r't\(\s*"palette\.tool_auto_zoom"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_color_match",
+        re.compile(r't\(\s*"palette\.tool_color_match"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_deliverables",
+        re.compile(r't\(\s*"palette\.tool_deliverables"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_footage_search",
+        re.compile(r't\(\s*"palette\.tool_footage_search"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_loudness_match",
+        re.compile(r't\(\s*"palette\.tool_loudness_match"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_multicam_switcher",
+        re.compile(r't\(\s*"palette\.tool_multicam_switcher"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_project_templates",
+        re.compile(r't\(\s*"palette\.tool_project_templates"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_workflow_presets",
+        re.compile(r't\(\s*"palette\.tool_workflow_presets"'),
         re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
