@@ -10914,17 +10914,44 @@
     // ================================================================
     var _favorites = [];
     var _favoriteOps = {
-        "silence": { label: "Remove Silences", tab: "cut", sub: "silence", btn: "runSilenceBtn" },
-        "fillers": { label: "Clean Fillers", tab: "cut", sub: "fillers", btn: "runFillersBtn" },
-        "styled_captions": { label: "Styled Captions", tab: "captions", sub: "cap-styled", btn: "runStyledCaptionsBtn" },
-        "transcribe": { label: "Transcribe", tab: "captions", sub: "cap-transcript", btn: "runTranscriptBtn" },
-        "denoise": { label: "Denoise Audio", tab: "audio", sub: "aud-denoise", btn: "runDenoiseBtn" },
-        "normalize": { label: "Normalize", tab: "audio", sub: "aud-normalize", btn: "runNormalizeBtn" },
-        "separate": { label: "Stem Separate", tab: "audio", sub: "aud-separate", btn: "runSeparateBtn" },
-        "stabilize": { label: "Stabilize Video", tab: "video", sub: "vid-effects", btn: "runVfxBtn" },
-        "face_blur": { label: "Face Blur", tab: "video", sub: "vid-face", btn: "runFaceBlurBtn" },
-        "export": { label: "Export Preset", tab: "export", sub: "exp-platform", btn: "runExportPresetBtn" },
+        "silence": { tab: "cut", sub: "silence", btn: "runSilenceBtn" },
+        "fillers": { tab: "cut", sub: "fillers", btn: "runFillersBtn" },
+        "styled_captions": { tab: "captions", sub: "cap-styled", btn: "runStyledCaptionsBtn" },
+        "transcribe": { tab: "captions", sub: "cap-transcript", btn: "runTranscriptBtn" },
+        "denoise": { tab: "audio", sub: "aud-denoise", btn: "runDenoiseBtn" },
+        "normalize": { tab: "audio", sub: "aud-normalize", btn: "runNormalizeBtn" },
+        "separate": { tab: "audio", sub: "aud-separate", btn: "runSeparateBtn" },
+        "stabilize": { tab: "video", sub: "vid-effects", btn: "runVfxBtn" },
+        "face_blur": { tab: "video", sub: "vid-face", btn: "runFaceBlurBtn" },
+        "export": { tab: "export", sub: "exp-platform", btn: "runExportPresetBtn" },
     };
+
+    function getFavoriteOpLabel(favId) {
+        switch (favId) {
+        case "silence":
+            return t("favorites.op_silence", "Remove Silences");
+        case "fillers":
+            return t("favorites.op_fillers", "Clean Fillers");
+        case "styled_captions":
+            return t("favorites.op_styled_captions", "Styled Captions");
+        case "transcribe":
+            return t("favorites.op_transcribe", "Transcribe");
+        case "denoise":
+            return t("favorites.op_denoise", "Denoise Audio");
+        case "normalize":
+            return t("favorites.op_normalize", "Normalize");
+        case "separate":
+            return t("favorites.op_separate", "Stem Separate");
+        case "stabilize":
+            return t("favorites.op_stabilize", "Stabilize Video");
+        case "face_blur":
+            return t("favorites.op_face_blur", "Face Blur");
+        case "export":
+            return t("favorites.op_export", "Export Preset");
+        default:
+            return "";
+        }
+    }
 
     function initFavorites() {
         // Load from backend
@@ -10953,7 +10980,7 @@
                     _favorites = _favorites.filter(function (f) { return f !== removeId; });
                     saveFavorites();
                     renderFavorites();
-                    showToast("Removed from favorites", "info");
+                    showToast(t("favorites.removed", "Removed from favorites"), "info");
                     return;
                 }
                 var chip = e.target.closest(".fav-chip");
@@ -10969,22 +10996,23 @@
             var favId = _favorites[i];
             var op = _favoriteOps[favId];
             if (!op) continue;
+            var label = getFavoriteOpLabel(favId);
             var group = document.createElement("div");
             group.className = "favorite-chip-group";
             var chip = document.createElement("button");
             chip.type = "button";
             chip.className = "fav-chip";
             chip.dataset.fav = favId;
-            chip.textContent = op.label;
-            chip.title = op.label;
-            chip.setAttribute("aria-label", "Open favorite " + op.label);
+            chip.textContent = label;
+            chip.title = label;
+            chip.setAttribute("aria-label", t("favorites.open_aria", "Open favorite {name}").replace("{name}", label));
             var removeBtn = document.createElement("button");
             removeBtn.type = "button";
             removeBtn.className = "fav-chip-remove";
             removeBtn.dataset.fav = favId;
-            removeBtn.textContent = "x";
-            removeBtn.title = "Remove favorite";
-            removeBtn.setAttribute("aria-label", "Remove favorite " + op.label);
+            removeBtn.textContent = t("favorites.remove_button", "x");
+            removeBtn.title = t("favorites.remove_title", "Remove favorite");
+            removeBtn.setAttribute("aria-label", t("favorites.remove_aria", "Remove favorite {name}").replace("{name}", label));
             group.appendChild(chip);
             group.appendChild(removeBtn);
             frag.appendChild(group);
@@ -11016,7 +11044,7 @@
         _favorites.push(favId);
         saveFavorites();
         renderFavorites();
-        showToast("Added to favorites: " + (_favoriteOps[favId] || {}).label, "success");
+        showToast(t("favorites.added", "Added to favorites: {name}").replace("{name}", getFavoriteOpLabel(favId)), "success");
     }
 
     function saveFavorites() {
@@ -11038,9 +11066,9 @@
         if (el.previewModal) {
             el.previewModal.classList.toggle("is-single", single);
         }
-        if (title) title.textContent = single ? "Frame Preview" : "Before / After Preview";
-        if (originalLabel) originalLabel.textContent = single ? "Selected Frame" : "Original";
-        if (processedLabel) processedLabel.textContent = "Processed Preview";
+        if (title) title.textContent = single ? t("preview.frame_title", "Frame Preview") : t("preview.compare_title", "Before / After Preview");
+        if (originalLabel) originalLabel.textContent = single ? t("preview.selected_frame", "Selected Frame") : t("preview.original", "Original");
+        if (processedLabel) processedLabel.textContent = t("preview.processed", "Processed Preview");
         if (processedPane) processedPane.setAttribute("aria-hidden", single ? "true" : "false");
         if (divider) divider.setAttribute("aria-hidden", single ? "true" : "false");
     }
@@ -11089,7 +11117,7 @@
         if (el.previewRefreshBtn) {
             el.previewRefreshBtn.disabled = true;
             var refreshLabel = el.previewRefreshBtn.querySelector(".btn-label");
-            if (refreshLabel) refreshLabel.textContent = "Loading…";
+            if (refreshLabel) refreshLabel.textContent = t("preview.loading", "Loading…");
         }
         // Load original frame
         startUtilityJob("/video/preview-frame", { filepath: previewPath, timestamp: ts }, {
@@ -11099,7 +11127,7 @@
             onComplete: function (data) {
                 if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
                 if (!data || !data.image) {
-                    showToast("Preview frame unavailable", "error");
+                    showToast(t("preview.frame_unavailable", "Preview frame unavailable"), "error");
                     return;
                 }
                 if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
@@ -11116,14 +11144,19 @@
             },
             onError: function (job) {
                 if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
-                showToast((job && (job.error || job.message)) ? "Preview failed: " + (job.error || job.message) : "Preview failed", "error");
+                showToast(
+                    (job && (job.error || job.message))
+                        ? t("toast.preview_failed", "Preview failed: {error}").replace("{error}", job.error || job.message)
+                        : t("preview.failed", "Preview failed"),
+                    "error"
+                );
             },
             onFinally: function () {
                 if (requestSeq !== _previewModalRequestSeq) return;
                 if (el.previewRefreshBtn) {
                     el.previewRefreshBtn.disabled = false;
                     var refreshLabel = el.previewRefreshBtn.querySelector(".btn-label");
-                    if (refreshLabel) refreshLabel.textContent = "Refresh Frame";
+                    if (refreshLabel) refreshLabel.textContent = t("preview.refresh_frame", "Refresh Frame");
                 }
             }
         });
@@ -12306,14 +12339,14 @@
         _recentClips = [];
         saveRecentClips();
         renderRecentClipsDropdown();
-        showToast("Cleared recent clips", "info");
+        showToast(t("recent.clips_cleared", "Cleared recent clips"), "info");
     }
 
     function renderRecentClipsDropdown() {
         if (!el.recentClipsDropdown) return;
         loadRecentClips();
         if (_recentClips.length === 0) {
-            setHintContent(el.recentClipsDropdown, "No recent clips yet.");
+            setHintContent(el.recentClipsDropdown, t("recent.no_clips", "No recent clips yet."));
             return;
         }
 
@@ -12326,12 +12359,12 @@
 
         var title = document.createElement("div");
         title.className = "recent-clips-title";
-        title.textContent = "Recent clips";
+        title.textContent = t("recent.clips_title", "Recent clips");
         copy.appendChild(title);
 
         var subtitle = document.createElement("div");
         subtitle.className = "recent-clips-subtitle";
-        subtitle.textContent = "Jump back into a source without rescanning.";
+        subtitle.textContent = t("recent.clips_subtitle", "Jump back into a source without rescanning.");
         copy.appendChild(subtitle);
         header.appendChild(copy);
 
@@ -12339,8 +12372,8 @@
         clearBtn.type = "button";
         clearBtn.className = "recent-clips-clear";
         clearBtn.setAttribute("data-action", "clear");
-        clearBtn.setAttribute("aria-label", "Clear recent clip history");
-        clearBtn.textContent = "Clear";
+        clearBtn.setAttribute("aria-label", t("recent.clear_aria", "Clear recent clip history"));
+        clearBtn.textContent = t("recent.clear", "Clear");
         header.appendChild(clearBtn);
         el.recentClipsDropdown.appendChild(header);
 
@@ -12356,7 +12389,7 @@
             item.setAttribute("data-path", path);
             item.setAttribute("data-name", name);
             item.title = path;
-            item.setAttribute("aria-label", "Open recent clip " + name);
+            item.setAttribute("aria-label", t("recent.open_clip_aria", "Open recent clip {name}").replace("{name}", name));
             if (path === selectedPath) {
                 item.classList.add("is-current");
                 item.setAttribute("aria-current", "true");
@@ -12529,7 +12562,7 @@
             if (!_favoriteOps.hasOwnProperty(favId)) continue;
             var op = _favoriteOps[favId];
             if (op.tab !== item.tab || op.sub !== item.sub) continue;
-            if (normalizePaletteText(op.label) === normalizedName) return favId;
+            if (normalizePaletteText(getFavoriteOpLabel(favId)) === normalizedName) return favId;
             if (!fallback) fallback = favId;
         }
         return fallback;
@@ -12538,7 +12571,7 @@
     function getPaletteItemForFavorite(favId) {
         var op = _favoriteOps[favId];
         if (!op) return null;
-        var preferredLabel = normalizePaletteText(op.label);
+        var preferredLabel = normalizePaletteText(getFavoriteOpLabel(favId));
         var fallback = null;
         for (var i = 0; i < _commandIndex.length; i++) {
             var item = _commandIndex[i];
