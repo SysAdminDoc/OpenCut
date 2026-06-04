@@ -365,6 +365,8 @@
 >
 > **v4.168 status (2026-06-04, research-only advisory refresh)**: route/version/i18n governance checks stayed green, but a fresh `py -3.12 -m opencut.tools.pip_audit_extras --json` failed the optional `pyproject[all]` target with five unwaived Torch/Transformers advisories while `requirements.txt` remained clean. RA-15 now tracks the build-lane decision: upgrade, split optional GPU/depth extras, or document narrowly scoped waivers so release smoke does not fail on surprise advisory drift.
 >
+> **v4.169 status (2026-06-04, continuation pass)**: advanced **E15** with a seventy-first rolling i18n batch. Loudness error fallback, recent-files labels, watermark detection progress/error copy, reframe output dimensions, journal context-only tooltips, disconnected status metrics, clip-preview fallback copy, and quick-workflow preset-missing alerts now route through `t(...)`, bringing the guarded migration ledger to 989 keys across seventy-one rounds while improving drift to 1,397 keys / 1,271 consumers / 126 dead / 0 missing.
+>
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
 ---
@@ -1639,6 +1641,23 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.169 CEP i18n Migration Batch 71 (E15)
+
+E15 remains open. This batch moved remaining status, media-preview, and quick-workflow feedback out of bare English.
+
+| Surface | Status |
+|---|---|
+| Status and media | Loudness error fallback, recent-files optgroup labels, disconnected status-bar labels, and clip-thumbnail fallback copy now resolve through `t(...)`. |
+| Video and journal | Watermark detection progress/error copy, reframe output dimensions, and context-only journal action tooltips now use locale keys. |
+| Quick workflows | Missing quick-workflow preset alerts now interpolate the workflow name through a locale key. |
+| Locale ledger | `locales/en.json` now carries 7 additional Status/Media/Video/Journal/Workflow keys and consumes 4 existing shared keys, bringing the guarded migration ledger to 989 keys across seventy-one rounds. |
+| Dead-key posture | Reusing existing Common/Media/Status keys reduced the drift report's dead-key count from 129 to 126 while keeping missing keys at 0. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new and reused keys, `t(...)` call sites, and absence of the previous bare-English status/media/video/workflow forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed (`22 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/sync_version.py --check` passed, `git diff --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,397 keys, 1,271 consumers, 126 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -1655,7 +1674,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.167 with the seventieth guarded assistant/preview/cancel feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.169 with the seventy-first guarded status/media-preview/quick-workflow feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 

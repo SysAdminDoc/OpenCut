@@ -2769,11 +2769,12 @@
         var recent = getRecentFiles();
         if (!el.clipSelect) return;
         // Check if optgroup already exists
-        var existing = el.clipSelect.querySelector('optgroup[label="Recent Files"]');
+        var existing = el.clipSelect.querySelector('optgroup[data-opencut-group="recent-files"]');
         if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
         if (recent.length) {
             var group = document.createElement("optgroup");
-            group.label = "Recent Files";
+            group.setAttribute("data-opencut-group", "recent-files");
+            group.label = t("media.recent_files", "Recent Files");
             for (var i = 0; i < recent.length; i++) {
                 var entry = recent[i];
                 if (!entry || !entry.path) continue;
@@ -4597,7 +4598,7 @@
                 el.meterTP.textContent = safeFixed(data.true_peak_dbtp, 1) + " dBTP";
                 el.meterLRA.textContent = safeFixed(data.loudness_range_lu, 1) + " LU";
             } else {
-                el.meterLUFS.textContent = "Error";
+                el.meterLUFS.textContent = t("common.error", "Error");
             }
         });
     }
@@ -4752,11 +4753,16 @@
         var btn = document.getElementById("autoDetectWatermarkBtn");
         var resEl = document.getElementById("wmDetectResult");
         var originalBtnText = rememberButtonText(btn);
-        if (btn) { btn.disabled = true; setButtonText(btn, "Detecting…"); }
+        if (btn) { btn.disabled = true; setButtonText(btn, t("video.detecting", "Detecting…")); }
         api("POST", "/video/auto-detect-watermark", { filepath: selectedPath, prompt: (el.wmPrompt ? el.wmPrompt.value.trim() : "watermark") || "watermark" }, function (err, data) {
             if (btn) { btn.disabled = false; setButtonText(btn, originalBtnText); }
             if (err || !data) {
-                setHintState(resEl, "Detection failed: " + ((err && err.message) || "Unknown error"), "error");
+                setHintState(
+                    resEl,
+                    t("video.watermark_detection_failed", "Detection failed: {error}")
+                        .replace("{error}", (err && err.message) || t("progress.unknown_error", "Unknown error")),
+                    "error"
+                );
                 return;
             }
             if (data.error) {
@@ -6563,9 +6569,13 @@
         // Show info
         if (!isCustom && _reframeDims[preset]) {
             var d = _reframeDims[preset];
-            el.reframeInfo.textContent = "Output: " + d[0] + " × " + d[1] + " px";
+            el.reframeInfo.textContent = t("video.reframe_output_dims", "Output: {width} × {height} px")
+                .replace("{width}", d[0])
+                .replace("{height}", d[1]);
         } else if (isCustom) {
-            el.reframeInfo.textContent = "Output: " + (el.reframeCustomW.value || "?") + " × " + (el.reframeCustomH.value || "?") + " px";
+            el.reframeInfo.textContent = t("video.reframe_output_dims", "Output: {width} × {height} px")
+                .replace("{width}", el.reframeCustomW.value || "?")
+                .replace("{height}", el.reframeCustomH.value || "?");
         }
     }
 
@@ -8617,7 +8627,10 @@
             var pill2 = document.createElement("span");
             pill2.className = "journal-pill journal-pill-info";
             pill2.textContent = t("journal.context_only", "Context only");
-            pill2.title = "This action is recorded for context, but it does not have an automatic rollback step.";
+            pill2.title = t(
+                "journal.context_only_action_title",
+                "This action is recorded for context, but it does not have an automatic rollback step."
+            );
             actions.appendChild(pill2);
         } else {
             var revertBtn = document.createElement("button");
@@ -12113,9 +12126,9 @@
                 // Disconnected
                 dot.className = "status-dot";
                 if (el.statusBar) el.statusBar.setAttribute("data-state", "offline");
-                text.textContent = "Disconnected";
-                gpu.textContent = "GPU: --";
-                jobsEl.textContent = "Jobs: --";
+                text.textContent = t("status.disconnected", "Disconnected");
+                gpu.textContent = t("status.gpu_none", "GPU: --");
+                jobsEl.textContent = t("status.jobs_unknown", "Jobs: --");
                 return;
             }
 
@@ -12330,7 +12343,7 @@
             onComplete: function(data) {
                 if (requestSeq !== _clipThumbRequestSeq || previewPath !== selectedPath) return;
                 if (!data || !data.image) {
-                    if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
+                    if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">' + esc(t("media.no_preview", "No Preview")) + '</div>';
                     return;
                 }
                 if (el.clipThumb) {
@@ -12343,7 +12356,7 @@
             },
             onError: function() {
                 if (requestSeq !== _clipThumbRequestSeq || previewPath !== selectedPath) return;
-                if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
+                if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">' + esc(t("media.no_preview", "No Preview")) + '</div>';
             }
         });
     }
@@ -15916,7 +15929,10 @@
                     return;
                 }
             }
-            showAlert("Workflow '" + workflowName + "' not found. Presets may still be loading.");
+            showAlert(
+                t("workflow.quick_not_found", "Workflow '{name}' not found. Presets may still be loading.")
+                    .replace("{name}", workflowName)
+            );
         }
         var qClean = document.getElementById("quickCleanInterview");
         var qYT = document.getElementById("quickYouTube");
