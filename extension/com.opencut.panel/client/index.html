@@ -426,35 +426,35 @@
                         <div class="form-group">
                             <label for="silencePreset" data-i18n="forms.preset">Preset</label>
                             <select id="silencePreset">
-                                <option value="youtube" selected>YouTube (-28dB, 0.4s)</option>
-                                <option value="default">Default (-30dB, 0.5s)</option>
-                                <option value="aggressive">Aggressive (-25dB, 0.3s)</option>
-                                <option value="conservative">Conservative (-40dB, 1.0s)</option>
-                                <option value="podcast">Podcast (-35dB, 0.75s)</option>
-                                <option value="">Custom…</option>
+                                <option value="youtube" selected data-i18n="silence.preset_youtube">YouTube (-28dB, 0.4s)</option>
+                                <option value="default" data-i18n="silence.preset_default">Default (-30dB, 0.5s)</option>
+                                <option value="aggressive" data-i18n="silence.preset_aggressive">Aggressive (-25dB, 0.3s)</option>
+                                <option value="conservative" data-i18n="silence.preset_conservative">Conservative (-40dB, 1.0s)</option>
+                                <option value="podcast" data-i18n="silence.preset_podcast">Podcast (-35dB, 0.75s)</option>
+                                <option value="" data-i18n="silence.preset_custom">Custom…</option>
                             </select>
                         </div>
                         <div class="custom-settings hidden" id="customSilenceSettings">
                             <div class="form-group">
                                 <label for="threshold" data-i18n="silence.threshold">Noise Threshold</label>
                                 <div class="slider-row">
-                                    <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1" title="Audio level below which is considered silence (lower = more sensitive)">
+                                    <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1" title="Audio level below which is considered silence (lower = more sensitive)" data-i18n-title="silence.threshold_title">
                                     <span class="slider-val" id="thresholdVal">-30 dB</span>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="minDuration" data-i18n="silence.min_duration">Min Silence Length</label>
                                 <div class="slider-row">
-                                    <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1" title="Minimum length of silence to remove (shorter = more aggressive)">
+                                    <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1" title="Minimum length of silence to remove (shorter = more aggressive)" data-i18n-title="silence.min_duration_title">
                                     <span class="slider-val" id="minDurationVal">0.5s</span>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="padBefore" data-i18n="silence.padding">Keep Padding (before / after)</label>
                                 <div class="input-pair">
-                                    <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05" aria-label="Padding before silence">
+                                    <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05" aria-label="Padding before silence" data-i18n-aria-label="silence.pad_before_aria">
                                     <span>/</span>
-                                    <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05" aria-label="Padding after silence">
+                                    <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05" aria-label="Padding after silence" data-i18n-aria-label="silence.pad_after_aria">
                                     <span class="unit">sec</span>
                                 </div>
                             </div>
@@ -462,35 +462,35 @@
                         <div class="waveform-container hidden" id="waveformContainer">
                             <canvas id="waveformCanvas" class="waveform-canvas" width="500" height="100"></canvas>
                             <div class="waveform-threshold" id="waveformThreshold"></div>
-                            <div class="waveform-label">Waveform &mdash; drag threshold line to adjust</div>
+                            <div class="waveform-label" data-i18n="silence.waveform_label">Waveform &mdash; drag threshold line to adjust</div>
                         </div>
                         <div class="form-group">
                             <label for="silenceDetectMethod" data-i18n="cut.detection_method">Detection Method</label>
-                            <select id="silenceDetectMethod" aria-label="Silence detection method">
-                                <option value="auto" selected>Auto (AI if available, fallback to threshold)</option>
-                                <option value="vad">Silero VAD (AI neural detection)</option>
-                                <option value="energy">Energy Threshold (classic FFmpeg)</option>
+                            <select id="silenceDetectMethod" aria-label="Silence detection method" data-i18n-aria-label="silence.detect_method_aria">
+                                <option value="auto" selected data-i18n="silence.detect_auto">Auto (AI if available, fallback to threshold)</option>
+                                <option value="vad" data-i18n="silence.detect_vad">Silero VAD (AI neural detection)</option>
+                                <option value="energy" data-i18n="silence.detect_energy">Energy Threshold (classic FFmpeg)</option>
                             </select>
-                            <div class="hint hidden" id="vadHint"><span class="hint-copy">Silero VAD requires PyTorch. Switch to Energy Threshold for now, or install PyTorch manually to unlock neural detection.</span></div>
+                            <div class="hint hidden" id="vadHint"><span class="hint-copy" data-i18n="silence.vad_hint">Silero VAD requires PyTorch. Switch to Energy Threshold for now, or install PyTorch manually to unlock neural detection.</span></div>
                         </div>
                         <div class="form-group">
                             <label for="silenceMode" data-i18n="silence.mode">Silence Mode</label>
                             <select id="silenceMode">
-                                <option value="remove" selected>Remove Silent Segments</option>
-                                <option value="speedup">Speed Up Silent Segments</option>
+                                <option value="remove" selected data-i18n="silence.mode_remove">Remove Silent Segments</option>
+                                <option value="speedup" data-i18n="silence.mode_speedup">Speed Up Silent Segments</option>
                             </select>
                         </div>
                         <div class="form-group hidden" id="silenceSpeedGroup">
                             <label for="silenceSpeedFactor" data-i18n="silence.speed_factor">Speed Factor</label>
                             <div class="slider-row">
-                                <input type="range" id="silenceSpeedFactor" min="1.5" max="8" value="4" step="0.5" title="How fast to play silent segments (higher = shorter pauses)">
+                                <input type="range" id="silenceSpeedFactor" min="1.5" max="8" value="4" step="0.5" title="How fast to play silent segments (higher = shorter pauses)" data-i18n-title="silence.speed_title">
                                 <span class="slider-val" id="silenceSpeedVal">4x</span>
                             </div>
                         </div>
                         <button type="button" class="btn-outline btn-sm mb-sm" id="loadWaveformBtn" disabled data-i18n="silence.preview_waveform">Preview Waveform</button>
                         <!-- v1.10.2 (M): hear what gets cut with current threshold -->
                         <div class="audio-preview-row">
-                            <button type="button" class="btn-secondary btn-sm" id="silencePreviewBtn" disabled title="Hear a 10s preview with silent regions removed">Preview 10s</button>
+                            <button type="button" class="btn-secondary btn-sm" id="silencePreviewBtn" disabled title="Hear a 10s preview with silent regions removed" data-i18n="silence.preview_10s" data-i18n-title="silence.preview_10s_title">Preview 10s</button>
                             <audio id="silencePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
                         <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Ctrl+Shift+S" data-i18n="silence.remove">Remove Silences</button>
