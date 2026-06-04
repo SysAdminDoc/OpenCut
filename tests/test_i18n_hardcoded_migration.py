@@ -880,6 +880,17 @@ MIGRATED_KEYS = (
     "deliverables.sequence_loaded_summary",
     "deliverables.sequence_required_alert",
     "deliverables.sequence_required_status",
+    # Fifty-ninth batch (deliverables labels and summary feedback).
+    "deliverables.adr_list_label",
+    "deliverables.asset_list_label",
+    "deliverables.last_export_summary",
+    "deliverables.music_cue_sheet_label",
+    "deliverables.no_exports_title",
+    "deliverables.no_exports_yet",
+    "deliverables.project_folder_label",
+    "deliverables.project_folder_title",
+    "deliverables.project_output_label",
+    "deliverables.vfx_sheet_label",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4730,6 +4741,57 @@ EXPECTED_CALLS = (
         "deliverables.sequence_required_status",
         re.compile(r't\(\s*"deliverables\.sequence_required_status"'),
         re.compile(r'setStatusLine\("deliverablesStatus",\s*"Load sequence info before generating handoff docs\."'),
+    ),
+    # --- Fifty-ninth batch ---------------------------------------
+    (
+        "deliverables.adr_list_label",
+        re.compile(r't\(\s*"deliverables\.adr_list_label"'),
+        re.compile(r'"adr-list":\s*"ADR List"'),
+    ),
+    (
+        "deliverables.asset_list_label",
+        re.compile(r't\(\s*"deliverables\.asset_list_label"'),
+        re.compile(r'"asset-list":\s*"Asset List"'),
+    ),
+    (
+        "deliverables.last_export_summary",
+        re.compile(r't\(\s*"deliverables\.last_export_summary"'),
+        re.compile(r'var exportLabel\s*=\s*activity\.label\s*\+\s*" at "\s*\+'),
+    ),
+    (
+        "deliverables.music_cue_sheet_label",
+        re.compile(r't\(\s*"deliverables\.music_cue_sheet_label"'),
+        re.compile(r'"music-cue-sheet":\s*"Music Cue Sheet"'),
+    ),
+    (
+        "deliverables.no_exports_title",
+        re.compile(r't\(\s*"deliverables\.no_exports_title"'),
+        re.compile(r'setTextAndTitle\("deliverablesLastExport",\s*"No exports yet",\s*"No deliverables have been generated yet\."'),
+    ),
+    (
+        "deliverables.no_exports_yet",
+        re.compile(r't\(\s*"deliverables\.no_exports_yet"'),
+        re.compile(r'setTextAndTitle\("deliverablesLastExport",\s*"No exports yet"'),
+    ),
+    (
+        "deliverables.project_folder_label",
+        re.compile(r't\(\s*"deliverables\.project_folder_label"'),
+        re.compile(r'label:\s*"Project folder"'),
+    ),
+    (
+        "deliverables.project_folder_title",
+        re.compile(r't\(\s*"deliverables\.project_folder_title"'),
+        re.compile(r'title:\s*"Uses the current Premiere project folder when available\."'),
+    ),
+    (
+        "deliverables.project_output_label",
+        re.compile(r't\(\s*"deliverables\.project_output_label"'),
+        re.compile(r'label:\s*\(projectFolder\.split\(/'),
+    ),
+    (
+        "deliverables.vfx_sheet_label",
+        re.compile(r't\(\s*"deliverables\.vfx_sheet_label"'),
+        re.compile(r'"vfx-sheet":\s*"VFX Sheet"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

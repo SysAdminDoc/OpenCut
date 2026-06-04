@@ -14129,11 +14129,16 @@
     // ================================================================
 
     var DELIVERABLE_DOC_LABELS = {
-        "vfx-sheet": "VFX Sheet",
-        "adr-list": "ADR List",
-        "music-cue-sheet": "Music Cue Sheet",
-        "asset-list": "Asset List"
+        "vfx-sheet": function () { return t("deliverables.vfx_sheet_label", "VFX Sheet"); },
+        "adr-list": function () { return t("deliverables.adr_list_label", "ADR List"); },
+        "music-cue-sheet": function () { return t("deliverables.music_cue_sheet_label", "Music Cue Sheet"); },
+        "asset-list": function () { return t("deliverables.asset_list_label", "Asset List"); }
     };
+
+    function getDeliverableDocLabel(type) {
+        var labelFactory = DELIVERABLE_DOC_LABELS[type];
+        return labelFactory ? labelFactory() : type;
+    }
 
     function setTextAndTitle(id, text, title) {
         var node = document.getElementById(id);
@@ -14187,14 +14192,16 @@
             };
         }
         if (projectFolder) {
+            var folderName = projectFolder.split(/[/\\]/).pop() || projectFolder;
             return {
-                label: (projectFolder.split(/[/\\]/).pop() || projectFolder) + " (project)",
+                label: t("deliverables.project_output_label", "{folder} (project)")
+                    .replace("{folder}", folderName),
                 title: projectFolder
             };
         }
         return {
-            label: "Project folder",
-            title: "Uses the current Premiere project folder when available."
+            label: t("deliverables.project_folder_label", "Project folder"),
+            title: t("deliverables.project_folder_title", "Uses the current Premiere project folder when available.")
         };
     }
 
@@ -14256,10 +14263,16 @@
 
         if (_lastDeliverablesActivity) {
             var activity = _lastDeliverablesActivity;
-            var exportLabel = activity.label + " at " + formatLocalTime(activity.time);
+            var exportLabel = t("deliverables.last_export_summary", "{label} at {time}")
+                .replace("{label}", activity.label)
+                .replace("{time}", formatLocalTime(activity.time));
             setTextAndTitle("deliverablesLastExport", exportLabel, activity.output || exportLabel);
         } else {
-            setTextAndTitle("deliverablesLastExport", "No exports yet", "No deliverables have been generated yet.");
+            setTextAndTitle(
+                "deliverablesLastExport",
+                t("deliverables.no_exports_yet", "No exports yet"),
+                t("deliverables.no_exports_title", "No deliverables have been generated yet.")
+            );
         }
     }
 
@@ -14345,7 +14358,7 @@
     }
 
     function genDeliverableDoc(type) {
-        var label = DELIVERABLE_DOC_LABELS[type] || type;
+        var label = getDeliverableDocLabel(type);
         if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
             setStatusLine(
                 "deliverablesStatus",
