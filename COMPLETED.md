@@ -34,6 +34,7 @@ Last consolidated: 2026-06-04.
 | Interrupted-job resume | The May 26 plan now has N5 closed: checkpointable async jobs persist resume metadata and can be re-enqueued from interrupted history through `POST /jobs/<job_id>/resume`. |
 | Plugin job registration | The May 26 plan now has N7 closed: plugin manifests can declare background jobs, and plugin routes can enqueue namespaced jobs through the core async-job tracker. |
 | Third-party agent skills | The May 26 plan now has N8 closed: validated user skills load from `~/.opencut/skills/<id>/`, share the `/agent/skills` catalogue, and reject unavailable route references at load time. |
+| CEP caption display settings | The May 26 plan now has E14 closed: the CEP Captions tab exposes the F236 display-settings card with token loading, live preview, and parity tests. |
 
 ## Historical Detail
 

@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.95
+**Version**: 4.96
 **Updated**: 2026-06-04
-**Baseline**: v1.32.0 (1,522 routes, 107 blueprints, 599 core modules, 8,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,522 routes, 107 blueprints, 599 core modules, 8,700+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
@@ -200,7 +200,9 @@
 >
 > **v4.95 status (2026-06-04, continuation pass)**: closed **N8** from the May 26 continuation queue by adding a third-party agent-skill loader. `opencut.core.agent_skills` now scans validated user packages from `~/.opencut/skills/<id>/`, tags catalogue entries with `source: "builtin" | "user"`, rejects user plans that reference routes absent from the generated route manifest, and wires the combined catalogue into `/agent/skills` and `/agent/skills/<id>`. `docs/SKILL_AUTHORING.md` documents the folder format and validation rules.
 >
-> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed; route manifest check: 1,522 routes / 107 blueprints; version sync: v1.32.0). Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; continue with N9/N10/E12/E13/E14/E15, external F202/F252, and RA-03..RA-10.
+> **v4.96 status (2026-06-04, continuation pass)**: closed **E14** from the May 26 continuation queue by porting the F236 caption display-settings card into the CEP Captions tab. The CEP panel now exposes the same seven FCC token selectors, preview/reset controls, status line, live preview area, `/captions/display-settings/tokens` load path, and `/captions/display-settings/preview` render path that already shipped in UXP.
+>
+> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; continue with N9/N10/E12/E13/E15, external F202/F252, and RA-03..RA-10.
 
 ---
 
@@ -366,6 +368,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_agent_skills.py tests
 
 ---
 
+## 2026-06-04 v4.96 CEP Caption Display Settings (E14)
+
+E14 is closed. CEP now matches the UXP F236 caption display-settings discoverability surface.
+
+| Surface | Status |
+|---|---|
+| CEP Captions tab | `extension/com.opencut.panel/client/index.html` now includes a visible Caption Display Settings (FCC) card above the captions sub-tabs. |
+| Controls | The card exposes font, size, text color/opacity, background color/opacity, and edge-style selectors plus Preview and Reset Defaults actions. |
+| Backend contract | CEP `main.js` loads `/captions/display-settings/tokens`, populates selectors from the canonical schema, and renders a live preview through `/captions/display-settings/preview`. |
+| Styling | `style.css` adds CEP-specific card, selector-grid, status, and preview-area rules using the existing panel tokens. |
+| Coverage | `tests/test_cep_caption_display_settings_ui.py` pins the CEP HTML controls, JS endpoint wiring, initializer call, cached selectors, preview/reset listeners, and CSS selectors. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py -q -p no:cacheprovider -o addopts=""` passed (`22 passed`), panel a11y/tab/i18n static gates passed (`11 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, and `rtk git diff --check` passed.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -377,7 +395,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_agent_skills.py tests
 - [x] **P1 — N5 job resume for interrupted jobs** — closed in v4.93 with resumability metadata, durable running-job persistence, persisted endpoint/payload replay, `POST /jobs/<job_id>/resume`, and coverage for checkpointable caption/audio/export/depth jobs.
 - [x] **P1 — N7 plugin job-registration API** — closed in v4.94 with a `jobs.register` capability, `plugin_job(...)` decorator, manifest/job mismatch checks, filesystem-scope enforcement, and a `long-job-demo` example plugin.
 - [x] **P1 — N8 third-party agent-skill loader** — closed in v4.95 with validated `~/.opencut/skills/<id>/` loading, combined catalogue `source` metadata, route-manifest plan validation, and authoring docs.
-- [ ] **P1 — E14 F236 CEP parity** — add CEP-side discoverability for caption display settings already shipped in UXP.
+- [x] **P1 — E14 F236 CEP parity** — closed in v4.96 with the FCC display-settings card, token loading, live preview, and static CEP parity tests.
 - [ ] **P2 — N9 enriched job metadata** — add peak resource fields and explicit exit reasons to persisted job history.
 - [ ] **P2 — N10 request-ID propagation into subprocess stderr** — carry request IDs into FFmpeg/subprocess logging.
 - [ ] **P2 — E12 workflow allowlist derived from route manifest** — replace hard-coded workflow endpoint allowlists with generated route data.
@@ -386,13 +404,13 @@ Validation after the batch: `py -3.12 -m pytest tests/test_agent_skills.py tests
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
-> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
+> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N9, N10, E12, E13, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
-These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
+These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, i18n batches = E15).
 
 ### Quick Wins
 

@@ -710,6 +710,59 @@
                         <span class="quick-action-tag" aria-hidden="true">Preset</span>
                     </button>
                 </div>
+
+                <!-- F236 FCC caption display settings (effective 2026-08-17). -->
+                <section class="card caption-display-card" id="captionDisplaySettingsCard" aria-labelledby="captionDisplaySettingsTitle">
+                    <div class="card-header">
+                        <div class="card-title" id="captionDisplaySettingsTitle">Caption Display Settings (FCC)</div>
+                    </div>
+                    <p class="card-desc" id="fccComplianceNotice">
+                        Per FCC 47 CFR 79.103 (effective 2026-08-17), caption display controls must be readily accessible. Pick a token preset or preview custom values.
+                        <a href="https://www.ecfr.gov/current/title-47/section-79.103" target="_blank" rel="noopener">FCC source</a>
+                    </p>
+                    <div class="caption-display-grid">
+                        <div class="form-group">
+                            <label for="capDispFont">Font</label>
+                            <select id="capDispFont"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispSize">Size</label>
+                            <select id="capDispSize"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispTextColor">Text Color</label>
+                            <select id="capDispTextColor"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispTextOpacity">Text Opacity</label>
+                            <select id="capDispTextOpacity"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispBgColor">Background Color</label>
+                            <select id="capDispBgColor"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispBgOpacity">Background Opacity</label>
+                            <select id="capDispBgOpacity"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capDispEdge">Edge Style</label>
+                            <select id="capDispEdge"></select>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" class="btn-primary btn-sm" id="capDispPreviewBtn">Preview</button>
+                        <button type="button" class="btn-secondary btn-sm" id="capDispResetBtn">Reset Defaults</button>
+                    </div>
+                    <div class="hint caption-display-status" id="capDispStatus" role="status" aria-live="polite">Loading tokens...</div>
+                    <div class="caption-display-preview" id="capDispPreviewBox" hidden>
+                        <div class="caption-display-preview-label">Live Preview</div>
+                        <div class="caption-display-preview-area" id="capDispPreviewArea">
+                            <span class="caption-display-preview-sample" id="capDispPreviewSample">Caption preview</span>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="sub-tabs" role="tablist" id="captionSubTabs">
                     <button type="button" class="sub-tab active" data-sub="cap-styled" data-i18n="subtabs.styled">Styled</button>
                     <button type="button" class="sub-tab" data-sub="cap-subtitle" data-i18n="subtabs.subtitle">Subtitle</button>
