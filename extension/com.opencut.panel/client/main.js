@@ -2467,7 +2467,13 @@
 
     function buildEmptyHintMarkup(title, copy, tone) {
         var resolvedTone = tone || "info";
-        var toneLabel = resolvedTone === "error" ? "Attention" : resolvedTone === "warning" ? "Needs review" : resolvedTone === "loading" ? "Checking" : "Ready when you are";
+        var toneLabel = resolvedTone === "error"
+            ? t("hint.tone_attention", "Attention")
+            : resolvedTone === "warning"
+                ? t("hint.tone_needs_review", "Needs review")
+                : resolvedTone === "loading"
+                    ? t("hint.tone_checking", "Checking")
+                    : t("hint.tone_ready", "Ready when you are");
         var classes = "hint hint-empty is-" + resolvedTone;
         var role = resolvedTone === "error" ? "alert" : "status";
         var live = resolvedTone === "error" ? "assertive" : "polite";
@@ -3187,7 +3193,9 @@
         container.classList.toggle("overflow-left", canScrollLeft);
         container.classList.toggle("overflow-right", canScrollRight);
         if (maxScrollLeft > 1) {
-            container.setAttribute("data-overflow-hint", canScrollRight ? "More tools" : "Previous tools");
+            container.setAttribute("data-overflow-hint", canScrollRight
+                ? t("toolbar.more_tools", "More tools")
+                : t("toolbar.previous_tools", "Previous tools"));
         } else {
             container.removeAttribute("data-overflow-hint");
         }
@@ -3449,7 +3457,10 @@
         var crisperAvailable = capabilities.crisper_whisper !== false;
         var showFillersHint = false;
         var showCrisperInstallAction = false;
-        var fillersHintMessage = "No filler detection backend is installed yet. Add Whisper from Settings or install CrisperWhisper here for verbatim filler detection.";
+        var fillersHintMessage = t(
+            "cut.filler_backend_missing",
+            "No filler detection backend is installed yet. Add Whisper from Settings or install CrisperWhisper here for verbatim filler detection."
+        );
 
         if (el.fillerBackend) {
             var whisperOpt = el.fillerBackend.querySelector('option[value="whisper"]');
@@ -10929,7 +10940,7 @@
             }
 
             var originalWaveformBtnText = rememberButtonText(el.loadWaveformBtn);
-            setButtonText(el.loadWaveformBtn, "Loading…");
+            setButtonText(el.loadWaveformBtn, t("audio.waveform_loading", "Loading…"));
             el.loadWaveformBtn.disabled = true;
             var fetchPath = selectedPath; // capture for closure
             var requestSeq = ++_waveformRequestSeq;
@@ -14936,7 +14947,7 @@
         // Capture state at command time so async callback uses the correct clip
         var snapPath = selectedPath;
         var snapFolder = projectFolder;
-        if (btn) { btn.disabled = true; setButtonText(btn, "Processing…"); }
+        if (btn) { btn.disabled = true; setButtonText(btn, t("nlp.processing_button", "Processing…")); }
         api("POST", "/nlp/command", { command: text, filepath: snapPath, llm_provider: provider }, function (err, data) {
             if (btn) { btn.disabled = false; setButtonText(btn, originalBtnText); }
             var res = document.getElementById("nlpCommandResult");
