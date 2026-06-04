@@ -10715,9 +10715,10 @@
                 // CEP environment provides the file path
                 if (file.path) {
                     selectFile(file.path, file.name);
-                    showToast("File loaded: " + file.name, "success");
+                    showToast(t("media.file_loaded", "File loaded: {name}")
+                        .replace("{name}", file.name), "success");
                 } else {
-                    showAlert("File dropped, but path not available in this environment.");
+                    showAlert(t("media.drop_path_unavailable", "File dropped, but path not available in this environment."));
                 }
             }
         });
@@ -10856,7 +10857,7 @@
                     _waveformCache[fetchPath] = data;
                     if (requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath) return;
                     if (!data || !data.peaks) {
-                        showToast("Failed to load waveform", "error");
+                        showToast(t("audio.waveform_load_failed", "Failed to load waveform"), "error");
                         return;
                     }
                     _waveformData = data;
@@ -10866,7 +10867,13 @@
                 },
                 onError: function (job) {
                     if (requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath) return;
-                    showToast((job && (job.error || job.message)) ? "Failed to load waveform: " + (job.error || job.message) : "Failed to load waveform", "error");
+                    showToast(
+                        (job && (job.error || job.message))
+                            ? t("audio.waveform_load_failed_detail", "Failed to load waveform: {error}")
+                                .replace("{error}", job.error || job.message)
+                            : t("audio.waveform_load_failed", "Failed to load waveform"),
+                        "error"
+                    );
                 },
                 onFinally: function () {
                     if (requestSeq !== _waveformRequestSeq) return;
