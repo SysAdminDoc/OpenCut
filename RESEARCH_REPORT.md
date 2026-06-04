@@ -28,10 +28,13 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
-E15 plus external F202/F252 and the RA-01..RA-14 research items below.
-Cycles 2 through 4 added UXP packaging-trust guardrails from Adobe's current
-manifest, filesystem, API-reference, changelog, Hybrid Plugin, external-process,
-and WebView docs.
+E15 plus external F202/F252 and the RA-01..RA-15 research items below. Cycles 2
+through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
+filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
+WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
+found `pyproject[all]` failing on five unwaived Torch/Transformers advisories
+while `requirements.txt` remained clean; RA-15 captures the build-lane
+follow-up.
 
 ## Executive Summary
 
@@ -49,40 +52,43 @@ This 2026-06-03 pass read the actual persistence, error, dependency, plugin, and
 correlation code and scanned the 2026 competitive market. The highest-value
 opportunities it surfaced — all net-new versus the open continuation queue:
 
-1. **Surface `request_id` in the JSON error body** (RA-04) — the correlation ID
+1. **Burn down new `pyproject[all]` Torch/Transformers advisory failures**
+   (RA-15) — the optional-extra `pip-audit` gate now fails on five unwaived
+   advisories even though `requirements.txt` is clean. [Verified]
+2. **Surface `request_id` in the JSON error body** (RA-04) — the correlation ID
    is already in the `X-Request-ID` header and job metadata but missing from the
    error envelope users actually copy into bug reports. [Verified]
-2. **`PRAGMA user_version` schema versioning** for the two SQLite stores
+3. **`PRAGMA user_version` schema versioning** for the two SQLite stores
    (RA-05) — migrations are currently ad-hoc `ALTER TABLE` in try/except; N5
    added resume columns and N9 has now added more metadata. [Verified]
-3. **Guard + back up destructive wipes** (RA-06) — `journal.clear_all()`, plugin
+4. **Guard + back up destructive wipes** (RA-06) — `journal.clear_all()`, plugin
    `uninstall`, and the cache-clear route delete user state with no dry-run,
    confirm token, or recoverable backup. [Verified]
-4. **Cap persisted job `result_json` size** (RA-07) — `save_job()` serializes the
+5. **Cap persisted job `result_json` size** (RA-07) — `save_job()` serializes the
    full result into SQLite with no ceiling. [Verified]
-5. **Job-store/journal compaction + size diagnostic** (RA-08) — cleanup never
+6. **Job-store/journal compaction + size diagnostic** (RA-08) — cleanup never
    `VACUUM`s and the journal has no retention. [Verified]
-6. **Log direct typed errors** (RA-03) — only `safe_error()` logs; typed
+7. **Log direct typed errors** (RA-03) — only `safe_error()` logs; typed
    `OpenCutError` / `error_response` returns leave no log line. [Verified]
-7. **Align Ruff `target-version` with `requires-python`** (RA-01) — py39 vs
+8. **Align Ruff `target-version` with `requires-python`** (RA-01) — py39 vs
    >=3.11 skew. [Verified]
-8. **Reconcile `requirements.txt` floors with `pyproject.toml`** (RA-02) — pin
+9. **Reconcile `requirements.txt` floors with `pyproject.toml`** (RA-02) — pin
    drift weakens the advisory story. [Verified]
-9. **Timeline-native caption round-trip parity** (RA-09) — the AutoCut
+10. **Timeline-native caption round-trip parity** (RA-09) — the AutoCut
    differentiator OpenCut does not yet match. [Likely]
-10. **"Magic clips" long-form-to-shorts macro** (RA-10) — 2026 table-stakes for
+11. **"Magic clips" long-form-to-shorts macro** (RA-10) — 2026 table-stakes for
     the shorts persona; composable from existing primitives. [Likely]
-11. **Minimize UXP filesystem permissions** (RA-11) — the base UXP manifest still
+12. **Minimize UXP filesystem permissions** (RA-11) — the base UXP manifest still
     asks for `fullAccess` even though picker-based `request` access should cover
     normal import/export browsing. [Verified]
-12. **Add F253 Hybrid Plugin package validation** (RA-12) — Adobe now documents
+13. **Add F253 Hybrid Plugin package validation** (RA-12) — Adobe now documents
     Premiere 26.2 `.uxpaddon` support; OpenCut should validate package layout and
     platform binaries before treating native add-ons as distribution-ready. [Verified]
-13. **Declare and harden UXP external-launch permissions** (RA-13) — the UXP
+14. **Declare and harden UXP external-launch permissions** (RA-13) — the UXP
     OAuth browser handoff uses `shell.openExternal` without a manifest
     `launchProcess` scheme allowlist, consent-dialog developer text, or denial
     result handling. [Verified]
-14. **Split UXP WebView dev and release bridge permissions** (RA-14) — the
+15. **Split UXP WebView dev and release bridge permissions** (RA-14) — the
     dormant Bolt/WebView scaffold currently requires `localAndRemote` message
     bridging and dev localhost domains even though release cutover should use
     packaged local WebView content. [Verified]
@@ -102,7 +108,11 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   `opencut/core/request_correlation.py` (header echo + job stamping exist;
   body field does not).
 - **Dependencies:** `pyproject.toml` (`requires-python>=3.11`, ruff `py39`),
-  `requirements.txt` (looser/unbounded floors vs extras).
+  `requirements.txt` (looser/unbounded floors vs extras), and
+  `py -3.12 -m opencut.tools.pip_audit_extras --json` (2026-06-04:
+  `requirements.txt` clean; `pyproject[all]` failed with unwaived
+  `torch==2.8.0` PYSEC-2025-203/204/206/PYSEC-2026-139 and
+  `transformers==4.57.6` PYSEC-2025-217).
 - **Extensibility:** `opencut/core/agent_skills.py` (N8 user loader now scans
   validated `~/.opencut/skills/<id>/` packages), `opencut/routes/plugins.py` (install requires
   restart to load routes; uninstall `shutil.rmtree` with no backup).
@@ -193,6 +203,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   RA-08.
 - **Cosmetic — Ruff/Python target skew** and **requirements/pyproject pin
   drift.** → RA-01, RA-02.
+- **Major — optional `[all]` dependency audit now fails.** `requirements.txt`
+  is clean, but `pyproject[all]` resolves vulnerable Torch/Transformers
+  versions with five unwaived advisories. → RA-15.
 - **Packaging trust — base UXP requests broad filesystem access.** Adobe
   recommends `request` for user-selected files and warns users may deny
   `fullAccess`; OpenCut should reserve broad/direct path access for justified
@@ -217,8 +230,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **Error handling** is a well-structured taxonomy; the gap is the logging +
   request_id seam at the typed-error path (RA-03/RA-04).
 - **Dependency health** is actively gated (pip-audit, npm advisory, SBOM, model
-  cards). The residual risk is the requirements/pyproject drift (RA-02) and the
-  lint target skew (RA-01), not vulnerable pins.
+  cards). The residual risk is now the requirements/pyproject drift (RA-02), the
+  lint target skew (RA-01), and the optional `[all]` advisory failure (RA-15).
 - **Release automation** is extensive (route manifest, OpenAPI, version sync,
   release smoke with 16 chained gates, signing/notarization wiring).
 - **UXP distribution posture** should split base-package trust from optional
@@ -239,6 +252,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   picker-scoped access covers current import/export browse flows (RA-11).
 - **Consent-trust gap** [Verified]: OAuth browser launches should be constrained
   to declared URL schemes and expose a graceful denial/manual-copy path (RA-13).
+- **Supply-chain gap** [Verified]: optional `pyproject[all]` installs now fail
+  the Python advisory gate on unwaived Torch/Transformers issues, so release
+  smoke needs an upgrade/split/waiver decision before the next all-extra build
+  claim (RA-15).
 
 ## UX & Accessibility
 
@@ -282,13 +299,16 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-13 OAuth launch behavior** needs UDT capture for both consent approval and
   denial, because Adobe documents user consent as part of the `openExternal`
   contract and static tests can only prove manifest/source alignment.
+- **RA-15 resolver choice** needs a build-lane decision: upgrade Torch-compatible
+  extras to 2.9+ where possible, split heavy GPU/depth extras out of `[all]`, or
+  document narrowly scoped no-fix waivers with tests and `docs/PYTHON_ADVISORIES.md`.
 
 ## Research Inputs (archived)
 
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-14 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-15 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
