@@ -850,6 +850,18 @@ MIGRATED_KEYS = (
     "audio.loudness_original_lufs",
     "audio.loudness_status",
     "audio.no_project_media_found",
+    # Fifty-seventh batch (deliverables sequence summary feedback).
+    "deliverables.active_sequence",
+    "deliverables.clip_count",
+    "deliverables.seq_load_summary",
+    "deliverables.seq_load_title",
+    "deliverables.seq_loaded",
+    "deliverables.seq_not_loaded",
+    "deliverables.seq_ready_title",
+    "deliverables.status_load_prompt",
+    "deliverables.status_loaded_disconnected",
+    "deliverables.status_ready",
+    "deliverables.status_reconnect_load",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4558,6 +4570,62 @@ EXPECTED_CALLS = (
         "audio.no_project_media_found",
         re.compile(r't\(\s*"audio\.no_project_media_found"'),
         re.compile(r'showAlert\("No project media found\."'),
+    ),
+    # --- Fifty-seventh batch ---------------------------------------
+    (
+        "deliverables.active_sequence",
+        re.compile(r't\(\s*"deliverables\.active_sequence"'),
+        re.compile(r'summaryBits\s*=\s*\[info\.name\s*\|\|\s*"Active Sequence"\]'),
+    ),
+    (
+        "deliverables.clip_count",
+        re.compile(r't\(\s*"deliverables\.clip_count"'),
+        re.compile(r'summaryBits\.push\(clipCount\s*\+\s*" clip"'),
+    ),
+    (
+        "deliverables.seq_load_summary",
+        re.compile(r't\(\s*"deliverables\.seq_load_summary"'),
+        re.compile(r'setTextAndTitle\(\s*"deliverablesSeqSummary",\s*"Load the active sequence before generating handoff docs\."'),
+    ),
+    (
+        "deliverables.seq_load_title",
+        re.compile(r't\(\s*"deliverables\.seq_load_title"'),
+        re.compile(r'setStatusPill\("deliverablesSeqPill",\s*"Not loaded",\s*"empty",\s*"Load the active sequence before generating deliverables\."'),
+    ),
+    (
+        "deliverables.seq_loaded",
+        re.compile(r't\(\s*"deliverables\.seq_loaded"'),
+        re.compile(r'setStatusPill\("deliverablesSeqPill",\s*"Loaded"'),
+    ),
+    (
+        "deliverables.seq_not_loaded",
+        re.compile(r't\(\s*"deliverables\.seq_not_loaded"'),
+        re.compile(r'setStatusPill\("deliverablesSeqPill",\s*"Not loaded"'),
+    ),
+    (
+        "deliverables.seq_ready_title",
+        re.compile(r't\(\s*"deliverables\.seq_ready_title"'),
+        re.compile(r'setStatusPill\("deliverablesSeqPill",\s*"Loaded",\s*"success",\s*"Sequence info is ready for deliverables\."'),
+    ),
+    (
+        "deliverables.status_load_prompt",
+        re.compile(r't\(\s*"deliverables\.status_load_prompt"'),
+        re.compile(r'\?\s*"Load sequence info, choose a destination if needed, then generate the docs you need\."'),
+    ),
+    (
+        "deliverables.status_loaded_disconnected",
+        re.compile(r't\(\s*"deliverables\.status_loaded_disconnected"'),
+        re.compile(r':\s*"Sequence info is loaded, but the backend is disconnected\."'),
+    ),
+    (
+        "deliverables.status_ready",
+        re.compile(r't\(\s*"deliverables\.status_ready"'),
+        re.compile(r'\?\s*"Sequence info is ready\. Choose a destination if needed, then generate the docs you need\."'),
+    ),
+    (
+        "deliverables.status_reconnect_load",
+        re.compile(r't\(\s*"deliverables\.status_reconnect_load"'),
+        re.compile(r':\s*"Reconnect the backend, then load sequence info to generate handoff docs\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
