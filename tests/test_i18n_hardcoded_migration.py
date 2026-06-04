@@ -148,6 +148,14 @@ MIGRATED_KEYS = (
     "toast.polish_cache_empty",
     "toast.polish_batch_requires_two",
     "toast.polish_batch_progress",
+    # Fourteenth batch (polish finish, journal clear, cut review/history feedback).
+    "toast.polish_batch_done",
+    "toast.polish_batch_failed_part",
+    "toast.journal_clear_failed",
+    "toast.journal_cleared",
+    "toast.no_cuts_detected",
+    "toast.no_cuts_selected",
+    "toast.history_missing_output_path",
 )
 
 
@@ -697,6 +705,47 @@ EXPECTED_CALLS = (
         "toast.polish_batch_progress",
         re.compile(r't\(\s*"toast\.polish_batch_progress"'),
         re.compile(r'showToast\(\s*"Polishing "'),
+    ),
+    # --- Fourteenth batch -------------------------------------------
+    (
+        "toast.polish_batch_done",
+        re.compile(r't\(\s*"toast\.polish_batch_done"'),
+        re.compile(r'showAlert\(\s*"Batch polish done: "'),
+    ),
+    (
+        "toast.polish_batch_failed_part",
+        re.compile(r't\(\s*"toast\.polish_batch_failed_part"'),
+        re.compile(r'", "\s*\+\s*failed\s*\+\s*" failed"'),
+    ),
+    (
+        "toast.journal_clear_failed",
+        re.compile(r't\(\s*"toast\.journal_clear_failed"'),
+        re.compile(r'showAlert\(\s*"Could not clear: "'),
+    ),
+    (
+        "toast.journal_cleared",
+        re.compile(r't\(\s*"toast\.journal_cleared"'),
+        re.compile(r'showToast\(\s*"Journal cleared"'),
+    ),
+    (
+        "toast.no_cuts_detected",
+        re.compile(r't\(\s*"toast\.no_cuts_detected"'),
+        re.compile(r'showAlert\(\s*"No cuts detected in this clip\."\s*\)'),
+    ),
+    (
+        "toast.no_cuts_selected",
+        re.compile(r't\(\s*"toast\.no_cuts_selected"'),
+        re.compile(r'showAlert\(\s*"No cuts selected\. Select at least one cut to apply\."\s*\)'),
+    ),
+    (
+        "toast.history_missing_output_path",
+        re.compile(r't\(\s*"toast\.history_missing_output_path"'),
+        re.compile(r'showToast\(\s*"This history item is missing an output path\."'),
+    ),
+    (
+        "toast.applying_to_selection",
+        re.compile(r't\(\s*"toast\.applying_to_selection"'),
+        re.compile(r'showToast\(\s*"Applying \'"\s*\+\s*entry\.type'),
     ),
 )
 
