@@ -634,6 +634,14 @@ HTML_STATIC_SHELL_CALLS = (
     ("forms.duration", "data-i18n"),
     ("common.auto_import_result", "data-i18n"),
     ("audio.sfx_generate", "data-i18n"),
+    # One-hundred-twenty-sixth batch (Audio Ducking form shell HTML).
+    ("audio.ducking_title", "data-i18n"),
+    ("audio.music_file_path", "data-i18n"),
+    ("common.browse", "data-i18n"),
+    ("audio.duck_music_vol", "data-i18n"),
+    ("audio.duck_amount", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("audio.add_music_ducking", "data-i18n"),
 )
 
 
@@ -2242,6 +2250,10 @@ MIGRATED_KEYS = (
     "audio.waveform_sine",
     "audio.waveform_square",
     "audio.waveform_triangle",
+    # One-hundred-twenty-sixth batch (Audio Ducking form shell HTML).
+    "audio.add_music_ducking",
+    "audio.ducking_title",
+    "audio.music_file_path",
 )
 
 
