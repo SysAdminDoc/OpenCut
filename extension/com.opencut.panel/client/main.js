@@ -12449,7 +12449,8 @@
                 if (el.clipThumb) {
                     var img = document.createElement("img");
                     img.src = "data:image/jpeg;base64," + data.image;
-                    img.alt = (selectedName || previewPath.split(/[/\\]/).pop() || "Clip") + " preview frame";
+                    var previewClipName = selectedName || previewPath.split(/[/\\]/).pop() || t("preview.clip_fallback", "Clip");
+                    img.alt = t("preview.frame_alt", "{clip} preview frame").replace("{clip}", previewClipName);
                     el.clipThumb.innerHTML = "";
                     el.clipThumb.appendChild(img);
                 }
@@ -13422,7 +13423,7 @@
         if (provider === "ollama") return "Ollama";
         if (provider === "openai") return "OpenAI";
         if (provider === "anthropic") return "Anthropic";
-        return provider || "LLM";
+        return provider || t("llm.provider_fallback", "LLM");
     }
 
     function refreshLlmStatusLine(message, state, title) {
@@ -13776,7 +13777,13 @@
     function addBeatMarkersToSequence() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert(t("timeline.no_beat_markers", "No beat markers detected.")); return; }
-        var markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat", type: "Chapter" }; });
+        var markers = beatMarkerTimes.map(function(time) {
+            return {
+                time: time,
+                name: t("timeline.beat_marker_name", "Beat"),
+                type: t("timeline.chapter_marker_name", "Chapter")
+            };
+        });
         var payload = JSON.stringify(markers);
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
@@ -13791,7 +13798,7 @@
                     for (var k = 0; k < markers.length; k++) {
                         fingerprints.push({
                             time: markers[k].time,
-                            comment: markers[k].name || "Beat"
+                            comment: markers[k].name || t("timeline.beat_marker_name", "Beat")
                         });
                     }
                     journalRecord(
@@ -14269,7 +14276,13 @@
     function addChaptersAsMarkers() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!chaptersData || !chaptersData.length) { showAlert(t("captions.no_chapters_available", "No chapters available.")); return; }
-        var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
+        var markers = chaptersData.map(function(c) {
+            return {
+                time: c.seconds || c.start || c.time || 0,
+                name: c.title || c.label || t("timeline.chapter_marker_name", "Chapter"),
+                type: t("timeline.chapter_marker_name", "Chapter")
+            };
+        });
         var payload = JSON.stringify(markers);
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
@@ -15098,9 +15111,14 @@
                 payload.cuts = lastTimelineCuts;
             } else if (mode === "markers") {
                 if (beatMarkerTimes && beatMarkerTimes.length) {
-                    payload.markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat" }; });
+                    payload.markers = beatMarkerTimes.map(function(time) { return { time: time, name: t("timeline.beat_marker_name", "Beat") }; });
                 } else if (chaptersData && chaptersData.length) {
-                    payload.markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || "Chapter" }; });
+                    payload.markers = chaptersData.map(function(c) {
+                        return {
+                            time: c.seconds || c.start || c.time || 0,
+                            name: c.title || t("timeline.chapter_marker_name", "Chapter")
+                        };
+                    });
                 } else {
                     showAlert(t("timeline.no_markers_available", "No markers available. Run Beat Detection or Chapter Generation first."));
                     return;
