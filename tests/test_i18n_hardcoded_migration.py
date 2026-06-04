@@ -1202,6 +1202,17 @@ MIGRATED_KEYS = (
     "palette.tool_transitions",
     "palette.tool_upscale",
     "palette.tool_video_effects",
+    # Eighty-eighth batch (command palette video/export/caption tool names).
+    "palette.tool_batch_processing",
+    "palette.tool_chapter_generation",
+    "palette.tool_color_correction",
+    "palette.tool_de_logo_remove_object",
+    "palette.tool_export_presets",
+    "palette.tool_face_ai",
+    "palette.tool_luts",
+    "palette.tool_repeat_detection",
+    "palette.tool_thumbnails",
+    "palette.tool_titles",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6558,6 +6569,57 @@ EXPECTED_CALLS = (
     (
         "palette.tool_video_effects",
         re.compile(r't\(\s*"palette\.tool_video_effects"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    # --- Eighty-eighth batch --------------------------------------
+    (
+        "palette.tool_batch_processing",
+        re.compile(r't\(\s*"palette\.tool_batch_processing"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_chapter_generation",
+        re.compile(r't\(\s*"palette\.tool_chapter_generation"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_color_correction",
+        re.compile(r't\(\s*"palette\.tool_color_correction"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_de_logo_remove_object",
+        re.compile(r't\(\s*"palette\.tool_de_logo_remove_object"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_export_presets",
+        re.compile(r't\(\s*"palette\.tool_export_presets"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_face_ai",
+        re.compile(r't\(\s*"palette\.tool_face_ai"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_luts",
+        re.compile(r't\(\s*"palette\.tool_luts"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_repeat_detection",
+        re.compile(r't\(\s*"palette\.tool_repeat_detection"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_thumbnails",
+        re.compile(r't\(\s*"palette\.tool_thumbnails"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_titles",
+        re.compile(r't\(\s*"palette\.tool_titles"'),
         re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
