@@ -1381,25 +1381,25 @@
                         <div class="card-header" data-collapsible="true">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                                <span data-i18n="subtabs.studio_fx">Studio Effects (Pedalboard)</span>
+                                <span data-i18n="audio.studio_effects_pedalboard_title">Studio Effects (Pedalboard)</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="audio.studio_desc">Studio-grade compressor, EQ, de-esser, limiter, reverb, and more. Processes audio in real-time.</p>
 
                         <div class="form-group">
-                            <label for="proFxCategory">Category</label>
+                            <label for="proFxCategory" data-i18n="forms.category">Category</label>
                             <select id="proFxCategory">
-                                <option value="preset">Presets (one-click chains)</option>
-                                <option value="dynamics">Dynamics</option>
-                                <option value="eq">EQ / Filters</option>
-                                <option value="spatial">Spatial / Time</option>
-                                <option value="character">Character / Distortion</option>
-                                <option value="pitch">Pitch</option>
+                                <option value="preset" data-i18n="audio.studio_category_preset">Presets (one-click chains)</option>
+                                <option value="dynamics" data-i18n="audio.studio_category_dynamics">Dynamics</option>
+                                <option value="eq" data-i18n="audio.studio_category_eq_filters">EQ / Filters</option>
+                                <option value="spatial" data-i18n="audio.studio_category_spatial_time">Spatial / Time</option>
+                                <option value="character" data-i18n="audio.studio_category_character_distortion">Character / Distortion</option>
+                                <option value="pitch" data-i18n="audio.studio_category_pitch">Pitch</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="proFxEffect">Effect</label>
+                            <label for="proFxEffect" data-i18n="forms.effect">Effect</label>
                             <select id="proFxEffect">
                                 <!-- Populated dynamically from category -->
                             </select>
@@ -1411,15 +1411,15 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="proFxAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runProFxBtn" disabled data-i18n="audio.studio_apply">Apply Studio Effect</button>
 
                         <div class="hint hidden" id="proFxHint">
-                            Pedalboard not installed.
-                            <button type="button" class="btn-install" id="installPedalboardBtn">Install Pedalboard</button>
-                            <div class="install-alt">Or: <code>pip install pedalboard</code></div>
+                            <span data-i18n="audio.pedalboard_not_installed">Pedalboard not installed.</span>
+                            <button type="button" class="btn-install" id="installPedalboardBtn" data-i18n="install.pedalboard">Install Pedalboard</button>
+                            <div class="install-alt"><span data-i18n="common.or_manually">Or manually:</span> <code>pip install pedalboard</code></div>
                         </div>
                     </section>
 
@@ -1427,22 +1427,22 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
-                                AI Noise Reduction (DeepFilterNet)
+                                <span data-i18n="audio.deepfilter_title">AI Noise Reduction (DeepFilterNet)</span>
                             </div>
                         </div>
-                        <p class="card-desc">Broadcast-grade AI speech cleanup. Ideal for podcasts and voiceover — runs in real-time on any machine.</p>
+                        <p class="card-desc" data-i18n="audio.deepfilter_desc">Broadcast-grade AI speech cleanup. Ideal for podcasts and voiceover — runs in real-time on any machine.</p>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="deepFilterAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
-                        <button type="button" class="btn-primary" id="runDeepFilterBtn" disabled data-i18n="subtabs.denoise">AI Denoise</button>
+                        <button type="button" class="btn-primary" id="runDeepFilterBtn" disabled data-i18n="audio.ai_denoise">AI Denoise</button>
 
                         <div class="hint hidden" id="deepFilterHint">
-                            DeepFilterNet not installed.
-                            <button type="button" class="btn-install" id="installDeepFilterBtn">Install DeepFilterNet</button>
-                            <div class="install-alt">Or: <code>pip install deepfilternet</code></div>
+                            <span data-i18n="audio.deepfilter_not_installed">DeepFilterNet not installed.</span>
+                            <button type="button" class="btn-install" id="installDeepFilterBtn" data-i18n="install.deepfilter">Install DeepFilterNet</button>
+                            <div class="install-alt"><span data-i18n="common.or_manually">Or manually:</span> <code>pip install deepfilternet</code></div>
                         </div>
                     </section>
                 </div>
