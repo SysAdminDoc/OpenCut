@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.227
+**Version**: 4.228
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 19 - 2026-06-04.
+> Last researched: Cycle 20 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-29.
+  RA-01..RA-30.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -483,6 +483,8 @@
 > **v4.226 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 19 researcher note into the canonical roadmap surfaces. RA-29 now tracks Docker dependency install fail-closed behavior and quoted/canonical package specifiers so container builds cannot silently succeed with a weakened dependency layer.
 >
 > **v4.227 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-eighteenth rolling i18n batch covering the Repeat Take Detection form shell. The i18n drift gate now reports 1,838 keys / 1,740 consumers / 98 dead / 0 missing.
+>
+> **v4.228 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 20 researcher note into the canonical roadmap surfaces. RA-30 now tracks Docker build-context secret/log hygiene so Git-ignored `.env*` and `*.log` artifacts cannot be copied into local container images.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2616,6 +2618,20 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.228 Research Queue Consolidation (RA-30)
+
+Cycle 20 is consolidated into the canonical queue. The new RA-30 item covers Docker build-context hygiene for Git-ignored local secrets/logs before `Dockerfile` copies the build context into `/app`.
+
+| Surface | Status |
+|---|---|
+| Research input | `docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE20.md` checked `.dockerignore`, `.gitignore`, `Dockerfile`, and local ignored log artifacts. |
+| Promoted item | RA-30 tracks aligning `.dockerignore` with Git-ignored secret/log patterns and adding a static guard against future drift. |
+| Local evidence | `.gitignore` excludes `.env`, `.env.*`, and `*.log`; `.dockerignore` does not. `Dockerfile` later runs `COPY . /app`, so a local Docker build can copy ignored logs/secrets into the image build context. |
+
+Validation after the consolidation: `Get-Content .dockerignore` and `rg -n "\\.env|\\*\\.log|COPY \\. /app|RA-29|RA-30|Cycle 19|Cycle 20" .gitignore .dockerignore Dockerfile ROADMAP.md TODO.md RESEARCH_REPORT.md PROJECT_CONTEXT.md` confirmed the source/planning evidence, and the focused roadmap/doc gates were rerun before commit.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2852,6 +2868,14 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
   `|| echo "Some optional deps failed -- continuing"`, which is distinct from
   RA-25's retired-package drift guard.
 
+### Researcher Queue (Cycle 20 - 2026-06-04)
+
+- [x] 🔬 `docker-context-secret-log-hygiene` - checked whether `.dockerignore`
+  excludes the same local-only logs/secrets that `.gitignore` excludes before
+  `Dockerfile` runs `COPY . /app`. Promoted RA-30 because `.gitignore` excludes
+  `.env`, `.env.*`, and `*.log`, but `.dockerignore` does not, so local Docker
+  builds can send ignored secret/log artifacts into the image build context.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2877,7 +2901,8 @@ non-badge generated-count guardrail for stale prose, diagram, and
 project-structure claims. Cycle 18 rechecked Docker CI/release-smoke coverage
 and promoted no new row because the evidence maps back to RA-25 through RA-27.
 Cycle 19 adds a Docker dependency fail-closed/specifier parsing guardrail for
-the image dependency layer.
+the image dependency layer. Cycle 20 adds a Docker build-context hygiene
+guardrail for Git-ignored secrets/logs.
 
 ### Quick Wins
 
@@ -2903,6 +2928,8 @@ the image dependency layer.
 - [ ] **P2 — RA-28 Add a README non-badge generated-count gate** — Why: Q4/E8 closed visible badge drift, but README prose, architecture diagram labels, and project-structure comments still carry stale exact route/module/blueprint counts that release smoke does not check. Evidence: README still says `v1.28.0`, `1,334 API routes`, `980 API routes`, `360 core modules`, and `73 route blueprints`; generated route truth reports 1,523 routes / 107 blueprints; `PROJECT_CONTEXT.md` records 599 core modules; `scripts/sync_badges.py` only checks badge regexes, and release-smoke's `badges` step only runs that badge check. Touches: `README.md`, `scripts/sync_badges.py` or a companion README sync/check script, `scripts/release_smoke.py`, and `tests/test_sync_badges.py` or a new README-count drift test. Acceptance: README non-badge generated counts are either synced from source-of-truth data or replaced with wording that cannot drift; tests fail if README reintroduces stale exact route/module/blueprint counts outside generated surfaces; release smoke covers the guard. Verify: focused README sync/count pytest plus `py -3.12 scripts/sync_badges.py --check` or the new companion check. Complexity: S-M.
 
 - [ ] **P2 — RA-29 Make Docker dependency installs fail closed and parse specifiers literally** — Why: Docker is advertised as a supported launch path, but the dependency layer can produce a partially provisioned image while the build still exits successfully. Evidence: `Dockerfile` uses shell-form `RUN pip install --no-cache-dir ...` with unquoted comparison specifiers such as `faster-whisper>=1.1`; in a POSIX shell-form `RUN`, `>` is shell redirection syntax unless the requirement is quoted or supplied from a requirements/extras file. The same layer ends with `|| echo "Some optional deps failed — continuing"`, so any failed optional install is converted into a successful Docker build. `pyproject.toml` already has canonical extras with parseable requirement strings such as `faster-whisper>=1.1,<2`, `opencv-python-headless>=4.13,<5`, and `scenedetect[opencv]>=0.6,<1`. Touches: `Dockerfile`, a Dockerfile/static dependency-surface guard test, and optionally `scripts/release_smoke.py` if the guard should run in release smoke. Acceptance: Docker dependencies are installed from canonical extras/requirements or every shell-form package specifier is quoted; fail-open `|| echo` masking is removed from dependency installation; tests fail if Dockerfile reintroduces unquoted comparison specifiers or unconditional install-failure masking. Verify: focused Dockerfile guard pytest, `git diff --check`, and real `docker build` evidence when Docker is available. Complexity: S.
+
+- [ ] **P2 — RA-30 Align Docker build-context secret/log hygiene with Git ignores** — Why: Docker builds include untracked local files unless `.dockerignore` blocks them, and this image copies the filtered build context into `/app`. Evidence: `.gitignore` excludes `.env`, `.env.*`, and `*.log`; `.dockerignore` excludes VCS/caches/build outputs/docs/tests/extension/venvs but does not exclude `.env`, `.env.*`, or `*.log`; `Dockerfile` later runs `COPY . /app`. Touches: `.dockerignore`, a static Docker context hygiene test, and optionally release-smoke wiring for that guard. Acceptance: `.dockerignore` blocks Git-ignored secrets/logs such as `.env`, `.env.*`, and `*.log`; a guard test fails when `.gitignore` secret/log classes are absent from `.dockerignore`; local ignored log artifacts are not sent into the Docker build context. Verify: focused Docker context hygiene pytest plus real `docker build`/context evidence when Docker is available. Complexity: S.
 
 ### Larger Bets
 
