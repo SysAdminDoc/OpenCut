@@ -76,7 +76,7 @@ Identical to the 2026-05-25 plan's §Current Product Map — 10 workflows. Refer
 - macOS source launcher; notarization tooling in place, GitHub Secrets pending (F202).
 - Linux source launcher + Flatpak/AppImage build wiring (F249); Flathub submission pending.
 - Docker CPU + GPU.
-- MCP server (curated 39 + opt-in 1,325) + UXP MCP bridge `/mcp/*` (F146).
+- MCP server (curated 39 + opt-in 1,463 as of `ROADMAP.md` v4.87) + UXP MCP bridge `/mcp/*` (F146).
 
 ### Notable surfaces added since 2026-05-25
 - `/agent/chat/*` (F143/F144) + UXP Agent tab.
@@ -127,13 +127,14 @@ For each item below: where it lives, what works, what was deferred.
 
 ### N1 — Content-addressable transcript cache (P0)
 
+- **Status:** Shipped in `ROADMAP.md` v4.87. The implementation keeps the existing `TranscriptionResult` return shape and adds cache metadata fields instead of returning a tuple.
 - **User problem:** Re-running the same workflow on the same clip pays the full Whisper cost every time. A 1 GB interview transcribed twice = 10–20 minutes wasted.
 - **Evidence (Verified):** `opencut/core/captions.py:629` (`from faster_whisper import WhisperModel`), no `lru_cache` or content-hash dispatcher anywhere in the module. `footage_index_db.py` is a SEARCH index over already-transcribed segments, not a cache layer. Subagent surveyed; my read confirms.
 - **Proposed behavior:**
   - New `opencut/core/transcript_cache.py` module.
   - Key = SHA-256 of `(audio_bytes_xxhash, whisper_model, language, beam_size, vad_filter)`. Use BLAKE3 if available for speed.
   - Store at `~/.opencut/transcript_cache/<key>.json`. Atomic write via `os.replace`.
-  - Wrap `transcribe()` to check cache before invoking Whisper. Return `(result, cache_hit: bool)`.
+  - Wrap `transcribe()` to check cache before invoking Whisper and expose cache metadata on the result.
   - Add `/captions/cache/stats` (GET, size + entries + hit rate since boot) and `/captions/cache/clear` (DELETE, CSRF-protected).
   - Cache TTL: indefinite (transcript output is deterministic for fixed inputs). Add an `--invalidate-on-mtime-change` flag if users want stricter behaviour.
 - **Implementation areas:** `opencut/core/captions.py` (`transcribe()` wrapper), `opencut/core/transcript_cache.py` (new), `opencut/routes/captions.py` (new stats + clear routes).
@@ -389,12 +390,12 @@ For each item below: where it lives, what works, what was deferred.
 
 ### Phase 0 — Reliability and trust quick wins (this week)
 
-- [ ] **P0 — N1 transcript content-addressable cache**
+- [x] **P0 — N1 transcript content-addressable cache**
   - Why: Single biggest user-visible perf win.
   - Evidence: `opencut/core/captions.py` no cache; subagent + verified.
   - Touches: `opencut/core/transcript_cache.py` (new), `opencut/core/captions.py` (wrap), `opencut/routes/captions.py` (stats+clear routes).
-  - Acceptance: re-running the same intent on the same clip returns in <200ms when cached; cache stats endpoint returns hit/miss counters.
-  - Verify: `python -m pytest tests/test_transcript_cache.py -q`.
+  - Acceptance: same source bytes/settings hit a persisted SHA-256 cache entry; cache stats endpoint returns hit/miss/write counters.
+  - Verify: `py -3.12 -m pytest tests/test_transcript_cache.py -q -p no:cacheprovider -o addopts=""`.
 
 - [ ] **P0 — N2 `missing_dependency()` includes pip extra name**
   - Why: 30-minute install-fumbling sessions disappear.
@@ -487,7 +488,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ## Larger Bets
 
-- **N1 transcript cache.** Highest-leverage perf win. Once shipped, every Whisper user gets it for free. (M, 1–2 days.)
+- **N1 transcript cache.** Shipped in `ROADMAP.md` v4.87; every Whisper caller now shares the core persistent cache.
 - **N5 job resume.** The reliability story flips when this lands. The hard part is the per-job-type checkpoint format — Whisper segments, Demucs chunks, depth frames each look different. Build it incrementally: ship one job-type at a time.
 - **N7 + N8 plugin/skill extensibility.** When community plugins ship background jobs and community skills ship via folder-drop, OpenCut becomes a *platform* instead of a feature-bag. Adopt the Obsidian capability-enforcement pattern (not just declaration).
 

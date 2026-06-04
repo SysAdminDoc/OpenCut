@@ -3,7 +3,7 @@
 Root synthesis of current research and planning inputs. Detailed research plans
 are archived under [docs/archive/research](docs/archive/research/).
 
-Last consolidated: 2026-06-01.
+Last consolidated: 2026-06-04.
 
 ## Executive Summary
 
@@ -11,9 +11,11 @@ OpenCut is already extremely broad. The highest-value research direction is not
 another large wave of model surfaces. It is making existing work easier to run,
 debug, resume, extend, and trust.
 
-The May 26 research pass identified the strongest v1.33+ opportunities:
+The May 26 research pass identified the strongest v1.33+ opportunities. N1 is
+now closed in `ROADMAP.md` v4.87; the remaining queue is tracked in
+`ROADMAP.md` under "Active Continuation Queue (May 26 Plan)".
 
-1. Content-addressable transcript cache by audio hash.
+1. Content-addressable transcript cache by audio hash. **Shipped in v4.87.**
 2. `missing_dependency()` responses that name the exact pip extra.
 3. GPU semaphore acquire-wait behavior instead of instant contention failures.
 4. Disk preflight on heavyweight render/model routes.
@@ -36,7 +38,7 @@ The May 26 research pass identified the strongest v1.33+ opportunities:
 
 | Theme | Implication |
 |---|---|
-| Performance | Cache expensive transcript/model outputs by stable content hashes before adding more user-facing AI surfaces. |
+| Performance | Cache expensive transcript/model outputs by stable content hashes before adding more user-facing surfaces. |
 | Observability | Job metadata and request correlation must span Python, FFmpeg, subprocesses, routes, and panel state. |
 | Recovery | Interrupted jobs should become resumable or explicitly non-resumable with useful reasons. |
 | Extensibility | Plugins need safe background-job primitives and capability-scoped skill loading, not just Flask route registration. |

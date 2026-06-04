@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.config import CaptionConfig
+from . import transcript_cache
 from .audio import extract_audio_wav
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,9 @@ class TranscriptionResult:
     language: str = "en"
     duration: float = 0.0
     language_confidence: float = 1.0
+    cache_hit: bool = False
+    cache_key: Optional[str] = None
+    cache_path: Optional[str] = None
 
     def __post_init__(self) -> None:
         self.language_confidence = _clamp_confidence(self.language_confidence)
@@ -259,6 +263,78 @@ def caption_segment_to_dict(
             for w in (getattr(seg, "words", None) or [])
         ]
     return payload
+
+
+def transcription_result_to_dict(result: TranscriptionResult) -> Dict[str, Any]:
+    """Serialize a transcription result for cache storage or JSON export."""
+    return {
+        "language": getattr(result, "language", "en"),
+        "duration": float(getattr(result, "duration", 0.0) or 0.0),
+        "language_confidence": _clamp_confidence(
+            getattr(result, "language_confidence", 1.0)
+        ),
+        "segments": [
+            caption_segment_to_dict(seg, include_words=True)
+            for seg in (getattr(result, "segments", []) or [])
+        ],
+    }
+
+
+def _word_from_dict(data: Dict[str, Any]) -> Word:
+    return Word(
+        text=str(data.get("text", data.get("word", ""))),
+        start=data.get("start", 0.0),
+        end=data.get("end", 0.0),
+        confidence=data.get("confidence", 1.0),
+    )
+
+
+def _segment_from_dict(data: Dict[str, Any]) -> CaptionSegment:
+    words = [
+        _word_from_dict(word_data)
+        for word_data in (data.get("words") or [])
+        if isinstance(word_data, dict)
+    ]
+    return CaptionSegment(
+        text=str(data.get("text", "")),
+        start=data.get("start", 0.0),
+        end=data.get("end", 0.0),
+        words=words,
+        speaker=data.get("speaker"),
+        language=data.get("language"),
+        language_confidence=data.get("language_confidence", 1.0),
+        confidence=data.get("confidence", 1.0),
+        human_review_recommended=bool(data.get("human_review_recommended", False)),
+        review_reasons=[
+            str(reason)
+            for reason in (data.get("review_reasons") or [])
+            if isinstance(reason, (str, int, float))
+        ],
+    )
+
+
+def transcription_result_from_dict(
+    payload: Dict[str, Any],
+    *,
+    cache_hit: bool = False,
+    cache_key: Optional[str] = None,
+    cache_path: Optional[str] = None,
+) -> TranscriptionResult:
+    """Rehydrate a cached transcription payload."""
+    segments = [
+        _segment_from_dict(seg_data)
+        for seg_data in (payload.get("segments") or [])
+        if isinstance(seg_data, dict)
+    ]
+    return TranscriptionResult(
+        segments=segments,
+        language=str(payload.get("language") or "en"),
+        duration=payload.get("duration", 0.0),
+        language_confidence=payload.get("language_confidence", 1.0),
+        cache_hit=cache_hit,
+        cache_key=cache_key,
+        cache_path=cache_path,
+    )
 
 
 def check_whisper_available() -> Tuple[bool, str]:
@@ -404,6 +480,8 @@ def transcribe(
     filepath: str,
     config: Optional[CaptionConfig] = None,
     timeout: Optional[float] = None,
+    *,
+    use_cache: bool = True,
 ) -> TranscriptionResult:
     """
     Transcribe audio/video to text with timestamps.
@@ -414,6 +492,7 @@ def transcribe(
         filepath: Path to the media file.
         config: Caption configuration. Uses defaults if None.
         timeout: Maximum time in seconds for transcription. None = no timeout.
+        use_cache: Use the persistent content-addressed transcript cache.
 
     Returns:
         TranscriptionResult with segments and word-level timestamps.
@@ -435,6 +514,34 @@ def transcribe(
             "  pip install whisperx               # Best word timestamps\n"
         )
 
+    cache_key: Optional[str] = None
+    cache_metadata: Optional[Dict[str, Any]] = None
+    if use_cache and transcript_cache.cache_enabled():
+        try:
+            cache_key, cache_metadata = transcript_cache.build_cache_key(
+                filepath,
+                backend=backend,
+                config=config,
+            )
+            cached = transcript_cache.load_transcript(cache_key)
+            if cached:
+                logger.info("Transcript cache hit for %s", filepath)
+                return transcription_result_from_dict(
+                    cached["result"],
+                    cache_hit=True,
+                    cache_key=cache_key,
+                    cache_path=transcript_cache.cache_entry_path(cache_key),
+                )
+            logger.debug("Transcript cache miss for %s", filepath)
+        except OSError as exc:
+            logger.debug("Transcript cache key build failed for %s: %s", filepath, exc)
+            cache_key = None
+            cache_metadata = None
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Transcript cache read failed for %s: %s", filepath, exc)
+            cache_key = None
+            cache_metadata = None
+
     # Extract audio to WAV for consistent input
     logger.debug(f"Extracting audio from {filepath}")
     wav_path = extract_audio_wav(filepath, sample_rate=16000)
@@ -455,13 +562,26 @@ def transcribe(
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(_do_transcribe)
                 try:
-                    return future.result(timeout=timeout)
+                    result = future.result(timeout=timeout)
                 except concurrent.futures.TimeoutError:
                     logger.error(f"Transcription timed out after {timeout}s")
                     raise TimeoutError(f"Transcription timed out after {timeout} seconds. "
                                      "Try using a smaller model or enabling CPU mode in Settings.")
         else:
-            return _do_transcribe()
+            result = _do_transcribe()
+
+        result.cache_hit = False
+        result.cache_key = cache_key
+        if cache_key and cache_metadata:
+            try:
+                result.cache_path = transcript_cache.store_transcript(
+                    cache_key,
+                    cache_metadata,
+                    transcription_result_to_dict(result),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Transcript cache write failed for %s: %s", filepath, exc)
+        return result
     finally:
         # Cleanup temp wav
         if os.path.exists(wav_path) and wav_path.startswith(tempfile.gettempdir()):
