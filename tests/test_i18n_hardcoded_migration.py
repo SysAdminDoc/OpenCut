@@ -612,6 +612,24 @@ MIGRATED_KEYS = (
     "whisper.gpu_preferred_status",
     "whisper.gpu_preferred_summary",
     "whisper.ready_default_label",
+    # Forty-fourth batch (search empty/result availability states).
+    "search.clip_path_unavailable_title",
+    "search.clip_unavailable",
+    "search.failed_status",
+    "search.index_cleared_hint",
+    "search.index_cleared_toast",
+    "search.index_empty_hint",
+    "search.library_body",
+    "search.library_cleared_status",
+    "search.library_title",
+    "search.no_matches_body",
+    "search.no_matches_status",
+    "search.no_matches_title",
+    "search.select_clip_aria",
+    "search.select_clip_title",
+    "search.unavailable_body",
+    "search.unavailable_clip_aria",
+    "search.unavailable_title",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -3179,6 +3197,92 @@ EXPECTED_CALLS = (
         "whisper.ready_default_label",
         re.compile(r't\(\s*"whisper\.ready_default_label"'),
         re.compile(r'setSettingsStudioState\(\s*"speech",\s*"Whisper ready"'),
+    ),
+    # --- Forty-fourth batch ----------------------------------------
+    (
+        "search.clip_path_unavailable_title",
+        re.compile(r't\(\s*"search\.clip_path_unavailable_title"'),
+        re.compile(r'item\.title = path \? "Select clip" : "Clip path unavailable"'),
+    ),
+    (
+        "search.clip_unavailable",
+        re.compile(r't\(\s*"search\.clip_unavailable"'),
+        re.compile(r':\s*"Clip unavailable"'),
+    ),
+    (
+        "search.failed_status",
+        re.compile(r't\(\s*"search\.failed_status"'),
+        re.compile(r'setStatusLine\("searchStatus",\s*"Search failed\. Check the backend connection and try again\."'),
+    ),
+    (
+        "search.index_cleared_hint",
+        re.compile(r't\(\s*"search\.index_cleared_hint"'),
+        re.compile(r'setHintState\(statsEl,\s*"Search index cleared\.'),
+    ),
+    (
+        "search.index_cleared_toast",
+        re.compile(r't\(\s*"search\.index_cleared_toast"'),
+        re.compile(r'showToast\("Footage index cleared"'),
+    ),
+    (
+        "search.index_empty_hint",
+        re.compile(r't\(\s*"search\.index_empty_hint"'),
+        re.compile(r'setHintState\(statsEl,\s*"Search index is empty\.'),
+    ),
+    (
+        "search.library_body",
+        re.compile(r't\(\s*"search\.library_body"'),
+        re.compile(r'renderSearchResultsEmpty\(\s*"Search the footage library",\s*"Index project clips'),
+    ),
+    (
+        "search.library_cleared_status",
+        re.compile(r't\(\s*"search\.library_cleared_status"'),
+        re.compile(r'setStatusLine\("searchStatus",\s*"Library index cleared\.'),
+    ),
+    (
+        "search.library_title",
+        re.compile(r't\(\s*"search\.library_title"'),
+        re.compile(r'renderSearchResultsEmpty\(\s*"Search the footage library"'),
+    ),
+    (
+        "search.no_matches_body",
+        re.compile(r't\(\s*"search\.no_matches_body"'),
+        re.compile(r'renderSearchResultsEmpty\(\s*"No matches yet",\s*"Try a broader query'),
+    ),
+    (
+        "search.no_matches_status",
+        re.compile(r't\(\s*"search\.no_matches_status"'),
+        re.compile(r'setStatusLine\("searchStatus",\s*"No matching footage found for that query\."'),
+    ),
+    (
+        "search.no_matches_title",
+        re.compile(r't\(\s*"search\.no_matches_title"'),
+        re.compile(r'renderSearchResultsEmpty\(\s*"No matches yet"'),
+    ),
+    (
+        "search.select_clip_aria",
+        re.compile(r't\(\s*"search\.select_clip_aria"'),
+        re.compile(r'\? "Select clip " \+ name'),
+    ),
+    (
+        "search.select_clip_title",
+        re.compile(r't\(\s*"search\.select_clip_title"'),
+        re.compile(r'item\.title = path \? "Select clip"'),
+    ),
+    (
+        "search.unavailable_body",
+        re.compile(r't\(\s*"search\.unavailable_body"'),
+        re.compile(r'renderSearchResultsEmpty\(\s*"Search unavailable",\s*"The footage search request failed'),
+    ),
+    (
+        "search.unavailable_clip_aria",
+        re.compile(r't\(\s*"search\.unavailable_clip_aria"'),
+        re.compile(r': "Unavailable clip result"'),
+    ),
+    (
+        "search.unavailable_title",
+        re.compile(r't\(\s*"search\.unavailable_title"'),
+        re.compile(r'renderSearchResultsEmpty\("Search unavailable"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

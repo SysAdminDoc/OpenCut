@@ -14277,7 +14277,7 @@
         }
         if (!statsEl) return;
         if (!totalFiles) {
-            setHintState(statsEl, "Search index is empty. Index project clips to enable footage search.", "info");
+            setHintState(statsEl, t("search.index_empty_hint", "Search index is empty. Index project clips to enable footage search."), "info");
             setStatusLine(
                 "searchStatus",
                 connected
@@ -14345,15 +14345,15 @@
             }
             renderSearchIndexStats({ total_files: 0, total_segments: 0 });
             if (statsEl) {
-                setHintState(statsEl, "Search index cleared. Re-index project clips when you're ready to search again.", "success");
+                setHintState(statsEl, t("search.index_cleared_hint", "Search index cleared. Re-index project clips when you're ready to search again."), "success");
             }
             renderSearchResultsEmpty(
-                "Search the footage library",
-                "Index project clips, then use descriptive queries to find the right sound bite or shot.",
+                t("search.library_title", "Search the footage library"),
+                t("search.library_body", "Index project clips, then use descriptive queries to find the right sound bite or shot."),
                 "info"
             );
-            setStatusLine("searchStatus", "Library index cleared. Re-index project clips to search again.", "success");
-            showToast("Footage index cleared", "success");
+            setStatusLine("searchStatus", t("search.library_cleared_status", "Library index cleared. Re-index project clips to search again."), "success");
+            showToast(t("search.index_cleared_toast", "Footage index cleared"), "success");
         });
     }
 
@@ -14443,21 +14443,29 @@
             }
             if (!res) return;
             if (err || !data) {
-                renderSearchResultsEmpty("Search unavailable", "The footage search request failed. Check the backend connection and try again.", "error");
-                setStatusLine("searchStatus", "Search failed. Check the backend connection and try again.", "error");
+                renderSearchResultsEmpty(
+                    t("search.unavailable_title", "Search unavailable"),
+                    t("search.unavailable_body", "The footage search request failed. Check the backend connection and try again."),
+                    "error"
+                );
+                setStatusLine("searchStatus", t("search.failed_status", "Search failed. Check the backend connection and try again."), "error");
                 return;
             }
             var results = data.results || [];
             if (!results.length) {
-                renderSearchResultsEmpty("No matches yet", "Try a broader query or refresh the library index, then search again.", "warning");
-                setStatusLine("searchStatus", "No matching footage found for that query.", "warning");
+                renderSearchResultsEmpty(
+                    t("search.no_matches_title", "No matches yet"),
+                    t("search.no_matches_body", "Try a broader query or refresh the library index, then search again."),
+                    "warning"
+                );
+                setStatusLine("searchStatus", t("search.no_matches_status", "No matching footage found for that query."), "warning");
                 return;
             }
             var frag = document.createDocumentFragment();
             for (var i = 0; i < results.length; i++) {
                 var r = results[i];
                 var path = r.path || "";
-                var name = path ? path.split(/[/\\]/).pop() : "Clip unavailable";
+                var name = path ? path.split(/[/\\]/).pop() : t("search.clip_unavailable", "Clip unavailable");
                 var timeRange = r.start != null ? fmtDur(r.start) + " - " + fmtDur(r.end || r.start) : "";
                 var item = document.createElement("button");
                 item.type = "button";
@@ -14469,8 +14477,15 @@
                 if (path && (path === _selectedFootageSearchPath || path === selectedPath)) {
                     item.classList.add("is-selected");
                 }
-                item.title = path ? "Select clip" : "Clip path unavailable";
-                item.setAttribute("aria-label", path ? "Select clip " + name : "Unavailable clip result");
+                item.title = path
+                    ? t("search.select_clip_title", "Select clip")
+                    : t("search.clip_path_unavailable_title", "Clip path unavailable");
+                item.setAttribute(
+                    "aria-label",
+                    path
+                        ? t("search.select_clip_aria", "Select clip {name}").replace("{name}", name)
+                        : t("search.unavailable_clip_aria", "Unavailable clip result")
+                );
                 var title = document.createElement("div");
                 title.className = "footage-result-title";
                 title.textContent = name;
@@ -14771,8 +14786,8 @@
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
         ensureFootageDelegation();
         renderSearchResultsEmpty(
-            "Search the footage library",
-            "Index project clips, then use descriptive queries to find the right sound bite or shot.",
+            t("search.library_title", "Search the footage library"),
+            t("search.library_body", "Index project clips, then use descriptive queries to find the right sound bite or shot."),
             "info"
         );
         refreshSearchIndexStatus();
