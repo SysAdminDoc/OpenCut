@@ -1160,6 +1160,12 @@ MIGRATED_KEYS = (
     "premiere.bin_output",
     "premiere.bin_stems",
     "status.gpu_fallback",
+    # Eighty-third batch (preview/provider/marker fallback labels).
+    "llm.provider_fallback",
+    "preview.clip_fallback",
+    "preview.frame_alt",
+    "timeline.beat_marker_name",
+    "timeline.chapter_marker_name",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6327,6 +6333,32 @@ EXPECTED_CALLS = (
         "status.gpu_fallback",
         re.compile(r't\(\s*"status\.gpu_fallback"'),
         re.compile(r'data\.gpu\.name\s*\|\|\s*"GPU"'),
+    ),
+    # --- Eighty-third batch --------------------------------------
+    (
+        "llm.provider_fallback",
+        re.compile(r't\(\s*"llm\.provider_fallback"'),
+        re.compile(r'return\s+provider\s*\|\|\s*"LLM"'),
+    ),
+    (
+        "preview.clip_fallback",
+        re.compile(r't\(\s*"preview\.clip_fallback"'),
+        re.compile(r'\|\|\s*"Clip"\)\s*\+\s*" preview frame"'),
+    ),
+    (
+        "preview.frame_alt",
+        re.compile(r't\(\s*"preview\.frame_alt"'),
+        re.compile(r'img\.alt\s*=\s*\(selectedName\s*\|\|\s*previewPath\.split'),
+    ),
+    (
+        "timeline.beat_marker_name",
+        re.compile(r't\(\s*"timeline\.beat_marker_name"'),
+        re.compile(r'name:\s*"Beat"|comment:\s*markers\[k\]\.name\s*\|\|\s*"Beat"'),
+    ),
+    (
+        "timeline.chapter_marker_name",
+        re.compile(r't\(\s*"timeline\.chapter_marker_name"'),
+        re.compile(r'type:\s*"Chapter"|name:\s*c\.title\s*\|\|\s*"Chapter"|name:\s*c\.title\s*\|\|\s*c\.label\s*\|\|\s*"Chapter"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
