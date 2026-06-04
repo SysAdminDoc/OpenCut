@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.210
+**Version**: 4.211
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 13 - 2026-06-04.
+> Last researched: Cycle 14 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-24.
+  RA-01..RA-25.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -449,6 +449,8 @@
 > **v4.209 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-fifth rolling i18n batch covering Auto-Edit method options, slider labels, and slider title tooltips. The i18n drift gate now reports 1,695 keys / 1,582 consumers / 113 dead / 0 missing.
 >
 > **v4.210 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-sixth rolling i18n batch covering Highlights form labels, duration ARIA labels, emotion-highlight ARIA, and dependency install helper text. The i18n drift gate now reports 1,703 keys / 1,592 consumers / 111 dead / 0 missing.
+>
+> **v4.211 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 14 researcher note into the canonical roadmap surfaces. RA-25 now tracks aligning Docker dependency installs with the audited Python install surfaces so the container path cannot reintroduce retired `deep-translator` or `pydub` packages.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2307,6 +2309,20 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.211 Research Queue Consolidation (RA-25)
+
+Cycle 14 is consolidated into the canonical queue. The new RA-25 item covers a Docker packaging dependency drift that was not covered by earlier source install-surface guards.
+
+| Surface | Status |
+|---|---|
+| Research input | `docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE14.md` checked the Docker image dependency layer against F094 and F123 dependency decisions. |
+| Promoted item | RA-25 tracks aligning Docker dependency installs with audited Python install surfaces, or adding a Dockerfile drift guard, so container builds cannot reintroduce retired packages. |
+| Local evidence | `Dockerfile` still lists `pydub` and `deep-translator`; `requirements.txt` and `pyproject.toml` record the pydub retirement; `tests/test_dependency_surface.py` currently forbids `deep-translator` in source install surfaces but not `Dockerfile`. |
+
+Validation after the consolidation: `py -3.12 -m pytest tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed, and `git diff --check` passed.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2481,6 +2497,17 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
   Full defaults to read-only permissions and narrows `contents: write` to the
   release-upload boundary.
 
+### Researcher Queue (Cycle 14 - 2026-06-04)
+
+- [x] 🔬 `docker-dependency-surface-refresh-2026-06-04` - checked the Docker
+  image dependency layer against the audited Python install-surface policy.
+  F094 removed vulnerable `deep-translator` from install surfaces, and F123
+  retired unused `pydub` from extras/requirements for Python 3.13 compatibility,
+  but `Dockerfile` still installs both packages in its optional dependency
+  layer. Promoted RA-25 so Docker installs either consume the same canonical
+  dependency surfaces or are covered by a drift guard that blocks retired
+  packages from returning through the container path.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2497,7 +2524,8 @@ from current repo metadata and workflow evidence. Cycle 11 adds a Release Full
 Node runtime reproducibility guardrail for the CEP panel npm gates. Cycle 12
 adds a GitHub Actions immutable-reference guardrail for release/signing workflow
 supply-chain trust. Cycle 13 adds a Release Full `GITHUB_TOKEN`
-least-privilege guardrail for workflow/job permission scoping.
+least-privilege guardrail for workflow/job permission scoping. Cycle 14 adds a
+Docker install-surface guardrail for retired Python dependencies.
 
 ### Quick Wins
 
@@ -2517,6 +2545,7 @@ least-privilege guardrail for workflow/job permission scoping.
 - [ ] **P2 — RA-22 Pin Node explicitly in Release Full panel gates** — Why: Release Full is the release-trust workflow that runs the CEP panel npm install, advisory check, Vitest suite, source verifier, and Vite build, but it currently inherits whatever `node` binary the Linux runner image places first on `PATH`. PR Fast already pins Node 22, so the two CI lanes can silently test different Node majors. Evidence: `.github/workflows/pr-fast.yml` sets up Node 22 before `npm ci`; `.github/workflows/build.yml` has no `setup-node` step before its Linux-only panel gate; `extension/com.opencut.panel/package-lock.json` records Vitest's engine as `^20.0.0 || ^22.0.0 || >=24.0.0`; GitHub's Node CI docs say `setup-node` ensures consistent behavior across runners and Node versions (`https://docs.github.com/en/actions/how-tos/writing-workflows/building-and-testing/building-and-testing-nodejs`); the actions/runner-images repository documents weekly image updates and current Ubuntu 24.04 image Node versions (`https://github.com/actions/runner-images`). Touches: `.github/workflows/build.yml`, `tests/test_ci_workflow_split.py`, and release-smoke docs. Acceptance: Release Full has an explicit `actions/setup-node` step with the same supported Node major used by PR Fast before any panel `npm` command; a workflow-shape test fails if PR Fast and Release Full diverge on the panel Node major or if Release Full runs panel npm commands without prior Node setup. Verify: `py -3.12 -m pytest tests/test_ci_workflow_split.py -q` plus one Release Full workflow run showing the pinned Node version in the panel gate. Complexity: S.
 - [ ] **P2 — RA-23 Pin GitHub Actions workflow actions to full-length SHAs** — Why: Release Full handles artifacts, release uploads, code signing, SBOM upload, and release issue creation, so mutable workflow action tags are part of the release trust boundary. GitHub's secure-use guidance says pinning to a full-length commit SHA is the immutable Action release option and warns that tags can be moved or deleted. Evidence: `.github/workflows/pr-fast.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, and `actions/setup-node@v4`; `.github/workflows/build.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, and repeated `actions/upload-artifact@v4`; `.github/workflows/adobe-premierepro-versions.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, and `actions/github-script@v7`; GitHub secure-use guidance recommends full-length SHA pins and repository/org policies for requiring them (`https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions`). Touches: `.github/workflows/*.yml`, a workflow-security guard test, and release-maintenance docs. Acceptance: every non-local workflow `uses:` reference is pinned to a full-length SHA with an adjacent version/update comment; a guard test fails on unpinned mutable tags or branches; docs record the update workflow for refreshing pins. Verify: focused workflow-security pytest plus one PR Fast and one Release Full run using the pinned actions. Complexity: S-M.
 - [ ] **P2 — RA-24 Scope Release Full `GITHUB_TOKEN` permissions by job** — Why: Release Full runs lint, tests, package builds, code signing, and notarization before artifact/release upload, so workflow-level `contents: write` unnecessarily broadens the blast radius of earlier steps and third-party actions. GitHub workflow syntax documents that job-level `permissions` can grant only the minimum required access, `contents: read` is sufficient for source reads, and `contents: write` allows release creation. Evidence: `.github/workflows/build.yml` declares workflow-level `permissions: contents: write`; its `gh release upload` steps are tag/manual release upload paths using `GH_TOKEN`; `.github/workflows/pr-fast.yml` uses workflow-level `permissions: contents: read`; `.github/workflows/adobe-premierepro-versions.yml` scopes `contents: read` plus `issues: write` to the one job that opens issues; GitHub docs describe job-level `GITHUB_TOKEN` permission scoping (`https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#permissions`). Touches: `.github/workflows/build.yml`, workflow-shape guard tests, and release-maintenance docs. Acceptance: Release Full defaults to read-only permissions for build/test/package jobs; only tag/manual release upload jobs or steps receive `contents: write`; guard tests fail if workflow-wide `contents: write` returns without an explicit allowlisted reason. Verify: focused workflow-permission pytest plus one Release Full tag/manual dry run confirming uploads still work. Complexity: S-M.
+- [ ] **P1 — RA-25 Align Docker dependency installs with tracked Python install surfaces** — Why: Docker is a user-facing packaging path, but its handwritten dependency list has drifted from the audited install surface. It still installs `deep-translator` after F094 removed that known no-fix advisory path, and it still installs `pydub` after F123 removed the unused dependency for Python 3.13 compatibility. Evidence: `Dockerfile` installs `pydub` and `deep-translator`; `requirements.txt` comments that pydub is retired; `pyproject.toml` extras omit pydub; `tests/test_audioop_shim.py` asserts OpenCut has no pydub imports and extras do not pin it; `tests/test_dependency_surface.py` forbids deep-translator in source install surfaces but omits Dockerfile. Touches: `Dockerfile`, `tests/test_dependency_surface.py`, and release/container docs. Acceptance: Docker installs from the same canonical requirements/extras used by source installs or has a guard-tested minimal list that excludes `deep-translator` and `pydub`; tests fail if Dockerfile reintroduces dependency names banned from the audited install surfaces. Verify: focused dependency-surface test plus a parse-only Dockerfile smoke in release CI, with real `docker build` evidence captured separately when Docker is available. Complexity: S.
 
 ### Larger Bets
 
