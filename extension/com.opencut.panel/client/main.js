@@ -13625,18 +13625,23 @@
         var res = document.getElementById("multicamResult");
         var sum = document.getElementById("multicamSummary");
         if (res) res.classList.remove("hidden");
-        if (sum) sum.textContent = (r.total_cuts || (r.cuts && r.cuts.length) || 0) + " cuts generated.";
+        if (sum) sum.textContent = t("timeline.multicam_cuts_generated", "{count} cuts generated.")
+            .replace("{count}", r.total_cuts || (r.cuts && r.cuts.length) || 0);
     });
 
     function applyMulticamCuts() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
-        if (!multicamCutsData) { showAlert("No multicam cuts available."); return; }
+        if (!multicamCutsData) { showAlert(t("timeline.no_multicam_cuts", "No multicam cuts available.")); return; }
         var payload = JSON.stringify(multicamCutsData);
         cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
-                showToast("Multicam cuts applied: " + (r.applied || 0), "success");
-            } catch (e) { showAlert("Error: " + (result || e.message)); }
+                showToast(t("timeline.multicam_cuts_applied", "Multicam cuts applied: {count}")
+                    .replace("{count}", r.applied || 0), "success");
+            } catch (e) {
+                showAlert(t("timeline.action_failed", "Error: {error}")
+                    .replace("{error}", result || e.message));
+            }
         });
     }
 
@@ -13647,8 +13652,12 @@
         var html = "";
         for (var i = 0; i < n; i++) {
             html += '<div class="multicam-track-row">'
-                + '<span class="multicam-track-label">Speaker ' + (i + 1) + '</span>'
-                + '<span class="multicam-track-arrow">\u2192 Track</span>'
+                + '<span class="multicam-track-label">'
+                + esc(t("timeline.multicam_speaker_label", "Speaker {number}").replace("{number}", i + 1))
+                + '</span>'
+                + '<span class="multicam-track-arrow">\u2192 '
+                + esc(t("timeline.multicam_track_label", "Track"))
+                + '</span>'
                 + '<input type="number" class="multicam-track-input" value="' + i + '" min="0" max="20">'
                 + '</div>';
         }
@@ -13858,7 +13867,7 @@
         var container = document.getElementById("smartBinRules");
         if (!container) return;
         if (!smartBinRules.length) {
-            container.innerHTML = '<div class="hint">No rules yet. Click "+ Add Rule".</div>';
+            container.innerHTML = '<div class="hint">' + esc(t("timeline.no_rules_yet", 'No rules yet. Click "+ Add Rule".')) + '</div>';
             updateButtons();
             return;
         }
@@ -13950,7 +13959,8 @@
         var sum = document.getElementById("repeatSummary");
         var list = document.getElementById("repeatList");
         if (res) res.classList.remove("hidden");
-        if (sum) sum.textContent = "Found " + repeatCutsData.length + " repeated takes.";
+        if (sum) sum.textContent = t("timeline.repeat_found_summary", "Found {count} repeated takes.")
+            .replace("{count}", repeatCutsData.length);
         if (list) {
             var html = "";
             for (var i = 0; i < repeatCutsData.length; i++) {
@@ -13960,14 +13970,15 @@
                     + '<span class="analysis-item-title">' + fmtDur(c.start || 0) + " - " + fmtDur(c.end || 0) + '</span>'
                     + (c.text ? '<span class="analysis-item-copy">' + esc(c.text.substring(0, 60)) + '</span>' : '')
                     + '</div>'
-                    + '<span class="analysis-item-badge">Repeat</span>'
+                    + '<span class="analysis-item-badge">' + esc(t("timeline.repeat_badge", "Repeat")) + '</span>'
                     + '</div>';
             }
-            list.innerHTML = html || '<div class="hint">No repeats found.</div>';
+            list.innerHTML = html || '<div class="hint">' + esc(t("timeline.no_repeats_found", "No repeats found.")) + '</div>';
         }
         // Update writeback status
         var tlStatus = document.getElementById("tlWritebackStatus");
-        if (tlStatus) tlStatus.textContent = repeatCutsData.length + " repeat cuts ready to review.";
+        if (tlStatus) tlStatus.textContent = t("timeline.repeat_cuts_ready", "{count} repeat cuts ready to review.")
+            .replace("{count}", repeatCutsData.length);
         // Phase 3.3: Show cut review panel
         showCutReview(repeatCutsData, function (selectedCuts) {
             lastTimelineCuts = selectedCuts;
@@ -13976,7 +13987,7 @@
     });
 
     function applyRepeatCutsToTimeline() {
-        if (!repeatCutsData || !repeatCutsData.length) { showAlert("No repeat cuts available."); return; }
+        if (!repeatCutsData || !repeatCutsData.length) { showAlert(t("timeline.no_repeat_cuts", "No repeat cuts available.")); return; }
         // Phase 3.3: Show review panel instead of direct apply
         showCutReview(repeatCutsData, function (selectedCuts) {
             applySequenceCuts(selectedCuts);
@@ -14836,7 +14847,7 @@
         // Write-back
         var applyBtn = document.getElementById("applySeqCutsBtn");
         if (applyBtn) applyBtn.addEventListener("click", function() {
-            if (!lastTimelineCuts) { showAlert("No cuts available. Run Silence Removal or Repeat Detection first."); return; }
+            if (!lastTimelineCuts) { showAlert(t("timeline.no_cuts_available", "No cuts available. Run Silence Removal or Repeat Detection first.")); return; }
             // Phase 3.3: Show review panel instead of direct apply
             showCutReview(lastTimelineCuts, function (selectedCuts) {
                 lastTimelineCuts = selectedCuts;
@@ -14852,7 +14863,7 @@
             var payload = { filepath: selectedPath, output_dir: projectFolder, mode: mode };
             if (mode === "cuts") {
                 if (!lastTimelineCuts || !lastTimelineCuts.length) {
-                    showAlert("No cuts available. Run Silence Removal or Repeat Detection first.");
+                    showAlert(t("timeline.no_cuts_available", "No cuts available. Run Silence Removal or Repeat Detection first."));
                     return;
                 }
                 payload.cuts = lastTimelineCuts;
