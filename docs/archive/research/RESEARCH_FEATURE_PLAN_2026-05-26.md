@@ -300,9 +300,10 @@ For each item below: where it lives, what works, what was deferred.
 
 ### E14 — F236 CEP parity (P1; tracked, scope here)
 
-- **Current behavior:** F236 caption display-settings card shipped in UXP (`8d7ebd2`); CEP captions tab still lacks it.
+- **Original behavior:** F236 caption display-settings card shipped in UXP (`8d7ebd2`); CEP captions tab still lacked it.
 - **Recommendation:** Port the same card pattern into `extension/com.opencut.panel/client/index.html` and the CEP `main.js` event wiring. Reuses the same backend routes.
 - **Complexity:** S. **Priority: P1.** (deadline 2026-08-17 already met via UXP; CEP parity is polish, not deadline-gated.)
+- **Status:** Shipped in `ROADMAP.md` v4.96 with the CEP Captions-tab FCC card, token-schema loading, preview/reset wiring, preview CSS, and `tests/test_cep_caption_display_settings_ui.py`.
 
 ### E15 — i18n migration continuation (P2)
 
@@ -452,10 +453,11 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: dropping a `SKILL.md` + `plan.json` into `~/.opencut/skills/<id>/` lists it in `GET /agent/skills`.
   - Status: closed in ROADMAP v4.95 with validated user-skill loading, generated route-manifest endpoint checks, combined catalogue source metadata, and authoring docs.
 
-- [ ] **P1 — E14 F236 CEP parity**
-  - Why: UXP got the FCC card; CEP still lacks it.
+- [x] **P1 — E14 F236 CEP parity**
+  - Why: UXP got the FCC card first; CEP lacked it at audit time.
   - Touches: `extension/com.opencut.panel/client/{index.html,main.js,style.css}`.
   - Acceptance: identical card surfaces in CEP captions tab; uses the same backend routes.
+  - Status: closed in ROADMAP v4.96 with CEP token loading, live preview, and static parity tests.
 
 ### Phase 2 — Observability & extensibility polish
 

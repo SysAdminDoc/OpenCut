@@ -103,6 +103,16 @@
 
     // ---- Style Preview CSS Map (loaded from backend) ----
     var stylePreviewMap = {};
+    var captionDisplaySettingsSchema = null;
+    var CAPTION_DISPLAY_SELECTS = [
+        { id: "capDispFont", category: "font", key: "font" },
+        { id: "capDispSize", category: "size", key: "size" },
+        { id: "capDispTextColor", category: "color", key: "text_color" },
+        { id: "capDispTextOpacity", category: "opacity", key: "text_opacity" },
+        { id: "capDispBgColor", category: "color", key: "background_color" },
+        { id: "capDispBgOpacity", category: "opacity", key: "background_opacity" },
+        { id: "capDispEdge", category: "edge_style", key: "edge_style" }
+    ];
 
     // ---- New Feature State (v1.5.0) ----
     var lastTimelineCuts = null;    // stores last cuts result for timeline apply
@@ -1175,6 +1185,21 @@
         el.runStyledCaptionsBtn = $("runStyledCaptionsBtn");
         el.captionsHint = $("captionsHint");
         el.installWhisperBtn = $("installWhisperBtn");
+        el.captionDisplaySettingsCard = $("captionDisplaySettingsCard");
+        el.capDispFont = $("capDispFont");
+        el.capDispSize = $("capDispSize");
+        el.capDispTextColor = $("capDispTextColor");
+        el.capDispTextOpacity = $("capDispTextOpacity");
+        el.capDispBgColor = $("capDispBgColor");
+        el.capDispBgOpacity = $("capDispBgOpacity");
+        el.capDispEdge = $("capDispEdge");
+        el.capDispPreviewBtn = $("capDispPreviewBtn");
+        el.capDispResetBtn = $("capDispResetBtn");
+        el.capDispStatus = $("capDispStatus");
+        el.capDispPreviewBox = $("capDispPreviewBox");
+        el.capDispPreviewArea = $("capDispPreviewArea");
+        el.capDispPreviewSample = $("capDispPreviewSample");
+        el.fccComplianceNotice = $("fccComplianceNotice");
         el.subModel = $("subModel");
         el.subLang = $("subLang");
         el.subFormat = $("subFormat");
@@ -6814,6 +6839,130 @@
                 }
             }
         }
+    }
+
+    function captionDisplayOptionLabel(spec, opt) {
+        var id = String(opt.id || "");
+        if (spec.category === "font" && opt.font_family) return id + " (" + opt.font_family + ")";
+        if (spec.category === "size" && opt.font_size) return id + " (" + opt.font_size + ")";
+        if (spec.category === "color" && opt.hex) return id + " (" + opt.hex + ")";
+        if (spec.category === "opacity" && opt.alpha !== undefined) return id + " (" + opt.alpha + ")";
+        return id;
+    }
+
+    function setCaptionDisplayStatus(text, state) {
+        if (!el.capDispStatus) return;
+        el.capDispStatus.textContent = text;
+        if (state) el.capDispStatus.setAttribute("data-state", state);
+    }
+
+    function populateCaptionDisplaySelects(schema) {
+        captionDisplaySettingsSchema = schema || {};
+        var tokens = captionDisplaySettingsSchema.tokens || {};
+        var defaults = captionDisplaySettingsSchema.defaults || {};
+        for (var i = 0; i < CAPTION_DISPLAY_SELECTS.length; i++) {
+            var spec = CAPTION_DISPLAY_SELECTS[i];
+            var select = el[spec.id];
+            if (!select) continue;
+            var opts = tokens[spec.category] || [];
+            select.innerHTML = "";
+            for (var j = 0; j < opts.length; j++) {
+                var opt = opts[j] || {};
+                var option = document.createElement("option");
+                option.value = String(opt.id || "");
+                option.textContent = captionDisplayOptionLabel(spec, opt);
+                select.appendChild(option);
+            }
+            if (defaults[spec.key]) {
+                select.value = defaults[spec.key];
+            } else if (opts.length && opts[0].id) {
+                select.value = opts[0].id;
+            }
+        }
+    }
+
+    function readCaptionDisplaySettings() {
+        var settings = {};
+        for (var i = 0; i < CAPTION_DISPLAY_SELECTS.length; i++) {
+            var spec = CAPTION_DISPLAY_SELECTS[i];
+            var select = el[spec.id];
+            if (select) settings[spec.key] = select.value;
+        }
+        return settings;
+    }
+
+    function applyCaptionDisplayPreview(payload) {
+        if (!el.capDispPreviewBox || !el.capDispPreviewArea || !el.capDispPreviewSample) return;
+        var styles = (payload && payload.preview_css) ? payload.preview_css : {};
+        el.capDispPreviewBox.hidden = false;
+        el.capDispPreviewSample.textContent = (payload && payload.sample_text) || "Caption preview";
+        el.capDispPreviewSample.removeAttribute("style");
+        if (styles.windowColor) {
+            el.capDispPreviewArea.style.backgroundColor = styles.windowColor;
+        }
+        for (var key in styles) {
+            if (!Object.prototype.hasOwnProperty.call(styles, key) || key === "windowColor") continue;
+            try {
+                el.capDispPreviewSample.style[key] = styles[key];
+            } catch (e) {}
+        }
+    }
+
+    function refreshCaptionDisplayPreview() {
+        if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = true;
+        setCaptionDisplayStatus("Rendering preview...", "working");
+        api("POST", "/captions/display-settings/preview", {
+            settings: readCaptionDisplaySettings(),
+            sample_text: "The quick brown fox jumps over the lazy dog."
+        }, function (err, data) {
+            if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = false;
+            if (err || !data || data.error) {
+                setCaptionDisplayStatus("Preview failed: " + ((data && data.error) || (err && err.message) || "unknown"), "error");
+                return;
+            }
+            applyCaptionDisplayPreview(data);
+            setCaptionDisplayStatus("Preview updated. These display tokens apply to caption burn-in.", "success");
+        });
+    }
+
+    function resetCaptionDisplayDefaults() {
+        if (!captionDisplaySettingsSchema) return;
+        var defaults = captionDisplaySettingsSchema.defaults || {};
+        for (var i = 0; i < CAPTION_DISPLAY_SELECTS.length; i++) {
+            var spec = CAPTION_DISPLAY_SELECTS[i];
+            var select = el[spec.id];
+            if (select && defaults[spec.key]) select.value = defaults[spec.key];
+        }
+        setCaptionDisplayStatus("Reset to FCC defaults. Click Preview to re-render.", "idle");
+    }
+
+    function loadCaptionDisplayTokens() {
+        setCaptionDisplayStatus("Loading tokens...", "working");
+        api("GET", "/captions/display-settings/tokens", null, function (err, data) {
+            if (err || !data || data.error) {
+                setCaptionDisplayStatus("Could not load FCC token schema.", "error");
+                return;
+            }
+            populateCaptionDisplaySelects(data);
+            if (el.fccComplianceNotice && data.compliance_date) {
+                var node = el.fccComplianceNotice.firstChild;
+                if (node && node.nodeType === 3) {
+                    node.nodeValue = node.nodeValue.replace("2026-08-17", data.compliance_date);
+                }
+            }
+            setCaptionDisplayStatus("Defaults loaded. Adjust tokens then Preview.", "idle");
+        });
+    }
+
+    function initCaptionDisplaySettingsCard() {
+        if (!el.captionDisplaySettingsCard) return;
+        if (el.capDispPreviewBtn) {
+            el.capDispPreviewBtn.addEventListener("click", refreshCaptionDisplayPreview);
+        }
+        if (el.capDispResetBtn) {
+            el.capDispResetBtn.addEventListener("click", resetCaptionDisplayDefaults);
+        }
+        setTimeout(loadCaptionDisplayTokens, 600);
     }
 
     // ================================================================
@@ -14361,6 +14510,7 @@
         _on("transcriptRedoBtn", "click", redoTranscript);
         _on("installWhisperBtn", "click", installWhisper);
         _on("captionStyle", "change", updateStylePreview);
+        initCaptionDisplaySettingsCard();
 
         // Audio tab buttons
         _on("runSeparateBtn", "click", runSeparate);
