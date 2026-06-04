@@ -9,14 +9,15 @@ freshness refresh: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.100 docs, so no
-new duplicate extensibility/accessibility/observability/workflow/scripting rows
-were promoted. Focused
+route escape hatch are now represented as shipped in the live v4.101 docs; E15
+also has its fourth rolling i18n batch recorded there. No new duplicate
+extensibility/accessibility/observability/workflow/scripting rows were promoted.
+Focused
 verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
 UI gates, N9 job metadata gates, N10 request-correlation subprocess gates, and
-E12 workflow/route-manifest gates, plus the E13 CLI route tests; the route
-manifest now reports 1,523 routes / 107 blueprints, and
-`py -3.12 scripts/sync_version.py --check` kept v1.32.0 in
+E12 workflow/route-manifest gates, the E13 CLI route tests, and the E15 i18n
+migration/drift gates; the route manifest now reports 1,523 routes / 107
+blueprints, and `py -3.12 scripts/sync_version.py --check` kept v1.32.0 in
 sync. Current
 external anchors still support the existing backlog shape: Adobe documents UXP
 as the Premiere v25.6+ extensibility path (`https://developer.adobe.com/premiere-pro/uxp/`),
@@ -37,9 +38,10 @@ OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1-N10, E11, E12, E13, E14) is now shipped through v4.100; the strongest remaining
-direction is **not** another wave of model surfaces but making the existing
-surface easier to run, debug, resume, extend, and trust.
+(N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
+rolling in v4.101; the strongest remaining direction is **not** another wave of
+model surfaces but making the existing surface easier to run, debug, resume,
+extend, and trust.
 
 This 2026-06-03 pass read the actual persistence, error, dependency, plugin, and
 correlation code and scanned the 2026 competitive market. The highest-value
@@ -73,7 +75,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
   start of this pass. The N1-N10/E11/E12/E13/E14 continuation queue is now closed
-  through v4.100, with the earlier checkpoints in `b228e42`, `ae25c96`,
+  through v4.100, E15 has a v4.101 rolling batch, and the earlier checkpoints include `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
