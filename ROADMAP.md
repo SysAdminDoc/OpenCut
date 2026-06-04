@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.199
+**Version**: 4.200
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -427,6 +427,8 @@
 > **v4.198 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-eighth rolling i18n batch covering the Cut tab quick-action shell, Interview Polish card, Sequence Assistant card, and related static attributes. The i18n drift gate now reports 1,635 keys / 1,512 consumers / 123 dead / 0 missing.
 >
 > **v4.199 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 10 researcher note into the canonical roadmap surfaces. RA-21 now tracks the advertised Python 3.13 classifier against committed GitHub Actions coverage so release metadata is either proven by CI or narrowed.
+>
+> **v4.200 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-ninth rolling i18n batch covering main navigation title/ARIA attributes. The i18n drift gate now reports 1,637 keys / 1,521 consumers / 116 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2158,6 +2160,21 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.200 CEP i18n Migration Batch 99 (E15)
+
+E15 remains open. This batch migrates the main tab navigation title and ARIA attributes so the first interactive sidebar controls no longer depend on bare English attributes.
+
+| Surface | Status |
+|---|---|
+| Main navigation | The tablist ARIA label and every top-level tab title/ARIA label now expose `data-i18n-title` / `data-i18n-aria-label` hooks while preserving the existing icon and visible-label structure. |
+| Locale ledger | `locales/en.json` now carries 2 additional nav keys, bringing the guarded migration ledger to 1,229 keys across ninety-nine rounds. |
+| Drift posture | `i18n-drift` reports 1,637 keys, 1,521 consumers, 116 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the new navigation static HTML hooks, reused header keys, and matching new nav locale keys. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed (`24 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/sync_version.py --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,637 keys, 1,521 consumers, 116 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2174,7 +2191,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.198 with the ninety-eighth guarded Cut/interview/assistant static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.200 with the ninety-ninth guarded main-navigation static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
