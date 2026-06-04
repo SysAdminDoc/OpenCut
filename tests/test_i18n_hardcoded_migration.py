@@ -1043,6 +1043,22 @@ MIGRATED_KEYS = (
     "video.reframe_output_dims",
     "video.watermark_detection_failed",
     "workflow.quick_not_found",
+    # Seventy-second batch (central job result summaries).
+    "progress.result_bpm_beats",
+    "progress.result_captions_words",
+    "progress.result_confidence",
+    "progress.result_denoise",
+    "progress.result_effect_applied",
+    "progress.result_errors",
+    "progress.result_files_exported",
+    "progress.result_files_indexed",
+    "progress.result_fillers_removed",
+    "progress.result_loudness_was",
+    "progress.result_normalized_to",
+    "progress.result_scenes",
+    "progress.result_segments",
+    "progress.result_stems",
+    "progress.result_style",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5664,6 +5680,82 @@ EXPECTED_CALLS = (
         "workflow.quick_not_found",
         re.compile(r't\(\s*"workflow\.quick_not_found"'),
         re.compile(r'showAlert\("Workflow \'"'),
+    ),
+    # --- Seventy-second batch -------------------------------------
+    (
+        "progress.result_bpm_beats",
+        re.compile(r't\(\s*"progress\.result_bpm_beats"'),
+        re.compile(r'"BPM: "\s*\+\s*safeFixed\(r\.bpm'),
+    ),
+    (
+        "progress.result_captions_words",
+        re.compile(r't\(\s*"progress\.result_captions_words"'),
+        re.compile(r'Number\(r\.caption_segments\)\s*\+\s*" captions, "'),
+    ),
+    (
+        "progress.result_confidence",
+        re.compile(r't\(\s*"progress\.result_confidence"'),
+        re.compile(r'" \| Confidence: "\s*\+\s*safeFixed\(r\.confidence'),
+    ),
+    (
+        "progress.result_denoise",
+        re.compile(r't\(\s*"progress\.result_denoise"'),
+        re.compile(r'"Denoise: "\s*\+\s*esc\(r\.method\)'),
+    ),
+    (
+        "progress.result_effect_applied",
+        re.compile(r't\(\s*"progress\.result_effect_applied"'),
+        re.compile(r'"Effect applied: "\s*\+\s*esc\(r\.effect\)'),
+    ),
+    (
+        "progress.result_errors",
+        re.compile(r't\(\s*"progress\.result_errors"'),
+        re.compile(r'Number\(r\.errors\.length\)\s*\+\s*" error"'),
+    ),
+    (
+        "progress.result_files_exported",
+        re.compile(r't\(\s*"progress\.result_files_exported"'),
+        re.compile(r'r\.output_paths\.length\s*\+\s*" files exported"'),
+    ),
+    (
+        "progress.result_files_indexed",
+        re.compile(r't\(\s*"progress\.result_files_indexed"'),
+        re.compile(r'Number\(r\.indexed\)\s*\+\s*" of "\s*\+\s*Number\(r\.total\)\s*\+\s*" files indexed"'),
+    ),
+    (
+        "progress.result_fillers_removed",
+        re.compile(r't\(\s*"progress\.result_fillers_removed"'),
+        re.compile(r'" fillers removed \("\s*\+\s*safeFixed\(r\.filler_stats\.total_filler_time'),
+    ),
+    (
+        "progress.result_loudness_was",
+        re.compile(r't\(\s*"progress\.result_loudness_was"'),
+        re.compile(r'" \| Was: "\s*\+\s*safeFixed\(r\.input_loudness'),
+    ),
+    (
+        "progress.result_normalized_to",
+        re.compile(r't\(\s*"progress\.result_normalized_to"'),
+        re.compile(r'"Normalized to "\s*\+\s*safeFixed\(r\.target_loudness'),
+    ),
+    (
+        "progress.result_scenes",
+        re.compile(r't\(\s*"progress\.result_scenes"'),
+        re.compile(r'"Scenes: "\s*\+\s*Number\(r\.total_scenes\)'),
+    ),
+    (
+        "progress.result_segments",
+        re.compile(r't\(\s*"progress\.result_segments"'),
+        re.compile(r'Number\(r\.segments\)\s*\+\s*" segments"'),
+    ),
+    (
+        "progress.result_stems",
+        re.compile(r't\(\s*"progress\.result_stems"'),
+        re.compile(r'r\.output_paths\.length\s*\+\s*" stems: "'),
+    ),
+    (
+        "progress.result_style",
+        re.compile(r't\(\s*"progress\.result_style"'),
+        re.compile(r'" \| Style: "\s*\+\s*esc\(r\.style\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
