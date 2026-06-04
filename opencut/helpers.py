@@ -184,6 +184,43 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
 # ---------------------------------------------------------------------------
 # Shared FFmpeg Runner
 # ---------------------------------------------------------------------------
+def _current_request_id() -> str:
+    try:
+        from opencut.core.request_correlation import get_request_id
+
+        return get_request_id()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _subprocess_env_kwargs(request_id: str = "") -> dict:
+    try:
+        from opencut.core.request_correlation import subprocess_env
+
+        env = subprocess_env(request_id or None)
+    except Exception:  # noqa: BLE001
+        env = None
+    return {"env": env} if env else {}
+
+
+def _log_subprocess_output(label: str, text: str, *, request_id: str = "",
+                           job_id: str = "", level: int = logging.DEBUG,
+                           cap: int = 4096) -> None:
+    if not text:
+        return
+    body = str(text)
+    if cap > 0 and len(body) > cap:
+        body = "...[truncated] " + body[-cap:]
+    try:
+        from opencut.core.request_correlation import prefix_subprocess_output
+
+        body = prefix_subprocess_output(body, request_id or None)
+    except Exception:  # noqa: BLE001
+        pass
+    tag = f"[{job_id}] " if job_id else ""
+    logger.log(level, "%s%s:\n%s", tag, label, body)
+
+
 def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
                job_id: str = "") -> str:
     """Run FFmpeg command, raise RuntimeError on failure. Returns stderr.
@@ -201,6 +238,8 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
     """
     if cmd and cmd[0] == "ffmpeg":
         cmd = [get_ffmpeg_path()] + cmd[1:]
+    request_id = _current_request_id()
+    env_kwargs = _subprocess_env_kwargs(request_id)
 
     # Log the full command at DEBUG so failed FFmpeg jobs can be
     # reproduced from ~/.opencut/server.log without guessing the args.
@@ -213,11 +252,17 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
     # subprocess.run semantics so existing callers see no behaviour
     # change.
     if not job_id:
-        result = _sp.run(cmd, capture_output=True, timeout=timeout)
+        result = _sp.run(cmd, capture_output=True, timeout=timeout, **env_kwargs)
         stderr = result.stderr.decode(errors="replace")
         if stderr_cap > 0 and len(stderr) > stderr_cap:
             stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if stderr and logger.isEnabledFor(logging.DEBUG):
+            _log_subprocess_output("FFmpeg stderr", stderr,
+                                   request_id=request_id, cap=stderr_cap or 4096)
         if result.returncode != 0:
+            _log_subprocess_output("FFmpeg stderr", stderr[-500:],
+                                   request_id=request_id, level=logging.WARNING,
+                                   cap=500)
             raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
         return stderr
 
@@ -226,15 +271,22 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
         from opencut.jobs import _register_job_process, _unregister_job_process
     except Exception:  # noqa: BLE001
         # Jobs module unavailable — fall back to plain run.
-        result = _sp.run(cmd, capture_output=True, timeout=timeout)
+        result = _sp.run(cmd, capture_output=True, timeout=timeout, **env_kwargs)
         stderr = result.stderr.decode(errors="replace")
         if stderr_cap > 0 and len(stderr) > stderr_cap:
             stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if stderr and logger.isEnabledFor(logging.DEBUG):
+            _log_subprocess_output("FFmpeg stderr", stderr,
+                                   request_id=request_id, job_id=job_id,
+                                   cap=stderr_cap or 4096)
         if result.returncode != 0:
+            _log_subprocess_output("FFmpeg stderr", stderr[-500:],
+                                   request_id=request_id, job_id=job_id,
+                                   level=logging.WARNING, cap=500)
             raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
         return stderr
 
-    proc = _sp.Popen(cmd, stdout=_sp.PIPE, stderr=_sp.PIPE)
+    proc = _sp.Popen(cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, **env_kwargs)
     _register_job_process(job_id, proc)
     try:
         try:
@@ -249,6 +301,10 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
             # any context hides the actual failure reason (wrong codec,
             # missing font, DRM, etc.) that usually precedes the stall.
             tail = (stderr_bytes or b"").decode(errors="replace")[-500:].strip()
+            if tail:
+                _log_subprocess_output("FFmpeg stderr before timeout", tail,
+                                       request_id=request_id, job_id=job_id,
+                                       level=logging.WARNING, cap=500)
             suffix = f" — last stderr: {tail}" if tail else ""
             raise RuntimeError(
                 f"FFmpeg timed out after {timeout}s and was killed{suffix}"
@@ -256,7 +312,14 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
         stderr = (stderr_bytes or b"").decode(errors="replace")
         if stderr_cap > 0 and len(stderr) > stderr_cap:
             stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if stderr and logger.isEnabledFor(logging.DEBUG):
+            _log_subprocess_output("FFmpeg stderr", stderr,
+                                   request_id=request_id, job_id=job_id,
+                                   cap=stderr_cap or 4096)
         if proc.returncode != 0:
+            _log_subprocess_output("FFmpeg stderr", stderr[-500:],
+                                   request_id=request_id, job_id=job_id,
+                                   level=logging.WARNING, cap=500)
             raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
         return stderr
     finally:
@@ -650,10 +713,13 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     from opencut.jobs import _is_cancelled, _register_job_process, _unregister_job_process, _update_job
 
     full_cmd = list(cmd) + ["-progress", "pipe:1"]
+    request_id = _current_request_id()
+    env_kwargs = _subprocess_env_kwargs(request_id)
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("[%s] FFmpeg progress cmd: %s", job_id,
                      " ".join(str(c) for c in full_cmd))
-    proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
+    proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True,
+                     **env_kwargs)
     _register_job_process(job_id, proc)
 
     stderr_lines = []
@@ -667,6 +733,13 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
             data = proc.stderr.read()
             if data:
                 stderr_lines.append(data[-_max_stderr_bytes:])
+                if logger.isEnabledFor(logging.DEBUG):
+                    _log_subprocess_output(
+                        "FFmpeg progress stderr",
+                        data[-_max_stderr_bytes:],
+                        request_id=request_id,
+                        job_id=job_id,
+                    )
         except Exception as e:
             logger.debug("Error draining FFmpeg stderr for job %s: %s", job_id, e)
 
@@ -728,7 +801,12 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     # callers expect a numeric return code (non-zero == failure) so map
     # the unknown state to a sentinel rather than silently passing None.
     rc = proc.returncode if proc.returncode is not None else -1
-    return rc, "".join(stderr_lines)
+    stderr_text = "".join(stderr_lines)
+    if rc != 0 and stderr_text:
+        _log_subprocess_output("FFmpeg progress stderr", stderr_text[-500:],
+                               request_id=request_id, job_id=job_id,
+                               level=logging.WARNING, cap=500)
+    return rc, stderr_text
 
 
 # ---------------------------------------------------------------------------

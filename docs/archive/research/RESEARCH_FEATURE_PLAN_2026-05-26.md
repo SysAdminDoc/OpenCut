@@ -323,7 +323,7 @@ For each item below: where it lives, what works, what was deferred.
 | Webhook signature optional by default | P1 | `webhook_system.py::WebhookConfig.secret default ""` | E11 |
 | `missing_dependency` suggestion is generic | P0 | `errors.py:144-150` | N2 |
 | No transcript cache → repeated Whisper cost | P0 | `core/captions.py` no cache hooks | N1 |
-| Subprocess stderr not request-ID-tagged | P2 | `request_correlation.py` filter scope | N10 |
+| Subprocess stderr not request-ID-tagged | P2 | `request_correlation.py` filter scope | N10 — shipped v4.98 |
 | Plugin capabilities declared but enforcement light | P2 | `plugins.py` doesn't intercept `open()`/`requests.get()` | (deferred — needs a runtime trace) |
 | No `peak_vram_mb` / `exit_reason` per job | P2 | `job_store.py` schema | N9 — shipped v4.97 |
 | Untrusted plugin manifest could declare jobs | P2 (when N7 lands) | Future — gate behind capability check | N7 verification |
@@ -336,7 +336,7 @@ For each item below: where it lives, what works, what was deferred.
 
 **Logging & diagnostics needs**
 
-- Request-ID propagation (N10).
+- Request-ID propagation (N10, shipped v4.98).
 - `peak_vram_mb` + `exit_reason` (N9, shipped v4.97).
 - Eventually: structured-log JSON output to a configurable log sink (Sentry/GlitchTip already present per F250; the structured-log writer needs to reach FFmpeg too).
 
@@ -465,8 +465,9 @@ For each item below: where it lives, what works, what was deferred.
   - Touches: `opencut/job_store.py`, `opencut/jobs.py`, `opencut/core/job_diagnostics.py`.
   - Status: closed in ROADMAP v4.97 with persisted peak resource fields, explicit terminal exit reasons, resource sampling, diagnostics metadata, generated surface refreshes, and `GET /jobs/<job_id>`.
 
-- [ ] **P2 — N10 request-ID propagation into subprocess stderr**
+- [x] **P2 — N10 request-ID propagation into subprocess stderr**
   - Touches: `opencut/helpers.py::run_ffmpeg`, `opencut/core/request_correlation.py`.
+  - Status: closed in ROADMAP v4.98 with async-worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, request-prefixed FFmpeg stderr logging, and parser-safe raw stderr returns.
 
 - [ ] **P2 — E12 workflow allowlist derived from route manifest**
   - Touches: `opencut/core/workflow.py`, `opencut/routes/__init__.py`.
