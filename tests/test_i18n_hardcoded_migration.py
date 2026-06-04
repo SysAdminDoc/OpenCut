@@ -287,6 +287,22 @@ MIGRATED_KEYS = (
     "batch.status_add_clips",
     "batch.status_add_one_more",
     "batch.status_ready",
+    # Twenty-seventh batch (workspace shell status feedback).
+    "workspace.backend_offline",
+    "workspace.reconnect_title",
+    "workspace.reconnect_copy",
+    "workspace.awaiting_media",
+    "workspace.choose_clip_title",
+    "workspace.default_suite",
+    "workspace.status_reconnect",
+    "workspace.status_reconnect_title",
+    "workspace.status_source_ready",
+    "workspace.status_source_ready_title",
+    "workspace.status_settings_ready",
+    "workspace.status_settings_ready_title",
+    "workspace.status_select_media",
+    "workspace.status_select_media_title",
+    "workspace.clip_choose",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1556,6 +1572,85 @@ EXPECTED_CALLS = (
         "batch.status_ready",
         re.compile(r't\(\s*"batch\.status_ready"'),
         re.compile(r'"Batch is ready to run "\s*\+\s*\(opLabel\s*\|\|\s*"the selected operation"\)'),
+    ),
+    # --- Twenty-seventh batch --------------------------------------
+    (
+        "workspace.backend_offline",
+        re.compile(r't\(\s*"workspace\.backend_offline"'),
+        re.compile(r'stageKicker\s*=\s*"Backend Offline"'),
+    ),
+    (
+        "workspace.reconnect_title",
+        re.compile(r't\(\s*"workspace\.reconnect_title"'),
+        re.compile(r'stageTitle\s*=\s*"Reconnect OpenCut to run processing jobs\."'),
+    ),
+    (
+        "workspace.reconnect_copy",
+        re.compile(r't\(\s*"workspace\.reconnect_copy"'),
+        re.compile(r'stageCopy\s*=\s*"The workspace is still available, but processing'),
+    ),
+    (
+        "workspace.awaiting_media",
+        re.compile(r't\(\s*"workspace\.awaiting_media"'),
+        re.compile(r'workspaceStageSource\.textContent\s*=\s*selectedName\s*\|\|\s*"Awaiting media"'),
+    ),
+    (
+        "workspace.choose_clip_title",
+        re.compile(r't\(\s*"workspace\.choose_clip_title"'),
+        re.compile(r'workspaceStageSource\.title\s*=\s*selectedPath\s*\|\|\s*"Choose a clip or drop media to start"'),
+    ),
+    (
+        "workspace.default_suite",
+        re.compile(r't\(\s*"workspace\.default_suite"'),
+        re.compile(
+            r'workspaceStageSuite\.textContent\s*=\s*activeTitle\s*\|\|\s*'
+            r'\(el\.contentTitle\s*\?\s*el\.contentTitle\.textContent\s*:\s*"Cut & Clean"\)'
+        ),
+    ),
+    (
+        "workspace.status_reconnect",
+        re.compile(r't\(\s*"workspace\.status_reconnect"'),
+        re.compile(r'workspaceStageStatus\.textContent\s*=\s*"Reconnect backend"'),
+    ),
+    (
+        "workspace.status_reconnect_title",
+        re.compile(r't\(\s*"workspace\.status_reconnect_title"'),
+        re.compile(r'workspaceStageStatus\.title\s*=\s*"Start or reconnect the local OpenCut backend service"'),
+    ),
+    (
+        "workspace.status_source_ready",
+        re.compile(r't\(\s*"workspace\.status_source_ready"'),
+        re.compile(r'workspaceStageStatus\.textContent\s*=\s*"Source ready"'),
+    ),
+    (
+        "workspace.status_source_ready_title",
+        re.compile(r't\(\s*"workspace\.status_source_ready_title"'),
+        re.compile(r'workspaceStageStatus\.title\s*=\s*"The active source is selected and ready for processing"'),
+    ),
+    (
+        "workspace.status_settings_ready",
+        re.compile(r't\(\s*"workspace\.status_settings_ready"'),
+        re.compile(r'workspaceStageStatus\.textContent\s*=\s*"Settings ready"'),
+    ),
+    (
+        "workspace.status_settings_ready_title",
+        re.compile(r't\(\s*"workspace\.status_settings_ready_title"'),
+        re.compile(r'workspaceStageStatus\.title\s*=\s*"Settings does not require a source clip"'),
+    ),
+    (
+        "workspace.status_select_media",
+        re.compile(r't\(\s*"workspace\.status_select_media"'),
+        re.compile(r'workspaceStageStatus\.textContent\s*=\s*"Select media"'),
+    ),
+    (
+        "workspace.status_select_media_title",
+        re.compile(r't\(\s*"workspace\.status_select_media_title"'),
+        re.compile(r'workspaceStageStatus\.title\s*=\s*"Select a clip from Premiere or browse'),
+    ),
+    (
+        "workspace.clip_choose",
+        re.compile(r't\(\s*"workspace\.clip_choose"'),
+        re.compile(r'workspaceClipStatus\.textContent\s*=\s*"Choose media to begin"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

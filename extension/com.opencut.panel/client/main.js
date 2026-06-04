@@ -2890,9 +2890,12 @@
         var stageCopy = stageMeta.idleCopy;
 
         if (!connected) {
-            stageKicker = "Backend Offline";
-            stageTitle = "Reconnect OpenCut to run processing jobs.";
-            stageCopy = "The workspace is still available, but processing, model checks, write-back, and timeline handoff need the local backend.";
+            stageKicker = t("workspace.backend_offline", "Backend Offline");
+            stageTitle = t("workspace.reconnect_title", "Reconnect OpenCut to run processing jobs.");
+            stageCopy = t(
+                "workspace.reconnect_copy",
+                "The workspace is still available, but processing, model checks, write-back, and timeline handoff need the local backend."
+            );
         } else if (selectedPath) {
             stageTitle = stageMeta.readyTitle;
             stageCopy = stageMeta.readyCopy;
@@ -2908,25 +2911,39 @@
             el.workspaceStageCopy.textContent = stageCopy;
         }
         if (el.workspaceStageSource) {
-            el.workspaceStageSource.textContent = selectedName || "Awaiting media";
-            el.workspaceStageSource.title = selectedPath || "Choose a clip or drop media to start";
+            el.workspaceStageSource.textContent = selectedName || t("workspace.awaiting_media", "Awaiting media");
+            el.workspaceStageSource.title = selectedPath ||
+                t("workspace.choose_clip_title", "Choose a clip or drop media to start");
         }
         if (el.workspaceStageSuite) {
-            el.workspaceStageSuite.textContent = activeTitle || (el.contentTitle ? el.contentTitle.textContent : "Cut & Clean");
+            el.workspaceStageSuite.textContent = activeTitle ||
+                (el.contentTitle ? el.contentTitle.textContent : t("workspace.default_suite", "Cut & Clean"));
         }
         if (el.workspaceStageStatus) {
             if (!connected) {
-                el.workspaceStageStatus.textContent = "Reconnect backend";
-                el.workspaceStageStatus.title = "Start or reconnect the local OpenCut backend service";
+                el.workspaceStageStatus.textContent = t("workspace.status_reconnect", "Reconnect backend");
+                el.workspaceStageStatus.title = t(
+                    "workspace.status_reconnect_title",
+                    "Start or reconnect the local OpenCut backend service"
+                );
             } else if (selectedPath) {
-                el.workspaceStageStatus.textContent = "Source ready";
-                el.workspaceStageStatus.title = "The active source is selected and ready for processing";
+                el.workspaceStageStatus.textContent = t("workspace.status_source_ready", "Source ready");
+                el.workspaceStageStatus.title = t(
+                    "workspace.status_source_ready_title",
+                    "The active source is selected and ready for processing"
+                );
             } else if (activeTab === "settings") {
-                el.workspaceStageStatus.textContent = "Settings ready";
-                el.workspaceStageStatus.title = "Settings does not require a source clip";
+                el.workspaceStageStatus.textContent = t("workspace.status_settings_ready", "Settings ready");
+                el.workspaceStageStatus.title = t(
+                    "workspace.status_settings_ready_title",
+                    "Settings does not require a source clip"
+                );
             } else {
-                el.workspaceStageStatus.textContent = "Select media";
-                el.workspaceStageStatus.title = "Select a clip from Premiere or browse a local file to unlock processing";
+                el.workspaceStageStatus.textContent = t("workspace.status_select_media", "Select media");
+                el.workspaceStageStatus.title = t(
+                    "workspace.status_select_media_title",
+                    "Select a clip from Premiere or browse a local file to unlock processing"
+                );
             }
         }
     }
@@ -2939,8 +2956,8 @@
             el.workspaceClipStatus.title = selectedPath || selectedName;
             el.workspaceClipStatus.classList.add("is-active");
         } else {
-            el.workspaceClipStatus.textContent = "Choose media to begin";
-            el.workspaceClipStatus.title = "Choose a clip or drop media to start";
+            el.workspaceClipStatus.textContent = t("workspace.clip_choose", "Choose media to begin");
+            el.workspaceClipStatus.title = t("workspace.choose_clip_title", "Choose a clip or drop media to start");
             el.workspaceClipStatus.classList.remove("is-active");
         }
         updateWorkspaceStageSession();
