@@ -13431,7 +13431,10 @@
         if (needsKey && !hasKey) {
             setStatusLine(
                 "llmStatus",
-                "Add an API key, then test the " + providerLabel + " connection before using hosted LLM features.",
+                t(
+                    "llm.api_key_required_status",
+                    "Add an API key, then test the {provider} connection before using hosted LLM features."
+                ).replace("{provider}", providerLabel),
                 "warning"
             );
             return;
@@ -13440,7 +13443,10 @@
         if (provider === "ollama") {
             setStatusLine(
                 "llmStatus",
-                "Ollama is selected for local suggestions. Test the connection before using chapters, summaries, or highlight ranking.",
+                t(
+                    "llm.ollama_selected_status",
+                    "Ollama is selected for local suggestions. Test the connection before using chapters, summaries, or highlight ranking."
+                ),
                 "idle"
             );
             return;
@@ -13448,7 +13454,10 @@
 
         setStatusLine(
             "llmStatus",
-            providerLabel + " is configured. Test the connection before using chapters, summaries, or highlight ranking.",
+            t(
+                "llm.provider_configured_status",
+                "{provider} is configured. Test the connection before using chapters, summaries, or highlight ranking."
+            ).replace("{provider}", providerLabel),
             "idle"
         );
     }
@@ -13496,7 +13505,10 @@
             if (err || !s) {
                 if (!hasLocalSettings) {
                     refreshLlmStatusLine(
-                        "Could not load saved LLM settings from the backend. You can still enter them manually.",
+                        t(
+                            "llm.load_settings_failed_status",
+                            "Could not load saved LLM settings from the backend. You can still enter them manually."
+                        ),
                         "warning"
                     );
                 }
@@ -13531,14 +13543,31 @@
 
     function testLLM() {
         var cfg = getLLMConfig();
-        refreshLlmStatusLine("Testing " + humanizeLlmProvider(cfg.provider) + " connection...", "working");
+        refreshLlmStatusLine(
+            t("llm.testing_connection_status", "Testing {provider} connection...")
+                .replace("{provider}", humanizeLlmProvider(cfg.provider)),
+            "working"
+        );
         api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
-                var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Couldn't reach the LLM provider";
-                refreshLlmStatusLine("Connection failed: " + msg, "error");
+                var msg = (resp && resp.error)
+                    ? resp.error
+                    : (err && typeof err === "object" && err.message)
+                        ? err.message
+                        : t("llm.provider_unreachable", "Couldn't reach the LLM provider");
+                refreshLlmStatusLine(
+                    t("llm.connection_failed_status", "Connection failed: {error}")
+                        .replace("{error}", msg),
+                    "error"
+                );
                 return;
             }
-            refreshLlmStatusLine("Connected to " + resp.provider + " / " + resp.model + ".", "success");
+            refreshLlmStatusLine(
+                t("llm.connected_status", "Connected to {provider} / {model}.")
+                    .replace("{provider}", resp.provider)
+                    .replace("{model}", resp.model),
+                "success"
+            );
             saveLLMSettings({ silent: true });
             showToast(t("llm.connected", "LLM connected"), "success");
         });

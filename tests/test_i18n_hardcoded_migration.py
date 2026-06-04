@@ -1116,6 +1116,15 @@ MIGRATED_KEYS = (
     "output.untitled",
     "review.cuts_selected_summary",
     "review.include_cut_label",
+    # Seventy-seventh batch (LLM settings status feedback).
+    "llm.api_key_required_status",
+    "llm.connected_status",
+    "llm.connection_failed_status",
+    "llm.load_settings_failed_status",
+    "llm.ollama_selected_status",
+    "llm.provider_configured_status",
+    "llm.provider_unreachable",
+    "llm.testing_connection_status",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6082,6 +6091,47 @@ EXPECTED_CALLS = (
         "review.include_cut_label",
         re.compile(r't\(\s*"review\.include_cut_label"'),
         re.compile(r'"Include cut "\s*\+\s*\(i \+ 1\)'),
+    ),
+    # --- Seventy-seventh batch -------------------------------------
+    (
+        "llm.api_key_required_status",
+        re.compile(r't\(\s*"llm\.api_key_required_status"'),
+        re.compile(r'setStatusLine\(\s*"llmStatus",\s*"Add an API key'),
+    ),
+    (
+        "llm.connected_status",
+        re.compile(r't\(\s*"llm\.connected_status"'),
+        re.compile(r'refreshLlmStatusLine\("Connected to "\s*\+\s*resp\.provider'),
+    ),
+    (
+        "llm.connection_failed_status",
+        re.compile(r't\(\s*"llm\.connection_failed_status"'),
+        re.compile(r'refreshLlmStatusLine\("Connection failed: "\s*\+\s*msg'),
+    ),
+    (
+        "llm.load_settings_failed_status",
+        re.compile(r't\(\s*"llm\.load_settings_failed_status"'),
+        re.compile(r'refreshLlmStatusLine\(\s*"Could not load saved LLM settings'),
+    ),
+    (
+        "llm.ollama_selected_status",
+        re.compile(r't\(\s*"llm\.ollama_selected_status"'),
+        re.compile(r'setStatusLine\(\s*"llmStatus",\s*"Ollama is selected'),
+    ),
+    (
+        "llm.provider_configured_status",
+        re.compile(r't\(\s*"llm\.provider_configured_status"'),
+        re.compile(r'providerLabel\s*\+\s*" is configured\. Test the connection'),
+    ),
+    (
+        "llm.provider_unreachable",
+        re.compile(r't\(\s*"llm\.provider_unreachable"'),
+        re.compile(r':\s*"Couldn\'t reach the LLM provider"'),
+    ),
+    (
+        "llm.testing_connection_status",
+        re.compile(r't\(\s*"llm\.testing_connection_status"'),
+        re.compile(r'refreshLlmStatusLine\("Testing "\s*\+\s*humanizeLlmProvider'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
