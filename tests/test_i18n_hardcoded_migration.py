@@ -480,6 +480,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.model_base", "data-i18n"),
     ("captions.model_small_accurate", "data-i18n"),
     ("common.auto_import_result", "data-i18n"),
+    # One-hundred-seventeenth batch (Animated Captions form shell HTML).
+    ("forms.animation", "data-i18n"),
+    ("captions.animation_pop_capcut", "data-i18n"),
+    ("captions.animation_fade", "data-i18n"),
+    ("captions.animation_slide_up", "data-i18n"),
+    ("captions.animation_typewriter", "data-i18n"),
+    ("captions.animation_bounce", "data-i18n"),
+    ("captions.animation_glow", "data-i18n"),
+    ("captions.animation_highlight_box", "data-i18n"),
+    ("forms.font_size", "data-i18n"),
+    ("forms.words_per_line", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small_accurate", "data-i18n"),
 )
 
 
@@ -1977,6 +1992,14 @@ MIGRATED_KEYS = (
     "captions.burnin_style_top_center",
     "captions.model_small_accurate",
     "common.auto_import_result",
+    # One-hundred-seventeenth batch (Animated Captions form shell HTML).
+    "captions.animation_bounce",
+    "captions.animation_fade",
+    "captions.animation_glow",
+    "captions.animation_highlight_box",
+    "captions.animation_pop_capcut",
+    "captions.animation_slide_up",
+    "captions.animation_typewriter",
 )
 
 
