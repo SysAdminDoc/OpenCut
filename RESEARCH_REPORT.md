@@ -8,7 +8,7 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.219 docs; E15
+route escape hatch are now represented as shipped in the live v4.220 docs; E15
 also has its fourth through one-hundred-twelfth rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-27 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-28 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -54,6 +54,9 @@ runtime docs, non-root volume paths, and WebSocket port posture; RA-26 captures
 the runtime parity follow-up. Cycle 16 checked Docker GPU compose launch
 commands against tracked files and profile comments; RA-27 captures the missing
 compose-file command drift follow-up.
+Cycle 17 checked README non-badge route/module/blueprint count claims against
+generated route truth and badge-sync coverage; RA-28 captures the README
+non-badge generated-count gate follow-up.
 
 ## Executive Summary
 
@@ -63,7 +66,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.219; the strongest remaining direction is **not** another wave of
+rolling in v4.220; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -156,6 +159,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     launch command references an untracked `docker-compose.gpu.yml` file even
     though the tracked compose file already exposes GPU mode through the `gpu`
     profile. [Verified]
+28. **Add a README non-badge generated-count gate** (RA-28) — README prose,
+    architecture diagram labels, and project-structure comments still carry
+    stale route/module/blueprint counts outside the badge sync coverage.
+    [Verified]
 
 ## Evidence Reviewed
 
@@ -425,6 +432,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-27 Docker GPU compose command** needs README and compose comments to
   agree on one tracked GPU launch command, plus a docs/config guard against
   missing compose-file references.
+- **RA-28 README non-badge count gate** needs generated README prose/diagram/
+  project-structure count checks, or removal of fragile exact counts from
+  non-generated prose, plus release-smoke coverage.
 
 ## Research Inputs (archived)
 
@@ -440,8 +450,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE14.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE14.md) — Docker dependency install-surface drift follow-up (RA-25).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE15.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE15.md) — Docker runtime docs, volume-home, and WebSocket exposure follow-up (RA-26).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE16.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE16.md) — Docker GPU compose launch command follow-up (RA-27).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md) — README non-badge generated-count drift follow-up (RA-28).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-27 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-28 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
