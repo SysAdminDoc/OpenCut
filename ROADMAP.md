@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.105
+**Version**: 4.106
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -238,6 +238,8 @@
 > **v4.104 status (2026-06-04, continuation pass)**: advanced **E15** with a seventh rolling i18n batch. Remaining nearby media/caption chain prompts for background and transition paths, title text, reference face input, music prompts, and chained caption step 2 status messages now route through `t(...)`, bringing the guarded migration ledger to 49 keys across seven rounds while keeping drift at 475 keys / 333 consumers / 142 dead / 0 missing.
 
 > **v4.105 status (2026-06-04, continuation pass)**: advanced **E15** with an eighth rolling i18n batch. Whisper install/reinstall, cache-clear, CPU-mode, settings-update, and backend-restart feedback now routes through `t(...)`, bringing the guarded migration ledger to 59 keys across eight rounds while keeping drift at 485 keys / 343 consumers / 142 dead / 0 missing.
+
+> **v4.106 status (2026-06-04, continuation pass)**: advanced **E15** with a ninth rolling i18n batch. Premiere import/export result feedback now routes through `t(...)`, including import-error prefixes, sequence-open success, export success/failure, and interview-polish import messages, bringing the guarded migration ledger to 69 keys across nine rounds while keeping drift at 495 keys / 353 consumers / 142 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-03..RA-10.
 
@@ -559,6 +561,21 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.106 CEP i18n Migration Batch 9 (E15)
+
+E15 remains open. This batch moved import/export result feedback out of bare English.
+
+| Surface | Status |
+|---|---|
+| Premiere import feedback | XML import errors, opened sequence names, overlay import errors, stem import errors, caption import errors, and interview-polish import outcomes now call `t(...)`. |
+| Export feedback | Transcript export success/failure alerts now call `t(...)`, with shared `{filename}` and `{error}` templates plus a localized unknown-error fallback. |
+| Locale ledger | `locales/en.json` now carries ten additional `toast.*` keys, bringing the guarded migration ledger to 69 keys across nine rounds. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new keys, `t(...)` call sites, and absence of the previous bare-English alert/toast prefixes. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migration.py tests/test_i18n_drift.py -q -p no:cacheprovider -o addopts=""` passed (`6 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, Ruff and `py_compile` passed for the updated Python guard, and `py -3.12 scripts/i18n_lint.py --json` reported 495 keys, 353 consumers, 142 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -575,7 +592,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.105 with the eighth guarded 10-string Whisper/settings status feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.106 with the ninth guarded 10-string import/export result feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -585,7 +602,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ### Researcher Queue (Cycle 1 - 2026-06-04)
 
-- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.105 docs and
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.106 docs and
   current external anchors. N8, E14, N9, N10, E12, and E13 are now shipped in the
   local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
   current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut
