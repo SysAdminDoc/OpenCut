@@ -1146,6 +1146,15 @@ MIGRATED_KEYS = (
     # Eightieth batch (engine summary grammar fragments).
     "engines.verb_are",
     "engines.verb_is",
+    # Eighty-first batch (shared grammar fragments).
+    "common.verb_are",
+    "common.verb_is",
+    "common.verb_look",
+    "common.verb_looks",
+    "common.verb_need",
+    "common.verb_needs",
+    "journal.entries_word",
+    "journal.entry_word",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6251,6 +6260,47 @@ EXPECTED_CALLS = (
         "engines.state_auto",
         re.compile(r'selectedLabel\s*=\s*this\.options\[this\.selectedIndex\].*t\(\s*"engines\.state_auto"'),
         re.compile(r'selectedLabel\s*=\s*this\.options\[this\.selectedIndex\]\s*\?\s*this\.options\[this\.selectedIndex\]\.textContent\s*:\s*"Auto"'),
+    ),
+    # --- Eighty-first batch ---------------------------------------
+    (
+        "common.verb_are",
+        re.compile(r't\(\s*"common\.verb_are"'),
+        re.compile(r'\?\s*"is"\s*:\s*"are"'),
+    ),
+    (
+        "common.verb_is",
+        re.compile(r't\(\s*"common\.verb_is"'),
+        re.compile(r'\?\s*"is"\s*:\s*"are"'),
+    ),
+    (
+        "common.verb_look",
+        re.compile(r't\(\s*"common\.verb_look"'),
+        re.compile(r'\?\s*"looks"\s*:\s*"look"'),
+    ),
+    (
+        "common.verb_looks",
+        re.compile(r't\(\s*"common\.verb_looks"'),
+        re.compile(r'\?\s*"looks"\s*:\s*"look"'),
+    ),
+    (
+        "common.verb_need",
+        re.compile(r't\(\s*"common\.verb_need"'),
+        re.compile(r'\?\s*"needs"\s*:\s*"need"'),
+    ),
+    (
+        "common.verb_needs",
+        re.compile(r't\(\s*"common\.verb_needs"'),
+        re.compile(r'\?\s*"needs"\s*:\s*"need"'),
+    ),
+    (
+        "journal.entries_word",
+        re.compile(r't\(\s*"journal\.entries_word"'),
+        re.compile(r'\?\s*"entry"\s*:\s*"entries"'),
+    ),
+    (
+        "journal.entry_word",
+        re.compile(r't\(\s*"journal\.entry_word"'),
+        re.compile(r'\?\s*"entry"\s*:\s*"entries"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
