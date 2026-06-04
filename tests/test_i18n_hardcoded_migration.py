@@ -97,6 +97,17 @@ MIGRATED_KEYS = (
     "toast.whisper_cpu_mode_disabled",
     "toast.settings_update_failed",
     "toast.restarting_backend",
+    # Ninth batch (import/export result feedback).
+    "toast.import_error",
+    "toast.opened_sequence",
+    "toast.overlay_import_error",
+    "toast.stem_import_error",
+    "toast.caption_import_error",
+    "toast.exported_to",
+    "toast.export_failed",
+    "toast.unknown_error",
+    "toast.imported_sequence",
+    "toast.import_failed",
 )
 
 
@@ -411,6 +422,57 @@ EXPECTED_CALLS = (
         "toast.restarting_backend",
         re.compile(r't\(\s*"toast\.restarting_backend"'),
         re.compile(r'showAlert\(\s*"Restarting backend'),
+    ),
+    # --- Ninth batch ------------------------------------------------
+    (
+        "toast.import_error",
+        re.compile(r't\(\s*"toast\.import_error"'),
+        re.compile(r'showAlert\(\s*"Import error: "'),
+    ),
+    (
+        "toast.opened_sequence",
+        re.compile(r't\(\s*"toast\.opened_sequence"'),
+        re.compile(r'showAlert\(\s*"Opened: "'),
+    ),
+    (
+        "toast.overlay_import_error",
+        re.compile(r't\(\s*"toast\.overlay_import_error"'),
+        re.compile(r'showAlert\(\s*"Overlay import error: "'),
+    ),
+    (
+        "toast.stem_import_error",
+        re.compile(r't\(\s*"toast\.stem_import_error"'),
+        re.compile(r'showAlert\(\s*"Stem import error: "'),
+    ),
+    (
+        "toast.caption_import_error",
+        re.compile(r't\(\s*"toast\.caption_import_error"'),
+        re.compile(r'showAlert\(\s*"Caption import error: "'),
+    ),
+    (
+        "toast.exported_to",
+        re.compile(r't\(\s*"toast\.exported_to"'),
+        re.compile(r'showAlert\(\s*"Exported to: "'),
+    ),
+    (
+        "toast.export_failed",
+        re.compile(r't\(\s*"toast\.export_failed"'),
+        re.compile(r'showAlert\(\s*"Export failed: "'),
+    ),
+    (
+        "toast.unknown_error",
+        re.compile(r't\(\s*"toast\.unknown_error"'),
+        None,
+    ),
+    (
+        "toast.imported_sequence",
+        re.compile(r't\(\s*"toast\.imported_sequence"'),
+        re.compile(r'showToast\(\s*"Imported \''),
+    ),
+    (
+        "toast.import_failed",
+        re.compile(r't\(\s*"toast\.import_failed"'),
+        re.compile(r'showAlert\(\s*"Import failed: "'),
     ),
 )
 

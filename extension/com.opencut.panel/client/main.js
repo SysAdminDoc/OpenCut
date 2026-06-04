@@ -4007,9 +4007,9 @@
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
-                            showAlert("Import error: " + r.error);
+                            showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
                         } else if (r.sequence_name) {
-                            showAlert("Opened: " + r.sequence_name);
+                            showAlert(t("toast.opened_sequence", "Opened: {name}").replace("{name}", r.sequence_name));
                             journalRecord(
                                 "import_sequence",
                                 _sessionCtxOpText(job) + " → '" + r.sequence_name + "'",
@@ -4033,7 +4033,7 @@
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
-                            showAlert("Overlay import error: " + r.error);
+                            showAlert(t("toast.overlay_import_error", "Overlay import error: {error}").replace("{error}", r.error));
                         } else if (r.message) {
                             showAlert(r.message);
                         }
@@ -4048,7 +4048,7 @@
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
-                            showAlert("Stem import error: " + r.error);
+                            showAlert(t("toast.stem_import_error", "Stem import error: {error}").replace("{error}", r.error));
                         } else if (r.message) {
                             showAlert(r.message);
                         }
@@ -4071,7 +4071,7 @@
                         try {
                             var r = JSON.parse(result);
                             if (r.error) {
-                                showAlert("Caption import error: " + r.error);
+                                showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
                             } else if (r.message) {
                                 showAlert(r.message);
                             }
@@ -4085,7 +4085,7 @@
                         try {
                             var r = JSON.parse(result);
                             if (r.error) {
-                                showAlert("Import error: " + r.error);
+                                showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
                             } else if (r.message) {
                                 showAlert(r.message);
                             }
@@ -4101,7 +4101,7 @@
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
-                            showAlert("Caption import error: " + r.error);
+                            showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
                         } else if (r.message) {
                             showAlert(r.message);
                         }
@@ -4338,9 +4338,10 @@
             language: transcriptData.language || "en",
         }, function (err, data) {
             if (!err && data && data.output_path) {
-                showAlert("Exported to: " + String(data.output_path).split(/[/\\]/).pop());
+                showAlert(t("toast.exported_to", "Exported to: {filename}").replace("{filename}", String(data.output_path).split(/[/\\]/).pop()));
             } else {
-                showAlert("Export failed: " + (data ? data.error : "Unknown error"));
+                showAlert(t("toast.export_failed", "Export failed: {error}")
+                    .replace("{error}", data ? data.error : t("toast.unknown_error", "Unknown error")));
             }
         });
     }
@@ -8273,14 +8274,14 @@
                 PremiereBridge.importXML(r.xml_path, function (result) {
                     try {
                         var jr = JSON.parse(result);
-                        if (jr.error) { showAlert("Import error: " + jr.error); return; }
-                        showToast("Imported '" + (jr.sequence_name || r.sequence_name) + "'", "success");
+                        if (jr.error) { showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", jr.error)); return; }
+                        showToast(t("toast.imported_sequence", "Imported '{name}'").replace("{name}", jr.sequence_name || r.sequence_name), "success");
                         if (jr.sequence_name) {
                             journalRecord("import_sequence",
                                 "Interview Polish → '" + jr.sequence_name + "'",
                                 { name: jr.sequence_name }, selectedPath);
                         }
-                    } catch (e) { showAlert("Import failed: " + (result || e.message)); }
+                    } catch (e) { showAlert(t("toast.import_failed", "Import failed: {error}").replace("{error}", result || e.message)); }
                 });
             });
             actions.appendChild(importBtn);
