@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-04 during the v4.207 continuation pass.
+Last synced: 2026-06-04 during the v4.208 research consolidation pass.
 
 ## Execution Order
 
@@ -20,6 +20,7 @@ Last synced: 2026-06-04 during the v4.207 continuation pass.
 - [ ] **RA-21 Python 3.13 classifier proof** - prove advertised Python 3.13 support with CI coverage or retract the classifier until it is tested.
 - [ ] **RA-22 Release Full Node pin** - pin the CEP panel Node runtime in Release Full to match PR Fast before trusting npm gates as release evidence.
 - [ ] **RA-23 GitHub Actions SHA pins** - pin workflow action references to full-length SHAs and guard against mutable action tags.
+- [ ] **RA-24 Release Full token permissions** - scope Release Full `GITHUB_TOKEN` permissions by job so only release uploads receive write access.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [ ] **RA-05 SQLite `PRAGMA user_version`** - add explicit schema versioning for local SQLite stores.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
