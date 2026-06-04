@@ -14273,7 +14273,11 @@
     function loadSeqInfo() {
         var statusEl = document.getElementById("seqInfoStatus");
         if (!inPremiere) {
-            setStatusLine("deliverablesStatus", "Premiere Pro connection required to load sequence info.", "warning");
+            setStatusLine(
+                "deliverablesStatus",
+                t("deliverables.load_connection_required", "Premiere Pro connection required to load sequence info."),
+                "warning"
+            );
             showAlert(t("timeline.premiere_required", "Premiere Pro connection required."));
             return;
         }
@@ -14281,7 +14285,14 @@
         if (_pproCache.seq && typeof _pproCache.seq === "object" && !_pproCache.seq.error && (Date.now() - _pproCache.seqTs < _pproCache.ttl)) {
             var cached = _pproCache.seq;
             sequenceInfo = cached;
-            if (statusEl) setHintState(statusEl, "Using cached sequence info for '" + (cached.name || "Active Sequence") + "'.", "success");
+            if (statusEl) {
+                setHintState(
+                    statusEl,
+                    t("deliverables.cached_sequence_info", "Using cached sequence info for '{name}'.")
+                        .replace("{name}", cached.name || t("deliverables.active_sequence", "Active Sequence")),
+                    "success"
+                );
+            }
             updateButtons();
             updateDeliverablesSummary();
             return;
@@ -14297,22 +14308,38 @@
                 if (statusEl) {
                     setHintState(
                         statusEl,
-                        "Loaded '" + (sequenceInfo.name || "Active Sequence") + "' with " + (Number(sequenceInfo.clip_count) || 0) + " clips ready for handoff docs.",
+                        t("deliverables.sequence_loaded_summary", "Loaded '{name}' with {count} clips ready for handoff docs.")
+                            .replace("{name}", sequenceInfo.name || t("deliverables.active_sequence", "Active Sequence"))
+                            .replace("{count}", Number(sequenceInfo.clip_count) || 0),
                         "success"
                     );
                 }
                 updateButtons();
                 updateDeliverablesSummary();
-                showToast("Sequence info loaded", "success");
+                showToast(t("deliverables.sequence_info_loaded_toast", "Sequence info loaded"), "success");
             } catch (e) {
                 sequenceInfo = null;
                 _pproCache.seq = null;
                 _pproCache.seqTs = 0;
-                if (statusEl) setHintState(statusEl, "Couldn't load the active Premiere sequence.", "error");
+                if (statusEl) {
+                    setHintState(
+                        statusEl,
+                        t("deliverables.sequence_load_failed_hint", "Couldn't load the active Premiere sequence."),
+                        "error"
+                    );
+                }
                 updateButtons();
                 updateDeliverablesSummary();
-                setStatusLine("deliverablesStatus", "Couldn't load the active sequence. Make sure a Premiere sequence is active and try again.", "error");
-                showAlert("Error loading sequence info: " + (result || e.message));
+                setStatusLine(
+                    "deliverablesStatus",
+                    t(
+                        "deliverables.sequence_load_failed_status",
+                        "Couldn't load the active sequence. Make sure a Premiere sequence is active and try again."
+                    ),
+                    "error"
+                );
+                showAlert(t("deliverables.sequence_load_error_alert", "Error loading sequence info: {error}")
+                    .replace("{error}", result || e.message));
             }
         });
     }
@@ -14320,8 +14347,12 @@
     function genDeliverableDoc(type) {
         var label = DELIVERABLE_DOC_LABELS[type] || type;
         if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
-            setStatusLine("deliverablesStatus", "Load sequence info before generating handoff docs.", "warning");
-            showAlert("Load sequence info first.");
+            setStatusLine(
+                "deliverablesStatus",
+                t("deliverables.sequence_required_status", "Load sequence info before generating handoff docs."),
+                "warning"
+            );
+            showAlert(t("deliverables.sequence_required_alert", "Load sequence info first."));
             return;
         }
         var buttonId = {
@@ -14335,22 +14366,32 @@
         var outDir = ((document.getElementById("deliverablesOutputDir") || {}).value || "").trim() || projectFolder || null;
         if (btn) {
             btn.disabled = true;
-            setButtonText(btn, "Generating…");
+            setButtonText(btn, t("deliverables.generating_button", "Generating…"));
         }
-        setStatusLine("deliverablesStatus", "Generating " + label + "…", "working");
+        setStatusLine(
+            "deliverablesStatus",
+            t("deliverables.generating_status", "Generating {label}…").replace("{label}", label),
+            "working"
+        );
         api("POST", "/deliverables/" + type, { sequence_data: sequenceInfo, output_dir: outDir }, function (err, data) {
             if (btn) {
                 btn.disabled = false;
                 setButtonText(btn, originalBtnText);
             }
             if (err || (data && data.error)) {
-                setStatusLine("deliverablesStatus", "Couldn't generate " + label + " just now.", "error");
-                showAlert("Generation failed: " + (data ? data.error : "Network error"));
+                setStatusLine(
+                    "deliverablesStatus",
+                    t("deliverables.generate_failed_status", "Couldn't generate {label} just now.")
+                        .replace("{label}", label),
+                    "error"
+                );
+                showAlert(t("deliverables.generation_failed_alert", "Generation failed: {error}")
+                    .replace("{error}", data ? data.error : t("deliverables.network_error", "Network error")));
                 return;
             }
             var res = document.getElementById("deliverablesResult");
             var fp = document.getElementById("deliverablesFilePath");
-            var output = data.output || data.output_path || "File generated.";
+            var output = data.output || data.output_path || t("deliverables.file_generated", "File generated.");
             if (res) res.classList.remove("hidden");
             if (fp) {
                 fp.textContent = output;
@@ -14362,8 +14403,14 @@
                 time: Date.now()
             };
             updateDeliverablesSummary();
-            setStatusLine("deliverablesStatus", label + " ready. Review the generated file or open its folder.", "success", output);
-            showToast(label + " generated", "success");
+            setStatusLine(
+                "deliverablesStatus",
+                t("deliverables.ready_status", "{label} ready. Review the generated file or open its folder.")
+                    .replace("{label}", label),
+                "success",
+                output
+            );
+            showToast(t("deliverables.generated_toast", "{label} generated").replace("{label}", label), "success");
         });
     }
 
