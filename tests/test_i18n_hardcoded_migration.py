@@ -286,6 +286,30 @@ MIGRATED_KEYS = (
     "workflow.failed",
     "workflow.unknown_error",
     "workflow.cancelled",
+    # Twenty-fourth batch (workflow preset summary/status feedback).
+    "workflow.preset_desc_choose",
+    "workflow.preset_desc_steps",
+    "workflow.preset_loading_pill",
+    "workflow.preset_loading_title",
+    "workflow.preset_loading_summary",
+    "workflow.preset_empty_pill",
+    "workflow.preset_empty_title",
+    "workflow.preset_empty_summary",
+    "workflow.preset_empty_hint",
+    "workflow.preset_choose_pill",
+    "workflow.preset_choose_title",
+    "workflow.preset_count_summary",
+    "workflow.preset_count_title",
+    "workflow.preset_ready_pill",
+    "workflow.preset_ready_title",
+    "workflow.preset_summary_label",
+    "workflow.preset_summary_title",
+    "workflow.preset_status_loading",
+    "workflow.preset_status_reconnect",
+    "workflow.preset_status_empty",
+    "workflow.preset_status_choose",
+    "workflow.preset_status_choose_clip",
+    "workflow.preset_status_ready_on",
 )
 
 
@@ -1501,6 +1525,130 @@ EXPECTED_CALLS = (
         "workflow.cancelled",
         re.compile(r't\(\s*"workflow\.cancelled"'),
         re.compile(r'var\s+cancelMsg\s*=\s*"Workflow cancelled before all steps finished\."'),
+    ),
+    # --- Twenty-fourth batch ---------------------------------------
+    (
+        "workflow.preset_desc_choose",
+        re.compile(r't\(\s*"workflow\.preset_desc_choose"'),
+        re.compile(r'setHintState\(\s*el\.workflowPresetDesc,\s*"Choose a preset to preview'),
+    ),
+    (
+        "workflow.preset_desc_steps",
+        re.compile(r't\(\s*"workflow\.preset_desc_steps"'),
+        re.compile(
+            r'workflowStepCountLabel\(\(preset\.steps \|\| \[\]\)\.length\)\s*\+\s*" in sequence\."'
+        ),
+    ),
+    (
+        "workflow.preset_loading_pill",
+        re.compile(r't\(\s*"workflow\.preset_loading_pill"'),
+        re.compile(r'setStatusPill\("workflowPresetPill",\s*"Loading\.\.\."'),
+    ),
+    (
+        "workflow.preset_loading_title",
+        re.compile(r't\(\s*"workflow\.preset_loading_title"'),
+        re.compile(r'summaryTitle\s*=\s*"Loading workflow presets\."'),
+    ),
+    (
+        "workflow.preset_loading_summary",
+        re.compile(r't\(\s*"workflow\.preset_loading_summary"'),
+        re.compile(r'summaryLabel\s*=\s*"Checking built-in and custom workflow presets\.\.\."'),
+    ),
+    (
+        "workflow.preset_empty_pill",
+        re.compile(r't\(\s*"workflow\.preset_empty_pill"'),
+        re.compile(r'setStatusPill\("workflowPresetPill",\s*"Empty"'),
+    ),
+    (
+        "workflow.preset_empty_title",
+        re.compile(r't\(\s*"workflow\.preset_empty_title"'),
+        re.compile(
+            r'setStatusPill\("workflowPresetPill",\s*"Empty",\s*"warning",\s*"No built-in or custom presets'
+        ),
+    ),
+    (
+        "workflow.preset_empty_summary",
+        re.compile(r't\(\s*"workflow\.preset_empty_summary"'),
+        re.compile(r'summaryLabel\s*=\s*"No workflow presets available"'),
+    ),
+    (
+        "workflow.preset_empty_hint",
+        re.compile(r't\(\s*"workflow\.preset_empty_hint"'),
+        re.compile(r'summaryTitle\s*=\s*"Save a custom workflow or refresh the preset library\."'),
+    ),
+    (
+        "workflow.preset_choose_pill",
+        re.compile(r't\(\s*"workflow\.preset_choose_pill"'),
+        re.compile(r'setStatusPill\("workflowPresetPill",\s*"Choose one"'),
+    ),
+    (
+        "workflow.preset_choose_title",
+        re.compile(r't\(\s*"workflow\.preset_choose_title"'),
+        re.compile(
+            r'setStatusPill\("workflowPresetPill",\s*"Choose one",\s*"idle",\s*"Choose a workflow preset'
+        ),
+    ),
+    (
+        "workflow.preset_count_summary",
+        re.compile(r't\(\s*"workflow\.preset_count_summary"'),
+        re.compile(r'summaryLabel\s*=\s*availableCount\s*\+\s*" presets ready"'),
+    ),
+    (
+        "workflow.preset_count_title",
+        re.compile(r't\(\s*"workflow\.preset_count_title"'),
+        re.compile(
+            r'summaryTitle\s*=\s*availableCount\s*\+\s*" built-in or custom workflow presets are available\."'
+        ),
+    ),
+    (
+        "workflow.preset_ready_pill",
+        re.compile(r't\(\s*"workflow\.preset_ready_pill"'),
+        re.compile(r'setStatusPill\("workflowPresetPill",\s*"Ready"'),
+    ),
+    (
+        "workflow.preset_ready_title",
+        re.compile(r't\(\s*"workflow\.preset_ready_title"'),
+        re.compile(r'preset\.name\s*\+\s*" is ready to run\."'),
+    ),
+    (
+        "workflow.preset_summary_label",
+        re.compile(r't\(\s*"workflow\.preset_summary_label"'),
+        re.compile(r'summaryLabel\s*=\s*preset\.name\s*\+\s*" • "'),
+    ),
+    (
+        "workflow.preset_summary_title",
+        re.compile(r't\(\s*"workflow\.preset_summary_title"'),
+        re.compile(r'summaryTitle\s*=\s*preset\.name\s*\+\s*" runs "'),
+    ),
+    (
+        "workflow.preset_status_loading",
+        re.compile(r't\(\s*"workflow\.preset_status_loading"'),
+        re.compile(r'setStatusLine\(\s*"workflowPresetStatus",\s*"Loading workflow presets for repeatable'),
+    ),
+    (
+        "workflow.preset_status_reconnect",
+        re.compile(r't\(\s*"workflow\.preset_status_reconnect"'),
+        re.compile(r'setStatusLine\(\s*"workflowPresetStatus",\s*"Reconnect the backend before running'),
+    ),
+    (
+        "workflow.preset_status_empty",
+        re.compile(r't\(\s*"workflow\.preset_status_empty"'),
+        re.compile(r'setStatusLine\(\s*"workflowPresetStatus",\s*"No workflow presets are available yet\.'),
+    ),
+    (
+        "workflow.preset_status_choose",
+        re.compile(r't\(\s*"workflow\.preset_status_choose"'),
+        re.compile(r'setStatusLine\(\s*"workflowPresetStatus",\s*"Choose a workflow preset to preview its step order'),
+    ),
+    (
+        "workflow.preset_status_choose_clip",
+        re.compile(r't\(\s*"workflow\.preset_status_choose_clip"'),
+        re.compile(r'preset\.name\s*\+\s*" is ready\. Choose a clip before starting the workflow\."'),
+    ),
+    (
+        "workflow.preset_status_ready_on",
+        re.compile(r't\(\s*"workflow\.preset_status_ready_on"'),
+        re.compile(r'preset\.name\s*\+\s*" is ready to run on "'),
     ),
 )
 

@@ -5603,12 +5603,19 @@
         if (!preset) {
             setHintState(
                 el.workflowPresetDesc,
-                "Choose a preset to preview its editorial intent and step order.",
+                t(
+                    "workflow.preset_desc_choose",
+                    "Choose a preset to preview its editorial intent and step order."
+                ),
                 "info"
             );
             return;
         }
-        var description = preset.description || (workflowStepCountLabel((preset.steps || []).length) + " in sequence.");
+        var stepLabel = workflowStepCountLabel((preset.steps || []).length);
+        var description = preset.description || t(
+            "workflow.preset_desc_steps",
+            "{steps} in sequence."
+        ).replace("{steps}", stepLabel);
         setHintState(el.workflowPresetDesc, description, "info");
     }
 
@@ -5619,21 +5626,60 @@
         var summaryTitle = "";
 
         if (!_workflowPresetsLoaded) {
-            setStatusPill("workflowPresetPill", "Loading...", "working", "Loading workflow presets.");
-            summaryLabel = "Checking built-in and custom workflow presets...";
-            summaryTitle = "Loading workflow presets.";
+            setStatusPill(
+                "workflowPresetPill",
+                t("workflow.preset_loading_pill", "Loading..."),
+                "working",
+                t("workflow.preset_loading_title", "Loading workflow presets.")
+            );
+            summaryLabel = t(
+                "workflow.preset_loading_summary",
+                "Checking built-in and custom workflow presets..."
+            );
+            summaryTitle = t("workflow.preset_loading_title", "Loading workflow presets.");
         } else if (!availableCount) {
-            setStatusPill("workflowPresetPill", "Empty", "warning", "No built-in or custom presets are currently available.");
-            summaryLabel = "No workflow presets available";
-            summaryTitle = "Save a custom workflow or refresh the preset library.";
+            setStatusPill(
+                "workflowPresetPill",
+                t("workflow.preset_empty_pill", "Empty"),
+                "warning",
+                t(
+                    "workflow.preset_empty_title",
+                    "No built-in or custom presets are currently available."
+                )
+            );
+            summaryLabel = t("workflow.preset_empty_summary", "No workflow presets available");
+            summaryTitle = t(
+                "workflow.preset_empty_hint",
+                "Save a custom workflow or refresh the preset library."
+            );
         } else if (!preset) {
-            setStatusPill("workflowPresetPill", "Choose one", "idle", "Choose a workflow preset to preview and run.");
-            summaryLabel = availableCount + " presets ready";
-            summaryTitle = availableCount + " built-in or custom workflow presets are available.";
+            setStatusPill(
+                "workflowPresetPill",
+                t("workflow.preset_choose_pill", "Choose one"),
+                "idle",
+                t("workflow.preset_choose_title", "Choose a workflow preset to preview and run.")
+            );
+            summaryLabel = t("workflow.preset_count_summary", "{count} presets ready")
+                .replace("{count}", availableCount);
+            summaryTitle = t(
+                "workflow.preset_count_title",
+                "{count} built-in or custom workflow presets are available."
+            ).replace("{count}", availableCount);
         } else {
-            setStatusPill("workflowPresetPill", "Ready", "ready", preset.name + " is ready to run.");
-            summaryLabel = preset.name + " • " + workflowStepCountLabel((preset.steps || []).length);
-            summaryTitle = preset.name + " runs " + workflowStepCountLabel((preset.steps || []).length) + " in sequence.";
+            var presetStepLabel = workflowStepCountLabel((preset.steps || []).length);
+            setStatusPill(
+                "workflowPresetPill",
+                t("workflow.preset_ready_pill", "Ready"),
+                "ready",
+                t("workflow.preset_ready_title", "{name} is ready to run.")
+                    .replace("{name}", preset.name)
+            );
+            summaryLabel = t("workflow.preset_summary_label", "{name} • {steps}")
+                .replace("{name}", preset.name)
+                .replace("{steps}", presetStepLabel);
+            summaryTitle = t("workflow.preset_summary_title", "{name} runs {steps} in sequence.")
+                .replace("{name}", preset.name)
+                .replace("{steps}", presetStepLabel);
         }
 
         setTextAndTitle("workflowPresetSummary", summaryLabel, summaryTitle);
@@ -5647,37 +5693,55 @@
         if (!_workflowPresetsLoaded) {
             setStatusLine(
                 "workflowPresetStatus",
-                "Loading workflow presets for repeatable editorial runs.",
+                t(
+                    "workflow.preset_status_loading",
+                    "Loading workflow presets for repeatable editorial runs."
+                ),
                 "working"
             );
         } else if (!connected) {
             setStatusLine(
                 "workflowPresetStatus",
-                "Reconnect the backend before running preset workflows or loading the preset library.",
+                t(
+                    "workflow.preset_status_reconnect",
+                    "Reconnect the backend before running preset workflows or loading the preset library."
+                ),
                 "warning"
             );
         } else if (!availableCount) {
             setStatusLine(
                 "workflowPresetStatus",
-                "No workflow presets are available yet. Save a custom workflow to build your own repeatable pipeline.",
+                t(
+                    "workflow.preset_status_empty",
+                    "No workflow presets are available yet. Save a custom workflow to build your own repeatable pipeline."
+                ),
                 "warning"
             );
         } else if (!preset) {
             setStatusLine(
                 "workflowPresetStatus",
-                "Choose a workflow preset to preview its step order and run it against the current clip.",
+                t(
+                    "workflow.preset_status_choose",
+                    "Choose a workflow preset to preview its step order and run it against the current clip."
+                ),
                 "idle"
             );
         } else if (!selectedPath) {
             setStatusLine(
                 "workflowPresetStatus",
-                preset.name + " is ready. Choose a clip before starting the workflow.",
+                t(
+                    "workflow.preset_status_choose_clip",
+                    "{name} is ready. Choose a clip before starting the workflow."
+                ).replace("{name}", preset.name),
                 "ready"
             );
         } else {
+            var clipLabel = selectedName || selectedPath.split(/[/\\]/).pop();
             setStatusLine(
                 "workflowPresetStatus",
-                preset.name + " is ready to run on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                t("workflow.preset_status_ready_on", "{name} is ready to run on {clip}.")
+                    .replace("{name}", preset.name)
+                    .replace("{clip}", clipLabel),
                 "ready"
             );
         }
