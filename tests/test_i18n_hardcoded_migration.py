@@ -247,6 +247,18 @@ HTML_STATIC_SHELL_CALLS = (
     ("cut.full_preset_aggressive", "data-i18n"),
     ("cut.full_preset_conservative", "data-i18n"),
     ("cut.full_preset_podcast", "data-i18n"),
+    # One-hundred-fourth batch (Trim form static shell HTML).
+    ("trim.start_time", "data-i18n"),
+    ("trim.start_hint", "data-i18n"),
+    ("trim.end_time", "data-i18n"),
+    ("trim.end_hint", "data-i18n"),
+    ("forms.mode", "data-i18n"),
+    ("trim.mode_copy", "data-i18n"),
+    ("trim.mode_reencode", "data-i18n"),
+    ("forms.quality", "data-i18n"),
+    ("trim.quality_high", "data-i18n"),
+    ("trim.quality_medium", "data-i18n"),
+    ("trim.quality_low", "data-i18n"),
 )
 
 
@@ -1580,6 +1592,16 @@ MIGRATED_KEYS = (
     "cut.full_preset_youtube",
     "cut.whisper_model",
     "install.crisper_whisper",
+    # One-hundred-fourth batch (Trim form static shell HTML).
+    "trim.end_hint",
+    "trim.end_time",
+    "trim.mode_copy",
+    "trim.mode_reencode",
+    "trim.quality_high",
+    "trim.quality_low",
+    "trim.quality_medium",
+    "trim.start_hint",
+    "trim.start_time",
 )
 
 
