@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.94
+**Version**: 4.95
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,522 routes, 107 blueprints, 599 core modules, 8,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -197,6 +197,10 @@
 > **v4.93 status (2026-06-04, continuation pass)**: closed **N5** from the May 26 continuation queue by adding resumability metadata to async jobs, durable running-job persistence before worker dispatch, SQLite resume columns, and a CSRF-protected `POST /jobs/<job_id>/resume` route. Resume dispatch replays the persisted endpoint/payload only for interrupted jobs whose current route is still marked `resumable=True`; transcription, WhisperX, Demucs separation, export/export-preset, and depth-estimation jobs now opt into the path. Route manifest now reports **1,522 routes / 107 blueprints** and extended MCP exposes **1,465** opt-in route tools.
 >
 > **v4.94 status (2026-06-04, continuation pass)**: closed **N7** from the May 26 continuation queue by adding a plugin job-registration API. Plugin manifests can now declare `jobs` entries gated by the new `jobs.register` capability, plugin route modules can wrap endpoints with `plugin_job(...)`, and loaded plugin jobs run through the same `@async_job` lifecycle, status tracking, resumability metadata, and global concurrency cap as core jobs. The bundled `long-job-demo` example demonstrates `/plugins/long-job-demo/start`, and plugins without `host.filesystem` are confined to their own `data/` directory for path-like job payload fields.
+>
+> **v4.95 status (2026-06-04, continuation pass)**: closed **N8** from the May 26 continuation queue by adding a third-party agent-skill loader. `opencut.core.agent_skills` now scans validated user packages from `~/.opencut/skills/<id>/`, tags catalogue entries with `source: "builtin" | "user"`, rejects user plans that reference routes absent from the generated route manifest, and wires the combined catalogue into `/agent/skills` and `/agent/skills/<id>`. `docs/SKILL_AUTHORING.md` documents the folder format and validation rules.
+>
+> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed; route manifest check: 1,522 routes / 107 blueprints; version sync: v1.32.0). Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; continue with N9/N10/E12/E13/E14/E15, external F202/F252, and RA-03..RA-10.
 
 ---
 
@@ -345,6 +349,23 @@ Validation after the batch: `py -3.12 -m pytest tests/test_plugins.py tests/test
 
 ---
 
+## 2026-06-04 v4.95 Third-Party Agent Skills (N8)
+
+N8 is closed. Agent skills are no longer limited to bundled examples; users can drop validated workflow packages into their OpenCut data directory.
+
+| Surface | Status |
+|---|---|
+| User skill directory | `opencut.core.agent_skills.USER_SKILLS_DIR` points at `~/.opencut/skills`, where each skill lives under `<skill-id>/SKILL.md` plus `plan.json`. |
+| Combined catalogue | `list_skills()` merges built-in and user skills, adds `source` metadata, and prevents user packages from shadowing bundled skill IDs. |
+| Plan validation | User plans reuse `validate_skill_plan(...)` and are checked against `opencut/_generated/route_manifest.json` so unavailable endpoint references are rejected at load time. |
+| Routes | `/agent/skills` and `/agent/skills/<skill_id>` now read from the combined built-in + user catalogue while preserving the existing response shape. |
+| Authoring docs | `docs/SKILL_AUTHORING.md` documents front matter, plan schema, route validation, collision rules, and install location. |
+| Coverage | `tests/test_user_skills.py` pins user-directory loading, HTTP catalogue exposure, unavailable-route rejection, and built-in shadowing protection. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_agent_skills.py tests/test_user_skills.py -q -p no:cacheprovider -o addopts=""` passed (`8 passed`) and touched Python files compile.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -355,7 +376,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_plugins.py tests/test
 - [x] **P1 — N4 disk preflight in heavy routes** — closed in v4.92 with a decorator-level disk gate, operation budgets, 507 responses, and coverage across 12 heavyweight async jobs.
 - [x] **P1 — N5 job resume for interrupted jobs** — closed in v4.93 with resumability metadata, durable running-job persistence, persisted endpoint/payload replay, `POST /jobs/<job_id>/resume`, and coverage for checkpointable caption/audio/export/depth jobs.
 - [x] **P1 — N7 plugin job-registration API** — closed in v4.94 with a `jobs.register` capability, `plugin_job(...)` decorator, manifest/job mismatch checks, filesystem-scope enforcement, and a `long-job-demo` example plugin.
-- [ ] **P1 — N8 third-party agent-skill loader** — load validated user skills from `~/.opencut/skills/<id>/`.
+- [x] **P1 — N8 third-party agent-skill loader** — closed in v4.95 with validated `~/.opencut/skills/<id>/` loading, combined catalogue `source` metadata, route-manifest plan validation, and authoring docs.
 - [ ] **P1 — E14 F236 CEP parity** — add CEP-side discoverability for caption display settings already shipped in UXP.
 - [ ] **P2 — N9 enriched job metadata** — add peak resource fields and explicit exit reasons to persisted job history.
 - [ ] **P2 — N10 request-ID propagation into subprocess stderr** — carry request IDs into FFmpeg/subprocess logging.
@@ -365,13 +386,13 @@ Validation after the batch: `py -3.12 -m pytest tests/test_plugins.py tests/test
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
-> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N8, N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
+> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
-These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (user skills = N8, job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
+These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
 
 ### Quick Wins
 

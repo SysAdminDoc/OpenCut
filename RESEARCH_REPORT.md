@@ -3,7 +3,28 @@
 Root synthesis of current research and planning inputs. Detailed research plans
 are archived under [docs/archive/research](docs/archive/research/).
 
-Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03.
+Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03;
+freshness refresh: 2026-06-04.
+
+2026-06-04 freshness refresh: the N8 third-party skill loader is now represented
+as shipped in the live v4.95 docs, so no new duplicate extensibility row was
+promoted. Focused verification passed: `py -3.12 -m pytest
+tests/test_agent_skills.py tests/test_user_skills.py -q -p no:cacheprovider -o
+addopts=""` reported 8 passed, `py -3.12 -m opencut.tools.dump_route_manifest
+--check` reported 1,522 routes / 107 blueprints, and
+`py -3.12 scripts/sync_version.py --check` kept v1.32.0 in sync. Current
+external anchors still support the existing backlog shape: Adobe documents UXP
+as the Premiere v25.6+ extensibility path (`https://developer.adobe.com/premiere-pro/uxp/`),
+Adobe's UXP API guidance warns that newer UXP APIs fail on older host versions
+(`https://developer.adobe.com/premiere-pro/uxp/resources/fundamentals/apis/`),
+Adobe's Firefly AI Assistant announcement reinforces agentic multi-step creative
+workflows (`https://news.adobe.com/en/gb/news/2026/04/adobe-new-creative-agent`),
+Generative Extend remains a current Premiere feature
+(`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
+FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
+comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
+N9/N10/E12/E13/E14/E15 plus external F202/F252 and the RA-03..RA-10 research
+items below.
 
 ## Executive Summary
 
@@ -12,7 +33,7 @@ OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1–N7, E11) is now shipped through v4.94; the strongest remaining
+(N1–N8, E11) is now shipped through v4.95; the strongest remaining
 direction is **not** another wave of model surfaces but making the existing
 surface easier to run, debug, resume, extend, and trust.
 
@@ -60,8 +81,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   body field does not).
 - **Dependencies:** `pyproject.toml` (`requires-python>=3.11`, ruff `py39`),
   `requirements.txt` (looser/unbounded floors vs extras).
-- **Extensibility:** `opencut/core/agent_skills.py` (built-in skills only — N8
-  user loader confirmed absent), `opencut/routes/plugins.py` (install requires
+- **Extensibility:** `opencut/core/agent_skills.py` (N8 user loader now scans
+  validated `~/.opencut/skills/<id>/` packages), `opencut/routes/plugins.py` (install requires
   restart to load routes; uninstall `shutil.rmtree` with no backup).
 - **Security/bind:** `opencut/server.py` loopback default + `OPENCUT_ALLOW_REMOTE`
   gate + F112 token requirement on remote bind — confirmed sound.
@@ -98,7 +119,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Shorts A/B variants | route/skill | `core/ab_variant.py`, `best_take.py` | shipped | tested |
 | MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,465 opt-in | tested |
 | Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; background jobs now use the core async-job tracker; no hot-reload, no backup on uninstall | partial |
-| Agent skills | built-in only | `core/agent_skills.py` | user loader not implemented (N8) | tested (built-ins) |
+| Agent skills | built-in + validated user packages | `core/agent_skills.py` | user loader shipped (N8); no marketplace UI | tested |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
 
 ## Competitive Landscape
@@ -199,7 +220,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" is the open Existing Planned Work and the "Research-Driven Additions" section holds this pass's RA-01..RA-10 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-10 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes

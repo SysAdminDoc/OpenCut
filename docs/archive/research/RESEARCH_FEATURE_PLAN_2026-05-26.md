@@ -24,7 +24,7 @@ The remaining headroom is **not** more model surfaces or more wave letters. It's
 | 5 | Job resume for interrupted jobs (not just flag as interrupted) | **P1** | L | Today a 30-min job that crashes at minute 28 must restart from zero. |
 | 6 | `GET /webhooks/event-types` discovery endpoint | **P1** | S | Webhook authors cannot enumerate event types without reading source. |
 | 7 | Plugin job-registration API (`@plugin_job` decorator) | **P1** | M | Plugins can register routes but cannot start `@async_job`-style background work. |
-| 8 | Third-party agent-skill loader (`~/.opencut/skills/<id>/SKILL.md`) | **P1** | M | Today skills are built-in only; no path for community skills. |
+| 8 | Third-party agent-skill loader (`~/.opencut/skills/<id>/SKILL.md`) | **P1** | M | Shipped in v4.95; user packages now load after schema and route-manifest validation. |
 | 9 | Enriched job metadata: `peak_vram_mb`, `exit_reason`, `started_at` | **P2** | M | `job_store.py` schema is captured-but-not-queryable; debugging crashed jobs is guesswork. |
 | 10 | Request-ID propagation into FFmpeg/subprocess stderr | **P2** | S | A 10-min job's logs cannot be walked end-to-end via the existing `request_id` filter. |
 
@@ -240,6 +240,7 @@ For each item below: where it lives, what works, what was deferred.
 - **Risks:** User skills referencing endpoints the host doesn't ship → skill validation must reject at load time, not at run time.
 - **Verification plan:** `tests/test_user_skills.py` writes a fixture skill into a tempdir, monkeypatches the skills-dir, confirms the catalogue + plan validation.
 - **Complexity:** M. **Priority: P1.**
+- **Status:** Shipped in `ROADMAP.md` v4.95 with validated user skill loading from `~/.opencut/skills/<id>/`, route-manifest endpoint checks, `source` catalogue metadata, `/agent/skills` wiring, and `docs/SKILL_AUTHORING.md`.
 
 ### N9 — Enriched job metadata (P2)
 
@@ -380,7 +381,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ### Documentation gaps
 
-- `CONTRIBUTING.md` documents the route-pattern conventions well. N7 added `docs/PLUGIN_AUTHORING.md`; N8 should add `docs/SKILL_AUTHORING.md` when third-party skills land.
+- `CONTRIBUTING.md` documents the route-pattern conventions well. N7 added `docs/PLUGIN_AUTHORING.md`; N8 added `docs/SKILL_AUTHORING.md` for third-party skills.
 - The 47 model cards (`docs/MODELS.md`) need a per-card "install hint" pointer once N2 lands.
 
 ### Release & build gaps (unchanged from prior plan)
@@ -445,10 +446,11 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: example plugin's `/plugins/long-job-demo/start` enqueues a real `@async_job`-tracked job.
   - Status: closed in ROADMAP v4.94 with `jobs.register`, `plugin_job(...)`, manifest/decorator cross-checks, filesystem-scope enforcement, and `opencut/data/example_plugins/long-job-demo/`.
 
-- [ ] **P1 — N8 third-party agent-skill loader**
-  - Why: today skills are built-in only.
+- [x] **P1 — N8 third-party agent-skill loader**
+  - Why: skills were built-in only at audit time.
   - Touches: `opencut/core/agent_skills.py`, `opencut/routes/agent_skills.py`.
   - Acceptance: dropping a `SKILL.md` + `plan.json` into `~/.opencut/skills/<id>/` lists it in `GET /agent/skills`.
+  - Status: closed in ROADMAP v4.95 with validated user-skill loading, generated route-manifest endpoint checks, combined catalogue source metadata, and authoring docs.
 
 - [ ] **P1 — E14 F236 CEP parity**
   - Why: UXP got the FCC card; CEP still lacks it.
@@ -497,7 +499,7 @@ For each item below: where it lives, what works, what was deferred.
 
 - **N1 transcript cache.** Shipped in `ROADMAP.md` v4.87; every Whisper caller now shares the core persistent cache.
 - **N5 job resume.** Shipped in `ROADMAP.md` v4.93 with incremental per-route opt-in for the checkpointable caption, Demucs, export, and depth jobs; future work can deepen per-job checkpoint formats.
-- **N7 + N8 plugin/skill extensibility.** N7 is shipped for plugin background jobs; N8 remains the folder-drop skill-loader half. Adopt the Obsidian capability-enforcement pattern (not just declaration) for the remaining skill work.
+- **N7 + N8 plugin/skill extensibility.** Both halves are shipped: plugin background jobs use capability-gated `plugin_job(...)`, and user skills are loaded only after schema and generated route-manifest validation. The remaining extensibility work is marketplace/review UX, not the local registration path.
 
 ---
 
@@ -532,7 +534,7 @@ For each item below: where it lives, what works, what was deferred.
 | `disk_monitor.preflight()` exists but routes don't call it | Yes, P1 | **SHIPPED** in `ROADMAP.md` v4.92 after the original audit found no route wiring. | Plan item N4. |
 | `mark_interrupted()` flips status only; no resume | Yes, P1 | **CORRECT** | Plan item N5. |
 | Webhook event types hard-coded; no discovery endpoint | Yes, P2 | **SHIPPED** in `ROADMAP.md` v4.90 after the original audit found no discovery route. | Plan item N6. |
-| Skills are built-in only | Yes, P2 | **CORRECT** | Plan item N8. |
+| Skills are built-in only | Yes, P2 | **CORRECT AT AUDIT TIME** | Plan item N8, now shipped in v4.95. |
 | Plugin job-registration not wired | Implied | **CORRECT** (grep shows no `register_job` in `plugins.py`) | Plan item N7. |
 | `missing_dependency` suggestion is generic | Yes, P0 | **CORRECT** (`errors.py:144-150`) | Plan item N2. |
 

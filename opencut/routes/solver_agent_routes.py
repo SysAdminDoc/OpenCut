@@ -507,16 +507,16 @@ def agent_plan_status(plan_id):
 
 
 # ---------------------------------------------------------------------------
-# Agent — List built-in skills
+# Agent — List available skills
 # ---------------------------------------------------------------------------
 @solver_agent_bp.route("/agent/skills", methods=["GET"])
 def agent_list_skills():
-    """List built-in agent skills."""
+    """List built-in and validated user-installed agent skills."""
     try:
-        from opencut.core.agent_skills import list_builtin_skills
+        from opencut.core.agent_skills import list_skills
 
         category = request.args.get("category", "")
-        skills = [skill.summary() for skill in list_builtin_skills(category=category)]
+        skills = [skill.summary() for skill in list_skills(category=category)]
         return jsonify({
             "skills": skills,
             "count": len(skills),
@@ -527,15 +527,15 @@ def agent_list_skills():
 
 
 # ---------------------------------------------------------------------------
-# Agent — Get built-in skill detail
+# Agent — Get skill detail
 # ---------------------------------------------------------------------------
 @solver_agent_bp.route("/agent/skills/<skill_id>", methods=["GET"])
 def agent_skill_detail(skill_id):
-    """Return a built-in agent skill manifest and structured plan."""
+    """Return an agent skill manifest and structured plan."""
     try:
-        from opencut.core.agent_skills import get_builtin_skill
+        from opencut.core.agent_skills import get_skill
 
-        skill = get_builtin_skill(skill_id)
+        skill = get_skill(skill_id)
         if skill is None:
             return jsonify({"error": f"Skill not found: {skill_id}", "skill_id": skill_id}), 404
         return jsonify(skill.to_dict())
