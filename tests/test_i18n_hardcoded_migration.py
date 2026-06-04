@@ -831,6 +831,17 @@ MIGRATED_KEYS = (
     "timeline.renamed_items",
     "timeline.rules_validated_no_premiere",
     "timeline.validation_failed",
+    # Fifty-fifth batch (captions chapter/SRT feedback).
+    "captions.action_failed",
+    "captions.chapter_markers_added",
+    "captions.chapters_copied",
+    "captions.copy_failed",
+    "captions.import_failed",
+    "captions.imported_captions",
+    "captions.imported_segments",
+    "captions.no_chapters_available",
+    "captions.select_srt_file_first",
+    "captions.srt_parsed_no_premiere",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4452,6 +4463,57 @@ EXPECTED_CALLS = (
         "timeline.validation_failed",
         re.compile(r't\(\s*"timeline\.validation_failed"'),
         re.compile(r'showAlert\("Validation failed: "'),
+    ),
+    # --- Fifty-fifth batch -----------------------------------------
+    (
+        "captions.action_failed",
+        re.compile(r't\(\s*"captions\.action_failed"'),
+        None,
+    ),
+    (
+        "captions.chapter_markers_added",
+        re.compile(r't\(\s*"captions\.chapter_markers_added"'),
+        re.compile(r'showToast\("Added "\s*\+\s*\(r\.added \|\| chaptersData\.length\)\s*\+\s*" chapter markers"'),
+    ),
+    (
+        "captions.chapters_copied",
+        re.compile(r't\(\s*"captions\.chapters_copied"'),
+        re.compile(r'showToast\("Chapters copied"'),
+    ),
+    (
+        "captions.copy_failed",
+        re.compile(r't\(\s*"captions\.copy_failed"'),
+        re.compile(r'\.catch\(function\(\) \{ showToast\("Copy failed"'),
+    ),
+    (
+        "captions.import_failed",
+        re.compile(r't\(\s*"captions\.import_failed"'),
+        re.compile(r'showAlert\("Failed: "'),
+    ),
+    (
+        "captions.imported_captions",
+        re.compile(r't\(\s*"captions\.imported_captions"'),
+        re.compile(r'showToast\("Imported "\s*\+\s*\(r\.imported \|\| segments\.length\)\s*\+\s*" captions"'),
+    ),
+    (
+        "captions.imported_segments",
+        re.compile(r't\(\s*"captions\.imported_segments"'),
+        re.compile(r'setHintState\(statusEl,\s*"Imported "\s*\+\s*segments\.length\s*\+\s*" caption segments\."'),
+    ),
+    (
+        "captions.no_chapters_available",
+        re.compile(r't\(\s*"captions\.no_chapters_available"'),
+        re.compile(r'showAlert\("No chapters available\."'),
+    ),
+    (
+        "captions.select_srt_file_first",
+        re.compile(r't\(\s*"captions\.select_srt_file_first"'),
+        re.compile(r'showAlert\("Select an SRT file first\."'),
+    ),
+    (
+        "captions.srt_parsed_no_premiere",
+        re.compile(r't\(\s*"captions\.srt_parsed_no_premiere"'),
+        re.compile(r'showToast\("SRT parsed \("\s*\+\s*segments\.length'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

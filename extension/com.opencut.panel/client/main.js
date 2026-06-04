@@ -14019,43 +14019,62 @@
         var text = document.getElementById("chaptersText");
         if (!text) return;
         if (navigator.clipboard) {
-            navigator.clipboard.writeText(text.value).then(function() { showToast("Chapters copied", "success"); }).catch(function() { showToast("Copy failed", "warning"); });
+            navigator.clipboard.writeText(text.value)
+                .then(function() { showToast(t("captions.chapters_copied", "Chapters copied"), "success"); })
+                .catch(function() { showToast(t("captions.copy_failed", "Copy failed"), "warning"); });
         } else {
             text.select();
             document.execCommand("copy");
-            showToast("Chapters copied", "success");
+            showToast(t("captions.chapters_copied", "Chapters copied"), "success");
         }
     }
 
     function addChaptersAsMarkers() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
-        if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
+        if (!chaptersData || !chaptersData.length) { showAlert(t("captions.no_chapters_available", "No chapters available.")); return; }
         var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
-                showToast("Added " + (r.added || chaptersData.length) + " chapter markers", "success");
-            } catch (e) { showAlert("Error: " + (result || e.message)); }
+                showToast(t("captions.chapter_markers_added", "Added {count} chapter markers")
+                    .replace("{count}", r.added || chaptersData.length), "success");
+            } catch (e) {
+                showAlert(t("captions.action_failed", "Error: {error}")
+                    .replace("{error}", result || e.message));
+            }
         });
     }
 
     function runSrtImport() {
         var path = (document.getElementById("srtImportPath") || {}).value || "";
-        if (!path) { showAlert("Select an SRT file first."); return; }
+        if (!path) { showAlert(t("captions.select_srt_file_first", "Select an SRT file first.")); return; }
         api("POST", "/timeline/srt-to-captions", { srt_path: path }, function (err, data) {
-            if (err || (data && data.error)) { showAlert("Failed: " + (data ? data.error : "Network error")); return; }
+            if (err || (data && data.error)) {
+                showAlert(t("captions.import_failed", "Failed: {error}")
+                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                return;
+            }
             var segments = data.segments || [];
-            if (!inPremiere) { showToast("SRT parsed (" + segments.length + " segments), no Premiere connection", "info"); return; }
+            if (!inPremiere) {
+                showToast(t("captions.srt_parsed_no_premiere", "SRT parsed ({count} segments), no Premiere connection")
+                    .replace("{count}", segments.length), "info");
+                return;
+            }
             var payload = JSON.stringify(segments);
             cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
-                    showToast("Imported " + (r.imported || segments.length) + " captions", "success");
-                } catch (e) { showAlert("Error: " + (result || e.message)); }
+                    showToast(t("captions.imported_captions", "Imported {count} captions")
+                        .replace("{count}", r.imported || segments.length), "success");
+                } catch (e) {
+                    showAlert(t("captions.action_failed", "Error: {error}")
+                        .replace("{error}", result || e.message));
+                }
             });
             var statusEl = document.getElementById("srtImportStatus");
-            setHintState(statusEl, "Imported " + segments.length + " caption segments.", "success");
+            setHintState(statusEl, t("captions.imported_segments", "Imported {count} caption segments.")
+                .replace("{count}", segments.length), "success");
         });
     }
 
