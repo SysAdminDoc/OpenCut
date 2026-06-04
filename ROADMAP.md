@@ -12,6 +12,25 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
+> Last researched: Cycle 1 - 2026-06-04.
+
+## Implementer Instructions
+
+- Treat this roadmap as the active build queue, with `PROJECT_CONTEXT.md` as the
+  cross-tool operating summary and `COMPLETED.md` as the shipped-work digest.
+- Keep source-of-truth counts generated. Regenerate route/API/MCP manifests
+  before claiming route, blueprint, or tool totals, and keep version sync on
+  v1.32.0 until the release metadata changes.
+- Preserve the local-first boundary: loopback by default, no cloud dependency
+  for core editing paths, no telemetry unless explicitly opt-in, and no live
+  Premiere/Apple/notarization claims without the required external run.
+- Continue from the open queue before adding new waves: E13 CLI parity, E15
+  i18n migration batches, external F202 notarization, external F252 UXP WebView
+  cutover, then RA-03..RA-10.
+- Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
+  means user/external/manual gated, `🔬` means researcher-added this cycle, and
+  `✅` means implemented/closed by the build lane.
+
 > **v4.2 status**: the 2026-05-16 research refresh below remains the full source-backed backlog ledger. Older waves remain as an archive and backlog reference, but new implementation decisions should start from the v4.3 audit and tier deltas immediately below.
 >
 > **v4.3 status**: this autonomous audit refresh supersedes v4.2 prioritization where they conflict. It preserves the existing F001-F092 ledger and source appendix, then adds live repo evidence, current GitHub competitor metadata, advisory results, and F093-F120 deltas focused on release trust, migration, packaging, quality gates, and governance.
@@ -460,6 +479,15 @@ Validation after the batch: `py -3.12 -m pytest tests/test_route_manifest.py tes
 > **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (E13, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
+
+### Researcher Queue (Cycle 1 - 2026-06-04)
+
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.99 docs and
+  current external anchors. N8, E14, N9, N10, and E12 are now shipped in the
+  local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
+  current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut
+  signals still reinforce the existing backlog shape. No duplicate rows were
+  promoted; continue with E13/E15, external F202/F252, and RA-03..RA-10.
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
