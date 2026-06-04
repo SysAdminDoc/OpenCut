@@ -303,6 +303,22 @@ MIGRATED_KEYS = (
     "workspace.status_select_media",
     "workspace.status_select_media_title",
     "workspace.clip_choose",
+    # Twenty-eighth batch (connection and project-media scan feedback).
+    "conn.connected",
+    "conn.connected_port",
+    "conn.connected_gpu",
+    "conn.disconnected",
+    "conn.dot_connected",
+    "conn.dot_disconnected",
+    "conn.port",
+    "conn.reconnecting",
+    "media.scanning_premiere",
+    "media.load_failed",
+    "media.no_importable",
+    "media.select_clip_placeholder",
+    "media.no_project_media",
+    "media.untitled_clip",
+    "media.read_failed",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1651,6 +1667,82 @@ EXPECTED_CALLS = (
         "workspace.clip_choose",
         re.compile(r't\(\s*"workspace\.clip_choose"'),
         re.compile(r'workspaceClipStatus\.textContent\s*=\s*"Choose media to begin"'),
+    ),
+    # --- Twenty-eighth batch ---------------------------------------
+    (
+        "conn.connected",
+        re.compile(r't\(\s*"conn\.connected"'),
+        re.compile(r'setConnectionBadge\("online",\s*"Connected"\s*\)'),
+    ),
+    (
+        "conn.connected_port",
+        re.compile(r't\(\s*"conn\.connected_port"'),
+        re.compile(r'setConnectionBadge\("online",\s*"Connected"\s*\+\s*\(port'),
+    ),
+    (
+        "conn.connected_gpu",
+        re.compile(r't\(\s*"conn\.connected_gpu"'),
+        re.compile(r'setConnectionBadge\("online",\s*"Connected \("\s*\+\s*data\.gpu_name'),
+    ),
+    (
+        "conn.disconnected",
+        re.compile(r't\(\s*"conn\.disconnected"'),
+        re.compile(r'setConnectionBadge\("offline",\s*"Disconnected"\s*\)'),
+    ),
+    (
+        "conn.dot_connected",
+        re.compile(r't\(\s*"conn\.dot_connected"'),
+        re.compile(r'state\s*===\s*"online"\s*\?\s*"Server connected"'),
+    ),
+    (
+        "conn.dot_disconnected",
+        re.compile(r't\(\s*"conn\.dot_disconnected"'),
+        re.compile(r':\s*"Server disconnected"\s*\)'),
+    ),
+    (
+        "conn.port",
+        re.compile(r't\(\s*"conn\.port"'),
+        re.compile(r'textContent\s*=\s*"Port "\s*\+\s*port'),
+    ),
+    (
+        "conn.reconnecting",
+        re.compile(r't\(\s*"conn\.reconnecting"'),
+        re.compile(r'serverStatusMsg\.textContent\s*=\s*"Server disconnected\. Reconnecting'),
+    ),
+    (
+        "media.scanning_premiere",
+        re.compile(r't\(\s*"media\.scanning_premiere"'),
+        re.compile(r'setProjectMediaPlaceholder\("Scanning Premiere project media'),
+    ),
+    (
+        "media.load_failed",
+        re.compile(r't\(\s*"media\.load_failed"'),
+        re.compile(r'setProjectMediaPlaceholder\("Couldn\'t load Premiere project media"'),
+    ),
+    (
+        "media.no_importable",
+        re.compile(r't\(\s*"media\.no_importable"'),
+        re.compile(r'setProjectMediaPlaceholder\("No importable project media found"'),
+    ),
+    (
+        "media.select_clip_placeholder",
+        re.compile(r't\(\s*"media\.select_clip_placeholder"'),
+        re.compile(r'placeholder\.textContent\s*=\s*files\.length\s*\?\s*"-- Select a clip --"'),
+    ),
+    (
+        "media.no_project_media",
+        re.compile(r't\(\s*"media\.no_project_media"'),
+        re.compile(r':\s*"No project media found"'),
+    ),
+    (
+        "media.untitled_clip",
+        re.compile(r't\(\s*"media\.untitled_clip"'),
+        re.compile(r':\s*"Untitled clip"\)'),
+    ),
+    (
+        "media.read_failed",
+        re.compile(r't\(\s*"media\.read_failed"'),
+        re.compile(r'showAlert\("Couldn\'t read project media\. Make sure a project is open'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
