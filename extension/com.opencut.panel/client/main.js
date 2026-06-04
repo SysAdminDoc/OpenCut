@@ -13125,7 +13125,7 @@
             var btn = document.createElement("button");
             btn.type = "button";
             btn.className = "btn-outline btn-sm waveform-audio-btn";
-            btn.textContent = "Preview Waveform";
+            btn.textContent = t("audio.preview_waveform", "Preview Waveform");
             btn.style.marginBottom = "6px";
             btn.addEventListener("click", function() {
                 if (el.loadWaveformBtn) el.loadWaveformBtn.click();
@@ -13150,7 +13150,7 @@
         var startVal = el.trimStart ? el.trimStart.value.trim() || "00:00:00" : "00:00:00";
         var endVal = el.trimEnd ? el.trimEnd.value.trim() || "00:00:30" : "00:00:30";
         if (parseTimeToSec(endVal) <= parseTimeToSec(startVal)) {
-            showAlert("End time must be after start time.");
+            showAlert(t("video.trim_end_after_start", "End time must be after start time."));
             return;
         }
         var mode = el.trimMode ? el.trimMode.value : "reencode";
@@ -13172,7 +13172,10 @@
     function renderMergeFiles() {
         if (!el.mergeFileList) return;
         if (_mergeFiles.length === 0) {
-            el.mergeFileList.innerHTML = buildEmptyHintMarkup("Nothing queued", "Add two or more files to merge in sequence.");
+            el.mergeFileList.innerHTML = buildEmptyHintMarkup(
+                t("merge.empty_title", "Nothing queued"),
+                t("merge.empty_body", "Add two or more files to merge in sequence.")
+            );
             if (el.runMergeBtn) el.runMergeBtn.disabled = !connected || _mergeFiles.length < 2;
             return;
         }
@@ -13184,7 +13187,7 @@
                 '<span class="merge-file-index">' + (i + 1) + '</span>' +
                 '<span class="merge-file-name">' + esc(name) + '</span>' +
                 '</div>' +
-                '<button type="button" class="merge-file-remove" data-idx="' + i + '">Remove</button>' +
+                '<button type="button" class="merge-file-remove" data-idx="' + i + '">' + esc(t("merge.remove", "Remove")) + '</button>' +
                 '</div>';
         }
         el.mergeFileList.innerHTML = html;
@@ -13208,7 +13211,7 @@
     }
 
     function runMerge() {
-        if (_mergeFiles.length < 2) { showToast("Add at least 2 clips to merge", "warning"); return; }
+        if (_mergeFiles.length < 2) { showToast(t("merge.requires_two", "Add at least 2 clips to merge"), "warning"); return; }
         startJob("/video/merge", {
             files: _mergeFiles,
             output_dir: projectFolder,

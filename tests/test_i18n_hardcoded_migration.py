@@ -787,6 +787,13 @@ MIGRATED_KEYS = (
     "install.pedalboard_start",
     "install.video_ai_start",
     "install.whisperx_start",
+    # Fiftieth batch (merge/trim utility feedback).
+    "audio.preview_waveform",
+    "merge.empty_body",
+    "merge.empty_title",
+    "merge.remove",
+    "merge.requires_two",
+    "video.trim_end_after_start",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4208,6 +4215,37 @@ EXPECTED_CALLS = (
         "install.whisperx_start",
         re.compile(r't\(\s*"install\.whisperx_start"'),
         re.compile(r'setHintState\(el\.karaokeHint,\s*"Installing WhisperX…'),
+    ),
+    # --- Fiftieth batch --------------------------------------------
+    (
+        "audio.preview_waveform",
+        re.compile(r't\(\s*"audio\.preview_waveform"'),
+        re.compile(r'btn\.textContent = "Preview Waveform"'),
+    ),
+    (
+        "merge.empty_body",
+        re.compile(r't\(\s*"merge\.empty_body"'),
+        re.compile(r'buildEmptyHintMarkup\("Nothing queued",\s*"Add two or more files'),
+    ),
+    (
+        "merge.empty_title",
+        re.compile(r't\(\s*"merge\.empty_title"'),
+        re.compile(r'buildEmptyHintMarkup\("Nothing queued"'),
+    ),
+    (
+        "merge.remove",
+        re.compile(r't\(\s*"merge\.remove"'),
+        re.compile(r'class="merge-file-remove"[^;]+>Remove</button>'),
+    ),
+    (
+        "merge.requires_two",
+        re.compile(r't\(\s*"merge\.requires_two"'),
+        re.compile(r'showToast\("Add at least 2 clips to merge"'),
+    ),
+    (
+        "video.trim_end_after_start",
+        re.compile(r't\(\s*"video\.trim_end_after_start"'),
+        re.compile(r'showAlert\("End time must be after start time\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
