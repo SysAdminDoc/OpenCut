@@ -7856,14 +7856,14 @@
 
     function _sessionCtxRerun(job) {
         if (!job.endpoint || !job.payload) {
-            showToast("Nothing to re-run — this job wasn't recorded with parameters", "warn");
+            showToast(t("toast.job_rerun_missing_params", "Nothing to re-run — this job wasn't recorded with parameters"), "warn");
             return;
         }
         dismissSessionContext();
-        showToast("Re-running " + _sessionCtxOpText(job) + "…", "info");
+        showToast(t("toast.job_rerunning", "Re-running {name}…").replace("{name}", _sessionCtxOpText(job)), "info");
         api("POST", job.endpoint, job.payload, function (err, data) {
             if (err) {
-                showAlert("Re-run failed: " + (err.error || err.message || err));
+                showAlert(t("toast.job_rerun_failed", "Re-run failed: {error}").replace("{error}", err.error || err.message || err));
                 return;
             }
             if (data && data.job_id) {
@@ -7876,13 +7876,15 @@
     function _sessionCtxApplyToSelection(job) {
         if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         if (!job.endpoint || !job.payload) {
-            showToast("Job params aren't recorded — can't replay.", "warn");
+            showToast(t("toast.job_replay_missing_params", "Job params aren't recorded — can't replay."), "warn");
             return;
         }
         var payload = JSON.parse(JSON.stringify(job.payload));
         payload.filepath = selectedPath;
         dismissSessionContext();
-        showToast("Applying " + _sessionCtxOpText(job) + " to " + (selectedName || "selection") + "…", "info");
+        showToast(t("toast.applying_to_selection", "Applying {action} to {target}…")
+            .replace("{action}", _sessionCtxOpText(job))
+            .replace("{target}", selectedName || t("toast.selection_target", "selection")), "info");
         startJob(job.endpoint, payload);
     }
 
@@ -8088,11 +8090,11 @@
         // ExtendScript-dispatch actions get a special pseudo-endpoint.
         if (fwd.endpoint === "__jsx_add_markers__") {
             if (!inPremiere) {
-                showAlert("Premiere connection required.");
+                showAlert(t("toast.premiere_connection_required", "Premiere connection required."));
                 return;
             }
             var markers = (fwd.payload && fwd.payload.markers) || [];
-            if (!markers.length) { showAlert("No markers to replay."); return; }
+            if (!markers.length) { showAlert(t("toast.no_markers_to_replay", "No markers to replay.")); return; }
             var payload = JSON.stringify(markers);
             cs.evalScript(
                 "ocAddSequenceMarkers('" +
@@ -8100,10 +8102,11 @@
                 function (result) {
                     try {
                         var r = JSON.parse(result || "{}");
-                        if (r.error) { showAlert("Apply failed: " + r.error); return; }
-                        showToast("Re-added " + markers.length + " markers on '" +
-                                  (selectedName || "selection") + "'", "success");
-                    } catch (e) { showAlert("Apply failed: " + (result || e.message)); }
+                        if (r.error) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", r.error)); return; }
+                        showToast(t("toast.markers_readded", "Re-added {count} markers on '{target}'")
+                            .replace("{count}", markers.length)
+                            .replace("{target}", selectedName || t("toast.selection_target", "selection")), "success");
+                    } catch (e) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", result || e.message)); }
                 }
             );
             return;
@@ -8111,8 +8114,9 @@
         // HTTP endpoints: replace filepath with the current selection
         var replay = JSON.parse(JSON.stringify(fwd.payload || {}));
         replay.filepath = selectedPath;
-        showToast("Applying " + _journalActionLabel(entry.action) +
-                  " to '" + (selectedName || "selection") + "'…", "info");
+        showToast(t("toast.applying_to_selection", "Applying {action} to {target}…")
+            .replace("{action}", _journalActionLabel(entry.action))
+            .replace("{target}", "'" + (selectedName || t("toast.selection_target", "selection")) + "'"), "info");
         startJob(fwd.endpoint, replay);
     }
 
