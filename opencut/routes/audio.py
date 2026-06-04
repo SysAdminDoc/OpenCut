@@ -396,7 +396,7 @@ def audio_isolate(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/separate", methods=["POST"])
 @require_csrf
-@async_job("separate")
+@async_job("separate", disk_operation="demucs")
 def audio_separate(job_id, filepath, data):
     """Separate audio into stems using AI (Demucs or audio-separator with RoFormer models)."""
     import shutil
@@ -836,7 +836,7 @@ def audio_pro_apply(job_id, filepath, data):
 
 @audio_bp.route("/audio/pro/deepfilter", methods=["POST"])
 @require_csrf
-@async_job("deepfilter")
+@async_job("deepfilter", disk_operation="deepfilter")
 def audio_pro_deepfilter(job_id, filepath, data):
     """AI noise reduction using DeepFilterNet."""
     from opencut.core.audio_pro import deepfilter_denoise

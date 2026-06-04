@@ -205,7 +205,7 @@ def _caption_review_summary(result_or_segments):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions", methods=["POST"])
 @require_csrf
-@async_job("captions")
+@async_job("captions", disk_operation="transcribe")
 def generate_captions(job_id, filepath, data):
     """Generate captions/subtitles."""
     output_dir = data.get("output_dir", "")
@@ -491,7 +491,7 @@ def styled_captions_route(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/transcript", methods=["POST"])
 @require_csrf
-@async_job("transcript")
+@async_job("transcript", disk_operation="transcribe")
 def get_transcript(job_id, filepath, data):
     """Transcribe and return full word-level transcript for editing."""
     model = data.get("model", "base")
@@ -728,7 +728,7 @@ def get_emoji_map():
 # ---------------------------------------------------------------------------
 @captions_bp.route("/full", methods=["POST"])
 @require_csrf
-@async_job("full")
+@async_job("full", disk_operation="full_pipeline")
 def full_pipeline(job_id, filepath, data):
     """Run silence removal + zoom + optional captions."""
     output_dir = data.get("output_dir", "")
@@ -1252,7 +1252,7 @@ def captions_enhanced_capabilities():
 
 @captions_bp.route("/captions/whisperx", methods=["POST"])
 @require_csrf
-@async_job("whisperx")
+@async_job("whisperx", disk_operation="transcribe")
 def captions_whisperx(job_id, filepath, data):
     """Transcribe with WhisperX for word-level timestamps."""
     model_size = data.get("model", "base")
@@ -1609,7 +1609,7 @@ def burnin_styles():
 
 @captions_bp.route("/captions/burnin/file", methods=["POST"])
 @require_csrf
-@async_job("burnin")
+@async_job("burnin", disk_operation="video_export")
 def burnin_from_file(job_id, filepath, data):
     """Burn a subtitle file into video."""
     video_path = filepath
