@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-04 during the v4.227 continuation pass.
+Last synced: 2026-06-04 during the v4.228 research consolidation pass.
 
 ## Execution Order
 
@@ -26,6 +26,7 @@ Last synced: 2026-06-04 during the v4.227 continuation pass.
 - [ ] **RA-27 Docker GPU compose command** - align README and compose GPU launch commands so docs never reference a missing compose file.
 - [ ] **RA-28 README non-badge count gate** - keep README prose, diagram, and project-structure count claims aligned with generated route/module truth.
 - [ ] **RA-29 Docker dependency install fail-closed guard** - make Docker dependency installs use canonical/quoted specifiers and fail instead of masking install errors.
+- [ ] **RA-30 Docker build-context secret/log hygiene** - align `.dockerignore` with Git-ignored secret/log patterns before `COPY . /app` can include local artifacts.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [ ] **RA-05 SQLite `PRAGMA user_version`** - add explicit schema versioning for local SQLite stores.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.

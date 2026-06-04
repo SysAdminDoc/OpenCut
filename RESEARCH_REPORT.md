@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-29 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-30 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -60,7 +60,9 @@ non-badge generated-count gate follow-up. Cycle 18 rechecked Docker CI and
 release-smoke coverage, promoting no new row because RA-25 through RA-27 already
 cover the Docker build/config/health validation shape. Cycle 19 checked Docker
 dependency installation behavior; RA-29 captures fail-closed dependency installs
-and quoted/canonical requirement specifier handling.
+and quoted/canonical requirement specifier handling. Cycle 20 checked Docker
+build-context hygiene; RA-30 captures aligning `.dockerignore` with Git-ignored
+secret/log patterns before `COPY . /app`.
 
 ## Executive Summary
 
@@ -171,6 +173,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     (RA-29) — Dockerfile uses shell-form unquoted comparison specifiers and
     masks optional dependency install failures with `|| echo`, so container
     builds can succeed with missing or weakened dependencies. [Verified]
+30. **Align Docker build-context secret/log hygiene with Git ignores** (RA-30)
+    — `.gitignore` excludes `.env`, `.env.*`, and `*.log`, but `.dockerignore`
+    does not, and `Dockerfile` copies the filtered context into `/app`.
+    [Verified]
 
 ## Evidence Reviewed
 
@@ -447,6 +453,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   installs to consume canonical extras/requirements or quote shell-form
   specifiers, remove fail-open `|| echo` masking, and add a static guard against
   either regression.
+- **RA-30 Docker build-context secret/log hygiene** needs `.dockerignore` to
+  block Git-ignored `.env*` and `*.log` artifacts, plus a static guard that
+  keeps secret/log ignore classes aligned.
 
 ## Research Inputs (archived)
 
@@ -465,8 +474,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE17.md) — README non-badge generated-count drift follow-up (RA-28).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md) — duplicate Docker CI/release-smoke coverage recheck; no new RA row promoted.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE19.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE19.md) — Docker dependency install fail-open and shell specifier parsing follow-up (RA-29).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE20.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE20.md) — Docker build-context secret/log hygiene follow-up (RA-30).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-29 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-30 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
