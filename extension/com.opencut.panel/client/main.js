@@ -5503,7 +5503,7 @@
     function installVidAi() {
         var tool = el.vidAiTool.value;
         var component = tool === "rembg" ? "rembg_cpu" : tool;
-        setHintState(el.vidAiHint, "Installing… This may take several minutes.", "info", el.installVidAiBtn);
+        setHintState(el.vidAiHint, t("install.video_ai_start", "Installing… This may take several minutes."), "info", el.installVidAiBtn);
         startJob("/video/ai/install", { component: component, no_input: true });
     }
 
@@ -5584,7 +5584,7 @@
     }
 
     function installPedalboard() {
-        setHintState(el.proFxHint, "Installing Pedalboard…", "info", el.installPedalboardBtn);
+        setHintState(el.proFxHint, t("install.pedalboard_start", "Installing Pedalboard…"), "info", el.installPedalboardBtn);
         startJob("/audio/pro/install", { component: "pedalboard", no_input: true });
     }
 
@@ -5596,7 +5596,7 @@
     }
 
     function installDeepFilter() {
-        setHintState(el.deepFilterHint, "Installing DeepFilterNet…", "info", el.installDeepFilterBtn);
+        setHintState(el.deepFilterHint, t("install.deepfilter_start", "Installing DeepFilterNet…"), "info", el.installDeepFilterBtn);
         startJob("/audio/pro/install", { component: "deepfilter", no_input: true });
     }
 
@@ -5612,7 +5612,7 @@
     }
 
     function installMediapipe() {
-        setHintState(el.faceHint, "Installing MediaPipe…", "info", el.installMediapipeBtn);
+        setHintState(el.faceHint, t("install.mediapipe_start", "Installing MediaPipe…"), "info", el.installMediapipeBtn);
         startJob("/video/face/install", { no_input: true });
     }
 
@@ -5657,7 +5657,7 @@
     }
 
     function installNllb() {
-        setHintState(el.translateHint, "Installing NLLB translation…", "info", el.installNllbBtn);
+        setHintState(el.translateHint, t("install.nllb_start", "Installing NLLB translation…"), "info", el.installNllbBtn);
         startJob("/captions/enhanced/install", { component: "nllb", no_input: true });
     }
 
@@ -5672,7 +5672,7 @@
     }
 
     function installWhisperx() {
-        setHintState(el.karaokeHint, "Installing WhisperX…", "info", el.installWhisperxBtn);
+        setHintState(el.karaokeHint, t("install.whisperx_start", "Installing WhisperX…"), "info", el.installWhisperxBtn);
         startJob("/captions/enhanced/install", { component: "whisperx", no_input: true });
     }
 
@@ -6342,7 +6342,7 @@
     }
 
     function installEdgeTts() {
-        setHintState(el.ttsHint, "Installing Edge TTS…", "info", el.installEdgeTtsBtn);
+        setHintState(el.ttsHint, t("install.edge_tts_start", "Installing Edge TTS…"), "info", el.installEdgeTtsBtn);
         startJob("/audio/tts/install", { component: "edge_tts", no_input: true });
     }
 
@@ -14761,11 +14761,11 @@
                 endpoint: "/timeline/otio/install",
                 hintEl: el.otioHint || document.getElementById("otioHint"),
                 actionBtn: installOtioBtn,
-                startMessage: "Installing OpenTimelineIO… This may take a minute.",
+                startMessage: t("install.otio_start", "Installing OpenTimelineIO… This may take a minute."),
                 onSuccess: function() {
                     capabilities.otio = true;
                     updateButtons();
-                    showToast("OpenTimelineIO installed successfully", "success");
+                    showToast(t("install.otio_success", "OpenTimelineIO installed successfully"), "success");
                 }
             });
         });

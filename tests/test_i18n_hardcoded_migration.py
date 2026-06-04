@@ -777,6 +777,16 @@ MIGRATED_KEYS = (
     "recent.clips_title",
     "recent.no_clips",
     "recent.open_clip_aria",
+    # Forty-ninth batch (optional engine install progress hints).
+    "install.deepfilter_start",
+    "install.edge_tts_start",
+    "install.mediapipe_start",
+    "install.nllb_start",
+    "install.otio_start",
+    "install.otio_success",
+    "install.pedalboard_start",
+    "install.video_ai_start",
+    "install.whisperx_start",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4152,6 +4162,52 @@ EXPECTED_CALLS = (
         "recent.open_clip_aria",
         re.compile(r't\(\s*"recent\.open_clip_aria"'),
         re.compile(r'aria-label",\s*"Open recent clip " \+ name'),
+    ),
+    # --- Forty-ninth batch -----------------------------------------
+    (
+        "install.deepfilter_start",
+        re.compile(r't\(\s*"install\.deepfilter_start"'),
+        re.compile(r'setHintState\(el\.deepFilterHint,\s*"Installing DeepFilterNet…'),
+    ),
+    (
+        "install.edge_tts_start",
+        re.compile(r't\(\s*"install\.edge_tts_start"'),
+        re.compile(r'setHintState\(el\.ttsHint,\s*"Installing Edge TTS…'),
+    ),
+    (
+        "install.mediapipe_start",
+        re.compile(r't\(\s*"install\.mediapipe_start"'),
+        re.compile(r'setHintState\(el\.faceHint,\s*"Installing MediaPipe…'),
+    ),
+    (
+        "install.nllb_start",
+        re.compile(r't\(\s*"install\.nllb_start"'),
+        re.compile(r'setHintState\(el\.translateHint,\s*"Installing NLLB translation…'),
+    ),
+    (
+        "install.otio_start",
+        re.compile(r't\(\s*"install\.otio_start"'),
+        re.compile(r'startMessage:\s*"Installing OpenTimelineIO…'),
+    ),
+    (
+        "install.otio_success",
+        re.compile(r't\(\s*"install\.otio_success"'),
+        re.compile(r'showToast\("OpenTimelineIO installed successfully"'),
+    ),
+    (
+        "install.pedalboard_start",
+        re.compile(r't\(\s*"install\.pedalboard_start"'),
+        re.compile(r'setHintState\(el\.proFxHint,\s*"Installing Pedalboard…'),
+    ),
+    (
+        "install.video_ai_start",
+        re.compile(r't\(\s*"install\.video_ai_start"'),
+        re.compile(r'setHintState\(el\.vidAiHint,\s*"Installing… This may take several minutes\.'),
+    ),
+    (
+        "install.whisperx_start",
+        re.compile(r't\(\s*"install\.whisperx_start"'),
+        re.compile(r'setHintState\(el\.karaokeHint,\s*"Installing WhisperX…'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
