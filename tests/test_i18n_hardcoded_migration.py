@@ -904,6 +904,24 @@ MIGRATED_KEYS = (
     "timeline.repeat_badge",
     "timeline.repeat_cuts_ready",
     "timeline.repeat_found_summary",
+    # Sixty-first batch (custom workflow summary/status feedback).
+    "workflow.custom_status_empty",
+    "workflow.custom_status_loading",
+    "workflow.custom_status_name_draft",
+    "workflow.custom_status_reconnect",
+    "workflow.custom_status_run_ready",
+    "workflow.custom_status_save_ready",
+    "workflow.custom_summary_draft",
+    "workflow.custom_summary_empty",
+    "workflow.custom_summary_empty_title",
+    "workflow.custom_summary_named",
+    "workflow.custom_summary_title",
+    "workflow.saved_count_label",
+    "workflow.saved_count_title",
+    "workflow.saved_empty_label",
+    "workflow.saved_empty_title",
+    "workflow.saved_loading_label",
+    "workflow.saved_loading_title",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4866,6 +4884,92 @@ EXPECTED_CALLS = (
         "timeline.repeat_found_summary",
         re.compile(r't\(\s*"timeline\.repeat_found_summary"'),
         re.compile(r'sum\.textContent\s*=\s*"Found "\s*\+'),
+    ),
+    # --- Sixty-first batch -----------------------------------------
+    (
+        "workflow.custom_status_empty",
+        re.compile(r't\(\s*"workflow\.custom_status_empty"'),
+        re.compile(r'setStatusLine\(\s*"customWorkflowStatus",\s*"Add steps to build a repeatable workflow for this editorial style\."'),
+    ),
+    (
+        "workflow.custom_status_loading",
+        re.compile(r't\(\s*"workflow\.custom_status_loading"'),
+        re.compile(r'setStatusLine\(\s*"customWorkflowStatus",\s*"Loading saved workflows and draft availability\."'),
+    ),
+    (
+        "workflow.custom_status_name_draft",
+        re.compile(r't\(\s*"workflow\.custom_status_name_draft"'),
+        re.compile(r'setStatusLine\(\s*"customWorkflowStatus",\s*"Name the draft when you want to save it to the workflow library\."'),
+    ),
+    (
+        "workflow.custom_status_reconnect",
+        re.compile(r't\(\s*"workflow\.custom_status_reconnect"'),
+        re.compile(r'setStatusLine\(\s*"customWorkflowStatus",\s*"Reconnect the backend before saving, deleting, or running custom workflows\."'),
+    ),
+    (
+        "workflow.custom_status_run_ready",
+        re.compile(r't\(\s*"workflow\.custom_status_run_ready"'),
+        re.compile(r'draftName\s*\+\s*" is ready to run on "\s*\+'),
+    ),
+    (
+        "workflow.custom_status_save_ready",
+        re.compile(r't\(\s*"workflow\.custom_status_save_ready"'),
+        re.compile(r'draftName\s*\+\s*" is ready to save\. Choose a clip before running the draft\."'),
+    ),
+    (
+        "workflow.custom_summary_draft",
+        re.compile(r't\(\s*"workflow\.custom_summary_draft"'),
+        re.compile(r'workflowStepCountLabel\(stepCount\)\s*\+\s*" in draft"'),
+    ),
+    (
+        "workflow.custom_summary_empty",
+        re.compile(r't\(\s*"workflow\.custom_summary_empty"'),
+        re.compile(r':\s*"No custom workflow steps yet"'),
+    ),
+    (
+        "workflow.custom_summary_empty_title",
+        re.compile(r't\(\s*"workflow\.custom_summary_empty_title"'),
+        re.compile(r':\s*"Add steps to start building a repeatable workflow\."'),
+    ),
+    (
+        "workflow.custom_summary_named",
+        re.compile(r't\(\s*"workflow\.custom_summary_named"'),
+        re.compile(r'draftName\s*\+\s*" • "\s*\+'),
+    ),
+    (
+        "workflow.custom_summary_title",
+        re.compile(r't\(\s*"workflow\.custom_summary_title"'),
+        re.compile(r'\?\s*"Draft contains "\s*\+'),
+    ),
+    (
+        "workflow.saved_count_label",
+        re.compile(r't\(\s*"workflow\.saved_count_label"'),
+        re.compile(r'_savedWorkflowCount\s*\+\s*" saved workflow"'),
+    ),
+    (
+        "workflow.saved_count_title",
+        re.compile(r't\(\s*"workflow\.saved_count_title"'),
+        re.compile(r'_savedWorkflowCount\s*\+\s*" saved custom workflow"'),
+    ),
+    (
+        "workflow.saved_empty_label",
+        re.compile(r't\(\s*"workflow\.saved_empty_label"'),
+        re.compile(r':\s*"No saved workflows yet"'),
+    ),
+    (
+        "workflow.saved_empty_title",
+        re.compile(r't\(\s*"workflow\.saved_empty_title"'),
+        re.compile(r':\s*"Save a draft to build a reusable workflow library\."'),
+    ),
+    (
+        "workflow.saved_loading_label",
+        re.compile(r't\(\s*"workflow\.saved_loading_label"'),
+        re.compile(r'\?\s*"Checking saved workflows\.\.\."'),
+    ),
+    (
+        "workflow.saved_loading_title",
+        re.compile(r't\(\s*"workflow\.saved_loading_title"'),
+        re.compile(r'\?\s*"Loading the saved custom workflow library\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
