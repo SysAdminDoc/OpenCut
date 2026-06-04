@@ -127,6 +127,16 @@ MIGRATED_KEYS = (
     "toast.log_file_path",
     "toast.settings_saved",
     "toast.refreshed",
+    # Twelfth batch (path open and journal revert feedback).
+    "toast.path_action_failed",
+    "toast.path_revealed",
+    "toast.path_opened",
+    "toast.premiere_revert_connection_required",
+    "toast.action_not_revertible",
+    "toast.parse_error",
+    "toast.revert_failed",
+    "toast.journal_revert_update_failed",
+    "toast.reverted_action",
 )
 
 
@@ -579,6 +589,52 @@ EXPECTED_CALLS = (
         "toast.refreshed",
         re.compile(r't\(\s*"toast\.refreshed"'),
         re.compile(r'showAlert\(\s*"Refreshed"\s*\)'),
+    ),
+    # --- Twelfth batch ----------------------------------------------
+    (
+        "toast.path_action_failed",
+        re.compile(r't\(\s*"toast\.path_action_failed"'),
+        re.compile(r'showToast\(\s*"Couldn\'t "\s*\+\s*mode'),
+    ),
+    (
+        "toast.path_revealed",
+        re.compile(r't\(\s*"toast\.path_revealed"'),
+        re.compile(r'"Revealed in file manager"\s*:\s*"Opened"'),
+    ),
+    (
+        "toast.path_opened",
+        re.compile(r't\(\s*"toast\.path_opened"'),
+        re.compile(r'"Revealed in file manager"\s*:\s*"Opened"'),
+    ),
+    (
+        "toast.premiere_revert_connection_required",
+        re.compile(r't\(\s*"toast\.premiere_revert_connection_required"'),
+        re.compile(r'showAlert\(\s*"Premiere Pro connection required to revert\."\s*\)'),
+    ),
+    (
+        "toast.action_not_revertible",
+        re.compile(r't\(\s*"toast\.action_not_revertible"'),
+        re.compile(r'showAlert\(\s*"This action can\'t be reverted automatically\."\s*\)'),
+    ),
+    (
+        "toast.parse_error",
+        re.compile(r't\(\s*"toast\.parse_error"'),
+        re.compile(r'error:\s*result\s*\|\|\s*"Parse error"'),
+    ),
+    (
+        "toast.revert_failed",
+        re.compile(r't\(\s*"toast\.revert_failed"'),
+        re.compile(r'showAlert\(\s*"Revert failed: "'),
+    ),
+    (
+        "toast.journal_revert_update_failed",
+        re.compile(r't\(\s*"toast\.journal_revert_update_failed"'),
+        re.compile(r'showToast\(\s*"Reverted in Premiere but couldn\'t update the journal"'),
+    ),
+    (
+        "toast.reverted_action",
+        re.compile(r't\(\s*"toast\.reverted_action"'),
+        re.compile(r'showToast\(\s*"Reverted: "'),
     ),
 )
 
