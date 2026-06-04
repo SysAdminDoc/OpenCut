@@ -12611,16 +12611,16 @@
     // v1.3.0 - Command Palette
     // ================================================================
     var _commandIndex = [
-        {name: "Silence Removal", tab: "cut", sub: "silence", keywords: "silence remove cut clean"},
-        {name: "Filler Words", tab: "cut", sub: "fillers", keywords: "filler um uh like words"},
-        {name: "Trim Clip", tab: "cut", sub: "trim", keywords: "trim cut crop in out point"},
-        {name: "Styled Captions", tab: "captions", sub: "cap-styled", keywords: "caption subtitle style burn"},
-        {name: "Transcribe", tab: "captions", sub: "cap-transcript", keywords: "transcribe whisper speech text"},
-        {name: "Translate", tab: "captions", sub: "cap-translate", keywords: "translate language"},
-        {name: "Stem Separation", tab: "audio", sub: "aud-separate", keywords: "separate stems vocals drums bass demucs"},
-        {name: "Denoise", tab: "audio", sub: "aud-denoise", keywords: "denoise noise reduce clean"},
-        {name: "Normalize", tab: "audio", sub: "aud-normalize", keywords: "normalize loudness lufs volume"},
-        {name: "Voice Generation", tab: "audio", sub: "aud-tts", keywords: "tts voice speech generate voiceover narration"},
+        {name: "Silence Removal", displayName: function () { return t("palette.tool_silence_removal", "Silence Removal"); }, tab: "cut", sub: "silence", keywords: "silence remove cut clean"},
+        {name: "Filler Words", displayName: function () { return t("palette.tool_filler_words", "Filler Words"); }, tab: "cut", sub: "fillers", keywords: "filler um uh like words"},
+        {name: "Trim Clip", displayName: function () { return t("palette.tool_trim_clip", "Trim Clip"); }, tab: "cut", sub: "trim", keywords: "trim cut crop in out point"},
+        {name: "Styled Captions", displayName: function () { return t("palette.tool_styled_captions", "Styled Captions"); }, tab: "captions", sub: "cap-styled", keywords: "caption subtitle style burn"},
+        {name: "Transcribe", displayName: function () { return t("palette.tool_transcribe", "Transcribe"); }, tab: "captions", sub: "cap-transcript", keywords: "transcribe whisper speech text"},
+        {name: "Translate", displayName: function () { return t("palette.tool_translate", "Translate"); }, tab: "captions", sub: "cap-translate", keywords: "translate language"},
+        {name: "Stem Separation", displayName: function () { return t("palette.tool_stem_separation", "Stem Separation"); }, tab: "audio", sub: "aud-separate", keywords: "separate stems vocals drums bass demucs"},
+        {name: "Denoise", displayName: function () { return t("palette.tool_denoise", "Denoise"); }, tab: "audio", sub: "aud-denoise", keywords: "denoise noise reduce clean"},
+        {name: "Normalize", displayName: function () { return t("palette.tool_normalize", "Normalize"); }, tab: "audio", sub: "aud-normalize", keywords: "normalize loudness lufs volume"},
+        {name: "Voice Generation", displayName: function () { return t("palette.tool_voice_generation", "Voice Generation"); }, tab: "audio", sub: "aud-tts", keywords: "tts voice speech generate voiceover narration"},
         {name: "Music AI", tab: "audio", sub: "aud-musicai", keywords: "music generate ai musicgen"},
         {name: "Sound Effects", tab: "audio", sub: "aud-sfx", keywords: "sfx sound effect tone"},
         {name: "Audio Ducking", tab: "audio", sub: "aud-duck", keywords: "duck ducking lower music dialogue"},
@@ -12686,6 +12686,11 @@
         return [item.name || "", item.tab || "", item.sub || ""].join("::");
     }
 
+    function getPaletteItemDisplayName(item) {
+        if (!item) return "";
+        return typeof item.displayName === "function" ? item.displayName() : (item.name || "");
+    }
+
     function loadPaletteHistory() {
         try {
             var saved = localStorage.getItem(PALETTE_HISTORY_KEY);
@@ -12738,13 +12743,15 @@
 
     function getPaletteFavoriteId(item) {
         if (!item) return "";
-        var normalizedName = normalizePaletteText(item.name);
+        var normalizedName = normalizePaletteText(getPaletteItemDisplayName(item));
+        var stableName = normalizePaletteText(item.name);
         var fallback = "";
         for (var favId in _favoriteOps) {
             if (!_favoriteOps.hasOwnProperty(favId)) continue;
             var op = _favoriteOps[favId];
             if (op.tab !== item.tab || op.sub !== item.sub) continue;
-            if (normalizePaletteText(getFavoriteOpLabel(favId)) === normalizedName) return favId;
+            var favoriteLabel = normalizePaletteText(getFavoriteOpLabel(favId));
+            if (favoriteLabel === normalizedName || favoriteLabel === stableName) return favId;
             if (!fallback) fallback = favId;
         }
         return fallback;
@@ -12758,7 +12765,10 @@
         for (var i = 0; i < _commandIndex.length; i++) {
             var item = _commandIndex[i];
             if (item.tab !== op.tab || item.sub !== op.sub) continue;
-            if (normalizePaletteText(item.name) === preferredLabel) return item;
+            if (
+                normalizePaletteText(getPaletteItemDisplayName(item)) === preferredLabel ||
+                normalizePaletteText(item.name) === preferredLabel
+            ) return item;
             if (!fallback) fallback = item;
         }
         return fallback;
@@ -12794,8 +12804,9 @@
         var q = normalizePaletteText(query);
         if (!q) return 0;
 
-        var name = normalizePaletteText(item.name);
-        var keywords = normalizePaletteText(item.keywords);
+        var name = normalizePaletteText(getPaletteItemDisplayName(item));
+        var stableName = normalizePaletteText(item.name);
+        var keywords = normalizePaletteText((item.keywords || "") + " " + (item.name || ""));
         var tabLabel = normalizePaletteText(getPaletteTabLabel(item.tab));
         var subLabel = normalizePaletteText(getPaletteSubLabel(item.sub));
         var score = 0;
@@ -12806,6 +12817,12 @@
         if (name === q) score += 220;
         else if (name.indexOf(q) === 0) score += 140;
         else if (name.indexOf(q) !== -1) score += 96;
+
+        if (stableName && stableName !== name) {
+            if (stableName === q) score += 180;
+            else if (stableName.indexOf(q) === 0) score += 112;
+            else if (stableName.indexOf(q) !== -1) score += 72;
+        }
 
         if (keywords.indexOf(q) !== -1) score += 56;
         if (tabLabel.indexOf(q) !== -1) score += 24;
@@ -12916,7 +12933,7 @@
             browseItems.sort(function (a, b) {
                 var tabCompare = getPaletteTabLabel(a.tab).localeCompare(getPaletteTabLabel(b.tab));
                 if (tabCompare !== 0) return tabCompare;
-                return a.name.localeCompare(b.name);
+                return getPaletteItemDisplayName(a).localeCompare(getPaletteItemDisplayName(b));
             });
 
             addPaletteSection(sections, t("palette.section_recent", "Recent"), recentItems, function (item) {
@@ -12965,7 +12982,7 @@
             if (b.score !== a.score) return b.score - a.score;
             if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
             if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-            return a.item.name.localeCompare(b.item.name);
+            return getPaletteItemDisplayName(a.item).localeCompare(getPaletteItemDisplayName(b.item));
         });
 
         if (matches.length) sections.push({ label: t("palette.section_matching_tools", "Matching Tools"), entries: matches });
@@ -12993,7 +13010,7 @@
         itemNode.setAttribute(
             "aria-label",
             t("palette.item_aria", "{name}. {description}. {location}.")
-                .replace("{name}", entry.item.name)
+                .replace("{name}", getPaletteItemDisplayName(entry.item))
                 .replace("{description}", entry.description)
                 .replace("{location}", entry.location)
         );
@@ -13006,7 +13023,7 @@
 
         var name = document.createElement("span");
         name.className = "command-palette-name";
-        name.textContent = entry.item.name;
+        name.textContent = getPaletteItemDisplayName(entry.item);
         top.appendChild(name);
 
         var badges = document.createElement("span");
