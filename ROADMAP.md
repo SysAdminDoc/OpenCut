@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.198
+**Version**: 4.199
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-20.
+  RA-01..RA-21.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -425,6 +425,8 @@
 > **v4.197 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-seventh rolling i18n batch covering the first-screen workspace-stage action cards and media-source shell HTML. Also reconciled the Cycle 8 researcher note into RA-19/RA-20 for UXP clipboard permission and beta alert/confirmation handling; Cycle 9 repeated those findings and promoted no new rows.
 >
 > **v4.198 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-eighth rolling i18n batch covering the Cut tab quick-action shell, Interview Polish card, Sequence Assistant card, and related static attributes. The i18n drift gate now reports 1,635 keys / 1,512 consumers / 123 dead / 0 missing.
+>
+> **v4.199 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 10 researcher note into the canonical roadmap surfaces. RA-21 now tracks the advertised Python 3.13 classifier against committed GitHub Actions coverage so release metadata is either proven by CI or narrowed.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2278,7 +2280,18 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
   clipboard permission gap covered by Cycle 8 RA-19. No new row was promoted.
 - [x] 🔬 `uxp-alert-feature-flag-refresh-2026-06-04` - rechecked the same UXP
   beta alert/confirmation gap covered by Cycle 8 RA-20. No new row was
-  promoted; do not create RA-21 from this duplicate pass.
+  promoted from this duplicate pass.
+
+### Researcher Queue (Cycle 10 - 2026-06-04)
+
+- [x] 🔬 `python-313-ci-classifier-refresh-2026-06-04` - checked OpenCut's Python
+  support metadata against the current CI workflows and current GitHub/Python
+  release docs. `pyproject.toml` advertises
+  `Programming Language :: Python :: 3.13`, and F123 already added the
+  `audioop` compatibility shim, but `.github/workflows/build.yml`,
+  `.github/workflows/pr-fast.yml`, and
+  `.github/workflows/adobe-premierepro-versions.yml` still run only Python 3.12.
+  Promoted RA-21 so release metadata is either proven by CI or narrowed.
 
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
@@ -2291,7 +2304,8 @@ Premiere UXP release-channel dist-tag tracker item from the current npm
 registry result. Cycle 7 adds UXP manifest schema and deprecated-API sentinels
 for the F252/F253 cutover path. Cycle 8 adds UXP clipboard-permission and beta
 alert/confirmation runtime guardrails. Cycle 9 rechecked those same two gaps and
-promoted no new rows.
+promoted no new rows. Cycle 10 adds the Python 3.13 classifier-vs-CI proof item
+from current repo metadata and workflow evidence.
 
 ### Quick Wins
 
@@ -2307,6 +2321,7 @@ promoted no new rows.
 - [ ] **P3 — RA-18 Add a UXP API deprecation sentinel before F252 cutover** — Why: Adobe's UXP API changelog deprecates older Clipboard APIs and legacy HTMLVideoElement `uxpvideo*` event names. OpenCut's UXP source currently uses `navigator.clipboard.writeText` and no deprecated `Clipboard.*` or `uxpvideo*` names, so the right action is not a migration but a static guard that keeps future F252/WebView work from regressing. Evidence: Adobe UXP API changelog (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`); local scans of `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, and UXP tests found no deprecated names. Touches: a focused UXP deprecation test, `docs/UXP_MIGRATION.md`, and any WebView generated bundle source path once F252 starts. Acceptance: tests fail if UXP/WebView code uses `Clipboard.setContent`, `Clipboard.getContent`, `Clipboard.clearContent`, object-form `Clipboard.writeText`, `uxpvideoload`, `uxpvideoplay`, `uxpvideocomplete`, or `uxpvideopause`; docs record the current clipboard path and any required manifest permission. Verify: `py -3.12 -m pytest tests/test_uxp_deprecation_sentinel.py -q`. Complexity: S.
 - [ ] **P2 — RA-19 Declare UXP clipboard permission and centralize copy fallback** — Why: Adobe's current UXP clipboard docs state that a valid manifest entry is required from manifest version 5 onward, and the manifest docs default `requiredPermissions.clipboard` to no clipboard access. OpenCut's UXP panel writes text with `navigator.clipboard.writeText(body.value)`, but the live manifest and WebView scaffold omit `clipboard`. Evidence: Adobe UXP Clipboard docs (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/reference-js/global-members/data-transfers/clipboard`); Adobe UXP Manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`); local `extension/com.opencut.uxp/main.js` clipboard call; local `extension/com.opencut.uxp/manifest.json` and `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` permissions. Not a duplicate of RA-18 because RA-18 bans deprecated Clipboard APIs; this item aligns the supported current Clipboard API with the required manifest permission and fallback UX. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, the UXP copy helper in `main.js`, UXP manifest/source guard tests, and `docs/UXP_MIGRATION.md`. Acceptance: if the UXP panel keeps any `navigator.clipboard.*` call, base and generated manifests declare the narrowest required clipboard permission (`readAndWrite` for copy); copy calls route through one wrapper that reports permission denial separately from unsupported Clipboard APIs; tests fail if a clipboard call exists without matching manifest permission. Verify: `py -3.12 -m pytest tests/test_uxp_clipboard_permission.py -q` plus a UDT copy smoke covering success and denied/unavailable fallback. Complexity: S-M.
 - [ ] **P2 — RA-20 Replace or explicitly gate UXP `window.confirm` usage** — Why: Adobe's UXP API changelog says `alert`, `prompt`, and `confirm` were moved back to beta and require `featureFlags.enableAlerts`; OpenCut's UXP panel calls `window.confirm(confirmMessage)` before clearing the search index, while the live manifest has no `featureFlags.enableAlerts`. Evidence: Adobe UXP API changelog (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`); local `extension/com.opencut.uxp/main.js` confirmation call; local `extension/com.opencut.uxp/manifest.json` feature flags. Touches: the UXP search-index clear flow, a reusable in-panel confirmation modal or explicit beta-alert manifest decision, UXP static guard tests, and `docs/UXP_MIGRATION.md`. Acceptance: destructive UXP confirmations use an OpenCut in-panel modal with keyboard focus/escape handling and localized copy, or the manifest explicitly opts into `enableAlerts` with documented UDT evidence; tests fail on raw `window.alert`, `window.prompt`, or `window.confirm` in UXP code outside the approved wrapper. Verify: `py -3.12 -m pytest tests/test_uxp_confirm_guard.py -q` plus UDT smoke for the clear-index cancel/confirm paths. Complexity: S-M.
+- [ ] **P2 — RA-21 Prove or retract the advertised Python 3.13 classifier** — Why: release metadata claims Python 3.13 support, but no committed GitHub Actions lane installs or tests OpenCut under 3.13. F123 fixed the known `audioop`/pydub compatibility issue, yet dependency resolution, optional extras, generated manifest tooling, and release-smoke scripts are still only exercised on 3.12. Evidence: `pyproject.toml` classifiers include `Programming Language :: Python :: 3.13`; `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, and `.github/workflows/adobe-premierepro-versions.yml` all set `python-version` to 3.12; GitHub's setup-python docs include 3.13 in Python-version matrix examples (`https://docs.github.com/actions/language-and-framework-guides/using-python-with-github-actions`); Python's current 3.13 documentation confirms the active 3.13 release line (`https://docs.python.org/3.13/whatsnew/changelog.html`). Touches: `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, `.github/workflows/adobe-premierepro-versions.yml`, `tests/test_dependency_surface.py`, and release-smoke docs. Acceptance: either CI has a 3.13 lane covering dependency install plus the fast manifest / smoke checks, or the 3.13 classifier is removed until a passing lane exists; tests fail if classifiers advertise a Python minor that no CI workflow covers. Verify: focused dependency-surface test plus one GitHub Actions run with the 3.13 matrix entry. Complexity: S-M.
 
 ### Larger Bets
 
