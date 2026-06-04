@@ -552,6 +552,27 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.denoise_strength_hint", "data-i18n"),
     ("audio.preview_10s", "data-i18n"),
     ("audio.denoise_preview_10s_title", "data-i18n-title"),
+    # One-hundred-twenty-second batch (Audio Studio FX and DeepFilter shell HTML).
+    ("audio.studio_effects_pedalboard_title", "data-i18n"),
+    ("forms.category", "data-i18n"),
+    ("audio.studio_category_preset", "data-i18n"),
+    ("audio.studio_category_dynamics", "data-i18n"),
+    ("audio.studio_category_eq_filters", "data-i18n"),
+    ("audio.studio_category_spatial_time", "data-i18n"),
+    ("audio.studio_category_character_distortion", "data-i18n"),
+    ("audio.studio_category_pitch", "data-i18n"),
+    ("forms.effect", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("audio.pedalboard_not_installed", "data-i18n"),
+    ("install.pedalboard", "data-i18n"),
+    ("common.or_manually", "data-i18n"),
+    ("audio.deepfilter_title", "data-i18n"),
+    ("audio.deepfilter_desc", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("audio.ai_denoise", "data-i18n"),
+    ("audio.deepfilter_not_installed", "data-i18n"),
+    ("install.deepfilter", "data-i18n"),
+    ("common.or_manually", "data-i18n"),
 )
 
 
@@ -2096,6 +2117,21 @@ MIGRATED_KEYS = (
     "audio.denoise_preview_10s_title",
     "audio.denoise_strength_hint",
     "audio.preview_10s",
+    # One-hundred-twenty-second batch (Audio Studio FX and DeepFilter shell HTML).
+    "audio.ai_denoise",
+    "audio.deepfilter_desc",
+    "audio.deepfilter_not_installed",
+    "audio.deepfilter_title",
+    "audio.pedalboard_not_installed",
+    "audio.studio_category_character_distortion",
+    "audio.studio_category_dynamics",
+    "audio.studio_category_eq_filters",
+    "audio.studio_category_pitch",
+    "audio.studio_category_preset",
+    "audio.studio_category_spatial_time",
+    "audio.studio_effects_pedalboard_title",
+    "install.deepfilter",
+    "install.pedalboard",
 )
 
 

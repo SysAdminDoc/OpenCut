@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.231
+**Version**: 4.232
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -491,6 +491,8 @@
 > **v4.230 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twentieth rolling i18n batch covering Audio tab quick-action copy and the AI Stem Separation form shell. The i18n drift gate now reports 1,865 keys / 1,772 consumers / 93 dead / 0 missing.
 >
 > **v4.231 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-first rolling i18n batch covering the Audio Denoise form shell. The i18n drift gate now reports 1,870 keys / 1,779 consumers / 91 dead / 0 missing.
+>
+> **v4.232 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-second rolling i18n batch covering the Audio Studio FX and DeepFilterNet form shell. The i18n drift gate now reports 1,884 keys / 1,795 consumers / 89 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2687,6 +2689,23 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-04 v4.232 CEP i18n Migration Batch 122 (E15)
+
+E15 remains open. This batch migrates the Audio Studio FX and DeepFilterNet shell while preserving dynamic effect-parameter rendering and literal package-install commands.
+
+| Surface | Status |
+|---|---|
+| Studio FX controls | Card title, Category/Effect labels, six category options, auto-import label, Pedalboard missing/install/manual hint now expose static locale hooks. |
+| DeepFilterNet controls | Title, description, auto-import label, AI Denoise action, missing/install/manual hint now expose static locale hooks. |
+| Shared keys | The panel now consumes existing `forms.category`, `forms.effect`, `common.auto_import_result`, and `common.or_manually` keys, reducing dead-key drift while adding panel-specific audio/install copy. |
+| Locale ledger | `locales/en.json` now carries 14 additional Audio Pro/install keys, bringing the guarded migration ledger to 1,478 keys across one hundred twenty-two rounds. |
+| Drift posture | `i18n-drift` reports 1,884 keys, 1,795 consumers, 89 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Audio Studio FX and DeepFilterNet static HTML hooks and matching locale keys. |
+
+Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/i18n_lint.py --json` reported 1,884 keys, 1,795 consumers, 89 dead keys, and 0 missing keys, and `git diff --check` passed. Focused pytest, ruff, and version-sync gates were rerun before commit.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2703,7 +2722,7 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.231 with the one-hundred-twenty-first guarded Audio Denoise form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.232 with the one-hundred-twenty-second guarded Audio Studio FX and DeepFilterNet form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
