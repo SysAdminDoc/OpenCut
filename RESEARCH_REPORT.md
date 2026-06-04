@@ -3,47 +3,204 @@
 Root synthesis of current research and planning inputs. Detailed research plans
 are archived under [docs/archive/research](docs/archive/research/).
 
-Last consolidated: 2026-06-04.
+Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03.
 
 ## Executive Summary
 
-OpenCut is already extremely broad. The highest-value research direction is not
-another large wave of model surfaces. It is making existing work easier to run,
-debug, resume, extend, and trust.
+OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
+(1,521 routes / 107 blueprints / ~599 core modules, 8,400+ tests) that exposes
+silence/filler removal, transcription and captions, audio cleanup, video
+effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
+already extremely broad. The May 26 performance/recovery research pass
+(N1–N4, N6, E11) is now fully shipped through v4.92; the strongest remaining
+direction is **not** another wave of model surfaces but making the existing
+surface easier to run, debug, resume, extend, and trust.
 
-The May 26 research pass identified the strongest v1.33+ opportunities. N1-N4,
-N6, and E11 are now closed in `ROADMAP.md` v4.87-v4.92; the remaining queue is tracked in
-`ROADMAP.md` under "Active Continuation Queue (May 26 Plan)".
+This 2026-06-03 pass read the actual persistence, error, dependency, plugin, and
+correlation code and scanned the 2026 competitive market. The highest-value
+opportunities it surfaced — all net-new versus the open continuation queue:
 
-1. Content-addressable transcript cache by audio hash. **Shipped in v4.87.**
-2. `missing_dependency()` responses that name the exact pip extra. **Shipped in v4.88.**
-3. GPU semaphore acquire-wait behavior instead of instant contention failures. **Shipped in v4.89.**
-4. Disk preflight on heavyweight render/model routes. **Shipped in v4.92.**
-5. Resumable interrupted jobs.
-6. `GET /webhooks/event-types` discovery. **Shipped in v4.90.**
-7. Plugin background-job registration.
-8. Third-party agent skill loading from the user data directory.
-9. Rich job metadata such as peak VRAM, exit reason, and started-at fields.
-10. Request-ID propagation into FFmpeg/subprocess stderr.
+1. **Surface `request_id` in the JSON error body** (RA-04) — the correlation ID
+   is already in the `X-Request-ID` header and job metadata but missing from the
+   error envelope users actually copy into bug reports. [Verified]
+2. **`PRAGMA user_version` schema versioning** for the two SQLite stores
+   (RA-05) — migrations are currently ad-hoc `ALTER TABLE` in try/except, and
+   N5/N9 will add more columns. [Verified]
+3. **Guard + back up destructive wipes** (RA-06) — `journal.clear_all()`, plugin
+   `uninstall`, and the cache-clear route delete user state with no dry-run,
+   confirm token, or recoverable backup. [Verified]
+4. **Cap persisted job `result_json` size** (RA-07) — `save_job()` serializes the
+   full result into SQLite with no ceiling. [Verified]
+5. **Job-store/journal compaction + size diagnostic** (RA-08) — cleanup never
+   `VACUUM`s and the journal has no retention. [Verified]
+6. **Log direct typed errors** (RA-03) — only `safe_error()` logs; typed
+   `OpenCutError` / `error_response` returns leave no log line. [Verified]
+7. **Align Ruff `target-version` with `requires-python`** (RA-01) — py39 vs
+   >=3.11 skew. [Verified]
+8. **Reconcile `requirements.txt` floors with `pyproject.toml`** (RA-02) — pin
+   drift weakens the advisory story. [Verified]
+9. **Timeline-native caption round-trip parity** (RA-09) — the AutoCut
+   differentiator OpenCut does not yet match. [Likely]
+10. **"Magic clips" long-form-to-shorts macro** (RA-10) — 2026 table-stakes for
+    the shorts persona; composable from existing primitives. [Likely]
 
-## Research Inputs
+## Evidence Reviewed
 
-- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) captured the governance, route-surface, agent, UXP, i18n, a11y, CI, and supply-chain loop that fed the current Unreleased work.
-- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) is the performance, observability, crash-recovery, plugin extensibility, resource-preflight, and trust-signals pass.
-- [docs/RESEARCH.md](docs/RESEARCH.md) keeps the earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) remains the canonical detailed F-number and wave-letter ledger.
-- [ROADMAP-NEXT.md](ROADMAP-NEXT.md) remains the wave-letter worksheet for older active-wave references.
+- **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20. Most
+  recent: `58d0781 feat: add async job disk preflight` (N4). The
+  N1–N4/N6/E11 continuation queue closed in `b228e42`, `ae25c96`, `ead2a3d`,
+  `40e43cb`, `9c13b9a`, `58d0781`.
+- **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
+  unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
+  bare `ALTER TABLE` migration, `clear_all()` with no backup),
+  `opencut/core/transcript_cache.py` (N1 content-addressed cache).
+- **Errors/diagnostics:** `opencut/errors.py` (only `safe_error` logs;
+  `error_response`/`to_response` omit `request_id` and emit no log),
+  `opencut/core/request_correlation.py` (header echo + job stamping exist;
+  body field does not).
+- **Dependencies:** `pyproject.toml` (`requires-python>=3.11`, ruff `py39`),
+  `requirements.txt` (looser/unbounded floors vs extras).
+- **Extensibility:** `opencut/core/agent_skills.py` (built-in skills only — N8
+  user loader confirmed absent), `opencut/routes/plugins.py` (install requires
+  restart to load routes; uninstall `shutil.rmtree` with no backup).
+- **Security/bind:** `opencut/server.py` loopback default + `OPENCUT_ALLOW_REMOTE`
+  gate + F112 token requirement on remote bind — confirmed sound.
+- **External sources (2026):** Adobe Firefly AI Assistant launch + Premiere
+  Generative Extend ([news.adobe.com](https://news.adobe.com/news/2026/04/adobe-new-creative-agent),
+  [helpx.adobe.com generative-extend](https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html));
+  AutoCut vs Submagic caption comparison ([autocut.com](https://www.autocut.com/en/blogs/AutoCut-vs-Submagic/));
+  Submagic 2026 review / Magic Clips ([max-productive.ai](https://max-productive.ai/ai-tools/submagic/)).
+- **Unverifiable here:** live coverage floor (F205 runs time out on this VM),
+  live Premiere round-trip behavior (no Premiere on this machine), live Apple
+  notarization (needs secrets + macOS runner).
 
-## Planning Implications
+## Current Product Map
 
-| Theme | Implication |
-|---|---|
-| Performance | Cache expensive transcript/model outputs by stable content hashes before adding more user-facing surfaces. |
-| Observability | Job metadata and request correlation must span Python, FFmpeg, subprocesses, routes, and panel state. |
-| Recovery | Interrupted jobs should become resumable or explicitly non-resumable with useful reasons. |
-| Extensibility | Plugins need safe background-job primitives and capability-scoped skill loading, not just Flask route registration. |
-| Release trust | Keep generated manifests, smoke gates, docs-size checks, advisories, signing, SBOM, webhook signing defaults, and package wiring in one release-readiness loop. |
-| UXP migration | CEP remains supported, but UXP parity and WebView cutover work must stay visible because CEP end-of-life risk is time-bound. |
+| Layer | Where | Notes |
+|---|---|---|
+| Entry points | `opencut.cli:main`, `opencut.server:main`, `opencut.mcp_server:main` | console scripts in `pyproject.toml`. |
+| Routes | `opencut/routes/*.py` (~90 blueprints) | captions, audio, editing, delivery, review, plugins, jobs, MCP bridge. |
+| Core | `opencut/core/*.py` (~599 modules) | per-feature processing; FFmpeg subprocess heavy. |
+| Job platform | `opencut/jobs.py`, `job_store.py`, `workers.py` | `@async_job`, SQLite persistence, priority workers, cancellation, disk preflight. |
+| Persistence | `~/.opencut/jobs.db`, `journal.db`, `transcript_cache/` | WAL SQLite + content-addressed cache. |
+| Panels | `extension/com.opencut.panel` (CEP), `com.opencut.uxp` (UXP) | UXP WebView cutover blocked on live UDT capture (F252). |
+| Persona | solo podcasters / YouTubers on Premiere 2019+ (CEP) / 25.6+ (UXP) | local-first, no cloud, no API keys for core features. |
+
+## Feature Inventory
+
+| Feature area | Access | Code | Maturity | Coverage |
+|---|---|---|---|---|
+| Silence/filler removal, auto-edit | routes + skills | `core/auto_edit.py`, `auto_montage.py` | mature | tested |
+| Transcription + captions | `/captions*`, `/transcript*` | `core/captions.py`, `routes/captions.py` | mature; N1 cache added | strong |
+| Caption display settings (FCC) | `/captions/display-settings/*` | `core/caption_display_settings.py` | shipped (F236) | tested |
+| Audio cleanup / pro chain | `/audio*` | `core/audio_*` | mature | tested |
+| Review bundles + markers | `/review*`, `/collab*` | `core/review*`, `annotations.py` | mature (F225–F229) | tested |
+| Shorts A/B variants | route/skill | `core/ab_variant.py`, `best_take.py` | shipped | tested |
+| MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,463 opt-in | tested |
+| Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; no hot-reload, no backup on uninstall | partial |
+| Agent skills | built-in only | `core/agent_skills.py` | user loader not implemented (N8) | tested (built-ins) |
+| Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
+
+## Competitive Landscape
+
+- **Adobe Firefly AI Assistant (public beta, Apr 2026)** — agentic orchestration
+  across Premiere/Photoshop/etc. from one natural-language prompt; "first cut
+  from raw footage"; Generative Extend. *Lesson:* OpenCut's MCP/agent-skill
+  framing is the right shape; the gap is a polished "raw footage → first cut"
+  macro. *Avoid:* cloud-only, paid-plan gating, API-key dependence — OpenCut's
+  local-first stance is the differentiator, keep it.
+- **AutoCut (Premiere extension)** — direct analogue: AutoCaptions, AutoCut
+  Silences, AutoZoom, AutoB-Rolls; **timeline-native caption editing** is its
+  cited advantage. *Lesson:* RA-09 round-trip parity closes the one place a
+  reviewer picks AutoCut. *Avoid:* paid-pack upsell model.
+- **Submagic** — shorts-first: animated captions + silence/filler removal +
+  contextual B-roll + auto-zoom + Magic Clips (auto-extract shorts). *Lesson:*
+  RA-10 (magic clips) is now table-stakes for the shorts persona. *Avoid:*
+  online-only, Storyblocks lock-in.
+- **Descript** — transcript-first long-form editing + collaboration. *Lesson:*
+  OpenCut's local transcript editing already overlaps; keep round-trip fidelity
+  high. *Avoid:* heavy account/cloud coupling.
+
+## Quality & Friction Findings
+
+- **Major — no `request_id` in error bodies.** Header-only correlation forces
+  users to read response headers to file a useful bug report. → RA-04.
+- **Major — ad-hoc SQLite migrations, no `user_version`.** N5/N9 will add
+  columns onto a versionless schema; no downgrade detection. → RA-05.
+- **Major — destructive wipes without guard/backup.** `journal.clear_all()`
+  (the rollback ledger), plugin uninstall, cache clear. → RA-06.
+- **Minor — typed errors are invisible in logs.** Only `safe_error()` logs;
+  typed `OpenCutError`/`error_response` paths emit nothing. → RA-03.
+- **Minor — unbounded `result_json`** in `jobs.db`. → RA-07.
+- **Minor — no compaction/retention/size diagnostic** for the SQLite stores. →
+  RA-08.
+- **Cosmetic — Ruff/Python target skew** and **requirements/pyproject pin
+  drift.** → RA-01, RA-02.
+
+## Architecture & Technical Findings
+
+- **Module boundaries** are clean: routes → core → FFmpeg subprocess; job
+  platform is isolated behind `@async_job`.
+- **Persistence** is two WAL SQLite DBs plus a content-addressed cache. The
+  weak spot is migration discipline (RA-05) and unbounded growth (RA-07/RA-08).
+- **Concurrency** uses thread-local SQLite connections with dead-thread pruning
+  and a GPU semaphore with a 30s acquire wait (N3) — solid.
+- **Error handling** is a well-structured taxonomy; the gap is the logging +
+  request_id seam at the typed-error path (RA-03/RA-04).
+- **Dependency health** is actively gated (pip-audit, npm advisory, SBOM, model
+  cards). The residual risk is the requirements/pyproject drift (RA-02) and the
+  lint target skew (RA-01), not vulnerable pins.
+- **Release automation** is extensive (route manifest, OpenAPI, version sync,
+  release smoke with 16 chained gates, signing/notarization wiring).
+
+## Security / Privacy / Data Safety
+
+- **Bind model is sound** [Verified]: loopback default, `OPENCUT_ALLOW_REMOTE`
+  opt-in, F112 per-install token required before a remote bind is announced.
+- **Webhooks are signed-by-default** (E11) and SSRF numeric-IP bypass is blocked
+  (`4647e0e`).
+- **Data-safety gap** [Verified]: destructive local-state wipes lack the
+  dry-run/confirm/backup posture the project applies elsewhere (RA-06). This is
+  the top safety item in this pass.
+
+## UX & Accessibility
+
+- Caption display settings follow the FCC token set (F236); CEP a11y invariant
+  gates exist. The open UX-parity item E14 (F236 CEP discoverability) is already
+  in the continuation queue and is **not** duplicated here.
+- The competitive UX gap is timeline-native caption round-trip (RA-09), where a
+  reviewer would otherwise choose AutoCut.
+
+## Explicit Non-Goals
+
+- **Cloud rendering / hosted SaaS** — rejected: contradicts the local-first,
+  no-upload value proposition that distinguishes OpenCut from Firefly/Submagic.
+- **Bundling new heavy diffusion/TTS models this pass** — rejected: the repo is
+  already model-saturated; the marginal value is in reliability/observability.
+- **Replacing SQLite with a server DB** — rejected: overkill for a single-user
+  local backend; the fix is migration discipline (RA-05), not a new datastore.
+- **Trusting client-supplied `X-Request-ID`** — already correctly rejected in
+  `request_correlation.py` (regenerated to prevent log injection); keep it.
+
+## Open Questions
+
+- **N5 vs RA-05 ordering:** RA-05 (schema versioning) is a sensible prerequisite
+  for N5 (resume) and N9 (job metadata) since both add columns. [Needs
+  validation] — confirm whether the N5 implementer wants the migration helper
+  landed first.
+- **RA-09 round-trip fidelity** cannot be verified without a live Premiere
+  install. [Needs validation] — needs a real export→edit→import loop before
+  committing to a styling-metadata schema.
+- **Coverage floor** (F205) remains unmeasured on this VM (runs time out); not a
+  blocker for these doc-only additions.
+
+## Research Inputs (archived)
+
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
+- [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" is the open Existing Planned Work and the "Research-Driven Additions" section holds this pass's RA-01..RA-10 items.
+- [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
 
