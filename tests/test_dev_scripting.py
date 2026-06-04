@@ -883,6 +883,37 @@ class TestWebhookSystemCore:
         with pytest.raises(ValueError, match="http:// or https://"):
             register_webhook("file:///tmp/out")
 
+    def test_register_webhook_strict_requires_secret(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import register_webhook
+
+        with pytest.raises(ValueError, match="signing secret is required"):
+            register_webhook(
+                "https://example.com/hook",
+                events=["job.complete"],
+                allow_unsigned=False,
+            )
+
+        wh = register_webhook(
+            "https://example.com/hook",
+            events=["job.complete"],
+            secret="top-secret",
+            allow_unsigned=False,
+        )
+        assert wh.secret == "top-secret"
+
+    def test_register_webhook_unsigned_opt_in_writes_warning(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import register_webhook
+
+        wh = register_webhook(
+            "https://example.com/hook",
+            events=["job.complete"],
+            allow_unsigned=True,
+        )
+
+        warning_file = os.path.join(tmp_opencut_dir, "webhooks_unsigned.txt")
+        assert wh.secret == ""
+        assert os.path.exists(warning_file)
+
     def test_register_all_events_empty_list(self, tmp_opencut_dir):
         from opencut.core.webhook_system import register_webhook
         wh = register_webhook("https://example.com/hook", events=[])
@@ -1466,11 +1497,33 @@ class TestWebhookRoutes:
         resp = client.post("/api/webhooks",
                            headers=csrf_headers(csrf_token),
                            json={"url": "https://test.com/hook",
-                                 "events": ["job_complete"]})
+                                 "events": ["job_complete"],
+                                 "secret": "top-secret"})
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["success"] is True
         assert data["webhook"]["url"] == "https://test.com/hook"
+        assert data["webhook"]["has_secret"] is True
+
+    def test_register_route_requires_secret_by_default(self, client, csrf_token, tmp_opencut_dir):
+        resp = client.post("/api/webhooks",
+                           headers=csrf_headers(csrf_token),
+                           json={"url": "https://test.com/hook",
+                                 "events": ["job_complete"]})
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "signing secret is required" in data["error"]
+
+    def test_register_route_allows_unsigned_with_explicit_opt_in(self, client, csrf_token, tmp_opencut_dir):
+        resp = client.post("/api/webhooks?allow_unsigned=true",
+                           headers=csrf_headers(csrf_token),
+                           json={"url": "https://test.com/hook",
+                                 "events": ["job_complete"]})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["webhook"]["has_secret"] is False
+        assert os.path.exists(os.path.join(tmp_opencut_dir, "webhooks_unsigned.txt"))
 
     def test_register_route_accepts_secret_without_echoing_it(self, client, csrf_token, tmp_opencut_dir):
         resp = client.post("/api/webhooks",

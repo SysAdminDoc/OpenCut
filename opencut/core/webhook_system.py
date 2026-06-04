@@ -177,6 +177,27 @@ def _ensure_dir():
     os.makedirs(_OPENCUT_DIR, exist_ok=True)
 
 
+def _unsigned_warning_file() -> str:
+    return os.path.join(_OPENCUT_DIR, "webhooks_unsigned.txt")
+
+
+def _write_unsigned_warning() -> None:
+    """Write the one-time warning for explicitly unsigned webhook configs."""
+    warning_file = _unsigned_warning_file()
+    if os.path.exists(warning_file):
+        return
+    try:
+        _ensure_dir()
+        with open(warning_file, "w", encoding="utf-8") as fh:
+            fh.write(
+                "Unsigned OpenCut webhooks are enabled for at least one endpoint.\n"
+                "New HTTP registrations require a non-empty HMAC signing secret by "
+                "default; use allow_unsigned=true only for trusted local testing.\n"
+            )
+    except OSError as exc:
+        logger.warning("Failed to write unsigned webhook warning: %s", exc)
+
+
 def _validate_webhook_url(url: str) -> str:
     """Validate and normalize outbound webhook URLs."""
     return validate_public_http_url(url, label="Webhook URL")
@@ -209,7 +230,10 @@ def _load_configs() -> List[WebhookConfig]:
             with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
             if isinstance(data, list):
-                return [WebhookConfig.from_dict(d) for d in data]
+                configs = [WebhookConfig.from_dict(d) for d in data]
+                if any(cfg.enabled and not cfg.secret for cfg in configs):
+                    _write_unsigned_warning()
+                return configs
             return []
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Failed to load webhook configs: %s", exc)
@@ -301,6 +325,7 @@ def register_webhook(
     description: str = "",
     webhook_id: Optional[str] = None,
     secret: Optional[str] = None,
+    allow_unsigned: bool = True,
     on_progress: Optional[Callable] = None,
 ) -> WebhookConfig:
     """Register or update a webhook endpoint.
@@ -313,6 +338,8 @@ def register_webhook(
         webhook_id: Optional ID for updating an existing webhook.
         secret: Optional HMAC signing secret. ``None`` preserves an existing
                 secret during updates; an empty string clears it.
+        allow_unsigned: When false, the resulting webhook must have a non-empty
+                signing secret.
         on_progress: Optional progress callback (int).
 
     Returns:
@@ -338,12 +365,19 @@ def register_webhook(
             # Update existing
             for cfg in configs:
                 if cfg.id == webhook_id:
+                    effective_secret = cfg.secret if secret is None else str(secret or "").strip()
+                    if not allow_unsigned and not effective_secret:
+                        raise ValueError(
+                            "Webhook signing secret is required. "
+                            "Set secret or pass allow_unsigned=true for local testing.")
                     cfg.url = url
                     cfg.events = events or []
                     cfg.description = description
                     if secret is not None:
-                        cfg.secret = str(secret or "").strip()
+                        cfg.secret = effective_secret
                     _save_configs(configs)
+                    if not cfg.secret:
+                        _write_unsigned_warning()
                     if on_progress:
                         on_progress(100)
                     logger.info("Updated webhook '%s' -> %s", webhook_id, url)
@@ -351,15 +385,22 @@ def register_webhook(
             # Not found — fall through to create new with that ID
 
         # Create new
+        normalized_secret = str(secret or "").strip() if secret is not None else ""
+        if not allow_unsigned and not normalized_secret:
+            raise ValueError(
+                "Webhook signing secret is required. "
+                "Set secret or pass allow_unsigned=true for local testing.")
         webhook = WebhookConfig(
             id=webhook_id or uuid.uuid4().hex[:12],
             url=url,
             events=events or [],
             description=description,
-            secret=str(secret or "").strip() if secret is not None else "",
+            secret=normalized_secret,
         )
         configs.append(webhook)
         _save_configs(configs)
+        if not webhook.secret:
+            _write_unsigned_warning()
 
     if on_progress:
         on_progress(100)

@@ -271,10 +271,11 @@ For each item below: where it lives, what works, what was deferred.
 
 ### E11 — Webhook signature secret should be mandatory (P1)
 
-- **Current behavior:** `core/webhook_system.py` ships HMAC support, but the `secret` field is optional. Unsigned webhooks are accepted.
+- **Status:** Shipped in `ROADMAP.md` v4.91. `POST /api/webhooks` now requires a non-empty HMAC secret unless the caller explicitly passes `?allow_unsigned=true`; unsigned configs create `~/.opencut/webhooks_unsigned.txt` once.
+- **Original behavior:** `core/webhook_system.py` shipped HMAC support, but the `secret` field was optional. Unsigned webhooks were accepted.
 - **Problem:** A misconfigured webhook is delivered without proof of origin; downstream receivers can't authenticate.
-- **Recommendation:** Require non-empty `secret` on `POST /webhooks/register` by default. Add `?allow_unsigned=true` opt-in for explicit local testing.
-- **Code locations:** `opencut/core/webhook_system.py::WebhookConfig`, `opencut/routes/webhook_routes.py`.
+- **Recommendation:** Require non-empty `secret` on `POST /api/webhooks` by default. Add `?allow_unsigned=true` opt-in for explicit local testing.
+- **Code locations:** `opencut/core/webhook_system.py::WebhookConfig`, `opencut/routes/dev_scripting_routes.py`.
 - **Backward compat:** Existing unsigned webhooks keep working until next restart; a one-time `webhooks_unsigned.txt` warning in `~/.opencut/`.
 - **Complexity:** S. **Priority: P1.**
 
@@ -419,10 +420,10 @@ For each item below: where it lives, what works, what was deferred.
   - Touches: `opencut/core/webhook_system.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/mcp_bridge_routes.py`.
   - Acceptance: GET returns `{events: [...], legacy_aliases: {...}}`; smoke test asserts every fired event is listed.
 
-- [ ] **P1 — E11 webhook signatures mandatory by default**
+- [x] **P1 — E11 webhook signatures mandatory by default**
   - Why: unsigned deliveries can't be authenticated downstream.
-  - Touches: `opencut/core/webhook_system.py`, `opencut/routes/webhook_routes.py`.
-  - Acceptance: `POST /webhooks/register` without `secret` returns 400 unless `?allow_unsigned=true`.
+  - Touches: `opencut/core/webhook_system.py`, `opencut/routes/dev_scripting_routes.py`.
+  - Acceptance: `POST /api/webhooks` without `secret` returns 400 unless `?allow_unsigned=true`.
 
 ### Phase 1 — Resource and recovery (next 2 weeks)
 
