@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.204
+**Version**: 4.205
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 11 - 2026-06-04.
+> Last researched: Cycle 12 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-22.
+  RA-01..RA-23.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -437,6 +437,8 @@
 > **v4.203 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 11 researcher note into the canonical roadmap surfaces. RA-22 now tracks pinning Release Full's CEP panel Node runtime to match PR Fast before treating panel npm gates as deterministic release evidence.
 >
 > **v4.204 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-second rolling i18n batch covering the Fillers form backend/model options, custom-filler label and placeholder, missing-backend hint, and CrisperWhisper install action. The i18n drift gate now reports 1,672 keys / 1,557 consumers / 115 dead / 0 missing.
+>
+> **v4.205 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 12 researcher note into the canonical roadmap surfaces. RA-23 now tracks pinning GitHub Actions workflow `uses:` references to full-length commit SHAs before treating release/signing workflows as immutable supply-chain evidence.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2381,6 +2383,18 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
   Release Full pins the same supported Node major as PR Fast before relying on
   panel tests/builds as release evidence.
 
+### Researcher Queue (Cycle 12 - 2026-06-04)
+
+- [x] 🔬 `github-actions-sha-pin-refresh-2026-06-04` - checked every GitHub
+  Actions workflow `uses:` reference against GitHub's current secure-use
+  guidance. GitHub documents full-length commit SHAs as the immutable Action
+  release option and warns that tags can move or be deleted. OpenCut workflows
+  still use mutable tag references for `actions/checkout@v4`,
+  `actions/setup-python@v5`, `actions/setup-node@v4`,
+  `actions/upload-artifact@v4`, and `actions/github-script@v7`. Promoted RA-23
+  so release/signing workflows pin actions by full SHA and gain a guard test
+  against mutable workflow action tags.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2394,7 +2408,9 @@ for the F252/F253 cutover path. Cycle 8 adds UXP clipboard-permission and beta
 alert/confirmation runtime guardrails. Cycle 9 rechecked those same two gaps and
 promoted no new rows. Cycle 10 adds the Python 3.13 classifier-vs-CI proof item
 from current repo metadata and workflow evidence. Cycle 11 adds a Release Full
-Node runtime reproducibility guardrail for the CEP panel npm gates.
+Node runtime reproducibility guardrail for the CEP panel npm gates. Cycle 12
+adds a GitHub Actions immutable-reference guardrail for release/signing workflow
+supply-chain trust.
 
 ### Quick Wins
 
@@ -2412,6 +2428,7 @@ Node runtime reproducibility guardrail for the CEP panel npm gates.
 - [ ] **P2 — RA-20 Replace or explicitly gate UXP `window.confirm` usage** — Why: Adobe's UXP API changelog says `alert`, `prompt`, and `confirm` were moved back to beta and require `featureFlags.enableAlerts`; OpenCut's UXP panel calls `window.confirm(confirmMessage)` before clearing the search index, while the live manifest has no `featureFlags.enableAlerts`. Evidence: Adobe UXP API changelog (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`); local `extension/com.opencut.uxp/main.js` confirmation call; local `extension/com.opencut.uxp/manifest.json` feature flags. Touches: the UXP search-index clear flow, a reusable in-panel confirmation modal or explicit beta-alert manifest decision, UXP static guard tests, and `docs/UXP_MIGRATION.md`. Acceptance: destructive UXP confirmations use an OpenCut in-panel modal with keyboard focus/escape handling and localized copy, or the manifest explicitly opts into `enableAlerts` with documented UDT evidence; tests fail on raw `window.alert`, `window.prompt`, or `window.confirm` in UXP code outside the approved wrapper. Verify: `py -3.12 -m pytest tests/test_uxp_confirm_guard.py -q` plus UDT smoke for the clear-index cancel/confirm paths. Complexity: S-M.
 - [ ] **P2 — RA-21 Prove or retract the advertised Python 3.13 classifier** — Why: release metadata claims Python 3.13 support, but no committed GitHub Actions lane installs or tests OpenCut under 3.13. F123 fixed the known `audioop`/pydub compatibility issue, yet dependency resolution, optional extras, generated manifest tooling, and release-smoke scripts are still only exercised on 3.12. Evidence: `pyproject.toml` classifiers include `Programming Language :: Python :: 3.13`; `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, and `.github/workflows/adobe-premierepro-versions.yml` all set `python-version` to 3.12; GitHub's setup-python docs include 3.13 in Python-version matrix examples (`https://docs.github.com/actions/language-and-framework-guides/using-python-with-github-actions`); Python's current 3.13 documentation confirms the active 3.13 release line (`https://docs.python.org/3.13/whatsnew/changelog.html`). Touches: `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, `.github/workflows/adobe-premierepro-versions.yml`, `tests/test_dependency_surface.py`, and release-smoke docs. Acceptance: either CI has a 3.13 lane covering dependency install plus the fast manifest / smoke checks, or the 3.13 classifier is removed until a passing lane exists; tests fail if classifiers advertise a Python minor that no CI workflow covers. Verify: focused dependency-surface test plus one GitHub Actions run with the 3.13 matrix entry. Complexity: S-M.
 - [ ] **P2 — RA-22 Pin Node explicitly in Release Full panel gates** — Why: Release Full is the release-trust workflow that runs the CEP panel npm install, advisory check, Vitest suite, source verifier, and Vite build, but it currently inherits whatever `node` binary the Linux runner image places first on `PATH`. PR Fast already pins Node 22, so the two CI lanes can silently test different Node majors. Evidence: `.github/workflows/pr-fast.yml` sets up Node 22 before `npm ci`; `.github/workflows/build.yml` has no `setup-node` step before its Linux-only panel gate; `extension/com.opencut.panel/package-lock.json` records Vitest's engine as `^20.0.0 || ^22.0.0 || >=24.0.0`; GitHub's Node CI docs say `setup-node` ensures consistent behavior across runners and Node versions (`https://docs.github.com/en/actions/how-tos/writing-workflows/building-and-testing/building-and-testing-nodejs`); the actions/runner-images repository documents weekly image updates and current Ubuntu 24.04 image Node versions (`https://github.com/actions/runner-images`). Touches: `.github/workflows/build.yml`, `tests/test_ci_workflow_split.py`, and release-smoke docs. Acceptance: Release Full has an explicit `actions/setup-node` step with the same supported Node major used by PR Fast before any panel `npm` command; a workflow-shape test fails if PR Fast and Release Full diverge on the panel Node major or if Release Full runs panel npm commands without prior Node setup. Verify: `py -3.12 -m pytest tests/test_ci_workflow_split.py -q` plus one Release Full workflow run showing the pinned Node version in the panel gate. Complexity: S.
+- [ ] **P2 — RA-23 Pin GitHub Actions workflow actions to full-length SHAs** — Why: Release Full handles artifacts, release uploads, code signing, SBOM upload, and release issue creation, so mutable workflow action tags are part of the release trust boundary. GitHub's secure-use guidance says pinning to a full-length commit SHA is the immutable Action release option and warns that tags can be moved or deleted. Evidence: `.github/workflows/pr-fast.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, and `actions/setup-node@v4`; `.github/workflows/build.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, and repeated `actions/upload-artifact@v4`; `.github/workflows/adobe-premierepro-versions.yml` uses `actions/checkout@v4`, `actions/setup-python@v5`, `actions/upload-artifact@v4`, and `actions/github-script@v7`; GitHub secure-use guidance recommends full-length SHA pins and repository/org policies for requiring them (`https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions`). Touches: `.github/workflows/*.yml`, a workflow-security guard test, and release-maintenance docs. Acceptance: every non-local workflow `uses:` reference is pinned to a full-length SHA with an adjacent version/update comment; a guard test fails on unpinned mutable tags or branches; docs record the update workflow for refreshing pins. Verify: focused workflow-security pytest plus one PR Fast and one Release Full run using the pinned actions. Complexity: S-M.
 
 ### Larger Bets
 
