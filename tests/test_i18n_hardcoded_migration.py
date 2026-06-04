@@ -495,6 +495,14 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.model_tiny", "data-i18n"),
     ("captions.model_base", "data-i18n"),
     ("captions.model_small_accurate", "data-i18n"),
+    # One-hundred-eighteenth batch (Repeat Take Detection form shell HTML).
+    ("captions.remove_repeated_takes", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small_accurate", "data-i18n"),
+    ("captions.model_medium_best", "data-i18n"),
+    ("captions.repeat_similarity_threshold", "data-i18n"),
 )
 
 
@@ -2000,6 +2008,10 @@ MIGRATED_KEYS = (
     "captions.animation_pop_capcut",
     "captions.animation_slide_up",
     "captions.animation_typewriter",
+    # One-hundred-eighteenth batch (Repeat Take Detection form shell HTML).
+    "captions.model_medium_best",
+    "captions.remove_repeated_takes",
+    "captions.repeat_similarity_threshold",
 )
 
 
