@@ -66,6 +66,8 @@ def list_plugins():
             "enabled": p["enabled"],
             "loaded": p["name"] in loaded,
             "has_routes": bool(p["routes"]) or os.path.isfile(os.path.join(p["path"], "routes.py")),
+            "jobs": p.get("jobs", []),
+            "loaded_jobs": loaded.get(p["name"], {}).get("jobs", []),
             "ui": p["ui"],
         }
         plugins.append(info)

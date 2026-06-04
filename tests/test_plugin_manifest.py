@@ -71,6 +71,51 @@ def test_schema_warns_on_open_network_capability():
     assert any("network" in w for w in result.warnings)
 
 
+def test_schema_accepts_declared_plugin_jobs_with_capability():
+    result = pm.validate_manifest_schema(
+        {
+            "name": "alpha",
+            "version": "0.1",
+            "description": "test",
+            "api_version": 1,
+            "capabilities": ["http.routes", "jobs.register"],
+            "jobs": [{"id": "long_task", "label": "Long Task"}],
+        }
+    )
+    assert result.valid
+    assert not result.errors
+
+
+def test_schema_rejects_jobs_without_register_capability():
+    result = pm.validate_manifest_schema(
+        {
+            "name": "alpha",
+            "version": "0.1",
+            "description": "test",
+            "api_version": 1,
+            "capabilities": ["http.routes"],
+            "jobs": [{"id": "long_task"}],
+        }
+    )
+    assert not result.valid
+    assert any("jobs.register" in e for e in result.errors)
+
+
+def test_schema_rejects_invalid_plugin_job_id():
+    result = pm.validate_manifest_schema(
+        {
+            "name": "alpha",
+            "version": "0.1",
+            "description": "test",
+            "api_version": 1,
+            "capabilities": ["http.routes", "jobs.register"],
+            "jobs": [{"id": "bad job!"}],
+        }
+    )
+    assert not result.valid
+    assert any("invalid id" in e for e in result.errors)
+
+
 def test_schema_requires_api_version_one():
     result = pm.validate_manifest_schema(
         {
@@ -163,3 +208,20 @@ def test_validate_plugin_manifest_fails_when_lock_drifted(tmp_path):
     result = pm.validate_plugin_manifest(tmp_path)
     assert not result.valid
     assert any("sha-256 mismatch" in e for e in result.errors)
+
+
+def test_long_job_demo_example_manifest_schema_is_valid():
+    manifest_path = (
+        Path(__file__).resolve().parents[1]
+        / "opencut"
+        / "data"
+        / "example_plugins"
+        / "long-job-demo"
+        / pm.MANIFEST_FILENAME
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    result = pm.validate_manifest_schema(manifest)
+
+    assert result.valid
+    assert not result.errors

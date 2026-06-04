@@ -10,6 +10,7 @@ import importlib.util
 import json
 import logging
 import os
+import re
 import sys
 import threading
 
@@ -22,7 +23,20 @@ _REQUIRED_MANIFEST_FIELDS = {"name", "version", "description"}
 
 # Loaded plugins registry
 _loaded_plugins = {}
+_plugin_contexts = {}
 _plugins_lock = threading.Lock()
+_PLUGIN_JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
+_PLUGIN_JOB_PATH_KEYS = {
+    "file",
+    "filepath",
+    "input_file",
+    "input_path",
+    "output_dir",
+    "output_file",
+    "output_path",
+    "path",
+    "source_path",
+}
 
 
 def _install_plugin_csrf_guard(blueprint):
@@ -60,7 +74,171 @@ def _validate_manifest(manifest, plugin_dir):
     if not version or not isinstance(version, str):
         return False, "Plugin version must be a non-empty string"
 
+    jobs = manifest.get("jobs", [])
+    if jobs and not isinstance(jobs, list):
+        return False, "Plugin jobs must be a list"
+    if isinstance(jobs, list):
+        seen = set()
+        for job in jobs:
+            if not isinstance(job, dict):
+                return False, "Plugin jobs must be objects"
+            job_id = job.get("id", "")
+            if not isinstance(job_id, str) or not _PLUGIN_JOB_ID_RE.fullmatch(job_id):
+                return False, f"Plugin job id is invalid: {job_id!r}"
+            if job_id in seen:
+                return False, f"Plugin job id is duplicated: {job_id}"
+            seen.add(job_id)
+
     return True, ""
+
+
+def _plugin_data_dir(plugin_name: str, plugin_dir: str) -> str:
+    return os.path.join(plugin_dir, "data")
+
+
+def _get_plugin_context(plugin_name: str) -> dict:
+    with _plugins_lock:
+        return dict(_plugin_contexts.get(plugin_name, {}))
+
+
+def _payload_path_values(value, *, parent_key: str = ""):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_str = str(key)
+            yield from _payload_path_values(child, parent_key=key_str)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _payload_path_values(child, parent_key=parent_key)
+    elif isinstance(value, str) and value.strip():
+        key = parent_key.lower()
+        if (
+            key in _PLUGIN_JOB_PATH_KEYS
+            or key.endswith("_path")
+            or key.endswith("_file")
+            or key.endswith("_dir")
+        ):
+            yield parent_key, value
+
+
+def _validate_plugin_job_payload(plugin_name: str, data: dict) -> str:
+    context = _get_plugin_context(plugin_name)
+    capabilities = set(context.get("capabilities") or [])
+    if "jobs.register" not in capabilities:
+        return "Plugin does not declare the jobs.register capability."
+    if "host.filesystem" in capabilities:
+        return ""
+
+    data_dir = context.get("data_dir", "")
+    if not data_dir:
+        return "Plugin data directory is unavailable."
+    os.makedirs(data_dir, exist_ok=True)
+
+    from opencut.security import validate_path
+
+    for key, value in _payload_path_values(data):
+        try:
+            validate_path(value, allowed_base=data_dir)
+        except ValueError:
+            return (
+                f"Plugin job path field '{key}' is outside the plugin data directory; "
+                "declare host.filesystem to access host files."
+            )
+    return ""
+
+
+def plugin_job(plugin_name: str, job_id: str, *,
+               label: str = "",
+               description: str = "",
+               filepath_required: bool = False,
+               filepath_param: str = "filepath",
+               pre_validate=None,
+               disk_operation=None,
+               disk_required_mb=None,
+               resumable: bool = False):
+    """Decorator for plugin routes that enqueue real OpenCut async jobs.
+
+    Use below a plugin Blueprint route::
+
+        @plugin_bp.route("/start", methods=["POST"])
+        @plugin_job("my-plugin", "long_task", filepath_required=False)
+        def start(job_id, filepath, data):
+            ...
+
+    The plugin manifest must declare the same job id under ``jobs`` and include
+    ``jobs.register`` in ``capabilities``.
+    """
+    if not _PLUGIN_JOB_ID_RE.fullmatch(str(plugin_name or "")):
+        raise ValueError(f"Invalid plugin name for job registration: {plugin_name!r}")
+    if not _PLUGIN_JOB_ID_RE.fullmatch(str(job_id or "")):
+        raise ValueError(f"Invalid plugin job id: {job_id!r}")
+
+    from opencut.jobs import async_job
+
+    def _combined_pre_validate(data):
+        err = _validate_plugin_job_payload(plugin_name, data)
+        if err:
+            return err
+        if pre_validate is None:
+            return None
+        return pre_validate(data)
+
+    def decorator(func):
+        wrapped = async_job(
+            f"plugin:{plugin_name}:{job_id}",
+            filepath_required=filepath_required,
+            filepath_param=filepath_param,
+            pre_validate=_combined_pre_validate,
+            disk_operation=disk_operation,
+            disk_required_mb=disk_required_mb,
+            resumable=resumable,
+        )(func)
+        wrapped._opencut_plugin_job = {
+            "plugin": plugin_name,
+            "id": job_id,
+            "type": f"plugin:{plugin_name}:{job_id}",
+            "label": label or job_id.replace("_", " ").replace("-", " ").title(),
+            "description": description,
+            "resumable": bool(resumable),
+            "filepath_required": bool(filepath_required),
+            "filepath_param": filepath_param,
+        }
+        return wrapped
+
+    return decorator
+
+
+def _collect_module_plugin_jobs(module, plugin_name: str) -> list[dict]:
+    jobs = []
+    seen = set()
+    for value in vars(module).values():
+        meta = getattr(value, "_opencut_plugin_job", None)
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("plugin") != plugin_name:
+            continue
+        job_id = meta.get("id", "")
+        if job_id in seen:
+            continue
+        seen.add(job_id)
+        jobs.append(dict(meta))
+    return sorted(jobs, key=lambda item: item.get("id", ""))
+
+
+def _validate_module_plugin_jobs(plugin_name: str, plugin_info: dict, module_jobs: list[dict]) -> str:
+    if not module_jobs:
+        return ""
+    capabilities = set(plugin_info.get("capabilities") or [])
+    if "jobs.register" not in capabilities:
+        return "Plugin uses plugin_job but does not declare jobs.register"
+    declared = {
+        job.get("id", "")
+        for job in plugin_info.get("jobs", [])
+        if isinstance(job, dict)
+    }
+    missing = [job["id"] for job in module_jobs if job.get("id") not in declared]
+    if missing:
+        return "Plugin job(s) not declared in plugin.json: " + ", ".join(missing)
+    return ""
 
 
 def discover_plugins():
@@ -98,6 +276,8 @@ def discover_plugins():
                 "error": "Missing plugin.json manifest",
                 "enabled": False,
                 "routes": [],
+                "jobs": [],
+                "capabilities": [],
                 "ui": None,
             })
             continue
@@ -116,6 +296,8 @@ def discover_plugins():
                 "error": f"Invalid plugin.json: {e}",
                 "enabled": False,
                 "routes": [],
+                "jobs": [],
+                "capabilities": [],
                 "ui": None,
             })
             continue
@@ -132,6 +314,8 @@ def discover_plugins():
             "error": error if not valid else None,
             "enabled": manifest.get("enabled", True) and valid,
             "routes": manifest.get("routes", []),
+            "jobs": manifest.get("jobs", []),
+            "capabilities": manifest.get("capabilities", []),
             "ui": manifest.get("ui", None),
         })
 
@@ -174,6 +358,12 @@ def load_plugin_routes(app, plugin_info):
 
     _path_inserted = False
     try:
+        with _plugins_lock:
+            _plugin_contexts[plugin_name] = {
+                "capabilities": list(plugin_info.get("capabilities") or []),
+                "data_dir": _plugin_data_dir(plugin_name, plugin_dir),
+                "plugin_dir": plugin_dir,
+            }
         # Add plugin dir to sys.path for the duration of exec_module only.
         # Remove it immediately after so two plugins with identically-named
         # helper modules cannot shadow each other.
@@ -193,6 +383,8 @@ def load_plugin_routes(app, plugin_info):
 
     except Exception as e:
         logger.error("Failed to load plugin %s: %s", plugin_name, e)
+        with _plugins_lock:
+            _plugin_contexts.pop(plugin_name, None)
         return False
     finally:
         if _path_inserted and plugin_dir in sys.path:
@@ -203,6 +395,16 @@ def load_plugin_routes(app, plugin_info):
         bp = getattr(module, "plugin_bp", None)
         if bp is None:
             logger.warning("Plugin %s routes.py has no 'plugin_bp' Blueprint", plugin_name)
+            with _plugins_lock:
+                _plugin_contexts.pop(plugin_name, None)
+            return False
+
+        module_jobs = _collect_module_plugin_jobs(module, plugin_name)
+        job_error = _validate_module_plugin_jobs(plugin_name, plugin_info, module_jobs)
+        if job_error:
+            logger.warning("Plugin %s job registration refused: %s", plugin_name, job_error)
+            with _plugins_lock:
+                _plugin_contexts.pop(plugin_name, None)
             return False
 
         _install_plugin_csrf_guard(bp)
@@ -215,6 +417,7 @@ def load_plugin_routes(app, plugin_info):
                 "info": plugin_info,
                 "module": module,
                 "blueprint": bp,
+                "jobs": module_jobs,
                 "app_id": id(app),
             }
 
@@ -223,6 +426,8 @@ def load_plugin_routes(app, plugin_info):
 
     except Exception as e:
         logger.error("Failed to register plugin %s: %s", plugin_name, e)
+        with _plugins_lock:
+            _plugin_contexts.pop(plugin_name, None)
         return False
 
 
@@ -272,6 +477,7 @@ def load_all_plugins(app):
                     "info": plugin,
                     "module": None,
                     "blueprint": None,
+                    "jobs": [],
                 }
             result["loaded"].append(plugin["name"])
             continue
@@ -303,6 +509,7 @@ def get_loaded_plugins():
                 "description": data["info"]["description"],
                 "author": data["info"]["author"],
                 "has_routes": data["blueprint"] is not None,
+                "jobs": list(data.get("jobs") or []),
                 "ui": data["info"].get("ui"),
             }
             for name, data in _loaded_plugins.items()
@@ -318,5 +525,6 @@ def unload_plugin(name):
     with _plugins_lock:
         if name in _loaded_plugins:
             del _loaded_plugins[name]
+            _plugin_contexts.pop(name, None)
             return True
     return False

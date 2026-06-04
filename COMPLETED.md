@@ -32,6 +32,7 @@ Last consolidated: 2026-06-04.
 | Webhook trust | The May 26 plan now has E11 closed: new HTTP webhook registrations require an HMAC secret unless the caller explicitly opts into unsigned local testing. |
 | Disk preflight | The May 26 plan now has N4 closed: heavyweight async jobs run output-volume disk checks before job creation and return 507 with required/free/output-dir metadata when space is insufficient. |
 | Interrupted-job resume | The May 26 plan now has N5 closed: checkpointable async jobs persist resume metadata and can be re-enqueued from interrupted history through `POST /jobs/<job_id>/resume`. |
+| Plugin job registration | The May 26 plan now has N7 closed: plugin manifests can declare background jobs, and plugin routes can enqueue namespaced jobs through the core async-job tracker. |
 
 ## Historical Detail
 
