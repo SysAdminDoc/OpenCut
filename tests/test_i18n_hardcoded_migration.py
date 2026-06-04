@@ -119,6 +119,14 @@ MIGRATED_KEYS = (
     "toast.no_markers_to_replay",
     "toast.apply_failed",
     "toast.markers_readded",
+    # Eleventh batch (settings/live-update utility feedback).
+    "toast.oauth_error",
+    "toast.ws_start_error",
+    "toast.engine_preference_error",
+    "toast.preference_save_failed",
+    "toast.log_file_path",
+    "toast.settings_saved",
+    "toast.refreshed",
 )
 
 
@@ -535,6 +543,42 @@ EXPECTED_CALLS = (
         "toast.markers_readded",
         re.compile(r't\(\s*"toast\.markers_readded"'),
         re.compile(r'showToast\(\s*"Re-added "'),
+    ),
+    # --- Eleventh batch ---------------------------------------------
+    (
+        "toast.oauth_error",
+        re.compile(r't\(\s*"toast\.oauth_error"'),
+        re.compile(r'showAlert\(\s*"OAuth error: "'),
+    ),
+    (
+        "toast.ws_start_error",
+        re.compile(r't\(\s*"toast\.ws_start_error"'),
+        re.compile(r'showAlert\(\s*"WS start error: "'),
+    ),
+    (
+        "toast.engine_preference_error",
+        re.compile(r't\(\s*"toast\.engine_preference_error"'),
+        re.compile(r'showAlert\(\s*"Error: "\s*\+\s*perr\.message'),
+    ),
+    (
+        "toast.preference_save_failed",
+        re.compile(r't\(\s*"toast\.preference_save_failed"'),
+        re.compile(r':\s*"Failed to save preference"'),
+    ),
+    (
+        "toast.log_file_path",
+        re.compile(r't\(\s*"toast\.log_file_path"'),
+        re.compile(r'showAlert\(\s*"Log file: "'),
+    ),
+    (
+        "toast.settings_saved",
+        re.compile(r't\(\s*"toast\.settings_saved"'),
+        re.compile(r'showToast\(\s*"Settings saved"'),
+    ),
+    (
+        "toast.refreshed",
+        re.compile(r't\(\s*"toast\.refreshed"'),
+        re.compile(r'showAlert\(\s*"Refreshed"\s*\)'),
     ),
 )
 
