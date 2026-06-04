@@ -1031,6 +1031,18 @@ MIGRATED_KEYS = (
     "common.apply",
     "preview.rendering",
     "progress.cancelling",
+    # Seventy-first batch (status, media-preview, and quick-workflow feedback).
+    "common.error",
+    "journal.context_only_action_title",
+    "media.no_preview",
+    "media.recent_files",
+    "status.disconnected",
+    "status.gpu_none",
+    "status.jobs_unknown",
+    "video.detecting",
+    "video.reframe_output_dims",
+    "video.watermark_detection_failed",
+    "workflow.quick_not_found",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5596,6 +5608,62 @@ EXPECTED_CALLS = (
         "progress.cancelling",
         re.compile(r't\(\s*"progress\.cancelling"'),
         re.compile(r'setButtonText\(el\.(?:processingCancel|cancelBtn),\s*"Cancelling…"'),
+    ),
+    # --- Seventy-first batch -------------------------------------
+    (
+        "common.error",
+        re.compile(r'el\.meterLUFS\.textContent\s*=\s*t\(\s*"common\.error"'),
+        re.compile(r'el\.meterLUFS\.textContent\s*=\s*"Error"'),
+    ),
+    (
+        "journal.context_only_action_title",
+        re.compile(r'pill2\.title\s*=\s*t\(\s*"journal\.context_only_action_title"'),
+        re.compile(r'pill2\.title\s*=\s*"This action is recorded for context'),
+    ),
+    (
+        "media.no_preview",
+        re.compile(r't\(\s*"media\.no_preview"'),
+        re.compile(r'clip-thumb-none">No Preview</div>'),
+    ),
+    (
+        "media.recent_files",
+        re.compile(r'group\.label\s*=\s*t\(\s*"media\.recent_files"'),
+        re.compile(r'group\.label\s*=\s*"Recent Files"'),
+    ),
+    (
+        "status.disconnected",
+        re.compile(r'text\.textContent\s*=\s*t\(\s*"status\.disconnected"'),
+        re.compile(r'text\.textContent\s*=\s*"Disconnected"'),
+    ),
+    (
+        "status.gpu_none",
+        re.compile(r'gpu\.textContent\s*=\s*t\(\s*"status\.gpu_none"'),
+        re.compile(r'gpu\.textContent\s*=\s*"GPU: --"'),
+    ),
+    (
+        "status.jobs_unknown",
+        re.compile(r'jobsEl\.textContent\s*=\s*t\(\s*"status\.jobs_unknown"'),
+        re.compile(r'jobsEl\.textContent\s*=\s*"Jobs: --"'),
+    ),
+    (
+        "video.detecting",
+        re.compile(r'setButtonText\(btn,\s*t\(\s*"video\.detecting"'),
+        re.compile(r'setButtonText\(btn,\s*"Detecting…"'),
+    ),
+    (
+        "video.reframe_output_dims",
+        re.compile(r't\(\s*"video\.reframe_output_dims"'),
+        re.compile(r'el\.reframeInfo\.textContent\s*=\s*"Output: "'),
+    ),
+    (
+        "video.watermark_detection_failed",
+        re.compile(r't\(\s*"video\.watermark_detection_failed"'),
+        re.compile(r'setHintState\(\s*resEl,\s*"Detection failed: "'),
+    ),
+    (
+        "workflow.quick_not_found",
+        re.compile(r't\(\s*"workflow\.quick_not_found"'),
+        re.compile(r'showAlert\("Workflow \'"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
