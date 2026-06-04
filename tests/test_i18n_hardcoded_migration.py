@@ -256,6 +256,24 @@ MIGRATED_KEYS = (
     "batch.no_files",
     "batch.add_hint",
     "batch.remove",
+    # Twenty-second batch (custom workflow builder feedback).
+    "workflow.step_count",
+    "workflow.enter_name",
+    "workflow.add_step_first",
+    "workflow.save_failed",
+    "workflow.saved",
+    "workflow.saved_summary",
+    "workflow.loaded_summary",
+    "workflow.deleted",
+    "workflow.deleted_summary",
+    "workflow.custom_default",
+    "workflow.running_on",
+    "workflow.empty_title",
+    "workflow.empty_hint",
+    "workflow.remove",
+    "workflow.saved_unavailable",
+    "workflow.load_saved_failed",
+    "workflow.no_custom_workflows",
 )
 
 
@@ -1324,6 +1342,94 @@ EXPECTED_CALLS = (
         re.compile(
             r'class="batch-file-remove"\s+data-idx="\'\s*\+\s*i\s*\+\s*\'">Remove</button>'
         ),
+    ),
+    # --- Twenty-second batch ----------------------------------------
+    (
+        "workflow.step_count",
+        re.compile(r't\(\s*"workflow\.step_count"'),
+        re.compile(r'return\s+count\s*\+\s*" step"'),
+    ),
+    (
+        "workflow.enter_name",
+        re.compile(r't\(\s*"workflow\.enter_name"'),
+        re.compile(r'showToast\("Enter a workflow name"'),
+    ),
+    (
+        "workflow.add_step_first",
+        re.compile(r't\(\s*"workflow\.add_step_first"'),
+        re.compile(r'showToast\("Add at least one step"'),
+    ),
+    (
+        "workflow.save_failed",
+        re.compile(r't\(\s*"workflow\.save_failed"'),
+        re.compile(r'data\s*\?\s*data\.error\s*:\s*"Save failed"'),
+    ),
+    (
+        "workflow.saved",
+        re.compile(r't\(\s*"workflow\.saved"'),
+        re.compile(r'showToast\("Workflow saved: "\s*\+\s*name'),
+    ),
+    (
+        "workflow.saved_summary",
+        re.compile(r't\(\s*"workflow\.saved_summary"'),
+        re.compile(r'updateCustomWorkflowSummary\("Saved "\s*\+\s*name'),
+    ),
+    (
+        "workflow.loaded_summary",
+        re.compile(r't\(\s*"workflow\.loaded_summary"'),
+        re.compile(r'updateCustomWorkflowSummary\(\s*"Loaded "\s*\+\s*data\[i\]\.name'),
+    ),
+    (
+        "workflow.deleted",
+        re.compile(r't\(\s*"workflow\.deleted"'),
+        re.compile(r'showToast\("Workflow deleted"'),
+    ),
+    (
+        "workflow.deleted_summary",
+        re.compile(r't\(\s*"workflow\.deleted_summary"'),
+        re.compile(r'updateCustomWorkflowSummary\("Deleted "\s*\+\s*sel\.value'),
+    ),
+    (
+        "workflow.custom_default",
+        re.compile(r't\(\s*"workflow\.custom_default"'),
+        re.compile(r'\|\|\s*"Custom workflow"'),
+    ),
+    (
+        "workflow.running_on",
+        re.compile(r't\(\s*"workflow\.running_on"'),
+        re.compile(r'updateCustomWorkflowSummary\(\s*"Running "\s*\+\s*draftName'),
+    ),
+    (
+        "workflow.empty_title",
+        re.compile(r't\(\s*"workflow\.empty_title"'),
+        re.compile(r'buildEmptyHintMarkup\("Workflow is empty"'),
+    ),
+    (
+        "workflow.empty_hint",
+        re.compile(r't\(\s*"workflow\.empty_hint"'),
+        re.compile(r'buildEmptyHintMarkup\("Workflow is empty",\s*"Add steps to build a custom workflow\."'),
+    ),
+    (
+        "workflow.remove",
+        re.compile(r't\(\s*"workflow\.remove"'),
+        re.compile(
+            r'class="workflow-step-remove"\s+data-idx="\'\s*\+\s*i\s*\+\s*\'">Remove</button>'
+        ),
+    ),
+    (
+        "workflow.saved_unavailable",
+        re.compile(r't\(\s*"workflow\.saved_unavailable"'),
+        re.compile(r"innerHTML\s*=\s*'<option value=\"\" disabled selected>Saved workflows unavailable</option>'"),
+    ),
+    (
+        "workflow.load_saved_failed",
+        re.compile(r't\(\s*"workflow\.load_saved_failed"'),
+        re.compile(r'updateCustomWorkflowSummary\(\s*"Couldn\'t load saved workflows\.'),
+    ),
+    (
+        "workflow.no_custom_workflows",
+        re.compile(r't\(\s*"workflow\.no_custom_workflows"'),
+        re.compile(r"innerHTML\s*=\s*'<option value=\"\" disabled selected>No custom workflows</option>'"),
     ),
 )
 
