@@ -5573,7 +5573,9 @@
     var _lastWorkflowRunContext = null;
 
     function workflowStepCountLabel(count) {
-        return count + " step" + (count === 1 ? "" : "s");
+        return t("workflow.step_count", "{count} step{plural}")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
     }
 
     function describeWorkflowStepGroup(endpoint) {
@@ -11249,12 +11251,12 @@
         if (el.saveCustomWorkflowBtn) {
             el.saveCustomWorkflowBtn.addEventListener("click", function () {
                 var name = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
-                if (!name) { showToast("Enter a workflow name", "error"); return; }
-                if (_workflowSteps.length === 0) { showToast("Add at least one step", "error"); return; }
+                if (!name) { showToast(t("workflow.enter_name", "Enter a workflow name"), "error"); return; }
+                if (_workflowSteps.length === 0) { showToast(t("workflow.add_step_first", "Add at least one step"), "error"); return; }
                 api("POST", "/workflow/save", { name: name, steps: _workflowSteps }, function (err, data) {
-                    if (err || (data && data.error)) { showToast(data ? data.error : "Save failed", "error"); return; }
-                    showToast("Workflow saved: " + name, "success");
-                    updateCustomWorkflowSummary("Saved " + name + " to the custom workflow library.", "success");
+                    if (err || (data && data.error)) { showToast(data ? data.error : t("workflow.save_failed", "Save failed"), "error"); return; }
+                    showToast(t("workflow.saved", "Workflow saved: {name}").replace("{name}", name), "success");
+                    updateCustomWorkflowSummary(t("workflow.saved_summary", "Saved {name} to the custom workflow library.").replace("{name}", name), "success");
                     refreshSavedWorkflows();
                     loadWorkflowPresets();
                 });
@@ -11272,7 +11274,8 @@
                             if (el.customWorkflowName) el.customWorkflowName.value = data[i].name;
                             renderWorkflowSteps();
                             updateCustomWorkflowSummary(
-                                "Loaded " + data[i].name + " into the draft editor. Review the steps or run it on the current clip.",
+                                t("workflow.loaded_summary", "Loaded {name} into the draft editor. Review the steps or run it on the current clip.")
+                                    .replace("{name}", data[i].name),
                                 "success"
                             );
                             break;
@@ -11287,8 +11290,8 @@
                 if (!sel || !sel.value) return;
                 api("DELETE", "/workflow/delete", { name: sel.value }, function (err, data) {
                     if (!err && !(data && data.error)) {
-                        showToast("Workflow deleted", "success");
-                        updateCustomWorkflowSummary("Deleted " + sel.value + " from the saved workflow library.", "warning");
+                        showToast(t("workflow.deleted", "Workflow deleted"), "success");
+                        updateCustomWorkflowSummary(t("workflow.deleted_summary", "Deleted {name} from the saved workflow library.").replace("{name}", sel.value), "warning");
                         refreshSavedWorkflows();
                         loadWorkflowPresets();
                     }
@@ -11298,14 +11301,18 @@
         if (el.runCustomWorkflowBtn) {
             el.runCustomWorkflowBtn.addEventListener("click", function () {
                 if (_workflowSteps.length === 0 || !selectedPath) return;
-                var draftName = (el.customWorkflowName && el.customWorkflowName.value.trim()) || "Custom workflow";
+                var draftName = (el.customWorkflowName && el.customWorkflowName.value.trim()) || t("workflow.custom_default", "Custom workflow");
                 _lastWorkflowRunContext = {
                     kind: "custom",
                     name: draftName,
                     steps: _workflowSteps.length
                 };
+                var clipName = selectedName || selectedPath.split(/[/\\]/).pop();
                 updateCustomWorkflowSummary(
-                    "Running " + draftName + " across " + workflowStepCountLabel(_workflowSteps.length) + " on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                    t("workflow.running_on", "Running {name} across {steps} on {clip}.")
+                        .replace("{name}", draftName)
+                        .replace("{steps}", workflowStepCountLabel(_workflowSteps.length))
+                        .replace("{clip}", clipName),
                     "working"
                 );
                 // Use server-side workflow runner for reliable chained execution
@@ -11324,7 +11331,10 @@
     function renderWorkflowSteps() {
         if (!el.workflowStepList) return;
         if (_workflowSteps.length === 0) {
-            el.workflowStepList.innerHTML = buildEmptyHintMarkup("Workflow is empty", "Add steps to build a custom workflow.");
+            el.workflowStepList.innerHTML = buildEmptyHintMarkup(
+                t("workflow.empty_title", "Workflow is empty"),
+                t("workflow.empty_hint", "Add steps to build a custom workflow.")
+            );
             if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = true;
             updateCustomWorkflowSummary();
             return;
@@ -11342,7 +11352,7 @@
                 '<span class="workflow-step-meta">' + esc(describeWorkflowStepGroup(endpoint)) + ' • ' + esc(endpoint.replace(/^\/+/, "")) + '</span>' +
                 '</div>' +
                 '</div>' +
-                '<button type="button" class="workflow-step-remove" data-idx="' + i + '">Remove</button>';
+                '<button type="button" class="workflow-step-remove" data-idx="' + i + '">' + esc(t("workflow.remove", "Remove")) + '</button>';
             frag.appendChild(item);
         }
         el.workflowStepList.innerHTML = "";
@@ -11358,12 +11368,12 @@
                 _savedWorkflowCount = 0;
                 _savedWorkflowLibraryLoaded = true;
                 if (el.savedWorkflowSelect) {
-                    el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>Saved workflows unavailable</option>';
+                    el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>' + esc(t("workflow.saved_unavailable", "Saved workflows unavailable")) + '</option>';
                 }
                 if (el.loadCustomWorkflowBtn) el.loadCustomWorkflowBtn.disabled = true;
                 if (el.deleteCustomWorkflowBtn) el.deleteCustomWorkflowBtn.disabled = true;
                 updateCustomWorkflowSummary(
-                    "Couldn't load saved workflows. Reconnect the backend or try again.",
+                    t("workflow.load_saved_failed", "Couldn't load saved workflows. Reconnect the backend or try again."),
                     "error"
                 );
                 return;
@@ -11373,7 +11383,7 @@
             _savedWorkflowCount = Array.isArray(data) ? data.length : 0;
             _savedWorkflowLibraryLoaded = true;
             if (data.length === 0) {
-                el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>No custom workflows</option>';
+                el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>' + esc(t("workflow.no_custom_workflows", "No custom workflows")) + '</option>';
                 if (el.loadCustomWorkflowBtn) el.loadCustomWorkflowBtn.disabled = true;
                 if (el.deleteCustomWorkflowBtn) el.deleteCustomWorkflowBtn.disabled = true;
                 updateCustomWorkflowSummary();
