@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.225
+**Version**: 4.226
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 18 - 2026-06-04.
+> Last researched: Cycle 19 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-28.
+  RA-01..RA-29.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -479,6 +479,8 @@
 > **v4.224 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-sixteenth rolling i18n batch covering the Caption Burn-in form shell. The i18n drift gate now reports 1,828 keys / 1,728 consumers / 100 dead / 0 missing.
 >
 > **v4.225 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-seventeenth rolling i18n batch covering the Animated Captions form shell. The i18n drift gate now reports 1,835 keys / 1,737 consumers / 98 dead / 0 missing.
+>
+> **v4.226 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 19 researcher note into the canonical roadmap surfaces. RA-29 now tracks Docker dependency install fail-closed behavior and quoted/canonical package specifiers so container builds cannot silently succeed with a weakened dependency layer.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2581,6 +2583,20 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.226 Research Queue Consolidation (RA-29)
+
+Cycle 19 is consolidated into the canonical queue. The new RA-29 item covers Docker dependency-install failure masking and shell-form requirement parsing, separate from RA-25's retired-package dependency-surface drift guard.
+
+| Surface | Status |
+|---|---|
+| Research input | `docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE19.md` checked Dockerfile dependency install behavior and canonical Python requirement surfaces. |
+| Promoted item | RA-29 tracks installing Docker dependencies from canonical extras/requirements or quoted specifiers, removing fail-open install masking, and adding a static guard. |
+| Local evidence | `Dockerfile` uses shell-form `RUN pip install --no-cache-dir ...` with unquoted `faster-whisper>=1.1` and ends the optional dependency layer with `|| echo "Some optional deps failed — continuing"`. |
+
+Validation after the consolidation: `rg -n "faster-whisper|optional deps failed|Some optional deps failed|pip install|deep-translator|pydub|RA-25|RA-28" Dockerfile ROADMAP.md TODO.md RESEARCH_REPORT.md PROJECT_CONTEXT.md` confirmed the source/planning evidence, and the focused roadmap/doc gates were rerun before commit.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2807,6 +2823,16 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
   runtime posture, GPU compose command drift, and the requested validation
   hooks.
 
+### Researcher Queue (Cycle 19 - 2026-06-04)
+
+- [x] 🔬 `docker-dependency-install-fail-open` - checked whether the Docker
+  dependency layer can silently succeed after optional dependency failures and
+  whether shell-form package specifiers are robust. Promoted RA-29 because
+  `Dockerfile` still uses unquoted comparison specifiers such as
+  `faster-whisper>=1.1` and masks optional install failures with
+  `|| echo "Some optional deps failed -- continuing"`, which is distinct from
+  RA-25's retired-package drift guard.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2831,6 +2857,8 @@ docs cannot reference an absent compose file. Cycle 17 adds a README
 non-badge generated-count guardrail for stale prose, diagram, and
 project-structure claims. Cycle 18 rechecked Docker CI/release-smoke coverage
 and promoted no new row because the evidence maps back to RA-25 through RA-27.
+Cycle 19 adds a Docker dependency fail-closed/specifier parsing guardrail for
+the image dependency layer.
 
 ### Quick Wins
 
@@ -2854,6 +2882,8 @@ and promoted no new row because the evidence maps back to RA-25 through RA-27.
 - [ ] **P2 — RA-26 Align Docker runtime docs, volume home, and WebSocket exposure** — Why: Docker is advertised as a supported launch path, while OpenCut docs describe real-time WebSocket progress on port 5680. The Dockerfile quick-start still points users at `/root/.opencut` even though the final image runs as `opencut` with `HOME=/home/opencut`, and compose does not publish the WebSocket port that the image exposes and docs advertise. Evidence: `Dockerfile` quick-start comments mount `/root/.opencut`; the final image creates `opencut` and sets `HOME=/home/opencut`; `docker-compose.yml` mounts `/home/opencut/.opencut` but publishes only `5679:5679`; `Dockerfile` exposes `5679 5680`; README and `PROJECT_CONTEXT.md` document the WebSocket bridge on 5680; `opencut.core.ws_bridge.WebSocketBridge` defaults to host `127.0.0.1` and port 5680, and `/system/websocket/start` does not override that host. Touches: `Dockerfile`, `docker-compose.yml`, Docker/README docs, and a container config drift test. Acceptance: either Docker is explicitly documented as HTTP-only, or compose/direct-run examples expose and bind the WebSocket bridge in a deliberate way; all quick-start volume examples use `/home/opencut/.opencut`; tests fail if Dockerfile examples, compose mounts, exposed ports, and documented runtime ports diverge again. Verify: focused Docker config test plus a Docker compose smoke that confirms `/health` and the chosen WebSocket posture. Complexity: S-M.
 - [ ] **P3 — RA-27 Fix Docker GPU compose launch command drift** — Why: Docker is presented as an easy install path, but the documented GPU command currently references a file that is not tracked. Users following the README will fail before reaching the existing GPU compose profile. Evidence: `README.md` says `docker-compose -f docker-compose.gpu.yml up`; `rg --files` shows only `docker-compose.yml`; `docker-compose.yml` defines `opencut-server-gpu` with `profiles: [gpu]` and comments `docker compose --profile gpu up`. Touches: README Docker launch docs, `docker-compose.yml` comments if needed, and a lightweight docs/config drift test. Acceptance: README and compose agree on one GPU launch command, either by adding the missing file or using the existing profile syntax; tests fail if README references a compose file that is absent from the repo. Verify: focused docs/config pytest plus `docker compose config --profile gpu` when Docker Compose is available. Complexity: S.
 - [ ] **P2 — RA-28 Add a README non-badge generated-count gate** — Why: Q4/E8 closed visible badge drift, but README prose, architecture diagram labels, and project-structure comments still carry stale exact route/module/blueprint counts that release smoke does not check. Evidence: README still says `v1.28.0`, `1,334 API routes`, `980 API routes`, `360 core modules`, and `73 route blueprints`; generated route truth reports 1,523 routes / 107 blueprints; `PROJECT_CONTEXT.md` records 599 core modules; `scripts/sync_badges.py` only checks badge regexes, and release-smoke's `badges` step only runs that badge check. Touches: `README.md`, `scripts/sync_badges.py` or a companion README sync/check script, `scripts/release_smoke.py`, and `tests/test_sync_badges.py` or a new README-count drift test. Acceptance: README non-badge generated counts are either synced from source-of-truth data or replaced with wording that cannot drift; tests fail if README reintroduces stale exact route/module/blueprint counts outside generated surfaces; release smoke covers the guard. Verify: focused README sync/count pytest plus `py -3.12 scripts/sync_badges.py --check` or the new companion check. Complexity: S-M.
+
+- [ ] **P2 — RA-29 Make Docker dependency installs fail closed and parse specifiers literally** — Why: Docker is advertised as a supported launch path, but the dependency layer can produce a partially provisioned image while the build still exits successfully. Evidence: `Dockerfile` uses shell-form `RUN pip install --no-cache-dir ...` with unquoted comparison specifiers such as `faster-whisper>=1.1`; in a POSIX shell-form `RUN`, `>` is shell redirection syntax unless the requirement is quoted or supplied from a requirements/extras file. The same layer ends with `|| echo "Some optional deps failed — continuing"`, so any failed optional install is converted into a successful Docker build. `pyproject.toml` already has canonical extras with parseable requirement strings such as `faster-whisper>=1.1,<2`, `opencv-python-headless>=4.13,<5`, and `scenedetect[opencv]>=0.6,<1`. Touches: `Dockerfile`, a Dockerfile/static dependency-surface guard test, and optionally `scripts/release_smoke.py` if the guard should run in release smoke. Acceptance: Docker dependencies are installed from canonical extras/requirements or every shell-form package specifier is quoted; fail-open `|| echo` masking is removed from dependency installation; tests fail if Dockerfile reintroduces unquoted comparison specifiers or unconditional install-failure masking. Verify: focused Dockerfile guard pytest, `git diff --check`, and real `docker build` evidence when Docker is available. Complexity: S.
 
 ### Larger Bets
 
