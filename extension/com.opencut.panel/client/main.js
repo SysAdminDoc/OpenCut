@@ -12115,7 +12115,11 @@
             for (var i = 0; i < data.length; i++) {
                 var opt = document.createElement("option");
                 opt.value = data[i].name;
-                opt.textContent = data[i].name + " (" + (data[i].steps || []).length + " steps)";
+                var stepCount = (data[i].steps || []).length;
+                opt.textContent = t("workflow.saved_option_steps", "{name} ({count} step{plural})")
+                    .replace("{name}", data[i].name)
+                    .replace("{count}", stepCount)
+                    .replace("{plural}", stepCount === 1 ? "" : "s");
                 el.savedWorkflowSelect.appendChild(opt);
             }
             if (previousValue) el.savedWorkflowSelect.value = previousValue;
@@ -12174,9 +12178,12 @@
             }
             var secs = Math.round(data.estimate_seconds);
             if (secs > 60) {
-                el.processingEstimate.textContent = Math.floor(secs / 60) + "m " + (secs % 60) + "s est.";
+                el.processingEstimate.textContent = t("progress.estimate_minutes", "{minutes}m {seconds}s est.")
+                    .replace("{minutes}", Math.floor(secs / 60))
+                    .replace("{seconds}", secs % 60);
             } else {
-                el.processingEstimate.textContent = secs + "s est.";
+                el.processingEstimate.textContent = t("progress.estimate_seconds", "{seconds}s est.")
+                    .replace("{seconds}", secs);
             }
         });
     }
@@ -15268,7 +15275,12 @@
         if (job.type === "silence" && job.status === "complete" && job.result && job.result.cuts) {
             lastTimelineCuts = job.result.cuts;
             var tlStatus = document.getElementById("tlWritebackStatus");
-            if (tlStatus) tlStatus.textContent = job.result.cuts.length + " silence cuts ready to review.";
+            if (tlStatus) {
+                var cutCount = job.result.cuts.length;
+                tlStatus.textContent = t("timeline.silence_cuts_ready", "{count} silence cut{plural} ready to review.")
+                    .replace("{count}", cutCount)
+                    .replace("{plural}", cutCount === 1 ? "" : "s");
+            }
             // Phase 3.3: Show cut review panel instead of auto-applying
             showCutReview(job.result.cuts, function (selectedCuts) {
                 lastTimelineCuts = selectedCuts;
