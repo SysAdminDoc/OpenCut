@@ -9900,19 +9900,19 @@
             if (!btn) return;
             var path = btn.dataset.path || "";
             if (!path) {
-                showAlert("Couldn't determine which model to delete.");
+                showAlert(t("models.delete_missing_path", "Couldn't determine which model to delete."));
                 return;
             }
             btn.disabled = true;
-                btn.textContent = "Deleting…";
+            btn.textContent = t("models.deleting", "Deleting…");
             api("POST", "/models/delete", { path: path }, function (err, data) {
                 if (!err && data && data.success) {
-                    showToast("Model deleted", "success");
+                    showToast(t("models.deleted", "Model deleted"), "success");
                     refreshModelList();
                 } else {
                     btn.disabled = false;
-                    btn.textContent = "Delete";
-                    showAlert("Failed to delete model.");
+                    btn.textContent = t("models.delete", "Delete");
+                    showAlert(t("models.delete_failed", "Failed to delete model."));
                 }
             });
         });
@@ -9928,40 +9928,40 @@
         if (!el.modelList) return;
         ensureModelListDelegation();
         el.modelList.innerHTML = buildEmptyHintMarkup(
-            "Scanning local models…",
-            "Reviewing local checkpoints and downloaded assets on this machine.",
+            t("models.scanning_title", "Scanning local models…"),
+            t("models.scanning_desc", "Reviewing local checkpoints and downloaded assets on this machine."),
             "info"
         );
         setStatusLine(
             "modelsStatusLine",
-            "Scanning local models and checkpoints for the current machine.",
+            t("models.scanning_status", "Scanning local models and checkpoints for the current machine."),
             "working"
         );
         api("GET", "/models/list", null, function (err, data) {
             if (err || !data) {
                 el.modelList.innerHTML = buildEmptyHintMarkup(
-                    "Model inventory unavailable",
-                    "Reconnect the backend or refresh again to inspect local model storage.",
+                    t("models.inventory_unavailable_title", "Model inventory unavailable"),
+                    t("models.inventory_unavailable_desc", "Reconnect the backend or refresh again to inspect local model storage."),
                     "error"
                 );
                 if (el.modelsTotalSize) el.modelsTotalSize.textContent = "--";
                 setStatusLine(
                     "modelsStatusLine",
-                    "Couldn't read the local model inventory. Reconnect the backend or try again.",
+                    t("models.inventory_unavailable_status", "Couldn't read the local model inventory. Reconnect the backend or try again."),
                     "error"
                 );
                 return;
             }
             if (!data.models || data.models.length === 0) {
                 el.modelList.innerHTML = buildEmptyHintMarkup(
-                    "No local models found",
-                    "Add local checkpoints here, or rely on hosted providers for LLM-driven features.",
+                    t("models.none_found_title", "No local models found"),
+                    t("models.none_found_desc", "Add local checkpoints here, or rely on hosted providers for LLM-driven features."),
                     "warning"
                 );
                 if (el.modelsTotalSize) el.modelsTotalSize.textContent = "0 MB";
                 setStatusLine(
                     "modelsStatusLine",
-                    "No local models are installed yet. Hosted providers can still power supported workflows.",
+                    t("models.none_found_status", "No local models are installed yet. Hosted providers can still power supported workflows."),
                     "warning"
                 );
                 return;
@@ -9976,16 +9976,17 @@
                 info.className = "model-item-info";
                 var name = document.createElement("span");
                 name.className = "model-item-name";
-                name.textContent = m.name || "Unknown model";
+                name.textContent = m.name || t("models.unknown_model", "Unknown model");
                 var meta = document.createElement("span");
                 meta.className = "model-item-meta";
-                meta.textContent = sizeStr + " - " + (m.source || "Unknown source");
+                meta.textContent = sizeStr + " - " + (m.source || t("models.unknown_source", "Unknown source"));
                 var deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "model-item-delete";
-                deleteBtn.textContent = "Delete";
-                deleteBtn.title = "Delete model";
-                deleteBtn.setAttribute("aria-label", "Delete model " + (m.name || "Unknown model"));
+                deleteBtn.textContent = t("models.delete", "Delete");
+                deleteBtn.title = t("models.delete_model", "Delete model");
+                deleteBtn.setAttribute("aria-label", t("models.delete_model_aria", "Delete model {name}")
+                    .replace("{name}", m.name || t("models.unknown_model", "Unknown model")));
                 deleteBtn.dataset.path = m.path || "";
                 deleteBtn.disabled = !m.path;
                 info.appendChild(name);
@@ -10001,7 +10002,10 @@
                 el.modelsTotalSize.textContent = totalStr;
                 setStatusLine(
                     "modelsStatusLine",
-                    data.models.length + " local model" + (data.models.length === 1 ? "" : "s") + " detected across " + totalStr + " of storage.",
+                    t("models.detected_status", "{count} local model{plural} detected across {size} of storage.")
+                        .replace("{count}", data.models.length)
+                        .replace("{plural}", data.models.length === 1 ? "" : "s")
+                        .replace("{size}", totalStr),
                     "success"
                 );
             }
@@ -10015,12 +10019,12 @@
         if (!el.getGpuRecBtn) return;
         el.getGpuRecBtn.addEventListener("click", function () {
             var originalBtnText = rememberButtonText(el.getGpuRecBtn);
-            setButtonText(el.getGpuRecBtn, "Checking…");
+            setButtonText(el.getGpuRecBtn, t("gpu.checking", "Checking…"));
             el.getGpuRecBtn.disabled = true;
             api("GET", "/system/gpu-recommend", null, function (err, data) {
                 setButtonText(el.getGpuRecBtn, originalBtnText);
                 el.getGpuRecBtn.disabled = false;
-                if (err || !data) { showAlert("Failed to get GPU recommendation."); return; }
+                if (err || !data) { showAlert(t("gpu.recommendation_failed", "Failed to get GPU recommendation.")); return; }
                 if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model || "N/A";
                 if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality || "N/A";
                 if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device || "N/A";
@@ -10050,7 +10054,7 @@
                 }
             }
             saveLocalSettings();
-            showToast("GPU recommendations applied", "success");
+            showToast(t("gpu.recommendations_applied", "GPU recommendations applied"), "success");
         });
     }
     var _lastGpuRec = null;
@@ -10063,7 +10067,8 @@
         el.clearQueueBtn.addEventListener("click", function () {
             api("POST", "/queue/clear", {}, function (err, data) {
                 if (!err && data) {
-                    showAlert("Queue cleared: " + (data.removed || 0) + " jobs removed.");
+                    showAlert(t("queue.cleared", "Queue cleared: {count} jobs removed.")
+                        .replace("{count}", data.removed || 0));
                     refreshQueueStatus();
                 }
             });
@@ -10077,7 +10082,11 @@
             if (el.jobQueueBar) {
                 if (count > 0) {
                     el.jobQueueBar.classList.remove("hidden");
-                    if (el.queueStatusText) el.queueStatusText.textContent = "Queue: " + count + " job" + (count !== 1 ? "s" : "");
+                    if (el.queueStatusText) {
+                        el.queueStatusText.textContent = t("queue.status", "Queue: {count} job{plural}")
+                            .replace("{count}", count)
+                            .replace("{plural}", count !== 1 ? "s" : "");
+                    }
                 } else {
                     el.jobQueueBar.classList.add("hidden");
                 }

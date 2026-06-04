@@ -216,6 +216,31 @@ MIGRATED_KEYS = (
     "captions.display_loading_tokens",
     "captions.display_schema_load_failed",
     "captions.display_defaults_loaded",
+    # Twentieth batch (model management, GPU recommendation, and queue feedback).
+    "models.delete_missing_path",
+    "models.deleting",
+    "models.deleted",
+    "models.delete",
+    "models.delete_failed",
+    "models.scanning_title",
+    "models.scanning_desc",
+    "models.scanning_status",
+    "models.inventory_unavailable_title",
+    "models.inventory_unavailable_desc",
+    "models.inventory_unavailable_status",
+    "models.none_found_title",
+    "models.none_found_desc",
+    "models.none_found_status",
+    "models.unknown_model",
+    "models.unknown_source",
+    "models.delete_model",
+    "models.delete_model_aria",
+    "models.detected_status",
+    "gpu.checking",
+    "gpu.recommendation_failed",
+    "gpu.recommendations_applied",
+    "queue.cleared",
+    "queue.status",
 )
 
 
@@ -1086,6 +1111,127 @@ EXPECTED_CALLS = (
         "captions.display_defaults_loaded",
         re.compile(r't\(\s*"captions\.display_defaults_loaded"'),
         re.compile(r'setCaptionDisplayStatus\("Defaults loaded\. Adjust tokens then Preview\."'),
+    ),
+    # --- Twentieth batch --------------------------------------------
+    (
+        "models.delete_missing_path",
+        re.compile(r't\(\s*"models\.delete_missing_path"'),
+        re.compile(r'showAlert\("Couldn\'t determine which model to delete\."'),
+    ),
+    (
+        "models.deleting",
+        re.compile(r't\(\s*"models\.deleting"'),
+        re.compile(r'btn\.textContent\s*=\s*"Deleting'),
+    ),
+    (
+        "models.deleted",
+        re.compile(r't\(\s*"models\.deleted"'),
+        re.compile(r'showToast\("Model deleted"'),
+    ),
+    (
+        "models.delete",
+        re.compile(r't\(\s*"models\.delete"'),
+        re.compile(r'(?:deleteBtn|btn)\.textContent\s*=\s*"Delete"'),
+    ),
+    (
+        "models.delete_failed",
+        re.compile(r't\(\s*"models\.delete_failed"'),
+        re.compile(r'showAlert\("Failed to delete model\."'),
+    ),
+    (
+        "models.scanning_title",
+        re.compile(r't\(\s*"models\.scanning_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Scanning local models'),
+    ),
+    (
+        "models.scanning_desc",
+        re.compile(r't\(\s*"models\.scanning_desc"'),
+        re.compile(r'^\s*"Reviewing local checkpoints and downloaded assets on this machine\.",', re.MULTILINE),
+    ),
+    (
+        "models.scanning_status",
+        re.compile(r't\(\s*"models\.scanning_status"'),
+        re.compile(r'^\s*"Scanning local models and checkpoints for the current machine\.",', re.MULTILINE),
+    ),
+    (
+        "models.inventory_unavailable_title",
+        re.compile(r't\(\s*"models\.inventory_unavailable_title"'),
+        re.compile(r'^\s*"Model inventory unavailable",', re.MULTILINE),
+    ),
+    (
+        "models.inventory_unavailable_desc",
+        re.compile(r't\(\s*"models\.inventory_unavailable_desc"'),
+        re.compile(r'^\s*"Reconnect the backend or refresh again to inspect local model storage\.",', re.MULTILINE),
+    ),
+    (
+        "models.inventory_unavailable_status",
+        re.compile(r't\(\s*"models\.inventory_unavailable_status"'),
+        re.compile(r'^\s*"Couldn\'t read the local model inventory\. Reconnect the backend or try again\.",', re.MULTILINE),
+    ),
+    (
+        "models.none_found_title",
+        re.compile(r't\(\s*"models\.none_found_title"'),
+        re.compile(r'^\s*"No local models found",', re.MULTILINE),
+    ),
+    (
+        "models.none_found_desc",
+        re.compile(r't\(\s*"models\.none_found_desc"'),
+        re.compile(r'^\s*"Add local checkpoints here, or rely on hosted providers for LLM-driven features\.",', re.MULTILINE),
+    ),
+    (
+        "models.none_found_status",
+        re.compile(r't\(\s*"models\.none_found_status"'),
+        re.compile(r'^\s*"No local models are installed yet\. Hosted providers can still power supported workflows\.",', re.MULTILINE),
+    ),
+    (
+        "models.unknown_model",
+        re.compile(r't\(\s*"models\.unknown_model"'),
+        re.compile(r'm\.name\s*\|\|\s*"Unknown model"'),
+    ),
+    (
+        "models.unknown_source",
+        re.compile(r't\(\s*"models\.unknown_source"'),
+        re.compile(r'm\.source\s*\|\|\s*"Unknown source"'),
+    ),
+    (
+        "models.delete_model",
+        re.compile(r't\(\s*"models\.delete_model"'),
+        re.compile(r'deleteBtn\.title\s*=\s*"Delete model"'),
+    ),
+    (
+        "models.delete_model_aria",
+        re.compile(r't\(\s*"models\.delete_model_aria"'),
+        re.compile(r'setAttribute\("aria-label",\s*"Delete model "\s*\+'),
+    ),
+    (
+        "models.detected_status",
+        re.compile(r't\(\s*"models\.detected_status"'),
+        re.compile(r'data\.models\.length\s*\+\s*" local model"'),
+    ),
+    (
+        "gpu.checking",
+        re.compile(r't\(\s*"gpu\.checking"'),
+        re.compile(r'setButtonText\(el\.getGpuRecBtn,\s*"Checking'),
+    ),
+    (
+        "gpu.recommendation_failed",
+        re.compile(r't\(\s*"gpu\.recommendation_failed"'),
+        re.compile(r'showAlert\("Failed to get GPU recommendation\."'),
+    ),
+    (
+        "gpu.recommendations_applied",
+        re.compile(r't\(\s*"gpu\.recommendations_applied"'),
+        re.compile(r'showToast\("GPU recommendations applied"'),
+    ),
+    (
+        "queue.cleared",
+        re.compile(r't\(\s*"queue\.cleared"'),
+        re.compile(r'showAlert\("Queue cleared: "\s*\+'),
+    ),
+    (
+        "queue.status",
+        re.compile(r't\(\s*"queue\.status"'),
+        re.compile(r'textContent\s*=\s*"Queue: "\s*\+'),
     ),
 )
 
