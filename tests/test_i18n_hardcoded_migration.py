@@ -270,6 +270,17 @@ HTML_STATIC_SHELL_CALLS = (
     ("auto_edit.margin_title", "data-i18n-title"),
     ("auto_edit.min_clip_length", "data-i18n"),
     ("auto_edit.min_clip_length_title", "data-i18n-title"),
+    # One-hundred-sixth batch (Highlights form static shell HTML).
+    ("forms.max_highlights", "data-i18n"),
+    ("highlights.max_title", "data-i18n-title"),
+    ("forms.duration_range", "data-i18n"),
+    ("highlights.min_duration_aria", "data-i18n-aria-label"),
+    ("highlights.range_to", "data-i18n"),
+    ("highlights.max_duration_aria", "data-i18n-aria-label"),
+    ("highlights.emotion_aria", "data-i18n-aria-label"),
+    ("highlights.emotion_missing", "data-i18n"),
+    ("common.install_now", "data-i18n"),
+    ("install.requires", "data-i18n"),
 )
 
 
@@ -1623,6 +1634,15 @@ MIGRATED_KEYS = (
     "auto_edit.min_clip_length_title",
     "auto_edit.motion_threshold",
     "auto_edit.motion_threshold_title",
+    # One-hundred-sixth batch (Highlights form static shell HTML).
+    "common.install_now",
+    "highlights.emotion_aria",
+    "highlights.emotion_missing",
+    "highlights.max_duration_aria",
+    "highlights.max_title",
+    "highlights.min_duration_aria",
+    "highlights.range_to",
+    "install.requires",
 )
 
 
