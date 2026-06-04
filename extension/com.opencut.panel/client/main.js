@@ -8484,17 +8484,22 @@
         setTextAndTitle(
             "journalCountSummary",
             recentCount
-                ? recentCount + " recent action" + (recentCount === 1 ? "" : "s")
-                : "No recent timeline writes",
+                ? t("journal.recent_actions", "{count} recent action{plural}")
+                    .replace("{count}", recentCount)
+                    .replace("{plural}", recentCount === 1 ? "" : "s")
+                : t("journal.no_recent_writes", "No recent timeline writes"),
             recentCount
-                ? "Latest journal entry was " + latestTime + "."
-                : "Run a Premiere-writing action and it will appear here."
+                ? t("journal.latest_entry_title", "Latest journal entry was {time}.")
+                    .replace("{time}", latestTime)
+                : t("journal.empty_entry_title", "Run a Premiere-writing action and it will appear here.")
         );
         setTextAndTitle(
             "journalRevertSummary",
             revertibleCount
-                ? revertibleCount + " undo-ready"
-                : (recentCount ? "Context only" : "Waiting for first reversible action"),
+                ? t("journal.undo_ready", "{count} undo-ready").replace("{count}", revertibleCount)
+                : (recentCount
+                    ? t("journal.context_only", "Context only")
+                    : t("journal.waiting_reversible", "Waiting for first reversible action")),
             revertibleCount
                 ? revertibleCount + " recent journal entr" + (revertibleCount === 1 ? "y is" : "ies are") + " ready to revert automatically."
                 : (recentCount
@@ -8599,19 +8604,19 @@
         if (entry.reverted) {
             var pill = document.createElement("span");
             pill.className = "journal-pill journal-pill-reverted";
-            pill.textContent = "Reverted";
+            pill.textContent = t("journal.reverted", "Reverted");
             actions.appendChild(pill);
         } else if (!entry.revertible) {
             var pill2 = document.createElement("span");
             pill2.className = "journal-pill journal-pill-info";
-            pill2.textContent = "Context only";
+            pill2.textContent = t("journal.context_only", "Context only");
             pill2.title = "This action is recorded for context, but it does not have an automatic rollback step.";
             actions.appendChild(pill2);
         } else {
             var revertBtn = document.createElement("button");
             revertBtn.type = "button";
             revertBtn.className = "btn btn-secondary btn-sm journal-revert-btn";
-            revertBtn.textContent = "Revert";
+            revertBtn.textContent = t("journal.revert", "Revert");
             revertBtn.addEventListener("click", function () {
                 _journalRevert(entry, revertBtn);
             });
@@ -8683,7 +8688,7 @@
         if (!entry.revertible) { return; }
 
         btn.disabled = true;
-        btn.textContent = "Reverting…";
+        btn.textContent = t("journal.reverting", "Reverting…");
 
         var dispatch = {
             add_markers:     function (p, cb) { PremiereBridge.removeSequenceMarkers(p, cb); },
@@ -8694,7 +8699,7 @@
 
         if (!dispatch) {
             btn.disabled = false;
-            btn.textContent = "Revert";
+            btn.textContent = t("journal.revert", "Revert");
             showAlert(t("toast.action_not_revertible", "This action can't be reverted automatically."));
             return;
         }
@@ -8704,7 +8709,7 @@
             try { r = JSON.parse(result || "{}"); } catch (e) { r = { error: result || t("toast.parse_error", "Parse error") }; }
             if (r.error) {
                 btn.disabled = false;
-                btn.textContent = "Revert";
+                btn.textContent = t("journal.revert", "Revert");
                 showAlert(t("toast.revert_failed", "Revert failed: {error}").replace("{error}", r.error));
                 return;
             }

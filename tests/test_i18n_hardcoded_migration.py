@@ -958,6 +958,17 @@ MIGRATED_KEYS = (
     "transcript.copy_not_supported",
     "transcript.summary_copied",
     "video.broll_generated",
+    # Sixty-sixth batch (journal summary and revert controls).
+    "journal.context_only",
+    "journal.empty_entry_title",
+    "journal.latest_entry_title",
+    "journal.no_recent_writes",
+    "journal.recent_actions",
+    "journal.revert",
+    "journal.reverted",
+    "journal.reverting",
+    "journal.undo_ready",
+    "journal.waiting_reversible",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5170,6 +5181,60 @@ EXPECTED_CALLS = (
         "video.broll_generated",
         re.compile(r't\(\s*"video\.broll_generated"'),
         re.compile(r'showToast\("B-roll generated: "\s*\+'),
+    ),
+    # --- Sixty-sixth batch ----------------------------------------
+    (
+        "journal.context_only",
+        re.compile(r't\(\s*"journal\.context_only"'),
+        re.compile(r'(?:recentCount\s*\?\s*"Context only"|pill2\.textContent\s*=\s*"Context only")'),
+    ),
+    (
+        "journal.empty_entry_title",
+        re.compile(r't\(\s*"journal\.empty_entry_title"'),
+        re.compile(
+            r'recentCount\s*\?[\s\S]{0,220}"Latest journal entry was "\s*\+[\s\S]{0,220}'
+            r':\s*"Run a Premiere-writing action and it will appear here\."'
+        ),
+    ),
+    (
+        "journal.latest_entry_title",
+        re.compile(r't\(\s*"journal\.latest_entry_title"'),
+        re.compile(r'"Latest journal entry was "\s*\+\s*latestTime\s*\+\s*"\."'),
+    ),
+    (
+        "journal.no_recent_writes",
+        re.compile(r't\(\s*"journal\.no_recent_writes"'),
+        re.compile(r':\s*"No recent timeline writes"'),
+    ),
+    (
+        "journal.recent_actions",
+        re.compile(r't\(\s*"journal\.recent_actions"'),
+        re.compile(r'recentCount\s*\+\s*" recent action"'),
+    ),
+    (
+        "journal.revert",
+        re.compile(r't\(\s*"journal\.revert"'),
+        re.compile(r'(?:revertBtn|btn)\.textContent\s*=\s*"Revert"'),
+    ),
+    (
+        "journal.reverted",
+        re.compile(r't\(\s*"journal\.reverted"'),
+        re.compile(r'pill\.textContent\s*=\s*"Reverted"'),
+    ),
+    (
+        "journal.reverting",
+        re.compile(r't\(\s*"journal\.reverting"'),
+        re.compile(r'btn\.textContent\s*=\s*"Reverting…"'),
+    ),
+    (
+        "journal.undo_ready",
+        re.compile(r't\(\s*"journal\.undo_ready"'),
+        re.compile(r'revertibleCount\s*\+\s*" undo-ready"'),
+    ),
+    (
+        "journal.waiting_reversible",
+        re.compile(r't\(\s*"journal\.waiting_reversible"'),
+        re.compile(r':\s*\(recentCount\s*\?\s*"Context only"\s*:\s*"Waiting for first reversible action"\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
