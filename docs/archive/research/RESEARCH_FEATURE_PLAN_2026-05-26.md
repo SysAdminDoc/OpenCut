@@ -283,8 +283,9 @@ For each item below: where it lives, what works, what was deferred.
 
 ### E12 — Workflow engine endpoint allowlist should be derived, not hard-coded (P2)
 
-- **Current behavior:** `opencut/core/workflow.py` carries a hand-maintained `KNOWN_ENDPOINTS` dict of ~80 routes. Adding a new step type requires editing this dict.
-- **Problem:** When a wave letter ships new routes (we just shipped 42 in Wave Q+R+S), the workflow engine can't see them until a maintainer remembers to update the dict.
+- **Status:** Shipped in `ROADMAP.md` v4.99. Workflow-safe async POST routes now opt in with `workflow_step(...)`; `opencut/_generated/route_manifest.json` carries `workflow.label` metadata for 53 steps; `KNOWN_ENDPOINTS` loads from the manifest; and route-manifest drift checks catch metadata changes.
+- **Original behavior:** `opencut/core/workflow.py` carried a hand-maintained `KNOWN_ENDPOINTS` dict of ~80 routes. Adding a new step type required editing this dict.
+- **Problem:** When a wave letter ships new routes (we just shipped 42 in Wave Q+R+S), the workflow engine could not see them until a maintainer remembered to update the dict.
 - **Recommendation:** Derive the allowlist from `opencut/_generated/route_manifest.json` at import time, intersected with a per-route "workflowable" annotation (a `@workflow_step` decorator on routes that opt in).
 - **Code locations:** `opencut/core/workflow.py`, `opencut/routes/__init__.py` (decorator), affected route handlers.
 - **Backward compat:** Pure additive — `KNOWN_ENDPOINTS` becomes a fallback for routes that haven't migrated.
@@ -369,7 +370,7 @@ For each item below: where it lives, what works, what was deferred.
 ### Refactor candidates surfaced during this pass
 
 - `opencut/core/captions.py` is the canonical place for a transcript-cache wrapper. Don't sprinkle caching into individual `_transcribe_*` functions; wrap the dispatcher.
-- `opencut/core/workflow.py::KNOWN_ENDPOINTS` is the kind of hand-maintained allowlist that drifts; E12 derives it from `route_manifest.json`.
+- `opencut/core/workflow.py::KNOWN_ENDPOINTS` is the kind of hand-maintained allowlist that drifts; E12 now derives it from `route_manifest.json`.
 - `opencut/core/plugins.py` should grow a `register_plugin_job(plugin_id, job_id, fn)` API; the existing route-registration shape is the pattern.
 - `opencut/jobs.py` is the right home for `peak_vram_mb` sampling and `exit_reason` enum — keep job metadata centralised, not per-route.
 
@@ -469,7 +470,8 @@ For each item below: where it lives, what works, what was deferred.
   - Touches: `opencut/helpers.py::run_ffmpeg`, `opencut/core/request_correlation.py`.
   - Status: closed in ROADMAP v4.98 with async-worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, request-prefixed FFmpeg stderr logging, and parser-safe raw stderr returns.
 
-- [ ] **P2 — E12 workflow allowlist derived from route manifest**
+- [x] **P2 — E12 workflow allowlist derived from route manifest**
+  - Status: closed in ROADMAP v4.99 with per-route workflow metadata, explicit async POST opt-ins, manifest-derived validation, and metadata drift checks.
   - Touches: `opencut/core/workflow.py`, `opencut/routes/__init__.py`.
 
 - [ ] **P2 — E13 CLI surface parity escape hatch**

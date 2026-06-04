@@ -17,6 +17,7 @@ import uuid
 from flask import Blueprint, jsonify
 
 from opencut.checks import check_watermark_available
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _get_file_duration,
@@ -87,6 +88,7 @@ def video_auto_detect_watermark():
 
 @video_core_bp.route("/video/watermark", methods=["POST"])
 @require_csrf
+@workflow_step("Adding watermark")
 @async_job("watermark")
 def video_watermark(job_id, filepath, data):
     """Remove watermarks from video or image using AI."""
@@ -396,6 +398,7 @@ def video_watermark(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_core_bp.route("/video/scenes", methods=["POST"])
 @require_csrf
+@workflow_step("Detecting scenes")
 @async_job("scenes")
 def video_scenes(job_id, filepath, data):
     """Detect scene changes in a video."""
@@ -463,6 +466,7 @@ def video_scenes(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_core_bp.route("/export-video", methods=["POST"])
 @require_csrf
+@workflow_step("Exporting video")
 @async_job("export", disk_operation="video_export", resumable=True)
 def export_video(job_id, filepath, data):
     """Render a new video file with silences removed (no visible cuts)."""
@@ -1246,6 +1250,7 @@ def _validate_merge_files(data):
 
 @video_core_bp.route("/video/merge", methods=["POST"])
 @require_csrf
+@workflow_step("Merging clips")
 @async_job("merge", filepath_required=False, pre_validate=_validate_merge_files)
 def video_merge(job_id, filepath, data):
     """Merge / concatenate multiple video files into one."""
@@ -1365,6 +1370,7 @@ def video_merge(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_core_bp.route("/video/trim", methods=["POST"])
 @require_csrf
+@workflow_step("Trimming video")
 @async_job("trim")
 def video_trim(job_id, filepath, data):
     """Trim a video to a start/end time range."""

@@ -37,6 +37,7 @@ Last consolidated: 2026-06-04.
 | CEP caption display settings | The May 26 plan now has E14 closed: the CEP Captions tab exposes the F236 display-settings card with token loading, live preview, and parity tests. |
 | Enriched job metadata | The May 26 plan now has N9 closed: live status, persisted history, diagnostics, and webhooks expose peak resource fields plus explicit terminal exit reasons. |
 | Request correlation | The May 26 plan now has N10 closed: async workers and FFmpeg subprocesses carry request IDs through `OPENCUT_REQUEST_ID` and prefixed stderr logs. |
+| Workflow safety | The May 26 plan now has E12 closed: workflow validation is derived from route-manifest `workflow.label` metadata, with 53 explicit workflow-safe route opt-ins and metadata drift checks. |
 
 ## Historical Detail
 

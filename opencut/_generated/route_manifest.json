@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "generated_at": "2026-06-04T03:54:18Z",
+  "version": 2,
+  "generated_at": "2026-06-04T04:24:57Z",
   "total_routes": 1523,
   "blueprint_count": 107,
   "method_counts": {
@@ -4133,7 +4133,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_denoise",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Denoising audio"
+      }
     },
     {
       "rule": "/audio/dereverb",
@@ -4205,7 +4208,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_duck_route",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Ducking audio"
+      }
     },
     {
       "rule": "/audio/duck-video",
@@ -4229,7 +4235,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_effects_apply",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Applying audio effects"
+      }
     },
     {
       "rule": "/audio/energy-envelope",
@@ -4365,7 +4374,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_isolate",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Isolating vocals"
+      }
     },
     {
       "rule": "/audio/loudness",
@@ -4389,7 +4401,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_loudness_match",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Matching loudness"
+      }
     },
     {
       "rule": "/audio/loudness-presets",
@@ -4597,7 +4612,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_normalize",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Normalizing audio"
+      }
     },
     {
       "rule": "/audio/premix-presets",
@@ -4613,7 +4631,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_pro_apply",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Applying pro audio effects"
+      }
     },
     {
       "rule": "/audio/pro/deepfilter",
@@ -4621,7 +4642,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_pro_deepfilter",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Running DeepFilter denoise"
+      }
     },
     {
       "rule": "/audio/pro/effects",
@@ -4677,7 +4701,10 @@
         "POST"
       ],
       "endpoint": "audio.audio_separate",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Separating audio stems"
+      }
     },
     {
       "rule": "/audio/sfx-categories",
@@ -4989,7 +5016,10 @@
         "POST"
       ],
       "endpoint": "audio.tts_generate",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Generating TTS"
+      }
     },
     {
       "rule": "/audio/tts/install",
@@ -5477,7 +5507,10 @@
         "POST"
       ],
       "endpoint": "captions.generate_captions",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Generating captions"
+      }
     },
     {
       "rule": "/captions/animated/presets",
@@ -5493,7 +5526,10 @@
         "POST"
       ],
       "endpoint": "captions.animated_caption_render",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Rendering animated captions"
+      }
     },
     {
       "rule": "/captions/burnin/file",
@@ -5501,7 +5537,10 @@
         "POST"
       ],
       "endpoint": "captions.burnin_from_file",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Burning in captions"
+      }
     },
     {
       "rule": "/captions/burnin/segments",
@@ -5541,7 +5580,10 @@
         "POST"
       ],
       "endpoint": "captions.captions_chapters",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Generating chapters"
+      }
     },
     {
       "rule": "/captions/compliance/standards",
@@ -5677,7 +5719,10 @@
         "POST"
       ],
       "endpoint": "captions.captions_repeat_detect",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Detecting repeats"
+      }
     },
     {
       "rule": "/captions/style/apply",
@@ -6502,7 +6547,10 @@
         "POST"
       ],
       "endpoint": "video_core.export_video",
-      "blueprint": "video_core"
+      "blueprint": "video_core",
+      "workflow": {
+        "label": "Exporting video"
+      }
     },
     {
       "rule": "/export/apng",
@@ -6694,7 +6742,10 @@
         "POST"
       ],
       "endpoint": "audio.filler_removal",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Removing filler words"
+      }
     },
     {
       "rule": "/filter/build",
@@ -9662,7 +9713,10 @@
         "POST"
       ],
       "endpoint": "audio.silence_remove",
-      "blueprint": "audio"
+      "blueprint": "audio",
+      "workflow": {
+        "label": "Detecting silence"
+      }
     },
     {
       "rule": "/silence/speed-up",
@@ -9958,7 +10012,10 @@
         "POST"
       ],
       "endpoint": "captions.styled_captions_route",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Generating styled captions"
+      }
     },
     {
       "rule": "/subtitle-position/analyze-frame",
@@ -10744,7 +10801,10 @@
         "POST"
       ],
       "endpoint": "captions.get_transcript",
-      "blueprint": "captions"
+      "blueprint": "captions",
+      "workflow": {
+        "label": "Transcribing"
+      }
     },
     {
       "rule": "/transcript-edit/apply-edits",
@@ -11000,7 +11060,10 @@
         "POST"
       ],
       "endpoint": "video_ai.video_ai_denoise",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Denoising video"
+      }
     },
     {
       "rule": "/video/ai/install",
@@ -11016,7 +11079,10 @@
         "POST"
       ],
       "endpoint": "video_ai.video_ai_interpolate",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Interpolating frames"
+      }
     },
     {
       "rule": "/video/ai/rembg",
@@ -11024,7 +11090,10 @@
         "POST"
       ],
       "endpoint": "video_ai.video_ai_rembg",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Removing background"
+      }
     },
     {
       "rule": "/video/ai/upscale",
@@ -11032,7 +11101,10 @@
         "POST"
       ],
       "endpoint": "video_ai.video_ai_upscale",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Upscaling video"
+      }
     },
     {
       "rule": "/video/analyze-exposure",
@@ -11112,7 +11184,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_auto_edit",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Auto-editing"
+      }
     },
     {
       "rule": "/video/auto-zoom",
@@ -11120,7 +11195,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_auto_zoom",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Applying auto-zoom"
+      }
     },
     {
       "rule": "/video/blend",
@@ -11128,7 +11206,10 @@
         "POST"
       ],
       "endpoint": "video_fx.blend_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Blending videos"
+      }
     },
     {
       "rule": "/video/body-effects",
@@ -11208,7 +11289,10 @@
         "POST"
       ],
       "endpoint": "video_fx.chromakey_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Applying chroma key"
+      }
     },
     {
       "rule": "/video/cinefocus",
@@ -11240,7 +11324,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_color_match",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Matching colors"
+      }
     },
     {
       "rule": "/video/color-scopes/all",
@@ -11320,7 +11407,10 @@
         "POST"
       ],
       "endpoint": "video_fx.color_correct_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Correcting color"
+      }
     },
     {
       "rule": "/video/color/external-lut",
@@ -11776,7 +11866,10 @@
         "POST"
       ],
       "endpoint": "video_ai.face_blur",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Blurring faces"
+      }
     },
     {
       "rule": "/video/face/capabilities",
@@ -11800,7 +11893,10 @@
         "POST"
       ],
       "endpoint": "video_ai.face_enhance_route",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Enhancing faces"
+      }
     },
     {
       "rule": "/video/face/install",
@@ -11864,7 +11960,10 @@
         "POST"
       ],
       "endpoint": "video_ai.face_swap_route",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Swapping faces"
+      }
     },
     {
       "rule": "/video/face/swap/capabilities",
@@ -11896,7 +11995,10 @@
         "POST"
       ],
       "endpoint": "video_fx.video_fx_apply",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Applying video FX"
+      }
     },
     {
       "rule": "/video/fx/list",
@@ -11968,7 +12070,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_highlights",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Extracting highlights"
+      }
     },
     {
       "rule": "/video/highlights/genres",
@@ -12144,7 +12249,10 @@
         "POST"
       ],
       "endpoint": "video_fx.lut_apply",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Applying LUT"
+      }
     },
     {
       "rule": "/video/lut/blend",
@@ -12208,7 +12316,10 @@
         "POST"
       ],
       "endpoint": "video_core.video_merge",
-      "blueprint": "video_core"
+      "blueprint": "video_core",
+      "workflow": {
+        "label": "Merging clips"
+      }
     },
     {
       "rule": "/video/motion-brush",
@@ -12320,7 +12431,10 @@
         "POST"
       ],
       "endpoint": "video_fx.particle_apply",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Adding particles"
+      }
     },
     {
       "rule": "/video/particles/presets",
@@ -12352,7 +12466,10 @@
         "POST"
       ],
       "endpoint": "video_fx.pip_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Adding picture-in-picture"
+      }
     },
     {
       "rule": "/video/power-windows/apply",
@@ -12456,7 +12573,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_reframe",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Reframing video"
+      }
     },
     {
       "rule": "/video/reframe-multi",
@@ -12488,7 +12608,10 @@
         "POST"
       ],
       "endpoint": "video_editing.video_reframe_face",
-      "blueprint": "video_editing"
+      "blueprint": "video_editing",
+      "workflow": {
+        "label": "Reframing to face"
+      }
     },
     {
       "rule": "/video/reframe/presets",
@@ -12672,7 +12795,10 @@
         "POST"
       ],
       "endpoint": "video_core.video_scenes",
-      "blueprint": "video_core"
+      "blueprint": "video_core",
+      "workflow": {
+        "label": "Detecting scenes"
+      }
     },
     {
       "rule": "/video/scenes/auto",
@@ -12752,7 +12878,10 @@
         "POST"
       ],
       "endpoint": "video_specialty.video_shorts_pipeline",
-      "blueprint": "video_specialty"
+      "blueprint": "video_specialty",
+      "workflow": {
+        "label": "Running shorts pipeline"
+      }
     },
     {
       "rule": "/video/slate/identify",
@@ -12768,7 +12897,10 @@
         "POST"
       ],
       "endpoint": "video_fx.speed_change_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Changing speed"
+      }
     },
     {
       "rule": "/video/speed/presets",
@@ -12784,7 +12916,10 @@
         "POST"
       ],
       "endpoint": "video_fx.speed_ramp_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Applying speed ramp"
+      }
     },
     {
       "rule": "/video/speed/reverse",
@@ -12792,7 +12927,10 @@
         "POST"
       ],
       "endpoint": "video_fx.speed_reverse_route",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Reversing video"
+      }
     },
     {
       "rule": "/video/stabilize-advanced",
@@ -12840,7 +12978,10 @@
         "POST"
       ],
       "endpoint": "video_ai.style_apply",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Applying style transfer"
+      }
     },
     {
       "rule": "/video/style/arbitrary",
@@ -12928,7 +13069,10 @@
         "POST"
       ],
       "endpoint": "video_specialty.title_overlay",
-      "blueprint": "video_specialty"
+      "blueprint": "video_specialty",
+      "workflow": {
+        "label": "Overlaying title"
+      }
     },
     {
       "rule": "/video/title/presets",
@@ -12944,7 +13088,10 @@
         "POST"
       ],
       "endpoint": "video_specialty.title_render",
-      "blueprint": "video_specialty"
+      "blueprint": "video_specialty",
+      "workflow": {
+        "label": "Rendering title"
+      }
     },
     {
       "rule": "/video/track-object",
@@ -12992,7 +13139,10 @@
         "POST"
       ],
       "endpoint": "video_fx.transitions_apply",
-      "blueprint": "video_fx"
+      "blueprint": "video_fx",
+      "workflow": {
+        "label": "Applying transitions"
+      }
     },
     {
       "rule": "/video/transitions/join",
@@ -13016,7 +13166,10 @@
         "POST"
       ],
       "endpoint": "video_core.video_trim",
-      "blueprint": "video_core"
+      "blueprint": "video_core",
+      "workflow": {
+        "label": "Trimming video"
+      }
     },
     {
       "rule": "/video/upscale/capabilities",
@@ -13048,7 +13201,10 @@
         "POST"
       ],
       "endpoint": "video_ai.upscale_run",
-      "blueprint": "video_ai"
+      "blueprint": "video_ai",
+      "workflow": {
+        "label": "Upscaling video"
+      }
     },
     {
       "rule": "/video/upscale/seedvr2",
@@ -13096,7 +13252,10 @@
         "POST"
       ],
       "endpoint": "video_core.video_watermark",
-      "blueprint": "video_core"
+      "blueprint": "video_core",
+      "workflow": {
+        "label": "Adding watermark"
+      }
     },
     {
       "rule": "/video/watermark/embed",

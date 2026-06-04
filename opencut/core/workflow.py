@@ -11,16 +11,46 @@ import json
 import logging
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 logger = logging.getLogger("opencut")
+ROUTE_MANIFEST_PATH = Path(__file__).resolve().parents[1] / "_generated" / "route_manifest.json"
 
 # ---------------------------------------------------------------------------
-# Known endpoints — maps route path to a human-readable label for progress
-# messages.  Only POST endpoints that accept {filepath, ...} are valid
-# workflow steps.
+# Workflowable route markers.
 # ---------------------------------------------------------------------------
-KNOWN_ENDPOINTS: Dict[str, str] = {
+def workflow_step(label: str):
+    """Mark an async POST route as safe for sequential workflow execution."""
+    clean_label = str(label or "").strip()
+    if not clean_label:
+        raise ValueError("workflow_step label is required")
+
+    def decorator(func):
+        setattr(func, "_opencut_workflow_step", {"label": clean_label})
+        return func
+
+    return decorator
+
+
+def get_workflow_step_metadata(view_func: Any) -> Optional[Dict[str, str]]:
+    """Return committed manifest metadata for a workflowable route."""
+    if view_func is None or not getattr(view_func, "_opencut_async_job", False):
+        return None
+    raw = getattr(view_func, "_opencut_workflow_step", None)
+    if isinstance(raw, Mapping):
+        label = str(raw.get("label") or "").strip()
+    elif isinstance(raw, str):
+        label = raw.strip()
+    else:
+        label = ""
+    if not label:
+        return None
+    return {"label": label}
+
+
+# Labels retained as an additive compatibility fallback for older manifests.
+_FALLBACK_WORKFLOW_ENDPOINTS: Dict[str, str] = {
     # Audio
     "/silence": "Detecting silence",
     "/fillers": "Removing filler words",
@@ -78,6 +108,56 @@ KNOWN_ENDPOINTS: Dict[str, str] = {
     "/captions/chapters": "Generating chapters",
     "/captions/repeat-detect": "Detecting repeats",
 }
+
+
+def workflow_endpoints_from_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    include_fallback: bool = True,
+) -> Dict[str, str]:
+    """Return ``{route_rule: progress_label}`` from route manifest metadata."""
+    endpoints: Dict[str, str] = {}
+    routes = manifest.get("routes", [])
+    if not isinstance(routes, list):
+        return endpoints
+
+    for route in routes:
+        if not isinstance(route, Mapping):
+            continue
+        rule = str(route.get("rule") or "").strip()
+        if not rule.startswith("/") or "<" in rule:
+            continue
+        methods = {str(method).upper() for method in (route.get("methods") or [])}
+        if "POST" not in methods:
+            continue
+
+        label = ""
+        workflow_meta = route.get("workflow")
+        if isinstance(workflow_meta, Mapping):
+            label = str(workflow_meta.get("label") or "").strip()
+        if not label and include_fallback:
+            label = _FALLBACK_WORKFLOW_ENDPOINTS.get(rule, "")
+        if label:
+            endpoints[rule] = label
+
+    return dict(sorted(endpoints.items()))
+
+
+def load_workflow_endpoints(path: Path = ROUTE_MANIFEST_PATH) -> Dict[str, str]:
+    """Load workflowable endpoints from the generated route manifest."""
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Cannot load route manifest for workflow validation: %s", exc)
+        return dict(_FALLBACK_WORKFLOW_ENDPOINTS)
+    endpoints = workflow_endpoints_from_manifest(manifest)
+    if not endpoints:
+        return dict(_FALLBACK_WORKFLOW_ENDPOINTS)
+    return endpoints
+
+
+# Public compatibility name used by tests and workflow execution.
+KNOWN_ENDPOINTS: Dict[str, str] = load_workflow_endpoints()
 
 
 def validate_workflow_steps(steps: List[Dict[str, Any]]) -> Tuple[bool, str]:
