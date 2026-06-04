@@ -7221,27 +7221,29 @@
     }
 
     function installWhisper() {
-        showAlert("Installing faster-whisper… This may take a minute.");
+        showAlert(t("toast.installing_faster_whisper", "Installing faster-whisper… This may take a minute."));
         startJob("/install-whisper", { backend: "faster-whisper", no_input: true });
     }
 
     function reinstallWhisper() {
         var cpuMode = el.whisperCpuMode.checked;
-        showAlert("Reinstalling Whisper" + (cpuMode ? " in CPU mode" : "") + "… Please wait.");
+        showAlert(t("toast.reinstalling_whisper", "Reinstalling Whisper{mode}… Please wait.").replace("{mode}", cpuMode ? " in CPU mode" : ""));
         startJob("/whisper/reinstall", { backend: "faster-whisper", cpu_mode: cpuMode, no_input: true });
     }
 
     function clearWhisperCache() {
-        showAlert("Clearing Whisper cache…");
+        showAlert(t("toast.clearing_whisper_cache", "Clearing Whisper cache…"));
         api("POST", "/whisper/clear-cache", {}, function (err, data) {
             if (!err && data) {
                 if (data.success) {
-                    showAlert("Cache cleared! Cleared " + (data.cleared ? data.cleared.length : 0) + " location(s). Models will re-download on next use.");
+                    showAlert(t("toast.whisper_cache_cleared", "Cache cleared! Cleared {count} location(s). Models will re-download on next use.")
+                        .replace("{count}", data.cleared ? data.cleared.length : 0));
                 } else {
-                    showAlert("Cache clear had errors: " + (data.errors ? data.errors.join(", ") : "unknown"));
+                    showAlert(t("toast.whisper_cache_clear_errors", "Cache clear had errors: {errors}")
+                        .replace("{errors}", data.errors ? data.errors.join(", ") : "unknown"));
                 }
             } else {
-                showAlert("Failed to clear cache.");
+                showAlert(t("toast.whisper_cache_clear_failed", "Failed to clear cache."));
             }
         });
     }
@@ -7264,7 +7266,7 @@
                         "ready",
                         "Transcription is available in CPU mode for stability."
                     );
-                    showAlert("CPU mode enabled. Transcription may be slower but more stable.");
+                    showAlert(t("toast.whisper_cpu_mode_enabled", "CPU mode enabled. Transcription may be slower but more stable."));
                 } else {
                     el.whisperDeviceText.textContent = "Auto (GPU if available)";
                     el.whisperDeviceText.setAttribute("data-state", "idle");
@@ -7279,10 +7281,10 @@
                         "ready",
                         "Transcription will prefer GPU acceleration when available."
                     );
-                    showAlert("CPU mode disabled. Whisper will try to use GPU.");
+                    showAlert(t("toast.whisper_cpu_mode_disabled", "CPU mode disabled. Whisper will try to use GPU."));
                 }
             } else {
-                showAlert("Failed to update settings.");
+                showAlert(t("toast.settings_update_failed", "Failed to update settings."));
                 // Revert checkbox
                 el.whisperCpuMode.checked = !cpuMode;
             }
@@ -7290,7 +7292,7 @@
     }
 
     function restartBackend() {
-        showAlert("Restarting backend…");
+        showAlert(t("toast.restarting_backend", "Restarting backend…"));
         setStatusLine(
             "systemStatusLine",
             "Restarting the local backend. Processing controls will come back as soon as the service responds again.",
