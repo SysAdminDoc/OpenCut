@@ -27,6 +27,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EN_JSON = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "locales" / "en.json"
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+INDEX_HTML = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 
 
 WORKSPACE_METADATA_CALLS = (
@@ -83,6 +84,43 @@ WORKSPACE_METADATA_CALLS = (
     ("workspace.settings_idle_copy", re.compile(r'idleCopy:\s*"Check backend status')),
     ("workspace.settings_ready_title", re.compile(r'readyTitle:\s*"Settings are ready')),
     ("workspace.settings_ready_copy", re.compile(r'readyCopy:\s*"Keep backend health')),
+)
+
+
+HTML_STATIC_SHELL_CALLS = (
+    # Ninety-fifth batch (first-viewport workspace shell HTML).
+    ("common.skip_to_main", "data-i18n"),
+    ("brand.meta", "data-i18n"),
+    ("conn.dot_disconnected", "data-i18n-aria-label"),
+    ("workspace.clip_choose", "data-i18n"),
+    ("workspace.choose_clip_title", "data-i18n-title"),
+    ("workspace.default_suite", "data-i18n"),
+    ("workspace.initial_subtitle", "data-i18n"),
+    ("conn.refresh_connection", "data-i18n-title"),
+    ("conn.refresh_connection", "data-i18n-aria-label"),
+    ("conn.backend_status", "data-i18n-title"),
+    ("common.cancel", "data-i18n"),
+    ("processing.cancel_active_run", "data-i18n-title"),
+    ("processing.cancel_active_run", "data-i18n-aria-label"),
+    ("processing.progress", "data-i18n-aria-label"),
+    ("alert.needs_attention", "data-i18n"),
+    ("alert.dismiss", "data-i18n-title"),
+    ("alert.dismiss", "data-i18n-aria-label"),
+    ("session.resume_region", "data-i18n-aria-label"),
+    ("session.welcome_back", "data-i18n"),
+    ("session.left_off_title", "data-i18n"),
+    ("common.dismiss", "data-i18n-title"),
+    ("session.dismiss_card", "data-i18n-aria-label"),
+    ("conn.reconnecting", "data-i18n"),
+    ("workspace.cut_kicker", "data-i18n"),
+    ("workspace.cut_idle_title", "data-i18n"),
+    ("workspace.cut_idle_copy", "data-i18n"),
+    ("workspace.session_region", "data-i18n-aria-label"),
+    ("workspace.label_source", "data-i18n"),
+    ("workspace.awaiting_media", "data-i18n"),
+    ("workspace.label_suite", "data-i18n"),
+    ("workspace.label_status", "data-i18n"),
+    ("workspace.backend_offline", "data-i18n"),
 )
 
 
@@ -1291,6 +1329,25 @@ MIGRATED_KEYS = (
     "workflow.preset_status_choose",
     "workflow.preset_status_choose_clip",
     "workflow.preset_status_ready_on",
+    # Ninety-fifth batch (first-viewport workspace shell HTML).
+    "alert.dismiss",
+    "alert.needs_attention",
+    "brand.meta",
+    "common.dismiss",
+    "common.skip_to_main",
+    "conn.backend_status",
+    "conn.refresh_connection",
+    "processing.cancel_active_run",
+    "processing.progress",
+    "session.dismiss_card",
+    "session.left_off_title",
+    "session.resume_region",
+    "session.welcome_back",
+    "workspace.initial_subtitle",
+    "workspace.label_source",
+    "workspace.label_status",
+    "workspace.label_suite",
+    "workspace.session_region",
 )
 
 
@@ -7021,6 +7078,7 @@ class TestI18nHardcodedMigration(unittest.TestCase):
     def setUpClass(cls):
         cls.en = json.loads(EN_JSON.read_text(encoding="utf-8"))
         cls.js = MAIN_JS.read_text(encoding="utf-8")
+        cls.html = INDEX_HTML.read_text(encoding="utf-8")
 
     def test_all_migrated_keys_in_en_json(self):
         for key in MIGRATED_KEYS:
@@ -7059,6 +7117,17 @@ class TestI18nHardcodedMigration(unittest.TestCase):
                     self.js,
                     banned_re,
                     f"main.js still contains bare-English workspace metadata for {key!r}",
+                )
+
+    def test_static_shell_html_uses_i18n_attributes(self):
+        for key, attribute in HTML_STATIC_SHELL_CALLS:
+            with self.subTest(key=key, attribute=attribute):
+                self.assertIn(key, self.en, f"en.json missing migrated key {key!r}")
+                self.assertTrue(self.en[key].strip(), f"en.json {key!r} has empty value")
+                self.assertRegex(
+                    self.html,
+                    re.compile(rf'{re.escape(attribute)}="{re.escape(key)}"'),
+                    f"index.html does not wire {attribute} to {key!r}",
                 )
 
 
