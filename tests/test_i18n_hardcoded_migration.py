@@ -274,6 +274,18 @@ MIGRATED_KEYS = (
     "workflow.saved_unavailable",
     "workflow.load_saved_failed",
     "workflow.no_custom_workflows",
+    # Twenty-third batch (workflow preset loading/run/completion feedback).
+    "workflow.preset_unavailable",
+    "workflow.load_presets_failed",
+    "workflow.builtin_group",
+    "workflow.custom_group",
+    "workflow.no_presets",
+    "workflow.preset_running_on",
+    "workflow.complete",
+    "workflow.complete_output_suffix",
+    "workflow.failed",
+    "workflow.unknown_error",
+    "workflow.cancelled",
 )
 
 
@@ -1430,6 +1442,65 @@ EXPECTED_CALLS = (
         "workflow.no_custom_workflows",
         re.compile(r't\(\s*"workflow\.no_custom_workflows"'),
         re.compile(r"innerHTML\s*=\s*'<option value=\"\" disabled selected>No custom workflows</option>'"),
+    ),
+    # --- Twenty-third batch -----------------------------------------
+    (
+        "workflow.preset_unavailable",
+        re.compile(r't\(\s*"workflow\.preset_unavailable"'),
+        re.compile(r"innerHTML\s*=\s*'<option value=\"\" disabled selected>Preset library unavailable</option>'"),
+    ),
+    (
+        "workflow.load_presets_failed",
+        re.compile(r't\(\s*"workflow\.load_presets_failed"'),
+        re.compile(r'updateWorkflowPresetSummary\(\s*"Couldn\'t load workflow presets\.'),
+    ),
+    (
+        "workflow.builtin_group",
+        re.compile(r't\(\s*"workflow\.builtin_group"'),
+        re.compile(r'optg\.label\s*=\s*"Built-in"'),
+    ),
+    (
+        "workflow.custom_group",
+        re.compile(r't\(\s*"workflow\.custom_group"'),
+        re.compile(r'optg2\.label\s*=\s*"Custom"'),
+    ),
+    (
+        "workflow.no_presets",
+        re.compile(r't\(\s*"workflow\.no_presets"'),
+        re.compile(r"innerHTML\s*=\s*'<option value=\"\" disabled selected>No presets available</option>'"),
+    ),
+    (
+        "workflow.preset_running_on",
+        re.compile(r't\(\s*"workflow\.preset_running_on"'),
+        re.compile(r'updateWorkflowPresetSummary\(\s*"Running "\s*\+\s*preset\.name'),
+    ),
+    (
+        "workflow.complete",
+        re.compile(r't\(\s*"workflow\.complete"'),
+        re.compile(r'var\s+msg\s*=\s*"Workflow complete: "\s*\+'),
+    ),
+    (
+        "workflow.complete_output_suffix",
+        re.compile(r't\(\s*"workflow\.complete_output_suffix"'),
+        re.compile(r'msg\s*\+=\s*" Output: "\s*\+'),
+    ),
+    (
+        "workflow.failed",
+        re.compile(r't\(\s*"workflow\.failed"'),
+        re.compile(r'var\s+errorMsg\s*=\s*"Workflow failed: "\s*\+'),
+    ),
+    (
+        "workflow.unknown_error",
+        re.compile(r't\(\s*"workflow\.unknown_error"'),
+        re.compile(
+            r'var\s+errorMsg\s*=\s*"Workflow failed: "\s*\+\s*'
+            r'\(job\.error\s*\|\|\s*job\.message\s*\|\|\s*"Unknown error"\)'
+        ),
+    ),
+    (
+        "workflow.cancelled",
+        re.compile(r't\(\s*"workflow\.cancelled"'),
+        re.compile(r'var\s+cancelMsg\s*=\s*"Workflow cancelled before all steps finished\."'),
     ),
 )
 

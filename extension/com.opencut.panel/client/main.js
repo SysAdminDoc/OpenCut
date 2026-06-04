@@ -5759,10 +5759,10 @@
             if (err || !data) {
                 _workflowPresets = [];
                 _workflowPresetsLoaded = true;
-                if (el.workflowPreset) el.workflowPreset.innerHTML = '<option value="" disabled selected>Preset library unavailable</option>';
+                if (el.workflowPreset) el.workflowPreset.innerHTML = '<option value="" disabled selected>' + esc(t("workflow.preset_unavailable", "Preset library unavailable")) + '</option>';
                 syncWorkflowPresetDescription(null);
                 updateWorkflowPresetSummary(
-                    "Couldn't load workflow presets. Reconnect the backend or refresh the panel to try again.",
+                    t("workflow.load_presets_failed", "Couldn't load workflow presets. Reconnect the backend or refresh the panel to try again."),
                     "error"
                 );
                 return;
@@ -5778,11 +5778,11 @@
             var globalIdx = 0;
             if (builtins.length) {
                 var optg = document.createElement("optgroup");
-                optg.label = "Built-in";
+                optg.label = t("workflow.builtin_group", "Built-in");
                 for (var i = 0; i < builtins.length; i++) {
                     var opt = document.createElement("option");
                     opt.value = "idx:" + globalIdx;
-                    opt.textContent = builtins[i].name + " (" + (builtins[i].steps || []).length + " steps)";
+                    opt.textContent = builtins[i].name + " (" + workflowStepCountLabel((builtins[i].steps || []).length) + ")";
                     optg.appendChild(opt);
                     _workflowPresets.push(builtins[i]);
                     globalIdx++;
@@ -5791,11 +5791,11 @@
             }
             if (customs.length) {
                 var optg2 = document.createElement("optgroup");
-                optg2.label = "Custom";
+                optg2.label = t("workflow.custom_group", "Custom");
                 for (var j = 0; j < customs.length; j++) {
                     var opt2 = document.createElement("option");
                     opt2.value = "idx:" + globalIdx;
-                    opt2.textContent = customs[j].name + " (" + (customs[j].steps || []).length + " steps)";
+                    opt2.textContent = customs[j].name + " (" + workflowStepCountLabel((customs[j].steps || []).length) + ")";
                     optg2.appendChild(opt2);
                     _workflowPresets.push(customs[j]);
                     globalIdx++;
@@ -5803,7 +5803,7 @@
                 sel.appendChild(optg2);
             }
             if (!builtins.length && !customs.length) {
-                sel.innerHTML = '<option value="" disabled selected>No presets available</option>';
+                sel.innerHTML = '<option value="" disabled selected>' + esc(t("workflow.no_presets", "No presets available")) + '</option>';
             } else if (previousValue) {
                 sel.value = previousValue;
             }
@@ -5841,8 +5841,12 @@
             name: preset.name,
             steps: (preset.steps || []).length
         };
+        var clipName = selectedName || selectedPath.split(/[/\\]/).pop();
         updateWorkflowPresetSummary(
-            "Running " + preset.name + " across " + workflowStepCountLabel((preset.steps || []).length) + " on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+            t("workflow.preset_running_on", "Running {name} across {steps} on {clip}.")
+                .replace("{name}", preset.name)
+                .replace("{steps}", workflowStepCountLabel((preset.steps || []).length))
+                .replace("{clip}", clipName),
             "working"
         );
         // Use server-side workflow runner for reliable chained execution
@@ -14300,8 +14304,12 @@
         var ctx = _lastWorkflowRunContext;
         if (job.status === "complete" && job.result) {
             var r = job.result;
-            var msg = "Workflow complete: " + (r.steps_completed || 0) + " steps processed.";
-            if (r.output) msg += " Output: " + String(r.output).split("/").pop().split("\\").pop();
+            var msg = t("workflow.complete", "Workflow complete: {steps} processed.")
+                .replace("{steps}", workflowStepCountLabel(r.steps_completed || 0));
+            if (r.output) {
+                msg += t("workflow.complete_output_suffix", " Output: {output}")
+                    .replace("{output}", String(r.output).split("/").pop().split("\\").pop());
+            }
             showToast(msg, "success");
             if (ctx && ctx.kind === "preset") {
                 updateWorkflowPresetSummary(msg, "success");
@@ -14310,7 +14318,8 @@
             }
             _lastWorkflowRunContext = null;
         } else if (job.status === "error") {
-            var errorMsg = "Workflow failed: " + (job.error || job.message || "Unknown error") + ".";
+            var errorMsg = t("workflow.failed", "Workflow failed: {error}.")
+                .replace("{error}", job.error || job.message || t("workflow.unknown_error", "Unknown error"));
             if (ctx && ctx.kind === "preset") {
                 updateWorkflowPresetSummary(errorMsg, "error");
             } else if (ctx && ctx.kind === "custom") {
@@ -14318,7 +14327,7 @@
             }
             _lastWorkflowRunContext = null;
         } else if (job.status === "cancelled") {
-            var cancelMsg = "Workflow cancelled before all steps finished.";
+            var cancelMsg = t("workflow.cancelled", "Workflow cancelled before all steps finished.");
             if (ctx && ctx.kind === "preset") {
                 updateWorkflowPresetSummary(cancelMsg, "warning");
             } else if (ctx && ctx.kind === "custom") {
