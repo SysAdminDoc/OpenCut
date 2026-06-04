@@ -373,8 +373,17 @@ def filter_chain_preview(job_id, filepath, data):
 
 
 # ===========================================================================
-# 4. Webhooks  (4 routes)
+# 4. Webhooks  (6 routes)
 # ===========================================================================
+
+@dev_scripting_bp.route("/webhooks/event-types", methods=["GET"])
+@dev_scripting_bp.route("/api/webhooks/event-types", methods=["GET"])
+def webhook_event_types():
+    """List supported webhook event names and legacy aliases."""
+    from opencut.core.webhook_system import list_event_types
+
+    return jsonify(list_event_types())
+
 
 @dev_scripting_bp.route("/api/webhooks", methods=["POST"])
 @require_csrf

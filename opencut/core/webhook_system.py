@@ -40,12 +40,74 @@ VALID_EVENTS = frozenset({
     "review.comment_added", "review.status_changed",
 })
 
+_LEGACY_EVENT_ALIASES = {
+    "error": "job.error",
+    "job_complete": "job.complete",
+    "job_failed": "job.error",
+}
+
 _EVENT_ALIASES = {
     "job.complete": frozenset({"job.complete", "job_complete"}),
     "job.error": frozenset({"job.error", "job_failed", "error"}),
     "job.cancelled": frozenset({"job.cancelled"}),
     "job_complete": frozenset({"job_complete", "job.complete"}),
     "job_failed": frozenset({"job_failed", "job.error"}),
+}
+
+_EVENT_METADATA = {
+    "error": {
+        "canonical": "job.error",
+        "deprecated": True,
+        "description": "Legacy alias for failed async jobs.",
+        "since_version": "1.32.0",
+    },
+    "export_ready": {
+        "deprecated": False,
+        "description": "A rendered export is available for pickup.",
+        "since_version": "1.32.0",
+    },
+    "job.cancelled": {
+        "deprecated": False,
+        "description": "An async job was cancelled before completion.",
+        "since_version": "1.32.0",
+    },
+    "job.complete": {
+        "deprecated": False,
+        "description": "An async job completed successfully.",
+        "since_version": "1.32.0",
+    },
+    "job.error": {
+        "deprecated": False,
+        "description": "An async job failed with an error.",
+        "since_version": "1.32.0",
+    },
+    "job_complete": {
+        "canonical": "job.complete",
+        "deprecated": True,
+        "description": "Legacy alias for completed async jobs.",
+        "since_version": "1.32.0",
+    },
+    "job_failed": {
+        "canonical": "job.error",
+        "deprecated": True,
+        "description": "Legacy alias for failed async jobs.",
+        "since_version": "1.32.0",
+    },
+    "render_complete": {
+        "deprecated": False,
+        "description": "A render operation completed.",
+        "since_version": "1.32.0",
+    },
+    "review.comment_added": {
+        "deprecated": False,
+        "description": "A timestamped review comment was added.",
+        "since_version": "1.32.0",
+    },
+    "review.status_changed": {
+        "deprecated": False,
+        "description": "A review status changed.",
+        "since_version": "1.32.0",
+    },
 }
 
 # Retry backoff delays in seconds
@@ -200,6 +262,38 @@ def _append_delivery(delivery: WebhookDelivery) -> None:
 # ---------------------------------------------------------------------------
 # Webhook CRUD
 # ---------------------------------------------------------------------------
+
+def list_events() -> Dict[str, Any]:
+    """Return the webhook event catalogue used by registration validation."""
+    events = []
+    for name in sorted(VALID_EVENTS):
+        metadata = dict(_EVENT_METADATA.get(name, {}))
+        canonical = str(metadata.get("canonical") or name)
+        event = {
+            "name": name,
+            "canonical": canonical,
+            "deprecated": bool(metadata.get("deprecated", False)),
+            "since_version": str(metadata.get("since_version") or "1.32.0"),
+            "schema_pointer": f"#/webhook-events/{canonical}",
+            "description": str(metadata.get("description") or ""),
+        }
+        if canonical != name:
+            event["replacement"] = canonical
+        accepted = sorted(_EVENT_ALIASES.get(name, frozenset({name})))
+        if len(accepted) > 1:
+            event["subscription_aliases"] = accepted
+        events.append(event)
+
+    return {
+        "events": events,
+        "legacy_aliases": dict(sorted(_LEGACY_EVENT_ALIASES.items())),
+    }
+
+
+def list_event_types() -> Dict[str, Any]:
+    """Compatibility wrapper with a route-oriented name."""
+    return list_events()
+
 
 def register_webhook(
     url: str,

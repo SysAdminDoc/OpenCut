@@ -12,7 +12,7 @@ another large wave of model surfaces. It is making existing work easier to run,
 debug, resume, extend, and trust.
 
 The May 26 research pass identified the strongest v1.33+ opportunities. N1-N3
-are now closed in `ROADMAP.md` v4.87-v4.89; the remaining queue is tracked in
+and N6 are now closed in `ROADMAP.md` v4.87-v4.90; the remaining queue is tracked in
 `ROADMAP.md` under "Active Continuation Queue (May 26 Plan)".
 
 1. Content-addressable transcript cache by audio hash. **Shipped in v4.87.**
@@ -20,7 +20,7 @@ are now closed in `ROADMAP.md` v4.87-v4.89; the remaining queue is tracked in
 3. GPU semaphore acquire-wait behavior instead of instant contention failures. **Shipped in v4.89.**
 4. Disk preflight on heavyweight render/model routes.
 5. Resumable interrupted jobs.
-6. `GET /webhooks/event-types` discovery.
+6. `GET /webhooks/event-types` discovery. **Shipped in v4.90.**
 7. Plugin background-job registration.
 8. Third-party agent skill loading from the user data directory.
 9. Rich job metadata such as peak VRAM, exit reason, and started-at fields.

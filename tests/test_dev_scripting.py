@@ -828,6 +828,30 @@ class TestWebhookSystemCore:
 
         assert wh.events == ["job.complete", "job.error", "job.cancelled"]
 
+    def test_list_event_types_covers_registered_and_fired_events(self):
+        from opencut.core.webhook_system import VALID_EVENTS, list_event_types
+
+        payload = list_event_types()
+        event_names = {event["name"] for event in payload["events"]}
+
+        assert event_names == set(VALID_EVENTS)
+        assert {
+            "job.complete",
+            "job.error",
+            "job.cancelled",
+            "review.comment_added",
+            "review.status_changed",
+        }.issubset(event_names)
+        assert payload["legacy_aliases"] == {
+            "error": "job.error",
+            "job_complete": "job.complete",
+            "job_failed": "job.error",
+        }
+        job_complete = next(event for event in payload["events"] if event["name"] == "job_complete")
+        assert job_complete["deprecated"] is True
+        assert job_complete["replacement"] == "job.complete"
+        assert job_complete["schema_pointer"] == "#/webhook-events/job.complete"
+
     def test_register_review_webhook_with_secret(self, tmp_opencut_dir):
         from opencut.core.webhook_system import get_webhook, list_webhooks, register_webhook
 
@@ -1471,6 +1495,17 @@ class TestWebhookRoutes:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "webhooks" in data
+
+    def test_event_types_route(self, client):
+        for path in ("/webhooks/event-types", "/api/webhooks/event-types"):
+            resp = client.get(path)
+            assert resp.status_code == 200
+            data = resp.get_json()
+            names = {event["name"] for event in data["events"]}
+            assert "job.complete" in names
+            assert "review.comment_added" in names
+            assert data["legacy_aliases"]["job_complete"] == "job.complete"
+            assert all(event["schema_pointer"] for event in data["events"])
 
     def test_delete_route_not_found(self, client, csrf_token, tmp_opencut_dir):
         resp = client.delete("/api/webhooks/fake_id",

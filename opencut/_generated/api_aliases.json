@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T01:30:08Z",
+  "generated_at": "2026-06-04T02:10:45Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_api_routes": 233,
-  "alias_count": 16,
+  "total_api_routes": 234,
+  "alias_count": 17,
   "api_only_count": 217,
   "method_counts": {
     "DELETE": 5,
-    "GET": 56,
+    "GET": 57,
     "PATCH": 1,
     "POST": 169,
     "PUT": 2
@@ -192,6 +192,17 @@
       "canonical_endpoint": "platform_infra.review_get_comments",
       "alias_blueprint": "collab_review",
       "canonical_blueprint": "platform_infra"
+    },
+    {
+      "alias_rule": "/api/webhooks/event-types",
+      "canonical_rule": "/webhooks/event-types",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "dev_scripting.webhook_event_types",
+      "canonical_endpoint": "dev_scripting.webhook_event_types",
+      "alias_blueprint": "dev_scripting",
+      "canonical_blueprint": "dev_scripting"
     }
   ],
   "api_only": [
