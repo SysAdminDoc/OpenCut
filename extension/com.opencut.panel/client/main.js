@@ -5187,6 +5187,23 @@
             .join(" ");
     }
 
+    function engineCountText(template, count) {
+        return template
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s")
+            .replace("{verb}", count === 1 ? "is" : "are");
+    }
+
+    function engineTemplateText(template, values) {
+        var text = template;
+        for (var key in values) {
+            if (Object.prototype.hasOwnProperty.call(values, key)) {
+                text = text.replace("{" + key + "}", values[key]);
+            }
+        }
+        return text;
+    }
+
     function loadEngineRegistry() {
         var grid = document.getElementById("engineRegistryGrid");
         if (!grid) return;
@@ -5251,7 +5268,11 @@
                     if (engines[ai] && engines[ai].name === active) activeInfo = engines[ai];
                     if (engines[ai] && engines[ai].name === preferred) preferredInfo = engines[ai];
                 }
-                var stateLabel = preferredInfo ? "Pinned" : (availableCount ? "Auto" : "Needs attention");
+                var stateLabel = preferredInfo
+                    ? t("engines.state_pinned", "Pinned")
+                    : (availableCount
+                        ? t("engines.state_auto", "Auto")
+                        : t("engines.state_needs_attention", "Needs attention"));
                 var stateClass = preferredInfo ? "manual" : (availableCount ? "auto" : "warning");
                 var summary = "";
 
@@ -5260,18 +5281,31 @@
                 else warningCount++;
 
                 if (preferredInfo) {
-                    summary = preferredInfo.display_name + " is preferred for " + domainLabel.toLowerCase() + ".";
+                    summary = engineTemplateText(
+                        t("engines.summary_preferred", "{engine} is preferred for {domain}."),
+                        {
+                            engine: preferredInfo.display_name,
+                            domain: domainLabel.toLowerCase()
+                        }
+                    );
                     if (activeInfo && activeInfo.name === preferredInfo.name) {
-                        summary += " It is also active right now.";
+                        summary += " " + t("engines.summary_also_active", "It is also active right now.");
                     } else if (activeInfo) {
-                        summary += " Current active engine: " + activeInfo.display_name + ".";
+                        summary += " " + t("engines.summary_current_active", "Current active engine: {engine}.")
+                            .replace("{engine}", activeInfo.display_name);
                     }
                 } else if (activeInfo) {
-                    summary = activeInfo.display_name + " is active right now. Auto mode keeps the best available engine selected for this system.";
+                    summary = t(
+                        "engines.summary_active_auto",
+                        "{engine} is active right now. Auto mode keeps the best available engine selected for this system."
+                    ).replace("{engine}", activeInfo.display_name);
                 } else if (availableCount) {
-                    summary = availableCount + " " + (availableCount === 1 ? "engine is" : "engines are") + " available. Auto mode will pick the best fit at run time.";
+                    summary = engineCountText(
+                        t("engines.summary_available_count", "{count} engine{plural} {verb} available. Auto mode will pick the best fit at run time."),
+                        availableCount
+                    );
                 } else {
-                    summary = "No available engines detected yet. Refresh availability after installs finish.";
+                    summary = t("engines.summary_none_available", "No available engines detected yet. Refresh availability after installs finish.");
                 }
 
                 html += '<div class="engine-domain engine-domain-card">';
@@ -5282,14 +5316,15 @@
                 html += '</div>';
                 html += '<div class="engine-meta">' + esc(summary) + '</div>';
                 html += '</div>';
-                html += '<select class="engine-select" data-domain="' + esc(domain) + '" aria-label="' + esc(domainLabel) + ' engine preference">';
-                html += '<option value="">Auto (best available)</option>';
+                html += '<select class="engine-select" data-domain="' + esc(domain) + '" aria-label="' +
+                    esc(t("engines.preference_aria", "{domain} engine preference").replace("{domain}", domainLabel)) + '">';
+                html += '<option value="">' + esc(t("engines.auto_best_available", "Auto (best available)")) + '</option>';
                 for (var j = 0; j < engines.length; j++) {
                     var eng = engines[j];
                     var selected = (preferred === eng.name) ? " selected" : "";
-                    var avail = eng.available ? "" : " - unavailable";
+                    var avail = eng.available ? "" : " " + esc(t("engines.option_unavailable_suffix", "- unavailable"));
                     var label = esc(eng.display_name) + " - " + esc(eng.quality) + "/" + esc(eng.speed) + avail;
-                    if (eng.name === active) label += " - active";
+                    if (eng.name === active) label += " " + esc(t("engines.option_active_suffix", "- active"));
                     html += '<option value="' + esc(eng.name) + '"' + selected + '>' + label + '</option>';
                 }
                 html += '</select>';
@@ -5301,22 +5336,41 @@
             var registryState = "success";
             var summaryLabel = "";
             if (!domains.length) {
-                registrySummary = "No engine domains were reported yet. Refresh availability after installs finish.";
+                registrySummary = t("engines.no_domains_summary", "No engine domains were reported yet. Refresh availability after installs finish.");
                 registryState = "warning";
-                summaryLabel = "No domains yet";
+                summaryLabel = t("engines.no_domains_label", "No domains yet");
             } else if (warningCount > 0) {
-                registrySummary = warningCount + " editing domain" + (warningCount === 1 ? " is" : "s are") + " still missing an available engine. Auto routing remains active for the rest.";
+                registrySummary = engineCountText(
+                    t("engines.warning_summary", "{count} editing domain{plural} {verb} still missing an available engine. Auto routing remains active for the rest."),
+                    warningCount
+                );
                 registryState = "warning";
-                summaryLabel = warningCount + " needs review";
+                summaryLabel = t("engines.warning_label", "{count} needs review").replace("{count}", warningCount);
             } else if (pinnedCount > 0 && autoCount > 0) {
-                registrySummary = pinnedCount + " domain" + (pinnedCount === 1 ? " is" : "s are") + " pinned while " + autoCount + " stay on Auto routing.";
-                summaryLabel = pinnedCount + " pinned / " + domains.length;
+                registrySummary = engineTemplateText(
+                    t("engines.mixed_summary", "{pinned} domain{plural} {verb} pinned while {auto} stay on Auto routing."),
+                    {
+                        pinned: pinnedCount,
+                        plural: pinnedCount === 1 ? "" : "s",
+                        verb: pinnedCount === 1 ? "is" : "are",
+                        auto: autoCount
+                    }
+                );
+                summaryLabel = t("engines.mixed_label", "{pinned} pinned / {total}")
+                    .replace("{pinned}", pinnedCount)
+                    .replace("{total}", domains.length);
             } else if (pinnedCount > 0) {
-                registrySummary = "Pinned routing is active across all " + domains.length + " editing domain" + (domains.length === 1 ? "" : "s") + ".";
-                summaryLabel = pinnedCount + " pinned";
+                registrySummary = engineCountText(
+                    t("engines.pinned_all_summary", "Pinned routing is active across all {count} editing domain{plural}."),
+                    domains.length
+                );
+                summaryLabel = t("engines.pinned_label", "{count} pinned").replace("{count}", pinnedCount);
             } else {
-                registrySummary = "Auto routing is ready across " + domains.length + " editing domain" + (domains.length === 1 ? "" : "s") + ".";
-                summaryLabel = "Auto across " + domains.length;
+                registrySummary = engineCountText(
+                    t("engines.auto_all_summary", "Auto routing is ready across {count} editing domain{plural}."),
+                    domains.length
+                );
+                summaryLabel = t("engines.auto_label", "Auto across {count}").replace("{count}", domains.length);
             }
 
             setSettingsStudioState("engines", summaryLabel, registryState === "success" ? "ready" : registryState, registrySummary);
@@ -5335,8 +5389,11 @@
                         if (r && r.success) {
                             showToast(
                                 eng
-                                    ? domainLabel + " now prefers " + selectedLabel + "."
-                                    : domainLabel + " is back on Auto routing.",
+                                    ? t("toast.engine_preference_saved", "{domain} now prefers {engine}.")
+                                        .replace("{domain}", domainLabel)
+                                        .replace("{engine}", selectedLabel)
+                                    : t("toast.engine_preference_auto", "{domain} is back on Auto routing.")
+                                        .replace("{domain}", domainLabel),
                                 "success"
                             );
                             loadEngineRegistry();
