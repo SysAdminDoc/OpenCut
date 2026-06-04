@@ -31,7 +31,7 @@ from typing import Dict, Iterable, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "opencut" / "_generated" / "route_manifest.json"
-MANIFEST_VERSION = 1
+MANIFEST_VERSION = 2
 
 _STD_METHODS = {"HEAD", "OPTIONS"}
 
@@ -42,9 +42,10 @@ class RouteEntry:
     methods: List[str]
     endpoint: str
     blueprint: str
+    workflow: Optional[Dict[str, str]] = None
 
     def as_tuple(self):
-        return (self.rule, tuple(self.methods), self.endpoint, self.blueprint)
+        return (self.rule, tuple(self.methods), self.endpoint, self.blueprint, self.workflow)
 
 
 @dataclass
@@ -77,6 +78,8 @@ class Manifest:
 
 
 def _collect_routes(app) -> List[RouteEntry]:
+    from opencut.core.workflow import get_workflow_step_metadata
+
     entries: List[RouteEntry] = []
     for rule in app.url_map.iter_rules():
         methods = sorted(m for m in rule.methods if m not in _STD_METHODS)
@@ -84,12 +87,16 @@ def _collect_routes(app) -> List[RouteEntry]:
             continue
         endpoint = rule.endpoint
         blueprint = endpoint.split(".", 1)[0] if "." in endpoint else "<app>"
+        workflow = None
+        if "POST" in methods:
+            workflow = get_workflow_step_metadata(app.view_functions.get(endpoint))
         entries.append(
             RouteEntry(
                 rule=rule.rule,
                 methods=methods,
                 endpoint=endpoint,
                 blueprint=blueprint,
+                workflow=workflow,
             )
         )
     return entries
@@ -110,14 +117,15 @@ def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
         bucket["method_counts"].update(entry.methods)
         if len(bucket["sample_rules"]) < 3:
             bucket["sample_rules"].append(entry.rule)
-        routes_payload.append(
-            {
-                "rule": entry.rule,
-                "methods": list(entry.methods),
-                "endpoint": entry.endpoint,
-                "blueprint": entry.blueprint,
-            }
-        )
+        route_payload = {
+            "rule": entry.rule,
+            "methods": list(entry.methods),
+            "endpoint": entry.endpoint,
+            "blueprint": entry.blueprint,
+        }
+        if entry.workflow:
+            route_payload["workflow"] = dict(entry.workflow)
+        routes_payload.append(route_payload)
 
     blueprints_payload = {
         name: {
@@ -187,14 +195,33 @@ def diff_manifests(expected: dict, live: dict) -> List[str]:
                 f"{key}: committed={expected_sig.get(key)!r} live={live_sig.get(key)!r}"
             )
 
-    expected_routes = {(r["rule"], tuple(r["methods"])) for r in expected_sig.get("routes", [])}
-    live_routes = {(r["rule"], tuple(r["methods"])) for r in live_sig.get("routes", [])}
-    only_in_committed = sorted(expected_routes - live_routes)
-    only_in_live = sorted(live_routes - expected_routes)
+    expected_routes = {
+        (r["rule"], tuple(r["methods"])): r
+        for r in expected_sig.get("routes", [])
+        if isinstance(r, dict)
+    }
+    live_routes = {
+        (r["rule"], tuple(r["methods"])): r
+        for r in live_sig.get("routes", [])
+        if isinstance(r, dict)
+    }
+    expected_keys = set(expected_routes)
+    live_keys = set(live_routes)
+    only_in_committed = sorted(expected_keys - live_keys)
+    only_in_live = sorted(live_keys - expected_keys)
     for rule, methods in only_in_committed:
         diffs.append(f"removed: {','.join(methods)} {rule}")
     for rule, methods in only_in_live:
         diffs.append(f"new:     {','.join(methods)} {rule}")
+    for rule, methods in sorted(expected_keys & live_keys):
+        expected_route = expected_routes[(rule, methods)]
+        live_route = live_routes[(rule, methods)]
+        if expected_route != live_route:
+            fields = sorted(
+                field for field in set(expected_route) | set(live_route)
+                if expected_route.get(field) != live_route.get(field)
+            )
+            diffs.append(f"changed: {','.join(methods)} {rule} fields={','.join(fields)}")
 
     if expected_sig.get("blueprints", {}) != live_sig.get("blueprints", {}):
         expected_bps = set(expected_sig.get("blueprints", {}).keys())

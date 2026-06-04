@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -63,9 +64,40 @@ def test_routes_are_sorted_and_unique(committed_manifest):
     assert len(rules_and_methods) == len(set(rules_and_methods)), "duplicate route entries"
 
 
+def test_workflow_routes_export_opt_in_metadata(committed_manifest):
+    workflow_routes = {
+        route["rule"]: route["workflow"]
+        for route in committed_manifest["routes"]
+        if isinstance(route.get("workflow"), dict)
+    }
+
+    assert len(workflow_routes) >= 50
+    assert workflow_routes["/silence"]["label"] == "Detecting silence"
+    assert workflow_routes["/audio/normalize"]["label"] == "Normalizing audio"
+    assert workflow_routes["/export-video"]["label"] == "Exporting video"
+    assert "/workflow/run" not in workflow_routes
+    assert "/workflow/save" not in workflow_routes
+
+
 def test_no_route_uses_head_or_options_explicitly(committed_manifest):
     for route in committed_manifest["routes"]:
         for method in route["methods"]:
             assert method not in {"HEAD", "OPTIONS"}, (
                 f"manifest should strip HEAD/OPTIONS; saw {method} on {route['rule']}"
             )
+
+
+def test_manifest_diff_catches_route_metadata_changes(committed_manifest):
+    from opencut.tools.dump_route_manifest import diff_manifests
+
+    live = copy.deepcopy(committed_manifest)
+    for route in live["routes"]:
+        if route["rule"] == "/silence":
+            route["workflow"]["label"] = "Changed label"
+            break
+    else:
+        raise AssertionError("/silence missing from committed manifest")
+
+    diffs = diff_manifests(committed_manifest, live)
+
+    assert any("changed: POST /silence" in diff and "workflow" in diff for diff in diffs)

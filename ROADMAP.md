@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.96
+**Version**: 4.99
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -206,7 +206,9 @@
 >
 > **v4.98 status (2026-06-04, continuation pass)**: closed **N10** from the May 26 continuation queue by propagating request IDs into async workers and FFmpeg subprocesses. Async jobs now stamp `request_id` / `client_request_id` before worker dispatch, worker threads restore the original request ID after Flask teardown, `run_ffmpeg()` and `_run_ffmpeg_with_progress()` pass `OPENCUT_REQUEST_ID` to child processes, and logged FFmpeg stderr lines are prefixed with `[r-...]` while returned/parser stderr stays raw.
 >
-> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10, continue with E12/E13/E15, external F202/F252, and RA-03..RA-10.
+> **v4.99 status (2026-06-04, continuation pass)**: closed **E12** from the May 26 continuation queue by deriving workflow step validation from `opencut/_generated/route_manifest.json`. Async POST routes now opt in with `workflow_step(...)`, the route manifest carries `workflow.label` metadata for 53 workflow-safe steps, `KNOWN_ENDPOINTS` loads from the generated manifest, and route-manifest `--check` now catches route metadata drift.
+>
+> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12, continue with E13/E15, external F202/F252, and RA-03..RA-10.
 
 ---
 
@@ -419,6 +421,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_request_correlation_s
 
 ---
 
+## 2026-06-04 v4.99 Manifest-Derived Workflow Allowlist (E12)
+
+E12 is closed. Workflow step validation now derives its allowlist from `opencut/_generated/route_manifest.json` workflow metadata instead of trusting an independent hand-maintained endpoint map.
+
+| Surface | Status |
+|---|---|
+| Route opt-in | `opencut.core.workflow.workflow_step(...)` marks async POST handlers as workflow-safe and stores the progress label on the registered Flask view. |
+| Generated manifest | `opencut.tools.dump_route_manifest` now emits per-route `workflow.label` metadata for opted-in async POST routes, bumps the manifest schema to version 2, and fails drift checks when route metadata changes. |
+| Workflow validation | `KNOWN_ENDPOINTS` remains the public compatibility map, but it is populated from the generated route manifest and intersects fallback labels with live POST route entries. |
+| Annotated routes | The 53 existing workflow-safe audio, caption, video core, editing, FX, AI, and title/shorts routes now opt in explicitly; recursive `/workflow/run` and workflow-management routes stay unmarked. |
+| Coverage | `tests/test_route_manifest.py` pins workflow metadata and metadata-drift detection, while `tests/test_workflow.py` pins manifest-derived validation and rejection of unmarked POST routes. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_route_manifest.py tests/test_workflow.py -q -p no:cacheprovider -o addopts=""` passed (`22 passed`), the adjacent generated-surface slice passed (`24 passed`), route smoke passed (`311 passed`, 1 existing pydub/audioop warning), generated route/API/MCP checks passed, touched Python files compile, Ruff passed for the changed code/test files, and `rtk git diff --check` passed.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -433,19 +451,19 @@ Validation after the batch: `py -3.12 -m pytest tests/test_request_correlation_s
 - [x] **P1 — E14 F236 CEP parity** — closed in v4.96 with the FCC display-settings card, token loading, live preview, and static CEP parity tests.
 - [x] **P2 — N9 enriched job metadata** — closed in v4.97 with persisted peak resource fields, explicit exit reasons, resource sampling, diagnostics metadata, and `GET /jobs/<job_id>`.
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
-- [ ] **P2 — E12 workflow allowlist derived from route manifest** — replace hard-coded workflow endpoint allowlists with generated route data.
+- [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [ ] **P2 — E13 CLI surface parity escape hatch** — add CLI access for high-value API workflows.
 - [ ] **P2 — E15 i18n migration rolling batches** — continue removing high-impact bare-English panel strings.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
-> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (E12, E13, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
+> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (E13, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
-These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = E12, CLI parity = E13, i18n batches = E15).
+These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = E13, i18n batches = E15).
 
 ### Quick Wins
 
