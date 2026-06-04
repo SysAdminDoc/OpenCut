@@ -16,6 +16,7 @@ import tempfile
 from flask import Blueprint, jsonify
 
 from opencut.checks import check_demucs_available
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _make_sequence_name,
@@ -67,6 +68,7 @@ audio_bp = Blueprint("audio", __name__)
 # ---------------------------------------------------------------------------
 @audio_bp.route("/silence", methods=["POST"])
 @require_csrf
+@workflow_step("Detecting silence")
 @async_job("silence")
 def silence_remove(job_id, filepath, data):
     """Remove silences and export Premiere XML."""
@@ -143,6 +145,7 @@ def silence_remove(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/fillers", methods=["POST"])
 @require_csrf
+@workflow_step("Removing filler words")
 @async_job("fillers")
 def filler_removal(job_id, filepath, data):
     """Detect and remove filler words (um, uh, like, etc.)."""
@@ -328,6 +331,7 @@ def filler_removal(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/denoise", methods=["POST"])
 @require_csrf
+@workflow_step("Denoising audio")
 @async_job("denoise")
 def audio_denoise(job_id, filepath, data):
     """Remove background noise from audio/video."""
@@ -369,6 +373,7 @@ def audio_denoise(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/isolate", methods=["POST"])
 @require_csrf
+@workflow_step("Isolating vocals")
 @async_job("isolate")
 def audio_isolate(job_id, filepath, data):
     """Isolate vocals by emphasizing voice frequencies."""
@@ -396,6 +401,7 @@ def audio_isolate(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/separate", methods=["POST"])
 @require_csrf
+@workflow_step("Separating audio stems")
 @async_job("separate", disk_operation="demucs", resumable=True)
 def audio_separate(job_id, filepath, data):
     """Separate audio into stems using AI (Demucs or audio-separator with RoFormer models)."""
@@ -620,6 +626,7 @@ def audio_separate(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/normalize", methods=["POST"])
 @require_csrf
+@workflow_step("Normalizing audio")
 @async_job("normalize")
 def audio_normalize(job_id, filepath, data):
     """Normalize audio loudness to broadcast/platform standards."""
@@ -741,6 +748,7 @@ def audio_effects_list():
 
 @audio_bp.route("/audio/effects/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying audio effects")
 @async_job("audio-effect")
 def audio_effects_apply(job_id, filepath, data):
     """Apply an audio effect."""
@@ -808,6 +816,7 @@ def audio_pro_effects():
 
 @audio_bp.route("/audio/pro/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying pro audio effects")
 @async_job("audio-pro")
 def audio_pro_apply(job_id, filepath, data):
     """Apply a Pedalboard studio effect."""
@@ -836,6 +845,7 @@ def audio_pro_apply(job_id, filepath, data):
 
 @audio_bp.route("/audio/pro/deepfilter", methods=["POST"])
 @require_csrf
+@workflow_step("Running DeepFilter denoise")
 @async_job("deepfilter", disk_operation="deepfilter")
 def audio_pro_deepfilter(job_id, filepath, data):
     """AI noise reduction using DeepFilterNet."""
@@ -927,6 +937,7 @@ def _validate_tts_text(data):
 
 @audio_bp.route("/audio/tts/generate", methods=["POST"])
 @require_csrf
+@workflow_step("Generating TTS")
 @async_job("tts", filepath_required=False, pre_validate=_validate_tts_text)
 def tts_generate(job_id, filepath, data):
     """Generate speech from text."""
@@ -1147,6 +1158,7 @@ def audio_gen_silence():
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/duck", methods=["POST"])
 @require_csrf
+@workflow_step("Ducking audio")
 @async_job("duck", filepath_param="music_path")
 def audio_duck_route(job_id, filepath, data):
     """Duck music under voice using sidechain compression."""
@@ -1657,6 +1669,7 @@ def _validate_loudness_files(data):
 
 @audio_bp.route("/audio/loudness-match", methods=["POST"])
 @require_csrf
+@workflow_step("Matching loudness")
 @async_job("loudness-match", filepath_required=False, pre_validate=_validate_loudness_files)
 def audio_loudness_match(job_id, filepath, data):
     """Batch-normalize a list of audio/video files to a target LUFS level."""

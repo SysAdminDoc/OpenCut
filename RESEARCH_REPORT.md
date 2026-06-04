@@ -7,14 +7,15 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03;
 freshness refresh: 2026-06-04.
 
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
-caption display-settings parity work, N9 enriched job metadata, and N10
-request-ID subprocess propagation are now represented as shipped in the live
-v4.98 docs, so no new duplicate extensibility/accessibility/observability rows
-were promoted. Focused
+caption display-settings parity work, N9 enriched job metadata, N10 request-ID
+subprocess propagation, and E12 manifest-derived workflow allowlist are now
+represented as shipped in the live v4.99 docs, so no new duplicate
+extensibility/accessibility/observability/workflow rows were promoted. Focused
 verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
-UI gates, N9 job metadata gates, and N10 request-correlation subprocess gates;
-the route manifest now reports 1,523 routes / 107 blueprints, and `py -3.12
-scripts/sync_version.py --check` kept v1.32.0 in sync. Current
+UI gates, N9 job metadata gates, N10 request-correlation subprocess gates, and
+E12 workflow/route-manifest gates; the route manifest now reports 1,523 routes /
+107 blueprints, and `py -3.12 scripts/sync_version.py --check` kept v1.32.0 in
+sync. Current
 external anchors still support the existing backlog shape: Adobe documents UXP
 as the Premiere v25.6+ extensibility path (`https://developer.adobe.com/premiere-pro/uxp/`),
 Adobe's UXP API guidance warns that newer UXP APIs fail on older host versions
@@ -25,7 +26,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
-E12/E13/E15 plus external F202/F252 and the RA-03..RA-10 research items below.
+E13/E15 plus external F202/F252 and the RA-03..RA-10 research items below.
 
 ## Executive Summary
 
@@ -34,7 +35,7 @@ OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1–N10, E11, E14) is now shipped through v4.98; the strongest remaining
+(N1-N10, E11, E12, E14) is now shipped through v4.99; the strongest remaining
 direction is **not** another wave of model surfaces but making the existing
 surface easier to run, debug, resume, extend, and trust.
 
@@ -69,8 +70,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 ## Evidence Reviewed
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
-  start of this pass. The N1–N10/E11/E14 continuation queue is now closed
-  through v4.98, with the earlier checkpoints in `b228e42`, `ae25c96`,
+  start of this pass. The N1-N10/E11/E12/E14 continuation queue is now closed
+  through v4.99, with the earlier checkpoints in `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,

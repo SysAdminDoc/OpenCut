@@ -20,6 +20,32 @@ from tests.conftest import csrf_headers
 class TestWorkflowValidation:
     """Tests for workflow step validation."""
 
+    def test_known_endpoints_come_from_manifest_workflow_metadata(self):
+        """Workflow validation should use route-manifest workflow opt-ins."""
+        import json
+
+        from opencut.core.workflow import KNOWN_ENDPOINTS, ROUTE_MANIFEST_PATH
+
+        manifest = json.loads(ROUTE_MANIFEST_PATH.read_text(encoding="utf-8"))
+        manifest_workflow = {
+            route["rule"]: route["workflow"]["label"]
+            for route in manifest["routes"]
+            if isinstance(route.get("workflow"), dict)
+        }
+
+        assert KNOWN_ENDPOINTS == dict(sorted(manifest_workflow.items()))
+        assert KNOWN_ENDPOINTS["/silence"] == "Detecting silence"
+        assert "/workflow/run" not in KNOWN_ENDPOINTS
+
+    def test_registered_post_route_without_marker_is_rejected(self):
+        """A live POST route is not workflowable unless it opts in."""
+        from opencut.core.workflow import validate_workflow_steps
+
+        ok, err = validate_workflow_steps([{"endpoint": "/workflow/save"}])
+
+        assert ok is False
+        assert "unknown endpoint" in err.lower()
+
     def test_invalid_endpoint_rejected(self, client, csrf_token):
         """Unknown endpoints must be rejected with 400."""
         resp = client.post(

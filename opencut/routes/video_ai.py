@@ -10,6 +10,7 @@ import re
 
 from flask import Blueprint, jsonify
 
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
@@ -52,6 +53,7 @@ def video_ai_capabilities():
 
 @video_ai_bp.route("/video/ai/upscale", methods=["POST"])
 @require_csrf
+@workflow_step("Upscaling video")
 @async_job("upscale", disk_operation="video_ai_heavy")
 def video_ai_upscale(job_id, filepath, data):
     """AI upscale video using Real-ESRGAN."""
@@ -86,6 +88,7 @@ def video_ai_upscale(job_id, filepath, data):
 
 @video_ai_bp.route("/video/ai/rembg", methods=["POST"])
 @require_csrf
+@workflow_step("Removing background")
 @async_job("rembg")
 def video_ai_rembg(job_id, filepath, data):
     """AI background removal using rembg."""
@@ -132,6 +135,7 @@ def video_ai_rembg(job_id, filepath, data):
 
 @video_ai_bp.route("/video/ai/interpolate", methods=["POST"])
 @require_csrf
+@workflow_step("Interpolating frames")
 @async_job("interpolate", disk_operation="video_ai_heavy")
 def video_ai_interpolate(job_id, filepath, data):
     """AI frame interpolation."""
@@ -167,6 +171,7 @@ def video_ai_interpolate(job_id, filepath, data):
 
 @video_ai_bp.route("/video/ai/denoise", methods=["POST"])
 @require_csrf
+@workflow_step("Denoising video")
 @async_job("denoise", disk_operation="video_ai_heavy")
 def video_ai_denoise(job_id, filepath, data):
     """AI video noise reduction."""
@@ -272,6 +277,7 @@ def face_detect():
 
 @video_ai_bp.route("/video/face/blur", methods=["POST"])
 @require_csrf
+@workflow_step("Blurring faces")
 @async_job("face_blur")
 def face_blur(job_id, filepath, data):
     """Auto-detect and blur faces in video."""
@@ -319,6 +325,7 @@ def style_list():
 
 @video_ai_bp.route("/video/style/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying style transfer")
 @async_job("style_transfer")
 def style_apply(job_id, filepath, data):
     """Apply neural style transfer to video."""
@@ -402,6 +409,7 @@ def face_swap_capabilities():
 
 @video_ai_bp.route("/video/face/enhance", methods=["POST"])
 @require_csrf
+@workflow_step("Enhancing faces")
 @async_job("face_enhance")
 def face_enhance_route(job_id, filepath, data):
     """Enhance/restore faces in video using GFPGAN or CodeFormer."""
@@ -428,6 +436,7 @@ def face_enhance_route(job_id, filepath, data):
 
 @video_ai_bp.route("/video/face/swap", methods=["POST"])
 @require_csrf
+@workflow_step("Swapping faces")
 @async_job("face_swap")
 def face_swap_route(job_id, filepath, data):
     """Swap faces in video with a reference image."""
@@ -466,6 +475,7 @@ def upscale_capabilities():
 
 @video_ai_bp.route("/video/upscale/run", methods=["POST"])
 @require_csrf
+@workflow_step("Upscaling video")
 @async_job("upscale")
 def upscale_run(job_id, filepath, data):
     """Upscale video with quality preset."""

@@ -11,6 +11,7 @@ import subprocess as _sp
 
 from flask import Blueprint, jsonify, request
 
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
@@ -62,6 +63,7 @@ def reframe_presets():
 
 @video_editing_bp.route("/video/reframe", methods=["POST"])
 @require_csrf
+@workflow_step("Reframing video")
 @async_job("reframe")
 def video_reframe(job_id, filepath, data):
     """Reframe/resize video for a target aspect ratio using crop, pad, or scale."""
@@ -225,6 +227,7 @@ def video_reframe(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/auto-edit", methods=["POST"])
 @require_csrf
+@workflow_step("Auto-editing")
 @async_job("auto_edit")
 def video_auto_edit(job_id, filepath, data):
     """Run auto-editor to detect interesting segments by motion/audio."""
@@ -278,6 +281,7 @@ def video_auto_edit(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/reframe/face", methods=["POST"])
 @require_csrf
+@workflow_step("Reframing to face")
 @async_job("reframe_face")
 def video_reframe_face(job_id, filepath, data):
     """Auto-reframe video to keep face centered using MediaPipe face detection."""
@@ -313,6 +317,7 @@ def video_reframe_face(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/highlights", methods=["POST"])
 @require_csrf
+@workflow_step("Extracting highlights")
 @async_job("highlights")
 def video_highlights(job_id, filepath, data):
     """Extract highlight clips using LLM analysis of transcript."""
@@ -396,6 +401,7 @@ def video_highlights(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/color-match", methods=["POST"])
 @require_csrf
+@workflow_step("Matching colors")
 @async_job("color_match", filepath_param="source")
 def video_color_match(job_id, filepath, data):
     """Match the color grading of a source video to a reference clip."""
@@ -450,6 +456,7 @@ def video_color_match(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/auto-zoom", methods=["POST"])
 @require_csrf
+@workflow_step("Applying auto-zoom")
 @async_job("auto_zoom")
 def video_auto_zoom(job_id, filepath, data):
     """Generate zoom keyframes for a clip, optionally baking them in via FFmpeg."""

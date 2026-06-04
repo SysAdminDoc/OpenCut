@@ -9,6 +9,7 @@ import re
 
 from flask import Blueprint, jsonify
 
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
@@ -47,6 +48,7 @@ def video_fx_list():
 
 @video_fx_bp.route("/video/fx/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying video FX")
 @async_job("fx")
 def video_fx_apply(job_id, filepath, data):
     """Apply a video effect."""
@@ -157,6 +159,7 @@ def speed_ramp_presets():
 
 @video_fx_bp.route("/video/speed/change", methods=["POST"])
 @require_csrf
+@workflow_step("Changing speed")
 @async_job("speed_change")
 def speed_change_route(job_id, filepath, data):
     """Apply constant speed change."""
@@ -181,6 +184,7 @@ def speed_change_route(job_id, filepath, data):
 
 @video_fx_bp.route("/video/speed/reverse", methods=["POST"])
 @require_csrf
+@workflow_step("Reversing video")
 @async_job("speed_reverse")
 def speed_reverse_route(job_id, filepath, data):
     """Reverse video playback."""
@@ -204,6 +208,7 @@ def speed_reverse_route(job_id, filepath, data):
 
 @video_fx_bp.route("/video/speed/ramp", methods=["POST"])
 @require_csrf
+@workflow_step("Applying speed ramp")
 @async_job("speed_ramp")
 def speed_ramp_route(job_id, filepath, data):
     """Apply keyframe-based speed ramp or preset."""
@@ -254,6 +259,7 @@ def lut_list():
 
 @video_fx_bp.route("/video/lut/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying LUT")
 @async_job("lut_apply")
 def lut_apply(job_id, filepath, data):
     """Apply a color LUT to video."""
@@ -299,6 +305,7 @@ def lut_generate_all(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_fx_bp.route("/video/chromakey", methods=["POST"])
 @require_csrf
+@workflow_step("Applying chroma key")
 @async_job("chromakey")
 def chromakey_route(job_id, filepath, data):
     """Chromakey (green/blue screen) removal + compositing."""
@@ -338,6 +345,7 @@ def chromakey_route(job_id, filepath, data):
 
 @video_fx_bp.route("/video/pip", methods=["POST"])
 @require_csrf
+@workflow_step("Adding picture-in-picture")
 @async_job("pip")
 def pip_route(job_id, filepath, data):
     """Picture-in-picture overlay."""
@@ -369,6 +377,7 @@ def pip_route(job_id, filepath, data):
 
 @video_fx_bp.route("/video/blend", methods=["POST"])
 @require_csrf
+@workflow_step("Blending videos")
 @async_job("blend")
 def blend_route(job_id, filepath, data):
     """Blend two videos with a blend mode."""
@@ -417,6 +426,7 @@ def transitions_list():
 
 @video_fx_bp.route("/video/transitions/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Applying transitions")
 @async_job("transition", filepath_param="clip_a")
 def transitions_apply(job_id, filepath, data):
     """Apply transition between two clips."""
@@ -503,6 +513,7 @@ def particle_presets():
 
 @video_fx_bp.route("/video/particles/apply", methods=["POST"])
 @require_csrf
+@workflow_step("Adding particles")
 @async_job("particles")
 def particle_apply(job_id, filepath, data):
     """Overlay particle effects on video."""
@@ -536,6 +547,7 @@ def color_capabilities():
 
 @video_fx_bp.route("/video/color/correct", methods=["POST"])
 @require_csrf
+@workflow_step("Correcting color")
 @async_job("color_correct")
 def color_correct_route(job_id, filepath, data):
     """Apply color correction (exposure, contrast, saturation, temperature, etc.)."""

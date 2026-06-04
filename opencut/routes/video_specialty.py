@@ -10,6 +10,7 @@ import tempfile
 
 from flask import Blueprint, jsonify
 
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
@@ -107,6 +108,7 @@ def _validate_title_render(data):
 
 @video_specialty_bp.route("/video/title/render", methods=["POST"])
 @require_csrf
+@workflow_step("Rendering title")
 @async_job("title_render", filepath_required=False, pre_validate=_validate_title_render)
 def title_render(job_id, filepath, data):
     """Render a standalone title card video."""
@@ -145,6 +147,7 @@ def title_render(job_id, filepath, data):
 
 @video_specialty_bp.route("/video/title/overlay", methods=["POST"])
 @require_csrf
+@workflow_step("Overlaying title")
 @async_job("title_overlay")
 def title_overlay(job_id, filepath, data):
     """Overlay animated title onto existing video."""
@@ -177,6 +180,7 @@ def title_overlay(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @video_specialty_bp.route("/video/shorts-pipeline", methods=["POST"])
 @require_csrf
+@workflow_step("Running shorts pipeline")
 @async_job("shorts_pipeline")
 def video_shorts_pipeline(job_id, filepath, data):
     """Generate short-form clips from a long video (transcribe + highlight + reframe + captions)."""

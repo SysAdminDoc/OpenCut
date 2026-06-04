@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
 
+from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
 from opencut.jobs import _is_cancelled, _update_job, async_job
@@ -205,6 +206,7 @@ def _caption_review_summary(result_or_segments):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions", methods=["POST"])
 @require_csrf
+@workflow_step("Generating captions")
 @async_job("captions", disk_operation="transcribe", resumable=True)
 def generate_captions(job_id, filepath, data):
     """Generate captions/subtitles."""
@@ -345,6 +347,7 @@ def caption_cache_clear():
 
 @captions_bp.route("/styled-captions", methods=["POST"])
 @require_csrf
+@workflow_step("Generating styled captions")
 @async_job("styled-captions")
 def styled_captions_route(job_id, filepath, data):
     """Generate a transparent video overlay with styled, animated captions."""
@@ -491,6 +494,7 @@ def styled_captions_route(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/transcript", methods=["POST"])
 @require_csrf
+@workflow_step("Transcribing")
 @async_job("transcript", disk_operation="transcribe", resumable=True)
 def get_transcript(job_id, filepath, data):
     """Transcribe and return full word-level transcript for editing."""
@@ -1609,6 +1613,7 @@ def burnin_styles():
 
 @captions_bp.route("/captions/burnin/file", methods=["POST"])
 @require_csrf
+@workflow_step("Burning in captions")
 @async_job("burnin", disk_operation="video_export")
 def burnin_from_file(job_id, filepath, data):
     """Burn a subtitle file into video."""
@@ -1692,6 +1697,7 @@ def animated_caption_presets():
 
 @captions_bp.route("/captions/animated/render", methods=["POST"])
 @require_csrf
+@workflow_step("Rendering animated captions")
 @async_job("anim-cap")
 def animated_caption_render(job_id, filepath, data):
     """Render animated word-by-word captions onto video."""
@@ -1799,6 +1805,7 @@ def _validate_chapters_input(data):
 
 @captions_bp.route("/captions/chapters", methods=["POST"])
 @require_csrf
+@workflow_step("Generating chapters")
 @async_job("chapters", filepath_required=False, pre_validate=_validate_chapters_input)
 def captions_chapters(job_id, filepath, data):
     """Generate YouTube-style chapters from a transcript using an LLM."""
@@ -1886,6 +1893,7 @@ def captions_chapters(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions/repeat-detect", methods=["POST"])
 @require_csrf
+@workflow_step("Detecting repeats")
 @async_job("repeat-detect")
 def captions_repeat_detect(job_id, filepath, data):
     """Detect repeated takes in a recording and identify clean ranges."""
