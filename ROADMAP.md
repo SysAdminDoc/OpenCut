@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 3 - 2026-06-04.
+> Last researched: Cycle 4 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -26,7 +26,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-13.
+  RA-01..RA-14.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -303,7 +303,9 @@
 >
 > **v4.137 status (2026-06-04, continuation pass)**: advanced **E15** with a fortieth rolling i18n batch. Engine registry dynamic state labels, per-domain summaries, option suffixes, aggregate routing summaries, and preference-success toasts now route through `t(...)`, bringing the guarded migration ledger to 534 keys across forty rounds while keeping drift at 948 keys / 817 consumers / 131 dead / 0 missing.
 >
-> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-13.
+> **v4.138 status (2026-06-04, continuation pass)**: advanced **E15** with a forty-first rolling i18n batch. Settings backend/speech summary defaults, backend reconnect states, and Whisper offline/not-installed status copy now route through `t(...)`, bringing the guarded migration ledger to 559 keys across forty-one rounds while keeping drift at 973 keys / 842 consumers / 131 dead / 0 missing.
+>
+> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
 ---
 
@@ -1106,6 +1108,21 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.138 CEP i18n Migration Batch 41 (E15)
+
+E15 remains open. This batch moved settings backend/speech availability states out of bare English.
+
+| Surface | Status |
+|---|---|
+| Backend settings | Settings studio backend checking/connected/offline labels, reconnect guidance, and repeated system reconnect details now resolve through `t(...)`. |
+| Whisper availability | Settings speech checking copy plus Whisper unavailable, reconnect, and not-installed status/device/status-line summaries now resolve through `t(...)`. |
+| Locale ledger | `locales/en.json` now carries 25 additional settings/Whisper keys, bringing the guarded migration ledger to 559 keys across forty-one rounds. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new settings/Whisper keys, `t(...)` call sites, and absence of the previous bare-English availability forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py -q -p no:cacheprovider -o addopts=""` passed (`7 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `git diff --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 973 keys, 842 consumers, 131 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -1122,7 +1139,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.137 with the fortieth guarded 25-key engine summary/preference batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.138 with the forty-first guarded 25-key settings backend/speech availability batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -1132,12 +1149,12 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ### Researcher Queue (Cycle 1 - 2026-06-04)
 
-- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.137 docs and
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.138 docs and
   current external anchors. N8, E14, N9, N10, E12, and E13 are now shipped in the
   local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
   current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut
   signals still reinforce the existing backlog shape. No duplicate rows were
-  promoted; continue with E15, external F202/F252, and RA-01..RA-13.
+  promoted; continue with E15, external F202/F252, and RA-01..RA-14.
 
 ### Researcher Queue (Cycle 2 - 2026-06-04)
 
@@ -1156,12 +1173,20 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
   allowlist, localized consent text, result/denial handling, and static manifest
   drift tests around `shell.openExternal`.
 
+### Researcher Queue (Cycle 4 - 2026-06-04)
+
+- [x] 🔬 `uxp-webview-bridge-refresh-2026-06-04` - rechecked Adobe's current
+  Premiere UXP WebView docs against the dormant Bolt/WebView scaffold. Promoted
+  RA-14 for a release/dev WebView manifest split that keeps local packaged
+  WebViews on `localOnly` message bridging and prevents dev localhost domains or
+  remote bridge access from leaking into Marketplace packages.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
-Cycles 2 and 3 add Premiere-UXP packaging trust guardrails based on Adobe's
-current manifest/filesystem/Hybrid Plugin/external-process docs and the live
-OpenCut UXP manifest.
+Cycles 2 through 4 add Premiere-UXP packaging trust guardrails based on Adobe's
+current manifest/filesystem/Hybrid Plugin/external-process/WebView docs and the
+live OpenCut UXP manifest.
 
 ### Quick Wins
 
@@ -1170,6 +1195,7 @@ OpenCut UXP manifest.
 - [ ] **P3 — RA-03 Log direct `OpenCutError` / `error_response` returns** — Why: only `safe_error()` calls `logger.exception`; routes that raise typed `OpenCutError`s or return `error_response(...)` produce a 4xx/5xx with **no** server-log line, so user-reported failures that took the typed path leave no diagnostic trail. Evidence: `opencut/errors.py` — `OpenCutError.to_response()` (line 37) and `error_response()` (line 51) emit responses without logging; `safe_error` is the only path that logs. Touches: `opencut/errors.py`. Acceptance: typed errors and `error_response` emit a single structured `logger.info`/`logger.warning` (level keyed off status class) carrying code + request_id; no double-logging when `safe_error` already logged. Verify: a test asserting a raised `OpenCutError` produces exactly one log record. Complexity: S.
 - [ ] **P2 — RA-11 Minimize UXP filesystem permissions before Marketplace packaging** — Why: Adobe's UXP filesystem guidance says `fullAccess` can make users deny installation and recommends `request` for user-selected files; OpenCut's current UXP manifest still declares `localFileSystem: "fullAccess"` even though the panel's file/folder browse helpers use picker APIs (`getFileForOpening`, `getFolder`). Evidence: Adobe filesystem guide (`https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/`) recommends `request` for user-selected files and reserves `fullAccess` for unrestricted path access; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) list `plugin` / `request` / `fullAccess`; local evidence: `extension/com.opencut.uxp/manifest.json` line 37 and `extension/com.opencut.uxp/main.js` file browse helpers. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `docs/UXP_MACOS_HTTP.md`, and a manifest-permission guard test. Acceptance: base UXP packages use the least-privilege permission that still supports picker-based imports/exports; any remaining direct-path/fullAccess need is documented as a separate F253/hybrid-only requirement; tests fail if base UXP returns to broad filesystem access without an allowlisted reason. Verify: focused manifest-permission pytest plus manual UXP picker smoke in UDT. Complexity: S-M.
 - [ ] **P2 — RA-13 Declare and harden UXP external-launch permissions** — Why: the UXP panel calls `shell.openExternal(r.data.auth_url)` for social OAuth, but the live manifest has no `requiredPermissions.launchProcess` scheme allowlist and the call currently omits the consent-dialog developer text and result handling that Adobe documents for Premiere UXP external launches. Evidence: Adobe's Premiere UXP external-process guide (`https://developer.adobe.com/premiere-pro/uxp/resources/recipes/external-process/`) says plugins cannot launch external processes by default, must declare `launchProcess.schemes` for `openExternal`, always require user consent, should provide clear `developerText`, and should handle denial/error return values; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) list `launchProcess` as the permission for `shell.openPath()` / `shell.openExternal()` and advise accurate least-privilege permissions; local evidence: `extension/com.opencut.uxp/main.js` `socialConnectUxp()` calls `shell.openExternal(r.data.auth_url)` and `extension/com.opencut.uxp/manifest.json` lacks `launchProcess`. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, the OAuth launcher wrapper in UXP/WebView host code, localized consent/fallback copy, and static manifest-source guard tests. Acceptance: base UXP packages declare only the schemes actually needed for OAuth browser handoff (for example `https`, not broad custom schemes); every `shell.openExternal` call passes localized, user-readable consent text, checks the returned error/denial string, and falls back to manual URL copy/open instructions; tests fail if source adds an external launch without a matching manifest scheme and consent text. Verify: focused UXP manifest/source pytest plus manual UDT OAuth-launch smoke that records consent approval and denial paths. Complexity: S-M.
+- [ ] **P2 — RA-14 Split UXP WebView dev and release bridge permissions** — Why: OpenCut's dormant Bolt/WebView scaffold hard-codes `enableMessageBridge: "localAndRemote"` and includes Vite dev localhost domains even though the planned live WebView UI is packaged local content; Adobe's current WebView docs now document `localOnly` for local content, warn that broad WebView domains can affect performance/security/privacy and may be blocked by enterprises, and recommend specified domain arrays instead of broad access. Evidence: Adobe WebView API docs (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/reference-js/global-members/html-elements/html-web-view-element`) describe `localOnly`, `localAndRemote`, `allowLocalRendering`, resource cost, and the domain warning; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) define WebView permissions; local evidence: `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` sets `enableMessageBridge: "localAndRemote"` and `DEV_WEBVIEW_DOMAINS`, while `tests/test_uxp_webview_scaffold.py` currently asserts the broad bridge value. Touches: `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, generated WebView manifest path, F252 WebView scaffold tests, and `docs/UXP_MIGRATION.md`. Acceptance: development builds can retain localhost WebView domains and remote bridge access behind an explicit dev mode, but release/Marketplace builds use packaged local WebView content, `allowLocalRendering: "yes"`, `domains: []` or a documented minimum list, and `enableMessageBridge: "localOnly"`; tests fail if dev domains or `localAndRemote` leak into the release manifest. Verify: focused WebView manifest pytest plus UDT smoke after F252 cutover. Complexity: S-M.
 
 ### Larger Bets
 

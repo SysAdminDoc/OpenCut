@@ -557,6 +557,32 @@ MIGRATED_KEYS = (
     "engines.auto_label",
     "toast.engine_preference_saved",
     "toast.engine_preference_auto",
+    # Forty-first batch (settings backend/speech availability states).
+    "settings.studio_backend_checking",
+    "settings.studio_backend_checking_title",
+    "settings.studio_backend_connected",
+    "settings.studio_backend_connected_title",
+    "settings.studio_backend_offline",
+    "settings.studio_backend_offline_title",
+    "settings.studio_backend_reconnect",
+    "settings.studio_speech_checking",
+    "settings.studio_speech_checking_title",
+    "settings.studio_speech_warning",
+    "settings.system_reconnect_details",
+    "whisper.install_label",
+    "whisper.install_required",
+    "whisper.install_required_title",
+    "whisper.install_status",
+    "whisper.install_status_title",
+    "whisper.install_summary",
+    "whisper.not_installed",
+    "whisper.reconnect_backend",
+    "whisper.reconnect_device_title",
+    "whisper.reconnect_status",
+    "whisper.reconnect_status_title",
+    "whisper.speech_reconnect_title",
+    "whisper.speech_status_unavailable",
+    "whisper.status_unavailable",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2855,6 +2881,136 @@ EXPECTED_CALLS = (
         "toast.engine_preference_auto",
         re.compile(r't\(\s*"toast\.engine_preference_auto"'),
         re.compile(r'domainLabel \+ " is back on Auto routing\."'),
+    ),
+    # --- Forty-first batch -----------------------------------------
+    (
+        "settings.studio_backend_checking",
+        re.compile(r't\(\s*"settings\.studio_backend_checking"'),
+        re.compile(r'label:\s*"Checking\.\.\."'),
+    ),
+    (
+        "settings.studio_backend_checking_title",
+        re.compile(r't\(\s*"settings\.studio_backend_checking_title"'),
+        re.compile(r'title:\s*"Checking the local OpenCut backend\."'),
+    ),
+    (
+        "settings.studio_backend_connected",
+        re.compile(r't\(\s*"settings\.studio_backend_connected"'),
+        re.compile(r'setSettingsStudioState\(\s*"backend",\s*"Connected"'),
+    ),
+    (
+        "settings.studio_backend_connected_title",
+        re.compile(r't\(\s*"settings\.studio_backend_connected_title"'),
+        re.compile(r'portLabel \+ " is responding for local processing\."'),
+    ),
+    (
+        "settings.studio_backend_offline",
+        re.compile(r't\(\s*"settings\.studio_backend_offline"'),
+        re.compile(r'setSettingsStudioState\(\s*"backend",\s*"Offline"'),
+    ),
+    (
+        "settings.studio_backend_offline_title",
+        re.compile(r't\(\s*"settings\.studio_backend_offline_title"'),
+        re.compile(r'setSettingsStudioState\(\s*"backend",\s*"Offline",\s*"error",\s*"Reconnect'),
+    ),
+    (
+        "settings.studio_backend_reconnect",
+        re.compile(r't\(\s*"settings\.studio_backend_reconnect"'),
+        re.compile(r'lineMessage = "Reconnect the local backend to restore'),
+    ),
+    (
+        "settings.studio_speech_checking",
+        re.compile(r't\(\s*"settings\.studio_speech_checking"'),
+        re.compile(r'label:\s*"Checking transcription\.\.\."'),
+    ),
+    (
+        "settings.studio_speech_checking_title",
+        re.compile(r't\(\s*"settings\.studio_speech_checking_title"'),
+        re.compile(r'title:\s*"Checking transcription readiness\."'),
+    ),
+    (
+        "settings.studio_speech_warning",
+        re.compile(r't\(\s*"settings\.studio_speech_warning"'),
+        re.compile(r'lineMessage = "Transcription still needs attention'),
+    ),
+    (
+        "settings.system_reconnect_details",
+        re.compile(r't\(\s*"settings\.system_reconnect_details"'),
+        re.compile(r'setStatusLine\(\s*"systemStatusLine",\s*"Reconnect the backend to review GPU'),
+    ),
+    (
+        "whisper.install_label",
+        re.compile(r't\(\s*"whisper\.install_label"'),
+        re.compile(r'setSettingsStudioState\(\s*"speech",\s*"Install Whisper"'),
+    ),
+    (
+        "whisper.install_required",
+        re.compile(r't\(\s*"whisper\.install_required"'),
+        re.compile(r'el\.whisperDeviceText\.textContent = "Install required"'),
+    ),
+    (
+        "whisper.install_required_title",
+        re.compile(r't\(\s*"whisper\.install_required_title"'),
+        re.compile(r'el\.whisperDeviceText\.title = "Install Whisper before captions'),
+    ),
+    (
+        "whisper.install_status",
+        re.compile(r't\(\s*"whisper\.install_status"'),
+        re.compile(r'setStatusLine\(\s*"whisperStatusLine",\s*"Install Whisper to enable transcription'),
+    ),
+    (
+        "whisper.install_status_title",
+        re.compile(r't\(\s*"whisper\.install_status_title"'),
+        re.compile(r'el\.whisperStatusText\.title = "Install Whisper to unlock transcription workflows\."'),
+    ),
+    (
+        "whisper.install_summary",
+        re.compile(r't\(\s*"whisper\.install_summary"'),
+        re.compile(
+            r'setSettingsStudioState\(\s*"speech",\s*"Install Whisper",\s*"error",\s*"Install Whisper to enable captions'
+        ),
+    ),
+    (
+        "whisper.not_installed",
+        re.compile(r't\(\s*"whisper\.not_installed"'),
+        re.compile(r'el\.whisperStatusText\.textContent = "Not installed"'),
+    ),
+    (
+        "whisper.reconnect_backend",
+        re.compile(r't\(\s*"whisper\.reconnect_backend"'),
+        re.compile(r'el\.whisperDeviceText\.textContent = "Reconnect backend"'),
+    ),
+    (
+        "whisper.reconnect_device_title",
+        re.compile(r't\(\s*"whisper\.reconnect_device_title"'),
+        re.compile(r'el\.whisperDeviceText\.title = "Reconnect the backend to inspect transcription device settings\."'),
+    ),
+    (
+        "whisper.reconnect_status",
+        re.compile(r't\(\s*"whisper\.reconnect_status"'),
+        re.compile(r'setStatusLine\(\s*"whisperStatusLine",\s*"Reconnect the backend before reviewing'),
+    ),
+    (
+        "whisper.reconnect_status_title",
+        re.compile(r't\(\s*"whisper\.reconnect_status_title"'),
+        re.compile(r'el\.whisperStatusText\.title = "Reconnect the backend to review transcription readiness\."'),
+    ),
+    (
+        "whisper.speech_reconnect_title",
+        re.compile(r't\(\s*"whisper\.speech_reconnect_title"'),
+        re.compile(
+            r'setSettingsStudioState\(\s*"speech",\s*"Status unavailable",\s*"error",\s*"Reconnect the backend to review Whisper readiness\."'
+        ),
+    ),
+    (
+        "whisper.speech_status_unavailable",
+        re.compile(r't\(\s*"whisper\.speech_status_unavailable"'),
+        re.compile(r'setSettingsStudioState\(\s*"speech",\s*"Status unavailable"'),
+    ),
+    (
+        "whisper.status_unavailable",
+        re.compile(r't\(\s*"whisper\.status_unavailable"'),
+        re.compile(r'el\.whisperStatusText\.textContent = "Unavailable"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
