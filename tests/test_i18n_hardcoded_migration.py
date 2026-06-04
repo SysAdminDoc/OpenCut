@@ -450,6 +450,17 @@ MIGRATED_KEYS = (
     "forms.short_duration",
     "toast.number_adjusted",
     "toast.number_kept_in_range",
+    # Thirty-fifth batch (status bar and language fallback).
+    "status.uptime",
+    "status.cpu_usage",
+    "status.ram_usage",
+    "status.gpu_unavailable",
+    "status.jobs_running",
+    "status.jobs_queued",
+    "status.jobs_done_today",
+    "status.jobs_summary",
+    "status.jobs_none",
+    "toast.language_unavailable",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2237,6 +2248,57 @@ EXPECTED_CALLS = (
         "toast.number_kept_in_range",
         re.compile(r't\(\s*"toast\.number_kept_in_range"'),
         re.compile(r'showToast\(\s*paired\.label\s*\+'),
+    ),
+    # --- Thirty-fifth batch -----------------------------------------
+    (
+        "status.uptime",
+        re.compile(r't\(\s*"status\.uptime"'),
+        re.compile(r'text\.textContent\s*=\s*"Up "\s*\+'),
+    ),
+    (
+        "status.cpu_usage",
+        re.compile(r't\(\s*"status\.cpu_usage"'),
+        re.compile(r'text\.textContent\s*\+=\s*" \\u00B7 CPU "\s*\+'),
+    ),
+    (
+        "status.ram_usage",
+        re.compile(r't\(\s*"status\.ram_usage"'),
+        re.compile(r'text\.textContent\s*\+=\s*" \\u00B7 RAM "\s*\+'),
+    ),
+    (
+        "status.gpu_unavailable",
+        re.compile(r't\(\s*"status\.gpu_unavailable"'),
+        re.compile(r'gpu\.textContent\s*=\s*"GPU: N/A"'),
+    ),
+    (
+        "status.jobs_running",
+        re.compile(r't\(\s*"status\.jobs_running"'),
+        re.compile(r'parts\.push\(j\.running\s*\+\s*" running"'),
+    ),
+    (
+        "status.jobs_queued",
+        re.compile(r't\(\s*"status\.jobs_queued"'),
+        re.compile(r'parts\.push\(j\.queued\s*\+\s*" queued"'),
+    ),
+    (
+        "status.jobs_done_today",
+        re.compile(r't\(\s*"status\.jobs_done_today"'),
+        re.compile(r'parts\.push\(j\.completed_today\s*\+\s*" done today"'),
+    ),
+    (
+        "status.jobs_summary",
+        re.compile(r't\(\s*"status\.jobs_summary"'),
+        re.compile(r'jobsEl\.textContent\s*=\s*parts\.length\s*\?\s*"Jobs: "\s*\+'),
+    ),
+    (
+        "status.jobs_none",
+        re.compile(r't\(\s*"status\.jobs_none"'),
+        re.compile(r':\s*"Jobs: 0"'),
+    ),
+    (
+        "toast.language_unavailable",
+        re.compile(r't\(\s*"toast\.language_unavailable"'),
+        re.compile(r'showToast\(\s*"Language \'"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
