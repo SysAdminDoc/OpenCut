@@ -1166,6 +1166,13 @@ MIGRATED_KEYS = (
     "preview.frame_alt",
     "timeline.beat_marker_name",
     "timeline.chapter_marker_name",
+    # Eighty-fourth batch (journal action labels).
+    "journal.action_add_markers",
+    "journal.action_batch_rename",
+    "journal.action_create_smart_bins",
+    "journal.action_import_captions",
+    "journal.action_import_overlay",
+    "journal.action_import_sequence",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6359,6 +6366,37 @@ EXPECTED_CALLS = (
         "timeline.chapter_marker_name",
         re.compile(r't\(\s*"timeline\.chapter_marker_name"'),
         re.compile(r'type:\s*"Chapter"|name:\s*c\.title\s*\|\|\s*"Chapter"|name:\s*c\.title\s*\|\|\s*c\.label\s*\|\|\s*"Chapter"'),
+    ),
+    # --- Eighty-fourth batch --------------------------------------
+    (
+        "journal.action_add_markers",
+        re.compile(r't\(\s*"journal\.action_add_markers"'),
+        re.compile(r'add_markers:\s*"Add markers"'),
+    ),
+    (
+        "journal.action_batch_rename",
+        re.compile(r't\(\s*"journal\.action_batch_rename"'),
+        re.compile(r'batch_rename:\s*"Batch rename"'),
+    ),
+    (
+        "journal.action_create_smart_bins",
+        re.compile(r't\(\s*"journal\.action_create_smart_bins"'),
+        re.compile(r'create_smart_bins:\s*"Create bins"'),
+    ),
+    (
+        "journal.action_import_captions",
+        re.compile(r't\(\s*"journal\.action_import_captions"'),
+        re.compile(r'import_captions:\s*"Import captions"'),
+    ),
+    (
+        "journal.action_import_overlay",
+        re.compile(r't\(\s*"journal\.action_import_overlay"'),
+        re.compile(r'import_overlay:\s*"Import overlay"'),
+    ),
+    (
+        "journal.action_import_sequence",
+        re.compile(r't\(\s*"journal\.action_import_sequence"'),
+        re.compile(r'import_sequence:\s*"Import sequence"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

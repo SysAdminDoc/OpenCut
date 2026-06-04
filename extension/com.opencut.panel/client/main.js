@@ -8548,12 +8548,12 @@
     // ================================================================
     function _journalActionLabel(action) {
         return ({
-            add_markers:       "Add markers",
-            batch_rename:      "Batch rename",
-            import_sequence:   "Import sequence",
-            import_overlay:    "Import overlay",
-            import_captions:   "Import captions",
-            create_smart_bins: "Create bins"
+            add_markers:       t("journal.action_add_markers", "Add markers"),
+            batch_rename:      t("journal.action_batch_rename", "Batch rename"),
+            import_sequence:   t("journal.action_import_sequence", "Import sequence"),
+            import_overlay:    t("journal.action_import_overlay", "Import overlay"),
+            import_captions:   t("journal.action_import_captions", "Import captions"),
+            create_smart_bins: t("journal.action_create_smart_bins", "Create bins")
         })[action] || action;
     }
 
