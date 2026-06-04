@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 122
+
+- Migrated the Audio Studio FX and DeepFilterNet form shell to static locale hooks while preserving dynamic effect-parameter rendering and literal package-install commands.
+- `client/locales/en.json` grows from 1,870 to 1,884 keys; `i18n-drift` reports 1,795 consumers, 89 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Audio Studio FX and DeepFilterNet static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 121
 
 - Migrated the Audio Denoise form shell to static locale hooks for the method controls, strength guidance, and preview button.
