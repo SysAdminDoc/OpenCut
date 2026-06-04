@@ -3582,7 +3582,7 @@
         }
         var step = workflowQueue.shift();
         jobStepCurrent++;
-        if (step.label) showAlert("Step " + jobStepCurrent + "/" + jobStepTotal + ": " + step.label);
+        if (step.label) showAlert(getProgressStepPrefix() + step.label);
         startJob(step.endpoint, step.payload);
     }
 
@@ -3777,10 +3777,20 @@
         });
     }
 
+    function getProgressStepPrefix() {
+        if (jobStepTotal <= 1) return "";
+        return t("progress.step_prefix", "Step {current}/{total}: ")
+            .replace("{current}", jobStepCurrent)
+            .replace("{total}", jobStepTotal);
+    }
+
     function startJob(endpoint, payload, options) {
         var opts = normalizeJobOptions(options);
         if (currentJob || jobStarting) {
-            showAlert("OpenCut is already processing another task. Stop the active run or wait for it to finish first.");
+            showAlert(t(
+                "progress.busy",
+                "OpenCut is already processing another task. Stop the active run or wait for it to finish first."
+            ));
             runStartJobErrorHook(opts, { reason: "busy" });
             return false;
         }
@@ -3794,9 +3804,10 @@
         jobStarting = true;
 
         // Show persistent processing banner
-        var stepPrefix = (jobStepTotal > 1) ? "Step " + jobStepCurrent + "/" + jobStepTotal + ": " : "";
+        var stepPrefix = getProgressStepPrefix();
+        var preparingMessage = stepPrefix + t("progress.preparing", "Preparing run…");
         el.processingBanner.classList.remove("hidden");
-        el.processingMsg.textContent = stepPrefix + "Preparing run…";
+        el.processingMsg.textContent = preparingMessage;
         el.processingFill.style.width = "0%";
         el.processingFill.setAttribute("aria-valuenow", "0");
         el.processingElapsed.textContent = "0s";
@@ -3806,7 +3817,7 @@
         el.resultsSection.classList.add("hidden");
         el.progressBar.style.width = "0%";
         el.progressBar.setAttribute("aria-valuenow", "0");
-        el.progressLabel.textContent = stepPrefix + "Preparing run…";
+        el.progressLabel.textContent = preparingMessage;
         el.cancelBtn.classList.remove("hidden");
 
         // Lock the entire UI
@@ -3832,7 +3843,7 @@
             api("POST", endpoint, payload, function (err, data) {
                 if (err || !data || data.error) {
                     jobStarting = false;
-                    showAlert(data ? data.error : "Failed to start job", data);
+                    showAlert(data ? data.error : t("progress.start_failed", "Failed to start job"), data);
                     hideProgress();
                     runStartJobErrorHook(opts, { reason: "request-failed", err: err, data: data });
                     return;
@@ -3856,7 +3867,8 @@
         } catch (e) {
             jobStarting = false;
             hideProgress();
-            showAlert("Failed to start job: " + e.message);
+            showAlert(t("progress.start_failed_prefix", "Failed to start job: {error}")
+                .replace("{error}", e.message));
             runStartJobErrorHook(opts, { reason: "exception", error: e });
             return false;
         }
@@ -3910,9 +3922,9 @@
 
     function updateProgress(job) {
         var pct = (job.progress || 0) + "%";
-        var msg = job.message || "Processing…";
+        var msg = job.message || t("progress.processing", "Processing…");
         if (jobStepTotal > 1) {
-            msg = "Step " + jobStepCurrent + "/" + jobStepTotal + ": " + msg;
+            msg = getProgressStepPrefix() + msg;
         }
         el.progressBar.style.width = pct;
         el.progressBar.setAttribute("aria-valuenow", String(job.progress || 0));
@@ -4028,10 +4040,13 @@
             hideProgress();
             // Show error in results card for better visibility
             el.resultsSection.classList.remove("hidden");
-            el.resultsTitle.textContent = "Run failed";
+            el.resultsTitle.textContent = t("progress.run_failed", "Run failed");
             el.resultsTitle.removeAttribute("style");
             el.resultsTitle.setAttribute("data-state", "error");
-            el.resultsStats.textContent = enhanceError(job.error || job.message || "Unknown error", job);
+            el.resultsStats.textContent = enhanceError(
+                job.error || job.message || t("progress.unknown_error", "Unknown error"),
+                job
+            );
             el.resultsPath.textContent = "";
             el.resultsPath.title = "";
             // Show retry button if we have a last job to retry
@@ -4189,7 +4204,7 @@
 
     function showResults(job) {
         el.resultsSection.classList.remove("hidden");
-        el.resultsTitle.textContent = "Finished";
+        el.resultsTitle.textContent = t("progress.finished", "Finished");
         el.resultsTitle.removeAttribute("style");
         el.resultsTitle.setAttribute("data-state", "success");
 
@@ -4251,7 +4266,7 @@
         }
 
         var resultPath = r.xml_path || r.output_path || r.overlay_path || (r.output_paths ? r.output_paths.length + " files exported" : "");
-        el.resultsStats.innerHTML = stats || "The run finished successfully.";
+        el.resultsStats.innerHTML = stats || t("progress.success_summary", "The run finished successfully.");
         el.resultsPath.textContent = resultPath;
         el.resultsPath.title = resultPath || "";
     }
