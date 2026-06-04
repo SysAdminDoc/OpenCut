@@ -1353,23 +1353,23 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="audio.denoise_desc">Reduce background noise, hum, and hiss from your audio.</p>
                         <div class="form-group">
-                            <label for="denoiseMethod">Method</label>
+                            <label for="denoiseMethod" data-i18n="forms.method">Method</label>
                             <select id="denoiseMethod">
-                                <option value="afftdn" selected>Standard (recommended)</option>
-                                <option value="bandpass">Bandpass (voice-focused)</option>
+                                <option value="afftdn" selected data-i18n="audio.denoise_method_standard">Standard (recommended)</option>
+                                <option value="bandpass" data-i18n="audio.denoise_method_bandpass">Bandpass (voice-focused)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="denoiseStrength">Strength</label>
+                            <label for="denoiseStrength" data-i18n="forms.strength">Strength</label>
                             <div class="slider-row">
                                 <input type="range" id="denoiseStrength" min="0.1" max="1.0" value="0.7" step="0.1">
                                 <span class="slider-val" id="denoiseStrengthVal">0.7</span>
                             </div>
-                            <span class="hint-inline">Higher = more noise removed, but may affect voice quality</span>
+                            <span class="hint-inline" data-i18n="audio.denoise_strength_hint">Higher = more noise removed, but may affect voice quality</span>
                         </div>
                         <!-- v1.9.36 (C): 10s live preview at the current strength -->
                         <div class="audio-preview-row">
-                            <button type="button" class="btn-secondary btn-sm" id="denoisePreviewBtn" disabled title="Render a 10s preview with current settings">Preview 10s</button>
+                            <button type="button" class="btn-secondary btn-sm" id="denoisePreviewBtn" disabled title="Render a 10s preview with current settings" data-i18n="audio.preview_10s" data-i18n-title="audio.denoise_preview_10s_title">Preview 10s</button>
                             <audio id="denoisePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
                         <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Ctrl+Shift+D" data-i18n="audio.remove_noise">Remove Noise</button>

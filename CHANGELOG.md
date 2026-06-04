@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 121
+
+- Migrated the Audio Denoise form shell to static locale hooks for the method controls, strength guidance, and preview button.
+- `client/locales/en.json` grows from 1,865 to 1,870 keys; `i18n-drift` reports 1,779 consumers, 91 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Audio Denoise static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 120
 
 - Migrated the Audio tab quick-action copy and AI Stem Separation form shell to static locale hooks while preserving nested icons, checkbox inputs, model names, and literal package-install commands.
