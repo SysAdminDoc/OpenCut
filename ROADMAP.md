@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.102
+**Version**: 4.103
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -232,6 +232,8 @@
 > **v4.101 status (2026-06-04, continuation pass)**: advanced **E15** with a fourth rolling i18n batch. The CEP panel now routes eight dependency/install feedback messages through `t(...)` and `locales/en.json`, extending the guarded migration ledger to 21 keys across four rounds while keeping i18n drift at 447 keys / 305 consumers / 142 dead / 0 missing.
 >
 > **v4.102 status (2026-06-04, continuation pass)**: advanced **E15** with a fifth rolling i18n batch. OAuth and live-updates bridge feedback now routes through `t(...)`, including the `{platform}` OAuth templates and WebSocket bridge status messages, bringing the guarded migration ledger to 30 keys across five rounds while keeping drift at 456 keys / 314 consumers / 142 dead / 0 missing.
+>
+> **v4.103 status (2026-06-04, continuation pass)**: advanced **E15** with a sixth rolling i18n batch. Clip/workflow input prompts for LUT paths, batch media selection, workflow presets, transcription chaining, music ducking, and compositing paths now route through `t(...)`, bringing the guarded migration ledger to 40 keys across six rounds while keeping drift at 466 keys / 324 consumers / 142 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-03..RA-10.
 
@@ -508,6 +510,21 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.103 CEP i18n Migration Batch 6 (E15)
+
+E15 remains open. This batch moved the clip/workflow input-prompt cluster out of bare English.
+
+| Surface | Status |
+|---|---|
+| Clip prompts | LUT path, missing project clips, too-small batch, music file, PiP video, and overlay path prompts now call `t(...)`. |
+| Workflow/caption prompts | Workflow preset selection, invalid workflow preset, translate pre-transcription, and burn-in pre-transcription prompts now call `t(...)`. |
+| Locale ledger | `locales/en.json` now carries ten additional `toast.*` keys, bringing the guarded migration ledger to 40 keys across six rounds. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new keys, `t(...)` call sites, and absence of the previous bare-English alert forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migration.py tests/test_i18n_drift.py -q -p no:cacheprovider -o addopts=""` passed (`6 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, Ruff and `py_compile` passed for the updated Python guard, and `py -3.12 scripts/i18n_lint.py --json` reported 466 keys, 324 consumers, 142 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -524,7 +541,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.102 with the fifth guarded 9-string OAuth/live-updates feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.103 with the sixth guarded 10-string clip/workflow input-prompt batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -534,7 +551,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ### Researcher Queue (Cycle 1 - 2026-06-04)
 
-- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.102 docs and
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.103 docs and
   current external anchors. N8, E14, N9, N10, E12, and E13 are now shipped in the
   local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
   current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut
