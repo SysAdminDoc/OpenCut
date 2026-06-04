@@ -34,6 +34,7 @@ request), and every response includes an ``X-Request-ID`` header.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import uuid
 from typing import Callable, Optional
@@ -54,14 +55,16 @@ def get_request_id() -> str:
     return getattr(_thread_local, "request_id", "") or ""
 
 
-def set_request_id(value: str) -> None:
-    """Set the thread-local request-ID. Trim + sanitise for log safety."""
+def sanitize_request_id(value: str, *, limit: int = 64) -> str:
+    """Return a log-safe request ID without mutating thread-local state."""
     if not isinstance(value, str):
         value = ""
-    # Strip control chars / whitespace + cap length. No dependency on
-    # a regex — we're applying the rule uniformly.
-    cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "-_:.")[:64]
-    _thread_local.request_id = cleaned
+    return "".join(ch for ch in value if ch.isalnum() or ch in "-_:.")[:limit]
+
+
+def set_request_id(value: str) -> None:
+    """Set the thread-local request-ID. Trim + sanitise for log safety."""
+    _thread_local.request_id = sanitize_request_id(value)
 
 
 def clear_request_id() -> None:
@@ -73,6 +76,30 @@ def new_request_id() -> str:
     rid = f"r-{uuid.uuid4().hex[:16]}"
     set_request_id(rid)
     return rid
+
+
+SUBPROCESS_REQUEST_ID_ENV = "OPENCUT_REQUEST_ID"
+
+
+def subprocess_env(request_id: Optional[str] = None, *, base_env=None) -> Optional[dict]:
+    """Return an env copy tagged with ``OPENCUT_REQUEST_ID`` when available."""
+    rid = sanitize_request_id(get_request_id() if request_id is None else request_id)
+    if not rid:
+        return None
+    env = dict(os.environ if base_env is None else base_env)
+    env[SUBPROCESS_REQUEST_ID_ENV] = rid
+    return env
+
+
+def prefix_subprocess_output(text: str, request_id: Optional[str] = None) -> str:
+    """Prefix each subprocess output line with ``[request_id]`` for logging."""
+    if text is None:
+        return ""
+    rid = sanitize_request_id(get_request_id() if request_id is None else request_id)
+    body = str(text)
+    if not rid or not body:
+        return body
+    return "\n".join(f"[{rid}] {line}" for line in body.splitlines())
 
 
 # ---------------------------------------------------------------------------
