@@ -15537,7 +15537,11 @@
                     if (err || !data || !data.unseen || !data.unseen.length) return;
                     var top = data.unseen[0];
                     if (!top || !top.tag) return;
-                    showToast("OpenCut " + top.tag + " released — see GitHub", "info");
+                    showToast(
+                        t("toast.changelog_released", "OpenCut {tag} released — see GitHub")
+                            .replace("{tag}", top.tag),
+                        "info"
+                    );
                     // Auto-mark as seen locally after showing once per session.
                     try { localStorage.setItem(WH_LAST_SEEN_KEY, top.tag); } catch (e) {}
                     // Persist server-side too so any other panel instance
@@ -15551,17 +15555,17 @@
             // --------------------------------------------------------------
             function sendLog() {
                 var desc = (typeof prompt === "function")
-                    ? (prompt("What went wrong?  (optional)") || "")
+                    ? (prompt(t("prompt.issue_description", "What went wrong?  (optional)")) || "")
                     : "";
                 api("POST", "/system/issue-report/bundle", {
-                    title: "OpenCut issue report from panel",
+                    title: t("issue.report_title", "OpenCut issue report from panel"),
                     description: desc,
                     log_tail_lines: 200,
                     include_crash: true,
                     include_logs: true
                 }, function (err, data) {
                     if (err || !data || !data.url) {
-                        showToast("Could not assemble issue bundle", "error");
+                        showToast(t("toast.issue_bundle_failed", "Could not assemble issue bundle"), "error");
                         return;
                     }
                     // CEP allows opening external URLs via CSInterface.
@@ -15621,22 +15625,30 @@
                             var publicChoice = false;
                             try {
                                 publicChoice = !!confirm(
-                                    "Push as a PUBLIC gist?\n\n" +
-                                    "Cancel = secret gist (requires GITHUB_TOKEN env)."
+                                    t(
+                                        "gist.confirm_public",
+                                        "Push as a PUBLIC gist?\n\nCancel = secret gist (requires GITHUB_TOKEN env)."
+                                    )
                                 );
                             } catch (e) {}
                             api("POST", "/settings/gist/push", {
                                 files: files,
-                                description: "OpenCut presets export",
+                                description: t("gist.export_description", "OpenCut presets export"),
                                 public: publicChoice
                             }, function (err, data) {
                                 if (err || !data || !data.html_url) {
-                                    showAlert("Gist push failed: " +
-                                        (err && err.message ? err.message : "unknown"));
+                                    showAlert(
+                                        t("gist.push_failed", "Gist push failed: {error}")
+                                            .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                                    );
                                     return;
                                 }
-                                showAlert("Gist created:\n\n" + data.html_url +
-                                    "\n\nCopy this URL to share your presets.");
+                                showAlert(
+                                    t(
+                                        "gist.created",
+                                        "Gist created:\n\n{url}\n\nCopy this URL to share your presets."
+                                    ).replace("{url}", data.html_url)
+                                );
                             });
                         });
                     });
@@ -15645,14 +15657,16 @@
 
             function gistPull() {
                 var url = (typeof prompt === "function")
-                    ? (prompt("Paste gist URL or ID:") || "")
+                    ? (prompt(t("gist.pull_prompt", "Paste gist URL or ID:")) || "")
                     : "";
                 url = String(url).trim();
                 if (!url) return;
                 api("POST", "/settings/gist/pull", { gist: url }, function (err, data) {
                     if (err || !data || !data.files) {
-                        showAlert("Gist pull failed: " +
-                            (err && err.message ? err.message : "unknown"));
+                        showAlert(
+                            t("gist.pull_failed", "Gist pull failed: {error}")
+                                .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                        );
                         return;
                     }
                     var summary = [];
@@ -15661,9 +15675,15 @@
                             summary.push(" - " + k);
                         }
                     }
-                    showAlert("Pulled " + summary.length + " file(s) from gist " +
-                        (data.id || "") + ":\n\n" + summary.join("\n") +
-                        "\n\nReview the files in ~/.opencut/ before applying.");
+                    showAlert(
+                        t(
+                            "gist.pulled_files",
+                            "Pulled {count} file(s) from gist {id}:\n\n{files}\n\nReview the files in ~/.opencut/ before applying."
+                        )
+                            .replace("{count}", summary.length)
+                            .replace("{id}", data.id || "")
+                            .replace("{files}", summary.join("\n"))
+                    );
                 });
             }
 
