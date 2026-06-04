@@ -144,9 +144,11 @@ def route_mcp_info():
     """Capability report — how many tools, extended-mode flag, version."""
     try:
         from opencut import __version__, mcp_server
+        from opencut.core.webhook_system import list_event_types
         from opencut.mcp_extended_tools import extended_tools_enabled
         curated = mcp_server.get_mcp_tools(include_extended=False)
         extended = mcp_server.get_mcp_tools(include_extended=True)
+        webhook_event_types = list_event_types()
         return jsonify({
             "version": __version__,
             "curated_count": len(curated),
@@ -154,6 +156,12 @@ def route_mcp_info():
             "extended_enabled_by_default": extended_tools_enabled(),
             "transport": "uxp-bridge",  # vs "json-rpc-stdio" or "json-rpc-http"
             "endpoints": ["/mcp/tools", "/mcp/call", "/mcp/info"],
+            "webhook_event_types": {
+                "endpoint": "/webhooks/event-types",
+                "api_endpoint": "/api/webhooks/event-types",
+                "events": [event["name"] for event in webhook_event_types["events"]],
+                "legacy_aliases": webhook_event_types["legacy_aliases"],
+            },
         })
     except Exception as exc:  # pragma: no cover
         return safe_error(exc, "mcp_bridge_info")

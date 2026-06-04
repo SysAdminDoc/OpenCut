@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.89
+**Version**: 4.90
 **Updated**: 2026-06-04
-**Baseline**: v1.32.0 (1,519 routes, 107 blueprints, 598 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,521 routes, 107 blueprints, 598 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
@@ -187,6 +187,8 @@
 > **v4.88 status (2026-06-04, continuation pass)**: closed **N2** from the May 26 continuation queue by adding `opencut/core/install_hints.py`, extending `missing_dependency(name, extra=None, gpu=False, vram_mb=0)`, and routing generic missing-dependency responses plus async job error status through the same install-hint registry. The top-12 dependency failures now resolve to actionable `pip install 'opencut[...]'` suggestions with package hints and GPU/VRAM notes where relevant.
 >
 > **v4.89 status (2026-06-04, continuation pass)**: closed **N3** from the May 26 continuation queue by changing the GPU semaphore default acquire wait from 0 seconds to 30 seconds while preserving `OPENCUT_GPU_ACQUIRE_TIMEOUT=0` for fail-fast behavior. GPU contention that still times out now carries `GPU_BUSY` retry metadata through direct structured errors and async job status.
+>
+> **v4.90 status (2026-06-04, continuation pass)**: closed **N6** from the May 26 continuation queue by adding `GET /webhooks/event-types` and `/api/webhooks/event-types` for webhook event discovery. `opencut/core/webhook_system.py` now exports a validated event catalogue with canonical names, legacy aliases, deprecation metadata, and schema pointers; `/mcp/info` also exposes the event-type discovery pointer for tooling.
 
 ---
 
@@ -254,12 +256,29 @@ Validation after the batch: `py -3.12 -m pytest tests/test_gpu_semaphore_wait.py
 
 ---
 
+## 2026-06-04 v4.90 Webhook Event Discovery (N6)
+
+N6 is closed. Webhook authors no longer need to read source constants to learn which events can be registered.
+
+| Surface | Status |
+|---|---|
+| Event catalogue | `opencut/core/webhook_system.py::list_event_types()` returns every `VALID_EVENTS` entry with canonical name, `since_version`, `deprecated`, `schema_pointer`, description, and replacement metadata for legacy aliases. |
+| Legacy aliases | The API returns `legacy_aliases` for `job_complete`, `job_failed`, and `error` so clients can migrate to `job.complete` / `job.error` while old subscriptions keep matching. |
+| Routes | `GET /webhooks/event-types` is the canonical discovery route; `GET /api/webhooks/event-types` preserves the existing `/api/webhooks` namespace. |
+| Tooling surface | `/mcp/info` now includes the webhook event-type endpoint, event names, and legacy alias map for MCP-aware clients. |
+| Coverage | `tests/test_dev_scripting.py` pins catalogue coverage for every valid event plus both discovery routes; `tests/test_mcp_bridge.py` pins the `/mcp/info` pointer. |
+| Generated surfaces | Route/API/feature-readiness/MCP manifests and README route badge were regenerated after adding the two event-type routes. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_dev_scripting.py -q -p no:cacheprovider -o addopts=""` passed (`166 passed`), touched Python files compile, generated surfaces were refreshed, and route count is now 1,521.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
 - [x] **P0 — N2 `missing_dependency()` includes pip extra name** — closed in v4.88 with a shared install-hint registry, helper metadata, generic route error inference, async job status suggestions, and top-12 dependency coverage.
 - [x] **P0 — N3 GPU semaphore default-wait 30s** — closed in v4.89 with a 30-second default wait, zero-second env override, `GPU_BUSY` retry metadata, async job status propagation, and focused wait tests.
-- [ ] **P1 — N6 `GET /webhooks/event-types`** — expose the webhook event catalogue and legacy aliases through the API.
+- [x] **P1 — N6 `GET /webhooks/event-types`** — closed in v4.90 with canonical and `/api` discovery routes, core event metadata, legacy alias mapping, MCP info discoverability, generated surface refresh, and focused tests.
 - [ ] **P1 — E11 webhook signatures mandatory by default** — require explicit opt-out for unsigned webhook delivery.
 - [ ] **P1 — N4 disk preflight in heavy routes** — wire `disk_monitor.preflight()` into the most disk-intensive async jobs.
 - [ ] **P1 — N5 job resume for interrupted jobs** — add resumability metadata and a resume route for checkpointable jobs.
