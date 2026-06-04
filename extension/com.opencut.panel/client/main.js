@@ -14084,7 +14084,7 @@
 
     function runLoudMatch() {
         var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
-        if (!paths.length) { showAlert("No project media found."); return; }
+        if (!paths.length) { showAlert(t("audio.no_project_media_found", "No project media found.")); return; }
         var outDir = (document.getElementById("loudMatchOutputDir") || {}).value || projectFolder;
         startJob("/audio/loudness-match", {
             files: paths,
@@ -14104,20 +14104,23 @@
         if (table && outputs.length) {
             var html = '<div class="report-table">';
             html += '<div class="report-table-row report-table-head">'
-                + '<span>Clip</span><span>Original LUFS</span><span>Status</span></div>';
+                + '<span>' + esc(t("audio.loudness_clip", "Clip")) + '</span>'
+                + '<span>' + esc(t("audio.loudness_original_lufs", "Original LUFS")) + '</span>'
+                + '<span>' + esc(t("audio.loudness_status", "Status")) + '</span></div>';
             for (var i = 0; i < outputs.length; i++) {
                 var c = outputs[i];
                 var name = (c.input || c.path || c.name || "").split(/[/\\]/).pop();
+                var ok = c.job_ok || c.success;
                 html += '<div class="report-table-row">'
                     + '<span class="report-table-cell report-table-primary">' + esc(name) + '</span>'
                     + '<span class="report-table-cell">' + safeFixed(c.original_lufs, 1) + '</span>'
-                    + '<span class="report-table-cell"><span class="report-status ' + ((c.job_ok || c.success) ? 'is-success' : 'is-error') + '">' + ((c.job_ok || c.success) ? "OK" : "Failed") + '</span></span>'
+                    + '<span class="report-table-cell"><span class="report-status ' + (ok ? 'is-success' : 'is-error') + '">' + esc(ok ? t("audio.loudness_ok", "OK") : t("audio.loudness_failed", "Failed")) + '</span></span>'
                     + '</div>';
             }
             html += '</div>';
             table.innerHTML = html;
         } else if (table) {
-            table.innerHTML = '<div class="hint">No loudness results available.</div>';
+            table.innerHTML = '<div class="hint">' + esc(t("audio.loudness_no_results", "No loudness results available.")) + '</div>';
         }
     });
 

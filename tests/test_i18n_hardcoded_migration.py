@@ -842,6 +842,14 @@ MIGRATED_KEYS = (
     "captions.no_chapters_available",
     "captions.select_srt_file_first",
     "captions.srt_parsed_no_premiere",
+    # Fifty-sixth batch (audio loudness result feedback).
+    "audio.loudness_clip",
+    "audio.loudness_failed",
+    "audio.loudness_no_results",
+    "audio.loudness_ok",
+    "audio.loudness_original_lufs",
+    "audio.loudness_status",
+    "audio.no_project_media_found",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4514,6 +4522,42 @@ EXPECTED_CALLS = (
         "captions.srt_parsed_no_premiere",
         re.compile(r't\(\s*"captions\.srt_parsed_no_premiere"'),
         re.compile(r'showToast\("SRT parsed \("\s*\+\s*segments\.length'),
+    ),
+    # --- Fifty-sixth batch -----------------------------------------
+    (
+        "audio.loudness_clip",
+        re.compile(r't\(\s*"audio\.loudness_clip"'),
+        re.compile(r'<span>Clip</span>'),
+    ),
+    (
+        "audio.loudness_failed",
+        re.compile(r't\(\s*"audio\.loudness_failed"'),
+        re.compile(r'\?\s*"OK"\s*:\s*"Failed"'),
+    ),
+    (
+        "audio.loudness_no_results",
+        re.compile(r't\(\s*"audio\.loudness_no_results"'),
+        re.compile(r'innerHTML\s*=\s*\'<div class="hint">No loudness results available\.</div>\''),
+    ),
+    (
+        "audio.loudness_ok",
+        re.compile(r't\(\s*"audio\.loudness_ok"'),
+        re.compile(r'\?\s*"OK"\s*:\s*"Failed"'),
+    ),
+    (
+        "audio.loudness_original_lufs",
+        re.compile(r't\(\s*"audio\.loudness_original_lufs"'),
+        re.compile(r'<span>Original LUFS</span>'),
+    ),
+    (
+        "audio.loudness_status",
+        re.compile(r't\(\s*"audio\.loudness_status"'),
+        re.compile(r'<span>Status</span>'),
+    ),
+    (
+        "audio.no_project_media_found",
+        re.compile(r't\(\s*"audio\.no_project_media_found"'),
+        re.compile(r'showAlert\("No project media found\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
