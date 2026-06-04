@@ -3341,11 +3341,12 @@
         // Interview polish hint — reflect the same state the button shows
         if (el.interviewPolishHint) {
             if (!connected) {
-                el.interviewPolishHint.textContent = "Server disconnected.";
+                el.interviewPolishHint.textContent = t("interview.server_disconnected", "Server disconnected.");
             } else if (!selectedPath) {
-                el.interviewPolishHint.textContent = "Select a clip to run.";
+                el.interviewPolishHint.textContent = t("interview.select_clip_to_run", "Select a clip to run.");
             } else {
-                el.interviewPolishHint.textContent = "Runs on '" + (selectedName || selectedPath) + "'.";
+                el.interviewPolishHint.textContent = t("interview.runs_on", "Runs on '{clip}'.")
+                    .replace("{clip}", selectedName || selectedPath);
             }
         }
 
@@ -3456,10 +3457,10 @@
         var tool = el.vidAiTool ? el.vidAiTool.value : "upscale";
         if (tool === "upscale" && aiCaps.upscale === false) {
             if (el.vidAiHint) el.vidAiHint.classList.remove("hidden");
-            if (el.vidAiHintText) el.vidAiHintText.textContent = "Real-ESRGAN not installed.";
+            if (el.vidAiHintText) el.vidAiHintText.textContent = t("video.realesrgan_not_installed", "Real-ESRGAN not installed.");
         } else if (tool === "rembg" && aiCaps.rembg === false) {
             if (el.vidAiHint) el.vidAiHint.classList.remove("hidden");
-            if (el.vidAiHintText) el.vidAiHintText.textContent = "rembg not installed.";
+            if (el.vidAiHintText) el.vidAiHintText.textContent = t("video.rembg_not_installed", "rembg not installed.");
         } else {
             if (el.vidAiHint) el.vidAiHint.classList.add("hidden");
         }
@@ -4540,7 +4541,7 @@
 
     function measureLoudness() {
         el.loudnessMeter.classList.remove("hidden");
-        el.meterLUFS.textContent = "Measuring…";
+        el.meterLUFS.textContent = t("audio.measuring", "Measuring…");
         el.meterTP.textContent = "--";
         el.meterLRA.textContent = "--";
 
@@ -4722,10 +4723,20 @@
                 if (el.removeY) el.removeY.value = data.y;
                 if (el.removeW) el.removeW.value = data.width;
                 if (el.removeH) el.removeH.value = data.height;
-                setHintState(resEl, "Detected at (" + data.x + ", " + data.y + ") — " + data.width + "×" + data.height + " px (" + (data.method || "auto") + ", " + safeFixed((data.confidence || 0) * 100, 0) + "% confidence)", "success");
+                setHintState(
+                    resEl,
+                    t("video.watermark_detected_region", "Detected at ({x}, {y}) — {width}×{height} px ({method}, {confidence}% confidence)")
+                        .replace("{x}", data.x)
+                        .replace("{y}", data.y)
+                        .replace("{width}", data.width)
+                        .replace("{height}", data.height)
+                        .replace("{method}", data.method || t("common.auto", "auto"))
+                        .replace("{confidence}", safeFixed((data.confidence || 0) * 100, 0)),
+                    "success"
+                );
                 showToast(t("toast.watermark_region_autofilled", "Watermark detected — region auto-filled"), "success");
             } else {
-                setHintState(resEl, "No watermark detected. Try adjusting the prompt.", "warning");
+                setHintState(resEl, t("video.watermark_not_detected", "No watermark detected. Try adjusting the prompt."), "warning");
             }
         });
     }
@@ -4842,7 +4853,7 @@
             var urlEl = document.getElementById("socialResultUrl");
             if (urlEl && result && result.url) {
                 urlEl.href = result.url;
-                urlEl.textContent = "View on " + platform;
+                urlEl.textContent = t("social.view_on", "View on {platform}").replace("{platform}", platform);
             }
         });
     }
@@ -4855,7 +4866,11 @@
                 for (var i = 0; i < r.platforms.length; i++) {
                     if (r.platforms[i].platform === platform && r.platforms[i].connected) {
                         var badge = document.getElementById("socialConnectedBadge");
-                        if (badge) { badge.classList.remove("hidden"); badge.textContent = "Connected as " + (r.platforms[i].username || ""); }
+                        if (badge) {
+                            badge.classList.remove("hidden");
+                            badge.textContent = t("social.connected_as", "Connected as {username}")
+                                .replace("{username}", r.platforms[i].username || "");
+                        }
                         return;
                     }
                 }
@@ -14671,9 +14686,9 @@
         var urlEl = document.getElementById("socialResultUrl");
         if (urlEl && r.url) {
             urlEl.href = r.url;
-            urlEl.textContent = "View on " + r.platform;
+            urlEl.textContent = t("social.view_on", "View on {platform}").replace("{platform}", r.platform);
         }
-        showToast("Uploaded to " + r.platform + "!", "success");
+        showToast(t("social.uploaded_to", "Uploaded to {platform}!").replace("{platform}", r.platform), "success");
     });
 
     // ================================================================
@@ -15493,9 +15508,9 @@
                         } else if (typeof window !== "undefined" && window.open) {
                             window.open(data.url, "_blank");
                         }
-                        showToast("Issue report opened — review before submitting", "success");
+                        showToast(t("toast.issue_report_opened", "Issue report opened — review before submitting"), "success");
                     } catch (e) {
-                        showAlert("Issue bundle URL (copy manually):\n\n" + data.url);
+                        showAlert(t("alert.issue_bundle_url", "Issue bundle URL (copy manually):\n\n{url}").replace("{url}", data.url));
                     }
                 });
             }
@@ -15506,18 +15521,20 @@
             function tryDemo() {
                 api("GET", "/system/demo/sample", null, function (err, data) {
                     if (err || !data) {
-                        showToast("Demo fetch failed", "error");
+                        showToast(t("toast.demo_fetch_failed", "Demo fetch failed"), "error");
                         return;
                     }
                     if (!data.exists || !data.path) {
-                        showAlert("No demo footage found on this server.\n\n" +
-                            "Run `opencut-server --download-demo` or use the installer build.");
+                        showAlert(t(
+                            "alert.no_demo_footage",
+                            "No demo footage found on this server.\n\nRun `opencut-server --download-demo` or use the installer build."
+                        ));
                         return;
                     }
                     // Fall through to the existing selection flow.
                     try {
                         selectedPath = data.path;
-                        showToast("Loaded demo footage — try any tab", "success");
+                        showToast(t("toast.demo_loaded", "Loaded demo footage — try any tab"), "success");
                         // Poke any selection label the panel exposes.
                         var label = document.getElementById("selectedClipLabel");
                         if (label) label.textContent = data.path.split(/[\\/]/).pop();
@@ -15712,7 +15729,7 @@
                 if (typeof cs === "undefined" || !cs || !cs.addEventListener) return;
                 try {
                     cs.addEventListener("com.opencut.ping.ack", function (evt) {
-                        showToast("BridgeTalk async ready", "success");
+                        showToast(t("toast.bridgetalk_async_ready", "BridgeTalk async ready"), "success");
                     });
                     cs.addEventListener("com.opencut.job.progress", function (evt) {
                         // Reserved for future host-driven progress updates.
