@@ -9649,7 +9649,7 @@
         var presetName = el.presetSelect.value;
         api("GET", "/presets", null, function (err, data) {
             if (err || !data || !data[presetName]) {
-                showToast("Could not load preset for export", "error");
+                showToast(t("toast.preset_export_load_failed", "Could not load preset for export"), "error");
                 return;
             }
             var exportData = {
@@ -9666,7 +9666,8 @@
             a.download = presetName.replace(/[^a-zA-Z0-9_-]/g, "_") + ".opencut-preset";
             a.click();
             setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
-            showToast("Preset exported: " + presetName, "success");
+            var _presetExportedTemplate = t("toast.preset_exported", "Preset exported: {name}");
+            showToast(_presetExportedTemplate.replace("{name}", presetName), "success");
         });
     }
 
@@ -9687,23 +9688,24 @@
                     try {
                         var data = JSON.parse(e.target.result);
                         if (!data.opencut_preset || !data.name || !data.settings) {
-                            showToast("Invalid preset file: missing required fields", "error");
+                            showToast(t("toast.preset_invalid_missing_fields", "Invalid preset file: missing required fields"), "error");
                             return;
                         }
                         if (typeof data.settings !== "object") {
-                            showToast("Invalid preset file: settings must be an object", "error");
+                            showToast(t("toast.preset_invalid_settings_object", "Invalid preset file: settings must be an object"), "error");
                             return;
                         }
                         api("POST", "/presets/save", { name: data.name, settings: data.settings }, function (err, result) {
                             if (!err && result && result.success) {
-                                showToast("Preset imported: " + data.name, "success");
+                                var _presetImportedTemplate = t("toast.preset_imported", "Preset imported: {name}");
+                                showToast(_presetImportedTemplate.replace("{name}", data.name), "success");
                                 refreshPresetList();
                             } else {
-                                showToast("Failed to import preset", "error");
+                                showToast(t("toast.preset_import_failed", "Failed to import preset"), "error");
                             }
                         });
                     } catch (ex) {
-                        showToast("Invalid preset file format", "error");
+                        showToast(t("toast.preset_invalid_format", "Invalid preset file format"), "error");
                     }
                 };
                 reader.readAsText(file);
