@@ -19,6 +19,10 @@ Schema::
         error       TEXT DEFAULT NULL,
         endpoint    TEXT DEFAULT '',
         payload_json TEXT DEFAULT NULL,
+        resumable   INTEGER DEFAULT 0,
+        partial_output_path TEXT DEFAULT '',
+        resume_source_job_id TEXT DEFAULT '',
+        resume_attempt INTEGER DEFAULT 0,
         created_at  REAL NOT NULL,
         started_at  REAL DEFAULT NULL,
         completed_at REAL DEFAULT NULL
@@ -39,6 +43,7 @@ _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "jobs.db")
 _LOCAL = threading.local()
 _INIT_LOCK = threading.Lock()
 _INITIALIZED = False
+_INITIALIZED_PATH = None
 _ALL_CONNECTIONS = {}  # thread_id -> Connection; dead thread entries cleaned in close_all
 _CONN_LOCK = threading.Lock()
 
@@ -84,12 +89,26 @@ def _coerce_offset(value, default=0):
 def _get_conn() -> sqlite3.Connection:
     """Get or create a thread-local SQLite connection."""
     conn = getattr(_LOCAL, "conn", None)
+    conn_path = getattr(_LOCAL, "conn_path", None)
+    if conn is not None and conn_path != _DB_PATH:
+        with _CONN_LOCK:
+            for tid, tracked in list(_ALL_CONNECTIONS.items()):
+                if tracked is conn:
+                    _ALL_CONNECTIONS.pop(tid, None)
+        try:
+            conn.close()
+        except sqlite3.Error:
+            pass
+        _LOCAL.conn = None
+        _LOCAL.conn_path = None
+        conn = None
     if conn is not None and not _connection_is_usable(conn):
         with _CONN_LOCK:
             for tid, tracked in list(_ALL_CONNECTIONS.items()):
                 if tracked is conn:
                     _ALL_CONNECTIONS.pop(tid, None)
         _LOCAL.conn = None
+        _LOCAL.conn_path = None
         conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -98,6 +117,7 @@ def _get_conn() -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         _LOCAL.conn = conn
+        _LOCAL.conn_path = _DB_PATH
         with _CONN_LOCK:
             _ALL_CONNECTIONS[threading.get_ident()] = conn
             # Prune connections from dead threads to prevent unbounded growth
@@ -127,6 +147,7 @@ def close_all_connections():
     try:
         if getattr(_LOCAL, "conn", None) is not None:
             _LOCAL.conn = None
+            _LOCAL.conn_path = None
     except Exception:
         pass
     logger.debug("All job store connections closed")
@@ -134,11 +155,11 @@ def close_all_connections():
 
 def init_db():
     """Create the jobs table if it doesn't exist. Safe to call multiple times."""
-    global _INITIALIZED
-    if _INITIALIZED:
+    global _INITIALIZED, _INITIALIZED_PATH
+    if _INITIALIZED and _INITIALIZED_PATH == _DB_PATH:
         return
     with _INIT_LOCK:
-        if _INITIALIZED:
+        if _INITIALIZED and _INITIALIZED_PATH == _DB_PATH:
             return
         conn = _get_conn()
         conn.execute("""
@@ -153,14 +174,32 @@ def init_db():
                 error        TEXT DEFAULT NULL,
                 endpoint     TEXT DEFAULT '',
                 payload_json TEXT DEFAULT NULL,
+                resumable    INTEGER DEFAULT 0,
+                partial_output_path TEXT DEFAULT '',
+                resume_source_job_id TEXT DEFAULT '',
+                resume_attempt INTEGER DEFAULT 0,
                 created_at   REAL NOT NULL,
                 started_at   REAL DEFAULT NULL,
                 completed_at REAL DEFAULT NULL
             )
         """)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+        migrations = {
+            "resumable": "ALTER TABLE jobs ADD COLUMN resumable INTEGER DEFAULT 0",
+            "partial_output_path": "ALTER TABLE jobs ADD COLUMN partial_output_path TEXT DEFAULT ''",
+            "resume_source_job_id": "ALTER TABLE jobs ADD COLUMN resume_source_job_id TEXT DEFAULT ''",
+            "resume_attempt": "ALTER TABLE jobs ADD COLUMN resume_attempt INTEGER DEFAULT 0",
+        }
+        for column, statement in migrations.items():
+            if column not in columns:
+                conn.execute(statement)
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_jobs_status
             ON jobs (status)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_jobs_resume
+            ON jobs (status, resumable)
         """)
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_jobs_created
@@ -168,6 +207,7 @@ def init_db():
         """)
         conn.commit()
         _INITIALIZED = True
+        _INITIALIZED_PATH = _DB_PATH
         logger.debug("Job store initialized at %s", _DB_PATH)
 
 
@@ -192,6 +232,22 @@ def save_job(job_dict):
         except (TypeError, ValueError):
             pass
 
+    resumable = None
+    if "resumable" in job_dict:
+        resumable = 1 if job_dict.get("resumable") else 0
+    partial_output_path = None
+    if "partial_output_path" in job_dict:
+        partial_output_path = str(job_dict.get("partial_output_path") or "")
+    resume_source_job_id = None
+    if "resume_source_job_id" in job_dict:
+        resume_source_job_id = str(job_dict.get("resume_source_job_id") or "")
+    resume_attempt = None
+    if "resume_attempt" in job_dict:
+        try:
+            resume_attempt = max(0, int(job_dict.get("resume_attempt") or 0))
+        except (TypeError, ValueError):
+            resume_attempt = 0
+
     now = time.time()
     completed_at = job_dict.get("completed_at")
     if completed_at is None and job_dict.get("status") in ("complete", "error", "cancelled", "interrupted"):
@@ -201,8 +257,10 @@ def save_job(job_dict):
     conn.execute("""
         INSERT INTO jobs (id, type, filepath, status, progress, message,
                           result_json, error, endpoint, payload_json,
+                          resumable, partial_output_path, resume_source_job_id,
+                          resume_attempt,
                           created_at, started_at, completed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             type = COALESCE(NULLIF(excluded.type, ''), jobs.type),
             filepath = COALESCE(NULLIF(excluded.filepath, ''), jobs.filepath),
@@ -213,6 +271,10 @@ def save_job(job_dict):
             error = excluded.error,
             endpoint = COALESCE(NULLIF(excluded.endpoint, ''), jobs.endpoint),
             payload_json = COALESCE(excluded.payload_json, jobs.payload_json),
+            resumable = COALESCE(excluded.resumable, jobs.resumable),
+            partial_output_path = COALESCE(NULLIF(excluded.partial_output_path, ''), jobs.partial_output_path),
+            resume_source_job_id = COALESCE(NULLIF(excluded.resume_source_job_id, ''), jobs.resume_source_job_id),
+            resume_attempt = COALESCE(excluded.resume_attempt, jobs.resume_attempt),
             created_at = MIN(jobs.created_at, excluded.created_at),
             started_at = COALESCE(jobs.started_at, excluded.started_at),
             completed_at = COALESCE(excluded.completed_at, jobs.completed_at)
@@ -227,6 +289,10 @@ def save_job(job_dict):
         job_dict.get("error"),
         job_dict.get("_endpoint", ""),
         payload_json,
+        resumable,
+        partial_output_path,
+        resume_source_job_id,
+        resume_attempt,
         job_dict.get("created", now),
         started_at,
         completed_at,
@@ -342,6 +408,10 @@ def _row_to_dict(row):
         "created": row["created_at"],
         "started_at": row["started_at"],
         "completed_at": row["completed_at"],
+        "resumable": bool(row["resumable"]),
+        "partial_output_path": row["partial_output_path"] or "",
+        "resume_source_job_id": row["resume_source_job_id"] or "",
+        "resume_attempt": int(row["resume_attempt"] or 0),
     }
     if row["result_json"]:
         try:

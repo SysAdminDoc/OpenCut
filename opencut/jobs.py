@@ -145,7 +145,11 @@ def apply_config(config: OpenCutConfig) -> None:
         _JOB_STUCK_TIMEOUT = int(config.job_stuck_timeout)
 
 
-def _new_job(job_type: str, filepath: str) -> str:
+def _new_job(job_type: str, filepath: str, *,
+             resumable: bool = False,
+             partial_output_path: str = "",
+             resume_source_job_id: str = "",
+             resume_attempt: int = 0) -> str:
     """Create a new job entry and return its ID.
 
     Raises ``TooManyJobsError`` (subclass of ``RuntimeError``) if the
@@ -166,6 +170,10 @@ def _new_job(job_type: str, filepath: str) -> str:
             "result": None,
             "error": None,
             "created": time.time(),
+            "resumable": bool(resumable),
+            "partial_output_path": str(partial_output_path or ""),
+            "resume_source_job_id": str(resume_source_job_id or ""),
+            "resume_attempt": _coerce_nonnegative_int(resume_attempt, 0),
             "_thread": None,
         }
     _start_periodic_cleanup()
@@ -393,6 +401,13 @@ def _sanitize_payload_for_storage(payload):
     }
 
 
+def _coerce_nonnegative_int(value, default: int = 0) -> int:
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
 def _is_cancelled(job_id: str) -> bool:
     """Check if a job has been cancelled."""
     with job_lock:
@@ -600,7 +615,9 @@ def async_job(job_type: str, *, filepath_required: bool = True,
               filepath_param: str = "filepath",
               pre_validate=None,
               disk_operation: Optional[str] = None,
-              disk_required_mb: Optional[int] = None):
+              disk_required_mb: Optional[int] = None,
+              resumable: bool = False,
+              partial_output_param: str = "partial_output_path"):
     """
     Decorator that wraps a route handler in the standard async job pattern.
 
@@ -635,6 +652,10 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             creating a job if the output volume is below the budget.
         disk_required_mb: Optional fixed preflight budget. When set without
             ``disk_operation``, the job type is used as the operation key.
+        resumable: Mark jobs from this route as safe to re-enqueue from
+            persisted payload metadata when a server restart interrupts them.
+        partial_output_param: Optional JSON field that stores checkpoint or
+            partial-output state used by the resume route.
 
     Usage::
 
@@ -768,8 +789,29 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                 return testing_install_response(component_name)
 
             job_label = filepath or job_type
+            partial_output_path = ""
+            if partial_output_param:
+                partial_output_path = data.get(partial_output_param, "")
+                if partial_output_param != "partial_output_path" and not partial_output_path:
+                    partial_output_path = data.get("partial_output_path", "")
+            if partial_output_path is None:
+                partial_output_path = ""
+            partial_output_path = str(partial_output_path).strip()
+            resume_source_job_id = str(
+                data.get("resume_source_job_id")
+                or data.get("resume_from_job_id")
+                or ""
+            ).strip()
+            resume_attempt = _coerce_nonnegative_int(data.get("resume_attempt"), 0)
             try:
-                job_id = _new_job(job_type, job_label)
+                job_id = _new_job(
+                    job_type,
+                    job_label,
+                    resumable=resumable,
+                    partial_output_path=partial_output_path,
+                    resume_source_job_id=resume_source_job_id,
+                    resume_attempt=resume_attempt,
+                )
             except TooManyJobsError as e:
                 return jsonify({
                     "error": str(e),
@@ -777,10 +819,14 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
                 }), 429
 
+            job_to_persist = None
             with job_lock:
                 if job_id in jobs:
                     jobs[job_id]["_endpoint"] = request.path
                     jobs[job_id]["_payload"] = _sanitize_payload_for_storage(data)
+                    job_to_persist = jobs[job_id].copy()
+            if job_to_persist is not None:
+                _persist_job(job_to_persist, sync=True)
 
             def _process():
                 _thread_local.job_id = job_id
@@ -836,6 +882,9 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     jobs[job_id]["_future"] = future
                     jobs[job_id]["_thread"] = future
             return jsonify({"job_id": job_id})
+        wrapper._opencut_async_job = True
+        wrapper._opencut_job_type = job_type
+        wrapper._opencut_resumable = bool(resumable)
         return wrapper
     return decorator
 

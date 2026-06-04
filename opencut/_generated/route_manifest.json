@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T02:10:39Z",
-  "total_routes": 1521,
+  "generated_at": "2026-06-04T02:48:07Z",
+  "total_routes": 1522,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 15,
     "GET": 380,
     "PATCH": 1,
-    "POST": 1127,
+    "POST": 1128,
     "PUT": 2
   },
   "blueprints": {
@@ -492,10 +492,10 @@
       ]
     },
     "jobs": {
-      "route_count": 13,
+      "route_count": 14,
       "method_counts": {
         "GET": 9,
-        "POST": 4
+        "POST": 5
       },
       "sample_rules": [
         "/cancel-all",
@@ -7550,6 +7550,14 @@
         "GET"
       ],
       "endpoint": "jobs.job_diagnostics",
+      "blueprint": "jobs"
+    },
+    {
+      "rule": "/jobs/<job_id>/resume",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "jobs.resume_job",
       "blueprint": "jobs"
     },
     {
