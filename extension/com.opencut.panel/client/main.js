@@ -12320,6 +12320,28 @@
             if (labelTarget) labelTarget.textContent = translated;
             else els[i].textContent = translated;
         }
+        var attrMappings = [
+            ["data-i18n-title", "title"],
+            ["data-i18n-placeholder", "placeholder"],
+            ["data-i18n-aria-label", "aria-label"]
+        ];
+        for (var m = 0; m < attrMappings.length; m++) {
+            var dataAttr = attrMappings[m][0];
+            var targetAttr = attrMappings[m][1];
+            var attrEls = document.querySelectorAll("[" + dataAttr + "]");
+            for (var j = 0; j < attrEls.length; j++) {
+                var attrKey = attrEls[j].getAttribute(dataAttr);
+                if (!attrKey) continue;
+                var fallbackAttr = dataAttr + "-fallback";
+                if (!attrEls[j].hasAttribute(fallbackAttr)) {
+                    attrEls[j].setAttribute(fallbackAttr, attrEls[j].getAttribute(targetAttr) || "");
+                }
+                attrEls[j].setAttribute(
+                    targetAttr,
+                    t(attrKey, attrEls[j].getAttribute(fallbackAttr) || "")
+                );
+            }
+        }
         if (el.contentSubtitle) {
             updateContentHeader(
                 getActiveNavTabName(),
