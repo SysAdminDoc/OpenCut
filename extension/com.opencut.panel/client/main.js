@@ -1986,12 +1986,19 @@
     // Helpers to extract the label/inverse from a forward-operation result.
     function _journalLabelForMarkers(count, clipName) {
         var n = count | 0;
-        return n + " marker" + (n === 1 ? "" : "s") +
-               (clipName ? " on '" + clipName + "'" : "");
+        var template = clipName
+            ? t("journal.marker_label_clip", "{count} marker{plural} on '{clip}'")
+            : t("journal.marker_label", "{count} marker{plural}");
+        return template
+            .replace("{count}", n)
+            .replace("{plural}", n === 1 ? "" : "s")
+            .replace("{clip}", clipName || "");
     }
     function _journalLabelForRename(count) {
         var n = count | 0;
-        return "Renamed " + n + " project item" + (n === 1 ? "" : "s");
+        return t("journal.renamed_project_items", "Renamed {count} project item{plural}")
+            .replace("{count}", n)
+            .replace("{plural}", n === 1 ? "" : "s");
     }
 
     // ================================================================
@@ -2512,10 +2519,16 @@
         if (!data || path !== selectedPath) return;
         if (el.clipMetaDur) el.clipMetaDur.textContent = data.duration ? fmtDur(data.duration) : "";
         if (el.clipMetaRes) {
-            el.clipMetaRes.textContent = data.video ? (data.video.width + "x" + data.video.height) : "";
+            el.clipMetaRes.textContent = data.video
+                ? t("media.meta_resolution", "{width}x{height}")
+                    .replace("{width}", data.video.width)
+                    .replace("{height}", data.video.height)
+                : "";
         }
         if (el.clipMetaSize) {
-            el.clipMetaSize.textContent = data.file_size_mb ? (safeFixed(data.file_size_mb, 1) + " MB") : "";
+            el.clipMetaSize.textContent = data.file_size_mb
+                ? t("media.meta_file_size", "{size} MB").replace("{size}", safeFixed(data.file_size_mb, 1))
+                : "";
         }
     }
 
@@ -2524,15 +2537,22 @@
         var meta = "";
         if (data.duration) meta += fmtDur(data.duration);
         if (data.video) {
-            meta += " | " + data.video.width + "x" + data.video.height + " @ " + safeFixed(data.video.fps, 2) + " fps";
+            meta += " | " + t("media.meta_video", "{width}x{height} @ {fps} fps")
+                .replace("{width}", data.video.width)
+                .replace("{height}", data.video.height)
+                .replace("{fps}", safeFixed(data.video.fps, 2));
             if (data.video.codec) meta += " (" + data.video.codec + ")";
         }
         if (data.audio) {
-            meta += " | " + safeFixed(data.audio.sample_rate / 1000, 1) + " kHz";
+            meta += " | " + t("media.meta_audio", "{rate} kHz")
+                .replace("{rate}", safeFixed(data.audio.sample_rate / 1000, 1));
             if (data.audio.codec) meta += " (" + data.audio.codec + ")";
         }
-        if (data.file_size_mb) meta += " | " + safeFixed(data.file_size_mb, 1) + " MB";
-        if (lastTranscriptSegments) meta += " | Transcript cached";
+        if (data.file_size_mb) {
+            meta += " | " + t("media.meta_file_size", "{size} MB")
+                .replace("{size}", safeFixed(data.file_size_mb, 1));
+        }
+        if (lastTranscriptSegments) meta += " | " + t("media.meta_transcript_cached", "Transcript cached");
         return meta || (path || "");
     }
 
@@ -3736,7 +3756,7 @@
             if (err || !data || data.error || !data.job_id) {
                 if (typeof opts.onError === "function") {
                     try {
-                        opts.onError(data || err || { error: "Failed to start request" }, requestSeq);
+                        opts.onError(data || err || { error: t("error.start_request_failed", "Failed to start request") }, requestSeq);
                     } catch (hookErr) {
                         console.error("utility job onError hook failed:", hookErr);
                     }
