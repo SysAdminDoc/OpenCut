@@ -1199,23 +1199,23 @@
                         <div class="card-header"><div class="card-title" data-i18n="captions.chapters_generate">Generate Chapters</div></div>
                         <p class="card-desc" data-i18n="captions.chapters_desc">Use an LLM to generate YouTube chapter markers from the transcript.</p>
                         <div class="form-group">
-                            <label for="chaptersLlmProvider">LLM Provider</label>
+                            <label for="chaptersLlmProvider" data-i18n="forms.llm_provider">LLM Provider</label>
                             <select id="chaptersLlmProvider">
-                                <option value="ollama" selected>Ollama (Local)</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
+                                <option value="ollama" selected data-i18n="llm.provider_ollama_local">Ollama (Local)</option>
+                                <option value="openai" data-i18n="llm.provider_openai">OpenAI</option>
+                                <option value="anthropic" data-i18n="llm.provider_anthropic">Anthropic</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="chaptersLlmModel">Model</label>
+                            <label for="chaptersLlmModel" data-i18n="forms.model">Model</label>
                             <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3" autocomplete="off" spellcheck="false">
                         </div>
                         <div class="form-group hidden" id="chaptersApiKeyGroup">
-                            <label for="chaptersApiKey">API Key</label>
+                            <label for="chaptersApiKey" data-i18n="forms.api_key">API Key</label>
                             <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
                         </div>
                         <div class="form-group">
-                            <label for="chaptersMax">Max Chapters</label>
+                            <label for="chaptersMax" data-i18n="forms.max_chapters">Max Chapters</label>
                             <div class="slider-row">
                                 <input type="range" id="chaptersMax" min="5" max="25" value="15" step="1">
                                 <span class="slider-val" id="chaptersMaxVal">15</span>
@@ -1223,11 +1223,11 @@
                         </div>
                         <button type="button" class="btn-primary" id="runChaptersBtn" disabled data-i18n="captions.chapters_generate">Generate Chapters</button>
                         <div class="result-area hidden" id="chaptersResult">
-                            <label for="chaptersText">Chapter List</label>
+                            <label for="chaptersText" data-i18n="captions.chapter_list">Chapter List</label>
                             <textarea class="text-area mt-xs" id="chaptersText" rows="6" readonly></textarea>
                             <div class="btn-row gap-xs mt-xs">
-                                <button type="button" class="btn-sm" id="copyChaptersDescBtn">Copy to Clipboard</button>
-                                <button type="button" class="btn-sm btn-secondary" id="addChaptersMarkersBtn">Add as Sequence Markers</button>
+                                <button type="button" class="btn-sm" id="copyChaptersDescBtn" data-i18n="captions.chapters_copy">Copy to Clipboard</button>
+                                <button type="button" class="btn-sm btn-secondary" id="addChaptersMarkersBtn" data-i18n="captions.chapters_markers">Add as Sequence Markers</button>
                             </div>
                         </div>
                     </section>

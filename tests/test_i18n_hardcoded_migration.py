@@ -503,6 +503,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.model_small_accurate", "data-i18n"),
     ("captions.model_medium_best", "data-i18n"),
     ("captions.repeat_similarity_threshold", "data-i18n"),
+    # One-hundred-nineteenth batch (YouTube Chapters form shell HTML).
+    ("captions.chapters_generate", "data-i18n"),
+    ("captions.chapters_desc", "data-i18n"),
+    ("forms.llm_provider", "data-i18n"),
+    ("llm.provider_ollama_local", "data-i18n"),
+    ("llm.provider_openai", "data-i18n"),
+    ("llm.provider_anthropic", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("forms.api_key", "data-i18n"),
+    ("forms.max_chapters", "data-i18n"),
+    ("captions.chapter_list", "data-i18n"),
+    ("captions.chapters_copy", "data-i18n"),
+    ("captions.chapters_markers", "data-i18n"),
 )
 
 
@@ -2012,6 +2025,11 @@ MIGRATED_KEYS = (
     "captions.model_medium_best",
     "captions.remove_repeated_takes",
     "captions.repeat_similarity_threshold",
+    # One-hundred-nineteenth batch (YouTube Chapters form shell HTML).
+    "captions.chapter_list",
+    "llm.provider_anthropic",
+    "llm.provider_ollama_local",
+    "llm.provider_openai",
 )
 
 
