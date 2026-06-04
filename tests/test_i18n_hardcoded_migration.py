@@ -186,6 +186,26 @@ MIGRATED_KEYS = (
     "templates.select",
     "templates.builtin_group",
     "templates.custom_group",
+    # Eighteenth batch (transcript editor and summarize feedback).
+    "toast.playhead_sync_unavailable",
+    "transcript.summary_topics",
+    "transcript.summary_empty",
+    "transcript.timeline_editor",
+    "transcript.timeline_awaiting_segments",
+    "transcript.timeline_segments",
+    "transcript.timeline_runtime",
+    "transcript.timeline_pace",
+    "transcript.timeline_avg_seconds",
+    "transcript.timeline_longest",
+    "transcript.timeline_select_segment",
+    "transcript.timeline_segment_status",
+    "transcript.timeline_empty",
+    "transcript.timeline_empty_ready",
+    "transcript.segment_label",
+    "transcript.segment_time_label",
+    "transcript.editor_info",
+    "transcript.editor_empty",
+    "transcript.segment_textarea_label",
 )
 
 
@@ -914,6 +934,102 @@ EXPECTED_CALLS = (
         "templates.custom_group",
         re.compile(r't\(\s*"templates\.custom_group"'),
         re.compile(r'html\s*\+=\s*\'<optgroup label="Custom">\''),
+    ),
+    # --- Eighteenth batch -------------------------------------------
+    (
+        "toast.playhead_sync_unavailable",
+        re.compile(r't\(\s*"toast\.playhead_sync_unavailable"'),
+        re.compile(r'showToast\(\s*"Playhead sync unavailable: "'),
+    ),
+    (
+        "transcript.summary_topics",
+        re.compile(r't\(\s*"transcript\.summary_topics"'),
+        re.compile(r'text\s*\+=\s*"\\nTopics: "\s*\+'),
+    ),
+    (
+        "transcript.summary_empty",
+        re.compile(r't\(\s*"transcript\.summary_empty"'),
+        re.compile(r'textContent\s*=\s*text\s*\|\|\s*"No summary generated\."'),
+    ),
+    (
+        "transcript.timeline_editor",
+        re.compile(r't\(\s*"transcript\.timeline_editor"'),
+        re.compile(r'<span class="transcript-timeline-stat-label">Editor</span>'),
+    ),
+    (
+        "transcript.timeline_awaiting_segments",
+        re.compile(r't\(\s*"transcript\.timeline_awaiting_segments"'),
+        re.compile(r'<span class="transcript-timeline-stat-value">Awaiting transcript segments</span>'),
+    ),
+    (
+        "transcript.timeline_segments",
+        re.compile(r't\(\s*"transcript\.timeline_segments"'),
+        re.compile(r'<span class="transcript-timeline-stat-label">Segments</span>'),
+    ),
+    (
+        "transcript.timeline_runtime",
+        re.compile(r't\(\s*"transcript\.timeline_runtime"'),
+        re.compile(r'<span class="transcript-timeline-stat-label">Runtime</span>'),
+    ),
+    (
+        "transcript.timeline_pace",
+        re.compile(r't\(\s*"transcript\.timeline_pace"'),
+        re.compile(r'<span class="transcript-timeline-stat-label">Pace</span>'),
+    ),
+    (
+        "transcript.timeline_avg_seconds",
+        re.compile(r't\(\s*"transcript\.timeline_avg_seconds"'),
+        re.compile(r"safeFixed\(avgDuration,\s*1\)\s*\+\s*'s avg"),
+    ),
+    (
+        "transcript.timeline_longest",
+        re.compile(r't\(\s*"transcript\.timeline_longest"'),
+        re.compile(r'<span class="transcript-timeline-stat-label">Longest</span>'),
+    ),
+    (
+        "transcript.timeline_select_segment",
+        re.compile(r't\(\s*"transcript\.timeline_select_segment"'),
+        re.compile(r'textContent\s*=\s*"Select a segment to focus the edit\."'),
+    ),
+    (
+        "transcript.timeline_segment_status",
+        re.compile(r't\(\s*"transcript\.timeline_segment_status"'),
+        re.compile(r'textContent\s*=\s*"Segment "\s*\+'),
+    ),
+    (
+        "transcript.timeline_empty",
+        re.compile(r't\(\s*"transcript\.timeline_empty"'),
+        re.compile(r'message\s*\|\|\s*"Transcript segments will appear here\."'),
+    ),
+    (
+        "transcript.timeline_empty_ready",
+        re.compile(r't\(\s*"transcript\.timeline_empty_ready"'),
+        re.compile(r'setTranscriptTimelineEmptyState\("Transcript segments will appear here once the clip is ready\."\)'),
+    ),
+    (
+        "transcript.segment_label",
+        re.compile(r't\(\s*"transcript\.segment_label"'),
+        re.compile(r"preview\s*\|\|\s*\('Segment '\s*\+"),
+    ),
+    (
+        "transcript.segment_time_label",
+        re.compile(r't\(\s*"transcript\.segment_time_label"'),
+        re.compile(r'aria-label="Segment \'\s*\+\s*\(i \+ 1\)'),
+    ),
+    (
+        "transcript.editor_info",
+        re.compile(r't\(\s*"transcript\.editor_info"'),
+        re.compile(r'el\.transcriptInfo\.textContent\s*=\s*wordCount\s*\+'),
+    ),
+    (
+        "transcript.editor_empty",
+        re.compile(r't\(\s*"transcript\.editor_empty"'),
+        re.compile(r'<div class="transcript-empty-state">Transcribe a clip to start shaping dialogue'),
+    ),
+    (
+        "transcript.segment_textarea_label",
+        re.compile(r't\(\s*"transcript\.segment_textarea_label"'),
+        re.compile(r'aria-label="Transcript segment \'\s*\+\s*\(i \+ 1\)'),
     ),
 )
 
