@@ -342,6 +342,8 @@
 > **v4.156 status (2026-06-04, continuation pass)**: advanced **E15** with a fifty-ninth rolling i18n batch. Deliverables document labels, project output summaries, last-export activity text, and no-export empty-state text now route through `t(...)`, bringing the guarded migration ledger to 849 keys across fifty-nine rounds while keeping drift at 1,263 keys / 1,132 consumers / 131 dead / 0 missing.
 
 > **v4.157 status (2026-06-04, continuation pass)**: advanced **E15** with a sixtieth rolling i18n batch. Timeline multicam result/apply feedback, generated speaker/track labels, smart-bin empty-state text, repeat-detection summaries, repeat badges, no-repeat guards, and shared no-cuts guards now route through `t(...)`, bringing the guarded migration ledger to 861 keys across sixty rounds while keeping drift at 1,275 keys / 1,144 consumers / 131 dead / 0 missing.
+
+> **v4.158 status (2026-06-04, continuation pass)**: advanced **E15** with a sixty-first rolling i18n batch. Custom Workflow saved-library labels/titles, draft summaries, empty-summary titles, loading/reconnect/empty/name prompts, and save/run readiness prompts now route through `t(...)`, bringing the guarded migration ledger to 878 keys across sixty-one rounds while keeping drift at 1,292 keys / 1,161 consumers / 131 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -1463,6 +1465,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.158 CEP i18n Migration Batch 61 (E15)
+
+E15 remains open. This batch moved Custom Workflow summary and readiness feedback out of bare English.
+
+| Surface | Status |
+|---|---|
+| Saved workflows | Loading, count, empty, and title strings for the saved custom workflow library now resolve through `t(...)`. |
+| Draft summary | Named draft, unnamed draft, empty draft, and draft-title summaries now use locale keys. |
+| Readiness status | Loading, reconnect, empty, name-required, ready-to-save, and ready-to-run prompts now route through `t(...)`. |
+| Locale ledger | `locales/en.json` now carries 17 additional Workflow keys, bringing the guarded migration ledger to 878 keys across sixty-one rounds. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new Workflow keys, `t(...)` call sites, and absence of the previous bare-English custom workflow summary/status forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py tests/test_roadmap_lint.py tests/test_roadmap_mirror.py -q -p no:cacheprovider -o addopts=""` passed (`22 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/sync_version.py --check` passed, `git diff --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,292 keys, 1,161 consumers, 131 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -1479,7 +1497,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.157 with the sixtieth guarded 12-key Timeline multicam/repeat feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.158 with the sixty-first guarded 17-key Custom Workflow summary/status feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -1489,7 +1507,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ### Researcher Queue (Cycle 1 - 2026-06-04)
 
-- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.157 docs and
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.158 docs and
   current external anchors. N8, E14, N9, N10, E12, and E13 are now shipped in the
   local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
   current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut

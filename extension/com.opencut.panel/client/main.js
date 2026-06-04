@@ -5978,6 +5978,19 @@
             .replace("{plural}", count === 1 ? "" : "s");
     }
 
+    function workflowSavedCountLabel(count) {
+        return t("workflow.saved_count_label", "{count} saved workflow{plural}")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
+    }
+
+    function workflowSavedCountTitle(count) {
+        return t("workflow.saved_count_title", "{count} saved custom workflow{plural} {verb} available.")
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s")
+            .replace("{verb}", count === 1 ? "is" : "are");
+    }
+
     function describeWorkflowStepGroup(endpoint) {
         if (!endpoint) return "Workflow step";
         var clean = String(endpoint).replace(/^\/+/, "");
@@ -6151,24 +6164,31 @@
         var draftName = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
         var stepCount = _workflowSteps.length;
         var savedLabel = !_savedWorkflowLibraryLoaded
-            ? "Checking saved workflows..."
+            ? t("workflow.saved_loading_label", "Checking saved workflows...")
             : (_savedWorkflowCount
-            ? _savedWorkflowCount + " saved workflow" + (_savedWorkflowCount === 1 ? "" : "s")
-            : "No saved workflows yet");
+            ? workflowSavedCountLabel(_savedWorkflowCount)
+            : t("workflow.saved_empty_label", "No saved workflows yet"));
         var savedTitle = !_savedWorkflowLibraryLoaded
-            ? "Loading the saved custom workflow library."
+            ? t("workflow.saved_loading_title", "Loading the saved custom workflow library.")
             : (_savedWorkflowCount
-            ? _savedWorkflowCount + " saved custom workflow" + (_savedWorkflowCount === 1 ? " is" : "s are") + " available."
-            : "Save a draft to build a reusable workflow library.");
+            ? workflowSavedCountTitle(_savedWorkflowCount)
+            : t("workflow.saved_empty_title", "Save a draft to build a reusable workflow library."));
+        var stepLabel = workflowStepCountLabel(stepCount);
 
         setTextAndTitle(
             "customWorkflowSummary",
             stepCount
-                ? (draftName ? draftName + " • " + workflowStepCountLabel(stepCount) : workflowStepCountLabel(stepCount) + " in draft")
-                : "No custom workflow steps yet",
+                ? (draftName
+                    ? t("workflow.custom_summary_named", "{name} • {steps}")
+                        .replace("{name}", draftName)
+                        .replace("{steps}", stepLabel)
+                    : t("workflow.custom_summary_draft", "{steps} in draft")
+                        .replace("{steps}", stepLabel))
+                : t("workflow.custom_summary_empty", "No custom workflow steps yet"),
             stepCount
-                ? "Draft contains " + workflowStepCountLabel(stepCount) + "."
-                : "Add steps to start building a repeatable workflow."
+                ? t("workflow.custom_summary_title", "Draft contains {steps}.")
+                    .replace("{steps}", stepLabel)
+                : t("workflow.custom_summary_empty_title", "Add steps to start building a repeatable workflow.")
         );
         setTextAndTitle("savedWorkflowSummary", savedLabel, savedTitle);
 
@@ -6180,37 +6200,40 @@
         if (!_savedWorkflowLibraryLoaded) {
             setStatusLine(
                 "customWorkflowStatus",
-                "Loading saved workflows and draft availability.",
+                t("workflow.custom_status_loading", "Loading saved workflows and draft availability."),
                 "working"
             );
         } else if (!connected) {
             setStatusLine(
                 "customWorkflowStatus",
-                "Reconnect the backend before saving, deleting, or running custom workflows.",
+                t("workflow.custom_status_reconnect", "Reconnect the backend before saving, deleting, or running custom workflows."),
                 "warning"
             );
         } else if (!stepCount) {
             setStatusLine(
                 "customWorkflowStatus",
-                "Add steps to build a repeatable workflow for this editorial style.",
+                t("workflow.custom_status_empty", "Add steps to build a repeatable workflow for this editorial style."),
                 "idle"
             );
         } else if (!draftName) {
             setStatusLine(
                 "customWorkflowStatus",
-                "Name the draft when you want to save it to the workflow library.",
+                t("workflow.custom_status_name_draft", "Name the draft when you want to save it to the workflow library."),
                 "warning"
             );
         } else if (!selectedPath) {
             setStatusLine(
                 "customWorkflowStatus",
-                draftName + " is ready to save. Choose a clip before running the draft.",
+                t("workflow.custom_status_save_ready", "{name} is ready to save. Choose a clip before running the draft.")
+                    .replace("{name}", draftName),
                 "ready"
             );
         } else {
             setStatusLine(
                 "customWorkflowStatus",
-                draftName + " is ready to run on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                t("workflow.custom_status_run_ready", "{name} is ready to run on {clip}.")
+                    .replace("{name}", draftName)
+                    .replace("{clip}", selectedName || selectedPath.split(/[/\\]/).pop()),
                 "ready"
             );
         }
