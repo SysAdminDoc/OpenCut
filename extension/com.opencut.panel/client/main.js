@@ -11889,13 +11889,16 @@
             } else {
                 upStr = up + "s";
             }
-            text.textContent = "Up " + upStr;
+            text.textContent = t("status.uptime", "Up {uptime}").replace("{uptime}", upStr);
 
             // CPU/RAM if available
             if (data.cpu_percent > 0 || data.ram_used_mb > 0) {
-                text.textContent += " \u00B7 CPU " + Math.round(data.cpu_percent) + "%";
+                text.textContent += " \u00B7 " + t("status.cpu_usage", "CPU {percent}%")
+                    .replace("{percent}", Math.round(data.cpu_percent));
                 if (data.ram_total_mb > 0) {
-                    text.textContent += " \u00B7 RAM " + Math.round(data.ram_used_mb / 1024 * 10) / 10 + "/" + Math.round(data.ram_total_mb / 1024 * 10) / 10 + "GB";
+                    text.textContent += " \u00B7 " + t("status.ram_usage", "RAM {used}/{total}GB")
+                        .replace("{used}", Math.round(data.ram_used_mb / 1024 * 10) / 10)
+                        .replace("{total}", Math.round(data.ram_total_mb / 1024 * 10) / 10);
                 }
             }
 
@@ -11910,16 +11913,24 @@
                     gpu.textContent = gpuLabel;
                 }
             } else {
-                gpu.textContent = "GPU: N/A";
+                gpu.textContent = t("status.gpu_unavailable", "GPU: N/A");
             }
 
             // Jobs
             var j = data.jobs || {};
             var parts = [];
-            if (j.running) parts.push(j.running + " running");
-            if (j.queued) parts.push(j.queued + " queued");
-            if (!parts.length && j.completed_today) parts.push(j.completed_today + " done today");
-            jobsEl.textContent = parts.length ? "Jobs: " + parts.join(", ") : "Jobs: 0";
+            if (j.running) {
+                parts.push(t("status.jobs_running", "{count} running").replace("{count}", j.running));
+            }
+            if (j.queued) {
+                parts.push(t("status.jobs_queued", "{count} queued").replace("{count}", j.queued));
+            }
+            if (!parts.length && j.completed_today) {
+                parts.push(t("status.jobs_done_today", "{count} done today").replace("{count}", j.completed_today));
+            }
+            jobsEl.textContent = parts.length
+                ? t("status.jobs_summary", "Jobs: {summary}").replace("{summary}", parts.join(", "))
+                : t("status.jobs_none", "Jobs: 0");
         }, 4000);
     }
 
@@ -11985,7 +11996,11 @@
                     _currentLang = lang;
                 } else {
                     _currentLang = "en";
-                    showToast("Language '" + lang + "' not available yet, using English", "info");
+                    showToast(
+                        t("toast.language_unavailable", "Language '{lang}' not available yet, using English")
+                            .replace("{lang}", lang),
+                        "info"
+                    );
                 }
                 applyI18nToDOM();
                 loadShortcuts();
