@@ -433,10 +433,11 @@ For each item below: where it lives, what works, what was deferred.
   - Touches: `opencut/core/preflight.py` (new), `opencut/jobs.py`, 12 affected route jobs.
   - Acceptance: heavy routes return 507 with `{required_mb, free_mb, output_dir}` on synthetic small-disk fixture; honest jobs unchanged.
 
-- [ ] **P1 — N5 job resume for interrupted jobs**
+- [x] **P1 — N5 job resume for interrupted jobs**
   - Why: 30-min job that crashes at minute 28 doesn't restart from zero.
   - Touches: `opencut/jobs.py`, `opencut/job_store.py` (schema migration), `opencut/routes/jobs_routes.py`, top 4 chunkable jobs (transcribe/demucs/depth/batch-encode).
   - Acceptance: kill worker mid-job, restart, `POST /jobs/{id}/resume`, output equals fresh-run baseline.
+  - Status: closed in ROADMAP v4.93 with resumable async-job metadata, durable running-job persistence, `POST /jobs/<job_id>/resume`, and route coverage for captions/transcript/WhisperX, Demucs separation, export/export-preset, and depth-estimate-v2.
 
 - [ ] **P1 — N7 plugin job-registration API**
   - Why: plugin authors can register routes but not background work.
@@ -494,7 +495,7 @@ For each item below: where it lives, what works, what was deferred.
 ## Larger Bets
 
 - **N1 transcript cache.** Shipped in `ROADMAP.md` v4.87; every Whisper caller now shares the core persistent cache.
-- **N5 job resume.** The reliability story flips when this lands. The hard part is the per-job-type checkpoint format — Whisper segments, Demucs chunks, depth frames each look different. Build it incrementally: ship one job-type at a time.
+- **N5 job resume.** Shipped in `ROADMAP.md` v4.93 with incremental per-route opt-in for the checkpointable caption, Demucs, export, and depth jobs; future work can deepen per-job checkpoint formats.
 - **N7 + N8 plugin/skill extensibility.** When community plugins ship background jobs and community skills ship via folder-drop, OpenCut becomes a *platform* instead of a feature-bag. Adopt the Obsidian capability-enforcement pattern (not just declaration).
 
 ---

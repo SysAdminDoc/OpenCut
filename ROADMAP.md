@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.92
+**Version**: 4.93
 **Updated**: 2026-06-04
-**Baseline**: v1.32.0 (1,521 routes, 107 blueprints, 599 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,522 routes, 107 blueprints, 599 core modules, 8,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
@@ -193,6 +193,8 @@
 > **v4.91 status (2026-06-04, continuation pass)**: closed **E11** from the May 26 continuation queue by making new HTTP webhook registrations require a non-empty HMAC signing secret by default. Unsigned webhook registration now requires explicit `?allow_unsigned=true` opt-in for local testing and writes a one-time `webhooks_unsigned.txt` warning in the OpenCut user directory.
 >
 > **v4.92 status (2026-06-04, continuation pass)**: closed **N4** from the May 26 continuation queue by adding a decorator-level disk preflight gate for heavyweight async routes. `opencut/core/preflight.py` estimates per-operation disk budgets, `@async_job(..., disk_operation=...)` now returns HTTP 507 before job creation when the output volume is under budget, and 12 caption/audio/export/video-AI jobs are wired into the gate.
+>
+> **v4.93 status (2026-06-04, continuation pass)**: closed **N5** from the May 26 continuation queue by adding resumability metadata to async jobs, durable running-job persistence before worker dispatch, SQLite resume columns, and a CSRF-protected `POST /jobs/<job_id>/resume` route. Resume dispatch replays the persisted endpoint/payload only for interrupted jobs whose current route is still marked `resumable=True`; transcription, WhisperX, Demucs separation, export/export-preset, and depth-estimation jobs now opt into the path. Route manifest now reports **1,522 routes / 107 blueprints** and extended MCP exposes **1,465** opt-in route tools.
 
 ---
 
@@ -309,6 +311,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_disk_preflight.py -q 
 
 ---
 
+## 2026-06-04 v4.93 Interrupted Job Resume (N5)
+
+N5 is closed. Interrupted jobs can now be re-enqueued from persisted provenance instead of forcing users to reconstruct the original request by hand.
+
+| Surface | Status |
+|---|---|
+| Job metadata | `@async_job(..., resumable=True)` records `resumable`, `partial_output_path`, `resume_source_job_id`, and `resume_attempt` on live and persisted jobs. |
+| Durable start state | Async jobs persist their running row synchronously after endpoint/payload capture and before worker dispatch, so restart-time `mark_interrupted()` has rows to recover. |
+| Resume route | `POST /jobs/<job_id>/resume` requires CSRF, accepts only `interrupted` rows, rejects non-resumable/stale endpoints, and dispatches the stored endpoint/payload with resume lineage fields. |
+| Wired routes | Captions, transcript, WhisperX, Demucs separation, export, export preset, and depth-estimate-v2 jobs are marked resumable. |
+| Coverage | `tests/test_job_resume.py` pins schema migration, running-job persistence, route dispatch, non-resumable rejection, stale-route rejection, and route annotations. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_job_resume.py tests/test_job_store.py tests/test_disk_preflight.py -q -p no:cacheprovider -o addopts=""` passed (`25 passed`) and touched Python files compile.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -317,7 +335,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_disk_preflight.py -q 
 - [x] **P1 — N6 `GET /webhooks/event-types`** — closed in v4.90 with canonical and `/api` discovery routes, core event metadata, legacy alias mapping, MCP info discoverability, generated surface refresh, and focused tests.
 - [x] **P1 — E11 webhook signatures mandatory by default** — closed in v4.91 with signed-by-default HTTP registration, explicit unsigned opt-in, warning-file creation, and focused tests.
 - [x] **P1 — N4 disk preflight in heavy routes** — closed in v4.92 with a decorator-level disk gate, operation budgets, 507 responses, and coverage across 12 heavyweight async jobs.
-- [ ] **P1 — N5 job resume for interrupted jobs** — add resumability metadata and a resume route for checkpointable jobs.
+- [x] **P1 — N5 job resume for interrupted jobs** — closed in v4.93 with resumability metadata, durable running-job persistence, persisted endpoint/payload replay, `POST /jobs/<job_id>/resume`, and coverage for checkpointable caption/audio/export/depth jobs.
 - [ ] **P1 — N7 plugin job-registration API** — let signed/capability-scoped plugins register namespaced background jobs through the existing async-job machinery.
 - [ ] **P1 — N8 third-party agent-skill loader** — load validated user skills from `~/.opencut/skills/<id>/`.
 - [ ] **P1 — E14 F236 CEP parity** — add CEP-side discoverability for caption display settings already shipped in UXP.
@@ -329,13 +347,13 @@ Validation after the batch: `py -3.12 -m pytest tests/test_disk_preflight.py -q 
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
-> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N5, N7, N8, N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
+> **Existing Planned Work** for de-duplication purposes is the "Active Continuation Queue (May 26 Plan)" list directly above (N7, N8, N9, N10, E12, E13, E14, E15, plus the External F202 / F252 rows) together with the F001–F272 ledger and Wave L–T sections further down this file. The Research-Driven Additions below were checked against all of those and are net-new.
 
 ## Research-Driven Additions
 
 *Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
 
-These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (resume = N5, plugin jobs = N7, user skills = N8, job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
+These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the open continuation-queue items (plugin jobs = N7, user skills = N8, job metadata = N9, request-ID-into-subprocess = N10, manifest-derived allowlist = E12, CLI parity = E13, F236 CEP parity = E14, i18n batches = E15).
 
 ### Quick Wins
 
@@ -346,7 +364,7 @@ These items came out of a fresh code-evidence pass (job/journal persistence laye
 ### Larger Bets
 
 - [ ] **P1 — RA-04 Surface `request_id` inside the JSON error body** — Why: the request-correlation middleware already echoes `X-Request-ID` in the response header and stamps it on job metadata, but the JSON error envelope omits it, so a user pasting an error message into a bug report gives no way to grep the server logs. Evidence: `opencut/core/request_correlation.py` documents header echo + job stamping; `opencut/errors.py` has zero `request_id` references in `error_response`/`to_response`. Touches: `opencut/errors.py` (read `get_request_id()` and add `request_id` to the body when non-empty). Acceptance: every error JSON includes `request_id` when inside a request context; absent/empty outside one; existing error-shape tests updated. Verify: route-smoke test asserting an error body's `request_id` equals its `X-Request-ID` header. Complexity: S–M.
-- [ ] **P1 — RA-05 Introduce `PRAGMA user_version` schema versioning for the SQLite stores** — Why: `job_store.py` and `journal.py` evolve their schemas by ad-hoc `CREATE TABLE IF NOT EXISTS` plus bare `ALTER TABLE ... ADD COLUMN` wrapped in try/except; the planned N5 resume work and N9 metadata will add more columns, and without a version pin there is no ordered, testable migration path or downgrade detection. Evidence: `opencut/journal.py` lines 126–129 (silent `ALTER TABLE ... ADD COLUMN forward_json` in try/except); `opencut/job_store.py` `init_db()` has no version pin. Touches: `opencut/job_store.py`, `opencut/journal.py`, a small shared `_apply_migrations(conn, target_version)` helper. Acceptance: each store records a `user_version`, applies ordered migrations idempotently, and refuses to open a DB newer than it understands with an actionable error. Verify: a migration test that opens a v0 DB, runs init, and asserts `user_version` advances and data survives. Complexity: M.
+- [ ] **P1 — RA-05 Introduce `PRAGMA user_version` schema versioning for the SQLite stores** — Why: `job_store.py` and `journal.py` evolve their schemas by ad-hoc `CREATE TABLE IF NOT EXISTS` plus bare `ALTER TABLE ... ADD COLUMN` wrapped in try/except; N5 has now added resume columns and N9 metadata will add more, so without a version pin there is no ordered, testable migration path or downgrade detection. Evidence: `opencut/journal.py` lines 126–129 (silent `ALTER TABLE ... ADD COLUMN forward_json` in try/except); `opencut/job_store.py` `init_db()` has no version pin. Touches: `opencut/job_store.py`, `opencut/journal.py`, a small shared `_apply_migrations(conn, target_version)` helper. Acceptance: each store records a `user_version`, applies ordered migrations idempotently, and refuses to open a DB newer than it understands with an actionable error. Verify: a migration test that opens a v0 DB, runs init, and asserts `user_version` advances and data survives. Complexity: M.
 - [ ] **P1 — RA-06 Guard + back up destructive SQLite/cache wipes** — Why: `journal.clear_all()` (one-shot `DELETE FROM journal`, the project's one-click-rollback ledger) and `DELETE /captions/cache/clear` and plugin `uninstall` (`shutil.rmtree`) destroy user state with no confirmation token, no row-count preview, and no recoverable backup — contrary to the project's own "destructive actions need guards + undo + backup" posture. Evidence: `opencut/journal.py` `clear_all()` (line 218); `opencut/routes/plugins.py` `uninstall_plugin()` `shutil.rmtree` (line 186); transcript-cache clear route. Touches: `opencut/journal.py`, journal route, `opencut/routes/plugins.py`, transcript-cache clear route. Acceptance: each destructive route returns a dry-run count by default and only wipes when an explicit `confirm=true` (plus existing CSRF) is present; journal wipe writes a timestamped JSON snapshot under `~/.opencut/` first. Verify: tests asserting dry-run returns counts without deleting and `confirm=true` deletes + writes the backup. Complexity: M.
 - [ ] **P2 — RA-07 Cap persisted job `result_json` size in the job store** — Why: `save_job()` JSON-encodes the full job result into the SQLite row with no size ceiling; a large transcript/segment payload (now also cached on disk per N1) can bloat `jobs.db` unboundedly and slow `/jobs` listing. Evidence: `opencut/job_store.py` `save_job()` lines 181–186 serialize `job_dict["result"]` verbatim. Touches: `opencut/job_store.py`. Acceptance: results over a configurable byte threshold are stored as a truncated summary plus a pointer to the on-disk artifact; `/status/<id>` still returns the full result from the hot in-memory store while it lives. Verify: a test feeding an oversized result and asserting the DB row is bounded while the live status response is unchanged. Complexity: M.
 - [ ] **P2 — RA-08 Add a job-store / journal compaction + retention diagnostic** — Why: `cleanup_old_jobs()` deletes rows but never `VACUUM`s, and the journal has no TTL at all, so WAL files and the DB grow monotonically on long-lived local installs; there is no surfaced size/health metric. Evidence: `opencut/job_store.py` `cleanup_old_jobs()` (no VACUUM); `opencut/journal.py` has no retention path. Touches: `opencut/job_store.py`, `opencut/journal.py`, an existing system/diagnostics route. Acceptance: a periodic/opt-in compaction `VACUUM`s after large deletes, the journal gains a configurable retention sweep, and a `/system/...` route reports row counts + on-disk bytes for both stores. Verify: a test asserting compaction reduces file size after a bulk delete and the diagnostic reports non-zero sizes. Complexity: M.

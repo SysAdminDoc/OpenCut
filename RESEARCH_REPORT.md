@@ -8,11 +8,11 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-03.
 ## Executive Summary
 
 OpenCut is a local-first automation backend for Adobe Premiere Pro: a Flask app
-(1,521 routes / 107 blueprints / ~599 core modules, 8,400+ tests) that exposes
+(1,522 routes / 107 blueprints / ~599 core modules, 8,600+ tests) that exposes
 silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
-(N1–N4, N6, E11) is now fully shipped through v4.92; the strongest remaining
+(N1–N6, E11) is now shipped through v4.93; the strongest remaining
 direction is **not** another wave of model surfaces but making the existing
 surface easier to run, debug, resume, extend, and trust.
 
@@ -24,8 +24,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
    is already in the `X-Request-ID` header and job metadata but missing from the
    error envelope users actually copy into bug reports. [Verified]
 2. **`PRAGMA user_version` schema versioning** for the two SQLite stores
-   (RA-05) — migrations are currently ad-hoc `ALTER TABLE` in try/except, and
-   N5/N9 will add more columns. [Verified]
+   (RA-05) — migrations are currently ad-hoc `ALTER TABLE` in try/except; N5
+   has now added resume columns and N9 will add more metadata. [Verified]
 3. **Guard + back up destructive wipes** (RA-06) — `journal.clear_all()`, plugin
    `uninstall`, and the cache-clear route delete user state with no dry-run,
    confirm token, or recoverable backup. [Verified]
@@ -46,10 +46,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 ## Evidence Reviewed
 
-- **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20. Most
-  recent: `58d0781 feat: add async job disk preflight` (N4). The
-  N1–N4/N6/E11 continuation queue closed in `b228e42`, `ae25c96`, `ead2a3d`,
-  `40e43cb`, `9c13b9a`, `58d0781`.
+- **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
+  start of this pass. The N1–N6/E11 continuation queue is now closed through
+  N5, with the earlier checkpoints in `b228e42`, `ae25c96`, `ead2a3d`,
+  `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
   bare `ALTER TABLE` migration, `clear_all()` with no backup),
@@ -81,7 +81,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Entry points | `opencut.cli:main`, `opencut.server:main`, `opencut.mcp_server:main` | console scripts in `pyproject.toml`. |
 | Routes | `opencut/routes/*.py` (~90 blueprints) | captions, audio, editing, delivery, review, plugins, jobs, MCP bridge. |
 | Core | `opencut/core/*.py` (~599 modules) | per-feature processing; FFmpeg subprocess heavy. |
-| Job platform | `opencut/jobs.py`, `job_store.py`, `workers.py` | `@async_job`, SQLite persistence, priority workers, cancellation, disk preflight. |
+| Job platform | `opencut/jobs.py`, `job_store.py`, `workers.py` | `@async_job`, SQLite persistence, priority workers, cancellation, disk preflight, interrupted-job resume. |
 | Persistence | `~/.opencut/jobs.db`, `journal.db`, `transcript_cache/` | WAL SQLite + content-addressed cache. |
 | Panels | `extension/com.opencut.panel` (CEP), `com.opencut.uxp` (UXP) | UXP WebView cutover blocked on live UDT capture (F252). |
 | Persona | solo podcasters / YouTubers on Premiere 2019+ (CEP) / 25.6+ (UXP) | local-first, no cloud, no API keys for core features. |
@@ -96,7 +96,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Audio cleanup / pro chain | `/audio*` | `core/audio_*` | mature | tested |
 | Review bundles + markers | `/review*`, `/collab*` | `core/review*`, `annotations.py` | mature (F225–F229) | tested |
 | Shorts A/B variants | route/skill | `core/ab_variant.py`, `best_take.py` | shipped | tested |
-| MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,463 opt-in | tested |
+| MCP bridge | `/mcp/*`, `opencut-mcp-server` | `mcp_server.py`, `mcp_extended_tools.py` | 39 curated + 1,465 opt-in | tested |
 | Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; no hot-reload, no backup on uninstall | partial |
 | Agent skills | built-in only | `core/agent_skills.py` | user loader not implemented (N8) | tested (built-ins) |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
@@ -125,8 +125,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 - **Major — no `request_id` in error bodies.** Header-only correlation forces
   users to read response headers to file a useful bug report. → RA-04.
-- **Major — ad-hoc SQLite migrations, no `user_version`.** N5/N9 will add
-  columns onto a versionless schema; no downgrade detection. → RA-05.
+- **Major — ad-hoc SQLite migrations, no `user_version`.** N5 has added
+  columns and N9 will add more onto a versionless schema; no downgrade
+  detection. → RA-05.
 - **Major — destructive wipes without guard/backup.** `journal.clear_all()`
   (the rollback ledger), plugin uninstall, cache clear. → RA-06.
 - **Minor — typed errors are invisible in logs.** Only `safe_error()` logs;
@@ -184,10 +185,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 
 ## Open Questions
 
-- **N5 vs RA-05 ordering:** RA-05 (schema versioning) is a sensible prerequisite
-  for N5 (resume) and N9 (job metadata) since both add columns. [Needs
-  validation] — confirm whether the N5 implementer wants the migration helper
-  landed first.
+- **RA-05 after N5:** N5 shipped with an idempotent ad-hoc migration to avoid
+  blocking crash-recovery work, but `PRAGMA user_version` remains the right
+  follow-up before N9 adds more job metadata columns.
 - **RA-09 round-trip fidelity** cannot be verified without a live Premiere
   install. [Needs validation] — needs a real export→edit→import loop before
   committing to a styling-metadata schema.

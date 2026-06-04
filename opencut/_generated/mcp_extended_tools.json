@@ -6,12 +6,12 @@
     "DELETE": 14,
     "GET": 369,
     "PATCH": 1,
-    "POST": 1078,
+    "POST": 1079,
     "PUT": 2
   },
-  "response_schema_count": 99,
+  "response_schema_count": 100,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1464,
+  "tool_count": 1465,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -28263,6 +28263,47 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_interview_polish"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /jobs/<job_id>/resume"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /jobs/<job_id>/resume. Response schema: JobResponse.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          },
+          "job_id": {
+            "description": "Path parameter `job_id` for `/jobs/<job_id>/resume`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "jobs",
+        "endpoint": "jobs.resume_job",
+        "generated": true,
+        "method": "POST",
+        "path": "/jobs/<job_id>/resume",
+        "path_params": [
+          {
+            "converter": "string",
+            "name": "job_id"
+          }
+        ],
+        "priority": "extended",
+        "response_schema": "JobResponse"
+      },
+      "name": "opencut_route_post_jobs_by_job_id_resume"
     },
     {
       "annotations": {

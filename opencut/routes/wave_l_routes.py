@@ -1544,7 +1544,7 @@ def route_lightx2v_info():
 
 @wave_l_bp.route("/video/depth/estimate-v2", methods=["POST"])
 @require_csrf
-@async_job("depth_estimate_v2")
+@async_job("depth_estimate_v2", resumable=True)
 def route_depth_estimate(job_id, filepath, data):
     """Estimate per-frame depth maps using Depth-Anything-V2."""
     from opencut.core import depth_anything_v2

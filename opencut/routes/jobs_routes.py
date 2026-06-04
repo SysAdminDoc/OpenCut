@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from opencut.jobs import (
     _cancel_job,
@@ -605,6 +605,124 @@ def interrupted_jobs():
         return jsonify(get_interrupted_jobs())
     except ImportError:
         return jsonify([])
+
+
+def _validate_resume_endpoint(endpoint: str):
+    if not isinstance(endpoint, str) or not endpoint.startswith("/") or endpoint.startswith("//"):
+        return "Resume endpoint is missing or invalid."
+    if "\x00" in endpoint or "://" in endpoint:
+        return "Resume endpoint must be an internal OpenCut route."
+    try:
+        adapter = current_app.url_map.bind("")
+        endpoint_name, _view_args = adapter.match(endpoint, method="POST")
+    except Exception:
+        return "Resume endpoint is no longer registered."
+    view_func = current_app.view_functions.get(endpoint_name)
+    if view_func is None or not getattr(view_func, "_opencut_async_job", False):
+        return "Resume endpoint is not an async job route."
+    if not getattr(view_func, "_opencut_resumable", False):
+        return "Resume endpoint is not marked resumable."
+    return ""
+
+
+@jobs_bp.route("/jobs/<job_id>/resume", methods=["POST"])
+@require_csrf
+def resume_job(job_id):
+    """Resume an interrupted, checkpointable job from persisted payload data."""
+    try:
+        from opencut.job_store import get_job as db_get_job
+        from opencut.security import get_csrf_token
+    except ImportError:
+        return jsonify({"error": "Job history is unavailable", "code": "JOB_STORE_UNAVAILABLE"}), 503
+
+    job = db_get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found", "code": "JOB_NOT_FOUND"}), 404
+    if job.get("status") != "interrupted":
+        return jsonify({
+            "error": "Only interrupted jobs can be resumed",
+            "code": "JOB_NOT_INTERRUPTED",
+            "status": job.get("status"),
+        }), 409
+    if not job.get("resumable"):
+        return jsonify({
+            "error": "Job is not marked resumable",
+            "code": "JOB_NOT_RESUMABLE",
+            "job_id": job_id,
+        }), 409
+
+    endpoint = job.get("endpoint") or ""
+    endpoint_error = _validate_resume_endpoint(endpoint)
+    if endpoint_error:
+        return jsonify({
+            "error": endpoint_error,
+            "code": "JOB_RESUME_UNAVAILABLE",
+            "job_id": job_id,
+            "endpoint": endpoint,
+        }), 409
+
+    payload = job.get("payload")
+    if not isinstance(payload, dict):
+        payload = {}
+    if job.get("filepath") and "filepath" not in payload:
+        payload["filepath"] = job["filepath"]
+    if not payload:
+        return jsonify({
+            "error": "Original job payload is unavailable",
+            "code": "JOB_RESUME_UNAVAILABLE",
+            "job_id": job_id,
+            "endpoint": endpoint,
+        }), 409
+
+    resume_payload = dict(payload)
+    partial_output_path = job.get("partial_output_path") or resume_payload.get("partial_output_path") or ""
+    if partial_output_path:
+        resume_payload["partial_output_path"] = partial_output_path
+    resume_attempt = int(job.get("resume_attempt") or 0) + 1
+    resume_payload["resume_source_job_id"] = job_id
+    resume_payload["resume_from_job_id"] = job_id
+    resume_payload["resume_attempt"] = resume_attempt
+
+    inner = current_app.test_client().post(
+        endpoint,
+        json=resume_payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-OpenCut-Token": get_csrf_token(),
+        },
+    )
+    inner_body = inner.get_json(silent=True)
+    if not isinstance(inner_body, dict):
+        inner_body = {}
+    if inner.status_code >= 400:
+        return jsonify({
+            "error": "Resume dispatch failed",
+            "code": "JOB_RESUME_FAILED",
+            "job_id": job_id,
+            "endpoint": endpoint,
+            "status_code": inner.status_code,
+            "details": inner_body,
+        }), inner.status_code
+
+    resumed_job_id = inner_body.get("job_id", "")
+    if not resumed_job_id:
+        return jsonify({
+            "error": "Resume endpoint did not return a job ID",
+            "code": "JOB_RESUME_FAILED",
+            "job_id": job_id,
+            "endpoint": endpoint,
+            "details": inner_body,
+        }), 502
+
+    return jsonify({
+        "success": True,
+        "job_id": resumed_job_id,
+        "resumed_job_id": resumed_job_id,
+        "source_job_id": job_id,
+        "endpoint": endpoint,
+        "partial_output_path": partial_output_path,
+        "resume_attempt": resume_attempt,
+    }), 202
 
 
 @jobs_bp.route("/jobs/<job_id>/diagnostics", methods=["GET"])

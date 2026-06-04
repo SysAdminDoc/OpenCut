@@ -638,6 +638,7 @@ _OPENAPI_SCHEMA_ROUTES = (
         "/audio/tts/install",
         "/audio/tts/omnivoice",
         "/audio/tts/subtitled",
+        "/jobs/<job_id>/resume",
     )),
     (JobStatsResult, ("/jobs/stats",)),
     (JobStatusResult, (

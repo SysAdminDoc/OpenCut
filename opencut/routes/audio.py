@@ -396,7 +396,7 @@ def audio_isolate(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/separate", methods=["POST"])
 @require_csrf
-@async_job("separate", disk_operation="demucs")
+@async_job("separate", disk_operation="demucs", resumable=True)
 def audio_separate(job_id, filepath, data):
     """Separate audio into stems using AI (Demucs or audio-separator with RoFormer models)."""
     import shutil

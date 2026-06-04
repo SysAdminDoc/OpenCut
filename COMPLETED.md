@@ -31,6 +31,7 @@ Last consolidated: 2026-06-04.
 | Webhook discoverability | The May 26 plan now has N6 closed: `/webhooks/event-types`, `/api/webhooks/event-types`, and `/mcp/info` expose webhook event names, canonical replacements, schema pointers, and legacy aliases. |
 | Webhook trust | The May 26 plan now has E11 closed: new HTTP webhook registrations require an HMAC secret unless the caller explicitly opts into unsigned local testing. |
 | Disk preflight | The May 26 plan now has N4 closed: heavyweight async jobs run output-volume disk checks before job creation and return 507 with required/free/output-dir metadata when space is insufficient. |
+| Interrupted-job resume | The May 26 plan now has N5 closed: checkpointable async jobs persist resume metadata and can be re-enqueued from interrupted history through `POST /jobs/<job_id>/resume`. |
 
 ## Historical Detail
 

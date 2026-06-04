@@ -15,6 +15,7 @@ def isolate_db(tmp_path):
     with patch("opencut.job_store._DB_PATH", db_path):
         import opencut.job_store as store
         store._INITIALIZED = False
+        store._INITIALIZED_PATH = None
         store._LOCAL = type(store._LOCAL)()  # fresh thread-local
         store._ALL_CONNECTIONS = {}
         yield store
@@ -240,3 +241,23 @@ class TestJobStore:
 
         assert isolate_db.get_job("after-close") is not None
         assert isolate_db._get_conn() is not stale
+
+    def test_db_path_change_reinitializes_schema_and_connection(self, isolate_db, tmp_path):
+        first_path = isolate_db._DB_PATH
+        isolate_db.init_db()
+        first_conn = isolate_db._get_conn()
+
+        isolate_db._DB_PATH = str(tmp_path / "second_jobs.db")
+        isolate_db.save_job({
+            "id": "second-db",
+            "type": "test",
+            "status": "running",
+            "created": time.time(),
+            "resumable": True,
+            "partial_output_path": "/tmp/partial",
+        })
+
+        assert isolate_db._INITIALIZED_PATH == isolate_db._DB_PATH
+        assert isolate_db._get_conn() is not first_conn
+        assert isolate_db.get_job("second-db")["resumable"] is True
+        assert first_path != isolate_db._DB_PATH
