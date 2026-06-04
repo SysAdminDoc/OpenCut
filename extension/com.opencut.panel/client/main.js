@@ -4982,6 +4982,12 @@
         _updateWsStatus();
     }
 
+    function wsFormatListenerCount(count, template) {
+        return template
+            .replace("{count}", count)
+            .replace("{plural}", count === 1 ? "" : "s");
+    }
+
     function _handleWsMessage(msg) {
         if (msg.type === "progress" && msg.job_id) {
             // Update progress bar in real-time (no polling needed)
@@ -5003,11 +5009,13 @@
         var startBtn = document.getElementById("wsStartBtn");
         var stopBtn = document.getElementById("wsStopBtn");
         var connectBtn = document.getElementById("wsConnectBtn");
-        var statusText = _wsConnected ? "Live updates connected" : "Bridge unavailable";
+        var statusText = _wsConnected
+            ? t("ws.status_connected", "Live updates connected")
+            : t("ws.status_unavailable", "Bridge unavailable");
         var statusState = _wsConnected ? "connected" : "unknown";
         var hintMessage = _wsConnected
-            ? "Checking listener status for the active panel connection."
-            : "Checking whether the live updates bridge is available.";
+            ? t("ws.hint_check_connected", "Checking listener status for the active panel connection.")
+            : t("ws.hint_check_available", "Checking whether the live updates bridge is available.");
         var hintState = _wsConnected ? "working" : "idle";
         var bridgeRunning = false;
         var clients = 0;
@@ -5016,37 +5024,49 @@
             statusEl.setAttribute("data-state", statusState);
         }
         if (countEl) {
-            countEl.textContent = clients + " listeners";
+            countEl.textContent = wsFormatListenerCount(
+                clients,
+                t("ws.listener_count", "{count} listener{plural}")
+            );
             countEl.setAttribute("data-state", "idle");
         }
         if (startBtn) startBtn.disabled = false;
         if (stopBtn) stopBtn.disabled = true;
         if (connectBtn) {
-            connectBtn.textContent = _wsConnected ? "Live Updates Connected" : "Connect Live Updates";
+            connectBtn.textContent = _wsConnected
+                ? t("ws.button_connected", "Live Updates Connected")
+                : t("ws.button_connect", "Connect Live Updates");
             connectBtn.disabled = !_wsConnected;
         }
         setStatusLine("wsHint", hintMessage, hintState, hintMessage);
         setSettingsStudioState(
             "bridge",
-            _wsConnected ? "Panel connected" : "Checking live updates...",
+            _wsConnected
+                ? t("ws.status_panel_connected", "Panel connected")
+                : t("ws.studio_checking", "Checking live updates..."),
             _wsConnected ? "ready" : "working",
             _wsConnected
-                ? "The panel is connected to the live updates bridge."
-                : "Checking the live updates bridge."
+                ? t("ws.studio_panel_title", "The panel is connected to the live updates bridge.")
+                : t("ws.studio_checking_title", "Checking the live updates bridge.")
         );
         // Also fetch server-side status
         api("GET", "/ws/status", null, function (err, r) {
             if (err) {
+                var readFailed = t(
+                    "ws.status_read_failed",
+                    "Couldn't read the live updates bridge status. Reconnect the backend or try again."
+                );
+                var readFailedShort = t("ws.status_read_failed_short", "Couldn't read the live updates bridge status.");
                 setStatusLine(
                     "wsHint",
-                    "Couldn't read the live updates bridge status. Reconnect the backend or try again.",
+                    readFailed,
                     "warning"
                 );
                 setSettingsStudioState(
                     "bridge",
-                    "Status unavailable",
+                    t("ws.status_unavailable_label", "Status unavailable"),
                     "warning",
-                    "Couldn't read the live updates bridge status."
+                    readFailedShort
                 );
                 return;
             }
@@ -5054,13 +5074,17 @@
                 bridgeRunning = !!r.running;
                 clients = Number(r.clients || 0);
                 if (_wsConnected) {
-                    statusText = clients > 0 ? "Live updates connected" : "Panel connected";
+                    statusText = clients > 0
+                        ? t("ws.status_connected", "Live updates connected")
+                        : t("ws.status_panel_connected", "Panel connected");
                     statusState = "connected";
                 } else if (bridgeRunning) {
-                    statusText = clients > 0 ? "Bridge ready" : "Bridge idle";
+                    statusText = clients > 0
+                        ? t("ws.status_bridge_ready", "Bridge ready")
+                        : t("ws.status_bridge_idle", "Bridge idle");
                     statusState = "ready";
                 } else {
-                    statusText = "Bridge stopped";
+                    statusText = t("ws.status_bridge_stopped", "Bridge stopped");
                     statusState = "stopped";
                 }
             }
@@ -5069,44 +5093,59 @@
                 statusEl.setAttribute("data-state", statusState);
             }
             if (countEl) {
-                countEl.textContent = clients + " " + (clients === 1 ? "listener" : "listeners");
+                countEl.textContent = wsFormatListenerCount(
+                    clients,
+                    t("ws.listener_count", "{count} listener{plural}")
+                );
                 countEl.setAttribute("data-state", clients > 0 ? "active" : "idle");
             }
             if (startBtn) startBtn.disabled = bridgeRunning;
             if (stopBtn) stopBtn.disabled = !bridgeRunning;
             if (connectBtn) {
-                connectBtn.textContent = _wsConnected ? "Live Updates Connected" : "Connect Live Updates";
+                connectBtn.textContent = _wsConnected
+                    ? t("ws.button_connected", "Live Updates Connected")
+                    : t("ws.button_connect", "Connect Live Updates");
                 connectBtn.disabled = !bridgeRunning || _wsConnected;
             }
 
             if (_wsConnected) {
                 hintMessage = clients > 0
-                    ? "Live updates are flowing into the panel right now. Progress, completion, and cancel events will stay visible here."
-                    : "The panel is connected. Progress will appear here as soon as a job starts streaming updates.";
+                    ? t("ws.hint_flowing", "Live updates are flowing into the panel right now. Progress, completion, and cancel events will stay visible here.")
+                    : t("ws.hint_panel_waiting", "The panel is connected. Progress will appear here as soon as a job starts streaming updates.");
                 hintState = "success";
                 setSettingsStudioState(
                     "bridge",
-                    clients > 0 ? clients + " live listener" + (clients === 1 ? "" : "s") : "Panel connected",
+                    clients > 0
+                        ? wsFormatListenerCount(
+                            clients,
+                            t("ws.listener_count_live", "{count} live listener{plural}")
+                        )
+                        : t("ws.status_panel_connected", "Panel connected"),
                     "ready",
                     hintMessage
                 );
             } else if (bridgeRunning) {
                 hintMessage = clients > 0
-                    ? "The bridge is running and waiting for a panel connection. Connect live updates to stream progress without polling."
-                    : "The bridge is running. Connect live updates so longer jobs can stream progress into the panel.";
+                    ? t("ws.hint_bridge_waiting", "The bridge is running and waiting for a panel connection. Connect live updates to stream progress without polling.")
+                    : t("ws.hint_bridge_connect", "The bridge is running. Connect live updates so longer jobs can stream progress into the panel.");
                 hintState = "ready";
                 setSettingsStudioState(
                     "bridge",
-                    clients > 0 ? clients + " listener" + (clients === 1 ? "" : "s") + " ready" : "Bridge ready",
+                    clients > 0
+                        ? wsFormatListenerCount(
+                            clients,
+                            t("ws.listener_count_ready", "{count} listener{plural} ready")
+                        )
+                        : t("ws.status_bridge_ready", "Bridge ready"),
                     "ready",
                     hintMessage
                 );
             } else {
-                hintMessage = "Start the bridge to stream progress, completion, and cancel feedback into the panel during longer runs.";
+                hintMessage = t("ws.hint_start_bridge", "Start the bridge to stream progress, completion, and cancel feedback into the panel during longer runs.");
                 hintState = "warning";
                 setSettingsStudioState(
                     "bridge",
-                    "Bridge stopped",
+                    t("ws.status_bridge_stopped", "Bridge stopped"),
                     "warning",
                     hintMessage
                 );
@@ -7372,9 +7411,9 @@
             title: "Checking transcription readiness."
         },
         bridge: {
-            label: "Checking live updates...",
+            label: t("ws.studio_checking", "Checking live updates..."),
             state: "working",
-            title: "Checking the live updates bridge."
+            title: t("ws.studio_checking_title", "Checking the live updates bridge.")
         },
         engines: {
             label: "Refresh availability",
@@ -7406,8 +7445,8 @@
         );
         setTextAndTitle(
             "settingsBridgeSummary",
-            (_settingsStudioState.bridge && _settingsStudioState.bridge.label) || "Checking live updates...",
-            (_settingsStudioState.bridge && _settingsStudioState.bridge.title) || "Checking the live updates bridge."
+            (_settingsStudioState.bridge && _settingsStudioState.bridge.label) || t("ws.studio_checking", "Checking live updates..."),
+            (_settingsStudioState.bridge && _settingsStudioState.bridge.title) || t("ws.studio_checking_title", "Checking the live updates bridge.")
         );
         setTextAndTitle(
             "settingsEngineSummary",
@@ -7426,7 +7465,10 @@
             lineMessage = "Transcription still needs attention before captions, search indexing, and chapter generation will feel reliable.";
         } else if (_settingsStudioState.bridge && (_settingsStudioState.bridge.state === "warning" || _settingsStudioState.bridge.state === "error")) {
             lineState = "warning";
-            lineMessage = "Most features still run, but live progress and completion feedback are limited until the bridge is running.";
+            lineMessage = t(
+                "ws.overview_limited",
+                "Most features still run, but live progress and completion feedback are limited until the bridge is running."
+            );
         } else if (_settingsStudioState.engines && (_settingsStudioState.engines.state === "warning" || _settingsStudioState.engines.state === "error")) {
             lineState = _settingsStudioState.engines.state === "error" ? "error" : "warning";
             lineMessage = "Refresh engine routing after installs finish so Auto can make the best local decisions for this machine.";
