@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T02:26:13Z",
-  "total_routes": 1517,
+  "generated_at": "2026-06-04T01:30:08Z",
+  "total_routes": 1519,
   "blueprint_count": 107,
   "method_counts": {
-    "DELETE": 14,
-    "GET": 377,
+    "DELETE": 15,
+    "GET": 378,
     "PATCH": 1,
     "POST": 1127,
     "PUT": 2
@@ -172,10 +172,10 @@
       ]
     },
     "captions": {
-      "route_count": 27,
+      "route_count": 29,
       "method_counts": {
-        "DELETE": 1,
-        "GET": 7,
+        "DELETE": 2,
+        "GET": 8,
         "POST": 19
       },
       "sample_rules": [
@@ -5509,6 +5509,22 @@
         "GET"
       ],
       "endpoint": "captions.burnin_styles",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/cache/clear",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "captions.caption_cache_clear",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/cache/stats",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "captions.caption_cache_stats",
       "blueprint": "captions"
     },
     {

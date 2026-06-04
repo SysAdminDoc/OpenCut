@@ -3,7 +3,7 @@
 Root summary of shipped roadmap work. Detailed historical ledgers remain in
 [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md) and [CHANGELOG.md](CHANGELOG.md).
 
-Last consolidated: 2026-06-01.
+Last consolidated: 2026-06-04.
 
 ## Current Delivered Baseline
 
@@ -25,6 +25,7 @@ Last consolidated: 2026-06-01.
 | Review and delivery | Review bundles, marker sidecars, SVG annotations, threaded comments, LAN review portal, notifications/webhooks, transfer bundles, delivery standards, and audio-description draft planning. |
 | AI/model governance | Model cards, feature readiness registry, AI eval harness, C2PA sidecars, deepfake detection, AI feature reconciliation, optional telemetry policy, and local-first defaults. |
 | Research closures | The May 25 plan closed or advanced route-surface, agent, UXP MCP, sequence-index, shorts-variant, enhance macro, test-breadth, i18n, a11y, security, and CI governance items. |
+| Performance and recovery | The May 26 plan now has N1 closed: transcripts are cached by source SHA-256 plus backend/settings, with shared core integration and cache stats/clear routes. |
 
 ## Historical Detail
 

@@ -9,8 +9,6 @@ import copy
 import logging
 import os
 import tempfile
-import threading
-from collections import OrderedDict
 from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
@@ -82,55 +80,6 @@ def _safe_probe(filepath):
     except Exception as exc:  # noqa: BLE001 — probing must never break a job
         logger.debug("Media probe failed for %s: %s", filepath, exc)
         return None
-
-# ---------------------------------------------------------------------------
-# Transcript Cache (transcribe once, reuse across highlights/shorts/translate)
-#
-# Ordered-dict backed LRU: reads promote a key to the end, and evictions
-# happen from the front. The previous implementation deleted the *first-
-# inserted* key on eviction regardless of recent use, which churned the
-# cache so badly that hot files were evicted while idle ones lingered.
-# ---------------------------------------------------------------------------
-_transcript_cache: "OrderedDict[str, dict]" = OrderedDict()
-_transcript_cache_lock = threading.Lock()
-_TRANSCRIPT_CACHE_MAX = 20
-
-
-def _cache_key(filepath):
-    """Generate cache key from filepath + file modification time."""
-    try:
-        mtime = os.path.getmtime(filepath)
-    except OSError:
-        mtime = 0
-    return f"{os.path.normcase(os.path.realpath(filepath))}:{mtime}"
-
-
-def cache_transcript(filepath, segments, language="", model=""):
-    """Cache transcription results for reuse."""
-    key = _cache_key(filepath)
-    with _transcript_cache_lock:
-        # If the key already exists, overwrite and bump to MRU.
-        if key in _transcript_cache:
-            _transcript_cache.move_to_end(key, last=True)
-        _transcript_cache[key] = {
-            "segments": segments,
-            "language": language,
-            "model": model,
-        }
-        while len(_transcript_cache) > _TRANSCRIPT_CACHE_MAX:
-            _transcript_cache.popitem(last=False)  # LRU eviction from the front
-
-
-def get_cached_transcript(filepath, model=""):
-    """Get cached transcript if available and model matches."""
-    key = _cache_key(filepath)
-    with _transcript_cache_lock:
-        cached = _transcript_cache.get(key)
-        if cached and (not model or cached.get("model") == model):
-            # Promote to MRU so future evictions drop genuinely cold keys.
-            _transcript_cache.move_to_end(key, last=True)
-            return cached["segments"]
-    return None
 
 _VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
 _VALID_ANIMATIONS = {"pop", "slide_up", "fade", "bounce", "typewriter", "highlight_box", "glow"}
@@ -287,51 +236,11 @@ def generate_captions(job_id, filepath, data):
         word_timestamps=word_timestamps,
     )
 
-    # Check transcript cache (only for SRT/VTT export -- styled captions need Segment objects)
-    _use_cache = sub_format in ("srt", "vtt", "json") and not data.get("force_retranscribe", False)
-    cached = get_cached_transcript(filepath, model=model) if _use_cache else None
-    if cached:
-        _update_job(job_id, progress=20, message="Using cached transcript...")
-        # Build minimal duck-typed segments with .start/.end/.text/.words
-        # for the export functions — SimpleNamespace is cleaner than the
-        # previous dynamic ``type("CachedSeg", (), {})`` pattern and still
-        # satisfies the attribute-based interface export_srt/_vtt/_json
-        # rely on.
-        cached_segs = [
-            _segment_namespace_from_dict(cs)
-            for cs in cached
-        ]
-        _cached_words = sum(
-            len(getattr(seg, "words", []) or []) or len(seg.text.split())
-            for seg in cached_segs
-            if seg.text
-        )
-        result = SimpleNamespace(
-            segments=cached_segs,
-            language=language or "en",
-            word_count=_cached_words,
-            language_confidence=1.0,
-            human_review_recommended=any(
-                bool(getattr(seg, "human_review_recommended", False))
-                for seg in cached_segs
-            ),
-            review_segment_count=sum(
-                1
-                for seg in cached_segs
-                if bool(getattr(seg, "human_review_recommended", False))
-            ),
-        )
-    else:
-        _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
-        result = transcribe(filepath, config=config)
-        # Cache for reuse by highlights/shorts/translate
-        if hasattr(result, "segments"):
-            raw_segs = result.segments or []
-            if raw_segs and hasattr(raw_segs[0], "start"):
-                segs = _segment_payloads(raw_segs, include_words=True)
-            else:
-                segs = list(raw_segs)
-            cache_transcript(filepath, segs, language=getattr(result, "language", ""), model=model)
+    force_retranscribe = safe_bool(data.get("force_retranscribe", False), False)
+    _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
+    result = transcribe(filepath, config=config, use_cache=not force_retranscribe)
+    if getattr(result, "cache_hit", False):
+        _update_job(job_id, progress=25, message="Using cached transcript...")
 
     if _is_cancelled(job_id):
         return {"cancelled": True}
@@ -364,6 +273,8 @@ def generate_captions(job_id, filepath, data):
         "segments": len(result.segments),
         "caption_segments": len(result.segments),
         "words": getattr(result, "word_count", 0),
+        "transcript_cache_hit": bool(getattr(result, "cache_hit", False)),
+        "transcript_cache_key": getattr(result, "cache_key", None),
     }
     response.update(_caption_review_summary(result))
     if sub_format == "srt":
@@ -407,6 +318,29 @@ def caption_display_setting_preview():
         return jsonify(build_preview_payload(settings=settings, sample_text=sample_text))
     except Exception as e:
         return safe_error(e, "caption_display_setting_preview")
+
+
+@captions_bp.route("/captions/cache/stats", methods=["GET"])
+def caption_cache_stats():
+    """Return persistent transcript-cache inventory and hit counters."""
+    try:
+        from opencut.core.transcript_cache import cache_stats
+
+        return jsonify(cache_stats())
+    except Exception as e:
+        return safe_error(e, "caption_cache_stats")
+
+
+@captions_bp.route("/captions/cache/clear", methods=["DELETE"])
+@require_csrf
+def caption_cache_clear():
+    """Clear persistent transcript-cache entries."""
+    try:
+        from opencut.core.transcript_cache import clear_cache
+
+        return jsonify(clear_cache())
+    except Exception as e:
+        return safe_error(e, "caption_cache_clear")
 
 
 @captions_bp.route("/styled-captions", methods=["POST"])
@@ -1910,21 +1844,16 @@ def captions_chapters(job_id, filepath, data):
         _update_job(job_id, progress=10, message="Transcribing for chapter generation...")
         config = CaptionConfig(model=transcribe_model, word_timestamps=False)
 
-        # Check cache first
-        cached = get_cached_transcript(filepath, model=transcribe_model)
-        if cached:
-            effective_segments = cached
+        result = transcribe(filepath, config=config)
+        if getattr(result, "cache_hit", False):
             _update_job(job_id, progress=30, message="Using cached transcript...")
+        if hasattr(result, "segments"):
+            effective_segments = [
+                _segment_payload(s, include_words=False)
+                for s in result.segments
+            ]
         else:
-            result = transcribe(filepath, config=config)
-            if hasattr(result, "segments"):
-                effective_segments = [
-                    _segment_payload(s, include_words=False)
-                    for s in result.segments
-                ]
-                cache_transcript(filepath, effective_segments, model=transcribe_model)
-            else:
-                effective_segments = []
+            effective_segments = []
 
     if not effective_segments:
         raise ValueError("No transcript segments available")
@@ -1978,21 +1907,16 @@ def captions_repeat_detect(job_id, filepath, data):
 
     config = _CC(model=model, word_timestamps=True)
 
-    # Check cache
-    cached = get_cached_transcript(filepath, model=model)
-    if cached:
-        segments = cached
+    result = transcribe(filepath, config=config)
+    if getattr(result, "cache_hit", False):
         _update_job(job_id, progress=30, message="Using cached transcript...")
+    if hasattr(result, "segments"):
+        segments = [
+            _segment_payload(s, include_words=True)
+            for s in result.segments
+        ]
     else:
-        result = transcribe(filepath, config=config)
-        if hasattr(result, "segments"):
-            segments = [
-                _segment_payload(s, include_words=True)
-                for s in result.segments
-            ]
-            cache_transcript(filepath, segments, model=model)
-        else:
-            segments = []
+        segments = []
 
     if not segments:
         return {"repeats": [], "clean_ranges": [], "total_removed_seconds": 0.0}

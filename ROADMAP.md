@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.86
-**Updated**: 2026-05-19
-**Baseline**: v1.32.0 (1,381 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Version**: 4.87
+**Updated**: 2026-06-04
+**Baseline**: v1.32.0 (1,519 routes, 107 blueprints, 597 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
@@ -181,6 +181,8 @@
 > **v4.85 status (2026-05-19, eighty-second pass)**: closed **F205** after a complete CI-style coverage run finished locally: `8,540 passed`, `16 skipped`, 7 warnings, 131,130 statements, 70,935 covered lines, 60,195 missing lines, and **54.09517272935255%** reported line coverage. `.github/workflows/build.yml` now raises Release Full from `--cov-fail-under=50` to `--cov-fail-under=54`, and `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` records the command, totals, SHA256, and cleanup boundary. All Pass-2 Now items are now closed locally; remaining Pass-2 open work is F252 live UXP WebView/UDT cutover and F253 Hybrid Plugin `.uxpaddon`.
 >
 > **v4.86 status (2026-05-19, eighty-third pass)**: advanced **F252.3** by adding a repository-side UDT result-capture contract. `opencut/core/uxp_udt_results.py` validates JSON captured from `window.OpenCutUXPUdtHarness.run({ includeMutating: true })`, `python -m opencut.tools.validate_uxp_udt_results` emits templates and strict readiness reports, and `tests/test_uxp_udt_results.py` is in release smoke. F252 still cannot close until a real Premiere UDT run is captured and passes the validator, then the live manifest can switch to the WebView entrypoint.
+>
+> **v4.87 status (2026-06-04, continuation pass)**: closed **N1** from the May 26 continuation queue by replacing the route-only path/mtime transcript cache with a persistent content-addressed cache in `opencut/core/transcript_cache.py`. `transcribe()` now keys cached results by source SHA-256, backend/version, and caption settings, writes atomic JSON entries under `~/.opencut/transcript_cache/`, exposes cache hit metadata on returned `TranscriptionResult`s, and adds `GET /captions/cache/stats` plus CSRF-protected `DELETE /captions/cache/clear`. Route manifest now reports **1,519 routes / 107 blueprints**, `/system/feature-state` exposes **108** records, and extended MCP exposes **1,463** opt-in route tools.
 
 ---
 
@@ -199,6 +201,42 @@ F252 advanced with the missing result-capture gate for the existing F267 UDT har
 Validation after the batch: focused F252.3 tests passed (`7 passed`), touched Python files compile, and `python -m pytest tests/test_uxp_udt_results.py tests/test_uxp_udt_harness.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed locally.
 
 ---
+
+## 2026-06-04 v4.87 Transcript Cache (N1)
+
+N1 is closed. The May 26 performance/recovery continuation queue is now tracked here as the canonical active queue; the archived research plan remains supporting evidence only.
+
+| Surface | Status |
+|---|---|
+| Persistent cache | `opencut/core/transcript_cache.py` stores SHA-256 keyed transcript JSON entries under `~/.opencut/transcript_cache/` with atomic writes and corrupt-entry quarantine. |
+| Core integration | `opencut/core/captions.py::transcribe()` checks the cache before audio extraction, preserves the existing `TranscriptionResult` return type, and adds `cache_hit`, `cache_key`, and `cache_path` metadata. |
+| Routes | `/captions`, `/captions/chapters`, `/captions/repeat-detect`, CLI callers, and other `transcribe()` consumers share the same core cache; `/captions` still supports `force_retranscribe=true`. |
+| Operations | `GET /captions/cache/stats` reports entries, bytes, and since-boot hit/miss/write counters; `DELETE /captions/cache/clear` clears the persistent cache behind CSRF. |
+| Generated surfaces | Route/API/feature-readiness/MCP manifests and README route badge were regenerated after adding the two cache endpoints. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_transcript_cache.py -q -p no:cacheprovider -o addopts=""` passed (`4 passed`), touched Python files compile, generated surface drift checks were refreshed, and route count is now 1,519.
+
+---
+
+## Active Continuation Queue (May 26 Plan)
+
+- [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
+- [ ] **P0 — N2 `missing_dependency()` includes pip extra name** — add per-feature extra hints and cover the 12 highest-frequency dependency failures.
+- [ ] **P0 — N3 GPU semaphore default-wait 30s** — change instant-contention behavior to bounded waiting while preserving env overrides.
+- [ ] **P1 — N6 `GET /webhooks/event-types`** — expose the webhook event catalogue and legacy aliases through the API.
+- [ ] **P1 — E11 webhook signatures mandatory by default** — require explicit opt-out for unsigned webhook delivery.
+- [ ] **P1 — N4 disk preflight in heavy routes** — wire `disk_monitor.preflight()` into the most disk-intensive async jobs.
+- [ ] **P1 — N5 job resume for interrupted jobs** — add resumability metadata and a resume route for checkpointable jobs.
+- [ ] **P1 — N7 plugin job-registration API** — let signed/capability-scoped plugins register namespaced background jobs through the existing async-job machinery.
+- [ ] **P1 — N8 third-party agent-skill loader** — load validated user skills from `~/.opencut/skills/<id>/`.
+- [ ] **P1 — E14 F236 CEP parity** — add CEP-side discoverability for caption display settings already shipped in UXP.
+- [ ] **P2 — N9 enriched job metadata** — add peak resource fields and explicit exit reasons to persisted job history.
+- [ ] **P2 — N10 request-ID propagation into subprocess stderr** — carry request IDs into FFmpeg/subprocess logging.
+- [ ] **P2 — E12 workflow allowlist derived from route manifest** — replace hard-coded workflow endpoint allowlists with generated route data.
+- [ ] **P2 — E13 CLI surface parity escape hatch** — add CLI access for high-value API workflows.
+- [ ] **P2 — E15 i18n migration rolling batches** — continue removing high-impact bare-English panel strings.
+- [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
+- [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
 ## 2026-05-19 v4.85 F205 Coverage Floor Uplift
 
