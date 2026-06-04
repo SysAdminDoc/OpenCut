@@ -17,14 +17,20 @@ Reviews with no `project_id` are grouped under `default`.
 
 ## Signed Webhooks
 
-`POST /api/webhooks` accepts an optional `secret` field. When a secret is set,
-outbound deliveries include:
+`POST /api/webhooks` requires a non-empty `secret` field by default. For trusted
+local testing only, callers may explicitly opt into unsigned delivery with
+`POST /api/webhooks?allow_unsigned=true`; OpenCut writes
+`~/.opencut/webhooks_unsigned.txt` once when unsigned webhook configs are
+present.
+
+Signed outbound deliveries include:
 
 - `X-OpenCut-Signature: sha256=<hex>`
 - `X-OpenCut-Signature-Algorithm: HMAC-SHA256`
 
-The signature covers the exact JSON request body bytes. Listing webhooks returns
-`has_secret` and never echoes the secret value.
+The signature covers the exact JSON request body bytes. Existing unsigned
+configs still load for compatibility. Listing webhooks returns `has_secret` and
+never echoes the secret value.
 
 Review comments and status updates emit best-effort events through the existing
 webhook system:

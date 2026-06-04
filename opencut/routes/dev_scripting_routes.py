@@ -16,7 +16,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_float, safe_int, validate_path
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -396,7 +396,7 @@ def webhook_register():
             "url": "https://example.com/hook",
             "events": ["job_complete", "job_failed"],
             "description": "My webhook",
-            "secret": "optional HMAC signing secret",
+            "secret": "required HMAC signing secret",
             "id": "optional-existing-id"
         }
     """
@@ -420,6 +420,8 @@ def webhook_register():
     if not isinstance(events, list):
         return jsonify({"error": "events must be a list"}), 400
 
+    allow_unsigned = safe_bool(request.args.get("allow_unsigned"), False)
+
     try:
         webhook = register_webhook(
             url=url,
@@ -427,6 +429,7 @@ def webhook_register():
             description=description,
             webhook_id=webhook_id,
             secret=secret,
+            allow_unsigned=allow_unsigned,
         )
         return jsonify({
             "success": True,

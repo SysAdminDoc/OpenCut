@@ -11,8 +11,8 @@ OpenCut is already extremely broad. The highest-value research direction is not
 another large wave of model surfaces. It is making existing work easier to run,
 debug, resume, extend, and trust.
 
-The May 26 research pass identified the strongest v1.33+ opportunities. N1-N3
-and N6 are now closed in `ROADMAP.md` v4.87-v4.90; the remaining queue is tracked in
+The May 26 research pass identified the strongest v1.33+ opportunities. N1-N3,
+N6, and E11 are now closed in `ROADMAP.md` v4.87-v4.91; the remaining queue is tracked in
 `ROADMAP.md` under "Active Continuation Queue (May 26 Plan)".
 
 1. Content-addressable transcript cache by audio hash. **Shipped in v4.87.**
@@ -42,7 +42,7 @@ and N6 are now closed in `ROADMAP.md` v4.87-v4.90; the remaining queue is tracke
 | Observability | Job metadata and request correlation must span Python, FFmpeg, subprocesses, routes, and panel state. |
 | Recovery | Interrupted jobs should become resumable or explicitly non-resumable with useful reasons. |
 | Extensibility | Plugins need safe background-job primitives and capability-scoped skill loading, not just Flask route registration. |
-| Release trust | Keep generated manifests, smoke gates, docs-size checks, advisories, signing, SBOM, and package wiring in one release-readiness loop. |
+| Release trust | Keep generated manifests, smoke gates, docs-size checks, advisories, signing, SBOM, webhook signing defaults, and package wiring in one release-readiness loop. |
 | UXP migration | CEP remains supported, but UXP parity and WebView cutover work must stay visible because CEP end-of-life risk is time-bound. |
 
 ## Archive Notes
