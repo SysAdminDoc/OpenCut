@@ -175,6 +175,17 @@ MIGRATED_KEYS = (
     "toast.preset_imported",
     "toast.preset_import_failed",
     "toast.preset_invalid_format",
+    # Seventeenth batch (project template feedback and labels).
+    "toast.select_template_first",
+    "toast.template_apply_failed",
+    "toast.template_applied",
+    "toast.enter_template_name",
+    "templates.custom_template_description",
+    "toast.template_saved",
+    "toast.template_save_failed",
+    "templates.select",
+    "templates.builtin_group",
+    "templates.custom_group",
 )
 
 
@@ -852,6 +863,57 @@ EXPECTED_CALLS = (
         "toast.preset_invalid_format",
         re.compile(r't\(\s*"toast\.preset_invalid_format"'),
         re.compile(r'showToast\(\s*"Invalid preset file format"'),
+    ),
+    # --- Seventeenth batch ------------------------------------------
+    (
+        "toast.select_template_first",
+        re.compile(r't\(\s*"toast\.select_template_first"'),
+        re.compile(r'showToast\(\s*"Select a template first"'),
+    ),
+    (
+        "toast.template_apply_failed",
+        re.compile(r't\(\s*"toast\.template_apply_failed"'),
+        re.compile(r'showToast\(\s*"Failed to apply template"'),
+    ),
+    (
+        "toast.template_applied",
+        re.compile(r't\(\s*"toast\.template_applied"'),
+        re.compile(r'showToast\(\s*"Template applied: "'),
+    ),
+    (
+        "toast.enter_template_name",
+        re.compile(r't\(\s*"toast\.enter_template_name"'),
+        re.compile(r'showToast\(\s*"Enter a template name"'),
+    ),
+    (
+        "templates.custom_template_description",
+        re.compile(r't\(\s*"templates\.custom_template_description"'),
+        re.compile(r'description:\s*"Custom template"'),
+    ),
+    (
+        "toast.template_saved",
+        re.compile(r't\(\s*"toast\.template_saved"'),
+        re.compile(r'showToast\(\s*"Template saved: "'),
+    ),
+    (
+        "toast.template_save_failed",
+        re.compile(r't\(\s*"toast\.template_save_failed"'),
+        re.compile(r'showToast\(\s*"Failed to save template"'),
+    ),
+    (
+        "templates.select",
+        re.compile(r't\(\s*"templates\.select"'),
+        re.compile(r'var html = \'<option value="" disabled selected>Select a template'),
+    ),
+    (
+        "templates.builtin_group",
+        re.compile(r't\(\s*"templates\.builtin_group"'),
+        re.compile(r'html\s*\+=\s*\'<optgroup label="Built-in">\''),
+    ),
+    (
+        "templates.custom_group",
+        re.compile(r't\(\s*"templates\.custom_group"'),
+        re.compile(r'html\s*\+=\s*\'<optgroup label="Custom">\''),
     ),
 )
 

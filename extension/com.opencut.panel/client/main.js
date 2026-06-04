@@ -9732,10 +9732,10 @@
         if (applyBtn) {
             applyBtn.addEventListener("click", function () {
                 var id = select.value;
-                if (!id) { showToast("Select a template first", "error"); return; }
+                if (!id) { showToast(t("toast.select_template_first", "Select a template first"), "error"); return; }
                 api("POST", "/templates/apply", { id: id }, function (err, data) {
                     if (err || !data || !data.success) {
-                        showToast("Failed to apply template", "error");
+                        showToast(t("toast.template_apply_failed", "Failed to apply template"), "error");
                         return;
                     }
                     var tpl = data.template;
@@ -9783,7 +9783,8 @@
                             }
                         }
                     }
-                    showToast("Template applied: " + tpl.name, "success");
+                    var _templateAppliedTemplate = t("toast.template_applied", "Template applied: {name}");
+                    showToast(_templateAppliedTemplate.replace("{name}", tpl.name), "success");
                 });
             });
         }
@@ -9791,10 +9792,10 @@
         if (saveBtn) {
             saveBtn.addEventListener("click", function () {
                 var name = nameInput ? nameInput.value.trim() : "";
-                if (!name) { showToast("Enter a template name", "error"); return; }
+                if (!name) { showToast(t("toast.enter_template_name", "Enter a template name"), "error"); return; }
                 var templateData = {
                     name: name,
-                    description: "Custom template",
+                    description: t("templates.custom_template_description", "Custom template"),
                     export: {},
                     audio: {},
                     captions: {},
@@ -9816,11 +9817,12 @@
                 var cfont = _get("captionFontSize"); if (cfont) templateData.captions.font_size = parseInt(cfont, 10) || 24;
                 api("POST", "/templates/save", templateData, function (err, data) {
                     if (!err && data && data.success) {
-                        showToast("Template saved: " + name, "success");
+                        var _templateSavedTemplate = t("toast.template_saved", "Template saved: {name}");
+                        showToast(_templateSavedTemplate.replace("{name}", name), "success");
                         if (nameInput) nameInput.value = "";
                         loadTemplateList();
                     } else {
-                        showToast("Failed to save template", "error");
+                        showToast(t("toast.template_save_failed", "Failed to save template"), "error");
                     }
                 });
             });
@@ -9835,16 +9837,16 @@
         api("GET", "/templates/list", null, function (err, data) {
             if (err || !data) return;
             _projectTemplates = (data.builtin || []).concat(data.user || []);
-                var html = '<option value="" disabled selected>Select a template…</option>';
+                var html = '<option value="" disabled selected>' + esc(t("templates.select", "Select a template…")) + '</option>';
             if (data.builtin && data.builtin.length) {
-                html += '<optgroup label="Built-in">';
+                html += '<optgroup label="' + esc(t("templates.builtin_group", "Built-in")) + '">';
                 for (var i = 0; i < data.builtin.length; i++) {
                     html += '<option value="' + esc(data.builtin[i].id) + '">' + esc(data.builtin[i].name) + '</option>';
                 }
                 html += '</optgroup>';
             }
             if (data.user && data.user.length) {
-                html += '<optgroup label="Custom">';
+                html += '<optgroup label="' + esc(t("templates.custom_group", "Custom")) + '">';
                 for (var j = 0; j < data.user.length; j++) {
                     html += '<option value="' + esc(data.user[j].id) + '">' + esc(data.user[j].name) + '</option>';
                 }
