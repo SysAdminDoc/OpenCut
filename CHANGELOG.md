@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 125
+
+- Migrated the Audio SFX and Tone Generator form shell to static locale hooks for generator, preset, waveform, frequency, duration, auto-import, and Generate Sound controls while preserving backend values.
+- `client/locales/en.json` grows from 1,913 to 1,930 keys; `i18n-drift` reports 1,848 consumers, 82 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Audio SFX/Tone static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 124
 
 - Migrated the Audio TTS form shell to static locale hooks for engine/voice labels, textarea placeholder, auto-import copy, and Edge TTS install hints while preserving backend engine and voice IDs.
