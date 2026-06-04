@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.221
+**Version**: 4.222
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 17 - 2026-06-04.
+> Last researched: Cycle 18 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -471,6 +471,8 @@
 > **v4.220 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 17 researcher note into the canonical roadmap surfaces. RA-28 now tracks generated-count drift in README prose, architecture diagrams, and project-structure comments outside the existing badge sync gate.
 >
 > **v4.221 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-thirteenth rolling i18n batch covering the Transcript editor static shell. The i18n drift gate now reports 1,803 keys / 1,699 consumers / 104 dead / 0 missing.
+>
+> **v4.222 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-fourteenth rolling i18n batch covering the Caption Translation form shell. The i18n drift gate now reports 1,816 keys / 1,715 consumers / 101 dead / 0 missing.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2502,6 +2504,25 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.222 CEP i18n Migration Batch 114 (E15)
+
+E15 remains open. This batch migrates the Caption Translation form shell while reusing the existing shared model, language, and format keys where possible.
+
+| Surface | Status |
+|---|---|
+| Transcribe step control | The Step 1 label and three Whisper model options now expose static locale hooks. |
+| Source language control | The Source Language label and twelve source-language options now expose static locale hooks. |
+| Target language control | The Target Language label and nineteen target-language options now expose static locale hooks, including target-only languages such as Dutch, Polish, Thai, Vietnamese, and Indonesian. |
+| Output format control | The Output Format label and SRT/VTT/ASS options now expose static locale hooks. |
+| NLLB install hint | The missing-NLLB hint and Install NLLB button now expose static locale hooks. |
+| Locale ledger | `locales/en.json` now carries 13 additional translation/install/language keys, bringing the guarded migration ledger to 1,410 keys across one hundred fourteen rounds. |
+| Drift posture | `i18n-drift` reports 1,816 keys, 1,715 consumers, 101 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Caption Translation static HTML hooks and matching locale keys. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migration.py tests/test_i18n_drift.py -q -p no:cacheprovider -o addopts=""` passed (`9 passed`), `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,816 keys, 1,715 consumers, 101 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2518,7 +2539,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.221 with the one-hundred-thirteenth guarded Transcript editor static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.222 with the one-hundred-fourteenth guarded Caption Translation form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -2719,6 +2740,15 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
   prose, architecture diagram labels, and project-structure comments that the
   current badge-only sync gate does not cover.
 
+### Researcher Queue (Cycle 18 - 2026-06-04)
+
+- [x] 🔬 `docker-ci-smoke-coverage-recheck` - checked Release Full, PR Fast,
+  release-smoke registration, Dockerfile, compose, and Docker-related test
+  coverage for image-build/config/health evidence. No new RA row was promoted
+  because RA-25, RA-26, and RA-27 already cover Docker dependency surface,
+  runtime posture, GPU compose command drift, and the requested validation
+  hooks.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2741,7 +2771,8 @@ a Docker runtime parity guardrail for non-root volume paths and WebSocket port
 posture. Cycle 16 adds a Docker GPU compose command guardrail so onboarding
 docs cannot reference an absent compose file. Cycle 17 adds a README
 non-badge generated-count guardrail for stale prose, diagram, and
-project-structure claims.
+project-structure claims. Cycle 18 rechecked Docker CI/release-smoke coverage
+and promoted no new row because the evidence maps back to RA-25 through RA-27.
 
 ### Quick Wins
 
