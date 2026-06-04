@@ -794,6 +794,14 @@ MIGRATED_KEYS = (
     "merge.remove",
     "merge.requires_two",
     "video.trim_end_after_start",
+    # Fifty-first batch (LLM/defaults utility feedback).
+    "defaults.save_failed",
+    "defaults.saved",
+    "llm.connected",
+    "llm.save_failed",
+    "llm.saved",
+    "transcript.summarizing",
+    "video.select_reference_image",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4246,6 +4254,42 @@ EXPECTED_CALLS = (
         "video.trim_end_after_start",
         re.compile(r't\(\s*"video\.trim_end_after_start"'),
         re.compile(r'showAlert\("End time must be after start time\."'),
+    ),
+    # --- Fifty-first batch -----------------------------------------
+    (
+        "defaults.save_failed",
+        re.compile(r't\(\s*"defaults\.save_failed"'),
+        re.compile(r'showToast\("Failed to save defaults"'),
+    ),
+    (
+        "defaults.saved",
+        re.compile(r't\(\s*"defaults\.saved"'),
+        re.compile(r'showToast\("Defaults saved"'),
+    ),
+    (
+        "llm.connected",
+        re.compile(r't\(\s*"llm\.connected"'),
+        re.compile(r'showToast\("LLM connected"'),
+    ),
+    (
+        "llm.save_failed",
+        re.compile(r't\(\s*"llm\.save_failed"'),
+        re.compile(r'showToast\("Failed to save LLM settings"'),
+    ),
+    (
+        "llm.saved",
+        re.compile(r't\(\s*"llm\.saved"'),
+        re.compile(r'showToast\("LLM settings saved"'),
+    ),
+    (
+        "transcript.summarizing",
+        re.compile(r't\(\s*"transcript\.summarizing"'),
+        re.compile(r'el\.summaryContent\.textContent\s*=\s*"Summarizing'),
+    ),
+    (
+        "video.select_reference_image",
+        re.compile(r't\(\s*"video\.select_reference_image"'),
+        re.compile(r'showAlert\("Select a reference image\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
