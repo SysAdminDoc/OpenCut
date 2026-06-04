@@ -1666,18 +1666,18 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
-                                <span data-i18n="audio.duck">Audio Ducking</span>
+                                <span data-i18n="audio.ducking_title">Audio Ducking</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="audio.duck_desc">Automatically lower background music when someone is speaking. Select your voice clip above, then provide the music file below.</p>
 
                         <div class="form-group">
-                            <label for="duckMusicPath">Music File Path</label>
-                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="duckMusicPath">Browse</button></div>
+                            <label for="duckMusicPath" data-i18n="audio.music_file_path">Music File Path</label>
+                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="duckMusicPath" data-i18n="common.browse">Browse</button></div>
                         </div>
 
                         <div class="form-group">
-                            <label for="duckMusicVol">Music Volume (base)</label>
+                            <label for="duckMusicVol" data-i18n="audio.duck_music_vol">Music Volume (base)</label>
                             <div class="slider-row">
                                 <input type="range" id="duckMusicVol" min="0.05" max="1.0" value="0.25" step="0.05">
                                 <span class="slider-val" id="duckMusicVolVal">0.25</span>
@@ -1685,7 +1685,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="duckAmount">Duck Amount</label>
+                            <label for="duckAmount" data-i18n="audio.duck_amount">Duck Amount</label>
                             <div class="slider-row">
                                 <input type="range" id="duckAmount" min="0.1" max="1.0" value="0.7" step="0.05">
                                 <span class="slider-val" id="duckAmountVal">0.7</span>
@@ -1694,10 +1694,10 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="duckAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
-                        <button type="button" class="btn-primary" id="runDuckBtn" disabled>Add Music with Ducking</button>
+                        <button type="button" class="btn-primary" id="runDuckBtn" disabled data-i18n="audio.add_music_ducking">Add Music with Ducking</button>
                     </section>
                 </div>
 
