@@ -1100,6 +1100,22 @@ MIGRATED_KEYS = (
     "session.relative_minute",
     "session.relative_minutes",
     "session.relative_yesterday",
+    # Seventy-sixth batch (output browser and review summaries).
+    "history.output_label",
+    "history.output_stopped",
+    "history.replayable_parameters",
+    "history.source_label",
+    "history.source_not_recorded",
+    "output.checking_recent_body",
+    "output.checking_recent_title",
+    "output.empty_body",
+    "output.empty_title",
+    "output.load_failed_body",
+    "output.load_failed_title",
+    "output.outputs_label",
+    "output.untitled",
+    "review.cuts_selected_summary",
+    "review.include_cut_label",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5990,6 +6006,82 @@ EXPECTED_CALLS = (
         "session.relative_yesterday",
         re.compile(r't\(\s*"session\.relative_yesterday"'),
         re.compile(r'return "yesterday"'),
+    ),
+    # --- Seventy-sixth batch -------------------------------------
+    (
+        "history.output_label",
+        re.compile(r't\(\s*"history\.output_label"'),
+        re.compile(r'bits\.push\("Output: "\s*\+'),
+    ),
+    (
+        "history.output_stopped",
+        re.compile(r't\(\s*"history\.output_stopped"'),
+        re.compile(r'bits\.push\("Stopped before the output finished\."'),
+    ),
+    (
+        "history.replayable_parameters",
+        re.compile(r't\(\s*"history\.replayable_parameters"'),
+        re.compile(r'bits\.push\("Saved with replayable parameters\."'),
+    ),
+    (
+        "history.source_label",
+        re.compile(r't\(\s*"history\.source_label"'),
+        re.compile(r'"Source: "\s*\+\s*sourceName'),
+    ),
+    (
+        "history.source_not_recorded",
+        re.compile(r't\(\s*"history\.source_not_recorded"'),
+        re.compile(r':\s*"Source not recorded"'),
+    ),
+    (
+        "output.checking_recent_body",
+        re.compile(r't\(\s*"output\.checking_recent_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Checking recent outputs",\s*"OpenCut is asking'),
+    ),
+    (
+        "output.checking_recent_title",
+        re.compile(r't\(\s*"output\.checking_recent_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Checking recent outputs"'),
+    ),
+    (
+        "output.empty_body",
+        re.compile(r't\(\s*"output\.empty_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No recent outputs yet",\s*"Finished files will collect'),
+    ),
+    (
+        "output.empty_title",
+        re.compile(r't\(\s*"output\.empty_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"No recent outputs yet"'),
+    ),
+    (
+        "output.load_failed_body",
+        re.compile(r't\(\s*"output\.load_failed_body"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Couldn\'t load recent outputs",\s*"Reconnect the backend'),
+    ),
+    (
+        "output.load_failed_title",
+        re.compile(r't\(\s*"output\.load_failed_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Couldn\'t load recent outputs"'),
+    ),
+    (
+        "output.outputs_label",
+        re.compile(r't\(\s*"output\.outputs_label"'),
+        re.compile(r'setToggleButtonCount\(el\.outputBrowserToggle,\s*"Outputs"'),
+    ),
+    (
+        "output.untitled",
+        re.compile(r't\(\s*"output\.untitled"'),
+        re.compile(r'if \(!path\) return "Untitled output"'),
+    ),
+    (
+        "review.cuts_selected_summary",
+        re.compile(r't\(\s*"review\.cuts_selected_summary"'),
+        re.compile(r'checked\s*\+\s*" of "\s*\+\s*boxes\.length\s*\+\s*" cuts selected'),
+    ),
+    (
+        "review.include_cut_label",
+        re.compile(r't\(\s*"review\.include_cut_label"'),
+        re.compile(r'"Include cut "\s*\+\s*\(i \+ 1\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

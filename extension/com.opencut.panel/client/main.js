@@ -9701,7 +9701,13 @@
                 totalDuration += parseFloat(boxes[i].getAttribute("data-duration") || 0);
             }
         }
-        summary.textContent = checked + " of " + boxes.length + " cuts selected · " + safeFixed(totalDuration, 1) + "s marked for write-back";
+        summary.textContent = t(
+            "review.cuts_selected_summary",
+            "{selected} of {total} cuts selected · {seconds}s marked for write-back"
+        )
+            .replace("{selected}", checked)
+            .replace("{total}", boxes.length)
+            .replace("{seconds}", safeFixed(totalDuration, 1));
     }
 
     /**
@@ -9734,7 +9740,10 @@
             var left = totalDuration > 0 ? Math.max(0, Math.min(100, (startSec / totalDuration) * 100)) : 0;
             var width = totalDuration > 0 ? Math.max(3, (dur / totalDuration) * 100) : 100;
             if (left + width > 100) width = Math.max(3, 100 - left);
-            var checkboxLabel = "Include cut " + (i + 1) + ", " + formatTimecode(startSec) + " to " + formatTimecode(endSec);
+            var checkboxLabel = t("review.include_cut_label", "Include cut {index}, {start} to {end}")
+                .replace("{index}", i + 1)
+                .replace("{start}", formatTimecode(startSec))
+                .replace("{end}", formatTimecode(endSec));
             html += '<label class="cut-review-row" data-idx="' + i + '">'
                 + '<input type="checkbox" checked data-index="' + i + '" data-duration="' + dur.toFixed(2) + '" aria-label="' + esc(checkboxLabel) + '">'
                 + '<div class="cut-review-main">'
@@ -9925,16 +9934,19 @@
         var outputPath = getJobHistoryOutputPath(entry);
         var bits = [];
 
-        bits.push(sourceName ? ("Source: " + sourceName) : "Source not recorded");
+        bits.push(sourceName
+            ? t("history.source_label", "Source: {source}").replace("{source}", sourceName)
+            : t("history.source_not_recorded", "Source not recorded"));
 
         if (outputPath) {
-            bits.push("Output: " + outputPath.split(/[\\/]/).pop());
+            bits.push(t("history.output_label", "Output: {output}")
+                .replace("{output}", outputPath.split(/[\\/]/).pop()));
         } else if ((entry && entry.status) === "error" && entry.message) {
             bits.push(entry.message);
         } else if ((entry && entry.status) === "cancelled") {
-            bits.push("Stopped before the output finished.");
+            bits.push(t("history.output_stopped", "Stopped before the output finished."));
         } else {
-            bits.push("Saved with replayable parameters.");
+            bits.push(t("history.replayable_parameters", "Saved with replayable parameters."));
         }
 
         return bits.join(" • ");
@@ -11505,7 +11517,7 @@
     function getOutputItemName(item) {
         var path = getOutputItemPath(item);
         if (item && item.name) return item.name;
-        if (!path) return "Untitled output";
+        if (!path) return t("output.untitled", "Untitled output");
         return path.split(/[\\/]/).pop() || path;
     }
 
@@ -11563,32 +11575,32 @@
     function refreshOutputs() {
         if (el.outputBrowserList) {
             el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
-                "Checking recent outputs",
-                "OpenCut is asking the local backend for rendered files.",
+                t("output.checking_recent_title", "Checking recent outputs"),
+                t("output.checking_recent_body", "OpenCut is asking the local backend for rendered files."),
                 "loading"
             );
         }
         api("GET", "/outputs/recent", null, function (err, data) {
             if (el.outputBrowserToggle) {
-                setToggleButtonCount(el.outputBrowserToggle, "Outputs", Array.isArray(data) ? data.length : 0);
+                setToggleButtonCount(el.outputBrowserToggle, t("output.outputs_label", "Outputs"), Array.isArray(data) ? data.length : 0);
             }
             if (!el.outputBrowserList) return;
             el.outputBrowserList.textContent = "";
             if (err || !data || !Array.isArray(data)) {
                 el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
-                    "Couldn't load recent outputs",
-                    "Reconnect the backend or refresh again to pull the latest rendered files.",
+                    t("output.load_failed_title", "Couldn't load recent outputs"),
+                    t("output.load_failed_body", "Reconnect the backend or refresh again to pull the latest rendered files."),
                     "error"
                 );
                 return;
             }
             if (el.outputBrowserToggle) {
-                setToggleButtonCount(el.outputBrowserToggle, "Outputs", data.length);
+                setToggleButtonCount(el.outputBrowserToggle, t("output.outputs_label", "Outputs"), data.length);
             }
             if (data.length === 0) {
                 el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
-                    "No recent outputs yet",
-                    "Finished files will collect here so you can reopen, reveal, or import them without hunting through folders.",
+                    t("output.empty_title", "No recent outputs yet"),
+                    t("output.empty_body", "Finished files will collect here so you can reopen, reveal, or import them without hunting through folders."),
                     "info"
                 );
                 return;
