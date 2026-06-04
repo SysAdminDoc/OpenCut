@@ -124,6 +124,13 @@ HTML_STATIC_SHELL_CALLS = (
 )
 
 
+I18N_ATTRIBUTE_MAPPINGS = (
+    ("data-i18n-title", "title"),
+    ("data-i18n-placeholder", "placeholder"),
+    ("data-i18n-aria-label", "aria-label"),
+)
+
+
 MIGRATED_KEYS = (
     # First batch (the explicit RESEARCH_FEATURE_PLAN E6 list)
     "toast.server_reconnected",
@@ -7129,6 +7136,31 @@ class TestI18nHardcodedMigration(unittest.TestCase):
                     re.compile(rf'{re.escape(attribute)}="{re.escape(key)}"'),
                     f"index.html does not wire {attribute} to {key!r}",
                 )
+
+    def test_dom_i18n_applies_translatable_attributes(self):
+        for data_attribute, dom_attribute in I18N_ATTRIBUTE_MAPPINGS:
+            with self.subTest(data_attribute=data_attribute, dom_attribute=dom_attribute):
+                self.assertRegex(
+                    self.js,
+                    re.compile(
+                        r'\["'
+                        + re.escape(data_attribute)
+                        + r'",\s*"'
+                        + re.escape(dom_attribute)
+                        + r'"\]'
+                    ),
+                    f"main.js does not map {data_attribute!r} to {dom_attribute!r}",
+                )
+        self.assertRegex(
+            self.js,
+            re.compile(r'querySelectorAll\("\[" \+ dataAttr \+ "\]"\)'),
+            "main.js does not query elements with translatable i18n attributes",
+        )
+        self.assertRegex(
+            self.js,
+            re.compile(r'setAttribute\(\s*targetAttr,\s*t\('),
+            "main.js does not apply translated i18n attributes",
+        )
 
 
 if __name__ == "__main__":
