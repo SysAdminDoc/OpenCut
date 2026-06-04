@@ -461,6 +461,23 @@ MIGRATED_KEYS = (
     "status.jobs_summary",
     "status.jobs_none",
     "toast.language_unavailable",
+    # Thirty-sixth batch (onboarding wizard feedback).
+    "onboarding.welcome_title",
+    "onboarding.welcome_body",
+    "onboarding.pick_clip_title",
+    "onboarding.pick_clip_body",
+    "onboarding.cut_title",
+    "onboarding.cut_body",
+    "onboarding.caption_title",
+    "onboarding.caption_body",
+    "onboarding.export_title",
+    "onboarding.export_body",
+    "onboarding.step_count",
+    "onboarding.back",
+    "onboarding.skip",
+    "onboarding.finish",
+    "onboarding.next",
+    "onboarding.ready",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2299,6 +2316,87 @@ EXPECTED_CALLS = (
         "toast.language_unavailable",
         re.compile(r't\(\s*"toast\.language_unavailable"'),
         re.compile(r'showToast\(\s*"Language \'"'),
+    ),
+    # --- Thirty-sixth batch -----------------------------------------
+    (
+        "onboarding.welcome_title",
+        re.compile(r't\(\s*"onboarding\.welcome_title"'),
+        re.compile(r'title:\s*"Welcome to OpenCut"'),
+    ),
+    (
+        "onboarding.welcome_body",
+        re.compile(r't\(\s*"onboarding\.welcome_body"'),
+        re.compile(r'body:\s*"AI-powered video editing automation'),
+    ),
+    (
+        "onboarding.pick_clip_title",
+        re.compile(r't\(\s*"onboarding\.pick_clip_title"'),
+        re.compile(r'title:\s*"Pick a clip"'),
+    ),
+    (
+        "onboarding.pick_clip_body",
+        re.compile(r't\(\s*"onboarding\.pick_clip_body"'),
+        re.compile(r'body:\s*"Choose any clip from your Premiere project'),
+    ),
+    (
+        "onboarding.cut_title",
+        re.compile(r't\(\s*"onboarding\.cut_title"'),
+        re.compile(r'title:\s*"Cut silences \+ fillers"'),
+    ),
+    (
+        "onboarding.cut_body",
+        re.compile(r't\(\s*"onboarding\.cut_body"'),
+        re.compile(r'body:\s*"The Cut tab removes pauses'),
+    ),
+    (
+        "onboarding.caption_title",
+        re.compile(r't\(\s*"onboarding\.caption_title"'),
+        re.compile(r'title:\s*"Caption \+ enhance"'),
+    ),
+    (
+        "onboarding.caption_body",
+        re.compile(r't\(\s*"onboarding\.caption_body"'),
+        re.compile(r'body:\s*"Captions and stems both run locally'),
+    ),
+    (
+        "onboarding.export_title",
+        re.compile(r't\(\s*"onboarding\.export_title"'),
+        re.compile(r'title:\s*"Export"\s*,'),
+    ),
+    (
+        "onboarding.export_body",
+        re.compile(r't\(\s*"onboarding\.export_body"'),
+        re.compile(r'body:\s*"Export to 13 social presets'),
+    ),
+    (
+        "onboarding.step_count",
+        re.compile(r't\(\s*"onboarding\.step_count"'),
+        re.compile(r'\["Step "\s*\+'),
+    ),
+    (
+        "onboarding.back",
+        re.compile(r't\(\s*"onboarding\.back"'),
+        re.compile(r'\},\s*\["Back"\]\)'),
+    ),
+    (
+        "onboarding.skip",
+        re.compile(r't\(\s*"onboarding\.skip"'),
+        re.compile(r'\},\s*\["Skip"\]\)'),
+    ),
+    (
+        "onboarding.finish",
+        re.compile(r't\(\s*"onboarding\.finish"'),
+        re.compile(r'\?\s*"Finish"\s*:\s*"Next"'),
+    ),
+    (
+        "onboarding.next",
+        re.compile(r't\(\s*"onboarding\.next"'),
+        re.compile(r'\?\s*"Finish"\s*:\s*"Next"'),
+    ),
+    (
+        "onboarding.ready",
+        re.compile(r't\(\s*"onboarding\.ready"'),
+        re.compile(r'showToast\(\s*"Ready to go'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
