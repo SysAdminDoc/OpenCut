@@ -205,7 +205,7 @@ def _caption_review_summary(result_or_segments):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions", methods=["POST"])
 @require_csrf
-@async_job("captions", disk_operation="transcribe")
+@async_job("captions", disk_operation="transcribe", resumable=True)
 def generate_captions(job_id, filepath, data):
     """Generate captions/subtitles."""
     output_dir = data.get("output_dir", "")
@@ -491,7 +491,7 @@ def styled_captions_route(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 @captions_bp.route("/transcript", methods=["POST"])
 @require_csrf
-@async_job("transcript", disk_operation="transcribe")
+@async_job("transcript", disk_operation="transcribe", resumable=True)
 def get_transcript(job_id, filepath, data):
     """Transcribe and return full word-level transcript for editing."""
     model = data.get("model", "base")
@@ -1252,7 +1252,7 @@ def captions_enhanced_capabilities():
 
 @captions_bp.route("/captions/whisperx", methods=["POST"])
 @require_csrf
-@async_job("whisperx", disk_operation="transcribe")
+@async_job("whisperx", disk_operation="transcribe", resumable=True)
 def captions_whisperx(job_id, filepath, data):
     """Transcribe with WhisperX for word-level timestamps."""
     model_size = data.get("model", "base")

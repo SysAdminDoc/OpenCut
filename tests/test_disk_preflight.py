@@ -148,19 +148,19 @@ def test_async_job_disk_preflight_ok_still_creates_job(tmp_path, monkeypatch):
 def test_high_impact_routes_enable_disk_preflight():
     expectations = {
         "opencut/routes/captions.py": [
-            '@async_job("captions", disk_operation="transcribe")',
-            '@async_job("transcript", disk_operation="transcribe")',
+            '@async_job("captions", disk_operation="transcribe", resumable=True)',
+            '@async_job("transcript", disk_operation="transcribe", resumable=True)',
             '@async_job("full", disk_operation="full_pipeline")',
-            '@async_job("whisperx", disk_operation="transcribe")',
+            '@async_job("whisperx", disk_operation="transcribe", resumable=True)',
             '@async_job("burnin", disk_operation="video_export")',
         ],
         "opencut/routes/audio.py": [
-            '@async_job("separate", disk_operation="demucs")',
+            '@async_job("separate", disk_operation="demucs", resumable=True)',
             '@async_job("deepfilter", disk_operation="deepfilter")',
         ],
         "opencut/routes/video_core.py": [
-            '@async_job("export", disk_operation="video_export")',
-            '@async_job("export_preset", disk_operation="video_export")',
+            '@async_job("export", disk_operation="video_export", resumable=True)',
+            '@async_job("export_preset", disk_operation="video_export", resumable=True)',
         ],
         "opencut/routes/video_ai.py": [
             '@async_job("upscale", disk_operation="video_ai_heavy")',
