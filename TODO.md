@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-04 during the v4.194 continuation pass.
+Last synced: 2026-06-04 during the v4.195 research queue consolidation pass.
 
 ## Execution Order
 
@@ -13,6 +13,8 @@ Last synced: 2026-06-04 during the v4.194 continuation pass.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [ ] **RA-15 optional `[all]` advisory decision** - decide whether to keep a convenience extra, split it into build-lane extras, or document the known Torch/Transformers advisory exposure.
 - [ ] **RA-16 Adobe release-channel dist-tags** - track stable Adobe `release-*` dist-tags in F251 alongside `latest` and `beta`.
+- [ ] **RA-17 UXP manifest schema guard** - add an explicit supported `manifestVersion` and schema drift tests before package claims.
+- [ ] **RA-18 UXP deprecation sentinel** - block deprecated Clipboard and legacy `uxpvideo*` APIs from the UXP/WebView cutover path.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [ ] **RA-05 SQLite `PRAGMA user_version`** - add explicit schema versioning for local SQLite stores.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
