@@ -401,6 +401,22 @@ MIGRATED_KEYS = (
     "error.file_moved",
     "error.operation_timeout",
     "error.server_running",
+    # Thirty-second batch (install/action helper feedback).
+    "alert.open_target",
+    "common.working",
+    "install.default_start",
+    "install.cancelled",
+    "install.failed",
+    "install.demucs_start",
+    "install.depth_start",
+    "install.emotion_start",
+    "install.crisper_whisper_start",
+    "install.broll_generation_start",
+    "install.multimodal_diarization_start",
+    "install.watermark_start",
+    "error.gpu_out_of_memory",
+    "error.file_not_found_reselect",
+    "error.too_many_jobs",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1955,6 +1971,82 @@ EXPECTED_CALLS = (
         "error.server_running",
         re.compile(r't\(\s*"error\.server_running"'),
         re.compile(r'return\s+normalizedMsg\s*\+\s*" \\u2014 Make sure the OpenCut server is running'),
+    ),
+    # --- Thirty-second batch ---------------------------------------
+    (
+        "alert.open_target",
+        re.compile(r't\(\s*"alert\.open_target"'),
+        re.compile(r'link\.textContent\s*=\s*"Open "\s*\+'),
+    ),
+    (
+        "common.working",
+        re.compile(r't\(\s*"common\.working"'),
+        re.compile(r'setButtonText\(btn,\s*"Working'),
+    ),
+    (
+        "install.default_start",
+        re.compile(r't\(\s*"install\.default_start"'),
+        re.compile(r'config\.startMessage\s*\|\|\s*"Installing'),
+    ),
+    (
+        "install.cancelled",
+        re.compile(r't\(\s*"install\.cancelled"'),
+        re.compile(r'error\s*=\s*"Cancelled"'),
+    ),
+    (
+        "install.failed",
+        re.compile(r't\(\s*"install\.failed"'),
+        re.compile(r'"Installation failed: "\s*\+'),
+    ),
+    (
+        "install.demucs_start",
+        re.compile(r't\(\s*"install\.demucs_start"'),
+        re.compile(r'setHintState\(el\.separateHint,\s*"Installing Demucs'),
+    ),
+    (
+        "install.depth_start",
+        re.compile(r't\(\s*"install\.depth_start"'),
+        re.compile(r'startMessage:\s*"Installing Depth Anything'),
+    ),
+    (
+        "install.emotion_start",
+        re.compile(r't\(\s*"install\.emotion_start"'),
+        re.compile(r'startMessage:\s*"Installing emotion analysis'),
+    ),
+    (
+        "install.crisper_whisper_start",
+        re.compile(r't\(\s*"install\.crisper_whisper_start"'),
+        re.compile(r'startMessage:\s*"Installing CrisperWhisper'),
+    ),
+    (
+        "install.broll_generation_start",
+        re.compile(r't\(\s*"install\.broll_generation_start"'),
+        re.compile(r'startMessage:\s*"Installing AI B-roll generation'),
+    ),
+    (
+        "install.multimodal_diarization_start",
+        re.compile(r't\(\s*"install\.multimodal_diarization_start"'),
+        re.compile(r'startMessage:\s*"Installing multimodal diarization'),
+    ),
+    (
+        "install.watermark_start",
+        re.compile(r't\(\s*"install\.watermark_start"'),
+        re.compile(r'setHintState\(el\.watermarkHint,\s*"Installing watermark remover'),
+    ),
+    (
+        "error.gpu_out_of_memory",
+        re.compile(r't\(\s*"error\.gpu_out_of_memory"'),
+        re.compile(r'msg:\s*"GPU ran out of memory'),
+    ),
+    (
+        "error.file_not_found_reselect",
+        re.compile(r't\(\s*"error\.file_not_found_reselect"'),
+        re.compile(r'msg:\s*"File not found\. Re-select your clip\.'),
+    ),
+    (
+        "error.too_many_jobs",
+        re.compile(r't\(\s*"error\.too_many_jobs"'),
+        re.compile(r'msg:\s*"Too many jobs running'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

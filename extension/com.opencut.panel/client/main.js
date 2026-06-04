@@ -2078,7 +2078,7 @@
     function apiWithSpinner(btn, method, path, body, callback, timeout) {
         var origText = rememberButtonText(btn);
         btn.disabled = true;
-        setButtonText(btn, "Working…");
+        setButtonText(btn, t("common.working", "Working…"));
         api(method, path, body, function (err, data) {
             btn.disabled = false;
             setButtonText(btn, origText);
@@ -2087,7 +2087,8 @@
     }
 
     function formatInstallError(detail, fallback) {
-        if (!detail) return fallback || "Unknown error";
+        var unknownFallback = fallback || t("progress.unknown_error", "Unknown error");
+        if (!detail) return unknownFallback;
         if (typeof detail === "string") return detail;
 
         var result = detail.result && typeof detail.result === "object" ? detail.result : null;
@@ -2100,11 +2101,11 @@
         }
         if (!error) error = detail.error || "";
         if (!suggestion) suggestion = detail.suggestion || "";
-        if (!error && detail.status === "cancelled") error = "Cancelled";
+        if (!error && detail.status === "cancelled") error = t("install.cancelled", "Cancelled");
         if (!error && detail.message) error = detail.message;
         if (!error && detail.code) error = detail.code;
 
-        if (!error) return fallback || "Unknown error";
+        if (!error) return unknownFallback;
         return suggestion ? error + " — " + suggestion : error;
     }
 
@@ -3743,7 +3744,7 @@
 
         var hintEl = config.hintEl || null;
         var actionBtn = config.actionBtn || null;
-        var startMessage = config.startMessage || "Installing…";
+        var startMessage = config.startMessage || t("install.default_start", "Installing…");
 
         if (hintEl) {
             setHintState(hintEl, startMessage, "info", actionBtn);
@@ -3762,9 +3763,14 @@
                 if (typeof config.onSuccess === "function") config.onSuccess(result || {}, job || null);
             },
             onError: function(detail) {
-                var errMsg = formatInstallError(detail, "Unknown error");
+                var errMsg = formatInstallError(detail, t("progress.unknown_error", "Unknown error"));
                 if (hintEl) {
-                    setHintState(hintEl, "Installation failed: " + errMsg, "error", actionBtn);
+                    setHintState(
+                        hintEl,
+                        t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                        "error",
+                        actionBtn
+                    );
                 } else if (actionBtn) {
                     actionBtn.disabled = false;
                 }
@@ -3992,11 +3998,24 @@
 
     // Structured error code -> actionable guidance map
     var ERROR_CODE_ACTIONS = {
-        "GPU_OUT_OF_MEMORY": { tab: "settings", msg: "GPU ran out of memory. Try CPU mode in Settings." },
+        "GPU_OUT_OF_MEMORY": {
+            tab: "settings",
+            msg: function () {
+                return t("error.gpu_out_of_memory", "GPU ran out of memory. Try CPU mode in Settings.");
+            }
+        },
         "MISSING_DEPENDENCY": { tab: "settings", sub: "dependencies", msg: null },
-        "FILE_NOT_FOUND": { msg: "File not found. Re-select your clip." },
+        "FILE_NOT_FOUND": {
+            msg: function () {
+                return t("error.file_not_found_reselect", "File not found. Re-select your clip.");
+            }
+        },
         "RATE_LIMITED": { msg: null },
-        "TOO_MANY_JOBS": { msg: "Too many jobs running. Wait or cancel one." },
+        "TOO_MANY_JOBS": {
+            msg: function () {
+                return t("error.too_many_jobs", "Too many jobs running. Wait or cancel one.");
+            }
+        },
         "INSTALL_FAILED": { tab: "settings", msg: null },
         "UNSUPPORTED_FORMAT": { msg: null },
         "FFMPEG_ERROR": { msg: null },
@@ -4005,12 +4024,18 @@
         "SERVER_BUSY": { msg: null }
     };
 
+    function getErrorCodeActionMessage(action) {
+        if (!action) return "";
+        if (typeof action.msg === "function") return action.msg();
+        return action.msg || "";
+    }
+
     function enhanceError(msg, errorData) {
         var normalizedMsg = cleanUiMessage(msg);
         // 1. Check structured error code FIRST
         if (errorData && errorData.code && ERROR_CODE_ACTIONS[errorData.code]) {
             var action = ERROR_CODE_ACTIONS[errorData.code];
-            var base = cleanUiMessage(action.msg || errorData.error || normalizedMsg);
+            var base = cleanUiMessage(getErrorCodeActionMessage(action) || errorData.error || normalizedMsg);
             if (errorData.suggestion) {
                 base = base + " \u2014 " + cleanUiMessage(errorData.suggestion);
             }
@@ -4485,13 +4510,25 @@
             auto_import: el.separateImport.checked,
         });
     }
-    
+
     function installDemucs() {
-        setHintState(el.separateHint, "Installing Demucs… This may take a few minutes.", "info", el.installDemucsBtn);
+        setHintState(
+            el.separateHint,
+            t("install.demucs_start", "Installing Demucs… This may take a few minutes."),
+            "info",
+            el.installDemucsBtn
+        );
         apiWithSpinner(el.installDemucsBtn, "POST", "/demucs/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
-                setHintState(el.separateHint, "Installation failed: " + errMsg, "error", el.installDemucsBtn);
+                var errMsg = data
+                    ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error)
+                    : t("progress.unknown_error", "Unknown error");
+                setHintState(
+                    el.separateHint,
+                    t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                    "error",
+                    el.installDemucsBtn
+                );
             } else {
                 hideHintState(el.separateHint, el.installDemucsBtn);
                 capabilities.separation = true;
@@ -4561,7 +4598,7 @@
             endpoint: "/video/depth/install",
             hintEl: el.depthHint,
             actionBtn: el.installDepthBtn,
-            startMessage: "Installing Depth Anything V2… This may take several minutes.",
+            startMessage: t("install.depth_start", "Installing Depth Anything V2… This may take several minutes."),
             onSuccess: function() {
                 capabilities.depth_effects = true;
                 updateButtons();
@@ -4575,7 +4612,7 @@
             endpoint: "/video/emotion/install",
             hintEl: el.emotionHint,
             actionBtn: el.installEmotionBtn,
-            startMessage: "Installing emotion analysis… This may take a few minutes.",
+            startMessage: t("install.emotion_start", "Installing emotion analysis… This may take a few minutes."),
             onSuccess: function() {
                 capabilities.deepface = true;
                 updateButtons();
@@ -4589,7 +4626,7 @@
             endpoint: "/audio/crisper-whisper/install",
             hintEl: el.fillersHint,
             actionBtn: el.installCrisperWhisperBtn,
-            startMessage: "Installing CrisperWhisper… This may take a few minutes.",
+            startMessage: t("install.crisper_whisper_start", "Installing CrisperWhisper… This may take a few minutes."),
             onSuccess: function() {
                 capabilities.crisper_whisper = true;
                 if (el.fillerBackend) {
@@ -4607,7 +4644,10 @@
             endpoint: "/video/broll-generate/install",
             hintEl: el.brollGenHint,
             actionBtn: el.installBrollGenBtn,
-            startMessage: "Installing AI B-roll generation dependencies… This may take several minutes.",
+            startMessage: t(
+                "install.broll_generation_start",
+                "Installing AI B-roll generation dependencies… This may take several minutes."
+            ),
             onSuccess: function() {
                 capabilities.broll_generate = true;
                 updateButtons();
@@ -4621,7 +4661,10 @@
             endpoint: "/video/multimodal-diarize/install",
             hintEl: el.mmDiarizeHint,
             actionBtn: el.installMmDiarizeBtn,
-            startMessage: "Installing multimodal diarization dependencies… This may take several minutes.",
+            startMessage: t(
+                "install.multimodal_diarization_start",
+                "Installing multimodal diarization dependencies… This may take several minutes."
+            ),
             onSuccess: function() {
                 capabilities.multimodal_diarize = true;
                 updateButtons();
@@ -4631,11 +4674,23 @@
     }
 
     function installWatermark() {
-        setHintState(el.watermarkHint, "Installing watermark remover… This may take several minutes.", "info", el.installWatermarkBtn);
+        setHintState(
+            el.watermarkHint,
+            t("install.watermark_start", "Installing watermark remover… This may take several minutes."),
+            "info",
+            el.installWatermarkBtn
+        );
         apiWithSpinner(el.installWatermarkBtn, "POST", "/watermark/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
-                setHintState(el.watermarkHint, "Installation failed: " + errMsg, "error", el.installWatermarkBtn);
+                var errMsg = data
+                    ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error)
+                    : t("progress.unknown_error", "Unknown error");
+                setHintState(
+                    el.watermarkHint,
+                    t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                    "error",
+                    el.installWatermarkBtn
+                );
             } else {
                 hideHintState(el.watermarkHint, el.installWatermarkBtn);
                 capabilities.watermark_removal = true;
@@ -7901,7 +7956,8 @@
             var link = document.createElement("button");
             link.type = "button";
             link.className = "alert-action-link";
-            link.textContent = "Open " + (action.sub ? getPaletteSubLabel(action.sub) : getPaletteTabLabel(action.tab));
+            var targetLabel = action.sub ? getPaletteSubLabel(action.sub) : getPaletteTabLabel(action.tab);
+            link.textContent = t("alert.open_target", "Open {target}").replace("{target}", targetLabel);
             link.addEventListener("click", function () {
                 navigateToTab(action.tab, action.sub || null);
                 el.alertBanner.classList.add("hidden");
@@ -7915,7 +7971,7 @@
     }
 
     function showErrorWithAction(errorData) {
-        var msg = errorData.error || errorData.message || "Unknown error";
+        var msg = errorData.error || errorData.message || t("progress.unknown_error", "Unknown error");
         showAlert(msg, errorData);
     }
 

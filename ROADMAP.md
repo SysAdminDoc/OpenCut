@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.128
+**Version**: 4.129
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 1 - 2026-06-04.
+> Last researched: Cycle 2 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -26,7 +26,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-10.
+  RA-01..RA-12.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -285,7 +285,9 @@
 
 > **v4.128 status (2026-06-04, continuation pass)**: advanced **E15** with a thirty-first rolling i18n batch. Central cleaned error guidance for backend/route/request failures, source/file permission problems, timeouts, install advice, memory retries, and server-running hints now routes through `t(...)`, bringing the guarded migration ledger to 387 keys across thirty-one rounds while keeping drift at 810 keys / 671 consumers / 139 dead / 0 missing.
 >
-> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-10.
+> **v4.129 status (2026-06-04, continuation pass)**: advanced **E15** with a thirty-second rolling i18n batch. Inline install helper defaults/failures, manual Demucs/watermark install feedback, start messages for depth/emotion/CrisperWhisper/B-roll/multimodal diarization, structured error-code guidance, spinner working text, and alert action links now route through `t(...)`, bringing the guarded migration ledger to 402 keys across thirty-two rounds while keeping drift at 825 keys / 686 consumers / 139 dead / 0 missing.
+>
+> **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-12.
 
 ---
 
@@ -952,6 +954,21 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ---
 
+## 2026-06-04 v4.129 CEP i18n Migration Batch 32 (E15)
+
+E15 remains open. This batch moved install/action helper feedback out of bare English.
+
+| Surface | Status |
+|---|---|
+| Install helpers | Spinner working text, default/cancelled/install-failed helper copy, Demucs/watermark manual install feedback, and start messages for depth/emotion/CrisperWhisper/B-roll/multimodal diarization now call `t(...)`. |
+| Error actions | GPU/file-not-found/too-many-jobs guidance plus alert action links now call `t(...)`. |
+| Locale ledger | `locales/en.json` now carries 15 additional alert/common/error/install keys, bringing the guarded migration ledger to 402 keys across thirty-two rounds. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` asserts the new keys, `t(...)` call sites, and absence of the previous bare-English install/action helper forms. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py -q -p no:cacheprovider -o addopts=""` passed (`7 passed`), `node --check extension/com.opencut.panel/client/main.js` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `git diff --check` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 825 keys, 686 consumers, 139 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -968,7 +985,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.128 with the thirty-first guarded 13-key central cleaned error-guidance batch; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.129 with the thirty-second guarded 15-key install/action helper feedback batch; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -978,22 +995,34 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/t
 
 ### Researcher Queue (Cycle 1 - 2026-06-04)
 
-- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.128 docs and
+- [x] 🔬 `freshness-refresh-2026-06-04` - rechecked the live v4.129 docs and
   current external anchors. N8, E14, N9, N10, E12, and E13 are now shipped in the
   local roadmap; the route manifest reports 1,523 routes / 107 blueprints; and
   current Adobe UXP, Firefly/Generative Extend, FFmpeg 8.1, MLT, and LosslessCut
   signals still reinforce the existing backlog shape. No duplicate rows were
-  promoted; continue with E15, external F202/F252, and RA-01..RA-10.
+  promoted; continue with E15, external F202/F252, and RA-01..RA-12.
 
-*Research conducted 2026-06-03. Items below are new — not duplicates of Existing Planned Work.*
+### Researcher Queue (Cycle 2 - 2026-06-04)
+
+- [x] 🔬 `uxp-permission-hybrid-refresh-2026-06-04` - rechecked Adobe's current
+  Premiere UXP manifest, filesystem, API-reference, changelog, and Hybrid Plugin
+  build docs against the live UXP manifest and F252/F253 plan. Promoted two
+  net-new implementation guardrails: RA-11 for UXP least-privilege filesystem
+  permission posture and RA-12 for Hybrid Plugin package validation before native
+  caption/QE replacement work lands.
+
+*Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
+Cycle 2 adds Premiere-UXP packaging trust guardrails based on Adobe's current
+manifest/filesystem/Hybrid Plugin docs and the live OpenCut UXP manifest.
 
 ### Quick Wins
 
 - [ ] **P2 — RA-01 Align Ruff target-version with the supported Python floor** — Why: lint cannot catch 3.10/3.11-only idioms or flag back-compat regressions while the analyzer thinks it targets 3.9. Evidence: `pyproject.toml` declares `requires-python = ">=3.11"` (line 11) but `[tool.ruff] target-version = "py39"` (line 194). Touches: `pyproject.toml`; optionally a one-line assertion in an existing dependency-surface test. Acceptance: `target-version = "py311"`; `ruff check` still green; a guard test asserts the two values stay in lockstep. Verify: `python -m ruff check opencut` + the lockstep test. Complexity: S.
 - [ ] **P2 — RA-02 Reconcile `requirements.txt` floors with `pyproject.toml` extras** — Why: the two dependency sources have drifted, so `pip install -r requirements.txt` can resolve looser/older pins than a `pip install opencut[standard]` install, weakening the supply-chain/advisory story. Evidence: `requirements.txt` pins `faster-whisper>=1.0` (line 14) while `pyproject.toml` pins `faster-whisper>=1.1,<2`; `numpy>=1.24` in requirements has no upper bound vs the extras; pydub comment still lingers. Touches: `requirements.txt`; a drift-guard assertion in `tests/test_dependency_surface.py`. Acceptance: shared floors match the canonical extras (or requirements.txt is reduced to a thin `-e .[standard]` shim) and a test fails when they diverge. Verify: targeted pytest on the dependency-surface test. Complexity: S.
 - [ ] **P3 — RA-03 Log direct `OpenCutError` / `error_response` returns** — Why: only `safe_error()` calls `logger.exception`; routes that raise typed `OpenCutError`s or return `error_response(...)` produce a 4xx/5xx with **no** server-log line, so user-reported failures that took the typed path leave no diagnostic trail. Evidence: `opencut/errors.py` — `OpenCutError.to_response()` (line 37) and `error_response()` (line 51) emit responses without logging; `safe_error` is the only path that logs. Touches: `opencut/errors.py`. Acceptance: typed errors and `error_response` emit a single structured `logger.info`/`logger.warning` (level keyed off status class) carrying code + request_id; no double-logging when `safe_error` already logged. Verify: a test asserting a raised `OpenCutError` produces exactly one log record. Complexity: S.
+- [ ] **P2 — RA-11 Minimize UXP filesystem permissions before Marketplace packaging** — Why: Adobe's UXP filesystem guidance says `fullAccess` can make users deny installation and recommends `request` for user-selected files; OpenCut's current UXP manifest still declares `localFileSystem: "fullAccess"` even though the panel's file/folder browse helpers use picker APIs (`getFileForOpening`, `getFolder`). Evidence: Adobe filesystem guide (`https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/`) recommends `request` for user-selected files and reserves `fullAccess` for unrestricted path access; Adobe manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`) list `plugin` / `request` / `fullAccess`; local evidence: `extension/com.opencut.uxp/manifest.json` line 37 and `extension/com.opencut.uxp/main.js` file browse helpers. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `docs/UXP_MACOS_HTTP.md`, and a manifest-permission guard test. Acceptance: base UXP packages use the least-privilege permission that still supports picker-based imports/exports; any remaining direct-path/fullAccess need is documented as a separate F253/hybrid-only requirement; tests fail if base UXP returns to broad filesystem access without an allowlisted reason. Verify: focused manifest-permission pytest plus manual UXP picker smoke in UDT. Complexity: S-M.
 
 ### Larger Bets
 
@@ -1004,6 +1033,7 @@ These items came out of a fresh code-evidence pass (job/journal persistence laye
 - [ ] **P2 — RA-08 Add a job-store / journal compaction + retention diagnostic** — Why: `cleanup_old_jobs()` deletes rows but never `VACUUM`s, and the journal has no TTL at all, so WAL files and the DB grow monotonically on long-lived local installs; there is no surfaced size/health metric. Evidence: `opencut/job_store.py` `cleanup_old_jobs()` (no VACUUM); `opencut/journal.py` has no retention path. Touches: `opencut/job_store.py`, `opencut/journal.py`, an existing system/diagnostics route. Acceptance: a periodic/opt-in compaction `VACUUM`s after large deletes, the journal gains a configurable retention sweep, and a `/system/...` route reports row counts + on-disk bytes for both stores. Verify: a test asserting compaction reduces file size after a bulk delete and the diagnostic reports non-zero sizes. Complexity: M.
 - [ ] **P2 — RA-09 Timeline-native caption round-trip parity with AutoCut** — Why: the direct Premiere-Pro competitor AutoCut wins reviews specifically on editing captions **on the timeline** (exact timing/transition control); OpenCut generates and burns captions but the competitive gap is a clean export→edit-in-Premiere→re-import loop. Evidence: AutoCut vs Submagic comparison (timeline caption editing as the stated AutoCut advantage); OpenCut caption surfaces in `opencut/routes/captions.py` are generation/QC/translate-centric. Touches: captions routes + a CEP/UXP host round-trip path. Acceptance: an exported caption track imported into Premiere, hand-edited, and re-imported preserves OpenCut styling metadata losslessly (documented schema + test fixtures). Verify: a round-trip fixture test through the existing SRT/ASS export and marker-import parsers. Complexity: L.
 - [ ] **P3 — RA-10 "Magic clips" long-form-to-shorts auto-extraction macro** — Why: Submagic's 2026 headline feature (Magic Clips: auto-extract shorts from a long video) and Firefly Assist's "first cut from raw footage" are now table-stakes for the shorts persona; OpenCut already has shorts A/B variants and beat/auto-edit primitives but no single "give me N shareable clips from this long video" entry point. Evidence: Submagic 2026 review (Magic Clips); existing `opencut/core/auto_edit.py`, `auto_montage.py`, `ab_variant.py`, `best_take.py` primitives to compose. Touches: a new orchestration skill/route composing existing modules (no new heavy models). Acceptance: one route/skill takes a long source plus a target count and returns ranked candidate clip ranges with rationale, reusing the existing scoring modules. Verify: an integration test on a synthetic multi-scene source asserting ranked ranges are returned. Complexity: L.
+- [ ] **P2 — RA-12 Add F253 Hybrid Plugin package validation before native code ships** — Why: Adobe now documents Premiere 26.2 Hybrid Plugin support, `.uxpaddon` native libraries, strict addon folder layout, native-binary packaging steps, and separate JavaScript/C++ debugging; OpenCut already plans F253 for native caption-track and residual CEP-only work, but the repo needs a static package validator before native code lands so partial or architecture-missing add-ons cannot be mistaken for a supported migration path. Evidence: Adobe UXP changelog (`https://developer.adobe.com/premiere-pro/uxp/changelog/`) says Premiere 26.2 officially supports Hybrid Plugins and `.uxpaddon` files; Adobe Hybrid build docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/hybrid-plugins/build/`) describe strict folder layout, native-binary packaging, and direct-path access differences; local evidence: `docs/UXP_MIGRATION.md` F253 residual caption/QE plan and `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` scaffold. Touches: a new package-validator script/test for F253 artifacts, `docs/UXP_MIGRATION.md`, and release-smoke wiring once F253 starts. Acceptance: base UXP builds remain installable without native add-ons; hybrid builds declare `addon` only when every required platform binary and manifest entry is present; CI catches missing `.uxpaddon` layout/architecture before distribution. Verify: validator fixture tests for base/no-addon, valid hybrid, and broken hybrid layouts. Complexity: M.
 
 ## 2026-05-19 v4.85 F205 Coverage Floor Uplift
 
