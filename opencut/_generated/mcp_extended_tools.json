@@ -3,15 +3,15 @@
   "enabled_by": "OPENCUT_MCP_EXTENDED_TOOLS=1 or opencut-mcp-server --extended-tools",
   "manifest_version": 1,
   "method_counts": {
-    "DELETE": 13,
-    "GET": 367,
+    "DELETE": 14,
+    "GET": 368,
     "PATCH": 1,
     "POST": 1078,
     "PUT": 2
   },
   "response_schema_count": 99,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1461,
+  "tool_count": 1463,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -207,6 +207,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_delete_api_webhooks_by_webhook_id"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false,
+        "title": "DELETE /captions/cache/clear"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /captions/cache/clear.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "captions",
+        "endpoint": "captions.caption_cache_clear",
+        "generated": true,
+        "method": "DELETE",
+        "path": "/captions/cache/clear",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_delete_captions_cache_clear"
     },
     {
       "annotations": {
@@ -4495,6 +4525,36 @@
         "response_schema": "ListEnvelopeResult"
       },
       "name": "opencut_route_get_captions_burnin_styles"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /captions/cache/stats"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /captions/cache/stats.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "captions",
+        "endpoint": "captions.caption_cache_stats",
+        "generated": true,
+        "method": "GET",
+        "path": "/captions/cache/stats",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_captions_cache_stats"
     },
     {
       "annotations": {
