@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.90
+**Version**: 4.91
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,521 routes, 107 blueprints, 598 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -189,6 +189,8 @@
 > **v4.89 status (2026-06-04, continuation pass)**: closed **N3** from the May 26 continuation queue by changing the GPU semaphore default acquire wait from 0 seconds to 30 seconds while preserving `OPENCUT_GPU_ACQUIRE_TIMEOUT=0` for fail-fast behavior. GPU contention that still times out now carries `GPU_BUSY` retry metadata through direct structured errors and async job status.
 >
 > **v4.90 status (2026-06-04, continuation pass)**: closed **N6** from the May 26 continuation queue by adding `GET /webhooks/event-types` and `/api/webhooks/event-types` for webhook event discovery. `opencut/core/webhook_system.py` now exports a validated event catalogue with canonical names, legacy aliases, deprecation metadata, and schema pointers; `/mcp/info` also exposes the event-type discovery pointer for tooling.
+>
+> **v4.91 status (2026-06-04, continuation pass)**: closed **E11** from the May 26 continuation queue by making new HTTP webhook registrations require a non-empty HMAC signing secret by default. Unsigned webhook registration now requires explicit `?allow_unsigned=true` opt-in for local testing and writes a one-time `webhooks_unsigned.txt` warning in the OpenCut user directory.
 
 ---
 
@@ -273,13 +275,29 @@ Validation after the batch: `py -3.12 -m pytest tests/test_dev_scripting.py -q -
 
 ---
 
+## 2026-06-04 v4.91 Mandatory Webhook Signatures (E11)
+
+E11 is closed. New webhook registrations through the HTTP API now require signed delivery by default instead of silently creating unauthenticated outbound callbacks.
+
+| Surface | Status |
+|---|---|
+| Route policy | `POST /api/webhooks` requires a non-empty `secret` unless the caller explicitly passes `?allow_unsigned=true`. |
+| Core support | `register_webhook(..., allow_unsigned=False)` enforces the same invariant for strict callers while preserving existing direct-call compatibility. |
+| Legacy compatibility | Existing unsigned webhook configs still load and deliver; if an unsigned config is present or intentionally created, OpenCut writes `~/.opencut/webhooks_unsigned.txt` once as an operator warning. |
+| Secret handling | Registered/listed webhook responses continue to expose only `has_secret` and never echo the secret value. |
+| Coverage | `tests/test_dev_scripting.py` pins strict core registration, explicit unsigned opt-in, warning-file creation, route rejection without a secret, and signed route success. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_dev_scripting.py -q -p no:cacheprovider -o addopts=""` passed (`170 passed`) and touched Python files compile.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
 - [x] **P0 — N2 `missing_dependency()` includes pip extra name** — closed in v4.88 with a shared install-hint registry, helper metadata, generic route error inference, async job status suggestions, and top-12 dependency coverage.
 - [x] **P0 — N3 GPU semaphore default-wait 30s** — closed in v4.89 with a 30-second default wait, zero-second env override, `GPU_BUSY` retry metadata, async job status propagation, and focused wait tests.
 - [x] **P1 — N6 `GET /webhooks/event-types`** — closed in v4.90 with canonical and `/api` discovery routes, core event metadata, legacy alias mapping, MCP info discoverability, generated surface refresh, and focused tests.
-- [ ] **P1 — E11 webhook signatures mandatory by default** — require explicit opt-out for unsigned webhook delivery.
+- [x] **P1 — E11 webhook signatures mandatory by default** — closed in v4.91 with signed-by-default HTTP registration, explicit unsigned opt-in, warning-file creation, and focused tests.
 - [ ] **P1 — N4 disk preflight in heavy routes** — wire `disk_monitor.preflight()` into the most disk-intensive async jobs.
 - [ ] **P1 — N5 job resume for interrupted jobs** — add resumability metadata and a resume route for checkpointable jobs.
 - [ ] **P1 — N7 plugin job-registration API** — let signed/capability-scoped plugins register namespaced background jobs through the existing async-job machinery.
@@ -700,7 +718,7 @@ One Next-tier collaboration item closed in this pass.
 |---|---|
 | F233 review notifications | DONE — saved review activity now has an Atom feed and HMAC-signed outbound webhook path. |
 | Atom feed | `GET /review/feed.atom` emits status/comment entries with `project_id`, `review_id`, and `limit` filters; reviews without a project are grouped under `default`. |
-| Signed webhooks | `POST /api/webhooks` accepts optional `secret`; deliveries include `X-OpenCut-Signature: sha256=<hex>` and never echo the secret from list/register responses. |
+| Signed webhooks | `POST /api/webhooks` requires `secret` by default as of v4.91; explicit `?allow_unsigned=true` keeps a local-test escape hatch. Signed deliveries include `X-OpenCut-Signature: sha256=<hex>` and list/register responses never echo the secret. |
 | Review events | `/review/comment` and `/review/status` emit best-effort `review.comment_added` and `review.status_changed` events through the existing webhook system without blocking the review action. |
 | Generated artifacts | Route manifest regenerated to 1,368 routes / 101 blueprints; opt-in extended MCP catalogue regenerated to 1,310 tools. |
 | Documentation | `docs/REVIEW_NOTIFICATIONS.md` documents Atom feed filters, signed webhook headers, and review event names. |

@@ -29,6 +29,7 @@ Last consolidated: 2026-06-04.
 | Dependency guidance | The May 26 plan now has N2 closed: optional-dependency failures surface OpenCut extra commands, package hints, and GPU/VRAM notes through structured errors and async job status. |
 | Resource contention | The May 26 plan now has N3 closed: GPU semaphore contention waits up to 30 seconds by default and returns retry metadata when the wait budget is exhausted. |
 | Webhook discoverability | The May 26 plan now has N6 closed: `/webhooks/event-types`, `/api/webhooks/event-types`, and `/mcp/info` expose webhook event names, canonical replacements, schema pointers, and legacy aliases. |
+| Webhook trust | The May 26 plan now has E11 closed: new HTTP webhook registrations require an HMAC secret unless the caller explicitly opts into unsigned local testing. |
 
 ## Historical Detail
 
