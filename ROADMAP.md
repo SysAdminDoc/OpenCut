@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.196
+**Version**: 4.197
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 7 - 2026-06-04.
+> Last researched: Cycle 9 - 2026-06-04.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-18.
+  RA-01..RA-20.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -421,6 +421,8 @@
 > **v4.195 status (2026-06-04, research queue consolidation)**: reconciled the Cycle 7 researcher note into the canonical roadmap surfaces. RA-17 now tracks explicit Premiere UXP `manifestVersion` schema validation, and RA-18 tracks UXP deprecated-API sentinels before F252 cutover work.
 >
 > **v4.196 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-sixth rolling i18n batch. The CEP DOM i18n applier now translates `data-i18n-title`, `data-i18n-placeholder`, and `data-i18n-aria-label` attributes at runtime, so the static shell hooks from v4.194 are live behavior instead of lint-only metadata.
+
+> **v4.197 status (2026-06-04, continuation pass)**: advanced **E15** with a ninety-seventh rolling i18n batch covering the first-screen workspace-stage action cards and media-source shell HTML. Also reconciled the Cycle 8 researcher note into RA-19/RA-20 for UXP clipboard permission and beta alert/confirmation handling; Cycle 9 repeated those findings and promoted no new rows.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2119,6 +2121,22 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 
 ---
 
+## 2026-06-04 v4.197 CEP i18n Migration Batch 97 (E15)
+
+E15 remains open. This batch continues static first-screen CEP shell migration across the workspace action cards and media-source intake shell.
+
+| Surface | Status |
+|---|---|
+| Workspace stage HTML | The stage action labels, workflow-region label, and three workflow cards now expose `data-i18n` / `data-i18n-aria-label` hooks without replacing button icon structure. |
+| Media intake HTML | The media card subtitle, rescan/recent/dismiss attributes, project-clip selector label, loading option, source sidecar labels, empty copy, and source pills now expose static i18n hooks. |
+| Locale ledger | `locales/en.json` now carries 24 additional shell keys, bringing the guarded migration ledger to 1,203 keys across ninety-seven rounds. |
+| Drift posture | `i18n-drift` reports 1,611 keys, 1,487 consumers, 124 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts each new static workspace/media HTML hook and matching locale key. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migration.py tests/test_i18n_drift.py -q -p no:cacheprovider -o addopts=""` passed (`9 passed`), `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, and `py -3.12 scripts/i18n_lint.py --json` reported 1,611 keys, 1,487 consumers, 124 dead keys, and 0 missing keys.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -2135,7 +2153,7 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.196 with the ninety-sixth guarded DOM attribute i18n runtime migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.197 with the ninety-seventh guarded workspace/media static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
@@ -2218,6 +2236,31 @@ Validation after the batch: `py -3.12 -m pytest tests/test_i18n_hardcoded_migrat
   the UXP/WebView cutover path. Promoted RA-18 as a low-cost regression
   sentinel.
 
+### Researcher Queue (Cycle 8 - 2026-06-04)
+
+- [x] 🔬 `uxp-clipboard-permission-refresh-2026-06-04` - checked Adobe's current
+  UXP clipboard and manifest docs against the live UXP copy path. Adobe says
+  clipboard access needs a valid manifest entry from manifest v5 onward, and
+  the manifest docs default clipboard permission to no access. OpenCut calls
+  `navigator.clipboard.writeText(body.value)` in
+  `extension/com.opencut.uxp/main.js`, but neither the live UXP manifest nor
+  the dormant WebView scaffold declares `requiredPermissions.clipboard`.
+  Promoted RA-19.
+- [x] 🔬 `uxp-alert-feature-flag-refresh-2026-06-04` - checked Adobe's UXP API
+  changelog against the live UXP destructive-confirmation path. Adobe moved
+  `alert`, `prompt`, and `confirm` support back to beta behind the
+  `enableAlerts` feature flag, while OpenCut calls `window.confirm(...)` in the
+  UXP panel and the manifest has no `featureFlags.enableAlerts`. Promoted
+  RA-20.
+
+### Researcher Queue (Cycle 9 - 2026-06-04)
+
+- [x] 🔬 `uxp-clipboard-permission-refresh-2026-06-04` - rechecked the same UXP
+  clipboard permission gap covered by Cycle 8 RA-19. No new row was promoted.
+- [x] 🔬 `uxp-alert-feature-flag-refresh-2026-06-04` - rechecked the same UXP
+  beta alert/confirmation gap covered by Cycle 8 RA-20. No new row was
+  promoted; do not create RA-21 from this duplicate pass.
+
 *Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
@@ -2227,7 +2270,9 @@ live OpenCut UXP manifest. Cycle 5 adds a Python optional-extra advisory
 gate-failure item from the current `pip-audit` result. Cycle 6 adds an Adobe
 Premiere UXP release-channel dist-tag tracker item from the current npm
 registry result. Cycle 7 adds UXP manifest schema and deprecated-API sentinels
-for the F252/F253 cutover path.
+for the F252/F253 cutover path. Cycle 8 adds UXP clipboard-permission and beta
+alert/confirmation runtime guardrails. Cycle 9 rechecked those same two gaps and
+promoted no new rows.
 
 ### Quick Wins
 
@@ -2241,6 +2286,8 @@ for the F252/F253 cutover path.
 - [ ] **P2 — RA-16 Track Adobe release-channel dist-tags in F251** — Why: OpenCut's CEP-to-UXP migration depends on Adobe UXP package movement, but F251 currently treats only `latest` and `beta` as first-class tracked versions even though Adobe now publishes a stable `release-26.2` tag that is newer than `latest`. Evidence: live npm registry dist-tags for `@adobe/premierepro` returned `latest: 26.2.0`, `beta: 26.3.0-beta.85`, and `release-26.2: 26.2.1`; npm's dist-tag docs describe named release streams and reserve special install behavior for `latest`; local `opencut/tools/adobe_premierepro_versions.py` still defines `TRACKED_TAGS = ("latest", "beta")`, and `tests/test_adobe_premierepro_versions.py` documents the F251 contract as a latest/beta pair. Touches: `opencut/tools/adobe_premierepro_versions.py`, `opencut/_generated/adobe_premierepro_versions.json`, `.github/workflows/adobe-premierepro-versions.yml`, `scripts/release_smoke.py`, `tests/test_adobe_premierepro_versions.py`, and `docs/UXP_MIGRATION.md`. Acceptance: F251 treats `release-*` tags as explicit stable release-channel inputs, includes them in tracked snapshot/report metadata, keeps drift issue copy from implying beta-only review, and preserves fail-open release-smoke behavior. Verify: `py -3.12 -m pytest tests/test_adobe_premierepro_versions.py -q` and `py -3.12 -m opencut.tools.adobe_premierepro_versions --check --json`. Complexity: S.
 - [ ] **P2 — RA-17 Add UXP manifest schema drift guard and explicit live `manifestVersion`** — Why: Adobe's current Premiere UXP manifest docs list `manifestVersion` as a required property and state that Premiere supports version `"5"`; OpenCut's live UXP manifest omits that required key, while the dormant Bolt/WebView scaffold declares `manifestVersion: 6`. That split can let UDT/package validation depend on host tolerance instead of an explicit OpenCut release decision. Evidence: Adobe UXP Manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`); local `extension/com.opencut.uxp/manifest.json` has no `manifestVersion`; local `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` types and emits `manifestVersion: 6`. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `tests/test_uxp_manifest_schema.py`, `tests/test_uxp_webview_scaffold.py`, and `docs/UXP_MIGRATION.md`. Acceptance: the live manifest declares an explicit Premiere-supported `manifestVersion` (use `"5"` unless a documented UDT/Premiere smoke proves v6 is accepted for this bundle); the WebView scaffold either aligns or documents why generated packages intentionally use a different schema; a static test validates required manifest keys/types and fails on unsupported schema drift between live and generated manifests. Verify: `py -3.12 -m pytest tests/test_uxp_manifest_schema.py tests/test_uxp_webview_scaffold.py -q` plus a UDT package/load smoke before claiming Marketplace readiness. Complexity: S-M.
 - [ ] **P3 — RA-18 Add a UXP API deprecation sentinel before F252 cutover** — Why: Adobe's UXP API changelog deprecates older Clipboard APIs and legacy HTMLVideoElement `uxpvideo*` event names. OpenCut's UXP source currently uses `navigator.clipboard.writeText` and no deprecated `Clipboard.*` or `uxpvideo*` names, so the right action is not a migration but a static guard that keeps future F252/WebView work from regressing. Evidence: Adobe UXP API changelog (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`); local scans of `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, and UXP tests found no deprecated names. Touches: a focused UXP deprecation test, `docs/UXP_MIGRATION.md`, and any WebView generated bundle source path once F252 starts. Acceptance: tests fail if UXP/WebView code uses `Clipboard.setContent`, `Clipboard.getContent`, `Clipboard.clearContent`, object-form `Clipboard.writeText`, `uxpvideoload`, `uxpvideoplay`, `uxpvideocomplete`, or `uxpvideopause`; docs record the current clipboard path and any required manifest permission. Verify: `py -3.12 -m pytest tests/test_uxp_deprecation_sentinel.py -q`. Complexity: S.
+- [ ] **P2 — RA-19 Declare UXP clipboard permission and centralize copy fallback** — Why: Adobe's current UXP clipboard docs state that a valid manifest entry is required from manifest version 5 onward, and the manifest docs default `requiredPermissions.clipboard` to no clipboard access. OpenCut's UXP panel writes text with `navigator.clipboard.writeText(body.value)`, but the live manifest and WebView scaffold omit `clipboard`. Evidence: Adobe UXP Clipboard docs (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/reference-js/global-members/data-transfers/clipboard`); Adobe UXP Manifest docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`); local `extension/com.opencut.uxp/main.js` clipboard call; local `extension/com.opencut.uxp/manifest.json` and `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` permissions. Not a duplicate of RA-18 because RA-18 bans deprecated Clipboard APIs; this item aligns the supported current Clipboard API with the required manifest permission and fallback UX. Touches: `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, the UXP copy helper in `main.js`, UXP manifest/source guard tests, and `docs/UXP_MIGRATION.md`. Acceptance: if the UXP panel keeps any `navigator.clipboard.*` call, base and generated manifests declare the narrowest required clipboard permission (`readAndWrite` for copy); copy calls route through one wrapper that reports permission denial separately from unsupported Clipboard APIs; tests fail if a clipboard call exists without matching manifest permission. Verify: `py -3.12 -m pytest tests/test_uxp_clipboard_permission.py -q` plus a UDT copy smoke covering success and denied/unavailable fallback. Complexity: S-M.
+- [ ] **P2 — RA-20 Replace or explicitly gate UXP `window.confirm` usage** — Why: Adobe's UXP API changelog says `alert`, `prompt`, and `confirm` were moved back to beta and require `featureFlags.enableAlerts`; OpenCut's UXP panel calls `window.confirm(confirmMessage)` before clearing the search index, while the live manifest has no `featureFlags.enableAlerts`. Evidence: Adobe UXP API changelog (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`); local `extension/com.opencut.uxp/main.js` confirmation call; local `extension/com.opencut.uxp/manifest.json` feature flags. Touches: the UXP search-index clear flow, a reusable in-panel confirmation modal or explicit beta-alert manifest decision, UXP static guard tests, and `docs/UXP_MIGRATION.md`. Acceptance: destructive UXP confirmations use an OpenCut in-panel modal with keyboard focus/escape handling and localized copy, or the manifest explicitly opts into `enableAlerts` with documented UDT evidence; tests fail on raw `window.alert`, `window.prompt`, or `window.confirm` in UXP code outside the approved wrapper. Verify: `py -3.12 -m pytest tests/test_uxp_confirm_guard.py -q` plus UDT smoke for the clear-index cancel/confirm paths. Complexity: S-M.
 
 ### Larger Bets
 

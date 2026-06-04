@@ -1,65 +1,83 @@
 # OpenCut Research Feature Plan - 2026-06-04 Cycle 8
 
-Planning-only researcher artifact. This file captures a net-new Cycle 8 item
-while the build lane is actively editing the canonical roadmap/context docs and
-CEP E15 source files. Reconcile this item into `ROADMAP.md`, `TODO.md`,
-`RESEARCH_REPORT.md`, and `PROJECT_CONTEXT.md` once those shared docs are clean.
+Planning-only researcher artifact. This file captures net-new UXP runtime
+permission findings discovered after Cycle 7. It does not modify app source,
+tests, generated manifests, or release assets.
 
 ## Scope
 
 - Lane: researcher / planning only.
-- Source files changed: none.
-- Allowed implementation surfaces named below are for the build lane.
 - De-duplication baseline: active queue E15, external F202/F252, RA-01 through
   RA-18, F001-F272, and Waves L-T in `ROADMAP.md`.
+- Primary evidence: Adobe Premiere UXP clipboard, manifest, and UXP API
+  changelog documentation plus the live UXP manifest and panel source.
 
 ## Researcher Queue (Cycle 8 - 2026-06-04)
 
-- [x] `python-313-ci-claim-refresh-2026-06-04` - checked OpenCut's Python
-  support metadata against the live CI workflows and current GitHub/Python
-  platform docs. `pyproject.toml` advertises Python 3.13 support, and F123
-  added an audioop/pydub 3.13 shim, but `.github/workflows/build.yml`,
-  `.github/workflows/pr-fast.yml`, and the weekly Adobe tracker workflow all
-  pin `actions/setup-python` to 3.12. GitHub's setup-python docs support
-  `python-version: '3.13'`, and Python.org marks 3.13 as a stable release.
-  Promoted RA-19 so advertised Python support is backed by a real CI lane or
-  an explicit classifier downgrade.
+- [x] `uxp-clipboard-permission-refresh-2026-06-04` - checked Adobe's current
+  UXP clipboard and manifest docs against the live UXP copy path. Adobe says
+  clipboard access needs a valid manifest entry from manifest v5 onward, and
+  the manifest docs default clipboard permission to no access. OpenCut calls
+  `navigator.clipboard.writeText(body.value)` in `extension/com.opencut.uxp/main.js`
+  but neither the live UXP manifest nor the dormant WebView scaffold declares
+  `requiredPermissions.clipboard`. Promoted RA-19.
+- [x] `uxp-alert-feature-flag-refresh-2026-06-04` - checked Adobe's UXP API
+  changelog against the live UXP destructive-confirmation path. Adobe moved
+  `alert`, `prompt`, and `confirm` support back to beta behind the `enableAlerts`
+  feature flag, while OpenCut calls `window.confirm(...)` in the UXP panel and
+  the manifest has no `featureFlags.enableAlerts`. Promoted RA-20.
 
-## Quick Win
+## Quick Wins
 
-- [ ] **P2 - RA-19 Add Python 3.13 CI coverage for the advertised classifier**
-  - Why: OpenCut publishes `Programming Language :: Python :: 3.13` and keeps
-    `requires-python = ">=3.11"`, but CI only exercises Python 3.12. The
-    current 3.13 confidence comes from targeted F123 shim tests, not an install
-    and release-gate run on the advertised interpreter.
-  - Evidence: local `pyproject.toml` classifiers include Python 3.11, 3.12, and
-    3.13; `.github/workflows/build.yml` and `.github/workflows/pr-fast.yml`
-    configure `actions/setup-python` with `python-version: '3.12'` only;
-    GitHub's setup-python docs show `python-version: '3.13'` as supported
-    (`https://github.com/actions/setup-python`); Python.org describes Python
-    3.13.0 as the stable 3.13 release
-    (`https://www.python.org/downloads/release/python-3130/`).
-  - Not a duplicate: RA-01 aligns Ruff's static target version; RA-02 aligns
-    dependency metadata; F123 fixed the audioop/pydub compatibility slice. RA-19
-    is the missing CI proof for the packaging classifier.
-  - Touches: `.github/workflows/pr-fast.yml`, `.github/workflows/build.yml`,
-    `tests/test_dependency_surface.py`, `tests/test_ci_workflow_split.py`, and
-    optionally a lightweight `python-compat.yml` workflow if Release Full should
-    remain artifact-focused on Python 3.12.
-  - Acceptance: CI runs at least bootstrap/version-sync/dependency-surface
-    checks and focused release-gate pytest on Python 3.11, 3.12, and 3.13, or
-    the 3.13 classifier is removed until that lane exists. A static test fails
-    when advertised Python classifiers drift from the CI compatibility matrix.
-  - Verify: `py -3.12 -m pytest tests/test_dependency_surface.py tests/test_ci_workflow_split.py -q`
-    plus one successful GitHub Actions run showing the Python 3.13 lane.
-  - Complexity: S.
+- [ ] **P2 - RA-19 Declare UXP clipboard permission and centralize copy
+  fallback** - Why: Adobe's current UXP clipboard docs state that a valid
+  manifest entry is required from manifest version 5 onward, and the manifest
+  docs default `requiredPermissions.clipboard` to no clipboard access. OpenCut's
+  UXP panel writes text with `navigator.clipboard.writeText(body.value)` but the
+  live manifest and WebView scaffold omit `clipboard`. Evidence: Adobe UXP
+  Clipboard docs
+  (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/reference-js/global-members/data-transfers/clipboard`);
+  Adobe UXP Manifest docs
+  (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`);
+  local `extension/com.opencut.uxp/main.js` clipboard call; local
+  `extension/com.opencut.uxp/manifest.json` and
+  `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` permissions. Not a
+  duplicate of RA-18 because RA-18 bans deprecated Clipboard APIs; this item
+  aligns the supported current Clipboard API with the required manifest
+  permission and fallback UX. Touches: `extension/com.opencut.uxp/manifest.json`,
+  `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, the UXP copy helper in
+  `main.js`, UXP manifest/source guard tests, and `docs/UXP_MIGRATION.md`.
+  Acceptance: if the UXP panel keeps any `navigator.clipboard.*` call, base and
+  generated manifests declare the narrowest required clipboard permission
+  (`readAndWrite` for copy); copy calls route through one wrapper that reports
+  permission denial separately from unsupported Clipboard APIs; tests fail if a
+  clipboard call exists without matching manifest permission. Verify:
+  `py -3.12 -m pytest tests/test_uxp_clipboard_permission.py -q` plus a UDT copy
+  smoke covering success and denied/unavailable fallback. Complexity: S-M.
+- [ ] **P2 - RA-20 Replace or explicitly gate UXP `window.confirm` usage** -
+  Why: Adobe's UXP API changelog says `alert`, `prompt`, and `confirm` were
+  moved back to beta and require `featureFlags.enableAlerts`; OpenCut's UXP panel
+  calls `window.confirm(confirmMessage)` before clearing the search index, while
+  the live manifest has no `featureFlags.enableAlerts`. Evidence: Adobe UXP API
+  changelog
+  (`https://developer.adobe.com/premiere-pro/uxp/uxp-api/changelog3-p`);
+  local `extension/com.opencut.uxp/main.js` confirmation call; local
+  `extension/com.opencut.uxp/manifest.json` feature flags. Touches: the UXP
+  search-index clear flow, a reusable in-panel confirmation modal or explicit
+  beta-alert manifest decision, UXP static guard tests, and `docs/UXP_MIGRATION.md`.
+  Acceptance: destructive UXP confirmations use an OpenCut in-panel modal with
+  keyboard focus/escape handling and localized copy, or the manifest explicitly
+  opts into `enableAlerts` with documented UDT evidence; tests fail on raw
+  `window.alert`, `window.prompt`, or `window.confirm` in UXP code outside the
+  approved wrapper. Verify:
+  `py -3.12 -m pytest tests/test_uxp_confirm_guard.py -q` plus UDT smoke for the
+  clear-index cancel/confirm paths. Complexity: S-M.
 
 ## Self-Audit
 
-- Net-new check: no existing F/RA item owns "advertised Python classifier must
-  have a matching CI lane." RA-01/RA-02 are metadata alignment work, and F123 is
-  a runtime compatibility shim.
-- Release-risk check: this can be implemented as a lightweight PR compatibility
-  matrix and does not require changing release artifacts or installer builds.
-- Lane-separation check: no source, tests, workflow YAML, generated manifests,
-  or release assets were modified by this researcher pass.
+- Net-new check: RA-19 is permission alignment for the currently supported
+  clipboard API, not the RA-18 deprecated API sentinel.
+- Net-new check: RA-20 is beta-alert/confirmation runtime behavior, not WebView
+  bridge permissions or external-launch consent.
+- Local-first check: both items preserve local-only behavior and add no cloud
+  dependency.
