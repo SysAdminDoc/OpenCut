@@ -3941,30 +3941,51 @@
         if (!text) return "";
         if (/Request failed with status code|^HTTP\s+\d+|status:\s*(4\d\d|5\d\d)/i.test(text)) {
             if (statusMatch && statusMatch[1] === "404") {
-                return "OpenCut couldn't find the local route for that action. Refresh the panel or restart the backend from Settings.";
+                return t(
+                    "error.route_not_found",
+                    "OpenCut couldn't find the local route for that action. Refresh the panel or restart the backend from Settings."
+                );
             }
             if (statusMatch && statusMatch[1].charAt(0) === "5") {
-                return "OpenCut hit a local backend problem while handling that request. Try again or review the logs in Settings.";
+                return t(
+                    "error.backend_problem",
+                    "OpenCut hit a local backend problem while handling that request. Try again or review the logs in Settings."
+                );
             }
-            return "OpenCut couldn't complete that request. Try again in a moment.";
+            return t("error.request_retry", "OpenCut couldn't complete that request. Try again in a moment.");
         }
         if (/ECONNREFUSED|ERR_CONNECTION_REFUSED|Failed to fetch|NetworkError|network request failed/i.test(text)) {
-            return "OpenCut couldn't reach the local backend. Restart it from Settings, then try again.";
+            return t(
+                "error.backend_unreachable",
+                "OpenCut couldn't reach the local backend. Restart it from Settings, then try again."
+            );
         }
         if (/another task is in progress/i.test(text)) {
-            return "OpenCut is already processing another task. Stop the active run or wait for it to finish first.";
+            return t(
+                "progress.busy",
+                "OpenCut is already processing another task. Stop the active run or wait for it to finish first."
+            );
         }
         if (/choose a clip|select a clip|select media|choose a source|select a source/i.test(text)) {
-            return "Choose a source in Media before running this tool.";
+            return t("toast.choose_source_first", "Choose a source in Media before running this tool.");
         }
         if (/file not found|no such file/i.test(text)) {
-            return "OpenCut couldn't find that source anymore. Re-select the clip or browse to it again.";
+            return t(
+                "error.source_missing",
+                "OpenCut couldn't find that source anymore. Re-select the clip or browse to it again."
+            );
         }
         if (/permission|access denied|denied/i.test(text)) {
-            return "OpenCut doesn't have permission to read or write that file. Check folder access, then try again.";
+            return t(
+                "error.file_permission",
+                "OpenCut doesn't have permission to read or write that file. Check folder access, then try again."
+            );
         }
         if (/timed?\s*out|timeout/i.test(text)) {
-            return "That run took too long to finish. Try a shorter clip, lighter settings, or rerun once the backend is idle.";
+            return t(
+                "error.timeout_retry",
+                "That run took too long to finish. Try a shorter clip, lighter settings, or rerun once the backend is idle."
+            );
         }
         return text.replace(/^error:\s*/i, "");
     }
@@ -4002,22 +4023,31 @@
         if (!normalizedMsg) return normalizedMsg;
         // 3. Fallback: regex-based enhancement for legacy/unstructured errors
         if (/not installed|No module named/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 You can install this from the Settings tab.";
+            return normalizedMsg + " \u2014 " + t("error.install_from_settings", "You can install this from the Settings tab.");
         }
         if (/memory|CUDA out of memory|out of memory/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 Try a smaller file, lower quality setting, or enable CPU mode in Settings.";
+            return normalizedMsg + " \u2014 " + t(
+                "error.memory_retry",
+                "Try a smaller file, lower quality setting, or enable CPU mode in Settings."
+            );
         }
         if (/Permission|Access denied|denied/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 The file may be locked or read-only. Check your file permissions.";
+            return normalizedMsg + " \u2014 " + t(
+                "error.permission_check",
+                "The file may be locked or read-only. Check your file permissions."
+            );
         }
         if (/No such file|not found/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 The file may have been moved or deleted.";
+            return normalizedMsg + " \u2014 " + t("error.file_moved", "The file may have been moved or deleted.");
         }
         if (/timed? ?out|timeout/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 The operation took too long. Try a shorter clip or simpler settings.";
+            return normalizedMsg + " \u2014 " + t(
+                "error.operation_timeout",
+                "The operation took too long. Try a shorter clip or simpler settings."
+            );
         }
         if (/connection|ECONNREFUSED|network/i.test(normalizedMsg)) {
-            return normalizedMsg + " \u2014 Make sure the OpenCut server is running.";
+            return normalizedMsg + " \u2014 " + t("error.server_running", "Make sure the OpenCut server is running.");
         }
         return normalizedMsg;
     }
