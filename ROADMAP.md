@@ -2780,6 +2780,23 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-05 v4.239 E15 Video Quick Actions and Effects Static HTML i18n
+
+E15 remains open. This batch migrates the Video tab quick actions and first effects selector shell while preserving the backend action IDs and effect option values sent to processing routes.
+
+| Surface | Status |
+|---|---|
+| Video quick actions | Auto Color and Social Reframe titles, labels, meta copy, and shared Preset tags now expose static locale hooks. |
+| Video effects selector | The Effect label and Stabilize/Vignette/Film Grain/Letterbox/Chromakey/LUT/Auto Color Normalize options now expose `data-i18n` hooks while preserving option values. |
+| Runtime fallback | `t(...)` now falls back safely before the locale table is initialized, preventing local static preview startup errors from early settings-state labels. |
+| Locale ledger | `locales/en.json` now carries 12 additional Video quick-action/effects keys, bringing the guarded migration ledger to 1,539 keys across one hundred twenty-seven rounds. |
+| Drift posture | `i18n-drift` reports 1,945 keys, 1,866 consumers, 79 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Video quick-action/effects static HTML hooks, matching locale keys, and safe pre-locale `t(...)` fallback. |
+
+Validation after the batch: `python -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py -q -p no:cacheprovider -o addopts=""` passed (`10 passed`), `python -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `node --check extension/com.opencut.panel/client/main.js` passed, `python -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `python -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `python scripts/i18n_lint.py --json` reported 1,945 keys, 1,866 consumers, 79 dead keys, and 0 missing keys, `git diff --check` passed, and a Browser local preview on `127.0.0.1:8767` rendered the migrated Video strings with no current-port console errors.
+
+---
+
 ## 2026-06-05 v4.238 RA-34 Lockfile Advisory Coverage
 
 RA-34 is closed. `requirements-lock.txt` is now a default target in `opencut.tools.pip_audit_extras`, release smoke reports the lockfile in the pip-audit step, and the lockfile `idna` pin is refreshed from 3.11 to 3.16. The wrapper audits the fully pinned lockfile with `pip-audit --no-deps`, keeps diagnostic `--no-lockfile` / `--no-extras` flags, and the default gate fails if the lockfile target is dropped.
@@ -2820,7 +2837,7 @@ Validation after the consolidation: `py -3.12 scripts\sync_version.py --check`, 
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.236 with the one-hundred-twenty-sixth guarded Audio Ducking form static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.239 with the one-hundred-twenty-seventh guarded Video quick actions and effects static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
