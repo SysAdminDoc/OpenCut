@@ -67,11 +67,48 @@ def test_resemble_enhance_stays_separate_from_combined_all_extra():
 def test_default_targets_include_requirements_and_pyproject_all():
     targets = pip_audit_extras.build_targets()
 
-    assert [target.name for target in targets] == ["requirements.txt", "pyproject[all]"]
+    assert [target.name for target in targets] == ["requirements.txt", "requirements-lock.txt", "pyproject[all]"]
     assert targets[0].kind == "requirements"
-    assert targets[1].kind == "pyproject-extra"
-    assert targets[1].extra == "all"
-    assert len(targets[1].requirements) > len(targets[0].requirements)
+    assert targets[1].kind == "lockfile"
+    assert targets[2].kind == "pyproject-extra"
+    assert targets[2].extra == "all"
+    assert any(req.startswith("idna==") for req in targets[1].requirements)
+    assert len(targets[2].requirements) > len(targets[0].requirements)
+
+
+def test_lockfile_target_can_be_disabled_for_diagnostics():
+    targets = pip_audit_extras.build_targets(include_lockfile=False)
+
+    assert [target.name for target in targets] == ["requirements.txt", "pyproject[all]"]
+    assert all(target.kind != "lockfile" for target in targets)
+
+
+def test_pyproject_extra_targets_can_be_disabled_for_diagnostics():
+    targets = pip_audit_extras.build_targets(extras=())
+
+    assert [target.name for target in targets] == ["requirements.txt", "requirements-lock.txt"]
+    assert all(target.kind != "pyproject-extra" for target in targets)
+
+
+def test_cli_no_extras_audits_only_committed_requirements(monkeypatch):
+    captured_targets = []
+
+    def _fake_run_audits(targets, **kwargs):  # noqa: ANN001, ARG001
+        captured_targets.extend(targets)
+        return {
+            "allowed_vulnerability_count": 0,
+            "message": "ok",
+            "status": "ok",
+            "target_count": len(targets),
+            "targets": [],
+            "unallowed_vulnerability_count": 0,
+            "vulnerability_count": 0,
+        }
+
+    monkeypatch.setattr(pip_audit_extras, "run_audits", _fake_run_audits)
+
+    assert pip_audit_extras.cli(["--json", "--no-extras"]) == 0
+    assert [target.name for target in captured_targets] == ["requirements.txt", "requirements-lock.txt"]
 
 
 def test_all_extras_cli_target_builder_knows_every_optional_extra():
@@ -79,6 +116,7 @@ def test_all_extras_cli_target_builder_knows_every_optional_extra():
     targets = pip_audit_extras.build_targets(
         extras=extras,
         include_requirements=False,
+        include_lockfile=False,
     )
 
     assert "all" in extras

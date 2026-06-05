@@ -112,6 +112,12 @@ def test_step_pip_audit_runs_pyproject_all_wrapper(monkeypatch):
                     "unallowed_vulnerability_count": 0,
                 },
                 {
+                    "name": "requirements-lock.txt",
+                    "vulnerability_count": 0,
+                    "allowed_vulnerability_count": 0,
+                    "unallowed_vulnerability_count": 0,
+                },
+                {
                     "name": "pyproject[all]",
                     "vulnerability_count": 2,
                     "allowed_vulnerability_count": 2,

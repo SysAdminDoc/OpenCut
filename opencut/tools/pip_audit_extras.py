@@ -1,9 +1,9 @@
 """Run pip-audit against OpenCut's committed and optional dependencies.
 
 F263 exists because the release smoke gate used to audit only
-``requirements.txt``. That misses the heavy optional install surface in
-``pyproject.toml`` — especially the ``[all]`` extra that users choose when they
-want every AI/video/audio backend available.
+``requirements.txt``. That misses the committed lockfile and the heavy optional
+install surface in ``pyproject.toml`` -- especially the ``[all]`` extra that
+users choose when they want every AI/video/audio backend available.
 
 This tool keeps the release gate structured and deterministic from OpenCut's
 side: it builds temporary requirements files for each requested target, invokes
@@ -30,6 +30,7 @@ import tomllib
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 REQUIREMENTS_PATH = REPO_ROOT / "requirements.txt"
+LOCKFILE_PATH = REPO_ROOT / "requirements-lock.txt"
 DEFAULT_EXTRAS = ("all",)
 
 
@@ -115,8 +116,10 @@ def build_targets(
     *,
     pyproject_path: Path = PYPROJECT_PATH,
     requirements_path: Path = REQUIREMENTS_PATH,
+    lockfile_path: Path = LOCKFILE_PATH,
     extras: Iterable[str] = DEFAULT_EXTRAS,
     include_requirements: bool = True,
+    include_lockfile: bool = True,
 ) -> List[AuditTarget]:
     targets: List[AuditTarget] = []
     if include_requirements:
@@ -126,6 +129,15 @@ def build_targets(
                 kind="requirements",
                 requirements=load_requirements(requirements_path),
                 source=str(requirements_path.relative_to(REPO_ROOT)),
+            )
+        )
+    if include_lockfile:
+        targets.append(
+            AuditTarget(
+                name="requirements-lock.txt",
+                kind="lockfile",
+                requirements=load_requirements(lockfile_path),
+                source=str(lockfile_path.relative_to(REPO_ROOT)),
             )
         )
 
@@ -374,6 +386,16 @@ def cli(argv: Optional[List[str]] = None) -> int:
         help="skip the legacy requirements.txt audit target",
     )
     parser.add_argument(
+        "--no-lockfile",
+        action="store_true",
+        help="skip the committed requirements-lock.txt audit target",
+    )
+    parser.add_argument(
+        "--no-extras",
+        action="store_true",
+        help="skip pyproject optional dependency audit targets",
+    )
+    parser.add_argument(
         "--timeout",
         type=int,
         default=15,
@@ -398,8 +420,14 @@ def cli(argv: Optional[List[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    extras = _optional_extra_names(PYPROJECT_PATH) if args.all_extras else (args.extras or list(DEFAULT_EXTRAS))
-    targets = build_targets(extras=extras, include_requirements=not args.no_requirements)
+    if args.no_extras and (args.extras or args.all_extras):
+        parser.error("--no-extras cannot be combined with --extra or --all-extras")
+    extras = [] if args.no_extras else (_optional_extra_names(PYPROJECT_PATH) if args.all_extras else (args.extras or list(DEFAULT_EXTRAS)))
+    targets = build_targets(
+        extras=extras,
+        include_requirements=not args.no_requirements,
+        include_lockfile=not args.no_lockfile,
+    )
     payload = run_audits(
         targets,
         timeout=args.timeout,
