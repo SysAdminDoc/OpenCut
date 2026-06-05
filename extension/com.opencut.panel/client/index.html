@@ -1834,15 +1834,15 @@
                         <!-- Stabilize params -->
                         <div class="vfx-params" id="vfxParams-stabilize">
                             <div class="form-group">
-                                <label for="vfxStabSmoothing">Smoothing</label>
+                                <label for="vfxStabSmoothing" data-i18n="forms.smoothing">Smoothing</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxStabSmoothing" min="3" max="30" value="10" step="1">
                                     <span class="slider-val" id="vfxStabSmoothingVal">10</span>
                                 </div>
-                                <span class="hint-inline">Higher = smoother camera, more crop</span>
+                                <span class="hint-inline" data-i18n="video.stabilize_smoothing_hint">Higher = smoother camera, more crop</span>
                             </div>
                             <div class="form-group">
-                                <label for="vfxStabZoom">Zoom (%)</label>
+                                <label for="vfxStabZoom" data-i18n="forms.zoom_percent">Zoom (%)</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxStabZoom" min="0" max="20" value="0" step="1">
                                     <span class="slider-val" id="vfxStabZoomVal">0%</span>
@@ -1853,7 +1853,7 @@
                         <!-- Vignette params -->
                         <div class="vfx-params hidden" id="vfxParams-vignette">
                             <div class="form-group">
-                                <label for="vfxVignetteIntensity">Intensity</label>
+                                <label for="vfxVignetteIntensity" data-i18n="forms.intensity">Intensity</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxVignetteIntensity" min="0.1" max="1.0" value="0.5" step="0.1">
                                     <span class="slider-val" id="vfxVignetteIntensityVal">0.5</span>
@@ -1864,7 +1864,7 @@
                         <!-- Film Grain params -->
                         <div class="vfx-params hidden" id="vfxParams-film_grain">
                             <div class="form-group">
-                                <label for="vfxGrainIntensity">Grain Intensity</label>
+                                <label for="vfxGrainIntensity" data-i18n="video.effect_grain_intensity">Grain Intensity</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxGrainIntensity" min="0.1" max="1.0" value="0.5" step="0.1">
                                     <span class="slider-val" id="vfxGrainIntensityVal">0.5</span>
@@ -1875,13 +1875,13 @@
                         <!-- Letterbox params -->
                         <div class="vfx-params hidden" id="vfxParams-letterbox">
                             <div class="form-group">
-                                <label for="vfxLetterboxAspect">Aspect Ratio</label>
+                                <label for="vfxLetterboxAspect" data-i18n="forms.aspect_ratio">Aspect Ratio</label>
                                 <select id="vfxLetterboxAspect">
-                                    <option value="2.39:1">2.39:1 (Anamorphic)</option>
-                                    <option value="2.00:1">2.00:1 (Univisium)</option>
-                                    <option value="1.85:1">1.85:1 (Widescreen)</option>
-                                    <option value="4:3">4:3 (Classic TV)</option>
-                                    <option value="1:1">1:1 (Square)</option>
+                                    <option value="2.39:1" data-i18n="video.aspect_anamorphic">2.39:1 (Anamorphic)</option>
+                                    <option value="2.00:1" data-i18n="video.aspect_univisium">2.00:1 (Univisium)</option>
+                                    <option value="1.85:1" data-i18n="video.aspect_widescreen">1.85:1 (Widescreen)</option>
+                                    <option value="4:3" data-i18n="video.aspect_classic_tv">4:3 (Classic TV)</option>
+                                    <option value="1:1" data-i18n="video.aspect_square">1:1 (Square)</option>
                                 </select>
                             </div>
                         </div>
@@ -1889,21 +1889,21 @@
                         <!-- Chromakey params -->
                         <div class="vfx-params hidden" id="vfxParams-chromakey">
                             <div class="form-group">
-                                <label for="vfxChromakeyColor">Key Color</label>
+                                <label for="vfxChromakeyColor" data-i18n="forms.key_color">Key Color</label>
                                 <select id="vfxChromakeyColor">
-                                    <option value="0x00FF00">Green Screen</option>
-                                    <option value="0x0000FF">Blue Screen</option>
+                                    <option value="0x00FF00" data-i18n="video.key_green_screen">Green Screen</option>
+                                    <option value="0x0000FF" data-i18n="video.key_blue_screen">Blue Screen</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="vfxChromakeySim">Similarity</label>
+                                <label for="vfxChromakeySim" data-i18n="forms.similarity">Similarity</label>
                                 <div class="slider-row">
-                                    <input type="range" id="vfxChromakeySim" min="0.05" max="0.8" value="0.3" step="0.05" title="How similar a color must be to the key color to be removed">
+                                    <input type="range" id="vfxChromakeySim" min="0.05" max="0.8" value="0.3" step="0.05" title="How similar a color must be to the key color to be removed" data-i18n-title="video.chromakey_similarity_title">
                                     <span class="slider-val" id="vfxChromakeySimVal">0.30</span>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="vfxChromakeyBlend">Blend</label>
+                                <label for="vfxChromakeyBlend" data-i18n="forms.blend">Blend</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxChromakeyBlend" min="0.0" max="0.5" value="0.1" step="0.05">
                                     <span class="slider-val" id="vfxChromakeyBlendVal">0.10</span>
@@ -1914,11 +1914,11 @@
                         <!-- LUT params -->
                         <div class="vfx-params hidden" id="vfxParams-lut">
                             <div class="form-group">
-                                <label for="vfxLutPath">LUT File Path</label>
-                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="vfxLutPath">Browse</button></div>
+                                <label for="vfxLutPath" data-i18n="forms.lut_file_path">LUT File Path</label>
+                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="vfxLutPath" data-i18n="common.browse">Browse</button></div>
                             </div>
                             <div class="form-group">
-                                <label for="vfxLutIntensity">Intensity</label>
+                                <label for="vfxLutIntensity" data-i18n="forms.intensity">Intensity</label>
                                 <div class="slider-row">
                                     <input type="range" id="vfxLutIntensity" min="0.1" max="1.0" value="1.0" step="0.1">
                                     <span class="slider-val" id="vfxLutIntensityVal">1.0</span>
@@ -1932,7 +1932,7 @@
                         <button type="button" class="btn-outline btn-sm mb-xs" id="previewVfxBtn" disabled data-i18n="video.preview_effect">Preview Effect</button>
                         <label class="checkbox-row">
                             <input type="checkbox" id="vfxAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runVfxBtn" disabled data-i18n="video.apply_vfx">Apply Video Effect</button>
