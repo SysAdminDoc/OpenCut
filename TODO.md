@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-05 during the v4.237 research consolidation pass.
+Last synced: 2026-06-05 during the v4.238 RA-34 lockfile advisory coverage pass.
 
 ## Execution Order
 
@@ -12,7 +12,7 @@ Last synced: 2026-06-05 during the v4.237 research consolidation pass.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [ ] **RA-15 optional `[all]` advisory decision** - decide whether to keep a convenience extra, split it into build-lane extras, or document the known Torch/Transformers advisory exposure.
-- [ ] **RA-34 lockfile advisory coverage** - restore `requirements-lock.txt` to release/audit coverage and refresh the vulnerable `idna` lock pin.
+- [x] **RA-34 lockfile advisory coverage** - restored `requirements-lock.txt` to release/audit coverage and refreshed the vulnerable `idna` lock pin.
 - [ ] **RA-16 Adobe release-channel dist-tags** - track stable Adobe `release-*` dist-tags in F251 alongside `latest` and `beta`.
 - [ ] **RA-31 Adobe tracker exit-code capture** - make the weekly Adobe tracker explicitly capture drift probe exit codes before notification logic runs.
 - [ ] **RA-32 Adobe tracker label contract** - seed or guard the labels used by automated Adobe tracker issue search and creation.

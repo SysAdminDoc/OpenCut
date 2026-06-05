@@ -19,7 +19,7 @@ Steps (in order):
 10. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
 11. ``ruff`` — lint the python package
 12. ``pytest-fast`` — focused test ids covering release gates
-13. ``pip-audit`` — Python dependency advisories for requirements + ``pyproject[all]``
+13. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
 14. ``panel-unit`` — CEP/UXP panel Vitest utility tests
 15. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
 16. ``panel-source`` — CEP panel source tree smoke
@@ -1094,7 +1094,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("caption-unicode", step_caption_unicode, "Verify RTL/CJK/bidi caption text export preservation"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
-    StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt and pyproject[all]"),
+    StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
     StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
     StepDefinition("esbuild-pin", step_esbuild_pin, "Verify resolved esbuild >= 0.25 (F131)"),
