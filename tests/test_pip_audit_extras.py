@@ -70,6 +70,7 @@ def test_default_targets_include_requirements_and_pyproject_all():
     assert [target.name for target in targets] == ["requirements.txt", "requirements-lock.txt", "pyproject[all]"]
     assert targets[0].kind == "requirements"
     assert targets[1].kind == "lockfile"
+    assert targets[1].no_deps is True
     assert targets[2].kind == "pyproject-extra"
     assert targets[2].extra == "all"
     assert any(req.startswith("idna==") for req in targets[1].requirements)
@@ -162,6 +163,40 @@ def test_run_audits_reports_per_target_advisory_state(monkeypatch):
     assert result["targets"][0]["resolved_dependency_count"] == 1
     assert result["targets"][0]["vulnerability_count"] == 0
     assert result["targets"][0]["unallowed_vulnerability_count"] == 0
+
+
+def test_run_audits_uses_no_deps_for_lockfile_targets(monkeypatch):
+    target = pip_audit_extras.AuditTarget(
+        name="requirements-lock.txt",
+        kind="lockfile",
+        source="requirements-lock.txt",
+        requirements=["idna==3.16"],
+        no_deps=True,
+    )
+
+    monkeypatch.setattr(
+        pip_audit_extras.importlib.util,
+        "find_spec",
+        lambda name: object() if name == "pip_audit" else None,
+    )
+
+    def _fake_run(cmd, cwd, timeout, env=None):  # noqa: ANN001
+        assert "--no-deps" in cmd
+        payload = {
+            "dependencies": [
+                {"name": "idna", "version": "3.16", "vulns": []},
+            ],
+            "fixes": [],
+        }
+        return subprocess.CompletedProcess(cmd, 0, pip_audit_extras.json.dumps(payload), "")
+
+    monkeypatch.setattr(pip_audit_extras, "_run", _fake_run)
+
+    result = pip_audit_extras.run_audits([target])
+
+    assert result["status"] == "ok"
+    assert result["targets"][0]["no_deps"] is True
+    assert result["targets"][0]["resolved_dependency_count"] == 1
 
 
 def test_run_audits_allows_documented_optional_dependency_advisories(monkeypatch):

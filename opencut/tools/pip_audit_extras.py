@@ -41,6 +41,7 @@ class AuditTarget:
     requirements: List[str]
     extra: str = ""
     source: str = ""
+    no_deps: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ def build_targets(
                 kind="lockfile",
                 requirements=load_requirements(lockfile_path),
                 source=str(lockfile_path.relative_to(REPO_ROOT)),
+                no_deps=True,
             )
         )
 
@@ -256,6 +258,8 @@ def _audit_target(
         ]
         if vulnerability_service:
             cmd.extend(["--vulnerability-service", vulnerability_service])
+        if target.no_deps:
+            cmd.append("--no-deps")
         env = {**os.environ, "PIP_CACHE_DIR": str(cache_path)}
         try:
             result = _run(cmd, cwd=REPO_ROOT, timeout=process_timeout, env=env)
@@ -270,6 +274,7 @@ def _audit_target(
                 "exit_code": -1,
                 "duration_ms": duration_ms,
                 "requirement_count": len(target.requirements),
+                "no_deps": target.no_deps,
                 "resolved_dependency_count": 0,
                 "vulnerability_count": 0,
                 "allowed_vulnerability_count": 0,
@@ -304,6 +309,7 @@ def _audit_target(
         "exit_code": result.returncode,
         "duration_ms": duration_ms,
         "requirement_count": len(target.requirements),
+        "no_deps": target.no_deps,
         "resolved_dependency_count": len(dependencies),
         "vulnerability_count": vulnerability_count,
         "allowed_vulnerability_count": allowed_vulnerability_count,

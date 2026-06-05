@@ -2782,7 +2782,7 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ## 2026-06-05 v4.238 RA-34 Lockfile Advisory Coverage
 
-RA-34 is closed. `requirements-lock.txt` is now a default target in `opencut.tools.pip_audit_extras`, release smoke reports the lockfile in the pip-audit step, and the lockfile `idna` pin is refreshed from 3.11 to 3.16. The wrapper keeps a diagnostic `--no-lockfile` flag, but the default gate fails if the lockfile target is dropped.
+RA-34 is closed. `requirements-lock.txt` is now a default target in `opencut.tools.pip_audit_extras`, release smoke reports the lockfile in the pip-audit step, and the lockfile `idna` pin is refreshed from 3.11 to 3.16. The wrapper audits the fully pinned lockfile with `pip-audit --no-deps`, keeps diagnostic `--no-lockfile` / `--no-extras` flags, and the default gate fails if the lockfile target is dropped.
 
 Validation after the fix: `py -3.12 -m pip_audit -r requirements-lock.txt --format json --progress-spinner off`, `py -3.12 -m opencut.tools.pip_audit_extras --json --no-extras`, focused `tests/test_pip_audit_extras.py` / `tests/test_release_smoke.py`, and `git diff --check`. `py -3.12 -m opencut.tools.pip_audit_extras --json --extra all` and `py -3.12 scripts\release_smoke.py --json --only pip-audit` still fail closed on separate RA-15 optional-extra advisories for Torch and Transformers; the committed requirements and lockfile targets both pass cleanly.
 
