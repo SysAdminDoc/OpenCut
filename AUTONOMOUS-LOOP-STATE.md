@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.239 / batch 127 and remains open.
-- Shipped this cycle: Video quick-action titles/labels/meta text, shared Preset tags, the Effect label, and the first Video effects selector options now expose static locale hooks while preserving backend action IDs and effect option values. The shared `t(...)` lookup now falls back safely before locale initialization.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, `node --check` passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 1,945 keys / 1,866 consumers / 79 dead / 0 missing, `git diff --check` passed, and a local Browser preview rendered the migrated Video strings with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.240 / batch 128 and remains open.
+- Shipped this cycle: Video Effects parameter labels, letterbox aspect options, chromakey color options, similarity title help, LUT path Browse copy, and auto-import copy now expose static locale hooks while preserving backend slider values, aspect values, color values, and LUT path behavior.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 1,961 keys / 1,884 consumers / 77 dead / 0 missing, `git diff --check` passed, and a local Browser preview rendered the migrated Video Effects parameter strings with no current-port console errors.
 
 ## Next Work
 
