@@ -2780,6 +2780,23 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-05 v4.240 E15 Video Effects Parameter Static HTML i18n
+
+E15 remains open. This batch migrates the Video Effects parameter shell while preserving numeric slider values, letterbox aspect values, chromakey color values, LUT path input behavior, and backend effect payloads.
+
+| Surface | Status |
+|---|---|
+| Stabilize and intensity controls | Smoothing, smoothing hint, Zoom (%), Vignette intensity, Grain Intensity, LUT intensity, and shared auto-import copy now expose static locale hooks. |
+| Letterbox and chromakey controls | Aspect Ratio options, Key Color options, Similarity title help, and Blend labels now expose locale hooks while preserving option values. |
+| LUT path row | LUT File Path and Browse action copy now use locale hooks while preserving the literal `.cube` path placeholder. |
+| Locale ledger | `locales/en.json` now carries 16 additional Video Effects parameter keys, bringing the guarded migration ledger to 1,555 keys across one hundred twenty-eight rounds. |
+| Drift posture | `i18n-drift` reports 1,961 keys, 1,884 consumers, 77 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Video Effects parameter static HTML hooks and matching locale keys. |
+
+Validation after the batch: `python -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py -q -p no:cacheprovider -o addopts=""` passed (`10 passed`), `python -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `python -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `python -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `python scripts/i18n_lint.py --json` reported 1,961 keys, 1,884 consumers, 77 dead keys, and 0 missing keys, `git diff --check` passed, and a Browser local preview on `127.0.0.1:8768` rendered the migrated Video Effects parameter strings with no current-port console errors.
+
+---
+
 ## 2026-06-05 v4.239 E15 Video Quick Actions and Effects Static HTML i18n
 
 E15 remains open. This batch migrates the Video tab quick actions and first effects selector shell while preserving the backend action IDs and effect option values sent to processing routes.
@@ -2837,7 +2854,7 @@ Validation after the consolidation: `py -3.12 scripts\sync_version.py --check`, 
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.239 with the one-hundred-twenty-seventh guarded Video quick actions and effects static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.240 with the one-hundred-twenty-eighth guarded Video Effects parameter static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 

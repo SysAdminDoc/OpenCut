@@ -659,6 +659,28 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.effect_chromakey", "data-i18n"),
     ("video.effect_apply_lut_cube", "data-i18n"),
     ("video.effect_auto_color_normalize", "data-i18n"),
+    # One-hundred-twenty-eighth batch (Video effects parameter shell HTML).
+    ("forms.smoothing", "data-i18n"),
+    ("video.stabilize_smoothing_hint", "data-i18n"),
+    ("forms.zoom_percent", "data-i18n"),
+    ("forms.intensity", "data-i18n"),
+    ("video.effect_grain_intensity", "data-i18n"),
+    ("forms.aspect_ratio", "data-i18n"),
+    ("video.aspect_anamorphic", "data-i18n"),
+    ("video.aspect_univisium", "data-i18n"),
+    ("video.aspect_widescreen", "data-i18n"),
+    ("video.aspect_classic_tv", "data-i18n"),
+    ("video.aspect_square", "data-i18n"),
+    ("forms.key_color", "data-i18n"),
+    ("video.key_green_screen", "data-i18n"),
+    ("video.key_blue_screen", "data-i18n"),
+    ("forms.similarity", "data-i18n"),
+    ("video.chromakey_similarity_title", "data-i18n-title"),
+    ("forms.blend", "data-i18n"),
+    ("forms.lut_file_path", "data-i18n"),
+    ("common.browse", "data-i18n"),
+    ("forms.intensity", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
 )
 
 
@@ -2284,6 +2306,23 @@ MIGRATED_KEYS = (
     "video.effect_film_grain",
     "video.effect_letterbox",
     "video.effect_vignette",
+    # One-hundred-twenty-eighth batch (Video effects parameter shell HTML).
+    "forms.aspect_ratio",
+    "forms.blend",
+    "forms.key_color",
+    "forms.lut_file_path",
+    "forms.similarity",
+    "forms.zoom_percent",
+    "video.aspect_anamorphic",
+    "video.aspect_classic_tv",
+    "video.aspect_square",
+    "video.aspect_univisium",
+    "video.aspect_widescreen",
+    "video.chromakey_similarity_title",
+    "video.effect_grain_intensity",
+    "video.key_blue_screen",
+    "video.key_green_screen",
+    "video.stabilize_smoothing_hint",
 )
 
 
