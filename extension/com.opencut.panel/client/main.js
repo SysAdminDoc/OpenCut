@@ -12303,7 +12303,7 @@
     var _i18n = {};
 
     function t(key, fallback) {
-        return _i18n[key] || fallback || key;
+        return (_i18n && _i18n[key]) || fallback || key;
     }
 
     function applyI18nToDOM() {

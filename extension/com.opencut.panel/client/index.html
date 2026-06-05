@@ -1757,29 +1757,29 @@
             <!-- ======== TAB: VIDEO ======== -->
             <div class="nav-panel" id="panel-video" role="tabpanel" aria-label="Video">
                 <div class="quick-actions" id="quickActionsVideo">
-                    <button type="button" class="quick-action-btn" id="quickAutoColor" disabled title="One-click color correction">
+                    <button type="button" class="quick-action-btn" id="quickAutoColor" disabled title="One-click color correction" data-i18n-title="quick_actions.video_auto_color_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="5.5"/><path d="M10 4.5v11"/><path d="M5.25 12.25h9.5"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Auto Color</span>
-                                <span class="quick-action-meta">Fast tonal balance for rough finishing</span>
+                                <span class="btn-label" data-i18n="quick_actions.video_auto_color_label">Auto Color</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.video_auto_color_meta">Fast tonal balance for rough finishing</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
-                    <button type="button" class="quick-action-btn" id="quickSocialReframe" disabled title="Reframe to 9:16 for TikTok/Reels/Shorts">
+                    <button type="button" class="quick-action-btn" id="quickSocialReframe" disabled title="Reframe to 9:16 for TikTok/Reels/Shorts" data-i18n-title="quick_actions.video_social_reframe_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6.25" y="3.5" width="7.5" height="13" rx="1.75"/><path d="M8.25 6.5h3.5"/><path d="M8.25 13.5h3.5"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Social Reframe</span>
-                                <span class="quick-action-meta">Vertical composition for reels and shorts</span>
+                                <span class="btn-label" data-i18n="quick_actions.video_social_reframe_label">Social Reframe</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.video_social_reframe_meta">Vertical composition for reels and shorts</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="videoSubTabs">
@@ -1819,15 +1819,15 @@
                         <p class="card-desc" data-i18n="video.effects_desc">Stabilization, vignette, film grain, letterbox, chromakey, LUT, and color correction. No extra installs needed.</p>
 
                         <div class="form-group">
-                            <label for="vfxSelect">Effect</label>
+                            <label for="vfxSelect" data-i18n="forms.effect">Effect</label>
                             <select id="vfxSelect">
-                                <option value="stabilize">Stabilize Video</option>
-                                <option value="vignette">Vignette</option>
-                                <option value="film_grain">Film Grain</option>
-                                <option value="letterbox">Letterbox (Cinematic Bars)</option>
-                                <option value="chromakey">Chromakey (Green Screen)</option>
-                                <option value="lut">Apply LUT (.cube)</option>
-                                <option value="color_match">Auto Color Normalize</option>
+                                <option value="stabilize" data-i18n="video.stabilize">Stabilize Video</option>
+                                <option value="vignette" data-i18n="video.effect_vignette">Vignette</option>
+                                <option value="film_grain" data-i18n="video.effect_film_grain">Film Grain</option>
+                                <option value="letterbox" data-i18n="video.effect_letterbox">Letterbox (Cinematic Bars)</option>
+                                <option value="chromakey" data-i18n="video.effect_chromakey">Chromakey (Green Screen)</option>
+                                <option value="lut" data-i18n="video.effect_apply_lut_cube">Apply LUT (.cube)</option>
+                                <option value="color_match" data-i18n="video.effect_auto_color_normalize">Auto Color Normalize</option>
                             </select>
                         </div>
 

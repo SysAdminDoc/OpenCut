@@ -642,6 +642,23 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.duck_amount", "data-i18n"),
     ("common.auto_import_result", "data-i18n"),
     ("audio.add_music_ducking", "data-i18n"),
+    # One-hundred-twenty-seventh batch (Video quick actions and effects shell HTML).
+    ("quick_actions.video_auto_color_title", "data-i18n-title"),
+    ("quick_actions.video_auto_color_label", "data-i18n"),
+    ("quick_actions.video_auto_color_meta", "data-i18n"),
+    ("quick_actions.preset_tag", "data-i18n"),
+    ("quick_actions.video_social_reframe_title", "data-i18n-title"),
+    ("quick_actions.video_social_reframe_label", "data-i18n"),
+    ("quick_actions.video_social_reframe_meta", "data-i18n"),
+    ("quick_actions.preset_tag", "data-i18n"),
+    ("forms.effect", "data-i18n"),
+    ("video.stabilize", "data-i18n"),
+    ("video.effect_vignette", "data-i18n"),
+    ("video.effect_film_grain", "data-i18n"),
+    ("video.effect_letterbox", "data-i18n"),
+    ("video.effect_chromakey", "data-i18n"),
+    ("video.effect_apply_lut_cube", "data-i18n"),
+    ("video.effect_auto_color_normalize", "data-i18n"),
 )
 
 
@@ -2254,6 +2271,19 @@ MIGRATED_KEYS = (
     "audio.add_music_ducking",
     "audio.ducking_title",
     "audio.music_file_path",
+    # One-hundred-twenty-seventh batch (Video quick actions and effects shell HTML).
+    "quick_actions.video_auto_color_label",
+    "quick_actions.video_auto_color_meta",
+    "quick_actions.video_auto_color_title",
+    "quick_actions.video_social_reframe_label",
+    "quick_actions.video_social_reframe_meta",
+    "quick_actions.video_social_reframe_title",
+    "video.effect_apply_lut_cube",
+    "video.effect_auto_color_normalize",
+    "video.effect_chromakey",
+    "video.effect_film_grain",
+    "video.effect_letterbox",
+    "video.effect_vignette",
 )
 
 
@@ -8059,6 +8089,12 @@ class TestI18nHardcodedMigration(unittest.TestCase):
             self.js,
             re.compile(r'setAttribute\(\s*targetAttr,\s*t\('),
             "main.js does not apply translated i18n attributes",
+        )
+
+    def test_i18n_lookup_is_safe_before_locale_initialization(self):
+        self.assertIn(
+            "return (_i18n && _i18n[key]) || fallback || key;",
+            self.js,
         )
 
 
