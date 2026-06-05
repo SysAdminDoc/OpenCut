@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Security - Lockfile advisory coverage
+
+- Added `requirements-lock.txt` to `opencut.tools.pip_audit_extras` and the release-smoke `pip-audit` step so the committed lockfile is audited alongside runtime requirements and `pyproject[all]`.
+- Refreshed the lockfile `idna` pin from 3.11 to 3.16, clearing the RA-34 `GHSA-65pc-fj4g-8rjx` / `CVE-2026-45409` finding.
+- Added tests for the default lockfile audit target plus the diagnostic `--no-lockfile` and `--no-extras` escape hatches.
+
 ### Changed - CEP i18n Migration Batch 126
 
 - Migrated the Audio Ducking form shell to static locale hooks for the title, music path, browse action, slider labels, auto-import copy, and run action while preserving backend input values.
