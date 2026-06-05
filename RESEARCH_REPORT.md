@@ -3,7 +3,7 @@
 Root synthesis of current research and planning inputs. Detailed research plans
 are archived under [docs/archive/research](docs/archive/research/).
 
-Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
+Last consolidated: 2026-06-05. Research-driven additions refreshed: 2026-06-05.
 
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
@@ -28,8 +28,12 @@ workflows (`https://news.adobe.com/en/gb/news/2026/04/adobe-new-creative-agent`)
 Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
-comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-30 research items below. Cycles 2
+comparators include MLT v7.38.0 and LosslessCut v3.68.0. The June 5
+comprehensive archive is now reconciled into `TODO.md` and `ROADMAP.md` as
+RA-31 through RA-36, covering Adobe tracker exit-code capture, tracker label
+contracts, no-`gh` label dry-runs, lockfile advisory coverage, release SBOM
+fidelity, and UNC/HGFS-safe CEP panel Node commands. The compact open queue in
+`TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-36 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -62,7 +66,14 @@ cover the Docker build/config/health validation shape. Cycle 19 checked Docker
 dependency installation behavior; RA-29 captures fail-closed dependency installs
 and quoted/canonical requirement specifier handling. Cycle 20 checked Docker
 build-context hygiene; RA-30 captures aligning `.dockerignore` with Git-ignored
-secret/log patterns before `COPY . /app`.
+secret/log patterns before `COPY . /app`. Cycles 21 through 23 checked Adobe
+tracker workflow output capture, tracker label contracts, and label dry-run
+behavior; RA-31 through RA-33 capture those automation gaps. Cycles 24 and 25
+repeated live issue-tracker and Python metadata checks but promoted no new rows.
+Cycle 26 found the vulnerable `requirements-lock.txt` `idna==3.11` pin and
+missing recurring lockfile audit target; RA-34 captures that release trust gap.
+Cycle 27 checked SBOM fidelity and promoted RA-35. Cycle 28 checked CEP panel
+Node commands from UNC/HGFS paths and promoted RA-36.
 
 ## Executive Summary
 
@@ -177,6 +188,25 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     — `.gitignore` excludes `.env`, `.env.*`, and `*.log`, but `.dockerignore`
     does not, and `Dockerfile` copies the filtered context into `/app`.
     [Verified]
+31. **Harden Adobe tracker exit-code capture** (RA-31) — the weekly tracker
+    notification path depends on `$GITHUB_OUTPUT` written after a command that
+    intentionally exits nonzero on drift. [Verified]
+32. **Guard Adobe tracker issue-label contracts** (RA-32) — the workflow uses
+    `f251`, `uxp`, and `tracking` labels that are absent from the source label
+    seed and were absent from the live default label set when checked.
+    [Verified]
+33. **Let issue-label dry-runs run without `gh`** (RA-33) — `apply_labels()`
+    checks for GitHub CLI before honoring `dry_run=True`. [Verified]
+34. **Restore lockfile advisory coverage and refresh vulnerable pins** (RA-34)
+    — `requirements-lock.txt` pins `idna==3.11`, and direct `pip-audit`
+    reports `CVE-2026-45409` / `GHSA-65pc-fj4g-8rjx`, fixed in 3.15.
+    [Verified]
+35. **Publish resolved SBOM or label the current artifact declared-only**
+    (RA-35) — `scripts/sbom.py` emits declared direct dependency/model-card
+    inventory, not resolved transitive package evidence. [Verified]
+36. **Make CEP panel Node command entry points UNC/HGFS-safe** (RA-36) —
+    documented `npm run` panel checks fail from the Windows shared-folder path
+    before the direct Node scripts execute. [Verified]
 
 ## Evidence Reviewed
 
@@ -205,6 +235,11 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   `python-version` to 3.12. GitHub's current Python Actions guide includes
   3.13 in matrix examples, and Python's current 3.13 documentation confirms
   the active release line.
+- **June 5 validation refresh:** `py -3.12 scripts\sync_version.py --check`,
+  route manifest, feature-readiness, MCP extended tools, model-card, CEP panel
+  build, panel advisory, and SBOM generator checks passed from the current
+  checkout. Direct lockfile `pip-audit` failed on the known RA-34
+  `idna==3.11` advisory (`CVE-2026-45409` / `GHSA-65pc-fj4g-8rjx`).
 - **Node CI runtime:** `.github/workflows/pr-fast.yml` uses
   `actions/setup-node@v4` with `node-version: '22'` before panel `npm ci`, while
   `.github/workflows/build.yml` runs the Release Full panel `npm ci`,
@@ -456,6 +491,22 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-30 Docker build-context secret/log hygiene** needs `.dockerignore` to
   block Git-ignored `.env*` and `*.log` artifacts, plus a static guard that
   keeps secret/log ignore classes aligned.
+- **RA-31 Adobe tracker exit-code capture** needs explicit probe `rc` capture,
+  deterministic output writing, and a workflow-shape test for the notification
+  contract.
+- **RA-32 Adobe tracker label contract** needs workflow issue labels to be
+  present in `.github/labels.yml` or replaced with existing seeded labels, plus
+  a guard against future workflow/label drift.
+- **RA-33 issue-label dry-run without `gh`** needs the `dry_run=True` path to
+  bypass GitHub CLI availability checks while real apply remains fail-closed.
+- **RA-34 lockfile advisory coverage** needs `requirements-lock.txt` refreshed
+  past vulnerable `idna<3.15` and added back to recurring release/audit
+  coverage.
+- **RA-35 release SBOM fidelity** needs a resolved transitive SBOM mode or
+  explicit declared-only artifact naming/metadata with matching tests.
+- **RA-36 CEP panel UNC/HGFS-safe Node commands** needs documented local panel
+  checks to reach the same direct Node scripts from shared-folder paths, or a
+  validated wrapper path plus command-contract tests.
 
 ## Research Inputs (archived)
 
@@ -475,8 +526,17 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE18.md) — duplicate Docker CI/release-smoke coverage recheck; no new RA row promoted.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE19.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE19.md) — Docker dependency install fail-open and shell specifier parsing follow-up (RA-29).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE20.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE20.md) — Docker build-context secret/log hygiene follow-up (RA-30).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-05_COMPREHENSIVE.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-05_COMPREHENSIVE.md) — comprehensive June 5 research synthesis and RA-31 through RA-36 candidate prioritization.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE21.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE21.md) — Adobe tracker exit-code capture follow-up (RA-31).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE22.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE22.md) — Adobe tracker issue-label contract follow-up (RA-32).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE23.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE23.md) — issue-label dry-run without `gh` follow-up (RA-33).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE24.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE24.md) — duplicate live issue-tracker seeding recheck; no new RA row promoted.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE25.md) — duplicate Python metadata drift recheck; no new RA row promoted.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE26.md) — lockfile advisory coverage and vulnerable `idna` pin follow-up (RA-34).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE27.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE27.md) — release SBOM fidelity and declared-only labeling follow-up (RA-35).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE28.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE28.md) — CEP panel UNC/HGFS-safe Node command entry-point follow-up (RA-36).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-30 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-36 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes

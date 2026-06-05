@@ -1,7 +1,7 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.236
-**Updated**: 2026-06-04
+**Version**: 4.237
+**Updated**: 2026-06-05
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 **Root summaries**: [TODO.md](TODO.md) is the compact active execution queue, [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
@@ -12,7 +12,7 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> Last researched: Cycle 20 - 2026-06-04.
+> Last researched: Cycle 28 - 2026-06-05.
 
 ## Implementer Instructions
 
@@ -27,7 +27,7 @@
   Premiere/Apple/notarization claims without the required external run.
 - Continue from the open queue before adding new waves: E15 i18n migration
   batches, external F202 notarization, external F252 UXP WebView cutover, then
-  RA-01..RA-30.
+  RA-01..RA-36.
 - Researcher-queue ownership tags: `🤖` means implementer-actionable, `🔧`
   means user/external/manual gated, `🔬` means researcher-added this cycle, and
   `✅` means implemented/closed by the build lane.
@@ -501,6 +501,8 @@
 > **v4.235 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-fifth rolling i18n batch covering the Audio SFX and Tone form shell. The i18n drift gate now reports 1,930 keys / 1,848 consumers / 82 dead / 0 missing.
 >
 > **v4.236 status (2026-06-04, continuation pass)**: advanced **E15** with a one-hundred-twenty-sixth rolling i18n batch covering the Audio Ducking form shell. The i18n drift gate now reports 1,933 keys / 1,853 consumers / 80 dead / 0 missing.
+>
+> **v4.237 status (2026-06-05, research queue consolidation)**: reconciled the comprehensive June 5 research archive into the canonical roadmap surfaces. RA-31 through RA-36 now track Adobe tracker exit-code capture, tracker label contracts, no-`gh` label dry-runs, lockfile advisory coverage, release SBOM fidelity, and UNC/HGFS-safe CEP panel Node commands. Cycles 24 and 25 were duplicate rechecks that promoted no new rows.
 >
 > **2026-06-04 research-only refresh:** Focused local checks stayed green after the N8 docs/code batch (`tests/test_agent_skills.py tests/test_user_skills.py`: 8 passed), and E14 added CEP/UXP caption display-settings UI parity checks (`tests/test_cep_caption_display_settings_ui.py tests/test_uxp_caption_display_settings_ui.py`: 22 passed). Route manifest check remained at 1,522 routes / 107 blueprints at that point, and version sync stayed on v1.32.0. Fresh external checks still point to the existing work rather than a new duplicate row: Adobe UXP remains the Premiere 25.6+ path, Firefly AI Assistant raises the bar for natural-language creative orchestration, Generative Extend remains active, FFmpeg 8.1 is current upstream, and OSS comparators MLT v7.38.0 / LosslessCut v3.68.0 remain active. No new roadmap rows were promoted; after N9/N10/E12/E13, continue with E15, external F202/F252, and RA-01..RA-14.
 
@@ -2778,6 +2780,22 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-05 v4.237 Research Queue Consolidation (RA-31 through RA-36)
+
+The comprehensive June 5 archive and Cycle 21 through Cycle 28 notes are now consolidated into the canonical queue. Cycles 24 and 25 were duplicate rechecks for live issue-tracker state and existing RA-01/RA-02 metadata drift; they promoted no new rows.
+
+| Surface | Status |
+|---|---|
+| Research inputs | `docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-05_COMPREHENSIVE.md` plus Cycle 21 through Cycle 28 archive notes. |
+| Promoted tracker items | RA-31 makes the Adobe tracker workflow capture probe exit codes explicitly, RA-32 guards workflow issue labels against the label seed, and RA-33 lets label dry-runs work without `gh`. |
+| Promoted release-trust items | RA-34 restores lockfile advisory coverage for `requirements-lock.txt` and refreshes the vulnerable `idna` pin; RA-35 either publishes a resolved release SBOM or labels the current artifact declared-only. |
+| Promoted local Windows item | RA-36 covers UNC/HGFS-safe CEP panel Node command entry points so documented local checks reach the same direct Node scripts used by release smoke. |
+| Local evidence | Version, route, feature-readiness, MCP, model-card, CEP build, panel advisory, and SBOM generator checks ran from the current checkout. The direct lockfile audit still fails on the known RA-34 `idna==3.11` finding (`CVE-2026-45409` / `GHSA-65pc-fj4g-8rjx`, patched at 3.15). |
+
+Validation after the consolidation: `py -3.12 scripts\sync_version.py --check`, `py -3.12 -m opencut.tools.dump_route_manifest --check`, `py -3.12 -m opencut.tools.dump_feature_readiness --check`, `py -3.12 -m opencut.tools.dump_mcp_extended_tools --check`, `py -3.12 -m opencut.tools.dump_model_cards --check`, `npm run build:verify`, `npm run audit:check -- --json`, and `py -3.12 scripts\sbom.py --format json --output dist\research-plan-sbom-check.json` passed. `py -3.12 -m pip_audit -r requirements-lock.txt --format json --progress-spinner off` failed as expected on the RA-34 lockfile advisory gap.
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
@@ -3022,7 +3040,65 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
   `.env`, `.env.*`, and `*.log`, but `.dockerignore` does not, so local Docker
   builds can send ignored secret/log artifacts into the image build context.
 
-*Research conducted 2026-06-03 and refreshed 2026-06-04. Items below are new — not duplicates of Existing Planned Work.*
+### Researcher Queue (Cycle 21 - 2026-06-05)
+
+- [x] 🔬 `adobe-tracker-output-capture-guard` - checked whether the weekly Adobe
+  typings tracker reliably captures its nonzero drift exit code before the
+  downstream notification condition evaluates. Promoted RA-31 because the
+  workflow depends on `$GITHUB_OUTPUT` written after a command that intentionally
+  exits nonzero on drift.
+
+### Researcher Queue (Cycle 22 - 2026-06-05)
+
+- [x] 🔬 `adobe-tracker-label-contract` - checked whether the F251 weekly
+  workflow uses labels that exist in the repo label seed and live GitHub label
+  state. Promoted RA-32 because workflow issue search/create references `f251`,
+  `uxp`, and `tracking` labels that are not guaranteed by `.github/labels.yml`.
+
+### Researcher Queue (Cycle 23 - 2026-06-05)
+
+- [x] 🔬 `github-seeder-label-dry-run-without-gh` - checked whether the
+  documented `--labels --dry-run` path avoids requiring the GitHub CLI.
+  Promoted RA-33 because `apply_labels()` checks for `gh` before honoring
+  `dry_run=True`.
+
+### Researcher Queue (Cycle 24 - 2026-06-05)
+
+- [x] 🔬 `github-live-issue-tracker-empty-recheck` - rechecked whether the
+  public GitHub issue tracker had been seeded. No new row was promoted because
+  the live seeding action is already covered by F182/F097, while RA-32 and
+  RA-33 cover the source-level label-contract and dry-run gaps.
+
+### Researcher Queue (Cycle 25 - 2026-06-05)
+
+- [x] 🔬 `python-packaging-metadata-drift-recheck` - rechecked Ruff
+  target-version and requirements/pyproject dependency drift. No new row was
+  promoted because the evidence maps back to existing RA-01 and RA-02.
+
+### Researcher Queue (Cycle 26 - 2026-06-05)
+
+- [x] 🔬 `requirements-lock-advisory-gap` - checked whether
+  `requirements-lock.txt` remains covered by recurring release/audit evidence.
+  Promoted RA-34 because the lockfile pins vulnerable `idna==3.11` while active
+  release-smoke dependency audit coverage no longer exercises that lockfile
+  target.
+
+### Researcher Queue (Cycle 27 - 2026-06-05)
+
+- [x] 🔬 `release-sbom-fidelity-boundary` - checked whether the tagged release
+  SBOM artifact is a resolved dependency SBOM or a declared-surface inventory.
+  Promoted RA-35 because the current SBOM generator emits declared direct
+  dependencies and model cards, not resolved transitive package evidence.
+
+### Researcher Queue (Cycle 28 - 2026-06-05)
+
+- [x] 🔬 `panel-npm-scripts-on-unc` - checked whether documented CEP panel npm
+  script entry points work from the Windows UNC/HGFS workspace path. Promoted
+  RA-36 because `npm run` resolves relative scripts from `C:\Windows` on that
+  path while the direct `node scripts/*.mjs` checks and release-smoke entry
+  points succeed.
+
+*Research conducted 2026-06-03 and refreshed 2026-06-05. Items below are new — not duplicates of Existing Planned Work.*
 
 These items came out of a fresh code-evidence pass (job/journal persistence layers, error/diagnostics layer, dependency manifests, plugin/skill loaders, request-correlation middleware) plus a competitive scan of the 2026 Premiere-Pro automation market (Adobe Firefly AI Assistant, AutoCut, Submagic, Descript). They deliberately avoid re-stating the continuation-queue items (job metadata = closed N9, request-ID-into-subprocess = closed N10, manifest-derived allowlist = closed E12, CLI parity = closed E13, i18n batches = E15).
 Cycles 2 through 4 add Premiere-UXP packaging trust guardrails based on Adobe's
@@ -3048,7 +3124,12 @@ project-structure claims. Cycle 18 rechecked Docker CI/release-smoke coverage
 and promoted no new row because the evidence maps back to RA-25 through RA-27.
 Cycle 19 adds a Docker dependency fail-closed/specifier parsing guardrail for
 the image dependency layer. Cycle 20 adds a Docker build-context hygiene
-guardrail for Git-ignored secrets/logs.
+guardrail for Git-ignored secrets/logs. Cycles 21 through 23 add Adobe tracker
+exit-code, tracker label-contract, and no-`gh` label dry-run hardening items.
+Cycles 24 and 25 are duplicate rechecks that promote no new rows. Cycle 26 adds
+lockfile advisory coverage for the current `idna==3.11` finding. Cycle 27 adds
+release SBOM fidelity/declared-only labeling work. Cycle 28 adds
+UNC/HGFS-safe CEP panel Node command entry-point work.
 
 ### Quick Wins
 
@@ -3076,6 +3157,13 @@ guardrail for Git-ignored secrets/logs.
 - [ ] **P2 — RA-29 Make Docker dependency installs fail closed and parse specifiers literally** — Why: Docker is advertised as a supported launch path, but the dependency layer can produce a partially provisioned image while the build still exits successfully. Evidence: `Dockerfile` uses shell-form `RUN pip install --no-cache-dir ...` with unquoted comparison specifiers such as `faster-whisper>=1.1`; in a POSIX shell-form `RUN`, `>` is shell redirection syntax unless the requirement is quoted or supplied from a requirements/extras file. The same layer ends with `|| echo "Some optional deps failed — continuing"`, so any failed optional install is converted into a successful Docker build. `pyproject.toml` already has canonical extras with parseable requirement strings such as `faster-whisper>=1.1,<2`, `opencv-python-headless>=4.13,<5`, and `scenedetect[opencv]>=0.6,<1`. Touches: `Dockerfile`, a Dockerfile/static dependency-surface guard test, and optionally `scripts/release_smoke.py` if the guard should run in release smoke. Acceptance: Docker dependencies are installed from canonical extras/requirements or every shell-form package specifier is quoted; fail-open `|| echo` masking is removed from dependency installation; tests fail if Dockerfile reintroduces unquoted comparison specifiers or unconditional install-failure masking. Verify: focused Dockerfile guard pytest, `git diff --check`, and real `docker build` evidence when Docker is available. Complexity: S.
 
 - [ ] **P2 — RA-30 Align Docker build-context secret/log hygiene with Git ignores** — Why: Docker builds include untracked local files unless `.dockerignore` blocks them, and this image copies the filtered build context into `/app`. Evidence: `.gitignore` excludes `.env`, `.env.*`, and `*.log`; `.dockerignore` excludes VCS/caches/build outputs/docs/tests/extension/venvs but does not exclude `.env`, `.env.*`, or `*.log`; `Dockerfile` later runs `COPY . /app`. Touches: `.dockerignore`, a static Docker context hygiene test, and optionally release-smoke wiring for that guard. Acceptance: `.dockerignore` blocks Git-ignored secrets/logs such as `.env`, `.env.*`, and `*.log`; a guard test fails when `.gitignore` secret/log classes are absent from `.dockerignore`; local ignored log artifacts are not sent into the Docker build context. Verify: focused Docker context hygiene pytest plus real `docker build`/context evidence when Docker is available. Complexity: S.
+
+- [ ] **P2 — RA-31 Harden Adobe tracker exit-code capture** — Why: F251 is intentionally fail-open, but the weekly workflow notification path depends on an output written after a command that intentionally exits nonzero when drift is detected. Evidence: `.github/workflows/adobe-premierepro-versions.yml` runs the tracker probe, redirects JSON to `premierepro-drift.json`, then writes `$?` to `$GITHUB_OUTPUT` under `continue-on-error`; the CLI documents and tests exit code `2` for drift. Touches: `.github/workflows/adobe-premierepro-versions.yml` and a workflow-shape test. Acceptance: the probe step explicitly captures `rc` and output before any command can overwrite it; downstream notification logic has a deterministic missing/malformed-output policy; fail-open release behavior is preserved. Verify: focused workflow-shape pytest plus a dry scheduled-workflow run or equivalent local workflow inspection. Complexity: S.
+- [ ] **P2 — RA-32 Guard Adobe tracker issue-label contracts** — Why: the weekly tracker can detect drift but fail or duplicate notifications if the labels it searches or creates are absent. Evidence: the workflow searches `labels: 'f251'` and creates issues with `f251`, `uxp`, and `tracking`, while `.github/labels.yml` does not define those labels and the live default label set did not contain them when checked. Touches: `.github/labels.yml`, `.github/workflows/adobe-premierepro-versions.yml`, `scripts/seed_github_issues.py` if needed, and a label/workflow contract test. Acceptance: workflow-created labels either exist in the label seed or the workflow uses existing seeded labels; tests fail if workflow label names drift from `.github/labels.yml`. Verify: label dry-run plus focused workflow-label contract pytest. Complexity: S.
+- [ ] **P3 — RA-33 Let issue-label dry-runs run without `gh`** — Why: dry-run is the safe local inspection path, but `apply_labels()` checks `_gh_available()` before honoring `dry_run=True`. Evidence: `scripts/seed_github_issues.py --labels --dry-run` reaches `apply_labels(..., dry_run=True)`, and the implementation raises a `gh CLI not found` error in no-`gh` environments before producing the planned label operations. Touches: `scripts/seed_github_issues.py` and `tests/test_seed_github_issues.py`. Acceptance: `--labels --dry-run --json` emits planned label commands without `gh`; real label apply still fails closed when `gh` is absent or unauthenticated. Verify: unit test with `_gh_available` monkeypatched false plus the documented dry-run command. Complexity: S.
+- [ ] **P0 — RA-34 Restore lockfile advisory coverage and refresh vulnerable lock pins** — Why: `requirements-lock.txt` remains a tracked trust surface, but recurring release/audit coverage no longer exercises it and it currently pins vulnerable `idna==3.11`. Evidence: `py -3.12 -m pip_audit -r requirements-lock.txt --format json --progress-spinner off` reports `CVE-2026-45409` / `GHSA-65pc-fj4g-8rjx`, fixed in `idna` 3.15; the active pip-audit wrapper defaults to `requirements.txt` and `pyproject[all]` targets. Touches: `requirements-lock.txt`, `opencut/tools/pip_audit_extras.py`, `scripts/release_smoke.py`, relevant audit/bootstrap tests, and dependency-governance docs. Acceptance: the lockfile no longer pins vulnerable `idna<3.15`; release/audit gates include an explicit lockfile target or equivalent fail-closed step; tests fail if the lockfile target is dropped. Verify: direct lockfile `pip-audit`, updated pip-audit wrapper run, focused release-smoke/audit tests, and `git diff --check`. Complexity: S-M.
+- [ ] **P1 — RA-35 Publish resolved SBOM or label current artifact declared-only** — Why: release workflows upload an SBOM artifact whose name can be read as a resolved vulnerability inventory, but `scripts/sbom.py` currently emits declared direct dependencies, optional extras, and model-card components rather than a resolved transitive install graph. Evidence: a generated SBOM contained 95 declared components and no `idna` entry even though `requirements-lock.txt` pins a vulnerable transitive package; direct dependencies from ranges are emitted without resolved versions. Touches: `scripts/sbom.py`, release workflow SBOM upload, SBOM/release-smoke tests, and release docs. Acceptance: release artifacts either include a resolved transitive package SBOM with versions for the released environment or are explicitly named/labeled as declared-only with separate advisory/VDR evidence. Verify: focused SBOM pytest, generated CycloneDX inspection for the selected fidelity marker, and one release-smoke run using the selected mode. Complexity: M.
+- [ ] **P2 — RA-36 Make CEP panel Node command entry points UNC/HGFS-safe** — Why: documented local panel commands use `npm run`, but on the Windows shared-folder checkout path `cmd.exe` defaults to `C:\Windows` and resolves relative script targets there before the panel checkers run. Evidence: `npm run audit:check -- --json`, `npm run audit:esbuild -- --json`, and `npm run build:verify` fail on UNC/HGFS paths with `MODULE_NOT_FOUND` for `C:\Windows\scripts\*.mjs`, while direct `node scripts/*.mjs` and release-smoke Node steps succeed. Touches: `extension/com.opencut.panel/package.json`, panel helper scripts or a Windows-safe wrapper, `docs/NODE_ADVISORIES.md`, and command-contract tests. Acceptance: documented local commands work from UNC/HGFS paths or route Windows users through a validated direct-node/PowerShell wrapper; tests cover the command contract so relative Node script entries do not regress. Verify: direct Node checker commands, chosen documented wrapper/npm commands from UNC/HGFS, and focused command-contract tests. Complexity: S.
 
 ### Larger Bets
 
