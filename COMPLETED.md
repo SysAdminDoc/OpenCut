@@ -39,6 +39,7 @@ Last consolidated: 2026-06-04.
 | Request correlation | The May 26 plan now has N10 closed: async workers and FFmpeg subprocesses carry request IDs through `OPENCUT_REQUEST_ID` and prefixed stderr logs. |
 | Workflow safety | The May 26 plan now has E12 closed: workflow validation is derived from route-manifest `workflow.label` metadata, with 53 explicit workflow-safe route opt-ins and metadata drift checks. |
 | CLI API escape hatch | The May 26 plan now has E13 closed: `opencut route METHOD PATH` validates against the generated route manifest, handles JSON/query request shaping, fetches CSRF tokens for mutating calls, and prints backend responses for scripts. |
+| Lockfile advisory coverage | RA-34 is closed: `requirements-lock.txt` is part of the default pip-audit wrapper/release-smoke target set, the vulnerable `idna` lock pin is refreshed to 3.16, and the fully pinned lockfile target audits with `pip-audit --no-deps`. |
 
 ## Historical Detail
 
