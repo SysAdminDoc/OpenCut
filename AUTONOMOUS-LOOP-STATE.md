@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: RA-34 lockfile advisory coverage is closed and verified.
-- Shipped this cycle: `requirements-lock.txt` remains in the default pip-audit/release-smoke target set, the lockfile `idna` pin is at 3.16, and the lockfile audit target now runs with `pip-audit --no-deps` because the file is fully pinned.
-- Verification: focused audit/release-smoke tests passed, focused Ruff passed, direct lockfile pip-audit passed, wrapper lockfile-only audit passed, and `git diff --check` passed.
+- Cycle result: E15 rolling i18n migration advanced to v4.239 / batch 127 and remains open.
+- Shipped this cycle: Video quick-action titles/labels/meta text, shared Preset tags, the Effect label, and the first Video effects selector options now expose static locale hooks while preserving backend action IDs and effect option values. The shared `t(...)` lookup now falls back safely before locale initialization.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, `node --check` passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 1,945 keys / 1,866 consumers / 79 dead / 0 missing, `git diff --check` passed, and a local Browser preview rendered the migrated Video strings with no current-port console errors.
 
 ## Next Work
 
