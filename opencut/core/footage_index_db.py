@@ -11,6 +11,7 @@ import sqlite3
 import threading
 import time
 
+from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_migrations import migrate_user_version
 
 logger = logging.getLogger("opencut")
@@ -315,6 +316,11 @@ def get_stats():
         "last_indexed_at": row["last_indexed"],
         "db_size": db_size,
     }
+
+
+def get_db_diagnostics():
+    """Return SQLite page, freelist, WAL, and size diagnostics for the index."""
+    return build_sqlite_diagnostic(_DB_PATH, store_name="footage_index")
 
 
 def clear_index():

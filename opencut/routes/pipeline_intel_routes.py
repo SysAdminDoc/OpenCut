@@ -31,6 +31,14 @@ def pipeline_health():
     return jsonify(result.to_dict())
 
 
+@pipeline_intel_bp.route("/api/pipeline/health/db-diagnostics", methods=["GET"])
+def pipeline_health_db_diagnostics():
+    """Return read-only diagnostics for the pipeline health SQLite store."""
+    from opencut.core.pipeline_health import get_db_diagnostics
+
+    return jsonify(get_db_diagnostics())
+
+
 @pipeline_intel_bp.route("/api/pipeline/errors", methods=["GET"])
 def pipeline_errors():
     """Get pipeline error summary."""

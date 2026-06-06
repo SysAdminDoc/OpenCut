@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Local SQLite Diagnostics
+
+- Closed RA-39/RA-08 by adding `opencut local-db-diagnostics` plus feature-area diagnostics routes for job, journal, footage-index, and pipeline-health SQLite stores.
+- The diagnostics report page count, page size, freelist count/ratio, estimated free bytes, user version, file sizes, WAL checkpoint status, and a recommended maintenance action.
+- Added regression coverage for initialized and missing database diagnostics plus CLI JSON output.
+
 ### Changed - Local SQLite Payload Spillover
 
 - Closed RA-38/RA-07 by adding content-addressed spill files for oversized local SQLite JSON payloads.
