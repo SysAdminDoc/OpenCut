@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - User Data Tombstone Restore
+
+- Closed RA-45 by adding capped tombstone snapshots for preset deletes, workflow deletes, favorites replacement, and assistant dismissal clears.
+- Added `/settings/tombstones` and `/settings/tombstones/restore` so recently deleted user data can be inspected and restored with audit metadata.
+- Tombstones are capped by count and age, and delete/replace responses now return restore metadata.
+
 ### Changed - Model Cache Clear Preview
 
 - Closed RA-44 by adding dry-run/preview plans for Whisper cache clear and model cache deletion.
