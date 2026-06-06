@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-40 local SQLite wipe-safeguard pass.
+Last synced: 2026-06-06 during the RA-42 render-cache containment pass.
 
 ## Execution Order
 
@@ -38,6 +38,11 @@ Last synced: 2026-06-06 during the RA-40 local SQLite wipe-safeguard pass.
 - [x] **RA-06/RA-40 destructive wipe backup/confirm** - local SQLite destructive maintenance paths now support dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
 - [x] **RA-07/RA-38 job and journal JSON payload caps** - oversized job results and journal inverse/forward payloads now spill to content-addressed local files with structured metadata.
 - [x] **RA-08/RA-39 DB compaction diagnostic** - CLI and feature-area routes now report page, freelist, WAL, file-size, and recommended-action posture for local SQLite stores.
+- [ ] **RA-41 destructive-operation plan contract** - add a shared dry-run/confirmation-token pattern for user-visible destructive endpoints.
+- [x] **RA-42 render-cache delete containment** - render-cache cleanup/invalidation now rejects forged index output paths outside `CACHE_DIR` or with mismatched cache-key basenames.
+- [ ] **RA-43 plugin uninstall quarantine** - move plugin deletion through quarantine, restore, and permanent-delete states with stronger confirmation.
+- [ ] **RA-44 model/cache clear preview** - enumerate exact model/cache clear paths and bytes before mutation, with per-path errors.
+- [ ] **RA-45 user-data delete snapshots** - add capped tombstone snapshots and restore metadata for user-data deletes.
 - [ ] **RA-03 direct typed error logging** - ensure direct typed error paths log with structured context.
 - [ ] **RA-01 Ruff target-version alignment** - make the lint target explicit.
 - [ ] **RA-02 requirements/pyproject alignment** - keep dependency metadata synchronized.

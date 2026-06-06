@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed - Render Cache Containment
+
+- Closed RA-42 by making render-cache reads, cleanup, and downstream invalidation reject forged `index.json` output paths outside `CACHE_DIR`.
+- Cached file deletion now requires the resolved path to stay under the cache root and the file basename to match the cache key before unlinking.
+- Added forged-index regression tests that preserve outside files while removing corrupted cache index entries.
+
 ### Changed - Local SQLite Wipe Safeguards
 
 - Closed RA-40/RA-06 by adding shared local SQLite destructive-maintenance helpers with dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
