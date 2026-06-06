@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Request ID Error Bodies
+
+- Closed RA-04 by adding generated server request IDs to structured JSON error bodies.
+- Routed direct auth, request-size, and internal server typed errors through the shared error helper and added release-smoke coverage for request ID/body/header alignment.
+
 ### Changed - CEP Panel Node Entry Points
 
 - Closed RA-36 by adding Windows-safe `audit:check:win`, `audit:esbuild:win`, and `build:verify:win` panel aliases for UNC/HGFS checkouts.

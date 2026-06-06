@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-06
-**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,400+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,600+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -91,7 +91,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-01 | Ruff target-version alignment | S | py39 vs >=3.11 skew |
 | RA-02 | requirements/pyproject alignment | S | Pin drift weakens advisories |
 | RA-03 | Direct typed error logging | S | OpenCutError leaves no log |
-| RA-04 | Request ID in error bodies | S | Missing from JSON envelope |
+| RA-04 | Request ID in error bodies | S | Closed 2026-06-06: structured error bodies now include the generated request ID |
 | RA-05 | SQLite PRAGMA user_version | M | Closed 2026-06-06: local SQLite stores now use explicit `user_version` migrations |
 | RA-06 | Destructive wipe backup | M | Closed 2026-06-06: local SQLite destructive maintenance paths now expose dry-run counts, optional backups, and audit metadata |
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
@@ -1236,6 +1236,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 44 | GitHub Actions SHA pins | `.github/workflows/*.yml`, workflow action tag SHAs, panel/workflow permission tests | Workflow `uses:` references still pointed at mutable major tags such as `actions/checkout@v4`, leaving release/signing workflows dependent on tag movement. | Closed RA-23 by pinning every non-local action ref to a full SHA, preserving adjacent version comments, and adding a release-smoke guard against mutable action refs. |
 | 2026-06-06 | Cycle 45 | Release artifact provenance attestations | GitHub artifact attestation docs, `actions/attest` README, `.github/workflows/build.yml`, release provenance tests | Release Full uploaded packaged artifacts and the declared SBOM without a signed provenance claim for the exact uploaded files. | Closed the provenance follow-up by adding pinned `actions/attest@v4`, least-extra attestation permissions, pre-upload server packaging, verification docs, and release-smoke static guards. |
 | 2026-06-06 | Cycle 46 | CEP UNC/HGFS-safe Node commands | `extension/com.opencut.panel/package.json`, `panel-node-gate.ps1`, panel advisory/build docs, release-smoke tests | Documented panel npm gate commands could be launched from Windows shared-folder paths where `cmd.exe` falls back to `C:\Windows`, causing relative `scripts/*.mjs` paths to resolve incorrectly. | Closed RA-36 by adding Windows-safe `:win` aliases that locate the wrapper from `%INIT_CWD%`; the wrapper then executes the Node scripts from `$PSScriptRoot`, with docs and release-smoke coverage for the shared-folder entry points. |
+| 2026-06-06 | Cycle 47 | Request IDs in typed error bodies | `opencut/errors.py`, `opencut/server.py`, request-correlation middleware, hardening tests | Structured JSON error bodies echoed codes and suggestions but omitted the generated server request ID, forcing operators to correlate from response headers alone. | Closed RA-04 by enriching centralized typed error bodies with the generated request ID, routing direct server typed errors through the shared helper, and adding release-smoke coverage for `error_response`, `OpenCutError`, `safe_error`, and built-in error handlers. |
 
 ### Research queries to run later
 
@@ -1256,23 +1257,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 47: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 48: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 49: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 50: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 51: Continue E15 or another remaining release-trust gap now that release provenance and RA-36 are closed.
+1. Cycle 48: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 49: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 50: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 51: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 52: Continue E15, RA-03, or another remaining release-trust gap now that RA-04 is closed.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 46: CEP UNC/HGFS-safe Node commands.
+Cycle 47: Request IDs in typed error bodies.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
+RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1309,6 +1310,8 @@ upload, and operator verification commands live in `docs/RELEASE_PROVENANCE.md`.
 RA-36 keeps Windows shared-folder panel npm gates on wrapper aliases that
 resolve the wrapper from npm's original working directory and execute Node
 scripts from the wrapper's script directory.
+RA-04 keeps structured JSON error envelopes tied to the generated server
+request ID so client-visible errors can be correlated directly with logs.
 
 #### Important findings so far
 
@@ -1356,6 +1359,8 @@ scripts from the wrapper's script directory.
   version comments and a release-smoke guard rejects mutable refs.
 - CEP panel npm advisory, esbuild-pin, and build verification gates now have
   Windows-safe `:win` aliases for UNC/HGFS checkouts.
+- Structured JSON error bodies now include the generated server request ID that
+  matches the `X-Request-ID` response header.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now

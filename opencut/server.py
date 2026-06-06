@@ -16,7 +16,7 @@ import time
 import traceback
 from contextlib import suppress
 
-from flask import Flask, jsonify, request
+from flask import Flask, request
 from flask_cors import CORS
 
 _TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
@@ -346,6 +346,8 @@ def create_app(config=None):
     except Exception as _disk_exc:  # noqa: BLE001
         logger.warning("disk_monitor bootstrap failed: %s", _disk_exc)
 
+    from opencut.errors import error_response as _error_response  # noqa: E402
+    from opencut.errors import register_error_handlers
     from opencut.security import OpenCutRequest  # noqa: E402
 
     _app = Flask(__name__)
@@ -354,7 +356,6 @@ def create_app(config=None):
     _app.config["MAX_CONTENT_LENGTH"] = config.max_content_length
     CORS(_app, origins=config.cors_origins)
 
-    from opencut.errors import register_error_handlers  # noqa: E402
     register_error_handlers(_app)
 
     # Per-request correlation ID middleware — must run before route
@@ -382,17 +383,16 @@ def create_app(config=None):
             token = _auth.extract_request_token(request.headers, request.args)
             if _auth.is_token_valid(token):
                 return None
-            return jsonify(
-                {
-                    "error": "Missing or invalid X-OpenCut-Auth token",
-                    "code": "AUTH_REQUIRED",
-                    "suggestion": (
-                        "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
-                        "~/.opencut/auth.json or rotate it via "
-                        "`opencut-server --rotate-auth`."
-                    ),
-                }
-            ), 401
+            return _error_response(
+                "AUTH_REQUIRED",
+                "Missing or invalid X-OpenCut-Auth token",
+                status=401,
+                suggestion=(
+                    "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
+                    "~/.opencut/auth.json or rotate it via "
+                    "`opencut-server --rotate-auth`."
+                ),
+            )
 
     except Exception as _auth_exc:  # noqa: BLE001
         logger.warning("auth middleware install failed: %s", _auth_exc)
@@ -401,11 +401,12 @@ def create_app(config=None):
     def handle_large_request(e):
         """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
         max_mb = config.max_content_length / (1024 * 1024)
-        return jsonify({
-            "error": f"Request too large (max {max_mb:.0f} MB)",
-            "code": "REQUEST_TOO_LARGE",
-            "suggestion": "Reduce the payload size or process the file in smaller batches.",
-        }), 413
+        return _error_response(
+            "REQUEST_TOO_LARGE",
+            f"Request too large (max {max_mb:.0f} MB)",
+            status=413,
+            suggestion="Reduce the payload size or process the file in smaller batches.",
+        )
 
     @_app.errorhandler(RuntimeError)
     def handle_runtime_error(e):
@@ -422,11 +423,12 @@ def create_app(config=None):
             return _safe_error(e, context="runtime_error_handler")
         except Exception:
             err_msg = str(e)[:200] if str(e) else "Internal server error"
-            return jsonify({
-                "error": err_msg,
-                "code": "INTERNAL_ERROR",
-                "suggestion": "Check the server logs for details.",
-            }), 500
+            return _error_response(
+                "INTERNAL_ERROR",
+                err_msg,
+                status=500,
+                suggestion="Check the server logs for details.",
+            )
 
     @_app.errorhandler(500)
     def handle_internal_error(e):
@@ -441,11 +443,12 @@ def create_app(config=None):
                 _tb.print_exc(file=_f)
         except Exception:
             pass
-        return jsonify({
-            "error": "An internal error occurred. Check server logs for details.",
-            "code": "INTERNAL_ERROR",
-            "suggestion": "Retry the request; if it persists check ~/.opencut/crash.log.",
-        }), 500
+        return _error_response(
+            "INTERNAL_ERROR",
+            "An internal error occurred. Check server logs for details.",
+            status=500,
+            suggestion="Retry the request; if it persists check ~/.opencut/crash.log.",
+        )
 
     # Register Blueprints (all routes are in opencut/routes/)
     from opencut.routes import assert_no_route_collisions, register_blueprints  # noqa: E402
