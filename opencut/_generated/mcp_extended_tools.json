@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 14,
-    "GET": 370,
+    "GET": 374,
     "PATCH": 1,
     "POST": 1079,
     "PUT": 2
   },
   "response_schema_count": 101,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1466,
+  "tool_count": 1470,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -2103,6 +2103,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_api_pipeline_health"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /api/pipeline/health/db-diagnostics"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /api/pipeline/health/db-diagnostics.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "pipeline_intel",
+        "endpoint": "pipeline_intel.pipeline_health_db_diagnostics",
+        "generated": true,
+        "method": "GET",
+        "path": "/api/pipeline/health/db-diagnostics",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_api_pipeline_health_db_diagnostics"
     },
     {
       "annotations": {
@@ -6574,6 +6604,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /jobs/db-diagnostics"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /jobs/db-diagnostics.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "jobs",
+        "endpoint": "jobs.job_db_diagnostics",
+        "generated": true,
+        "method": "GET",
+        "path": "/jobs/db-diagnostics",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_jobs_db_diagnostics"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /jobs/history"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /jobs/history. Response schema: JobListResult.",
@@ -6700,6 +6760,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_jobs_stream_result_by_job_id"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /journal/db-diagnostics"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /journal/db-diagnostics.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "journal",
+        "endpoint": "journal.journal_db_diagnostics",
+        "generated": true,
+        "method": "GET",
+        "path": "/journal/db-diagnostics",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_journal_db_diagnostics"
     },
     {
       "annotations": {
@@ -8266,6 +8356,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_review_portal_by_review_id"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /search/db-diagnostics"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /search/db-diagnostics.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.search_db_diagnostics",
+        "generated": true,
+        "method": "GET",
+        "path": "/search/db-diagnostics",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_search_db_diagnostics"
     },
     {
       "annotations": {

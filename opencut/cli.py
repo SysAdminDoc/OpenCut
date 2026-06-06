@@ -690,6 +690,44 @@ def route(method, path, host, port, query, data, data_file, field, timeout, raw)
         )
 
 
+def _local_db_diagnostics_payload() -> dict[str, Any]:
+    from opencut.local_db_diagnostics import collect_local_db_diagnostics
+
+    stores = collect_local_db_diagnostics()
+    return {"count": len(stores), "stores": stores}
+
+
+@cli.command("local-db-diagnostics")
+@click.option("--json", "json_output", is_flag=True, help="Print machine-readable JSON.")
+def local_db_diagnostics(json_output):
+    """Show read-only diagnostics for local SQLite databases."""
+    payload = _local_db_diagnostics_payload()
+    if json_output:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+        return
+
+    table = Table(title="Local SQLite Diagnostics", box=box.ROUNDED)
+    table.add_column("Store", style="cyan")
+    table.add_column("DB bytes", justify="right")
+    table.add_column("WAL bytes", justify="right")
+    table.add_column("Pages", justify="right")
+    table.add_column("Freelist", justify="right")
+    table.add_column("Action")
+    for item in payload["stores"]:
+        files = item.get("files") or {}
+        database = files.get("database") or {}
+        wal = files.get("wal") or {}
+        table.add_row(
+            str(item.get("store") or ""),
+            str(database.get("bytes") or 0),
+            str(wal.get("bytes") or 0),
+            str(item.get("page_count") or 0),
+            str(item.get("freelist_count") or 0),
+            str(item.get("recommended_action") or ""),
+        )
+    console.print(table)
+
+
 def _resolve_output_dir(input_file, output_dir):
     """Resolve output directory, creating it if needed. Returns base path."""
     base = os.path.splitext(input_file)[0]

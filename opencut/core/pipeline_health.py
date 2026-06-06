@@ -14,6 +14,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_migrations import migrate_user_version
 
 logger = logging.getLogger("opencut")
@@ -572,3 +573,8 @@ def reset_health_db() -> None:
     conn = _get_conn()
     conn.execute("DELETE FROM health_metrics")
     conn.commit()
+
+
+def get_db_diagnostics() -> dict:
+    """Return SQLite page, freelist, WAL, and size diagnostics for health data."""
+    return build_sqlite_diagnostic(_DB_PATH, store_name="pipeline_health")

@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-06
-**Baseline**: v1.32.0 -- 1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,527 routes, 107 blueprints, 599 core modules, 9,000+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -95,7 +95,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-05 | SQLite PRAGMA user_version | M | Closed 2026-06-06: local SQLite stores now use explicit `user_version` migrations |
 | RA-06 | Destructive wipe backup | M | No dry-run or backup |
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
-| RA-08 | DB compaction diagnostic | S | No VACUUM; no retention |
+| RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
 | RA-09 | Timeline-native captions | L | UXP createCaptionTrack() |
 | RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
@@ -348,7 +348,7 @@ LosslessCut ships on 7+ platforms (41K stars). Distribution is a competitive wea
 | Accessibility | Good | FCC captions, WCAG 3 AD, flash detection, RTL/CJK |
 | i18n/l10n | Active | 2,009 locale keys; 50+ languages via NLLB |
 | Observability | Good | JSON logging, Sentry/GlitchTip, Aptabase |
-| Testing | Strong | 8,800+ tests, 54% coverage, fuzz harness |
+| Testing | Strong | 9,000+ tests, 54% coverage, fuzz harness |
 | Docs | Good | CLAUDE.md, CONTRIBUTING, SECURITY, DEVELOPMENT |
 | Distribution | **Weak** | Windows-only installer. Homebrew/winget/Snap/pip planned. |
 | Plugin ecosystem | Good | Manifest v1, sandbox, examples, skills |
@@ -363,7 +363,7 @@ LosslessCut ships on 7+ platforms (41K stars). Distribution is a competitive wea
 
 | Competitor | Pricing | OpenCut advantage | OpenCut gap |
 |---|---|---|---|
-| Descript ($24-65/mo) | Sub | 1,523 routes; MIT; local-first | Chat conductor, Overdub |
+| Descript ($24-65/mo) | Sub | 1,527 routes; MIT; local-first | Chat conductor, Overdub |
 | CapCut (free-$20/mo) | Freemium | Pro AI; Premiere; privacy | Templates, mobile |
 | AutoCut ($29/mo) | Sub | 10x breadth; MIT | Timeline speed |
 | Gling ($10-50/mo) | Sub | Full pipeline; local | Bad take detection |
@@ -678,7 +678,7 @@ copies before destructive maintenance.
 |---|---|---|---|
 | RA-37 SQLite schema versions | `opencut/job_store.py`, `opencut/journal.py`, `opencut/core/footage_index_db.py`, `opencut/core/pipeline_health.py` | Closed 2026-06-06: added a local-DB migration helper that records `user_version`, runs ordered idempotent migrations per store, and rejects newer unknown schemas with downgrade-safe errors. | P1 |
 | RA-38 payload-size quotas | `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` | Closed 2026-06-06: added per-field JSON byte caps, content-addressed local spill files under `.opencut/payload_spills`, and structured spill metadata in job and journal list/detail payloads. | P1 |
-| RA-39 local DB maintenance diagnostics | `cleanup_old_jobs`, `journal.clear_all`, `clear_index`, and metric purges delete rows, but no shared page-count, freelist, WAL checkpoint, or vacuum diagnostics were found | Add a read-only diagnostics command/route for each local DB with `page_count`, `freelist_count`, WAL checkpoint status, file sizes, and recommended maintenance action. | P1 |
+| RA-39 local DB maintenance diagnostics | `cleanup_old_jobs`, `journal.clear_all`, `clear_index`, and metric purges delete rows | Closed 2026-06-06: added `opencut local-db-diagnostics`, feature-area diagnostics routes, and a shared diagnostic helper with `page_count`, `freelist_count`, WAL checkpoint status, file sizes, and recommended maintenance action. | P1 |
 | RA-40 backup-before-wipe policy | `journal.clear_all`, journal DELETE route, footage-index clear/rebuild, and health reset paths perform destructive local deletes without a common backup/dry-run contract | Standardize destructive local-store APIs on `dry_run`, affected-row count, optional `VACUUM INTO` backup, and audit journal entry before irreversible deletion. | P1 |
 
 **External sources:** SQLite PRAGMA docs
@@ -1208,6 +1208,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 19 | Release SBOM fidelity | `scripts/sbom.py`, `.github/workflows/build.yml`, `tests/test_release_sbom.py`, `tests/test_sbom_completeness.py`, CycloneDX and GitHub artifact-attestation docs | The release SBOM is useful as a declared inventory, but it should not look like a resolved installed-environment vulnerability inventory. | Closed RA-35 by renaming the release SBOM path/artifact and adding declared-only CycloneDX metadata plus lockfile audit-target evidence. |
 | 2026-06-06 | Cycle 20 | Local SQLite schema versioning | `opencut/local_db_migrations.py`, `job_store.py`, `journal.py`, `footage_index_db.py`, `pipeline_health.py`, local DB migration tests | The local stores had idempotent schema creation but no durable SQLite `user_version` boundary or future-version rejection. | Closed RA-37/RA-05 with explicit per-store schema versions, ordered migrations, and downgrade-safe unknown-schema errors. |
 | 2026-06-06 | Cycle 21 | Local SQLite payload spillover | `opencut/local_db_payloads.py`, `job_store.py`, `journal.py`, job/journal tests | Job result and journal inverse/forward payloads could grow without a SQLite row-size boundary. | Closed RA-38/RA-07 with per-field caps, content-addressed spill files, and API-visible spill metadata. |
+| 2026-06-06 | Cycle 22 | Local SQLite maintenance diagnostics | `opencut/local_db_diagnostics.py`, `opencut/cli.py`, local DB and CLI tests | The stores had cleanup paths but no shared operator-visible page/freelist/WAL/file-size diagnostic. | Closed RA-39/RA-08 with read-only CLI and route diagnostics plus a reusable SQLite diagnostic helper. |
 
 ### Research queries to run later
 
@@ -1228,25 +1229,25 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 22: Continue local DB hardening with maintenance diagnostics and backup-before-wipe policy for RA-39 and RA-40.
-2. Cycle 23: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Cycle 24: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-4. Cycle 25: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-5. Cycle 26: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-6. Cycle 27: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 23: Continue local DB hardening with backup-before-wipe policy for RA-40.
+2. Cycle 24: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+3. Cycle 25: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+4. Cycle 26: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+5. Cycle 27: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+6. Cycle 28: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 21: Local SQLite payload spillover.
+Cycle 22: Local SQLite maintenance diagnostics.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
-product workflow specs. RA-05/RA-37, RA-07/RA-38, RA-16, RA-27, RA-28, RA-31,
-RA-32, RA-33, and RA-35 are closed, and the bootstrap dev-check guard is in
-place; the next cycle should continue local DB hardening with RA-39 and RA-40.
+product workflow specs. RA-05/RA-37, RA-07/RA-38, RA-08/RA-39, RA-16, RA-27,
+RA-28, RA-31, RA-32, RA-33, and RA-35 are closed, and the bootstrap dev-check
+guard is in place; the next cycle should continue local DB hardening with RA-40.
 
 #### Important findings so far
 
@@ -1282,8 +1283,8 @@ place; the next cycle should continue local DB hardening with RA-39 and RA-40.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
   spill oversized JSON into content-addressed `.opencut/payload_spills` files
   and return structured spill metadata instead of large inline rows.
-- Local-store deletes and clears have tests for behavior, but no common
-  dry-run, backup, compaction, or diagnostic policy.
+- Local SQLite stores now have shared page/freelist/WAL/file-size diagnostics
+  through CLI and feature routes; destructive clears still need the RA-40 backup/dry-run policy.
 - Destructive routes generally have CSRF and input validation, but no shared
   dry-run/confirmation token contract.
 - `render_cache.cleanup_cache()` and `invalidate_downstream()` should verify

@@ -261,6 +261,17 @@ def search_db_stats():
         return safe_error(e, "search_db_stats")
 
 
+@search_bp.route("/search/db-diagnostics", methods=["GET"])
+def search_db_diagnostics():
+    """Get read-only diagnostics for the SQLite footage index."""
+    try:
+        from opencut.core.footage_index_db import get_db_diagnostics
+        return jsonify(get_db_diagnostics())
+    except Exception as e:
+        logger.error("Failed to get index diagnostics: %s", e)
+        return safe_error(e, "search_db_diagnostics")
+
+
 # ---------------------------------------------------------------------------
 # Search: Cleanup Missing Files
 # ---------------------------------------------------------------------------

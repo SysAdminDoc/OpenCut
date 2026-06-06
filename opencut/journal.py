@@ -20,6 +20,7 @@ import sqlite3
 import threading
 import time
 
+from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_migrations import migrate_user_version
 from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
@@ -252,6 +253,11 @@ def clear_all() -> int:
     cur = conn.execute("DELETE FROM journal")
     conn.commit()
     return cur.rowcount
+
+
+def get_db_diagnostics() -> dict:
+    """Return SQLite page, freelist, WAL, and size diagnostics for journal.db."""
+    return build_sqlite_diagnostic(_DB_PATH, store_name="journal")
 
 
 def _row_to_dict(row) -> "dict | None":
