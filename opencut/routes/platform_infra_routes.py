@@ -16,6 +16,8 @@ from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir, _unique_output_path
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
     get_json_dict,
     require_csrf,
     safe_bool,
@@ -23,6 +25,7 @@ from opencut.security import (
     safe_int,
     validate_filepath,
     validate_path,
+    verify_destructive_confirm_token,
 )
 
 logger = logging.getLogger("opencut")
@@ -858,9 +861,40 @@ def cache_cleanup():
     try:
         data = get_json_dict()
         max_size = safe_float(data.get("max_size_gb"), default=5.0, min_val=0.1)
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
 
-        from opencut.core.render_cache import cleanup_cache
+        from opencut.core.render_cache import cleanup_cache, cleanup_cache_plan
+        cleanup_plan = cleanup_cache_plan(max_size_gb=max_size)
+        plan = build_destructive_plan(
+            "render_cache.cleanup",
+            targets=cleanup_plan["entries"],
+            metadata={
+                "route": "/cache/cleanup",
+                "max_size_gb": max_size,
+                "max_size_bytes": cleanup_plan["max_size_bytes"],
+                "total_size": cleanup_plan["total_size"],
+                "estimated_freed_bytes": cleanup_plan["estimated_freed_bytes"],
+            },
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "plan": cleanup_plan["entries"],
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+                "removed": 0,
+                "would_remove": cleanup_plan["removed"],
+                "estimated_freed_bytes": cleanup_plan["estimated_freed_bytes"],
+                "current_size": cleanup_plan["total_size"],
+                "projected_size": cleanup_plan["current_size"],
+            })
+        if plan["targets"] and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         result = cleanup_cache(max_size_gb=max_size)
+        result["dry_run"] = False
+        result["destructive_plan"] = plan
         return jsonify(result)
     except Exception as exc:
         return safe_error(exc, "cache_cleanup")
@@ -874,9 +908,37 @@ def cache_invalidate():
         data = get_json_dict()
         input_hash = data.get("input_hash", "")
         operation = data.get("operation", "")
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
 
-        from opencut.core.render_cache import invalidate_downstream
+        from opencut.core.render_cache import invalidate_downstream, invalidate_downstream_plan
+        invalidate_plan = invalidate_downstream_plan(input_hash, operation)
+        plan = build_destructive_plan(
+            "render_cache.invalidate",
+            targets=invalidate_plan["entries"],
+            metadata={
+                "route": "/cache/invalidate",
+                "input_hash": input_hash,
+                "operation": operation,
+                "estimated_freed_bytes": invalidate_plan["estimated_freed_bytes"],
+            },
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "plan": invalidate_plan["entries"],
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+                "invalidated": 0,
+                "would_invalidate": invalidate_plan["invalidated"],
+                "estimated_freed_bytes": invalidate_plan["estimated_freed_bytes"],
+            })
+        if plan["targets"] and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         result = invalidate_downstream(input_hash, operation)
+        result["dry_run"] = False
+        result["destructive_plan"] = plan
         return jsonify(result)
     except Exception as exc:
         return safe_error(exc, "cache_invalidate")

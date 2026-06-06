@@ -1290,12 +1290,12 @@ class TestPlatformInfraRoutes(unittest.TestCase):
 
     def test_cache_cleanup(self):
         resp = self.client.post("/cache/cleanup", headers=self._headers(),
-                                data=json.dumps({"max_size_gb": 5}))
+                                data=json.dumps({"max_size_gb": 5, "dry_run": True}))
         self.assertIn(resp.status_code, [200, 500])
 
     def test_cache_invalidate(self):
         resp = self.client.post("/cache/invalidate", headers=self._headers(),
-                                data=json.dumps({"input_hash": "abc", "operation": "encode"}))
+                                data=json.dumps({"input_hash": "abc", "operation": "encode", "dry_run": True}))
         self.assertIn(resp.status_code, [200, 500])
 
     # --- Timeline diff routes ---

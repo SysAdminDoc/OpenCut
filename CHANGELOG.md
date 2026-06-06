@@ -5,8 +5,8 @@
 ### Changed - Destructive Clear Confirmation Plans
 
 - Advanced RA-41 with shared destructive-operation dry-run plan and confirmation-token helpers.
-- `/queue/clear`, `/logs/clear`, `/captions/cache/clear`, `/whisper/clear-cache`, and `/models/delete` now return reviewable dry-run plans and reject mutation until the returned `confirm_token` is supplied.
-- Added regression coverage for unconfirmed clear rejection, confirmed mutation, and cache/model confirmation enforcement.
+- `/queue/clear`, `/logs/clear`, `/captions/cache/clear`, `/whisper/clear-cache`, `/models/delete`, `/cache/cleanup`, `/cache/invalidate`, and `/system/temp-cleanup/sweep` now return reviewable dry-run plans and reject mutation until the returned `confirm_token` is supplied.
+- Added regression coverage for unconfirmed clear rejection, confirmed mutation, cache/model confirmation enforcement, render-cache cleanup/invalidation confirmation, and temp-cleanup sweep confirmation.
 
 ### Changed - User Data Tombstone Restore
 

@@ -74,20 +74,24 @@ DEFAULT_PREFIXES = tuple(
 @dataclass
 class SweepReport:
     """Result of one sweep pass."""
+    dry_run: bool = False
     scanned: int = 0
     removed_files: int = 0
     removed_dirs: int = 0
     bytes_reclaimed: int = 0
     skipped: int = 0
+    targets: List[dict] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
 
     def to_dict(self):
         return {
+            "dry_run": self.dry_run,
             "scanned": self.scanned,
             "removed_files": self.removed_files,
             "removed_dirs": self.removed_dirs,
             "bytes_reclaimed": self.bytes_reclaimed,
             "skipped": self.skipped,
+            "targets": list(self.targets),
             "errors": list(self.errors),
         }
 
@@ -129,14 +133,15 @@ def _entry_bytes(path: str) -> int:
 def sweep(
     ttl_seconds: int = DEFAULT_TTL,
     prefixes=DEFAULT_PREFIXES,
+    dry_run: bool = False,
 ) -> SweepReport:
     """Run one sweep over ``tempfile.gettempdir()``. Synchronous."""
-    report = SweepReport()
+    report = SweepReport(dry_run=dry_run)
     root = tempfile.gettempdir()
     now = time.time()
 
     try:
-        entries = os.listdir(root)
+        entries = sorted(os.listdir(root))
     except OSError as exc:
         report.errors.append(f"listdir({root}): {exc}")
         return report
@@ -163,14 +168,29 @@ def sweep(
             continue
 
         size = _entry_bytes(full)
+        is_dir = os.path.isdir(full) and not os.path.islink(full)
+        target = {
+            "path": full,
+            "category": "temp-directory" if is_dir else "temp-file",
+            "root": root,
+            "type": "directory" if is_dir else "file",
+            "bytes": size,
+            "modified_at": mtime,
+            "prefix": next((p for p in prefixes if name.startswith(p)), ""),
+            "reversible": False,
+        }
+        if dry_run:
+            report.targets.append(target)
+            continue
         try:
-            if os.path.isdir(full) and not os.path.islink(full):
+            if is_dir:
                 shutil.rmtree(full, ignore_errors=False)
                 report.removed_dirs += 1
             else:
                 os.unlink(full)
                 report.removed_files += 1
             report.bytes_reclaimed += size
+            report.targets.append(target)
         except OSError as exc:
             report.errors.append(f"delete({full}): {exc}")
 
