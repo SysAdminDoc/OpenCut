@@ -41,6 +41,8 @@ import threading
 import time
 from typing import Optional
 
+from opencut.local_db_migrations import migrate_user_version
+
 logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "jobs.db")
@@ -50,6 +52,7 @@ _INITIALIZED = False
 _INITIALIZED_PATH = None
 _ALL_CONNECTIONS = {}  # thread_id -> Connection; dead thread entries cleaned in close_all
 _CONN_LOCK = threading.Lock()
+SCHEMA_VERSION = 2
 
 # How long to keep completed jobs in the database
 COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
@@ -166,6 +169,58 @@ def close_all_connections():
     logger.debug("All job store connections closed")
 
 
+def _create_schema_v1(conn: sqlite3.Connection) -> None:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS jobs (
+            id           TEXT PRIMARY KEY,
+            type         TEXT NOT NULL,
+            filepath     TEXT DEFAULT '',
+            status       TEXT NOT NULL DEFAULT 'running',
+            progress     INTEGER DEFAULT 0,
+            message      TEXT DEFAULT '',
+            result_json  TEXT DEFAULT NULL,
+            error        TEXT DEFAULT NULL,
+            endpoint     TEXT DEFAULT '',
+            payload_json TEXT DEFAULT NULL,
+            created_at   REAL NOT NULL,
+            started_at   REAL DEFAULT NULL,
+            completed_at REAL DEFAULT NULL
+        )
+    """)
+
+
+def _migrate_schema_v2(conn: sqlite3.Connection) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    migrations = {
+        "resumable": "ALTER TABLE jobs ADD COLUMN resumable INTEGER DEFAULT 0",
+        "partial_output_path": "ALTER TABLE jobs ADD COLUMN partial_output_path TEXT DEFAULT ''",
+        "resume_source_job_id": "ALTER TABLE jobs ADD COLUMN resume_source_job_id TEXT DEFAULT ''",
+        "resume_attempt": "ALTER TABLE jobs ADD COLUMN resume_attempt INTEGER DEFAULT 0",
+        "peak_vram_mb": "ALTER TABLE jobs ADD COLUMN peak_vram_mb INTEGER DEFAULT NULL",
+        "peak_cpu_pct": "ALTER TABLE jobs ADD COLUMN peak_cpu_pct INTEGER DEFAULT NULL",
+        "peak_rss_mb": "ALTER TABLE jobs ADD COLUMN peak_rss_mb INTEGER DEFAULT NULL",
+        "exit_reason": "ALTER TABLE jobs ADD COLUMN exit_reason TEXT DEFAULT ''",
+    }
+    for column, statement in migrations.items():
+        if column not in columns:
+            conn.execute(statement)
+
+
+def _ensure_indexes(conn: sqlite3.Connection) -> None:
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_jobs_status
+        ON jobs (status)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_jobs_resume
+        ON jobs (status, resumable)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_jobs_created
+        ON jobs (created_at)
+    """)
+
+
 def init_db():
     """Create the jobs table if it doesn't exist. Safe to call multiple times."""
     global _INITIALIZED, _INITIALIZED_PATH
@@ -175,57 +230,16 @@ def init_db():
         if _INITIALIZED and _INITIALIZED_PATH == _DB_PATH:
             return
         conn = _get_conn()
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS jobs (
-                id           TEXT PRIMARY KEY,
-                type         TEXT NOT NULL,
-                filepath     TEXT DEFAULT '',
-                status       TEXT NOT NULL DEFAULT 'running',
-                progress     INTEGER DEFAULT 0,
-                message      TEXT DEFAULT '',
-                result_json  TEXT DEFAULT NULL,
-                error        TEXT DEFAULT NULL,
-                endpoint     TEXT DEFAULT '',
-                payload_json TEXT DEFAULT NULL,
-                resumable    INTEGER DEFAULT 0,
-                partial_output_path TEXT DEFAULT '',
-                resume_source_job_id TEXT DEFAULT '',
-                resume_attempt INTEGER DEFAULT 0,
-                peak_vram_mb INTEGER DEFAULT NULL,
-                peak_cpu_pct INTEGER DEFAULT NULL,
-                peak_rss_mb INTEGER DEFAULT NULL,
-                exit_reason TEXT DEFAULT '',
-                created_at   REAL NOT NULL,
-                started_at   REAL DEFAULT NULL,
-                completed_at REAL DEFAULT NULL
-            )
-        """)
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
-        migrations = {
-            "resumable": "ALTER TABLE jobs ADD COLUMN resumable INTEGER DEFAULT 0",
-            "partial_output_path": "ALTER TABLE jobs ADD COLUMN partial_output_path TEXT DEFAULT ''",
-            "resume_source_job_id": "ALTER TABLE jobs ADD COLUMN resume_source_job_id TEXT DEFAULT ''",
-            "resume_attempt": "ALTER TABLE jobs ADD COLUMN resume_attempt INTEGER DEFAULT 0",
-            "peak_vram_mb": "ALTER TABLE jobs ADD COLUMN peak_vram_mb INTEGER DEFAULT NULL",
-            "peak_cpu_pct": "ALTER TABLE jobs ADD COLUMN peak_cpu_pct INTEGER DEFAULT NULL",
-            "peak_rss_mb": "ALTER TABLE jobs ADD COLUMN peak_rss_mb INTEGER DEFAULT NULL",
-            "exit_reason": "ALTER TABLE jobs ADD COLUMN exit_reason TEXT DEFAULT ''",
-        }
-        for column, statement in migrations.items():
-            if column not in columns:
-                conn.execute(statement)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_jobs_status
-            ON jobs (status)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_jobs_resume
-            ON jobs (status, resumable)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_jobs_created
-            ON jobs (created_at)
-        """)
+        migrate_user_version(
+            conn,
+            store_name="job store",
+            target_version=SCHEMA_VERSION,
+            migrations={
+                1: _create_schema_v1,
+                2: _migrate_schema_v2,
+            },
+        )
+        _ensure_indexes(conn)
         conn.commit()
         _INITIALIZED = True
         _INITIALIZED_PATH = _DB_PATH

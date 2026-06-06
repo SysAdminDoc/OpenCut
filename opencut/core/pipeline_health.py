@@ -14,12 +14,15 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.local_db_migrations import migrate_user_version
+
 logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "pipeline_health.db")
 _LOCAL = threading.local()
 _INIT_LOCK = threading.Lock()
 _INITIALIZED = False
+SCHEMA_VERSION = 1
 
 # ---------------------------------------------------------------------------
 # Alert threshold defaults
@@ -162,6 +165,27 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
+def _create_schema_v1(conn: sqlite3.Connection) -> None:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS health_metrics (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation      TEXT NOT NULL,
+            duration_s     REAL NOT NULL,
+            success        INTEGER NOT NULL DEFAULT 1,
+            error_type     TEXT DEFAULT '',
+            error_message  TEXT DEFAULT '',
+            cpu_pct        REAL DEFAULT 0,
+            gpu_pct        REAL DEFAULT 0,
+            ram_mb         REAL DEFAULT 0,
+            disk_write_mb  REAL DEFAULT 0,
+            timestamp      REAL NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_operation ON health_metrics (operation)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_timestamp ON health_metrics (timestamp)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_success ON health_metrics (success)")
+
+
 def _init_db():
     """Create tables and indexes if they do not exist."""
     global _INITIALIZED
@@ -171,24 +195,12 @@ def _init_db():
         if _INITIALIZED:
             return
         conn = _get_conn()
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS health_metrics (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                operation      TEXT NOT NULL,
-                duration_s     REAL NOT NULL,
-                success        INTEGER NOT NULL DEFAULT 1,
-                error_type     TEXT DEFAULT '',
-                error_message  TEXT DEFAULT '',
-                cpu_pct        REAL DEFAULT 0,
-                gpu_pct        REAL DEFAULT 0,
-                ram_mb         REAL DEFAULT 0,
-                disk_write_mb  REAL DEFAULT 0,
-                timestamp      REAL NOT NULL
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_operation ON health_metrics (operation)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_timestamp ON health_metrics (timestamp)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_hm_success ON health_metrics (success)")
+        migrate_user_version(
+            conn,
+            store_name="pipeline health",
+            target_version=SCHEMA_VERSION,
+            migrations={1: _create_schema_v1},
+        )
         conn.commit()
         _INITIALIZED = True
         logger.debug("Pipeline health DB initialized at %s", _DB_PATH)

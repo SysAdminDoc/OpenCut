@@ -17,6 +17,9 @@
 **Pass 269 update (no standalone research file):**
 - Closed RA-35 by renaming the release SBOM workflow path/artifact to the declared-SBOM contract and adding CycloneDX metadata properties for declared-only fidelity, dependency sources, excluded resolved/transitive surfaces, and `requirements-lock.txt` advisory-audit coverage.
 
+**Pass 270 update (no standalone research file):**
+- Closed RA-37/RA-05 by adding a shared local SQLite migration helper, stamping explicit `PRAGMA user_version` values for the job store, operation journal, footage index, and pipeline-health database, and rejecting newer unknown local schemas before downgrade-prone access. Focused local DB tests and Ruff cover the batch.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -37,7 +40,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **221 test_*.py files** + **2 Vitest panel test files** (8,800+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **224 test_*.py files** + **2 Vitest panel test files** (8,800+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **234** total; **17** true aliases; **217** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
