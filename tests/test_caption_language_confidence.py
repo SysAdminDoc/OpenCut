@@ -165,6 +165,15 @@ def test_timeline_srt_to_captions_labels_srt_only_metadata_loss(client, csrf_tok
     assert payload["metadata_preserved"] is False
     assert set(payload["warnings"]) == {"sidecar_missing", "metadata_unavailable"}
     assert payload["segments"] == [{"start": 1.0, "end": 2.0, "text": "Edited text"}]
+    assert set(payload["segments"][0]) == {"start", "end", "text"}
+    for metadata_key in (
+        "speaker",
+        "review_reasons",
+        "display_setting_token_ids",
+        "transcript_cache_key",
+        "words",
+    ):
+        assert metadata_key not in payload["segments"][0]
 
 
 def test_timeline_srt_to_captions_enriches_segments_from_sidecar(client, csrf_token, tmp_path):
@@ -213,6 +222,80 @@ def test_timeline_srt_to_captions_enriches_segments_from_sidecar(client, csrf_to
     assert segment["words"][0]["text"] == "Original"
 
 
+def test_caption_roundtrip_import_diff_preserves_sidecar_metadata(client, csrf_token, tmp_path):
+    from opencut.core.caption_roundtrip import write_caption_sidecar
+    from opencut.core.captions import CaptionSegment, TranscriptionResult, Word
+
+    source = tmp_path / "clip.wav"
+    source.write_bytes(b"RIFF")
+    srt_path = tmp_path / "clip.srt"
+    srt_path.write_text("1\n00:00:01,100 --> 00:00:02,600\nTimeline edit\n", encoding="utf-8")
+    result = TranscriptionResult(
+        segments=[
+            CaptionSegment(
+                text="Original text",
+                start=1.0,
+                end=2.5,
+                words=[Word("Original", 1.0, 1.8, confidence=0.91)],
+                speaker="Narrator",
+                language="en",
+                language_confidence=0.93,
+                confidence=0.82,
+                human_review_recommended=True,
+                review_reasons=["editor_flagged"],
+            )
+        ],
+        language="en",
+        duration=2.5,
+        cache_key="f" * 64,
+    )
+    sidecar_path = write_caption_sidecar(
+        result,
+        str(srt_path),
+        export_format="srt",
+        source_path=str(source),
+        display_settings={"token_ids": ["caption-style-main"], "font": "Inter"},
+    )
+
+    imported = client.post(
+        "/timeline/srt-to-captions",
+        json={"srt_path": str(srt_path), "sidecar_path": sidecar_path},
+        headers=csrf_headers(csrf_token),
+    )
+    assert imported.status_code == 200
+    imported_payload = imported.get_json()
+    imported_segment = imported_payload["segments"][0]
+    assert imported_payload["metadata_preserved"] is True
+    assert imported_segment["text"] == "Timeline edit"
+    assert imported_segment["speaker"] == "Narrator"
+    assert imported_segment["human_review_recommended"] is True
+    assert imported_segment["review_reasons"] == ["editor_flagged"]
+    assert imported_segment["display_setting_token_ids"] == ["caption-style-main"]
+    assert imported_segment["transcript_cache_key"] == "f" * 64
+
+    diff = client.post(
+        "/captions/round-trip/diff",
+        json={"sidecar_path": sidecar_path, "edited_segments": imported_payload["segments"]},
+        headers=csrf_headers(csrf_token),
+    )
+    assert diff.status_code == 200
+    diff_payload = diff.get_json()
+    assert diff_payload["metadata_preserved"] is True
+    assert diff_payload["warnings"] == []
+    assert diff_payload["source"]["transcript_cache_key"] == "f" * 64
+    assert diff_payload["counts"]["text_changed"] == 1
+    change = diff_payload["changes"][0]
+    assert change["before"]["caption_id"] == "cap_000001"
+    assert change["before"]["speaker"] == "Narrator"
+    assert change["before"]["review_reasons"] == ["editor_flagged"]
+    assert change["before"]["display_setting_token_ids"] == ["caption-style-main"]
+    assert change["after"]["text"] == "Timeline edit"
+    assert change["after"]["speaker"] == "Narrator"
+    assert change["after"]["review_reasons"] == ["editor_flagged"]
+    assert change["after"]["display_setting_token_ids"] == ["caption-style-main"]
+    assert change["after"]["transcript_cache_key"] == "f" * 64
+
+
 def test_timeline_srt_to_captions_warns_on_invalid_sidecar_path(client, csrf_token, tmp_path):
     srt_path = tmp_path / "lossy.srt"
     srt_path.write_text("1\n00:00:01,000 --> 00:00:02,000\nEdited text\n", encoding="utf-8")
@@ -258,6 +341,97 @@ def test_timeline_srt_to_captions_rejects_cueless_sidecar_metadata(client, csrf_
     assert payload["segments"] == [{"start": 1.0, "end": 2.0, "text": "Edited text"}]
 
 
+def test_timeline_srt_to_captions_warns_on_stale_sidecar_export_path(client, csrf_token, tmp_path):
+    from opencut.core.caption_roundtrip import write_caption_sidecar
+    from opencut.core.captions import CaptionSegment, TranscriptionResult
+
+    source = tmp_path / "clip.wav"
+    source.write_bytes(b"RIFF")
+    old_srt = tmp_path / "old.srt"
+    current_srt = tmp_path / "current.srt"
+    old_srt.write_text("1\n00:00:01,000 --> 00:00:02,000\nOld\n", encoding="utf-8")
+    current_srt.write_text("1\n00:00:01,000 --> 00:00:02,000\nCurrent\n", encoding="utf-8")
+    result = TranscriptionResult(
+        segments=[CaptionSegment(text="Old", start=1.0, end=2.0, speaker="A")],
+        language="en",
+        duration=2.0,
+        cache_key="g" * 64,
+    )
+    sidecar_path = write_caption_sidecar(result, str(old_srt), export_format="srt", source_path=str(source))
+
+    response = client.post(
+        "/timeline/srt-to-captions",
+        json={"srt_path": str(current_srt), "sidecar_path": sidecar_path},
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["metadata_preserved"] is True
+    assert payload["segments"][0]["speaker"] == "A"
+    assert payload["segments"][0]["text"] == "Current"
+    assert "sidecar_export_path_mismatch" in payload["warnings"]
+
+
+def test_caption_roundtrip_diff_classifies_split_merge_insert_and_delete():
+    from opencut.core.caption_roundtrip import diff_caption_roundtrip
+
+    sidecar = {
+        "source": {"transcript_cache_key": "h" * 64, "source_file_hash": "sha"},
+        "cues": [
+            {
+                "caption_id": "cap-1",
+                "start": 0.0,
+                "end": 1.0,
+                "text": "First",
+                "display_setting_token_ids": ["style-a"],
+            },
+            {"caption_id": "cap-2", "start": 1.0, "end": 2.0, "text": "Second"},
+            {"caption_id": "cap-3", "start": 2.0, "end": 3.0, "text": "Third"},
+        ],
+    }
+
+    changed = diff_caption_roundtrip(
+        sidecar=sidecar,
+        edited_segments=[
+            {
+                "caption_id": "cap-1a",
+                "source_caption_id": "cap-1",
+                "start": 0.0,
+                "end": 0.5,
+                "text": "First part",
+                "display_setting_token_ids": ["style-b"],
+            },
+            {
+                "caption_id": "cap-1b",
+                "source_caption_id": "cap-1",
+                "start": 0.5,
+                "end": 1.0,
+                "text": "First part two",
+            },
+            {
+                "caption_id": "cap-2-3",
+                "source_caption_ids": ["cap-2", "cap-3"],
+                "start": 1.0,
+                "end": 3.0,
+                "text": "Second and third",
+            },
+            {"caption_id": "cap-4", "start": 3.0, "end": 4.0, "text": "Inserted"},
+        ],
+    )
+    assert changed["metadata_preserved"] is True
+    assert changed["counts"]["split"] >= 1
+    assert changed["counts"]["merge"] == 1
+    assert changed["counts"]["inserted"] == 1
+    assert changed["counts"]["style_changed"] == 1
+    assert any("split" in change["changes"] for change in changed["changes"])
+    assert any("merge" in change["changes"] for change in changed["changes"])
+
+    deleted = diff_caption_roundtrip(sidecar=sidecar, edited_segments=sidecar["cues"][:2])
+    assert deleted["counts"]["deleted"] == 1
+    assert deleted["changes"][-1]["change_type"] == "deleted"
+
+
 def test_caption_roundtrip_diff_endpoint_reports_sidecar_changes(client, csrf_token, tmp_path):
     from opencut.core.caption_roundtrip import write_caption_sidecar
     from opencut.core.captions import CaptionSegment, TranscriptionResult
@@ -291,6 +465,7 @@ def test_caption_roundtrip_diff_endpoint_reports_sidecar_changes(client, csrf_to
     assert payload["summary"]["changed"] is True
     assert payload["changes"][0]["before"]["text"] == "Original text"
     assert payload["changes"][0]["after"]["text"] == "Edited text"
+    assert payload["changes"][0]["after"]["speaker"] == "A"
     assert payload["source"]["transcript_cache_key"] == "c" * 64
 
 
@@ -386,7 +561,13 @@ def test_caption_roundtrip_apply_requires_confirmation_and_stores_revision(clien
     payload = applied.get_json()
     revision = payload["revision"]
     assert revision["transcript_cache_key"] == "d" * 64
-    assert Path(revision["revision_path"]).exists()
+    revision_path = Path(revision["revision_path"])
+    assert revision_path.exists()
+    revision_payload = json.loads(revision_path.read_text(encoding="utf-8"))
+    stored_change = revision_payload["diff"]["changes"][0]
+    assert stored_change["before"]["speaker"] == "A"
+    assert stored_change["after"]["speaker"] == "A"
+    assert stored_change["after"]["transcript_cache_key"] == "d" * 64
 
     applied_again = client.post(
         "/captions/round-trip/apply",

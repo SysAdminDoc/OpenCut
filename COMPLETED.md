@@ -18,7 +18,7 @@ Last consolidated: 2026-06-06.
 
 | Area | Completed work |
 |---|---|
-| Core automation | Silence/filler removal, captions/transcription, caption round-trip sidecars, diff/apply revisions, CEP/hybrid caption write contracts, audio cleanup, video effects, export, timeline actions, deliverables, search, workflow presets, NLP commands, and plugin loading. |
+| Core automation | Silence/filler removal, captions/transcription, caption round-trip sidecars, diff/apply revisions, CEP/hybrid caption write contracts, caption metadata-loss regression fixtures, audio cleanup, video effects, export, timeline actions, deliverables, search, workflow presets, NLP commands, and plugin loading. |
 | Job platform | `@async_job`, SQLite job persistence, explicit local SQLite schema versions, priority workers, cancellation, interrupted-job marking, queue allowlists, structured errors with request IDs in JSON bodies and typed-error log context, and log correlation. |
 | Local data stores | Local SQLite schemas use explicit `user_version` migrations, oversized job-result plus journal inverse/forward JSON payloads spill to content-addressed local files with API-visible metadata, local DB diagnostics report page/freelist/WAL/file-size maintenance posture through CLI and feature routes, destructive local SQLite maintenance paths expose dry-run counts, optional backups, and audit metadata, and user-data deletes/replacements create capped tombstone snapshots with restore routes. |
 | Panel UX | CEP panel, UXP panel, command palette, status surfaces, quick actions, E15 i18n migration through batch 154, keyboard/a11y gates, UXP Agent tab, caption display settings, UXP caption-track snapshot reads, concrete CEP caption placement handoffs, and panel parity checks. |
