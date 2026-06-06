@@ -27,25 +27,12 @@ WORKDIR /app
 # Stage 2: Install Python dependencies
 FROM base AS deps
 
-COPY requirements.txt pyproject.toml ./
-COPY opencut/__init__.py opencut/__init__.py
+COPY requirements.txt ./
 
-# Install core dependencies first (cached layer)
-RUN pip install --no-cache-dir flask flask-cors click rich python-json-logger
-
-# Install standard optional dependencies
-RUN pip install --no-cache-dir \
-    faster-whisper>=1.1 \
-    opencv-python-headless \
-    Pillow \
-    numpy \
-    librosa \
-    pydub \
-    noisereduce \
-    deep-translator \
-    scenedetect[opencv] \
-    psutil \
-    || echo "Some optional deps failed — continuing"
+# Keep the container dependency layer on the committed Python install surface.
+# This prevents retired packages from re-entering through Docker and lets pip
+# failures fail the image build instead of producing a partial runtime.
+RUN python -m pip install --no-cache-dir --requirement requirements.txt
 
 # Stage 3: Final image
 FROM base AS final
