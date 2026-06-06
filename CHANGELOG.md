@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 130
+
+- Migrated the Video Face Blur form shell to static locale hooks for blur method, blur strength, detector, auto-import, and MediaPipe install-helper controls while preserving method option values, detector option values, slider values, and fallback install wiring.
+- `client/locales/en.json` grows from 1,991 to 1,999 keys; `i18n-drift` reports 1,929 consumers, 70 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Face Blur static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 129
 
 - Migrated the Video AI tools form shell to static locale hooks for tool, upscale, background-removal, interpolation, denoise, auto-import, and install-helper controls while preserving backend tool IDs, model IDs, backend values, background color values, interpolation multipliers, denoise method values, and AI processing payloads.

@@ -722,6 +722,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("common.auto_import_result", "data-i18n"),
     ("video.ai_model_not_installed", "data-i18n"),
     ("common.install_now", "data-i18n"),
+    # One-hundred-thirtieth batch (Video Face Blur parameter shell HTML).
+    ("forms.blur_method", "data-i18n"),
+    ("video.face_blur_method_gaussian", "data-i18n"),
+    ("video.face_blur_method_pixelate", "data-i18n"),
+    ("video.face_blur_method_black_box", "data-i18n"),
+    ("forms.blur_strength", "data-i18n"),
+    ("video.face_blur_strength_hint", "data-i18n"),
+    ("forms.detector", "data-i18n"),
+    ("video.face_detector_mediapipe", "data-i18n"),
+    ("video.face_detector_haar", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("video.mediapipe_not_installed", "data-i18n"),
+    ("video.install_mediapipe", "data-i18n"),
 )
 
 
