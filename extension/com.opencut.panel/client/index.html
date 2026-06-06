@@ -2121,31 +2121,31 @@
                         <p class="card-desc" data-i18n="video.style_desc">Transform your video into a painting — Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
 
                         <div class="form-group">
-                            <label for="styleModel">Style</label>
+                            <label for="styleModel" data-i18n="forms.style">Style</label>
                             <select id="styleModel">
-                                <option value="candy">Candy (bright, colorful)</option>
-                                <option value="mosaic">Mosaic (stained glass)</option>
-                                <option value="rain_princess">Rain Princess (impressionist)</option>
-                                <option value="udnie">Udnie (abstract cubist)</option>
-                                <option value="starry_night">Starry Night (Van Gogh)</option>
-                                <option value="the_scream">The Scream (Munch)</option>
-                                <option value="la_muse">La Muse (expressionist)</option>
-                                <option value="pointilism">Pointilism (dotted)</option>
+                                <option value="candy" data-i18n="video.style_preset_candy">Candy (bright, colorful)</option>
+                                <option value="mosaic" data-i18n="video.style_preset_mosaic">Mosaic (stained glass)</option>
+                                <option value="rain_princess" data-i18n="video.style_preset_rain_princess">Rain Princess (impressionist)</option>
+                                <option value="udnie" data-i18n="video.style_preset_udnie">Udnie (abstract cubist)</option>
+                                <option value="starry_night" data-i18n="video.style_preset_starry_night">Starry Night (Van Gogh)</option>
+                                <option value="the_scream" data-i18n="video.style_preset_the_scream">The Scream (Munch)</option>
+                                <option value="la_muse" data-i18n="video.style_preset_la_muse">La Muse (expressionist)</option>
+                                <option value="pointilism" data-i18n="video.style_preset_pointilism">Pointilism (dotted)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="styleIntensity">Style Intensity</label>
+                            <label for="styleIntensity" data-i18n="forms.style_intensity">Style Intensity</label>
                             <div class="slider-row">
-                                <input type="range" id="styleIntensity" min="0.1" max="1.0" value="1.0" step="0.1" title="Blend between original video and stylized version">
+                                <input type="range" id="styleIntensity" min="0.1" max="1.0" value="1.0" step="0.1" title="Blend between original video and stylized version" data-i18n-title="video.style_intensity_title">
                                 <span class="slider-val" id="styleIntensityVal">1.0</span>
                             </div>
-                            <span class="hint-inline">Lower = subtle blend with original</span>
+                            <span class="hint-inline" data-i18n="video.style_intensity_hint">Lower = subtle blend with original</span>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="styleAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runStyleBtn" disabled data-i18n="video.apply_style">Apply Style</button>

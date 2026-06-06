@@ -735,6 +735,20 @@ HTML_STATIC_SHELL_CALLS = (
     ("common.auto_import_result", "data-i18n"),
     ("video.mediapipe_not_installed", "data-i18n"),
     ("video.install_mediapipe", "data-i18n"),
+    # One-hundred-thirty-first batch (Video Style Transfer parameter shell HTML).
+    ("forms.style", "data-i18n"),
+    ("video.style_preset_candy", "data-i18n"),
+    ("video.style_preset_mosaic", "data-i18n"),
+    ("video.style_preset_rain_princess", "data-i18n"),
+    ("video.style_preset_udnie", "data-i18n"),
+    ("video.style_preset_starry_night", "data-i18n"),
+    ("video.style_preset_the_scream", "data-i18n"),
+    ("video.style_preset_la_muse", "data-i18n"),
+    ("video.style_preset_pointilism", "data-i18n"),
+    ("forms.style_intensity", "data-i18n"),
+    ("video.style_intensity_title", "data-i18n-title"),
+    ("video.style_intensity_hint", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
 )
 
 
