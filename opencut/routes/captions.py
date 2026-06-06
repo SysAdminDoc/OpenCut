@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
 
+from opencut.core.caption_roundtrip import write_caption_sidecar
 from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
@@ -110,6 +111,27 @@ def _legacy_srt_bom_requested(data: dict) -> bool:
         if key in data:
             return safe_bool(data.get(key), False)
     return False
+
+
+def _caption_display_settings(data: dict) -> dict | None:
+    settings = data.get("display_settings")
+    return settings if isinstance(settings, dict) else None
+
+
+def _write_caption_roundtrip_sidecar(result, out_path: str, sub_format: str, filepath: str, data: dict) -> tuple[str, list[str]]:
+    try:
+        sidecar_path = write_caption_sidecar(
+            result,
+            out_path,
+            export_format=sub_format,
+            source_path=filepath,
+            transcript_cache_key=data.get("transcript_cache_key") or getattr(result, "cache_key", None),
+            display_settings=_caption_display_settings(data),
+        )
+    except Exception as exc:  # noqa: BLE001 - metadata sidecars must not block subtitle export.
+        logger.warning("Caption sidecar write failed for %s: %s", out_path, exc)
+        return "", ["sidecar_write_failed"]
+    return sidecar_path, []
 
 
 def _export_srt_with_policy(result, out_path: str, *, legacy_windows_bom: bool = False) -> str:
@@ -272,8 +294,11 @@ def generate_captions(job_id, filepath, data):
     else:
         _export_srt_with_policy(result, out_path, legacy_windows_bom=legacy_srt_bom)
 
+    sidecar_path, sidecar_warnings = _write_caption_roundtrip_sidecar(result, out_path, sub_format, filepath, data)
     response = {
         "output_path": out_path,
+        "sidecar_path": sidecar_path,
+        "metadata_preserved": bool(sidecar_path),
         "language": getattr(result, "language", language or "en"),
         "segments": len(result.segments),
         "caption_segments": len(result.segments),
@@ -281,6 +306,8 @@ def generate_captions(job_id, filepath, data):
         "transcript_cache_hit": bool(getattr(result, "cache_hit", False)),
         "transcript_cache_key": getattr(result, "cache_key", None),
     }
+    if sidecar_warnings:
+        response["warnings"] = sidecar_warnings
     response.update(_caption_review_summary(result))
     if sub_format == "srt":
         response["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
@@ -709,7 +736,16 @@ def export_edited_transcript():
                 # the diagnostics are advisory in that case.
                 qc_payload = {"overall_pass": True, "error_count": 0, "warning_count": 0, "diagnostics": [], "skipped": True}
 
-        payload = {"output_path": out_path, "format": sub_format, "qc": qc_payload}
+        sidecar_path, sidecar_warnings = _write_caption_roundtrip_sidecar(result, out_path, sub_format, filepath, data)
+        payload = {
+            "output_path": out_path,
+            "sidecar_path": sidecar_path,
+            "metadata_preserved": bool(sidecar_path),
+            "format": sub_format,
+            "qc": qc_payload,
+        }
+        if sidecar_warnings:
+            payload["warnings"] = sidecar_warnings
         if sub_format == "srt":
             payload["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
         return jsonify(payload)

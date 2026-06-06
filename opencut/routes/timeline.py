@@ -10,6 +10,11 @@ import subprocess as _sp
 
 from flask import Blueprint, jsonify
 
+from opencut.core.caption_roundtrip import (
+    caption_sidecar_path,
+    merge_segments_with_sidecar,
+    read_caption_sidecar,
+)
 from opencut.errors import safe_error
 from opencut.helpers import get_ffmpeg_path
 from opencut.jobs import (
@@ -274,7 +279,25 @@ def timeline_srt_to_captions():
                 "end": safe_float(seg.get("end", 0), 0.0, min_val=0.0),
                 "text": str(seg.get("text", "")).strip(),
             })
-        return jsonify({"segments": cleaned, "count": len(cleaned)})
+        sidecar_path = str(data.get("sidecar_path", "")).strip()
+        sidecar = None
+        warnings = []
+        if sidecar_path:
+            try:
+                sidecar_path = validate_filepath(sidecar_path)
+                sidecar, warnings = read_caption_sidecar(sidecar_path)
+            except ValueError:
+                warnings = ["sidecar_missing"]
+            cleaned, merge_warnings = merge_segments_with_sidecar(cleaned, sidecar)
+            warnings.extend(merge_warnings)
+        metadata_preserved = bool(sidecar) and "metadata_unavailable" not in warnings
+        return jsonify({
+            "segments": cleaned,
+            "count": len(cleaned),
+            "sidecar_path": sidecar_path,
+            "metadata_preserved": metadata_preserved,
+            "warnings": warnings,
+        })
 
     # Parse SRT file
     if not srt_path:
@@ -287,7 +310,29 @@ def timeline_srt_to_captions():
 
     try:
         parsed = _parse_srt(srt_path)
-        return jsonify({"segments": parsed, "count": len(parsed)})
+        explicit_sidecar_path = str(data.get("sidecar_path", "")).strip()
+        sidecar_path = explicit_sidecar_path or caption_sidecar_path(srt_path)
+        sidecar = None
+        sidecar_warnings = []
+        if explicit_sidecar_path:
+            try:
+                sidecar_path = validate_filepath(sidecar_path)
+            except ValueError:
+                sidecar_warnings = ["sidecar_missing"]
+            else:
+                sidecar, sidecar_warnings = read_caption_sidecar(sidecar_path, expected_export_path=srt_path)
+        else:
+            sidecar, sidecar_warnings = read_caption_sidecar(sidecar_path, expected_export_path=srt_path)
+        enriched, merge_warnings = merge_segments_with_sidecar(parsed, sidecar)
+        warnings = sidecar_warnings + merge_warnings
+        metadata_preserved = bool(sidecar) and "metadata_unavailable" not in warnings
+        return jsonify({
+            "segments": enriched,
+            "count": len(enriched),
+            "sidecar_path": sidecar_path,
+            "metadata_preserved": metadata_preserved,
+            "warnings": warnings,
+        })
     except Exception as exc:
         return safe_error(exc, "timeline_srt_to_captions")
 
