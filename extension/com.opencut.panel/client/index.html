@@ -2940,7 +2940,7 @@
                         <p class="card-desc" data-i18n="export.thumbnail_desc">AI-scored thumbnail candidates from your video. Scores frames on sharpness, color, contrast, face presence, and composition.</p>
 
                         <div class="form-group">
-                            <label for="thumbCount">Number of Candidates</label>
+                            <label for="thumbCount" data-i18n="export.thumbnail_count">Number of Candidates</label>
                             <select id="thumbCount">
                                 <option value="3">3</option>
                                 <option value="5" selected>5</option>
@@ -2949,17 +2949,17 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="thumbWidth">Resolution</label>
+                            <label for="thumbWidth" data-i18n="forms.resolution">Resolution</label>
                             <select id="thumbWidth">
-                                <option value="1920">1920px (Full HD)</option>
-                                <option value="1280">1280px (HD)</option>
-                                <option value="640">640px (Web)</option>
+                                <option value="1920" data-i18n="export.thumbnail_resolution_full_hd">1920px (Full HD)</option>
+                                <option value="1280" data-i18n="export.thumbnail_resolution_hd">1280px (HD)</option>
+                                <option value="640" data-i18n="export.thumbnail_resolution_web">640px (Web)</option>
                             </select>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="thumbUseFaces" checked>
-                            Boost frames with faces
+                            <span data-i18n="export.thumbnail_boost_faces">Boost frames with faces</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runThumbBtn" disabled data-i18n="export.generate_thumbnails">Generate Thumbnails</button>

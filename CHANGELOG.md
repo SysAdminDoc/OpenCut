@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 152
+
+- Migrated the Export Auto-Thumbnails form shell to static locale hooks for candidate count, resolution, resolution choices, and face-boost copy while preserving candidate values, width values, default selection, and checked state.
+- `client/locales/en.json` grows from 2,253 to 2,258 keys; `i18n-drift` reports 2,202 consumers, 56 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Export Auto-Thumbnails static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 151
 
 - Migrated the Export Platform Presets form shell to static locale hooks for title, category label/options, preset label, and auto-import copy while preserving category values and checked state; removed the stale singular `export.platform_preset` locale key after replacing it with the exact title key.
