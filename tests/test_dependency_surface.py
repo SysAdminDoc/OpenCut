@@ -4,6 +4,7 @@ import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
+WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
 
 
 def _pyproject() -> dict:
@@ -45,6 +46,20 @@ def test_python_floor_tracks_security_dependency_floor():
     assert "Programming Language :: Python :: 3.9" not in classifiers
     assert "Programming Language :: Python :: 3.10" not in classifiers
     assert "Programming Language :: Python :: 3.11" in classifiers
+
+
+def test_python_313_classifier_requires_ci_lane():
+    """RA-21: do not advertise Python 3.13 until a workflow tests it."""
+    classifiers = set(_pyproject()["project"]["classifiers"])
+    workflow_text = "\n".join(
+        path.read_text(encoding="utf-8", errors="replace")
+        for path in sorted(WORKFLOW_DIR.glob("*.yml"))
+    )
+
+    if "Programming Language :: Python :: 3.13" in classifiers:
+        assert "python-version: '3.13'" in workflow_text or 'python-version: "3.13"' in workflow_text
+    else:
+        assert "Programming Language :: Python :: 3.13" not in classifiers
 
 
 def test_core_dependency_security_floor_pins():

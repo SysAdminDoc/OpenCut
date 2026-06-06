@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-24 Release Full token permissions pass.
+Last synced: 2026-06-06 during the RA-21 Python 3.13 classifier retraction pass.
 
 ## Execution Order
 
@@ -21,7 +21,7 @@ Last synced: 2026-06-06 during the RA-24 Release Full token permissions pass.
 - [x] **RA-18 UXP deprecation sentinel** - static tests now block deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events from the UXP/WebView source path.
 - [x] **RA-19 UXP clipboard permission** - live and WebView manifests now declare the required clipboard permission, and UXP output copy uses a shared fallback helper.
 - [x] **RA-20 UXP confirmation guard** - search-index clearing now uses an inline second-click panel confirmation and static tests block raw UXP alert/prompt/confirm calls.
-- [ ] **RA-21 Python 3.13 classifier proof** - prove advertised Python 3.13 support with CI coverage or retract the classifier until it is tested.
+- [x] **RA-21 Python 3.13 classifier proof** - retracted the untested Python 3.13 classifier until a CI workflow lane proves it, with a metadata guard in pytest-fast.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [ ] **RA-23 GitHub Actions SHA pins** - pin workflow action references to full-length SHAs and guard against mutable action tags.
 - [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.
