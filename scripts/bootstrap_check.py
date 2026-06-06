@@ -10,6 +10,7 @@ Usage:
     python scripts/bootstrap_check.py
     python scripts/bootstrap_check.py --json
     python scripts/bootstrap_check.py --metadata-only
+    python scripts/bootstrap_check.py --dev
 """
 
 from __future__ import annotations
@@ -90,6 +91,13 @@ RUNTIME_IMPORTS: Dict[str, str] = {
     "flask-cors": "flask_cors",
     "python-json-logger": "pythonjsonlogger",
     "psutil": "psutil",
+}
+
+DEV_IMPORTS: Dict[str, str] = {
+    "pytest": "pytest",
+    "pytest-cov": "pytest_cov",
+    "pytest-xdist": "xdist",
+    "ruff": "ruff",
 }
 
 
@@ -178,6 +186,18 @@ def check_runtime_imports(imports: Dict[str, str] = RUNTIME_IMPORTS) -> CheckRes
         "runtime-imports",
         "Missing required runtime imports: " + ", ".join(sorted(missing)),
         'Install core dependencies with python -m pip install -e ".[dev]".',
+    )
+
+
+def check_dev_imports(imports: Dict[str, str] = DEV_IMPORTS) -> CheckResult:
+    missing = [package for package, module_name in imports.items() if importlib.util.find_spec(module_name) is None]
+    if not missing:
+        return _pass("dev-imports", "Development and test imports are available")
+    return _fail(
+        "dev-imports",
+        "Missing development/test imports: " + ", ".join(sorted(missing)),
+        'Install test tooling with python -m pip install -e ".[dev]". '
+        'If you are using the repo virtualenv, run .venv\\Scripts\\python.exe -m pip install -e ".[dev]".',
     )
 
 
@@ -293,13 +313,15 @@ def check_lockfile(repo_root: Path = REPO_ROOT) -> CheckResult:
     return _pass("requirements-lock", f"requirements-lock.txt has {len(active)} auditable dependency lines")
 
 
-def run_checks(metadata_only: bool = False, repo_root: Path = REPO_ROOT) -> List[CheckResult]:
+def run_checks(metadata_only: bool = False, repo_root: Path = REPO_ROOT, dev: bool = False) -> List[CheckResult]:
     checks = [
         check_python_version(),
         check_repo_import(repo_root),
         check_version_sync(repo_root),
         check_lockfile(repo_root),
     ]
+    if dev:
+        checks.append(check_dev_imports())
     if not metadata_only:
         checks.extend([
             check_runtime_imports(),
@@ -332,9 +354,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="Skip runtime dependency and server import checks",
     )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Also check development/test imports such as pytest, pytest-xdist, and ruff",
+    )
     args = parser.parse_args(argv)
 
-    results = run_checks(metadata_only=args.metadata_only)
+    results = run_checks(metadata_only=args.metadata_only, dev=args.dev)
     if args.json:
         _print_json(results)
     else:

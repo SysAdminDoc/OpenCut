@@ -1203,6 +1203,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 14 | Shorts pipeline and Magic Clips macro composition | `shorts_pipeline.py`, `video_specialty.py`, workflow core/routes, `shorts_variants.py`, `virality_score.py`, `export_presets.py`, thumbnail modules, UXP/CEP panel paths, Riverside/OpusClip/Descript/CapCut docs | OpenCut has the rendering primitives and a variant dry-run precedent, but no Magic Clips plan graph, explainable candidate board, preset-driven multi-platform contract, resumable intermediates, or output manifest. | Added RA-51 through RA-56 and refined RA-10 as the parent macro. |
 | 2026-06-06 | Cycle 15 | Adobe/NPM tracker hardening | `opencut/tools/adobe_premierepro_versions.py`, `.github/workflows/adobe-premierepro-versions.yml`, `.github/labels.yml`, `scripts/seed_github_issues.py`, npm registry live dist-tags, GitHub Actions workflow docs | Live Adobe npm tags now include `beta=26.3.0-beta.85` and `release-26.2=26.2.1`; GitHub bash steps run with `-e`, so drift exit codes must be captured before a success exit; tracker labels need one shared search/create contract. | Closed RA-16, RA-31, RA-32, and RA-33 with schema v2 tracking, workflow and label tests, and release-smoke coverage. |
 | 2026-06-06 | Cycle 16 | Distribution packaging and Docker docs | README, Dockerfile, docker-compose.yml, LosslessCut downloads, Homebrew Cask docs, Microsoft WinGet docs, Snapcraft docs, PyPI trusted publishing docs | Broad distribution requires stable release artifacts, checksums, silent-install metadata, and package-manager-specific manifests; the immediate repo bug was a missing Docker GPU compose override and root-home Docker run examples. | Closed RA-27 with committed GPU profile commands, non-root Docker run examples, Compose config cleanup, and release-smoke docs coverage. |
+| 2026-06-06 | Cycle 17 | Test environment repair guard | `.venv`, `py -3.12`, `scripts/bootstrap_check.py`, `tests/test_bootstrap_check.py`, README Testing | The repo `.venv` can pass metadata bootstrap while lacking pytest/dev tooling, so test runs need an explicit dev-import check and repair command. | Added `bootstrap_check.py --dev`, README `.venv` repair commands, and focused bootstrap tests. |
 
 ### Research queries to run later
 
@@ -1223,28 +1224,27 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 17: Prepare a minimal test-environment repair plan for the broken `.venv` path.
-2. Cycle 18: Inspect README badge/count drift against generated manifests.
-3. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
-4. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
-5. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-6. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-7. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-8. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-9. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 18: Inspect README badge/count drift against generated manifests.
+2. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+3. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+4. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+5. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+6. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+7. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+8. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 16: Docker distribution command and docs hardening.
+Cycle 17: Test environment bootstrap dev-check and repair documentation.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
-product workflow specs. RA-16, RA-27, RA-31, RA-32, and RA-33 are closed; the
-next cycle should prepare the minimal test-environment repair plan for the
-broken `.venv` path.
+product workflow specs. RA-16, RA-27, RA-31, RA-32, and RA-33 are closed, and
+the bootstrap dev-check guard is in place; the next cycle should inspect README
+badge/count drift against generated manifests.
 
 #### Important findings so far
 
@@ -1261,8 +1261,9 @@ broken `.venv` path.
 - E15's live i18n linter passes with 55 dead keys and 0 missing keys; remaining
   work should target dead-key cleanup and scanner coverage, not broad missing-key
   repair.
-- Focused UXP pytest validation could not run because system Python 3.12/3.13
-  lack `pytest`, and the repo `.venv` resolves to a placeholder Python path.
+- The repo `.venv` can launch but lacks pytest/dev tooling; `bootstrap_check.py
+  --metadata-only --dev` now catches that state, while `py -3.12` passes the
+  same dev check in this workspace.
 - Docker GPU docs now point at the committed `gpu` profile service command, and
   `tests/test_docker_distribution_docs.py` guards against missing compose
   override references.
@@ -1328,10 +1329,9 @@ broken `.venv` path.
 
 #### Next best actions
 
-1. Refresh distribution competitor packaging paths and OpenCut package install
-   docs.
-2. Prepare a minimal test-environment repair plan for the broken `.venv` path.
-3. Inspect README badge/count drift against generated manifests.
+1. Inspect README badge/count drift against generated manifests.
+2. Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+3. Continue release-trust hardening on RA-15/RA-17+ or Docker RA-25/RA-26/RA-29/RA-30.
 
 #### Unprocessed leads
 

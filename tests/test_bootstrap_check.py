@@ -60,6 +60,27 @@ def test_runtime_import_check_reports_missing_modules(monkeypatch):
     assert "flask" in result.detail
 
 
+def test_dev_import_check_reports_missing_test_tooling(monkeypatch):
+    bootstrap_check = load_bootstrap_check()
+
+    def fake_find_spec(module_name):
+        return None if module_name in {"pytest", "ruff"} else object()
+
+    monkeypatch.setattr(bootstrap_check.importlib.util, "find_spec", fake_find_spec)
+
+    result = bootstrap_check.check_dev_imports({
+        "pytest": "pytest",
+        "pytest-cov": "pytest_cov",
+        "ruff": "ruff",
+    })
+
+    assert result.ok is False
+    assert result.name == "dev-imports"
+    assert "pytest" in result.detail
+    assert "ruff" in result.detail
+    assert '".[dev]"' in result.hint
+
+
 def test_python_version_floor_is_3_11():
     bootstrap_check = load_bootstrap_check()
     assert bootstrap_check.MIN_PYTHON == (3, 11)
@@ -71,7 +92,7 @@ def test_json_output_uses_aggregate_status(monkeypatch, capsys):
     monkeypatch.setattr(
         bootstrap_check,
         "run_checks",
-        lambda metadata_only=False: [
+        lambda metadata_only=False, dev=False: [
             bootstrap_check.CheckResult("one", True, "ok"),
             bootstrap_check.CheckResult("two", False, "bad", "fix it"),
         ],
@@ -83,6 +104,24 @@ def test_json_output_uses_aggregate_status(monkeypatch, capsys):
     assert exit_code == 1
     assert payload["ok"] is False
     assert payload["checks"][1]["hint"] == "fix it"
+
+
+def test_json_output_can_include_dev_import_check(monkeypatch, capsys):
+    bootstrap_check = load_bootstrap_check()
+    calls = []
+
+    def fake_run_checks(metadata_only=False, repo_root=None, dev=False):
+        calls.append({"metadata_only": metadata_only, "dev": dev})
+        return [bootstrap_check.CheckResult("dev-imports", True, "ok")]
+
+    monkeypatch.setattr(bootstrap_check, "run_checks", fake_run_checks)
+
+    exit_code = bootstrap_check.main(["--json", "--metadata-only", "--dev"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["ok"] is True
+    assert calls == [{"metadata_only": True, "dev": True}]
 
 
 # ---------------------------------------------------------------------------
