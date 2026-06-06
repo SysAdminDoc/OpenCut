@@ -205,6 +205,33 @@ def create_user_tombstone(kind: str, key: str, value, *, source_file: str, actio
     return entry
 
 
+def build_user_data_destructive_record(
+    kind: str,
+    key: str,
+    value,
+    *,
+    source_file: str,
+    route: str,
+    action: str = "delete",
+) -> dict:
+    """Build non-mutating metadata for a user-data record delete/replace."""
+    encoded = json.dumps(value, sort_keys=True, default=str).encode("utf-8")
+    return {
+        "id": str(key),
+        "kind": str(kind),
+        "key": str(key),
+        "action": str(action),
+        "path": _safe_user_filepath(source_file),
+        "category": f"user-data-{kind}",
+        "root": OPENCUT_DIR,
+        "type": "record",
+        "bytes": len(encoded),
+        "route": str(route),
+        "reversible": True,
+        "restore_route": "/settings/tombstones/restore",
+    }
+
+
 def list_user_tombstones(kind: str | None = None) -> list[dict]:
     entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
     if not isinstance(entries, list):
