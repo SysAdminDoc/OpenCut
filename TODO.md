@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-36 CEP panel UNC/HGFS-safe Node command pass.
+Last synced: 2026-06-06 during the RA-04 request ID error-body pass.
 
 ## Execution Order
 
@@ -34,7 +34,7 @@ Last synced: 2026-06-06 during the RA-36 CEP panel UNC/HGFS-safe Node command pa
 - [x] **RA-29 Docker dependency install fail-closed guard** - Docker dependency installation now uses the requirements file instead of shell-form specifiers and no longer masks pip failures.
 - [x] **RA-30 Docker build-context secret/log hygiene** - `.dockerignore` now mirrors Git-ignored secret/log patterns and excludes local runtime/cache database state before `COPY . /app`.
 - [x] **RA-36 CEP panel UNC/HGFS-safe Node commands** - Windows shared-folder panel checks now use validated `:win` aliases through a script-root anchored wrapper.
-- [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
+- [x] **RA-04 request ID in typed error bodies** - structured JSON error envelopes now include the generated server request ID so response bodies match the `X-Request-ID` header.
 - [x] **RA-05/RA-37 SQLite `PRAGMA user_version`** - local SQLite stores now use explicit schema versions, ordered idempotent migrations, and newer-schema rejection.
 - [x] **RA-06/RA-40 destructive wipe backup/confirm** - local SQLite destructive maintenance paths now support dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
 - [x] **RA-07/RA-38 job and journal JSON payload caps** - oversized job results and journal inverse/forward payloads now spill to content-addressed local files with structured metadata.
