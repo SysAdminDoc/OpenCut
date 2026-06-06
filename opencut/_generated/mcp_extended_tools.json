@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 15,
-    "GET": 375,
+    "GET": 376,
     "PATCH": 1,
-    "POST": 1082,
+    "POST": 1083,
     "PUT": 2
   },
   "response_schema_count": 101,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1475,
+  "tool_count": 1477,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -8746,6 +8746,36 @@
         "response_schema": "SettingsResult"
       },
       "name": "opencut_route_get_settings_onboarding"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /settings/tombstones"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /settings/tombstones.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "settings",
+        "endpoint": "settings.list_tombstones_route",
+        "generated": true,
+        "method": "GET",
+        "path": "/settings/tombstones",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_settings_tombstones"
     },
     {
       "annotations": {
@@ -34029,6 +34059,36 @@
         "response_schema": "SettingsResult"
       },
       "name": "opencut_route_post_settings_onboarding"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /settings/tombstones/restore"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /settings/tombstones/restore.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "settings",
+        "endpoint": "settings.restore_tombstone_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/settings/tombstones/restore",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_settings_tombstones_restore"
     },
     {
       "annotations": {

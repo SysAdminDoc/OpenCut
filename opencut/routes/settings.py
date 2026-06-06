@@ -18,12 +18,18 @@ from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import get_json_dict, require_csrf, safe_float, safe_int
 from opencut.user_data import (
+    create_user_tombstone,
+    get_user_tombstone,
+    list_user_tombstones,
     load_favorites,
     load_presets,
     load_workflows,
+    mark_user_tombstone_restored,
+    save_assistant_dismissed,
     save_favorites,
     save_presets,
     save_workflows,
+    summarize_user_tombstone,
 )
 
 settings_bp = Blueprint("settings", __name__)
@@ -43,6 +49,34 @@ def _require_json_object():
         return get_json_dict(), None
     except ValueError as e:
         return None, _invalid_input_response(str(e))
+
+
+def _restore_tombstone(entry: dict) -> tuple[dict | None, str | None]:
+    kind = entry.get("kind", "")
+    key = str(entry.get("key", "") or "default")
+    value = entry.get("value")
+    if kind == "preset":
+        presets = load_presets()
+        presets[key] = value
+        save_presets(presets)
+    elif kind == "workflow":
+        if not isinstance(value, dict):
+            return None, "Workflow tombstone payload is invalid"
+        workflows = [wf for wf in load_workflows() if wf.get("name") != key]
+        workflows.append(value)
+        save_workflows(workflows[:100])
+    elif kind == "favorites":
+        if not isinstance(value, list):
+            return None, "Favorites tombstone payload is invalid"
+        save_favorites(value[:200])
+    elif kind == "assistant_dismissed":
+        if not isinstance(value, list):
+            return None, "Assistant dismissal tombstone payload is invalid"
+        save_assistant_dismissed(key, value[:200])
+    else:
+        return None, f"Unsupported tombstone kind: {kind}"
+    restored = mark_user_tombstone_restored(str(entry.get("id", ""))) or entry
+    return restored, None
 
 
 def _parse_log_line(line: str) -> dict:
@@ -171,9 +205,20 @@ def delete_preset():
             "code": "NOT_FOUND",
             "suggestion": "Refresh the preset list — it may have been deleted by another client.",
         }), 404
+    tombstone = create_user_tombstone(
+        "preset",
+        name,
+        presets[name],
+        source_file="user_presets.json",
+        metadata={"route": "/presets/delete"},
+    )
     del presets[name]
     save_presets(presets)
-    return jsonify({"success": True, "deleted": name})
+    return jsonify({
+        "success": True,
+        "deleted": name,
+        "tombstone": summarize_user_tombstone(tombstone),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -197,8 +242,22 @@ def save_favorites_route():
         return jsonify({"error": "favorites must be a list"}), 400
     if len(favorites) > 200:
         return jsonify({"error": "Too many favorites (max 200)"}), 400
+    current = load_favorites()
+    tombstone = None
+    if current != favorites:
+        tombstone = create_user_tombstone(
+            "favorites",
+            "default",
+            current,
+            source_file="favorites.json",
+            action="replace",
+            metadata={"route": "/favorites/save", "new_count": len(favorites)},
+        )
     save_favorites(favorites)
-    return jsonify({"success": True})
+    response = {"success": True}
+    if tombstone:
+        response["tombstone"] = summarize_user_tombstone(tombstone)
+    return jsonify(response)
 
 
 # ---------------------------------------------------------------------------
@@ -271,8 +330,61 @@ def delete_workflow():
             "code": "NOT_FOUND",
             "suggestion": "Refresh the workflow list — it may have been deleted by another client.",
         }), 404
+    removed = next((wf for wf in workflows if wf.get("name") == name), None)
+    tombstone = create_user_tombstone(
+        "workflow",
+        name,
+        removed or {"name": name},
+        source_file="workflows.json",
+        metadata={"route": "/workflows/delete"},
+    )
     save_workflows(remaining)
-    return jsonify({"success": True, "deleted": name})
+    return jsonify({
+        "success": True,
+        "deleted": name,
+        "tombstone": summarize_user_tombstone(tombstone),
+    })
+
+
+@settings_bp.route("/settings/tombstones", methods=["GET"])
+def list_tombstones_route():
+    """List recent user-data tombstone snapshots."""
+    kind = (request.args.get("kind") or "").strip() or None
+    entries = [summarize_user_tombstone(entry) for entry in list_user_tombstones(kind)]
+    return jsonify({
+        "tombstones": entries,
+        "total": len(entries),
+    })
+
+
+@settings_bp.route("/settings/tombstones/restore", methods=["POST"])
+@require_csrf
+def restore_tombstone_route():
+    """Restore one user-data tombstone snapshot."""
+    data, error = _require_json_object()
+    if error:
+        return error
+    tombstone_id = (data.get("id") or data.get("tombstone_id") or "").strip()
+    if not tombstone_id:
+        return jsonify({
+            "error": "id is required",
+            "code": "INVALID_INPUT",
+            "suggestion": "Pass the tombstone id returned by the delete or list response.",
+        }), 400
+    entry = get_user_tombstone(tombstone_id)
+    if entry is None:
+        return jsonify({
+            "error": "Tombstone not found",
+            "code": "NOT_FOUND",
+            "suggestion": "Refresh the tombstone list; the snapshot may have expired or been pruned.",
+        }), 404
+    restored, restore_error = _restore_tombstone(entry)
+    if restore_error:
+        return jsonify({"error": restore_error, "code": "INVALID_INPUT"}), 400
+    return jsonify({
+        "success": True,
+        "restored": summarize_user_tombstone(restored or entry),
+    })
 
 
 # ---------------------------------------------------------------------------

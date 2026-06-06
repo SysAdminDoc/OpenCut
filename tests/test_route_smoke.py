@@ -1788,6 +1788,7 @@ class TestCSRFEnforcement:
         "/queue/add",
         "/workflow/run",
         "/workflow/save",
+        "/settings/tombstones/restore",
         "/templates/save",
         "/templates/apply",
         "/context/analyze",

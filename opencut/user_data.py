@@ -11,10 +11,14 @@ import os
 import tempfile
 import threading
 import time
+import uuid
 
 logger = logging.getLogger("opencut")
 
 OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
+USER_TOMBSTONES_FILE = "user_tombstones.json"
+USER_TOMBSTONE_MAX_COUNT = 100
+USER_TOMBSTONE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
 # Per-file locks to prevent concurrent read-modify-write corruption.
 # Bounded: only OpenCut user-data files should be locked (< 20 files).
@@ -146,6 +150,115 @@ def write_user_file(filename: str, data):
         except Exception as e:
             logger.warning("Could not write %s: %s", filename, e)
             raise
+
+
+def _utc_iso(timestamp: float) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
+
+
+def _json_snapshot(value):
+    return json.loads(json.dumps(value))
+
+
+def _prune_user_tombstones(entries: list, *, now: float | None = None) -> list:
+    now = time.time() if now is None else now
+    cutoff = now - USER_TOMBSTONE_MAX_AGE_SECONDS
+    kept = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        created_at = entry.get("created_at", 0)
+        if not isinstance(created_at, (int, float)) or created_at < cutoff:
+            continue
+        kept.append(entry)
+    kept.sort(key=lambda item: float(item.get("created_at", 0)))
+    return kept[-USER_TOMBSTONE_MAX_COUNT:]
+
+
+def create_user_tombstone(kind: str, key: str, value, *, source_file: str, action: str = "delete", metadata: dict | None = None) -> dict:
+    """Persist a capped restorable snapshot before mutating user data."""
+    if not kind or not isinstance(kind, str):
+        raise ValueError("Tombstone kind is required")
+    now = time.time()
+    expires_at = now + USER_TOMBSTONE_MAX_AGE_SECONDS
+    entry = {
+        "id": f"{kind}-{time.strftime('%Y%m%d-%H%M%S', time.gmtime(now))}-{uuid.uuid4().hex[:8]}",
+        "kind": kind,
+        "key": str(key or "default"),
+        "action": action,
+        "source_file": source_file,
+        "value": _json_snapshot(value),
+        "metadata": _json_snapshot(metadata or {}),
+        "created_at": now,
+        "created_at_iso": _utc_iso(now),
+        "expires_at": expires_at,
+        "expires_at_iso": _utc_iso(expires_at),
+        "restore_route": "/settings/tombstones/restore",
+    }
+    entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
+    if not isinstance(entries, list):
+        entries = []
+    entries = _prune_user_tombstones(entries, now=now)
+    entries.append(entry)
+    entries = _prune_user_tombstones(entries, now=now)
+    write_user_file(USER_TOMBSTONES_FILE, entries)
+    return entry
+
+
+def list_user_tombstones(kind: str | None = None) -> list[dict]:
+    entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
+    if not isinstance(entries, list):
+        entries = []
+    pruned = _prune_user_tombstones(entries)
+    if len(pruned) != len(entries):
+        write_user_file(USER_TOMBSTONES_FILE, pruned)
+    if kind:
+        return [entry for entry in pruned if entry.get("kind") == kind]
+    return pruned
+
+
+def get_user_tombstone(tombstone_id: str) -> dict | None:
+    for entry in list_user_tombstones():
+        if entry.get("id") == tombstone_id:
+            return entry
+    return None
+
+
+def mark_user_tombstone_restored(tombstone_id: str) -> dict | None:
+    entries = list_user_tombstones()
+    now = time.time()
+    restored = None
+    for entry in entries:
+        if entry.get("id") == tombstone_id:
+            entry["restored_at"] = now
+            entry["restored_at_iso"] = _utc_iso(now)
+            restored = entry
+            break
+    if restored is not None:
+        write_user_file(USER_TOMBSTONES_FILE, entries)
+    return restored
+
+
+def summarize_user_tombstone(entry: dict, *, include_value: bool = False) -> dict:
+    keys = (
+        "id",
+        "kind",
+        "key",
+        "action",
+        "source_file",
+        "metadata",
+        "created_at",
+        "created_at_iso",
+        "expires_at",
+        "expires_at_iso",
+        "restored_at",
+        "restored_at_iso",
+        "restore_route",
+    )
+    summary = {key: entry[key] for key in keys if key in entry}
+    if include_value:
+        summary["value"] = entry.get("value")
+    return summary
 
 
 # ---------------------------------------------------------------------------

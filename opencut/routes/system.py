@@ -966,12 +966,30 @@ def assistant_dismiss():
 @require_csrf
 def assistant_dismiss_clear():
     """Clear every persisted dismissal for a sequence so they reappear."""
-    from opencut.user_data import save_assistant_dismissed
+    from opencut.user_data import (
+        create_user_tombstone,
+        load_assistant_dismissed,
+        save_assistant_dismissed,
+        summarize_user_tombstone,
+    )
 
     data = request.get_json(force=True, silent=True) or {}
     sequence_key = (data.get("sequence_key") or "").strip() or "default"
+    current = load_assistant_dismissed(sequence_key)
+    tombstone = create_user_tombstone(
+        "assistant_dismissed",
+        sequence_key,
+        current,
+        source_file="assistant_dismissed.json",
+        action="clear",
+        metadata={"route": "/assistant/dismiss-clear"},
+    )
     save_assistant_dismissed(sequence_key, [])
-    return jsonify({"sequence_key": sequence_key, "dismissed": []})
+    return jsonify({
+        "sequence_key": sequence_key,
+        "dismissed": [],
+        "tombstone": summarize_user_tombstone(tombstone),
+    })
 
 
 # ---------------------------------------------------------------------------

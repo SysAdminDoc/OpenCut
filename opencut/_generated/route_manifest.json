@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-06T19:28:34Z",
-  "total_routes": 1532,
+  "generated_at": "2026-06-06T19:48:34Z",
+  "total_routes": 1534,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
-    "GET": 386,
+    "GET": 387,
     "PATCH": 1,
-    "POST": 1131,
+    "POST": 1132,
     "PUT": 2
   },
   "blueprints": {
@@ -812,10 +812,10 @@
       ]
     },
     "settings": {
-      "route_count": 30,
+      "route_count": 32,
       "method_counts": {
-        "GET": 13,
-        "POST": 17
+        "GET": 14,
+        "POST": 18
       },
       "sample_rules": [
         "/presets",
@@ -9746,6 +9746,22 @@
       ],
       "endpoint": "wave_h.route_onboarding_post",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/settings/tombstones",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "settings.list_tombstones_route",
+      "blueprint": "settings"
+    },
+    {
+      "rule": "/settings/tombstones/restore",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "settings.restore_tombstone_route",
+      "blueprint": "settings"
     },
     {
       "rule": "/shorts/variants",
