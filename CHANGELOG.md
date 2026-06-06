@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 138
+
+- Migrated the Video Speed and Ramp form shell to static locale hooks for mode choices, speed multiplier, maintain-pitch copy, ramp preset choices, and auto-import copy while preserving mode values, ramp values, slider constraints, and checkbox state.
+- `client/locales/en.json` grows from 2,078 to 2,088 keys; `i18n-drift` reports 2,026 consumers, 62 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Speed and Ramp static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 137
 
 - Migrated the Video Scene Detection form shell to static locale hooks for detection method, method options, sensitivity, minimum scene length, result stat labels, YouTube Chapters, and Copy to Clipboard while preserving method values, slider values, and readonly chapter output.

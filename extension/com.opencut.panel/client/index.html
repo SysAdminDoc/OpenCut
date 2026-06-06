@@ -2432,18 +2432,18 @@
                         <p class="card-desc" data-i18n="video.speed_desc">Constant speed change, reverse playback, or keyframe-based speed ramps with easing presets.</p>
 
                         <div class="form-group">
-                            <label for="speedMode">Mode</label>
+                            <label for="speedMode" data-i18n="forms.mode">Mode</label>
                             <select id="speedMode">
-                                <option value="constant">Constant Speed</option>
-                                <option value="reverse">Reverse Playback</option>
-                                <option value="preset">Speed Ramp Preset</option>
+                                <option value="constant" data-i18n="video.speed_mode_constant">Constant Speed</option>
+                                <option value="reverse" data-i18n="video.speed_mode_reverse">Reverse Playback</option>
+                                <option value="preset" data-i18n="video.speed_mode_preset">Speed Ramp Preset</option>
                             </select>
                         </div>
 
                         <!-- Constant speed params -->
                         <div id="speedConstantParams">
                             <div class="form-group">
-                                <label for="speedMultiplier">Speed Multiplier</label>
+                                <label for="speedMultiplier" data-i18n="forms.speed_multiplier">Speed Multiplier</label>
                                 <div class="slider-row">
                                     <input type="range" id="speedMultiplier" min="0.25" max="8" value="2" step="0.25">
                                     <span class="slider-val" id="speedMultiplierVal">2x</span>
@@ -2451,27 +2451,27 @@
                             </div>
                             <label class="checkbox-row">
                                 <input type="checkbox" id="speedMaintainPitch">
-                                Maintain audio pitch
+                                <span data-i18n="video.maintain_audio_pitch">Maintain audio pitch</span>
                             </label>
                         </div>
 
                         <!-- Ramp preset params -->
                         <div id="speedRampParams" class="hidden">
                             <div class="form-group">
-                                <label for="speedRampPreset">Ramp Preset</label>
+                                <label for="speedRampPreset" data-i18n="video.ramp_preset">Ramp Preset</label>
                                 <select id="speedRampPreset">
-                                    <option value="dramatic_slowmo">Dramatic Slow-Mo</option>
-                                    <option value="speed_up_middle">Speed Up Middle</option>
-                                    <option value="ramp_up">Accelerate</option>
-                                    <option value="ramp_down">Decelerate</option>
-                                    <option value="pulse">Pulse</option>
+                                    <option value="dramatic_slowmo" data-i18n="video.ramp_dramatic_slowmo">Dramatic Slow-Mo</option>
+                                    <option value="speed_up_middle" data-i18n="video.ramp_speed_up_middle">Speed Up Middle</option>
+                                    <option value="ramp_up" data-i18n="video.ramp_accelerate">Accelerate</option>
+                                    <option value="ramp_down" data-i18n="video.ramp_decelerate">Decelerate</option>
+                                    <option value="pulse" data-i18n="video.ramp_pulse">Pulse</option>
                                 </select>
                             </div>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="speedAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runSpeedBtn" disabled data-i18n="video.apply_speed">Apply Speed</button>

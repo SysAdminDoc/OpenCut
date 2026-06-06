@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.249 / batch 137 and remains open.
-- Shipped this cycle: Video Scene Detection detection method, method options, sensitivity, minimum scene length, result stat labels, YouTube Chapters, and Copy to Clipboard now expose static locale hooks while preserving method values, slider values, and readonly chapter output.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,078 keys / 2,015 consumers / 63 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Scene Detection hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.250 / batch 138 and remains open.
+- Shipped this cycle: Video Speed and Ramp mode choices, speed multiplier, maintain-pitch copy, ramp preset choices, and auto-import copy now expose static locale hooks while preserving mode values, ramp values, slider constraints, and checkbox state.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,088 keys / 2,026 consumers / 62 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Speed and Ramp hooks and preserved values with no current-port console errors.
 
 ## Next Work
 
