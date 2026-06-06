@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-03 direct typed error logging is closed; E15 rolling i18n migration, RA-01/RA-02 dependency/lint alignment, and remaining UXP permission-split work remain open.
 - Shipped this cycle: Direct typed error responses now log structured error code, status, request ID, method, path, and typed-error context fields while preserving single exception logs for classified `safe_error` paths.
-- Verification: focused RA-03/RA-04/hardening/dependency-error tests passed (61 tests), focused Ruff passed for `opencut/errors.py`, `tests/test_error_logging.py`, `tests/test_error_request_ids.py`, and `scripts/release_smoke.py`, README badges are in sync, doc-size checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (791 tests), `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `rtk git diff --check` passed.
+- Verification: focused RA-03/RA-04 structured-error tests passed (14 tests), focused Ruff passed for `opencut/errors.py`, `tests/test_error_logging.py`, `tests/test_error_request_ids.py`, and `scripts/release_smoke.py`, generated route/API-alias/feature-readiness/MCP checks passed, README badges are in sync, doc-size checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (791 tests), `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `rtk git diff --check` passed.
 
 ## Next Work
 
