@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-06
-**Baseline**: v1.32.0 -- 1,532 routes, 107 blueprints, 599 core modules, 9,100+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,200+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -363,7 +363,7 @@ LosslessCut ships on 7+ platforms (41K stars). Distribution is a competitive wea
 
 | Competitor | Pricing | OpenCut advantage | OpenCut gap |
 |---|---|---|---|
-| Descript ($24-65/mo) | Sub | 1,532 routes; MIT; local-first | Chat conductor, Overdub |
+| Descript ($24-65/mo) | Sub | 1,534 routes; MIT; local-first | Chat conductor, Overdub |
 | CapCut (free-$20/mo) | Freemium | Pro AI; Premiere; privacy | Templates, mobile |
 | AutoCut ($29/mo) | Sub | 10x breadth; MIT | Timeline speed |
 | Gling ($10-50/mo) | Sub | Full pipeline; local | Bad take detection |
@@ -708,7 +708,7 @@ has a documented dry-run mode before removing untracked files.
 | RA-42 render-cache delete containment | `opencut/core/render_cache.py` writes cached outputs under `CACHE_DIR`, but `cleanup_cache()` and `invalidate_downstream()` trust persisted `index.json` `output_path` values when calling `os.unlink()` | Closed 2026-06-06: render-cache reads, cleanup, and downstream invalidation now reject corrupted index paths unless they resolve under `CACHE_DIR` and match the expected cache-key basename, preserving outside files while dropping bad index entries. | P0 |
 | RA-43 plugin uninstall quarantine | `opencut/routes/plugins.py` validates plugin names and confines paths under `PLUGINS_DIR`, then `shutil.rmtree(plugin_dir)` removes the plugin immediately; archive notes already called out missing re-type confirmation | Closed 2026-06-06: uninstall now requires typed `confirm_name`, moves plugins into timestamped quarantine before unloading, and exposes quarantine list, restore, and permanent-delete endpoints. | P1 |
 | RA-44 model/cache clear preview | `whisper_clear_cache()` removes matching Hugging Face entries with `ignore_errors=True` and deletes whole OpenCut/Whisper cache directories; `/models/delete` removes cache files/dirs immediately after allowed-root checks | Closed 2026-06-06: Whisper cache clear and model delete now support `dry_run`/`preview` plans with exact paths, byte counts, categories, and per-path delete errors instead of silent `ignore_errors=True` wipes. | P1 |
-| RA-45 user-data delete snapshots | Preset/workflow deletes rewrite JSON files atomically, and settings export exists, but delete endpoints do not create per-item tombstones or expose undo metadata | Add lightweight tombstone snapshots for presets, workflows, favorites, and assistant dismissals, capped by count/age, with restore routes and audit fields. | P2 |
+| RA-45 user-data delete snapshots | Preset/workflow deletes rewrite JSON files atomically, and settings export exists, but delete endpoints do not create per-item tombstones or expose undo metadata | Closed 2026-06-06: user-data mutations now write capped tombstone snapshots for presets, workflows, favorites, and assistant dismissals, with list/restore routes and audit metadata. | P2 |
 
 **External sources:** Docker prune docs
 `https://docs.docker.com/engine/manage-resources/pruning/`; Docker system prune
@@ -1213,6 +1213,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 24 | Render-cache delete containment | `opencut/core/render_cache.py`, `tests/test_render_cache_safety.py`, platform cache tests | A forged render-cache `index.json` could point cleanup or downstream invalidation at files outside `CACHE_DIR`. | Closed RA-42 by validating resolved cache output paths against the cache root and cache-key basename before any unlink. |
 | 2026-06-06 | Cycle 25 | Plugin uninstall quarantine | `opencut/routes/plugins.py`, generated route manifests, plugin quarantine tests | Plugin uninstall removed plugin directories immediately after path validation, with no restore window or typed confirmation. | Closed RA-43 with quarantine move/unload ordering, restore/permanent-delete endpoints, and route-visible metadata. |
 | 2026-06-06 | Cycle 26 | Model/cache clear preview | `opencut/routes/system.py`, model cache preview tests | Whisper cache clear used broad best-effort deletes and model delete mutated immediately without an exact preview plan. | Closed RA-44 with dry-run/preview plans for Whisper cache and model-cache deletion plus per-path error reporting. |
+| 2026-06-06 | Cycle 27 | User-data tombstone snapshots | `opencut/user_data.py`, settings/system/workflow routes, tombstone tests | Presets, workflows, favorites, and assistant dismissals could be removed or replaced without restore metadata. | Closed RA-45 with capped tombstone snapshots, restore metadata, and user-data restore routes. |
 
 ### Research queries to run later
 
@@ -1233,25 +1234,25 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 27: Continue destructive-operation safety with RA-41 and RA-45.
-2. Cycle 28: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 29: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 30: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 31: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 28: Continue destructive-operation safety with RA-41.
+2. Cycle 29: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 30: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 31: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 32: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 26: Model/cache clear preview.
+Cycle 27: User-data tombstone snapshots.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, and RA-44 are
-closed, and the bootstrap dev-check guard is in place; the next cycle should
-continue the broader destructive-operation contract with RA-41 and RA-45.
+RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-45 are closed, and the bootstrap dev-check guard is in place; the next cycle
+should continue the broader destructive-operation contract with RA-41.
 
 #### Important findings so far
 
@@ -1299,6 +1300,8 @@ continue the broader destructive-operation contract with RA-41 and RA-45.
   restore, and permanent-delete quarantine actions.
 - Whisper cache clear and model delete now expose dry-run/preview plans with
   exact paths, byte counts, categories, and per-path deletion errors.
+- Preset, workflow, favorites, and assistant dismissal mutations now write
+  capped tombstone snapshots with restore metadata and restore routes.
 - Destructive routes generally have CSRF and input validation, but no shared
   dry-run/confirmation token contract.
 - Caption generation/export is mature enough to support SRT/VTT/ASS/JSON and
@@ -1369,8 +1372,8 @@ continue the broader destructive-operation contract with RA-41 and RA-45.
   reference scan.
 - Whether RA-40 should cover every user-data wipe path or stay scoped to local
   SQLite stores plus cache rebuilds.
-- Whether RA-41/RA-45 should be implemented under the existing TODO RA-06 item
-  or split into distinct active TODO rows.
+- Whether RA-41 should become the shared contract that consolidates the closed
+  destructive-route hardening patterns.
 
 #### Files still to inspect
 

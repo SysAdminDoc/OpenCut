@@ -11,7 +11,7 @@ from flask import Blueprint, current_app, has_app_context, jsonify
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import get_json_dict, require_csrf
-from opencut.user_data import load_workflows, save_workflows
+from opencut.user_data import create_user_tombstone, load_workflows, save_workflows, summarize_user_tombstone
 
 logger = logging.getLogger("opencut")
 
@@ -283,10 +283,21 @@ def delete_custom_workflow():
 
     workflows = load_workflows()
     original_len = len(workflows)
+    removed = next((wf for wf in workflows if wf.get("name") == name), None)
     workflows = [wf for wf in workflows if wf.get("name") != name]
 
     if len(workflows) == original_len:
         return jsonify({"error": "Workflow not found"}), 404
 
+    tombstone = create_user_tombstone(
+        "workflow",
+        name,
+        removed or {"name": name},
+        source_file="workflows.json",
+        metadata={"route": "/workflow/delete"},
+    )
     save_workflows(workflows)
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "tombstone": summarize_user_tombstone(tombstone),
+    })
