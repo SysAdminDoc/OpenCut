@@ -35,6 +35,9 @@
 **Pass 275 update (no standalone research file):**
 - Closed RA-43 by moving plugin uninstall through timestamped quarantine entries, requiring typed `confirm_name`, unloading only after quarantine succeeds, and adding quarantine list, restore, and permanent-delete routes with regression coverage.
 
+**Pass 276 update (no standalone research file):**
+- Closed RA-44 by adding dry-run/preview plans for Whisper cache clearing and model deletion, including exact path/byte metadata and per-path delete errors instead of silent ignore-errors cleanup.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -55,7 +58,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **228 test_*.py files** + **2 Vitest panel test files** (9,100+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **229 test_*.py files** + **2 Vitest panel test files** (9,100+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
