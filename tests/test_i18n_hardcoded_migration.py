@@ -944,6 +944,17 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.transition_smooth_left", "data-i18n"),
     ("video.transition_squeeze_h", "data-i18n"),
     ("forms.duration", "data-i18n"),
+    # One-hundred-forty-second batch (Video Particle Effects parameter shell HTML).
+    ("forms.preset", "data-i18n"),
+    ("video.particle_confetti", "data-i18n"),
+    ("video.particle_sparkles", "data-i18n"),
+    ("video.particle_snow", "data-i18n"),
+    ("video.particle_rain", "data-i18n"),
+    ("video.particle_fire_embers", "data-i18n"),
+    ("video.particle_smoke", "data-i18n"),
+    ("video.particle_bubbles", "data-i18n"),
+    ("video.particle_density", "data-i18n"),
+    ("video.particle_density_hint", "data-i18n"),
 )
 
 
