@@ -7,11 +7,18 @@ process isolation.
 
 import logging
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf, safe_int
-from opencut.security import get_json_dict
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_int,
+    verify_destructive_confirm_token,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -324,10 +331,46 @@ def worker_pool_cleanup():
                 "code": "POOL_NOT_INITIALIZED",
             }), 404
 
+        data = get_json_dict() if request.data else {}
+        with pool._lock:
+            workers = [worker.to_dict() for worker in pool.active_workers.values()]
+        targets = [
+            {
+                "id": str(worker.get("worker_id", "")),
+                "category": "worker-process",
+                "type": "process",
+                "pid": worker.get("pid"),
+                "model_name": worker.get("model_name", ""),
+                "status": worker.get("status", ""),
+                "vram_allocated": worker.get("vram_allocated", 0),
+                "runtime_sec": worker.get("runtime_sec", 0.0),
+                "reversible": False,
+            }
+            for worker in workers
+        ]
+        plan = build_destructive_plan(
+            "worker_pool.cleanup",
+            targets=targets,
+            metadata={"route": "/architecture/worker-pool/cleanup", "worker_count": len(targets)},
+            reversible=False,
+        )
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "cleaned_up": 0,
+                "would_clean_up": len(targets),
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if targets and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         count = pool.cleanup()
         return jsonify({
             "cleaned_up": count,
             "status": "cleaned",
+            "destructive_plan": plan,
         })
     except Exception as exc:
         return safe_error(exc, "worker_pool_cleanup")

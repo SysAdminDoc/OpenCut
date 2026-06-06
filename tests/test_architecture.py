@@ -1247,6 +1247,61 @@ class TestArchitectureRoutes(unittest.TestCase):
         data = resp.get_json()
         self.assertEqual(data["status"], "cleaned")
 
+    def test_worker_pool_cleanup_requires_confirm_token_for_active_workers(self):
+        import threading
+
+        import opencut.core.process_isolation as mod
+
+        class FakeWorker:
+            def to_dict(self):
+                return {
+                    "worker_id": "worker-a",
+                    "pid": 123,
+                    "model_name": "test-model",
+                    "status": "running",
+                    "vram_allocated": 512,
+                    "runtime_sec": 1.5,
+                }
+
+        class FakePool:
+            def __init__(self):
+                self._lock = threading.Lock()
+                self.active_workers = {"worker-a": FakeWorker()}
+                self.cleaned = False
+
+            def cleanup(self):
+                self.cleaned = True
+                self.active_workers.clear()
+                return 1
+
+        old = mod._global_pool
+        pool = FakePool()
+        mod._global_pool = pool
+        try:
+            preview = self.client.post(
+                "/architecture/worker-pool/cleanup",
+                headers=self.csrf_headers,
+                json={"dry_run": True},
+            )
+            missing_token = self.client.post(
+                "/architecture/worker-pool/cleanup",
+                headers=self.csrf_headers,
+                json={},
+            )
+            confirmed = self.client.post(
+                "/architecture/worker-pool/cleanup",
+                headers=self.csrf_headers,
+                json={"confirm_token": preview.get_json()["confirm_token"]},
+            )
+        finally:
+            mod._global_pool = old
+
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.get_json()["would_clean_up"], 1)
+        self.assertEqual(missing_token.status_code, 409)
+        self.assertEqual(confirmed.status_code, 200)
+        self.assertTrue(pool.cleaned)
+
     def test_csrf_required_on_create(self):
         resp = self.client.post(
             "/architecture/worker-pool/create",

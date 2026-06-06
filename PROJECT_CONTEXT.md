@@ -53,6 +53,9 @@
 **Pass 281 update (no standalone research file):**
 - Advanced RA-41 adjacent-route hardening by adding confirmation-token dry-run plans for assistant dismissal clears, chat session clears, undo-history clears, and footage-index missing-file cleanup. Journal clear already uses the local DB dry-run/backup contract; worker-pool cleanup remains the next process-lifecycle route to audit.
 
+**Pass 282 update (no standalone research file):**
+- Closed RA-41 by adding confirmation-token dry-run plans to worker-pool cleanup. The final route scan found the remaining journal clear path already covered by the local DB dry-run/backup contract and no additional user-visible clear/delete route outside the destructive-plan pattern.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
