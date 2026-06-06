@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.262 / batch 150 and remains open.
-- Shipped this cycle: Export Transcript export format, transcript format choices, model, and model choices now expose static locale hooks while preserving format values, model values, and the default Base selection.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,248 keys / 2,191 consumers / 57 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Transcript hooks, option values, and default model selection with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.263 / batch 151 and remains open.
+- Shipped this cycle: Export Platform Presets title, category label/options, preset label, and auto-import copy now expose static locale hooks while preserving category values and checked state; the stale singular `export.platform_preset` locale key was removed after replacement.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,253 keys / 2,196 consumers / 57 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Platform Presets hooks, category values, and checked auto-import state with no current-port console errors.
 
 ## Next Work
 

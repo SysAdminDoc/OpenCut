@@ -2894,24 +2894,24 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                <span data-i18n="export.platform_preset">Platform Export Presets</span>
+                                <span data-i18n="export.platform_presets_title">Platform Export Presets</span>
                             </div>
                         </div>
                         <p class="card-desc" data-i18n="export.platform_desc">One-click export optimized for each platform's format, resolution, codec, and file size requirements.</p>
 
                         <div class="form-group">
-                            <label for="exportPresetCategory">Category</label>
+                            <label for="exportPresetCategory" data-i18n="forms.category">Category</label>
                             <select id="exportPresetCategory">
-                                <option value="youtube">YouTube</option>
-                                <option value="social">Social Media</option>
-                                <option value="audio">Podcast / Audio</option>
-                                <option value="archive">Professional / Archive</option>
-                                <option value="web">Web / GIF</option>
+                                <option value="youtube" data-i18n="export.category_youtube">YouTube</option>
+                                <option value="social" data-i18n="export.category_social">Social Media</option>
+                                <option value="audio" data-i18n="export.category_audio">Podcast / Audio</option>
+                                <option value="archive" data-i18n="export.category_archive">Professional / Archive</option>
+                                <option value="web" data-i18n="export.category_web">Web / GIF</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="exportPresetSelect">Preset</label>
+                            <label for="exportPresetSelect" data-i18n="forms.preset">Preset</label>
                             <select id="exportPresetSelect">
                                 <!-- Populated by JS -->
                             </select>
@@ -2921,7 +2921,7 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="exportPresetAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runExportPresetBtn" disabled title="Ctrl+Shift+E" data-i18n="export.export">Export</button>
