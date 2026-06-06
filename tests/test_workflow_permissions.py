@@ -8,6 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
 RELEASE_SMOKE = REPO_ROOT / "scripts" / "release_smoke.py"
+DOWNLOAD_ARTIFACT_V4_PIN = "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4"
 
 
 def _workflow_text() -> str:
@@ -48,7 +49,7 @@ def test_release_upload_job_is_the_only_write_token_boundary():
     assert "if: startsWith(github.ref, 'refs/tags/')" in release_job
     assert "needs: build" in release_job
     assert "\n    permissions:\n      contents: write\n\n    steps:\n" in release_job
-    assert "actions/download-artifact@v4" in release_job
+    assert DOWNLOAD_ARTIFACT_V4_PIN in release_job
     assert "gh release upload" in release_job
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in release_job
     assert "contents: write" not in workflow_without_release_job
