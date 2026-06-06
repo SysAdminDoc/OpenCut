@@ -14,6 +14,9 @@
 **Pass 268 update (no standalone research file):**
 - Closed RA-28 by extending `scripts/check_doc_sizes.py` to validate README non-badge route, module, blueprint, panel line-count, and root test-file claims against generated manifests and the live filesystem. README counts now match the route manifest and local file counts, and the doc-size release-smoke step covers the expanded size/count drift contract.
 
+**Pass 269 update (no standalone research file):**
+- Closed RA-35 by renaming the release SBOM workflow path/artifact to the declared-SBOM contract and adding CycloneDX metadata properties for declared-only fidelity, dependency sources, excluded resolved/transitive surfaces, and `requirements-lock.txt` advisory-audit coverage.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

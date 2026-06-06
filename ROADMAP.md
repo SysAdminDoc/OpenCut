@@ -121,7 +121,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-31 | Adobe tracker exit-code | S | Exit codes lost |
 | RA-32 | Adobe tracker labels | S | Unseeded labels |
 | RA-33 | Label dry-run without gh | S | Requires CLI |
-| RA-35 | Release SBOM fidelity | M | Declared-only SBOM |
+| RA-35 | Release SBOM fidelity | M | Closed 2026-06-06: declared-SBOM artifact naming and CycloneDX fidelity metadata |
 | RA-36 | CEP UNC/HGFS-safe Node | M | Shared-folder paths |
 
 ### Drop-in model upgrades
@@ -1205,6 +1205,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 16 | Distribution packaging and Docker docs | README, Dockerfile, docker-compose.yml, LosslessCut downloads, Homebrew Cask docs, Microsoft WinGet docs, Snapcraft docs, PyPI trusted publishing docs | Broad distribution requires stable release artifacts, checksums, silent-install metadata, and package-manager-specific manifests; the immediate repo bug was a missing Docker GPU compose override and root-home Docker run examples. | Closed RA-27 with committed GPU profile commands, non-root Docker run examples, Compose config cleanup, and release-smoke docs coverage. |
 | 2026-06-06 | Cycle 17 | Test environment repair guard | `.venv`, `py -3.12`, `scripts/bootstrap_check.py`, `tests/test_bootstrap_check.py`, README Testing | The repo `.venv` can pass metadata bootstrap while lacking pytest/dev tooling, so test runs need an explicit dev-import check and repair command. | Added `bootstrap_check.py --dev`, README `.venv` repair commands, and focused bootstrap tests. |
 | 2026-06-06 | Cycle 18 | README generated-count drift gate | README, `scripts/check_doc_sizes.py`, route manifest, live panel/source files, root test files | README badges were already described as generated, but prose, architecture diagrams, and project-structure comments could still drift from route/module/test truth. | Closed RA-28 by extending doc-size checks to README non-badge route, module, blueprint, panel line-count, and root test-file claims. |
+| 2026-06-06 | Cycle 19 | Release SBOM fidelity | `scripts/sbom.py`, `.github/workflows/build.yml`, `tests/test_release_sbom.py`, `tests/test_sbom_completeness.py`, CycloneDX and GitHub artifact-attestation docs | The release SBOM is useful as a declared inventory, but it should not look like a resolved installed-environment vulnerability inventory. | Closed RA-35 by renaming the release SBOM path/artifact and adding declared-only CycloneDX metadata plus lockfile audit-target evidence. |
 
 ### Research queries to run later
 
@@ -1225,26 +1226,26 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
-2. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
-3. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-4. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-5. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-6. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-7. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+2. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+3. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+4. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+5. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+6. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 18: README generated-count drift gate.
+Cycle 19: Release SBOM fidelity.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
-product workflow specs. RA-16, RA-27, RA-28, RA-31, RA-32, and RA-33 are
+product workflow specs. RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, and RA-35 are
 closed, and the bootstrap dev-check guard is in place; the next cycle should
-inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+inspect local DB migration implementation shape and test fixture needs for RA-37
+through RA-40.
 
 #### Important findings so far
 
@@ -1267,6 +1268,9 @@ inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
 - README non-badge route, module, blueprint, panel line-count, and root test-file
   claims now run through `scripts/check_doc_sizes.py` beside the older
   documentation size targets.
+- Release SBOM workflow artifacts now use declared-SBOM naming, and generated
+  CycloneDX metadata marks the inventory as `declared-only` with source,
+  exclusion, and lockfile advisory-audit evidence.
 - Docker GPU docs now point at the committed `gpu` profile service command, and
   `tests/test_docker_distribution_docs.py` guards against missing compose
   override references.
@@ -1332,8 +1336,8 @@ inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
 
 #### Next best actions
 
-1. Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
-2. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
 3. Continue release-trust hardening on RA-15/RA-17+ or Docker RA-25/RA-26/RA-29/RA-30.
 
 #### Unprocessed leads

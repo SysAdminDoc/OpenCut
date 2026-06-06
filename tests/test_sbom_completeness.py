@@ -64,8 +64,23 @@ def _component_properties(component: dict) -> dict[str, str]:
     return {prop["name"]: prop["value"] for prop in component.get("properties", [])}
 
 
+def _metadata_properties(bom: dict) -> dict[str, str]:
+    return {prop["name"]: prop["value"] for prop in bom["metadata"].get("properties", [])}
+
+
 def _build_bom() -> dict:
     return _load_sbom_module().build_sbom()
+
+
+def test_sbom_declares_inventory_fidelity_boundary():
+    bom = _build_bom()
+    properties = _metadata_properties(bom)
+
+    assert properties["opencut:sbom:fidelity"] == "declared-only"
+    assert "pyproject.toml" in properties["opencut:sbom:sources"]
+    assert "requirements.txt" in properties["opencut:sbom:sources"]
+    assert "requirements-lock.txt" in properties["opencut:sbom:excludes"]
+    assert "requirements-lock.txt" in properties["opencut:sbom:vulnerability-audit-targets"]
 
 
 def test_sbom_contains_every_declared_python_dependency():
