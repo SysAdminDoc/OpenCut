@@ -33,7 +33,7 @@ Last consolidated: 2026-06-06.
 | Webhook trust | The May 26 plan now has E11 closed: new HTTP webhook registrations require an HMAC secret unless the caller explicitly opts into unsigned local testing. |
 | Disk preflight | The May 26 plan now has N4 closed: heavyweight async jobs run output-volume disk checks before job creation and return 507 with required/free/output-dir metadata when space is insufficient. |
 | Interrupted-job resume | The May 26 plan now has N5 closed: checkpointable async jobs persist resume metadata and can be re-enqueued from interrupted history through `POST /jobs/<job_id>/resume`. |
-| Plugin job registration | The May 26 plan now has N7 closed: plugin manifests can declare background jobs, and plugin routes can enqueue namespaced jobs through the core async-job tracker. |
+| Plugin job registration | The May 26 plan now has N7 closed: plugin manifests can declare background jobs, plugin routes can enqueue namespaced jobs through the core async-job tracker, and plugin uninstall now moves through quarantine/restore/permanent-delete states. |
 | Third-party agent skills | The May 26 plan now has N8 closed: validated user skills load from `~/.opencut/skills/<id>/`, share the `/agent/skills` catalogue, and reject unavailable route references at load time. |
 | CEP caption display settings | The May 26 plan now has E14 closed: the CEP Captions tab exposes the F236 display-settings card with token loading, live preview, and parity tests. |
 | Enriched job metadata | The May 26 plan now has N9 closed: live status, persisted history, diagnostics, and webhooks expose peak resource fields plus explicit terminal exit reasons. |

@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 15,
-    "GET": 374,
+    "GET": 375,
     "PATCH": 1,
-    "POST": 1080,
+    "POST": 1082,
     "PUT": 2
   },
   "response_schema_count": 101,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1472,
+  "tool_count": 1475,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -7884,6 +7884,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_plugins_loaded"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /plugins/quarantine/list"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /plugins/quarantine/list.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.list_plugin_quarantine",
+        "generated": true,
+        "method": "GET",
+        "path": "/plugins/quarantine/list",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_plugins_quarantine_list"
     },
     {
       "annotations": {
@@ -30508,6 +30538,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_plugins_marketplace_install"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /plugins/quarantine/delete"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /plugins/quarantine/delete.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.delete_plugin_quarantine",
+        "generated": true,
+        "method": "POST",
+        "path": "/plugins/quarantine/delete",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_plugins_quarantine_delete"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /plugins/quarantine/restore"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /plugins/quarantine/restore.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.restore_plugin_quarantine",
+        "generated": true,
+        "method": "POST",
+        "path": "/plugins/quarantine/restore",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_plugins_quarantine_restore"
     },
     {
       "annotations": {

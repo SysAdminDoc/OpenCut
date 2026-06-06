@@ -5,8 +5,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1529-orange)
-![Tests](https://img.shields.io/badge/Tests-9000+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1532-orange)
+![Tests](https://img.shields.io/badge/Tests-9100+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
@@ -76,7 +76,7 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 
 ## Feature Overview
 
-OpenCut v1.32.0 includes **1,529 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.32.0 includes **1,532 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -278,7 +278,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,529 API routes     |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,532 API routes     |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  599 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -479,7 +479,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-9,000+ estimated tests across 227 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+9,100+ estimated tests across 228 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -540,7 +540,7 @@ extension/
     main.js          # UXP panel (~6,014 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (9,000+ estimated tests, 227 root test files)
+tests/               # pytest test suite (9,100+ estimated tests, 228 root test files)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking
