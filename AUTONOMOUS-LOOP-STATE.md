@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.246 / batch 134 and remains open.
-- Shipped this cycle: Video AI B-Roll description/backend/seed controls, backend options, placeholder and ARIA attributes, analyze action, dependency hint, install helper copy, and Requires text now expose static locale hooks while preserving backend IDs, seed attributes, and package command text.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,045 keys / 1,977 consumers / 68 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video AI B-Roll hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.247 / batch 135 and remains open.
+- Shipped this cycle: Video Multimodal Diarization speaker/sample/confidence controls, dependency hint, install helper copy, Requires text, and result-stat labels now expose static locale hooks while preserving numeric speaker options, slider values, and package command text.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,054 keys / 1,986 consumers / 68 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Multimodal Diarization hooks and preserved values with no current-port console errors.
 
 ## Next Work
 
