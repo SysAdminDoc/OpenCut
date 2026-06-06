@@ -955,6 +955,20 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.particle_bubbles", "data-i18n"),
     ("video.particle_density", "data-i18n"),
     ("video.particle_density_hint", "data-i18n"),
+    # One-hundred-forty-third batch (Video Titles parameter shell HTML).
+    ("video.title_text", "data-i18n"),
+    ("video.title_text_placeholder", "data-i18n-placeholder"),
+    ("video.subtitle", "data-i18n"),
+    ("video.subtitle_placeholder", "data-i18n-placeholder"),
+    ("forms.preset", "data-i18n"),
+    ("video.title_preset_fade_center", "data-i18n"),
+    ("video.title_preset_slide_left", "data-i18n"),
+    ("video.title_preset_typewriter", "data-i18n"),
+    ("video.title_preset_lower_third", "data-i18n"),
+    ("video.title_preset_countdown", "data-i18n"),
+    ("video.title_preset_kinetic_bounce", "data-i18n"),
+    ("forms.duration", "data-i18n"),
+    ("forms.font_size", "data-i18n"),
 )
 
 
