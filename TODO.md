@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-18 UXP deprecation sentinel pass.
+Last synced: 2026-06-06 during the RA-19 UXP clipboard permission pass.
 
 ## Execution Order
 
@@ -19,7 +19,7 @@ Last synced: 2026-06-06 during the RA-18 UXP deprecation sentinel pass.
 - [x] **RA-33 issue-label dry-run without `gh`** - documented label dry-runs run without requiring GitHub CLI while real apply still checks it.
 - [x] **RA-17 UXP manifest schema guard** - live UXP manifest now declares Premiere-supported `manifestVersion: 5`, with tests separating it from the dormant WebView scaffold's v6 template.
 - [x] **RA-18 UXP deprecation sentinel** - static tests now block deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events from the UXP/WebView source path.
-- [ ] **RA-19 UXP clipboard permission** - declare the narrow clipboard permission and centralize copy fallback handling.
+- [x] **RA-19 UXP clipboard permission** - live and WebView manifests now declare the required clipboard permission, and UXP output copy uses a shared fallback helper.
 - [ ] **RA-20 UXP confirmation guard** - replace raw `window.confirm` or explicitly gate beta alert APIs with documented evidence.
 - [ ] **RA-21 Python 3.13 classifier proof** - prove advertised Python 3.13 support with CI coverage or retract the classifier until it is tested.
 - [ ] **RA-22 Release Full Node pin** - pin the CEP panel Node runtime in Release Full to match PR Fast before trusting npm gates as release evidence.

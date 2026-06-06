@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - UXP Clipboard Permission
+
+- Closed RA-19 by declaring `requiredPermissions.clipboard: "readAndWrite"` in the live UXP manifest and dormant WebView scaffold.
+- Centralized UXP output copying through an async helper that reports unsupported or denied clipboard access with a manual-copy fallback.
+- Added static permission/fallback tests for the manifest and copy-button contract.
+
 ### Changed - UXP Deprecated API Sentinel
 
 - Closed RA-18 by adding a static guard against deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events in the UXP/WebView source path.

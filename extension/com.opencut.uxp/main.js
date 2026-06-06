@@ -149,6 +149,29 @@ function isTimeoutError(err) {
   return err?.name === "AbortError" || /timed out|abort/i.test(message);
 }
 
+async function copyTextToClipboard(text, { successLabel = "Output" } = {}) {
+  const value = String(text || "");
+  if (!value) return false;
+
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.clipboard ||
+    typeof navigator.clipboard.writeText !== "function"
+  ) {
+    UIController.showToast("Clipboard is unavailable in this UXP environment. Copy the output manually.", "warning");
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    UIController.showToast(`${successLabel} copied to clipboard.`, "success");
+    return true;
+  } catch (err) {
+    UIController.showToast("Clipboard permission is unavailable or denied. Copy the output manually.", "warning");
+    return false;
+  }
+}
+
 async function fetchWithTimeout(url, opts = {}, timeoutMs = 120000) {
   const options = { ...opts };
   let timer = null;
@@ -4560,12 +4583,11 @@ function bindEvents() {
   document.getElementById("runTranscribeBtn")?.addEventListener("click", runTranscribe);
   document.getElementById("runChaptersBtn")?.addEventListener("click", runChapterGeneration);
   document.getElementById("runRepeatBtn")?.addEventListener("click", runRepeatDetection);
-  document.getElementById("copySrtBtn")?.addEventListener("click", () => {
+  document.getElementById("copySrtBtn")?.addEventListener("click", async () => {
     const body = document.getElementById("captionsResultBody");
     if (body?.value) {
       const copiedLabel = (_lastCaptionsResult?.copyLabel || "Copy Output").replace(/^Copy\s+/, "");
-      try { navigator.clipboard.writeText(body.value); UIController.showToast(`${copiedLabel} copied to clipboard.`, "success"); }
-      catch (_) { UIController.showToast("Could not access clipboard.", "warning"); }
+      await copyTextToClipboard(body.value, { successLabel: copiedLabel });
     }
   });
   document.getElementById("importSrtBtn")?.addEventListener("click", async () => {
