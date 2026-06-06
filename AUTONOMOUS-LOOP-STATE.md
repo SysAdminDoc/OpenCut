@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-01 Ruff target-version alignment and RA-02 requirements/pyproject alignment are closed; E15 rolling i18n migration and remaining UXP permission-split work remain open.
 - Shipped this cycle: Ruff now targets the declared Python 3.11 package floor, `requirements.txt` core/standard dependency bounds match `pyproject.toml`, and dependency-surface tests guard both contracts.
-- Verification: focused dependency-surface/release-smoke tests passed (9 tests), focused Ruff passed for the dependency-surface guard and `opencut.tools.pip_audit_extras`, generated route/API-alias/feature-readiness/MCP checks passed, README badges are in sync, doc-size checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (793 tests), `py -3.12 scripts\release_smoke.py --only pip-audit --json` passed with zero unallowed advisories, and `git diff --check` passed.
+- Verification: focused dependency-surface/bootstrap tests passed (37 tests), `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (793 tests), `py -3.12 scripts\release_smoke.py --only ruff --json` passed, README badges are in sync, doc-size checks passed within tolerance, roadmap source lint passed with existing appendix warnings, and `rtk git diff --check` passed.
 
 ## Next Work
 
