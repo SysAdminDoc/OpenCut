@@ -19,6 +19,13 @@ logger = logging.getLogger("opencut")
 journal_bp = Blueprint("journal", __name__)
 
 
+def _destructive_flags() -> tuple[bool, bool]:
+    payload = request.get_json(silent=True) or {}
+    dry_run = safe_bool(request.args.get("dry_run", payload.get("dry_run", False)), False)
+    backup = safe_bool(request.args.get("backup", payload.get("backup", False)), False)
+    return dry_run, backup
+
+
 @journal_bp.route("/journal/list", methods=["GET"])
 def journal_list():
     """List recent journal entries (newest first).
@@ -121,7 +128,11 @@ def journal_mark_reverted(entry_id: int):
 @require_csrf
 def journal_delete(entry_id: int):
     """Delete a single entry (user-initiated cleanup)."""
-    ok = journal.delete_entry(entry_id)
+    dry_run, backup = _destructive_flags()
+    result = journal.delete_entry(entry_id, dry_run=dry_run, backup=backup)
+    if isinstance(result, dict):
+        return jsonify(result)
+    ok = result
     if not ok:
         return jsonify({"error": "Entry not found"}), 404
     return jsonify({"ok": True, "id": entry_id})
@@ -131,5 +142,9 @@ def journal_delete(entry_id: int):
 @require_csrf
 def journal_clear():
     """Delete every journal entry. Requires explicit user action in the UI."""
-    removed = journal.clear_all()
+    dry_run, backup = _destructive_flags()
+    result = journal.clear_all(dry_run=dry_run, backup=backup)
+    if isinstance(result, dict):
+        return jsonify(result)
+    removed = result
     return jsonify({"ok": True, "removed": removed})

@@ -3,15 +3,15 @@
   "enabled_by": "OPENCUT_MCP_EXTENDED_TOOLS=1 or opencut-mcp-server --extended-tools",
   "manifest_version": 1,
   "method_counts": {
-    "DELETE": 14,
+    "DELETE": 15,
     "GET": 374,
     "PATCH": 1,
-    "POST": 1079,
+    "POST": 1080,
     "PUT": 2
   },
   "response_schema_count": 101,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1470,
+  "tool_count": 1472,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -379,6 +379,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_delete_render_queue_remove"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false,
+        "title": "DELETE /search/db-index"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /search/db-index.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.search_clear_db_index",
+        "generated": true,
+        "method": "DELETE",
+        "path": "/search/db-index",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_delete_search_db_index"
     },
     {
       "annotations": {
@@ -16432,6 +16462,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_api_pipeline_health_record"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /api/pipeline/health/reset"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /api/pipeline/health/reset.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "pipeline_intel",
+        "endpoint": "pipeline_intel.pipeline_health_reset",
+        "generated": true,
+        "method": "POST",
+        "path": "/api/pipeline/health/reset",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_api_pipeline_health_reset"
     },
     {
       "annotations": {

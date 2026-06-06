@@ -21,6 +21,7 @@ import threading
 import time
 
 from opencut.local_db_diagnostics import build_sqlite_diagnostic
+from opencut.local_db_maintenance import count_rows, prepare_destructive_result
 from opencut.local_db_migrations import migrate_user_version
 from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
@@ -238,20 +239,55 @@ def mark_reverted(entry_id: int) -> bool:
     return cur.rowcount > 0
 
 
-def delete_entry(entry_id: int) -> bool:
+def delete_entry(entry_id: int, *, dry_run: bool = False, backup: bool = False,
+                 backup_dir: str | None = None) -> bool | dict:
     init_db()
     conn = _get_conn()
+    affected = count_rows(conn, "journal", "id = ?", (entry_id,))
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="journal",
+            operation="delete_entry",
+            affected_rows=affected,
+            dry_run=dry_run,
+            backup=backup,
+            backup_dir=backup_dir,
+        )
+        result["entry_id"] = entry_id
+        if dry_run:
+            return result
     cur = conn.execute("DELETE FROM journal WHERE id = ?", (entry_id,))
     conn.commit()
+    if backup:
+        result["affected_rows"] = cur.rowcount
+        return result
     return cur.rowcount > 0
 
 
-def clear_all() -> int:
+def clear_all(*, dry_run: bool = False, backup: bool = False,
+              backup_dir: str | None = None) -> int | dict:
     """Delete every entry. Returns count removed. For user-initiated wipe."""
     init_db()
     conn = _get_conn()
+    affected = count_rows(conn, "journal")
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="journal",
+            operation="clear_all",
+            affected_rows=affected,
+            dry_run=dry_run,
+            backup=backup,
+            backup_dir=backup_dir,
+        )
+        if dry_run:
+            return result
     cur = conn.execute("DELETE FROM journal")
     conn.commit()
+    if backup:
+        result["affected_rows"] = cur.rowcount
+        return result
     return cur.rowcount
 
 
