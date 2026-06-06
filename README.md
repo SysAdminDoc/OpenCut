@@ -455,6 +455,13 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 ## Testing
 
 ```bash
+# Verify the selected Python has runtime metadata and test tooling
+py -3.12 scripts/bootstrap_check.py --metadata-only --dev
+
+# Repair a stale repo virtualenv before running tests from it
+py -3.12 -m venv --clear .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
 # Run all tests
 python -m pytest tests/ -q
 
