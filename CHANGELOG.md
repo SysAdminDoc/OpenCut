@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 139
+
+- Migrated the Video LUT Library form shell to static locale hooks for category filters, LUT preset choices, gallery ARIA copy, intensity title copy, auto-import copy, reference-image inputs, Browse, LUT name, and strength while preserving option values, slider constraints, placeholders, and checkbox state.
+- `client/locales/en.json` grows from 2,088 to 2,110 keys; `i18n-drift` reports 2,048 consumers, 62 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video LUT Library static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 138
 
 - Migrated the Video Speed and Ramp form shell to static locale hooks for mode choices, speed multiplier, maintain-pitch copy, ramp preset choices, and auto-import copy while preserving mode values, ramp values, slider constraints, and checkbox state.
