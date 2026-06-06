@@ -2774,10 +2774,10 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.upscale">Pro Upscaling</div></div>
                         <p class="card-desc" data-i18n="video.upscale_desc">Upscale low-resolution video to 2x, 3x, or 4x. Choose fast CPU or AI-powered GPU quality.</p>
-                        <div class="form-group"><label for="upscalePreset">Quality Preset</label>
-                            <select id="upscalePreset"><option value="fast">Fast (CPU, good quality)</option><option value="balanced">Balanced (AI, great quality)</option><option value="premium_v2x">Premium (AI, best quality)</option></select></div>
-                        <div class="form-group"><label for="upscaleScale">Scale</label>
-                            <select id="upscaleScale"><option value="2" selected>2x</option><option value="3">3x</option><option value="4">4x</option></select></div>
+                        <div class="form-group"><label for="upscalePreset" data-i18n="forms.quality_preset">Quality Preset</label>
+                            <select id="upscalePreset"><option value="fast" data-i18n="video.upscale_preset_fast">Fast (CPU, good quality)</option><option value="balanced" data-i18n="video.upscale_preset_balanced">Balanced (AI, great quality)</option><option value="premium_v2x" data-i18n="video.upscale_preset_premium">Premium (AI, best quality)</option></select></div>
+                        <div class="form-group"><label for="upscaleScale" data-i18n="forms.scale">Scale</label>
+                            <select id="upscaleScale"><option value="2" selected data-i18n="video.upscale_scale_2x">2x</option><option value="3" data-i18n="video.upscale_scale_3x">3x</option><option value="4" data-i18n="video.upscale_scale_4x">4x</option></select></div>
                         <button type="button" class="btn-primary" id="runUpscaleBtn" disabled data-i18n="video.upscale_run">Upscale Video</button>
                     </section>
                 </div>

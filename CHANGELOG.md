@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 146
+
+- Migrated the Video Pro Upscaling form shell to static locale hooks for quality preset, preset choices, scale, and scale choices while preserving preset values and scale values.
+- `client/locales/en.json` grows from 2,215 to 2,221 keys; `i18n-drift` reports 2,163 consumers, 58 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Pro Upscaling static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 145
 
 - Migrated the Video Merge form shell to static locale hooks for merge-file label/hint, Add Current Clip, Add All Project Media, Clear, merge mode options, and quality options while preserving list role wiring, mode values, and quality values.
