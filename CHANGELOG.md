@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Caption Snapshot Read Bridge
+
+- Closed RA-48 with read-only `ocGetCaptionTrackSnapshot` UXP host-action support.
+- Added safe-by-default UDT fixture coverage and distinct snapshot failure reasons without claiming UXP caption write support.
+
 ### Changed - Caption Round-Trip Diff And Apply
 
 - Closed RA-47 with `POST /captions/round-trip/diff` and `POST /captions/round-trip/apply`.

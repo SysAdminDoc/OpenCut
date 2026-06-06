@@ -30,6 +30,7 @@ _PAYLOADS: dict[str, dict] = {
         ]
     },
     "ocGetSequenceMarkers": {},
+    "ocGetCaptionTrackSnapshot": {"includeEmptyTrackItems": False},
     "ocApplyClipKeyframes": {
         "trackIndex": 0,
         "clipStartTime": 0,
@@ -83,6 +84,7 @@ _SCENARIO_SAFETY: dict[str, dict] = {
     "ocGetSequenceInfo": {"fixture": "active_sequence", "mutates_project": False, "writes_files": False, "safe_by_default": True},
     "ocAddSequenceMarkers": {"fixture": "active_sequence", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocGetSequenceMarkers": {"fixture": "active_sequence", "mutates_project": False, "writes_files": False, "safe_by_default": True},
+    "ocGetCaptionTrackSnapshot": {"fixture": "active_sequence_with_optional_caption_track", "mutates_project": False, "writes_files": False, "safe_by_default": True},
     "ocApplyClipKeyframes": {"fixture": "selected_video_clip", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocBatchRenameProjectItems": {"fixture": "project_item_named_open_cut_udt_fixture", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocCreateSmartBins": {"fixture": "open_project", "mutates_project": True, "writes_files": False, "safe_by_default": False},
@@ -100,6 +102,7 @@ _RESULT_KEYS: dict[str, tuple[str, ...]] = {
     "ocGetSequenceInfo": ("ok", "data"),
     "ocAddSequenceMarkers": ("ok", "added"),
     "ocGetSequenceMarkers": ("ok", "markers", "count"),
+    "ocGetCaptionTrackSnapshot": ("ok", "reason_code", "segments", "tracks", "count"),
     "ocApplyClipKeyframes": ("ok", "applied"),
     "ocBatchRenameProjectItems": ("ok", "renamed"),
     "ocCreateSmartBins": ("ok", "created"),
@@ -118,6 +121,19 @@ def _scenario_for_entry(entry: dict, index: int) -> dict:
     if name not in _PAYLOADS:
         raise KeyError(f"missing F267 UDT payload for {name}")
     safety = _SCENARIO_SAFETY[name]
+    acceptable_blockers = [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found",
+    ]
+    if name == "ocGetCaptionTrackSnapshot":
+        acceptable_blockers.extend([
+            "caption_api_missing",
+            "caption_track_items_unavailable",
+            "CaptionTrack.getTrackItems",
+        ])
     return {
         "id": f"f267-{index:02d}-{name}",
         "action": name,
@@ -131,23 +147,24 @@ def _scenario_for_entry(entry: dict, index: int) -> dict:
         "safe_by_default": safety["safe_by_default"],
         "payload": deepcopy(_PAYLOADS[name]),
         "expected_result_keys": list(_RESULT_KEYS[name]),
-        "acceptable_blockers": [
-            "No open project",
-            "No active sequence",
-            "UXP API unavailable",
-            "Premiere EncoderManager is unavailable",
-            "Project item not found",
-        ],
+        "acceptable_blockers": acceptable_blockers,
     }
 
 
 def build_udt_harness_manifest() -> dict:
-    """Return a JSON-safe UDT smoke harness for the 14 direct UXP actions."""
+    """Return a JSON-safe UDT smoke harness for direct UXP actions."""
 
     source = build_manifest()
     direct_entries = [
         entry for entry in source["functions"] if entry["status"] == "direct_uxp"
     ]
+    direct_entries.append({
+        "name": "ocGetCaptionTrackSnapshot",
+        "role": "Read active-sequence caption-track items into the caption round-trip snapshot schema.",
+        "risk": "low",
+        "status": "direct_uxp",
+        "uxp_path": "Sequence.getCaptionTrackCount(), Sequence.getCaptionTrack(), and CaptionTrack.getTrackItems() read APIs.",
+    })
     scenarios = [
         _scenario_for_entry(entry, index)
         for index, entry in enumerate(direct_entries, start=1)
