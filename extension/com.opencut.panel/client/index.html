@@ -2163,51 +2163,51 @@
                         <p class="card-desc" data-i18n="video.watermark_desc">Automatically detect and remove watermarks from videos and images. Works with AI-generated content and stock footage.</p>
                         
                         <div class="form-group">
-                            <label for="wmMaxBbox">Detection Sensitivity</label>
+                            <label for="wmMaxBbox" data-i18n="video.watermark_detection_sensitivity">Detection Sensitivity</label>
                             <div class="slider-row">
                                 <input type="range" id="wmMaxBbox" min="5" max="30" value="10" step="1">
                                 <span class="slider-val" id="wmMaxBboxVal">10%</span>
                             </div>
-                            <span class="hint-inline">Max watermark size as % of image</span>
+                            <span class="hint-inline" data-i18n="video.watermark_size_hint">Max watermark size as % of image</span>
                         </div>
                         
                         <div class="form-group">
-                            <label for="wmPrompt">Detection Prompt</label>
-                            <input type="text" id="wmPrompt" class="text-input" value="watermark" placeholder="watermark, logo, text overlay">
+                            <label for="wmPrompt" data-i18n="video.watermark_detection_prompt">Detection Prompt</label>
+                            <input type="text" id="wmPrompt" class="text-input" value="watermark" placeholder="watermark, logo, text overlay" data-i18n-placeholder="video.watermark_prompt_placeholder">
                         </div>
                         
                         <div class="form-group hidden" id="wmVideoOptions">
-                            <label for="wmFrameSkip">Video Frame Skip</label>
+                            <label for="wmFrameSkip" data-i18n="video.watermark_frame_skip">Video Frame Skip</label>
                             <div class="slider-row">
                                 <input type="range" id="wmFrameSkip" min="1" max="10" value="3" step="1">
                                 <span class="slider-val" id="wmFrameSkipVal">3</span>
                             </div>
-                            <span class="hint-inline">Detect every N frames (faster processing)</span>
+                            <span class="hint-inline" data-i18n="video.watermark_frame_skip_hint">Detect every N frames (faster processing)</span>
                         </div>
                         
                         <label class="checkbox-row">
                             <input type="checkbox" id="wmTransparent">
-                            Make watermark area transparent (PNG only)
+                            <span data-i18n="video.watermark_transparent">Make watermark area transparent (PNG only)</span>
                         </label>
                         
                         <label class="checkbox-row">
                             <input type="checkbox" id="wmPreview">
-                            Preview detection only (no removal)
+                            <span data-i18n="video.watermark_preview_only">Preview detection only (no removal)</span>
                         </label>
                         
                         <label class="checkbox-row">
                             <input type="checkbox" id="wmAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
                         
-                        <button type="button" class="btn-outline btn-sm mb-sm" id="autoDetectWatermarkBtn" disabled aria-label="Auto-detect watermark location">Auto-Detect Watermark (Florence-2)</button>
+                        <button type="button" class="btn-outline btn-sm mb-sm" id="autoDetectWatermarkBtn" disabled aria-label="Auto-detect watermark location" data-i18n-aria-label="video.watermark_auto_detect_aria" data-i18n="video.watermark_auto_detect">Auto-Detect Watermark (Florence-2)</button>
                         <div class="hint hidden mb-sm" id="wmDetectResult"></div>
                         <button type="button" class="btn-primary" id="runWatermarkBtn" disabled data-i18n="video.remove_watermark">Remove Watermark</button>
 
                         <div class="hint hidden" id="watermarkHint">
-                            Watermark remover not installed.
-                            <button type="button" class="btn-install" id="installWatermarkBtn">Install Now</button>
-                            <div class="install-alt">Requires: <code>pip install transformers simple-lama-inpainting</code></div>
+                            <span data-i18n="video.watermark_not_installed">Watermark remover not installed.</span>
+                            <button type="button" class="btn-install" id="installWatermarkBtn" data-i18n="common.install_now">Install Now</button>
+                            <div class="install-alt"><span data-i18n="common.requires">Requires:</span> <code>pip install transformers simple-lama-inpainting</code></div>
                         </div>
                     </section>
                 </div>

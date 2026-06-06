@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 132
+
+- Migrated the Video Watermark Removal form shell to static locale hooks for detection sensitivity, prompt placeholder, frame-skip controls, checkbox copy, auto-detect ARIA/label text, install helper copy, and the shared Requires label while preserving prompt defaults, slider values, checkbox defaults, and package command text.
+- `client/locales/en.json` grows from 2,009 to 2,021 keys; `i18n-drift` reports 1,952 consumers, 69 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Watermark Removal static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 131
 
 - Migrated the Video Style Transfer form shell to static locale hooks for style preset options, intensity label/title/help, and auto-import copy while preserving style option IDs, intensity slider values, and style-transfer payloads.

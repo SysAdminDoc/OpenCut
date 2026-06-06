@@ -749,6 +749,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.style_intensity_title", "data-i18n-title"),
     ("video.style_intensity_hint", "data-i18n"),
     ("common.auto_import_result", "data-i18n"),
+    # One-hundred-thirty-second batch (Video Watermark Removal parameter shell HTML).
+    ("video.watermark_detection_sensitivity", "data-i18n"),
+    ("video.watermark_size_hint", "data-i18n"),
+    ("video.watermark_detection_prompt", "data-i18n"),
+    ("video.watermark_prompt_placeholder", "data-i18n-placeholder"),
+    ("video.watermark_frame_skip", "data-i18n"),
+    ("video.watermark_frame_skip_hint", "data-i18n"),
+    ("video.watermark_transparent", "data-i18n"),
+    ("video.watermark_preview_only", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("video.watermark_auto_detect_aria", "data-i18n-aria-label"),
+    ("video.watermark_auto_detect", "data-i18n"),
+    ("video.watermark_not_installed", "data-i18n"),
+    ("common.install_now", "data-i18n"),
+    ("common.requires", "data-i18n"),
 )
 
 
