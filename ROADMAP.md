@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (153/~160) | Removing bare-English strings from 15,263-line main.js; `TODO.md` last synced this at v4.265 / batch 153. |
+| E15 | CEP i18n migration | Rolling batches (154/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.266 / batch 154. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1239,6 +1239,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 47 | Request IDs in typed error bodies | `opencut/errors.py`, `opencut/server.py`, request-correlation middleware, hardening tests | Structured JSON error bodies echoed codes and suggestions but omitted the generated server request ID, forcing operators to correlate from response headers alone. | Closed RA-04 by enriching centralized typed error bodies with the generated request ID, routing direct server typed errors through the shared helper, and adding release-smoke coverage for `error_response`, `OpenCutError`, `safe_error`, and built-in error handlers. |
 | 2026-06-06 | Cycle 48 | Direct typed error logging | `opencut/errors.py`, request ID tests, typed-error logging tests, release-smoke list | `OpenCutError` and direct `error_response` paths returned useful JSON but did not reliably emit a structured log record with the code, status, request ID, method, path, and caller context. | Closed RA-03 by centralizing typed-error log records, preserving single exception logs for `safe_error`, and adding release-smoke coverage for raised `OpenCutError`, direct `error_response`, and `safe_error(OpenCutError)` paths. |
 | 2026-06-06 | Cycle 49 | Python dependency and lint alignment | `pyproject.toml`, `requirements.txt`, dependency-surface tests, Ruff import ordering | Ruff still targeted Python 3.9 despite the package floor being Python 3.11+, and the installable `requirements.txt` surface had looser bounds than the audited `pyproject.toml` core/standard declarations. | Closed RA-01/RA-02 by setting Ruff to `py311`, syncing core/standard requirement bounds, and adding drift guards that derive the lint target from `requires-python` and ensure `requirements.txt` contains the `pyproject.toml` core plus standard dependency surface. |
+| 2026-06-06 | Cycle 50 | CEP i18n workflow preset shell | CEP `index.html`, `en.json`, i18n hardcoded-migration tests | The Export Workflow Presets card still had bare static shell strings for preset/library status, custom workflow controls, and step selector options despite dynamic workflow text being localized. | Advanced E15 to batch 154 by wiring those static strings through `data-i18n*` attributes and locale keys; the drift gate now reports 2,295 keys, 2,242 consumers, 53 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1259,17 +1260,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 50: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 51: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 52: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 53: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 54: Continue E15 or another remaining release-trust gap now that RA-01/RA-02 are closed.
+1. Cycle 51: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 52: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 53: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 54: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 55: Continue E15 or another remaining release-trust gap after batch 154.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 49: Python dependency and lint alignment.
+Cycle 50: CEP i18n workflow preset shell.
 
 #### Current focus
 
@@ -1319,6 +1320,9 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
+E15 is advanced through batch 154: Workflow Presets static shell strings now use
+locale hooks, and the drift gate reports 2,295 keys, 2,242 consumers, 53 dead
+keys, and 0 missing keys.
 
 #### Important findings so far
 
@@ -1373,6 +1377,8 @@ keep `requirements.txt` core/standard dependency bounds synchronized with
 - Ruff now treats `tomllib` as Python 3.11 stdlib, so import-order checks can
   surface package files that were clean under the older Python 3.9 parser
   target.
+- E15 batch 154 reduced dead locale keys from 55 to 53 while adding Workflow
+  Presets static-shell consumers.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
