@@ -2649,73 +2649,73 @@
                         <p class="card-desc" data-i18n="video.reframe_desc">Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.</p>
 
                         <div class="form-group">
-                            <label for="reframePreset">Target Format</label>
+                            <label for="reframePreset" data-i18n="forms.target_format">Target Format</label>
                             <select id="reframePreset">
-                                <option value="tiktok">TikTok / Shorts (1080×1920, 9:16)</option>
-                                <option value="instagram_reel">Instagram Reel / Story (1080×1920, 9:16)</option>
-                                <option value="instagram_post">Instagram Post (1080×1080, 1:1)</option>
-                                <option value="instagram_land">Instagram Landscape (1080×566)</option>
-                                <option value="youtube">YouTube 1080p (1920×1080, 16:9)</option>
-                                <option value="youtube_4k">YouTube 4K (3840×2160, 16:9)</option>
-                                <option value="square">Square (1080×1080, 1:1)</option>
-                                <option value="custom">Custom Dimensions</option>
+                                <option value="tiktok" data-i18n="video.reframe_format_tiktok">TikTok / Shorts (1080×1920, 9:16)</option>
+                                <option value="instagram_reel" data-i18n="video.reframe_format_instagram_reel">Instagram Reel / Story (1080×1920, 9:16)</option>
+                                <option value="instagram_post" data-i18n="video.reframe_format_instagram_post">Instagram Post (1080×1080, 1:1)</option>
+                                <option value="instagram_land" data-i18n="video.reframe_format_instagram_landscape">Instagram Landscape (1080×566)</option>
+                                <option value="youtube" data-i18n="video.reframe_format_youtube">YouTube 1080p (1920×1080, 16:9)</option>
+                                <option value="youtube_4k" data-i18n="video.reframe_format_youtube_4k">YouTube 4K (3840×2160, 16:9)</option>
+                                <option value="square" data-i18n="video.reframe_format_square">Square (1080×1080, 1:1)</option>
+                                <option value="custom" data-i18n="video.reframe_format_custom">Custom Dimensions</option>
                             </select>
                         </div>
 
                         <div class="form-group hidden" id="reframeCustomDims">
-                            <label for="reframeCustomW">Width × Height</label>
+                            <label for="reframeCustomW" data-i18n="video.width_height">Width × Height</label>
                             <div class="input-pair">
-                                <input type="number" id="reframeCustomW" min="16" max="7680" value="1080" class="dim-input" aria-label="Custom reframe width">
+                                <input type="number" id="reframeCustomW" min="16" max="7680" value="1080" class="dim-input" aria-label="Custom reframe width" data-i18n-aria-label="video.custom_reframe_width">
                                 <span>×</span>
-                                <input type="number" id="reframeCustomH" min="16" max="7680" value="1920" class="dim-input" aria-label="Custom reframe height">
+                                <input type="number" id="reframeCustomH" min="16" max="7680" value="1920" class="dim-input" aria-label="Custom reframe height" data-i18n-aria-label="video.custom_reframe_height">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="reframeMode">Resize Mode</label>
+                            <label for="reframeMode" data-i18n="forms.resize_mode">Resize Mode</label>
                             <select id="reframeMode">
-                                <option value="crop">Crop (fill frame, cut edges)</option>
-                                <option value="pad">Pad (fit inside, add bars)</option>
-                                <option value="stretch">Stretch (distort to fit)</option>
+                                <option value="crop" data-i18n="video.reframe_mode_crop">Crop (fill frame, cut edges)</option>
+                                <option value="pad" data-i18n="video.reframe_mode_pad">Pad (fit inside, add bars)</option>
+                                <option value="stretch" data-i18n="video.reframe_mode_stretch">Stretch (distort to fit)</option>
                             </select>
                         </div>
 
                         <div class="form-group" id="reframeCropPosGroup">
-                            <label for="reframeCropPos">Crop Position</label>
+                            <label for="reframeCropPos" data-i18n="forms.crop_position">Crop Position</label>
                             <select id="reframeCropPos">
-                                <option value="center" selected>Center</option>
-                                <option value="top">Top</option>
-                                <option value="bottom">Bottom</option>
-                                <option value="left">Left</option>
-                                <option value="right">Right</option>
-                                <option value="auto">Face Tracking (auto)</option>
+                                <option value="center" selected data-i18n="video.position_center">Center</option>
+                                <option value="top" data-i18n="video.position_top">Top</option>
+                                <option value="bottom" data-i18n="video.position_bottom">Bottom</option>
+                                <option value="left" data-i18n="video.position_left">Left</option>
+                                <option value="right" data-i18n="video.position_right">Right</option>
+                                <option value="auto" data-i18n="video.position_face_tracking_auto">Face Tracking (auto)</option>
                             </select>
-                            <span class="hint-inline">Where to anchor the crop</span>
+                            <span class="hint-inline" data-i18n="video.crop_anchor_hint">Where to anchor the crop</span>
                         </div>
                         <div class="form-group hidden" id="reframeFaceSmoothing">
-                            <label for="faceSmoothing">Face Tracking Smoothing</label>
+                            <label for="faceSmoothing" data-i18n="video.face_tracking_smoothing">Face Tracking Smoothing</label>
                             <div class="slider-row">
-                                <input type="range" id="faceSmoothing" min="0.01" max="1.0" value="0.15" step="0.01" title="Lower = smoother camera movement">
+                                <input type="range" id="faceSmoothing" min="0.01" max="1.0" value="0.15" step="0.01" title="Lower = smoother camera movement" data-i18n-title="video.face_smoothing_title">
                                 <span class="slider-val" id="faceSmoothingVal">0.15</span>
                             </div>
                         </div>
 
                         <div class="form-group hidden" id="reframePadColorGroup">
-                            <label for="reframePadColor">Bar Color</label>
+                            <label for="reframePadColor" data-i18n="video.bar_color">Bar Color</label>
                             <select id="reframePadColor">
-                                <option value="black" selected>Black</option>
-                                <option value="white">White</option>
-                                <option value="0x111111">Dark Gray</option>
-                                <option value="0x1a1a2e">Dark Navy</option>
+                                <option value="black" selected data-i18n="video.color_black">Black</option>
+                                <option value="white" data-i18n="video.color_white">White</option>
+                                <option value="0x111111" data-i18n="video.color_dark_gray">Dark Gray</option>
+                                <option value="0x1a1a2e" data-i18n="video.color_dark_navy">Dark Navy</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="reframeQuality">Quality</label>
+                            <label for="reframeQuality" data-i18n="forms.quality">Quality</label>
                             <select id="reframeQuality">
-                                <option value="high" selected>High (CRF 18)</option>
-                                <option value="medium">Medium (CRF 23)</option>
-                                <option value="low">Low (CRF 28)</option>
+                                <option value="high" selected data-i18n="video.quality_high_crf18">High (CRF 18)</option>
+                                <option value="medium" data-i18n="video.quality_medium_crf23">Medium (CRF 23)</option>
+                                <option value="low" data-i18n="video.quality_low_crf28">Low (CRF 28)</option>
                             </select>
                         </div>
 

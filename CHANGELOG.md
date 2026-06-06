@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 144
+
+- Migrated the Video Reframe form shell to static locale hooks for target formats, custom dimension labels/ARIA, resize and crop options, crop anchor hint, face smoothing, pad colors, and quality options while preserving all option values plus input and slider constraints.
+- `client/locales/en.json` grows from 2,178 to 2,208 keys; `i18n-drift` reports 2,149 consumers, 59 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Reframe static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 143
 
 - Migrated the Video Titles form shell to static locale hooks for title/subtitle labels and placeholders, title preset options, duration, and font size while preserving title preset values and slider constraints.
