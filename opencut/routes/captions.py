@@ -18,8 +18,10 @@ from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
 from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.security import (
-    get_json_dict,
     VALID_WHISPER_MODELS,
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
     rate_limit,
     rate_limit_release,
     require_csrf,
@@ -29,6 +31,7 @@ from opencut.security import (
     safe_pip_install,
     validate_filepath,
     validate_path,
+    verify_destructive_confirm_token,
 )
 
 logger = logging.getLogger("opencut")
@@ -338,9 +341,48 @@ def caption_cache_stats():
 def caption_cache_clear():
     """Clear persistent transcript-cache entries."""
     try:
-        from opencut.core.transcript_cache import clear_cache
+        data = get_json_dict() if request.data else {}
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        from opencut.core.transcript_cache import cache_stats, clear_cache
 
-        return jsonify(clear_cache())
+        stats = cache_stats()
+        entries = []
+        if int(stats.get("entries", 0)) > 0:
+            entries.append({
+                "path": str(stats.get("cache_dir", "")),
+                "category": "transcript-cache",
+                "root": str(stats.get("cache_dir", "")),
+                "type": "directory",
+                "bytes": int(stats.get("bytes", 0)),
+                "reversible": False,
+            })
+        plan = build_destructive_plan(
+            "captions.cache.clear",
+            targets=entries,
+            metadata={
+                "route": "/captions/cache/clear",
+                "entries": stats.get("entries", 0),
+                "total_bytes": int(stats.get("bytes", 0)),
+            },
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "plan": entries,
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+                "removed_entries": 0,
+                "removed_bytes": 0,
+                "cache_dir": stats.get("cache_dir", ""),
+            })
+        if entries and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
+        result = clear_cache()
+        result["dry_run"] = False
+        result["destructive_plan"] = plan
+        return jsonify(result)
     except Exception as e:
         return safe_error(e, "caption_cache_clear")
 

@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-45 user-data tombstone pass.
+Last synced: 2026-06-06 during the RA-41 destructive clear confirmation pass.
 
 ## Execution Order
 
@@ -38,7 +38,7 @@ Last synced: 2026-06-06 during the RA-45 user-data tombstone pass.
 - [x] **RA-06/RA-40 destructive wipe backup/confirm** - local SQLite destructive maintenance paths now support dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
 - [x] **RA-07/RA-38 job and journal JSON payload caps** - oversized job results and journal inverse/forward payloads now spill to content-addressed local files with structured metadata.
 - [x] **RA-08/RA-39 DB compaction diagnostic** - CLI and feature-area routes now report page, freelist, WAL, file-size, and recommended-action posture for local SQLite stores.
-- [ ] **RA-41 destructive-operation plan contract** - add a shared dry-run/confirmation-token pattern for user-visible destructive endpoints.
+- [ ] **RA-41 destructive-operation plan contract** - shared dry-run/confirmation-token helpers now protect queue/log/caption-cache/Whisper-cache/model-cache clears; continue the contract across remaining cache cleanup/invalidation, temp-cleanup, plugin cleanup, and remaining destructive endpoints.
 - [x] **RA-42 render-cache delete containment** - render-cache cleanup/invalidation now rejects forged index output paths outside `CACHE_DIR` or with mismatched cache-key basenames.
 - [x] **RA-43 plugin uninstall quarantine** - plugin uninstall now moves through quarantine, restore, and permanent-delete states with typed confirmation.
 - [x] **RA-44 model/cache clear preview** - Whisper cache clear and model delete now preview exact paths/bytes and report per-path deletion errors.

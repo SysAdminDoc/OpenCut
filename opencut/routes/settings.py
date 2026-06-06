@@ -16,7 +16,16 @@ from flask import Blueprint, jsonify, request, send_file
 from opencut import __version__
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
-from opencut.security import get_json_dict, require_csrf, safe_float, safe_int
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    verify_destructive_confirm_token,
+)
 from opencut.user_data import (
     create_user_tombstone,
     get_user_tombstone,
@@ -554,14 +563,49 @@ def clear_logs():
     try:
         from opencut.server import LOG_FILE
 
-        cleared = []
+        data = get_json_dict() if request.data else {}
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        targets = []
         for path in (crash_log, LOG_FILE):
-            if not os.path.isfile(path):
+            exists = os.path.isfile(path)
+            targets.append({
+                "path": path,
+                "name": os.path.basename(path),
+                "category": "log-file",
+                "exists": exists,
+                "bytes": os.path.getsize(path) if exists else 0,
+            })
+        total_bytes = sum(int(target["bytes"]) for target in targets)
+        plan = build_destructive_plan(
+            "logs.clear",
+            targets=targets,
+            metadata={"total_bytes": total_bytes, "existing_count": sum(1 for target in targets if target["exists"])},
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "plan": plan,
+                "total_bytes": total_bytes,
+                "cleared": [],
+            })
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
+        cleared = []
+        for target in targets:
+            if not target["exists"]:
                 continue
-            with open(path, "w", encoding="utf-8"):
+            with open(target["path"], "w", encoding="utf-8"):
                 pass
-            cleared.append(os.path.basename(path))
-        return jsonify({"success": True, "cleared": cleared})
+            cleared.append(target["name"])
+        return jsonify({
+            "success": True,
+            "dry_run": False,
+            "plan": plan,
+            "total_bytes": total_bytes,
+            "cleared": cleared,
+        })
     except OSError as e:
         return safe_error(e, "clear_logs")
 

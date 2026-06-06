@@ -19,7 +19,14 @@ from opencut.jobs import (
     _kill_job_process,
     _list_jobs_copy,
 )
-from opencut.security import get_json_dict, require_csrf
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    verify_destructive_confirm_token,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -397,10 +404,31 @@ def queue_list():
 @require_csrf
 def queue_clear():
     """Clear all queued (not running) jobs."""
+    data = get_json_dict() if request.data else {}
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
     with job_queue_lock:
-        removed = len([e for e in job_queue if e["status"] == "queued"])
+        queued = [e for e in job_queue if e["status"] == "queued"]
+        records = [
+            {
+                "id": entry.get("id", ""),
+                "endpoint": entry.get("endpoint", ""),
+                "status": entry.get("status", ""),
+            }
+            for entry in queued
+        ]
+        plan = build_destructive_plan(
+            "queue.clear",
+            records=records,
+            metadata={"queued_count": len(records)},
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({"success": True, "dry_run": True, "removed": 0, "plan": plan})
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
+        removed = len(queued)
         job_queue[:] = [e for e in job_queue if e["status"] != "queued"]
-    return jsonify({"removed": removed})
+    return jsonify({"success": True, "dry_run": False, "removed": removed, "plan": plan})
 
 
 def _dispatch_queue_entry(entry):

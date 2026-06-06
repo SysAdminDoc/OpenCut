@@ -489,9 +489,16 @@ def test_models_delete_allows_custom_model_cache_file(client, csrf_token, tmp_pa
 
     monkeypatch.setattr(system_routes, "WHISPER_MODELS_DIR", str(model_dir))
 
+    preview = client.post(
+        "/models/delete",
+        data=json.dumps({"path": str(model_file), "dry_run": True}),
+        headers=csrf_headers(csrf_token),
+    )
+    token = preview.get_json()["confirm_token"]
+
     resp = client.post(
         "/models/delete",
-        data=json.dumps({"path": str(model_file)}),
+        data=json.dumps({"path": str(model_file), "confirm_token": token}),
         headers=csrf_headers(csrf_token),
     )
 
