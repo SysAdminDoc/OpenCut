@@ -745,6 +745,7 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
 RELEASE_GATE_TESTS: List[str] = [
     "tests/test_bootstrap_check.py",
     "tests/test_node_advisories.py",
+    "tests/test_panel_node_entrypoints.py",
     "tests/test_seed_github_issues.py",
     "tests/test_route_manifest.py",
     "tests/test_route_collisions.py",
@@ -758,6 +759,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_mcp_extended_tools.py",
     "tests/test_macos_notarization.py",
     "tests/test_release_sbom.py",
+    "tests/test_release_provenance_attestation.py",
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_text_shaping_gate.py",

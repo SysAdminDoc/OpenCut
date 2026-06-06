@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Changed - CEP Panel Node Entry Points
+
+- Closed RA-36 by adding Windows-safe `audit:check:win`, `audit:esbuild:win`, and `build:verify:win` panel aliases for UNC/HGFS checkouts.
+- Added a script-root anchored PowerShell wrapper and release-smoke guard so shared-folder path fallback cannot redirect documented panel Node gates to the wrong working directory.
+
+### Changed - Release Artifact Provenance Attestations
+
+- Added a pinned `actions/attest` step to Release Full so uploaded server archives, Linux packages, Windows installer artifacts, and the declared SBOM get GitHub artifact attestations before release upload.
+- Documented `gh attestation verify` commands and added release-smoke guards for attestation permissions, subject paths, and packaged server artifact upload order.
+
 ### Changed - GitHub Actions SHA Pins
 
 - Closed RA-23 by pinning every non-local workflow action reference to a full-length commit SHA with an adjacent version comment.

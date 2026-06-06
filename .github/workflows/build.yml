@@ -241,6 +241,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Download build artifacts
@@ -248,20 +250,41 @@ jobs:
         with:
           path: release-artifacts
 
+      - name: Package server artifacts for release
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p release-upload-artifacts/server
+          for artifact_dir in release-artifacts/OpenCut-Server-*; do
+            artifact_name="$(basename "$artifact_dir")"
+            if [[ -f "$artifact_dir/OpenCut-Server-macOS.zip" ]]; then
+              cp "$artifact_dir/OpenCut-Server-macOS.zip" "release-upload-artifacts/server/OpenCut-Server-macOS.zip"
+            elif [[ -d "$artifact_dir/OpenCut-Server" ]]; then
+              tar -C "$artifact_dir" -czf "release-upload-artifacts/server/$artifact_name.tar.gz" OpenCut-Server
+            fi
+          done
+
+      - name: Generate release artifact attestations
+        uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
+        with:
+          subject-path: |
+            release-upload-artifacts/server/*
+            release-artifacts/OpenCut-Linux-Desktop-Packages/*
+            release-artifacts/OpenCut-Setup-Windows/*
+            release-artifacts/OpenCut-Declared-Dependency-SBOM-CycloneDX/opencut-declared-sbom.cyclonedx.json
+
       - name: Upload server artifacts to release
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for artifact_dir in release-artifacts/OpenCut-Server-*; do
-            artifact_name="$(basename "$artifact_dir")"
-            if [[ -f "$artifact_dir/OpenCut-Server-macOS.zip" ]]; then
-              gh release upload ${{ github.ref_name }} "$artifact_dir/OpenCut-Server-macOS.zip" --clobber
-            elif [[ -d "$artifact_dir/OpenCut-Server" ]]; then
-              tar -C "$artifact_dir" -czf "$artifact_name.tar.gz" OpenCut-Server
-              gh release upload ${{ github.ref_name }} "$artifact_name.tar.gz" --clobber
-            fi
-          done
+          artifacts=(release-upload-artifacts/server/*)
+          if (( ${#artifacts[@]} == 0 )); then
+            echo "No server artifacts found in packaged release artifacts" >&2
+            exit 1
+          fi
+          gh release upload ${{ github.ref_name }} "${artifacts[@]}" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

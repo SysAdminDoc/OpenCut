@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-23 GitHub Actions SHA pin pass.
+Last synced: 2026-06-06 during the RA-36 CEP panel UNC/HGFS-safe Node command pass.
 
 ## Execution Order
 
@@ -25,6 +25,7 @@ Last synced: 2026-06-06 during the RA-23 GitHub Actions SHA pin pass.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [x] **RA-23 GitHub Actions SHA pins** - workflow action references now use full-length SHAs with adjacent version comments and a static release-smoke guard rejects mutable action refs.
 - [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.
+- [x] **Release provenance attestation** - Release Full now generates GitHub artifact attestations for the uploaded server archives, Linux packages, Windows installer, and declared SBOM before release upload.
 - [x] **RA-35 release SBOM fidelity** - current release SBOM is explicitly labeled declared-only in its filename, artifact name, metadata, docs, and tests while lockfile vulnerability evidence remains in pip-audit.
 - [x] **RA-25 Docker dependency surface** - Docker now installs from the tracked `requirements.txt` surface so retired packages cannot return through the container path.
 - [x] **RA-26 Docker runtime parity** - Docker now documents and tests HTTP-only default publishing on 5679, non-root data paths, and opt-in WebSocket/MCP sidecars.
@@ -32,7 +33,7 @@ Last synced: 2026-06-06 during the RA-23 GitHub Actions SHA pin pass.
 - [x] **RA-28 README non-badge count gate** - README prose, diagram, and project-structure count claims now align with generated route/module truth through `check_doc_sizes.py`.
 - [x] **RA-29 Docker dependency install fail-closed guard** - Docker dependency installation now uses the requirements file instead of shell-form specifiers and no longer masks pip failures.
 - [x] **RA-30 Docker build-context secret/log hygiene** - `.dockerignore` now mirrors Git-ignored secret/log patterns and excludes local runtime/cache database state before `COPY . /app`.
-- [ ] **RA-36 CEP panel UNC/HGFS-safe Node commands** - make documented panel Node command entry points work from Windows shared-folder paths or route through a validated wrapper.
+- [x] **RA-36 CEP panel UNC/HGFS-safe Node commands** - Windows shared-folder panel checks now use validated `:win` aliases through a script-root anchored wrapper.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [x] **RA-05/RA-37 SQLite `PRAGMA user_version`** - local SQLite stores now use explicit schema versions, ordered idempotent migrations, and newer-schema rejection.
 - [x] **RA-06/RA-40 destructive wipe backup/confirm** - local SQLite destructive maintenance paths now support dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.

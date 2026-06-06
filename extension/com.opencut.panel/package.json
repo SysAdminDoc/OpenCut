@@ -10,8 +10,11 @@
     "lint": "eslint client/main.js",
     "test": "vitest run --config vitest.config.mjs",
     "audit:check": "node scripts/check-advisories.mjs",
+    "audit:check:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:check",
     "audit:esbuild": "node scripts/check-esbuild-pin.mjs",
-    "build:verify": "node scripts/verify-build.mjs"
+    "audit:esbuild:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:esbuild",
+    "build:verify": "node scripts/verify-build.mjs",
+    "build:verify:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" build:verify"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
