@@ -704,7 +704,7 @@ has a documented dry-run mode before removing untracked files.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| RA-41 destructive-operation plan contract | `/models/delete`, `/whisper/clear-cache`, `/plugins/uninstall`, `/cache/cleanup`, `/cache/invalidate`, `/captions/cache/clear`, `/system/temp-cleanup/sweep`, `/logs/clear`, `/presets/delete`, `/workflows/delete`, `/workflow/delete`, `/queue/clear`; tests mainly cover status codes | Add a shared `dry_run`/`confirm_token` pattern for user-visible destructive endpoints. Dry-run returns affected paths/records, byte counts, category, root, and reversibility; mutation requires the confirm token or explicit UI re-type for high-risk deletes. | P1 |
+| RA-41 destructive-operation plan contract | `/models/delete`, `/whisper/clear-cache`, `/plugins/uninstall`, `/cache/cleanup`, `/cache/invalidate`, `/captions/cache/clear`, `/system/temp-cleanup/sweep`, `/logs/clear`, `/presets/delete`, `/workflows/delete`, `/workflow/delete`, `/queue/clear`; tests mainly cover status codes | Advanced 2026-06-06: shared destructive dry-run plan and confirm-token helpers now protect `/queue/clear`, `/logs/clear`, `/captions/cache/clear`, `/whisper/clear-cache`, and `/models/delete`; continue extending the contract to remaining cache cleanup/invalidation, temp-cleanup, plugin cleanup, and other destructive routes. | P1 |
 | RA-42 render-cache delete containment | `opencut/core/render_cache.py` writes cached outputs under `CACHE_DIR`, but `cleanup_cache()` and `invalidate_downstream()` trust persisted `index.json` `output_path` values when calling `os.unlink()` | Closed 2026-06-06: render-cache reads, cleanup, and downstream invalidation now reject corrupted index paths unless they resolve under `CACHE_DIR` and match the expected cache-key basename, preserving outside files while dropping bad index entries. | P0 |
 | RA-43 plugin uninstall quarantine | `opencut/routes/plugins.py` validates plugin names and confines paths under `PLUGINS_DIR`, then `shutil.rmtree(plugin_dir)` removes the plugin immediately; archive notes already called out missing re-type confirmation | Closed 2026-06-06: uninstall now requires typed `confirm_name`, moves plugins into timestamped quarantine before unloading, and exposes quarantine list, restore, and permanent-delete endpoints. | P1 |
 | RA-44 model/cache clear preview | `whisper_clear_cache()` removes matching Hugging Face entries with `ignore_errors=True` and deletes whole OpenCut/Whisper cache directories; `/models/delete` removes cache files/dirs immediately after allowed-root checks | Closed 2026-06-06: Whisper cache clear and model delete now support `dry_run`/`preview` plans with exact paths, byte counts, categories, and per-path delete errors instead of silent `ignore_errors=True` wipes. | P1 |
@@ -1214,6 +1214,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 25 | Plugin uninstall quarantine | `opencut/routes/plugins.py`, generated route manifests, plugin quarantine tests | Plugin uninstall removed plugin directories immediately after path validation, with no restore window or typed confirmation. | Closed RA-43 with quarantine move/unload ordering, restore/permanent-delete endpoints, and route-visible metadata. |
 | 2026-06-06 | Cycle 26 | Model/cache clear preview | `opencut/routes/system.py`, model cache preview tests | Whisper cache clear used broad best-effort deletes and model delete mutated immediately without an exact preview plan. | Closed RA-44 with dry-run/preview plans for Whisper cache and model-cache deletion plus per-path error reporting. |
 | 2026-06-06 | Cycle 27 | User-data tombstone snapshots | `opencut/user_data.py`, settings/system/workflow routes, tombstone tests | Presets, workflows, favorites, and assistant dismissals could be removed or replaced without restore metadata. | Closed RA-45 with capped tombstone snapshots, restore metadata, and user-data restore routes. |
+| 2026-06-06 | Cycle 28 | Destructive clear confirmation plans | `opencut/security.py`, `jobs_routes.py`, `settings.py`, `system.py`, `captions.py`, destructive-operation/cache tests | User-visible clear/delete routes still mutated immediately with no shared plan/confirm-token contract. | Advanced RA-41 with shared destructive-plan helpers plus dry-run and confirmation-token enforcement for queue, log, caption-cache, Whisper-cache, and model-cache clears. |
 
 ### Research queries to run later
 
@@ -1234,25 +1235,28 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 28: Continue destructive-operation safety with RA-41.
-2. Cycle 29: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 30: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 31: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 32: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 29: Continue RA-41 on render-cache cleanup/invalidation, temp-cleanup sweep, plugin quarantine cleanup, and any remaining destructive routes without the shared confirmation contract.
+2. Cycle 30: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 31: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 32: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 33: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 27: User-data tombstone snapshots.
+Cycle 28: Destructive clear confirmation plans.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
 RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
-RA-45 are closed, and the bootstrap dev-check guard is in place; the next cycle
-should continue the broader destructive-operation contract with RA-41.
+RA-45 are closed, and the bootstrap dev-check guard is in place; RA-41 now has
+shared dry-run/confirm-token helpers for queue, log, caption-cache,
+Whisper-cache, and model-cache clears and should continue across remaining
+cache cleanup/invalidation, temp-cleanup, plugin cleanup, and other destructive
+routes without the shared confirmation contract.
 
 #### Important findings so far
 
