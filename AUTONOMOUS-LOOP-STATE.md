@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-28 closed; E15 rolling i18n migration and broader Docker hardening remain open.
 - Shipped this cycle: `scripts/check_doc_sizes.py` now checks README non-badge route, module, blueprint, panel line-count, and root test-file claims against generated manifests and the live filesystem. README generated-count claims are refreshed, `tests/test_check_doc_sizes.py` covers the README route-count regex, and release-smoke doc-size wording now covers size/count drift.
-- Verification: `py -3.12 scripts/check_doc_sizes.py --check`, `py -3.12 scripts/sync_badges.py --check`, `py -3.12 -m pytest -q tests/test_check_doc_sizes.py tests/test_sync_badges.py`, `py -3.12 scripts/release_smoke.py --only doc-sizes --json`, and `py -3.12 scripts/release_smoke.py --only badges --json` passed.
+- Verification: `py -3.12 scripts/check_doc_sizes.py --check`, `py -3.12 scripts/sync_badges.py --check`, `py -3.12 -m pytest -q tests/test_check_doc_sizes.py tests/test_sync_badges.py`, `ruff check scripts/check_doc_sizes.py tests/test_check_doc_sizes.py scripts/release_smoke.py --select E,F,I --ignore E501,E402`, `py -3.12 scripts/release_smoke.py --only doc-sizes --json`, `py -3.12 scripts/release_smoke.py --only badges --json`, and `py -3.12 scripts/release_smoke.py --only pytest-fast --json` passed (752 tests).
 
 ## Next Work
 
