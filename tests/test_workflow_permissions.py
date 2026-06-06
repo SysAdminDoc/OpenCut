@@ -48,7 +48,7 @@ def test_release_upload_job_is_the_only_write_token_boundary():
 
     assert "if: startsWith(github.ref, 'refs/tags/')" in release_job
     assert "needs: build" in release_job
-    assert "\n    permissions:\n      contents: write\n\n    steps:\n" in release_job
+    assert "\n    permissions:\n      contents: write\n      id-token: write\n      attestations: write\n\n    steps:\n" in release_job
     assert DOWNLOAD_ARTIFACT_V4_PIN in release_job
     assert "gh release upload" in release_job
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in release_job

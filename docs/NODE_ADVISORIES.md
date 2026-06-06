@@ -45,6 +45,21 @@ npm run build:verify         # smoke-check source tree + optional dist output
 npm run build                # full Vite production build (CI; Linux preferred)
 ```
 
+When the checkout is opened through a Windows UNC/HGFS path, run the
+Windows-safe aliases from `extension/com.opencut.panel` instead of the relative
+`npm run` commands above:
+
+```powershell
+npm run audit:check:win -- --json
+npm run audit:esbuild:win -- --json
+npm run build:verify:win
+```
+
+These aliases resolve `scripts/panel-node-gate.ps1` from npm's original
+`%INIT_CWD%` and the wrapper then executes the Node scripts from its own
+`$PSScriptRoot`, so `cmd.exe` falling back to `C:\Windows` cannot redirect the
+script path. Direct `node scripts/*.mjs` commands remain valid as well.
+
 `scripts/release_smoke.py` uses the `--json` form and fails if the checker
 does not emit parseable JSON with `status: "ok"` and zero unwaived advisories.
 

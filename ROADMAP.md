@@ -122,7 +122,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-32 | Adobe tracker labels | S | Unseeded labels |
 | RA-33 | Label dry-run without gh | S | Requires CLI |
 | RA-35 | Release SBOM fidelity | M | Closed 2026-06-06: declared-SBOM artifact naming and CycloneDX fidelity metadata |
-| RA-36 | CEP UNC/HGFS-safe Node | M | Shared-folder paths |
+| RA-36 | CEP UNC/HGFS-safe Node | M | Closed 2026-06-06: Windows-safe panel aliases route shared-folder npm gates through a script-root anchored wrapper |
 
 ### Drop-in model upgrades
 
@@ -650,7 +650,7 @@ support signed build-provenance claims for binaries and container images.
 | RA-23 full-SHA action pins | Closed 2026-06-06: non-local workflow `uses:` references now point at full-length SHAs with adjacent version comments, and `tests/test_workflow_action_pins.py` rejects mutable refs. | Keep workflow action updates explicit by changing both the SHA and nearby version comment through the static guard. | Done |
 | RA-24 token least privilege | Closed 2026-06-06: Release Full defaults to `contents: read`, the build matrix is read-only, and the tag-only `release-upload` job is the only `contents: write` boundary. | Keep release upload authority isolated from build/test/package jobs and guard against workflow-level write-token regressions. | Done |
 | RA-22 Release Full Node pin | Closed 2026-06-06: Release Full uses `actions/setup-node@v4` with Node 22 before Linux CEP panel npm gates, and PR Fast uses the same runtime. | Keep Release Full and PR Fast panel runtimes in lockstep before treating npm advisory/build evidence as deterministic release proof. | Done |
-| Release provenance attestation | Release Full uploads binaries, installers, Linux packages, and SBOM but no `attest-build-provenance` step appears in workflow scan | Add GitHub artifact attestations for release artifacts and SBOM after RA-24 narrows permissions; document verification commands. | P2 |
+| Release provenance attestation | Closed 2026-06-06: Release Full now packages server release assets before upload, generates GitHub artifact attestations for uploaded server/Linux/Windows/SBOM subjects, and documents `gh attestation verify` commands. | Keep release uploads and attested subject paths in lockstep through `tests/test_release_provenance_attestation.py`. | Done |
 
 **External sources:** GitHub artifact attestations
 `https://docs.github.com/actions/concepts/security/artifact-attestations`;
@@ -1234,6 +1234,8 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 42 | Release Full token permissions | `.github/workflows/build.yml`, release upload steps, workflow permission tests, SBOM workflow tests | Release Full still granted `contents: write` at workflow scope, so build/test/package matrix jobs and third-party actions received write-capable tokens even though only tag release uploads needed them. | Closed RA-24 by defaulting the workflow and build matrix to `contents: read`, moving all `gh release upload` calls into a tag-only `release-upload` job with `contents: write`, and adding static permission guards. |
 | 2026-06-06 | Cycle 43 | Python 3.13 classifier retraction | `pyproject.toml`, CI workflow Python versions, dependency-surface tests, release-smoke pytest-fast list | Package metadata advertised Python 3.13, but every committed GitHub Actions lane still installs Python 3.12. | Closed RA-21 by removing the untested classifier until a CI lane proves it and adding a metadata guard that blocks the classifier without a matching workflow lane. |
 | 2026-06-06 | Cycle 44 | GitHub Actions SHA pins | `.github/workflows/*.yml`, workflow action tag SHAs, panel/workflow permission tests | Workflow `uses:` references still pointed at mutable major tags such as `actions/checkout@v4`, leaving release/signing workflows dependent on tag movement. | Closed RA-23 by pinning every non-local action ref to a full SHA, preserving adjacent version comments, and adding a release-smoke guard against mutable action refs. |
+| 2026-06-06 | Cycle 45 | Release artifact provenance attestations | GitHub artifact attestation docs, `actions/attest` README, `.github/workflows/build.yml`, release provenance tests | Release Full uploaded packaged artifacts and the declared SBOM without a signed provenance claim for the exact uploaded files. | Closed the provenance follow-up by adding pinned `actions/attest@v4`, least-extra attestation permissions, pre-upload server packaging, verification docs, and release-smoke static guards. |
+| 2026-06-06 | Cycle 46 | CEP UNC/HGFS-safe Node commands | `extension/com.opencut.panel/package.json`, `panel-node-gate.ps1`, panel advisory/build docs, release-smoke tests | Documented panel npm gate commands could be launched from Windows shared-folder paths where `cmd.exe` falls back to `C:\Windows`, causing relative `scripts/*.mjs` paths to resolve incorrectly. | Closed RA-36 by adding Windows-safe `:win` aliases that locate the wrapper from `%INIT_CWD%`; the wrapper then executes the Node scripts from `$PSScriptRoot`, with docs and release-smoke coverage for the shared-folder entry points. |
 
 ### Research queries to run later
 
@@ -1254,23 +1256,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 45: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 46: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 47: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 48: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 49: Continue release provenance attestation follow-up now that RA-23 and RA-24 are closed.
+1. Cycle 47: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 48: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 49: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 50: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 51: Continue E15 or another remaining release-trust gap now that release provenance and RA-36 are closed.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 44: GitHub Actions SHA pins.
+Cycle 46: CEP UNC/HGFS-safe Node commands.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1300,7 +1302,13 @@ token.
 RA-21 keeps package metadata to the tested Python classifier set until a 3.13
 workflow lane proves runtime support.
 RA-23 keeps non-local workflow actions pinned to full-length SHAs with adjacent
-version comments so workflow action updates stay explicit.
+version comments so workflow action updates stay explicit. Release provenance is
+closed for the current Release Full shape: uploaded server archives, Linux
+packages, Windows installer, and declared SBOM paths are attested before release
+upload, and operator verification commands live in `docs/RELEASE_PROVENANCE.md`.
+RA-36 keeps Windows shared-folder panel npm gates on wrapper aliases that
+resolve the wrapper from npm's original working directory and execute Node
+scripts from the wrapper's script directory.
 
 #### Important findings so far
 
@@ -1339,12 +1347,15 @@ version comments so workflow action updates stay explicit.
   matching PR Fast's panel runtime pin.
 - The package Ruff release-smoke gate is clean after mechanical import-order
   cleanup across existing package files.
-- Release Full now keeps build/test/package jobs on `contents: read`; artifact
-  attestations remain the next release-provenance follow-up.
+- Release Full now keeps build/test/package jobs on `contents: read`; the
+  tag-only release-upload job packages server assets, generates GitHub artifact
+  attestations, and uploads only the attested release paths.
 - The Python 3.13 classifier is retracted until a committed workflow lane tests
   that runtime.
 - Non-local GitHub Actions workflow references are full-SHA pinned with adjacent
   version comments and a release-smoke guard rejects mutable refs.
+- CEP panel npm advisory, esbuild-pin, and build verification gates now have
+  Windows-safe `:win` aliases for UNC/HGFS checkouts.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
@@ -1414,13 +1425,14 @@ version comments so workflow action updates stay explicit.
 
 #### Next best actions
 
-1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
-2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release provenance attestation follow-up or the remaining UXP permission split rows.
+1. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+2. Continue E15 rolling CEP i18n migration.
+3. Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
 
 #### Unprocessed leads
 
-- GitHub Actions artifact attestations for release provenance.
+- Confirm future package-manager artifacts reuse the Release Full attestation
+  path when they are added to GitHub Releases.
 - WebView permission split specifics after the RA-17 live-manifest guard.
 - Whether future Docker profiles should publish optional WebSocket 5680 or MCP
   5681 sidecars now that the default container posture is HTTP-only.
