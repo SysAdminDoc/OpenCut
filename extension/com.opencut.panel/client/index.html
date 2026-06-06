@@ -1951,29 +1951,29 @@
                         <p class="card-desc" data-i18n="video.ai_desc">AI upscaling, background removal, frame interpolation, and video denoising.</p>
 
                         <div class="form-group">
-                            <label for="vidAiTool">Tool</label>
+                            <label for="vidAiTool" data-i18n="forms.tool">Tool</label>
                             <select id="vidAiTool">
-                                <option value="upscale">AI Upscale (Real-ESRGAN)</option>
-                                <option value="rembg">AI Background Removal</option>
-                                <option value="interpolate">AI Frame Interpolation</option>
-                                <option value="denoise">AI Video Denoise</option>
+                                <option value="upscale" data-i18n="video.ai_tool_upscale">AI Upscale (Real-ESRGAN)</option>
+                                <option value="rembg" data-i18n="video.ai_tool_rembg">AI Background Removal</option>
+                                <option value="interpolate" data-i18n="video.ai_tool_interpolate">AI Frame Interpolation</option>
+                                <option value="denoise" data-i18n="video.ai_tool_denoise">AI Video Denoise</option>
                             </select>
                         </div>
 
                         <!-- Upscale params -->
                         <div class="vidai-params" id="vidAiParams-upscale">
                             <div class="form-group">
-                                <label for="vidAiUpscaleScale">Scale</label>
+                                <label for="vidAiUpscaleScale" data-i18n="forms.scale">Scale</label>
                                 <select id="vidAiUpscaleScale">
-                                    <option value="2">2x</option>
-                                    <option value="4">4x</option>
+                                    <option value="2" data-i18n="video.ai_scale_2x">2x</option>
+                                    <option value="4" data-i18n="video.ai_scale_4x">4x</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="vidAiUpscaleModel">Model</label>
+                                <label for="vidAiUpscaleModel" data-i18n="forms.model">Model</label>
                                 <select id="vidAiUpscaleModel">
-                                    <option value="realesrgan-x4plus">General (Real-ESRGAN)</option>
-                                    <option value="realesrgan-x4plus-anime">Anime / Cartoon</option>
+                                    <option value="realesrgan-x4plus" data-i18n="video.ai_model_realesrgan_general">General (Real-ESRGAN)</option>
+                                    <option value="realesrgan-x4plus-anime" data-i18n="video.ai_model_realesrgan_anime">Anime / Cartoon</option>
                                 </select>
                             </div>
                         </div>
@@ -1981,47 +1981,47 @@
                         <!-- Background removal params -->
                         <div class="vidai-params hidden" id="vidAiParams-rembg">
                             <div class="form-group">
-                                <label for="vidAiRembgBackend">Backend</label>
-                                <select id="vidAiRembgBackend" aria-label="Background removal backend">
-                                    <option value="rembg" selected>rembg (per-frame, more models)</option>
-                                    <option value="rvm">Robust Video Matting (temporal consistency)</option>
+                                <label for="vidAiRembgBackend" data-i18n="forms.backend">Backend</label>
+                                <select id="vidAiRembgBackend" aria-label="Background removal backend" data-i18n-aria-label="video.background_removal_backend">
+                                    <option value="rembg" selected data-i18n="video.rembg_backend_rembg">rembg (per-frame, more models)</option>
+                                    <option value="rvm" data-i18n="video.rembg_backend_rvm">Robust Video Matting (temporal consistency)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="vidAiRembgModel">Model</label>
+                                <label for="vidAiRembgModel" data-i18n="forms.model">Model</label>
                                 <select id="vidAiRembgModel">
-                                    <option value="birefnet-general" selected>BiRefNet (best quality)</option>
-                                    <option value="birefnet-massive">BiRefNet Massive (highest quality)</option>
-                                    <option value="u2net">U2Net (general, fast)</option>
-                                    <option value="u2net_human_seg">U2Net Human (people)</option>
-                                    <option value="isnet-general-use">ISNet (general)</option>
-                                    <option value="mobilenetv3">RVM MobileNetV3 (fast)</option>
-                                    <option value="resnet50">RVM ResNet50 (quality)</option>
+                                    <option value="birefnet-general" selected data-i18n="video.rembg_model_birefnet_general">BiRefNet (best quality)</option>
+                                    <option value="birefnet-massive" data-i18n="video.rembg_model_birefnet_massive">BiRefNet Massive (highest quality)</option>
+                                    <option value="u2net" data-i18n="video.rembg_model_u2net">U2Net (general, fast)</option>
+                                    <option value="u2net_human_seg" data-i18n="video.rembg_model_u2net_human">U2Net Human (people)</option>
+                                    <option value="isnet-general-use" data-i18n="video.rembg_model_isnet_general">ISNet (general)</option>
+                                    <option value="mobilenetv3" data-i18n="video.rembg_model_mobilenetv3">RVM MobileNetV3 (fast)</option>
+                                    <option value="resnet50" data-i18n="video.rembg_model_resnet50">RVM ResNet50 (quality)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="vidAiRembgBg">Background</label>
+                                <label for="vidAiRembgBg" data-i18n="forms.background">Background</label>
                                 <select id="vidAiRembgBg">
-                                    <option value="">Transparent (ProRes 4444)</option>
-                                    <option value="#000000">Black</option>
-                                    <option value="#FFFFFF">White</option>
-                                    <option value="#00FF00">Green</option>
+                                    <option value="" data-i18n="video.rembg_background_transparent">Transparent (ProRes 4444)</option>
+                                    <option value="#000000" data-i18n="video.rembg_background_black">Black</option>
+                                    <option value="#FFFFFF" data-i18n="video.rembg_background_white">White</option>
+                                    <option value="#00FF00" data-i18n="video.rembg_background_green">Green</option>
                                 </select>
                             </div>
                             <label class="checkbox-row">
                                 <input type="checkbox" id="vidAiRembgAlpha">
-                                Export alpha matte only (grayscale)
+                                <span data-i18n="video.rembg_alpha_only">Export alpha matte only (grayscale)</span>
                             </label>
                         </div>
 
                         <!-- Frame interpolation params -->
                         <div class="vidai-params hidden" id="vidAiParams-interpolate">
                             <div class="form-group">
-                                <label for="vidAiInterpMultiplier">Multiplier</label>
+                                <label for="vidAiInterpMultiplier" data-i18n="forms.multiplier">Multiplier</label>
                                 <select id="vidAiInterpMultiplier">
-                                    <option value="2">2x (e.g. 30fps -> 60fps)</option>
-                                    <option value="4">4x (e.g. 30fps -> 120fps)</option>
-                                    <option value="8">8x (extreme slow-mo)</option>
+                                    <option value="2" data-i18n="video.interpolate_2x">2x (e.g. 30fps -> 60fps)</option>
+                                    <option value="4" data-i18n="video.interpolate_4x">4x (e.g. 30fps -> 120fps)</option>
+                                    <option value="8" data-i18n="video.interpolate_8x">8x (extreme slow-mo)</option>
                                 </select>
                             </div>
                         </div>
@@ -2029,14 +2029,14 @@
                         <!-- Video denoise params -->
                         <div class="vidai-params hidden" id="vidAiParams-denoise">
                             <div class="form-group">
-                                <label for="vidAiDenoiseMethod">Method</label>
+                                <label for="vidAiDenoiseMethod" data-i18n="forms.method">Method</label>
                                 <select id="vidAiDenoiseMethod">
-                                    <option value="nlmeans">High Quality (slower)</option>
-                                    <option value="hqdn3d">Fast (good quality)</option>
+                                    <option value="nlmeans" data-i18n="video.denoise_method_high_quality">High Quality (slower)</option>
+                                    <option value="hqdn3d" data-i18n="video.denoise_method_fast">Fast (good quality)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="vidAiDenoiseStrength">Strength</label>
+                                <label for="vidAiDenoiseStrength" data-i18n="forms.strength">Strength</label>
                                 <div class="slider-row">
                                     <input type="range" id="vidAiDenoiseStrength" min="0.1" max="1.0" value="0.5" step="0.1">
                                     <span class="slider-val" id="vidAiDenoiseStrengthVal">0.5</span>
@@ -2046,14 +2046,14 @@
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="vidAiAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runVidAiBtn" disabled data-i18n="video.ai_process">Process with AI</button>
 
                         <div class="hint hidden" id="vidAiHint">
-                            <span id="vidAiHintText">AI model not installed.</span>
-                            <button type="button" class="btn-install" id="installVidAiBtn">Install Now</button>
+                            <span id="vidAiHintText" data-i18n="video.ai_model_not_installed">AI model not installed.</span>
+                            <button type="button" class="btn-install" id="installVidAiBtn" data-i18n="common.install_now">Install Now</button>
                         </div>
                     </section>
                 </div>
