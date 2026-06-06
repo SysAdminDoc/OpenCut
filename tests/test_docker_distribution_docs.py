@@ -25,6 +25,19 @@ def test_docker_run_examples_use_non_root_data_home():
     assert "-v opencut-data:/home/opencut/.opencut" in dockerfile
 
 
+def test_docker_runtime_is_http_only_by_default():
+    dockerfile = _read("Dockerfile")
+    compose = _read("docker-compose.yml")
+    readme = _read("README.md")
+
+    assert re.search(r"^EXPOSE 5679$", dockerfile, re.M)
+    assert "EXPOSE 5679 5680" not in dockerfile
+    assert "5680:5680" not in compose
+    assert "5681:5681" not in compose
+    assert "Docker publishes the HTTP API on port 5679" in readme
+    assert "does not publish the optional WebSocket 5680 or\nMCP 5681 sidecars by default" in readme
+
+
 def test_documented_compose_override_files_exist():
     docs = "\n".join(_read(path) for path in ["README.md", "Dockerfile"])
     referenced = set(re.findall(r"docker compose -f\s+([^\s]+)", docs))
