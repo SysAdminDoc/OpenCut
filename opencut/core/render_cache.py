@@ -67,6 +67,40 @@ def _save_index(index: Dict[str, dict]) -> None:
         json.dump(index, fh, indent=2)
 
 
+def _cache_root() -> str:
+    return os.path.realpath(os.path.abspath(CACHE_DIR))
+
+
+def _is_under_cache_dir(path: str) -> bool:
+    try:
+        resolved = os.path.realpath(os.path.abspath(path))
+        root = _cache_root()
+        common = os.path.commonpath([root, resolved])
+        return os.path.normcase(common) == os.path.normcase(root)
+    except (TypeError, ValueError, OSError):
+        return False
+
+
+def _is_expected_cache_file(cache_key: str, path: str) -> bool:
+    if not cache_key or not path or not _is_under_cache_dir(path):
+        return False
+    basename = os.path.basename(os.path.realpath(path))
+    stem, _ext = os.path.splitext(basename)
+    return stem == cache_key
+
+
+def _safe_unlink_cached_file(cache_key: str, path: str) -> tuple[int, bool]:
+    """Delete one cache file only when the index path is confined and expected."""
+    if not _is_expected_cache_file(cache_key, path):
+        logger.warning("Refusing unsafe render-cache path for %s: %s", cache_key, path)
+        return 0, False
+    if not os.path.isfile(path):
+        return 0, True
+    size = os.path.getsize(path)
+    os.unlink(path)
+    return size, True
+
+
 def _file_content_hash(filepath: str) -> str:
     """Compute a hash of file contents for input tracking."""
     if not os.path.isfile(filepath):
@@ -185,6 +219,12 @@ def get_cached(
     data = index[key]
     cached_path = data.get("output_path", "")
 
+    if not _is_expected_cache_file(key, cached_path):
+        logger.warning("Cache miss (unsafe index path): %s", key)
+        del index[key]
+        _save_index(index)
+        return None
+
     # Validate the cached file still exists
     if not os.path.isfile(cached_path):
         logger.info("Cache miss (file deleted): %s", key)
@@ -261,12 +301,18 @@ def invalidate_downstream(
         on_progress(70, f"Removing {len(to_remove)} entries")
 
     freed = 0
+    invalid_entries = 0
+    missing_entries = 0
     for key in to_remove:
         data = index.get(key, {})
         path = data.get("output_path", "")
-        if os.path.isfile(path):
-            freed += os.path.getsize(path)
-            os.unlink(path)
+        existed = _is_expected_cache_file(key, path) and os.path.isfile(path)
+        size, safe = _safe_unlink_cached_file(key, path)
+        if not safe:
+            invalid_entries += 1
+        elif not existed:
+            missing_entries += 1
+        freed += size
         del index[key]
 
     _save_index(index)
@@ -275,7 +321,12 @@ def invalidate_downstream(
         on_progress(100, "Invalidation complete")
 
     logger.info("Invalidated %d cache entries, freed %d bytes", len(to_remove), freed)
-    return {"invalidated": len(to_remove), "freed_bytes": freed}
+    return {
+        "invalidated": len(to_remove),
+        "freed_bytes": freed,
+        "invalid_entries": invalid_entries,
+        "missing_entries": missing_entries,
+    }
 
 
 def get_cache_stats(
@@ -350,16 +401,22 @@ def cleanup_cache(
 
     removed = 0
     freed = 0
+    invalid_entries = 0
+    missing_entries = 0
     for key, data in entries:
         if total_size <= max_bytes:
             break
         path = data.get("output_path", "")
         fsize = data.get("file_size", 0)
-        if os.path.isfile(path):
-            os.unlink(path)
+        existed = _is_expected_cache_file(key, path) and os.path.isfile(path)
+        actual_size, safe = _safe_unlink_cached_file(key, path)
+        if not safe:
+            invalid_entries += 1
+        elif not existed:
+            missing_entries += 1
         del index[key]
         total_size -= fsize
-        freed += fsize
+        freed += actual_size
         removed += 1
 
     _save_index(index)
@@ -369,4 +426,10 @@ def cleanup_cache(
 
     logger.info("Cache cleanup: removed %d entries, freed %.1f MB",
                 removed, freed / (1024 * 1024))
-    return {"removed": removed, "freed_bytes": freed, "current_size": total_size}
+    return {
+        "removed": removed,
+        "freed_bytes": freed,
+        "current_size": total_size,
+        "invalid_entries": invalid_entries,
+        "missing_entries": missing_entries,
+    }
