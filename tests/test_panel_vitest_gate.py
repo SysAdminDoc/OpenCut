@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PANEL_DIR = REPO_ROOT / "extension" / "com.opencut.panel"
+SETUP_NODE_V4_PIN = "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4"
 
 
 def test_panel_package_exposes_vitest_suite():
@@ -27,7 +28,7 @@ def test_ci_workflows_run_panel_unit_tests():
     pr_workflow = (REPO_ROOT / ".github" / "workflows" / "pr-fast.yml").read_text(encoding="utf-8")
 
     assert "npm test" in release_workflow
-    assert "actions/setup-node@v4" in pr_workflow
+    assert SETUP_NODE_V4_PIN in pr_workflow
     assert "npm ci" in pr_workflow
     assert "npm ci --omit=optional" not in pr_workflow
     assert "--skip panel-unit" not in pr_workflow
@@ -48,9 +49,9 @@ def test_release_full_pins_same_node_runtime_as_pr_fast():
     assert (
         "- name: Set up Node\n"
         "        if: runner.os == 'Linux'\n"
-        "        uses: actions/setup-node@v4\n"
+        f"        uses: {SETUP_NODE_V4_PIN}\n"
         "        with:\n"
         "          node-version: '22'"
     ) in release_workflow
     assert "node-version: '22'" in pr_workflow
-    assert release_workflow.index("actions/setup-node@v4") < release_workflow.index("CEP panel")
+    assert release_workflow.index(SETUP_NODE_V4_PIN) < release_workflow.index("CEP panel")
