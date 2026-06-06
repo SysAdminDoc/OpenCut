@@ -19,10 +19,21 @@ def test_pyproject_all_target_includes_base_and_optional_dependencies():
     assert "flask>=3.0,<4" in requirements
     assert "faster-whisper>=1.1,<2" in requirements
     assert "otio-aaf-adapter>=2.0,<3" in requirements
-    assert "transnetv2-pytorch>=1.0.5,<2" in requirements
-    assert "pyannote.audio>=4.0,<5" in requirements
-    assert not any(req.startswith("audiocraft") for req in requirements)
-    assert not any(req.startswith("resemble-enhance") for req in requirements)
+    advisory_heavy_prefixes = (
+        "audiocraft",
+        "demucs",
+        "gfpgan",
+        "pyannote.audio",
+        "realesrgan",
+        "resemble-enhance",
+        "torch",
+        "torchvision",
+        "transformers",
+        "transnetv2-pytorch",
+        "whisperx",
+    )
+    for prefix in advisory_heavy_prefixes:
+        assert not any(req.startswith(prefix) for req in requirements)
     assert len(requirements) == len(set(req.lower() for req in requirements))
 
 
@@ -62,6 +73,40 @@ def test_resemble_enhance_stays_separate_from_combined_all_extra():
 
     assert "resemble-enhance>=0.0.1,<1; python_version < '3.12'" in enhance_requirements
     assert not any(req.startswith("resemble-enhance") for req in all_requirements)
+
+
+def test_whisperx_stays_separate_from_combined_all_extra():
+    whisperx_requirements = pip_audit_extras.load_pyproject_requirements(
+        REPO_ROOT / "pyproject.toml",
+        "captions-whisperx",
+    )
+    all_requirements = pip_audit_extras.load_pyproject_requirements(
+        REPO_ROOT / "pyproject.toml",
+        "all",
+    )
+
+    assert "whisperx>=3.8.5,<4" in whisperx_requirements
+    assert not any(req.startswith("whisperx") for req in all_requirements)
+
+
+def test_torch_stack_collects_advisory_heavy_backends():
+    requirements = pip_audit_extras.load_pyproject_requirements(
+        REPO_ROOT / "pyproject.toml",
+        "torch-stack",
+    )
+
+    expected = {
+        "whisperx>=3.8.5,<4",
+        "demucs>=4.0,<5",
+        "realesrgan>=0.3,<1",
+        "gfpgan>=1.3,<2",
+        "pyannote.audio>=4.0,<5",
+        "transnetv2-pytorch>=1.0.5,<2",
+        "torch>=2.0",
+        "torchvision>=0.15",
+        "transformers>=4.30",
+    }
+    assert expected.issubset(set(requirements))
 
 
 def test_default_targets_include_requirements_and_pyproject_all():

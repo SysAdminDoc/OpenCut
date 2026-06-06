@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Optional Dependency Advisory Policy
+
+- Closed RA-15 by keeping `opencut[all]` as the audited convenience install lane while moving Torch/Transformers-backed backends to explicit `opencut[torch-stack]` or narrower feature extras.
+- Updated Python advisory policy docs and release-smoke expectations so `pyproject[all]` passes with zero advisories.
+
 ### Changed - Destructive Clear Confirmation Plans
 
 - Advanced RA-41 with shared destructive-operation dry-run plan and confirmation-token helpers.

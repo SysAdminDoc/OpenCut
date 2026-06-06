@@ -64,9 +64,10 @@ def test_optional_dependency_security_floor_pins():
         deps = _dep_names(extras[extra])
         assert deps["pillow"] == "Pillow>=12.2,<13"
 
-    for extra in ("captions-whisperx", "all"):
-        deps = _dep_names(extras[extra])
-        assert deps["whisperx"] == "whisperx>=3.8.5,<4"
+    deps = _dep_names(extras["captions-whisperx"])
+    assert deps["whisperx"] == "whisperx>=3.8.5,<4"
+    assert "whisperx" not in _dep_names(extras["all"])
+    assert _dep_names(extras["torch-stack"])["whisperx"] == "whisperx>=3.8.5,<4"
 
     for extra in ("ai", "all"):
         deps = _dep_names(extras[extra])
@@ -74,6 +75,10 @@ def test_optional_dependency_security_floor_pins():
 
     deps = _dep_names(extras["ai-gpu"])
     assert deps["onnxruntime-gpu"] == "onnxruntime-gpu>=1.25,<2"
+
+    torch_stack = _dep_names(extras["torch-stack"])
+    assert torch_stack["torch"] == "torch>=2.0"
+    assert torch_stack["transformers"] == "transformers>=4.30"
 
 
 def test_requirements_txt_matches_security_floor():

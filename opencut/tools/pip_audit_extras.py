@@ -2,8 +2,8 @@
 
 F263 exists because the release smoke gate used to audit only
 ``requirements.txt``. That misses the committed lockfile and the heavy optional
-install surface in ``pyproject.toml`` -- especially the ``[all]`` extra that
-users choose when they want every AI/video/audio backend available.
+install surface in ``pyproject.toml`` -- especially the release-audited
+``[all]`` convenience extra.
 
 This tool keeps the release gate structured and deterministic from OpenCut's
 side: it builds temporary requirements files for each requested target, invokes
@@ -66,9 +66,11 @@ ALLOWED_ADVISORIES: dict[str, AllowedAdvisory] = {
         package="transformers",
         aliases=("GHSA-69w3-r845-3855",),
         reason=(
-            "Transformers 5.x is blocked by WhisperX's huggingface-hub<1 pin; "
-            "OpenCut does not use transformers.Trainer checkpoint resume, and "
-            "the resolved pyproject[all] Torch stack is 2.8."
+            "Transformers 5.x is blocked in the explicit WhisperX lane by "
+            "WhisperX's huggingface-hub<1 pin; OpenCut does not use "
+            "transformers.Trainer checkpoint resume, and pyproject[all] "
+            "excludes Torch/Transformers-backed stacks so the audited "
+            "convenience extra can resolve away from the Torch 2.8 stack."
         ),
     ),
 }
