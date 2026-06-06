@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.256 / batch 144 and remains open.
-- Shipped this cycle: Video Reframe target formats, custom dimension labels/ARIA, resize and crop options, crop anchor hint, face smoothing, pad colors, and quality options now expose static locale hooks while preserving all option values plus input and slider constraints.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,208 keys / 2,149 consumers / 59 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Reframe hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.257 / batch 145 and remains open.
+- Shipped this cycle: Video Merge merge-file label/hint, Add Current Clip, Add All Project Media, Clear, merge mode options, and quality options now expose static locale hooks while preserving list role wiring, mode values, and quality values.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,215 keys / 2,156 consumers / 59 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Merge hooks and preserved values with no current-port console errors.
 
 ## Next Work
 

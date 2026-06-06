@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 145
+
+- Migrated the Video Merge form shell to static locale hooks for merge-file label/hint, Add Current Clip, Add All Project Media, Clear, merge mode options, and quality options while preserving list role wiring, mode values, and quality values.
+- `client/locales/en.json` grows from 2,208 to 2,215 keys; `i18n-drift` reports 2,156 consumers, 59 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Merge static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 144
 
 - Migrated the Video Reframe form shell to static locale hooks for target formats, custom dimension labels/ARIA, resize and crop options, crop anchor hint, face smoothing, pad colors, and quality options while preserving all option values plus input and slider constraints.

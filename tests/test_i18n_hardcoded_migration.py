@@ -1005,6 +1005,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.quality_high_crf18", "data-i18n"),
     ("video.quality_medium_crf23", "data-i18n"),
     ("video.quality_low_crf28", "data-i18n"),
+    # One-hundred-forty-fifth batch (Video Merge parameter shell HTML).
+    ("video.merge_files", "data-i18n"),
+    ("video.merge_file_hint", "data-i18n"),
+    ("video.add_current_clip", "data-i18n"),
+    ("video.add_all_project_media", "data-i18n"),
+    ("common.clear", "data-i18n"),
+    ("forms.mode", "data-i18n"),
+    ("video.merge_mode_fast", "data-i18n"),
+    ("video.merge_mode_quality", "data-i18n"),
+    ("forms.quality", "data-i18n"),
+    ("video.quality_high_crf18", "data-i18n"),
+    ("video.quality_medium_crf23", "data-i18n"),
+    ("video.quality_low_crf28", "data-i18n"),
 )
 
 
