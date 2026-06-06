@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Docker Runtime Parity
+
+- Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping WebSocket 5680 and MCP 5681 sidecars opt-in, and guarding Dockerfile/Compose/README port parity.
+
 ### Changed - Docker Dependency Surface
 
 - Closed RA-25/RA-29 by moving Docker dependency installation to the committed `requirements.txt` surface and removing masked optional pip failures.

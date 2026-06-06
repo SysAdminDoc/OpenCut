@@ -113,7 +113,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-23 | GitHub Actions SHA pins | M | Mutable tag references |
 | RA-24 | Release Full token perms | M | Over-broad contents: write |
 | RA-25 | Docker dependency surface | M | Closed 2026-06-06: Docker installs from tracked `requirements.txt` and no longer reintroduces retired packages |
-| RA-26 | Docker runtime parity | M | Old paths, missing ports |
+| RA-26 | Docker runtime parity | M | Closed 2026-06-06: Docker defaults publish HTTP 5679 only, with WebSocket/MCP sidecars documented as opt-in |
 | RA-27 | Docker GPU compose | S | Closed 2026-06-06: README and compose docs now use the committed GPU profile command |
 | RA-28 | README count gate | S | Closed 2026-06-06: README non-badge count claims are checked against generated/live counts |
 | RA-29 | Docker fail-closed | M | Closed 2026-06-06: Docker dependency installs use the requirements file and fail on pip errors |
@@ -426,7 +426,7 @@ tree.
 | Adobe API drift tracker | Weekly `@adobe/premierepro` workflow and Python registry probe | `.github/workflows/adobe-premierepro-versions.yml`, `opencut/tools/adobe_premierepro_versions.py` | Useful but fragile | RA-31/RA-32 are confirmed by local workflow evidence. |
 | GitHub issue seeding | YAML issue/label seeder with dry-run mode | `scripts/seed_github_issues.py`, `.github/labels.yml`, `.github/issue-seeds.yml` | Useful but fragile | RA-33 is confirmed: label dry-run still requires `gh` before checking `dry_run`. |
 | Release CI | PR Fast and Release Full workflows | `.github/workflows/pr-fast.yml`, `.github/workflows/build.yml` | Strong tests, weak token posture | RA-24 remains concrete: Release Full has workflow-level `contents: write`; PR Fast is already read-only. |
-| Docker distribution | Multi-stage image, `.dockerignore`, compose | `Dockerfile`, `.dockerignore`, `docker-compose.yml`, README Docker section | Medium | RA-25/RA-29/RA-30 are closed with dependency-surface, fail-closed install, and build-context hygiene guards; RA-26 port/runtime posture remains open. |
+| Docker distribution | Multi-stage image, `.dockerignore`, compose | `Dockerfile`, `.dockerignore`, `docker-compose.yml`, README Docker section | Medium | RA-25/RA-26/RA-29/RA-30 are closed with dependency-surface, fail-closed install, HTTP-only default runtime, and build-context hygiene guards. |
 
 ### Cycle 3: Governance and release-trust specs
 
@@ -554,7 +554,7 @@ build args or environment variables because they can persist.
 | RA-25 Docker dependency surface | Closed 2026-06-06: `Dockerfile` installs from tracked `requirements.txt`; static tests block retired `pydub` and `deep-translator` from the Docker path. | Reopen only if Docker adds a separate optional dependency surface outside the audited requirements/pyproject policy. | Done |
 | RA-29 Docker fail-closed installs | Closed 2026-06-06: Docker dependency installation no longer uses shell-form version specifiers or `|| echo` masking. | Keep dependency failures fatal unless a documented intentionally-omitted feature path is added with its own guard. | Done |
 | RA-30 build-context hygiene | Closed 2026-06-06: `.dockerignore` now excludes `.env*`, key/cert/credential/log files, coverage output, `.opencut/`, and local SQLite/cache DB artifacts. | Keep Docker context hygiene tests synchronized with sensitive `.gitignore` patterns and local runtime-state conventions. | Done |
-| Docker runtime parity | README mentions GPU compose file while only `docker-compose.yml` was surfaced in the initial file scan. | Keep README, compose files, and exposed HTTP/WebSocket ports synchronized through a docs test. | P2 |
+| Docker runtime parity | Closed 2026-06-06: Docker docs, Compose, and Dockerfile now agree that default containers publish the HTTP API on 5679 only; WebSocket/MCP sidecars require explicit custom profiles/services. | Keep README, compose files, and exposed runtime ports synchronized through Docker distribution tests. | Done |
 
 **External sources:** Docker build context docs
 `https://docs.docker.com/build/building/context/`; Docker build secrets docs
@@ -627,11 +627,11 @@ committed compose file and the non-root `/home/opencut/.opencut` data path.
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
 | RA-27 Docker GPU compose command | README previously referenced a missing `docker-compose.gpu.yml`; `docker-compose.yml` uses `profiles: [gpu]` | Closed by updating README/compose comments to `docker compose --profile gpu up opencut-server-gpu` and adding a release-smoke docs guard. | Done |
-| RA-26 non-root volume docs | `docker-compose.yml` uses `/home/opencut/.opencut`; Dockerfile comments previously used `/root/.opencut` | Dockerfile comments now match the non-root home path; broader RA-26 port/runtime posture remains open. | Partial |
+| RA-26 non-root volume docs and runtime posture | Closed 2026-06-06: Dockerfile run examples and Compose volumes use `/home/opencut/.opencut`, the image exposes only HTTP 5679 by default, and README documents WebSocket/MCP sidecars as opt-in container profiles. | Reopen only if the Docker image starts or publishes WebSocket/MCP sidecars by default. | Done |
 | RA-25 Docker dependency surface | Closed 2026-06-06: Docker installs the tracked requirements file and no longer lists retired `pydub` or `deep-translator` packages. | Revisit only if Docker needs a separate feature-extra install profile with explicit advisory evidence. | Done |
 | RA-29 fail-closed install | Closed 2026-06-06: the Docker dependency layer no longer masks pip failures or relies on shell-parsed requirement specifiers. | Keep the Dockerfile dependency path on requirements-file installs or quoted explicit requirements. | Done |
 | RA-30 build-context hygiene | Closed 2026-06-06: `.dockerignore` mirrors `.env*`, key, cert, credential, and log ignores and adds local runtime/cache DB exclusions. | Keep `tests/test_docker_distribution_docs.py` covering secret/log and runtime-state patterns. | Done |
-| Docker port posture | Dockerfile exposes 5679/5680; README and UXP docs mention backend HTTP 5679, WebSocket 5680, MCP 5681 | Decide whether containerized MCP is supported; if yes, expose/map 5681 and document auth posture. If no, state HTTP/WebSocket-only container boundary. | P2 |
+| Docker port posture | Closed 2026-06-06: default Docker runtime publishes HTTP 5679 only and leaves optional WebSocket 5680 / MCP 5681 sidecars to explicit custom services. | Add dedicated profiles before exposing sidecar ports from containerized runs. | Done |
 
 ### Cycle 10: GitHub Actions supply-chain audit
 
@@ -1225,6 +1225,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 36 | UXP clipboard permission and fallback | Adobe Premiere UXP clipboard and manifest docs, `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, Bolt/WebView scaffold | Adobe defaults clipboard access to unavailable unless `requiredPermissions.clipboard` is declared. OpenCut writes copied output text but the manifests lacked the permission and the copy path handled async denial inline. | Closed RA-19 by declaring clipboard `readAndWrite` in both manifest surfaces, centralizing output copy through `copyTextToClipboard()`, and adding manifest/helper regression tests. |
 | 2026-06-06 | Cycle 37 | UXP confirmation guard | Adobe Premiere UXP API changelog, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/manifest.json`, UXP confirmation tests | Adobe keeps browser alert/prompt/confirm APIs behind a beta `enableAlerts` flag. OpenCut used raw `window.confirm` for search-index clearing without a manifest feature-flag decision. | Closed RA-20 by replacing the raw dialog with an inline second-click panel confirmation, keeping `enableAlerts` disabled, and adding a static raw-dialog guard. |
 | 2026-06-06 | Cycle 38 | Docker dependency and context hardening | Docker build/context docs, pip requirement-specifier docs, `Dockerfile`, `.dockerignore`, `requirements.txt`, Docker guard tests | The Docker image still carried a hand-written optional dependency install list that could reintroduce retired packages, shell-parse unquoted specifiers, and mask pip failures, while `.dockerignore` did not explicitly block local secrets/logs/runtime DB state before `COPY . /app`. | Closed RA-25/RA-29/RA-30 by installing from tracked `requirements.txt`, keeping pip failures fatal, mirroring sensitive ignore patterns, excluding local runtime/cache DB artifacts, and extending Docker distribution guard tests. |
+| 2026-06-06 | Cycle 39 | Docker runtime parity | Docker port-publishing docs, Dockerfile `EXPOSE`, `docker-compose.yml`, README Docker quick start, WebSocket/MCP sidecar evidence | Dockerfile and product docs mentioned WebSocket/MCP sidecar ports, but the image does not install/start/publish those sidecars by default. Publishing 5680/5681 would imply support the default container does not provide. | Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping sidecars opt-in, aligning Dockerfile/Compose/README, and extending Docker distribution tests to guard the port posture. |
 
 ### Research queries to run later
 
@@ -1245,23 +1246,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 39: Continue Docker runtime parity on RA-26.
-2. Cycle 40: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 41: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 42: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 43: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+1. Cycle 40: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 41: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 42: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 43: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 44: Continue release-trust hardening on RA-21 through RA-24.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 38: Docker dependency and context hardening.
+Cycle 39: Docker runtime parity.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-25, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1276,8 +1277,10 @@ behavior through a shared fallback helper. RA-20 keeps UXP destructive
 confirmation on a panel-native second-click flow rather than beta browser
 dialogs. RA-25/RA-29/RA-30 keep Docker installs on the tracked requirements
 surface, fail closed on dependency install errors, and exclude local
-secret/log/runtime DB state from the Docker build context. Continue with the
-remaining release-trust and product workflow specs.
+secret/log/runtime DB state from the Docker build context. RA-26 keeps the
+default Docker runtime explicitly HTTP-only on 5679 and leaves WebSocket/MCP
+sidecars to custom opt-in services. Continue with the remaining release-trust
+and product workflow specs.
 
 #### Important findings so far
 
@@ -1309,6 +1312,9 @@ remaining release-trust and product workflow specs.
 - Docker dependency installs now consume `requirements.txt` directly, avoid
   retired `pydub`/`deep-translator` packages, fail on pip errors, and guard
   `.dockerignore` secret/log/runtime-state exclusions before `COPY . /app`.
+- Docker runtime docs, Compose, and Dockerfile now agree that default containers
+  publish HTTP 5679 only; WebSocket 5680 and MCP 5681 sidecars require explicit
+  custom services/profiles.
 - Release Full still has workflow-level `contents: write`, mutable action tags,
   and no artifact attestation step in the scanned workflows.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
@@ -1382,14 +1388,14 @@ remaining release-trust and product workflow specs.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on Docker RA-26 or the remaining UXP permission split rows.
+3. Continue release-trust hardening on RA-21 through RA-24 or the remaining UXP permission split rows.
 
 #### Unprocessed leads
 
 - GitHub Actions artifact attestations for release provenance.
 - WebView permission split specifics after the RA-17 live-manifest guard.
-- Whether RA-26 should map/expose MCP port 5681 in containerized runs or keep
-  Docker documented as HTTP/WebSocket-only.
+- Whether future Docker profiles should publish optional WebSocket 5680 or MCP
+  5681 sidecars now that the default container posture is HTTP-only.
 - Whether the Magic Clips plan endpoint should be `/video/magic-clips/plan`,
   `/video/shorts-pipeline/dry-run`, or both with one canonical core planner.
 - Whether RA-51 through RA-56 should be added as separate active TODO rows or

@@ -74,6 +74,9 @@
 **Pass 288 update (no standalone research file):**
 - Closed RA-25/RA-29/RA-30 by moving Docker dependency installation to tracked `requirements.txt`, keeping pip failures fatal, mirroring secret/log ignore patterns into `.dockerignore`, excluding local runtime/cache DB artifacts from the build context, and extending Docker guard tests.
 
+**Pass 289 update (no standalone research file):**
+- Closed RA-26 by making Docker runtime posture explicit: default containers publish HTTP 5679 only, keep WebSocket 5680 and MCP 5681 sidecars opt-in, and guard Dockerfile/Compose/README port parity in Docker distribution tests.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

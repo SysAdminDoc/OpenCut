@@ -68,6 +68,11 @@ docker compose up opencut-server
 docker compose --profile gpu up opencut-server-gpu
 ```
 
+Docker publishes the HTTP API on port 5679 and persists data under
+`/home/opencut/.opencut`. It does not publish the optional WebSocket 5680 or
+MCP 5681 sidecars by default; add a dedicated service/profile before exposing
+those opt-in processes from a container.
+
 **Option E -- Linux desktop package:**
 
 Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller server bundle. See `docs/LINUX_DISTRIBUTION.md` for the `io.github.sysadmindoc.opencut` Flatpak/AppImage contract and local package-build command.

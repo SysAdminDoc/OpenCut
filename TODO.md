@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-25/RA-29/RA-30 Docker hardening pass.
+Last synced: 2026-06-06 during the RA-26 Docker runtime parity pass.
 
 ## Execution Order
 
@@ -27,7 +27,7 @@ Last synced: 2026-06-06 during the RA-25/RA-29/RA-30 Docker hardening pass.
 - [ ] **RA-24 Release Full token permissions** - scope Release Full `GITHUB_TOKEN` permissions by job so only release uploads receive write access.
 - [x] **RA-35 release SBOM fidelity** - current release SBOM is explicitly labeled declared-only in its filename, artifact name, metadata, docs, and tests while lockfile vulnerability evidence remains in pip-audit.
 - [x] **RA-25 Docker dependency surface** - Docker now installs from the tracked `requirements.txt` surface so retired packages cannot return through the container path.
-- [ ] **RA-26 Docker runtime parity** - align Docker runtime docs, non-root volume paths, and explicit HTTP/WebSocket container posture.
+- [x] **RA-26 Docker runtime parity** - Docker now documents and tests HTTP-only default publishing on 5679, non-root data paths, and opt-in WebSocket/MCP sidecars.
 - [x] **RA-27 Docker GPU compose command** - README and compose comments now use the committed `gpu` profile service command, and release-smoke guards against missing compose overrides.
 - [x] **RA-28 README non-badge count gate** - README prose, diagram, and project-structure count claims now align with generated route/module truth through `check_doc_sizes.py`.
 - [x] **RA-29 Docker dependency install fail-closed guard** - Docker dependency installation now uses the requirements file instead of shell-form specifiers and no longer masks pip failures.

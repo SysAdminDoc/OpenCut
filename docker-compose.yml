@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "5679:5679"
+      # Default Docker runtime publishes the HTTP API only. Optional
+      # WebSocket/MCP sidecars require an explicit custom service/profile.
     volumes:
       # Persist models, settings, job history across container rebuilds
       # Match the Dockerfile's non-root ``opencut`` user home; mounting to
@@ -26,6 +28,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5679:5679"
+      # Default Docker runtime publishes the HTTP API only. Optional
+      # WebSocket/MCP sidecars require an explicit custom service/profile.
     volumes:
       # Match the Dockerfile's non-root ``opencut`` user home; mounting to
       # ``/root/.opencut`` writes to the wrong path (or fails outright)

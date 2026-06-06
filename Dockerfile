@@ -5,6 +5,8 @@
 # Build:       docker build -t opencut .
 # Run (CPU):   docker run -d -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
 # Run (GPU):   docker run -d --gpus all -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
+# Runtime:     publishes the HTTP API only. Optional WebSocket/MCP sidecars
+#              are separate opt-in processes, not default container ports.
 # ============================================================
 
 # Stage 1: Base with Python and system deps
@@ -49,8 +51,8 @@ RUN groupadd -r opencut && useradd -r -g opencut -d /home/opencut -m opencut \
     && mkdir -p /home/opencut/.opencut/packages /home/opencut/.opencut/models /home/opencut/.opencut/plugins \
     && chown -R opencut:opencut /home/opencut /app
 
-# Expose server port + WebSocket bridge port
-EXPOSE 5679 5680
+# Expose the HTTP API. WebSocket and MCP sidecars are not published by default.
+EXPOSE 5679
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
