@@ -110,7 +110,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-20 | UXP confirmation guard | S | Closed 2026-06-06: raw UXP browser dialogs are blocked and search-index clear uses inline second-click confirmation |
 | RA-21 | Python 3.13 classifier proof | M | Closed 2026-06-06: untested Python 3.13 classifier retracted until a CI lane proves it |
 | RA-22 | Release Full Node pin | S | Closed 2026-06-06: Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast |
-| RA-23 | GitHub Actions SHA pins | M | Mutable tag references |
+| RA-23 | GitHub Actions SHA pins | M | Closed 2026-06-06: workflow action refs are pinned to full-length SHAs with adjacent version comments |
 | RA-24 | Release Full token perms | M | Closed 2026-06-06: Release Full build/test/package legs are read-only, with release uploads isolated in a write-scoped tag-only job |
 | RA-25 | Docker dependency surface | M | Closed 2026-06-06: Docker installs from tracked `requirements.txt` and no longer reintroduces retired packages |
 | RA-26 | Docker runtime parity | M | Closed 2026-06-06: Docker defaults publish HTTP 5679 only, with WebSocket/MCP sidecars documented as opt-in |
@@ -647,7 +647,7 @@ support signed build-provenance claims for binaries and container images.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| RA-23 full-SHA action pins | `.github/workflows/*.yml`; archived Cycle 12 research; GitHub action allowlist docs | Pin non-local workflow `uses:` references to full-length SHAs, keep adjacent version comments, and add a static test that rejects mutable tags/branches. | P1 |
+| RA-23 full-SHA action pins | Closed 2026-06-06: non-local workflow `uses:` references now point at full-length SHAs with adjacent version comments, and `tests/test_workflow_action_pins.py` rejects mutable refs. | Keep workflow action updates explicit by changing both the SHA and nearby version comment through the static guard. | Done |
 | RA-24 token least privilege | Closed 2026-06-06: Release Full defaults to `contents: read`, the build matrix is read-only, and the tag-only `release-upload` job is the only `contents: write` boundary. | Keep release upload authority isolated from build/test/package jobs and guard against workflow-level write-token regressions. | Done |
 | RA-22 Release Full Node pin | Closed 2026-06-06: Release Full uses `actions/setup-node@v4` with Node 22 before Linux CEP panel npm gates, and PR Fast uses the same runtime. | Keep Release Full and PR Fast panel runtimes in lockstep before treating npm advisory/build evidence as deterministic release proof. | Done |
 | Release provenance attestation | Release Full uploads binaries, installers, Linux packages, and SBOM but no `attest-build-provenance` step appears in workflow scan | Add GitHub artifact attestations for release artifacts and SBOM after RA-24 narrows permissions; document verification commands. | P2 |
@@ -1233,6 +1233,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 41 | Release smoke Ruff import-order cleanup | Release-smoke Ruff gate, `opencut/routes/__init__.py`, package import blocks, route manifest and collision tests | The broader release-smoke Ruff gate failed on 17 existing `I001` import-order findings, including the blueprint import block. | Restored the Ruff gate with mechanical import ordering and rechecked route-manifest plus route-collision invariants. |
 | 2026-06-06 | Cycle 42 | Release Full token permissions | `.github/workflows/build.yml`, release upload steps, workflow permission tests, SBOM workflow tests | Release Full still granted `contents: write` at workflow scope, so build/test/package matrix jobs and third-party actions received write-capable tokens even though only tag release uploads needed them. | Closed RA-24 by defaulting the workflow and build matrix to `contents: read`, moving all `gh release upload` calls into a tag-only `release-upload` job with `contents: write`, and adding static permission guards. |
 | 2026-06-06 | Cycle 43 | Python 3.13 classifier retraction | `pyproject.toml`, CI workflow Python versions, dependency-surface tests, release-smoke pytest-fast list | Package metadata advertised Python 3.13, but every committed GitHub Actions lane still installs Python 3.12. | Closed RA-21 by removing the untested classifier until a CI lane proves it and adding a metadata guard that blocks the classifier without a matching workflow lane. |
+| 2026-06-06 | Cycle 44 | GitHub Actions SHA pins | `.github/workflows/*.yml`, workflow action tag SHAs, panel/workflow permission tests | Workflow `uses:` references still pointed at mutable major tags such as `actions/checkout@v4`, leaving release/signing workflows dependent on tag movement. | Closed RA-23 by pinning every non-local action ref to a full SHA, preserving adjacent version comments, and adding a release-smoke guard against mutable action refs. |
 
 ### Research queries to run later
 
@@ -1253,23 +1254,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 44: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 45: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 46: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 47: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 48: Continue release-trust hardening on RA-23.
+1. Cycle 45: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 46: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 47: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 48: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 49: Continue release provenance attestation follow-up now that RA-23 and RA-24 are closed.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 43: Python 3.13 classifier retraction.
+Cycle 44: GitHub Actions SHA pins.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1298,6 +1299,8 @@ permission while the tag-only release-upload job owns the write-capable release
 token.
 RA-21 keeps package metadata to the tested Python classifier set until a 3.13
 workflow lane proves runtime support.
+RA-23 keeps non-local workflow actions pinned to full-length SHAs with adjacent
+version comments so workflow action updates stay explicit.
 
 #### Important findings so far
 
@@ -1336,10 +1339,12 @@ workflow lane proves runtime support.
   matching PR Fast's panel runtime pin.
 - The package Ruff release-smoke gate is clean after mechanical import-order
   cleanup across existing package files.
-- Release Full now keeps build/test/package jobs on `contents: read`; mutable
-  action tags and no artifact attestation step remain in the scanned workflows.
+- Release Full now keeps build/test/package jobs on `contents: read`; artifact
+  attestations remain the next release-provenance follow-up.
 - The Python 3.13 classifier is retracted until a committed workflow lane tests
   that runtime.
+- Non-local GitHub Actions workflow references are full-SHA pinned with adjacent
+  version comments and a release-smoke guard rejects mutable refs.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
@@ -1411,7 +1416,7 @@ workflow lane proves runtime support.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-23 or the remaining UXP permission split rows.
+3. Continue release provenance attestation follow-up or the remaining UXP permission split rows.
 
 #### Unprocessed leads
 

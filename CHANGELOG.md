@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - GitHub Actions SHA Pins
+
+- Closed RA-23 by pinning every non-local workflow action reference to a full-length commit SHA with an adjacent version comment.
+- Added a release-smoke static guard that rejects mutable action refs, missing version comments, and unreviewed action pins.
+
 ### Changed - Python Classifier Metadata
 
 - Closed RA-21 by retracting the untested Python 3.13 classifier until CI proves that runtime.
