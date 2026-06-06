@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-42 render-cache containment pass.
+Last synced: 2026-06-06 during the RA-43 plugin quarantine pass.
 
 ## Execution Order
 
@@ -40,7 +40,7 @@ Last synced: 2026-06-06 during the RA-42 render-cache containment pass.
 - [x] **RA-08/RA-39 DB compaction diagnostic** - CLI and feature-area routes now report page, freelist, WAL, file-size, and recommended-action posture for local SQLite stores.
 - [ ] **RA-41 destructive-operation plan contract** - add a shared dry-run/confirmation-token pattern for user-visible destructive endpoints.
 - [x] **RA-42 render-cache delete containment** - render-cache cleanup/invalidation now rejects forged index output paths outside `CACHE_DIR` or with mismatched cache-key basenames.
-- [ ] **RA-43 plugin uninstall quarantine** - move plugin deletion through quarantine, restore, and permanent-delete states with stronger confirmation.
+- [x] **RA-43 plugin uninstall quarantine** - plugin uninstall now moves through quarantine, restore, and permanent-delete states with typed confirmation.
 - [ ] **RA-44 model/cache clear preview** - enumerate exact model/cache clear paths and bytes before mutation, with per-path errors.
 - [ ] **RA-45 user-data delete snapshots** - add capped tombstone snapshots and restore metadata for user-data deletes.
 - [ ] **RA-03 direct typed error logging** - ensure direct typed error paths log with structured context.

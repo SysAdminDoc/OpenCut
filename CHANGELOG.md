@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Plugin Uninstall Quarantine
+
+- Closed RA-43 by moving plugin uninstall through a timestamped quarantine directory instead of immediate deletion.
+- `/plugins/uninstall` now requires `confirm_name`, unloads only after quarantine succeeds, and returns restore/delete route metadata.
+- Added quarantine list, restore, and permanent-delete endpoints plus regression coverage for confirmation and restore/delete behavior.
+
 ### Fixed - Render Cache Containment
 
 - Closed RA-42 by making render-cache reads, cleanup, and downstream invalidation reject forged `index.json` output paths outside `CACHE_DIR`.

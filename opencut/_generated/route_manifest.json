@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-06T19:11:08Z",
-  "total_routes": 1529,
+  "generated_at": "2026-06-06T19:28:34Z",
+  "total_routes": 1532,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
-    "GET": 385,
+    "GET": 386,
     "PATCH": 1,
-    "POST": 1129,
+    "POST": 1131,
     "PUT": 2
   },
   "blueprints": {
@@ -671,10 +671,10 @@
       ]
     },
     "plugins": {
-      "route_count": 4,
+      "route_count": 7,
       "method_counts": {
-        "GET": 2,
-        "POST": 2
+        "GET": 3,
+        "POST": 4
       },
       "sample_rules": [
         "/plugins/install",
@@ -8490,6 +8490,30 @@
       ],
       "endpoint": "platform_infra.plugins_install",
       "blueprint": "platform_infra"
+    },
+    {
+      "rule": "/plugins/quarantine/delete",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.delete_plugin_quarantine",
+      "blueprint": "plugins"
+    },
+    {
+      "rule": "/plugins/quarantine/list",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "plugins.list_plugin_quarantine",
+      "blueprint": "plugins"
+    },
+    {
+      "rule": "/plugins/quarantine/restore",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.restore_plugin_quarantine",
+      "blueprint": "plugins"
     },
     {
       "rule": "/plugins/registry",
