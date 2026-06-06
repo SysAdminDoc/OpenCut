@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, Optional
 
-
 _SEPARATOR_RE = re.compile(r"[^a-z0-9]+")
 
 

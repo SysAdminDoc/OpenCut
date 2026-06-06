@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 from opencut.core import disk_monitor
 from opencut.security import validate_output_path, validate_path
 
-
 MIN_REQUIRED_MB = 500
 
 _OPERATION_RATIOS = {

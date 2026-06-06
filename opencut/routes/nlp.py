@@ -10,8 +10,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf
-from opencut.security import get_json_dict
+from opencut.security import get_json_dict, require_csrf
 
 try:
     from ..core.llm import LLMConfig

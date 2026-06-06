@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed - Release Smoke Ruff Gate
+
+- Restored the package Ruff release-smoke gate by applying mechanical import ordering across existing package files.
+- Rechecked route-manifest and route-collision invariants after the blueprint import-block cleanup.
+
 ### Changed - Release Full Node Runtime Pin
 
 - Closed RA-22 by setting up Node 22 before Release Full's Linux CEP panel npm gates, matching the PR Fast runtime.

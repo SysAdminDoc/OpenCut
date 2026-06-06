@@ -13,8 +13,7 @@ import tempfile
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
-from opencut.security import get_json_dict
+from opencut.security import get_json_dict, require_csrf, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
