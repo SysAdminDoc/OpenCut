@@ -51,7 +51,7 @@ The 2026-05-17 parity audit walked all 18 `ocXxx` functions in
 
 | Function | Current role | Post-CEP plan |
 |---|---|---|
-| `ocAddNativeCaptionTrack(srtJSON)` | Creates a native Premiere caption track from SRT-style segments. | Keep CEP fallback while CEP exists. Long-term target is F253 Hybrid Plugin `createCaptionTrack(sequence, srtBytes)` or an Adobe UXP `createCaptionTrack()` API. Until then, UXP keeps SRT validation, project import, manual timeline placement, and burn-in captions as the fallback paths. |
+| `ocAddNativeCaptionTrack(srtJSON)` | Creates a native Premiere caption track from SRT-style segments and reports the CEP/hybrid placement mode. | Keep CEP fallback while CEP exists. Long-term target is F253 Hybrid Plugin `createCaptionTrack(sequence, srtBytes)` or an Adobe UXP `createCaptionTrack()` API. Until then, UXP keeps SRT validation, CEP `ocAddNativeCaptionTrack` handoff, project import, manual timeline placement, and burn-in captions as the fallback paths. |
 | `ocQeReflect()` | Diagnostic probe for undocumented QE DOM methods, cached for `/system/qe-reflect`. | Do not port wholesale. Treat QE reflection as a research aid and retire it after CEP EOL. Replace real user workflows one by one with documented UXP APIs: `SequenceEditor.createRemoveItemsAction(ripple=true)` for most ripple-delete cases, `VideoFilterFactory` / `AudioFilterFactory` for effect creation, and explicit adjacent-clip recompute for advanced trim cases. |
 
 Rules for new migration work:

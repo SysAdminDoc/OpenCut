@@ -2507,8 +2507,8 @@ function updateTimelineReadiness() {
   setStatusPill("timelineSmartBinsPill", "CEP panel required", "warning", "Smart bin execution still runs through the CEP panel on this build.");
   setTextAndTitle("timelineSmartBinsValue", smartBinsStrategy, smartBinsStrategy);
 
-  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : "Choose .srt file", srtPath || "Choose an .srt file to validate for CEP/native import.");
-  setTextAndTitle("timelineSrtTrackValue", `Track ${trackIndex}`, `Track ${trackIndex} in the final CEP/native captions import flow.`);
+  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : "Choose .srt file", srtPath || "Choose an .srt file to validate before the CEP ocAddNativeCaptionTrack bridge places it.");
+  setTextAndTitle("timelineSrtTrackValue", `Track ${trackIndex}`, `Track ${trackIndex} target for the CEP ocAddNativeCaptionTrack handoff.`);
 
   const hasCuts = Array.isArray(lastCuts) && lastCuts.length > 0;
   const hasMarkers = Array.isArray(lastMarkers) && lastMarkers.length > 0;
@@ -3463,7 +3463,7 @@ function showCaptionsResult(result) {
     sessionLabel: result.srt ? "Transcript ready" : "Review ready",
     sessionState: "success",
     statusMessage: result.srt
-      ? "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to validate it for CEP or native caption import."
+      ? "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to validate it for the CEP ocAddNativeCaptionTrack handoff."
       : "Transcript ready. Copy the text, draft chapters, or run a repeat review from the same clip.",
     statusState: "success",
     statusTitle: clipPath || "Transcript ready",
@@ -4033,7 +4033,7 @@ async function runSrtImport() {
       noteTimelineAction(
         "SRT validated",
         "success",
-        `SRT validation is ready. Use the CEP or native captions flow to place ${count} caption segment${count === 1 ? "" : "s"} on track ${trackIndex}.`,
+        `SRT validation is ready. Use the CEP ocAddNativeCaptionTrack bridge action to place ${count} caption segment${count === 1 ? "" : "s"} on track ${trackIndex}.`,
         srtPath,
         `${count} caption segment${count === 1 ? "" : "s"} parsed`
       );
@@ -4915,7 +4915,7 @@ function bindEvents() {
     UIController.switchTab("timeline");
     focusControl("srtFilePath");
     UIController.setStatus("Timeline SRT prep ready.", "working");
-    UIController.showToast("Choose the saved .srt file, then validate it for CEP or native captions import.", "info");
+    UIController.showToast("Choose the saved .srt file, then validate it for the CEP ocAddNativeCaptionTrack bridge.", "info");
   });
 
   // ── Audio ──
