@@ -799,6 +799,18 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.broll_dependencies_not_installed", "data-i18n"),
     ("common.install_now", "data-i18n"),
     ("common.requires", "data-i18n"),
+    # One-hundred-thirty-fifth batch (Video Multimodal Diarization parameter shell HTML).
+    ("video.diarize_expected_speakers", "data-i18n"),
+    ("video.diarize_number_of_speakers", "data-i18n-aria-label"),
+    ("common.auto_detect", "data-i18n"),
+    ("video.diarize_face_sample_rate", "data-i18n"),
+    ("video.diarize_min_face_confidence", "data-i18n"),
+    ("video.diarize_dependencies_not_installed", "data-i18n"),
+    ("common.install_now", "data-i18n"),
+    ("common.requires", "data-i18n"),
+    ("video.diarize_stat_speakers", "data-i18n"),
+    ("video.diarize_stat_faces", "data-i18n"),
+    ("video.diarize_stat_mapped", "data-i18n"),
 )
 
 

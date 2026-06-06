@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 135
+
+- Migrated the Video Multimodal Diarization form shell to static locale hooks for speaker, sample-rate, confidence, dependency, install, Requires, and result-stat labels while preserving numeric speaker options, slider values, and package command text.
+- `client/locales/en.json` grows from 2,045 to 2,054 keys; `i18n-drift` reports 1,986 consumers, 68 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Multimodal Diarization static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 134
 
 - Migrated the Video AI B-Roll Generation form shell to static locale hooks for description/backend/seed controls, backend options, placeholder and ARIA attributes, analyze action, dependency hint, install helper copy, and Requires text while preserving backend IDs, seed attributes, and package command text.
