@@ -2803,33 +2803,33 @@
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.de_logo">Object &amp; Watermark Removal</div></div>
                         <p class="card-desc" data-i18n="video.remove_desc">Remove a logo or watermark from a specific region of your video. Draw the area to erase.</p>
                         <div class="form-group">
-                            <label for="removeMethod">Method</label>
+                            <label for="removeMethod" data-i18n="forms.method">Method</label>
                             <select id="removeMethod">
-                                <option value="delogo">Fast (good for simple logos)</option>
-                                <option value="lama">AI Quality (best for complex areas)</option>
+                                <option value="delogo" data-i18n="video.remove_method_delogo">Fast (good for simple logos)</option>
+                                <option value="lama" data-i18n="video.remove_method_lama">AI Quality (best for complex areas)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="removeX">Region (X, Y, Width, Height)</label>
+                            <label for="removeX" data-i18n="video.remove_region">Region (X, Y, Width, Height)</label>
                             <div class="region-inputs">
                                 <div class="region-field">
-                                    <span class="region-label">X</span>
-                                    <input type="number" id="removeX" value="0" min="0" aria-label="Region X coordinate">
+                                    <span class="region-label" data-i18n="video.region_x_short">X</span>
+                                    <input type="number" id="removeX" value="0" min="0" aria-label="Region X coordinate" data-i18n-aria-label="video.remove_region_x_aria">
                                 </div>
                                 <div class="region-field">
-                                    <span class="region-label">Y</span>
-                                    <input type="number" id="removeY" value="0" min="0" aria-label="Region Y coordinate">
+                                    <span class="region-label" data-i18n="video.region_y_short">Y</span>
+                                    <input type="number" id="removeY" value="0" min="0" aria-label="Region Y coordinate" data-i18n-aria-label="video.remove_region_y_aria">
                                 </div>
                                 <div class="region-field">
-                                    <span class="region-label">W</span>
-                                    <input type="number" id="removeW" value="200" min="10" aria-label="Region width">
+                                    <span class="region-label" data-i18n="video.region_w_short">W</span>
+                                    <input type="number" id="removeW" value="200" min="10" aria-label="Region width" data-i18n-aria-label="video.remove_region_width_aria">
                                 </div>
                                 <div class="region-field">
-                                    <span class="region-label">H</span>
-                                    <input type="number" id="removeH" value="50" min="10" aria-label="Region height">
+                                    <span class="region-label" data-i18n="video.region_h_short">H</span>
+                                    <input type="number" id="removeH" value="50" min="10" aria-label="Region height" data-i18n-aria-label="video.remove_region_height_aria">
                                 </div>
                             </div>
-                            <span class="hint-inline">Pixel coordinates of the area to remove</span>
+                            <span class="hint-inline" data-i18n="video.remove_region_hint">Pixel coordinates of the area to remove</span>
                         </div>
                         <button type="button" class="btn-primary" id="runRemoveBtn" disabled data-i18n="video.erase_region">Erase Region</button>
                     </section>
