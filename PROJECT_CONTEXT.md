@@ -29,6 +29,9 @@
 **Pass 273 update (no standalone research file):**
 - Closed RA-40/RA-06 by adding a shared local SQLite maintenance helper for destructive operations, returning dry-run affected-row counts, creating optional compact `VACUUM INTO` backups, and writing JSONL audit metadata for old-job cleanup, journal deletes/clears, footage-index clears, and pipeline-health purge/reset paths.
 
+**Pass 274 update (no standalone research file):**
+- Closed RA-42 by making render-cache deletion fail closed on forged `index.json` output paths: cache reads, cleanup, and downstream invalidation now require cached files to resolve under `CACHE_DIR` and match the cache-key basename before unlinking.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -49,7 +52,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **226 test_*.py files** + **2 Vitest panel test files** (9,000+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **227 test_*.py files** + **2 Vitest panel test files** (9,000+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **235** total; **17** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
