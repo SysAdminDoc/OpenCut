@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: Cycle 17 test-environment bootstrap repair guard shipped; E15 rolling i18n migration and broader Docker hardening remain open.
 - Shipped this cycle: `scripts/bootstrap_check.py --dev` now checks development/test imports, stale virtualenvs fail with a repair hint, README testing commands show the Python 3.12 `.venv` repair path, and `tests/test_bootstrap_check.py` covers the flag and missing-tooling output.
-- Verification: `.venv\Scripts\python.exe scripts\bootstrap_check.py --json --metadata-only --dev` failed as expected for missing pytest/dev tooling, `py -3.12 scripts\bootstrap_check.py --json --metadata-only --dev` passed, and `py -3.12 -m pytest -q tests/test_bootstrap_check.py` passed (11 tests).
+- Verification: `.venv\Scripts\python.exe scripts\bootstrap_check.py --json --metadata-only --dev` failed as expected for missing pytest/dev tooling, `py -3.12 scripts\bootstrap_check.py --json --metadata-only --dev` passed, `py -3.12 -m pytest -q tests/test_bootstrap_check.py` passed (11 tests), `py -3.12 scripts\release_smoke.py --only bootstrap --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (752 tests).
 
 ## Next Work
 
