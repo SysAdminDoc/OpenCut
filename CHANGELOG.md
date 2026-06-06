@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Test Environment Bootstrap
+
+- Added `scripts/bootstrap_check.py --dev` to verify pytest, pytest-cov, pytest-xdist, and Ruff before trusting a selected Python for test work.
+- Updated README testing setup with the dev bootstrap check and the `.[dev]` repair command.
+
 ### Changed - Docker Distribution Docs
 
 - Closed RA-27 by replacing the missing `docker-compose.gpu.yml` README command with `docker compose --profile gpu up opencut-server-gpu`.
