@@ -704,7 +704,7 @@ has a documented dry-run mode before removing untracked files.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| RA-41 destructive-operation plan contract | `/models/delete`, `/whisper/clear-cache`, `/plugins/uninstall`, `/cache/cleanup`, `/cache/invalidate`, `/captions/cache/clear`, `/system/temp-cleanup/sweep`, `/logs/clear`, `/presets/delete`, `/workflows/delete`, `/workflow/delete`, `/queue/clear`; tests mainly cover status codes | Advanced 2026-06-06: the original named route list plus adjacent assistant/chat/undo/search clears now have shared dry-run plans and confirm-token enforcement, with plugin deletes also requiring typed `confirm_name`; continue with worker-pool cleanup and any remaining clear/cleanup audit items. | P1 |
+| RA-41 destructive-operation plan contract | `/models/delete`, `/whisper/clear-cache`, `/plugins/uninstall`, `/cache/cleanup`, `/cache/invalidate`, `/captions/cache/clear`, `/system/temp-cleanup/sweep`, `/logs/clear`, `/presets/delete`, `/workflows/delete`, `/workflow/delete`, `/queue/clear`; tests mainly cover status codes | Closed 2026-06-06: the original named route list plus adjacent assistant/chat/undo/search/worker-pool clears now have shared dry-run plans and confirm-token enforcement, with plugin deletes also requiring typed `confirm_name`; journal clear remains covered by the local DB dry-run/backup contract. | P1 |
 | RA-42 render-cache delete containment | `opencut/core/render_cache.py` writes cached outputs under `CACHE_DIR`, but `cleanup_cache()` and `invalidate_downstream()` trust persisted `index.json` `output_path` values when calling `os.unlink()` | Closed 2026-06-06: render-cache reads, cleanup, and downstream invalidation now reject corrupted index paths unless they resolve under `CACHE_DIR` and match the expected cache-key basename, preserving outside files while dropping bad index entries. | P0 |
 | RA-43 plugin uninstall quarantine | `opencut/routes/plugins.py` validates plugin names and confines paths under `PLUGINS_DIR`, then `shutil.rmtree(plugin_dir)` removes the plugin immediately; archive notes already called out missing re-type confirmation | Closed 2026-06-06: uninstall now requires typed `confirm_name`, moves plugins into timestamped quarantine before unloading, and exposes quarantine list, restore, and permanent-delete endpoints. | P1 |
 | RA-44 model/cache clear preview | `whisper_clear_cache()` removes matching Hugging Face entries with `ignore_errors=True` and deletes whole OpenCut/Whisper cache directories; `/models/delete` removes cache files/dirs immediately after allowed-root checks | Closed 2026-06-06: Whisper cache clear and model delete now support `dry_run`/`preview` plans with exact paths, byte counts, categories, and per-path delete errors instead of silent `ignore_errors=True` wipes. | P1 |
@@ -1218,6 +1218,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 29 | Render-cache and temp cleanup confirmation plans | `opencut/core/render_cache.py`, `opencut/core/temp_cleanup.py`, `platform_infra_routes.py`, `wave_f_routes.py`, destructive-operation tests | Render-cache cleanup/invalidation and manual temp cleanup sweeps could mutate files from route calls without the shared confirmation-token contract. | Advanced RA-41 with non-mutating render-cache and temp-cleanup plans plus confirmation-token enforcement for `/cache/cleanup`, `/cache/invalidate`, and `/system/temp-cleanup/sweep`. |
 | 2026-06-06 | Cycle 30 | Plugin and user-data delete confirmation plans | `opencut/routes/plugins.py`, `settings.py`, `workflow.py`, `user_data.py`, plugin/user-data/workflow tests | Plugin uninstall/quarantine delete and tombstone-backed preset/workflow deletes still relied on typed names or restore snapshots without the shared dry-run token contract. | Advanced RA-41 with shared dry-run plans and confirmation-token enforcement for `/plugins/uninstall`, `/plugins/quarantine/delete`, `/presets/delete`, `/workflows/delete`, and `/workflow/delete`; closure scan found adjacent clear/cleanup routes for the next pass. |
 | 2026-06-06 | Cycle 31 | Adjacent state-clear confirmation plans | `opencut/routes/system.py`, `workflow_dev_routes.py`, `search.py`, `footage_index_db.py`, destructive-operation/user-data/workflow tests | Assistant dismissal clears, chat clears, undo-history clears, and search cleanup could mutate in-memory or local-index state without the shared review/confirm-token contract. | Advanced RA-41 with dry-run plans and confirmation-token enforcement for `/assistant/dismiss-clear`, `/chat/clear`, `/api/undo/clear`, and `/search/cleanup`; worker-pool cleanup remains the next process-lifecycle audit target. |
+| 2026-06-06 | Cycle 32 | Worker-pool cleanup confirmation plan | `opencut/routes/architecture_routes.py`, `tests/test_architecture.py` | Worker-pool cleanup can terminate active worker processes without a dry-run target list or confirm-token review. | Closed RA-41 by adding active-worker dry-run plans and confirmation-token enforcement to `/architecture/worker-pool/cleanup`; final scan leaves journal clear under the existing local DB dry-run/backup contract. |
 
 ### Research queries to run later
 
@@ -1238,29 +1239,29 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 32: Continue RA-41 with worker-pool cleanup and any remaining clear/cleanup route audit items not already covered by local DB dry-run/backup.
-2. Cycle 33: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 34: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 35: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 36: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 33: Resolve RA-15 optional `[all]` advisory policy.
+2. Cycle 34: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 35: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 36: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 37: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 31: Adjacent state-clear confirmation plans.
+Cycle 32: Worker-pool cleanup confirmation plan.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
 RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
-RA-45 are closed, and the bootstrap dev-check guard is in place; RA-41 now has
-shared dry-run/confirm-token helpers for the original named RA-41 endpoint list
-plus adjacent assistant/chat/undo/search state clears; the next pass should
-audit worker-pool cleanup and any remaining clear/cleanup routes not already
-covered by the local DB dry-run/backup contract before moving back to the
-remaining release-trust and product workflow specs.
+RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
+closed: shared dry-run/confirm-token helpers cover the original named
+endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
+journal clear is covered by the local DB dry-run/backup contract. Continue with
+RA-15 optional dependency advisory policy before returning to the remaining
+release-trust and product workflow specs.
 
 #### Important findings so far
 
