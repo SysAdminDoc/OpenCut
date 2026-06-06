@@ -19,7 +19,15 @@ from typing import Any, Dict
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_int,
+    verify_destructive_confirm_token,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -165,15 +173,38 @@ def route_temp_cleanup_status():
 def route_temp_cleanup_sweep():
     """Manually trigger a sweep (same logic as the periodic background pass)."""
     from opencut.core import temp_cleanup
-    from opencut.security import safe_int
 
-    data = request.get_json(silent=True) or {}
+    data = get_json_dict() if request.data else {}
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
     ttl = safe_int(
         data.get("ttl_seconds", temp_cleanup.DEFAULT_TTL),
         temp_cleanup.DEFAULT_TTL, min_val=60, max_val=86400 * 7,
     )
     try:
+        preview_report = temp_cleanup.sweep(ttl_seconds=ttl, dry_run=True)
+        preview = preview_report.to_dict()
+        plan = build_destructive_plan(
+            "temp_cleanup.sweep",
+            targets=preview["targets"],
+            metadata={
+                "route": "/system/temp-cleanup/sweep",
+                "ttl_seconds": ttl,
+                "scanned": preview["scanned"],
+                "target_count": len(preview["targets"]),
+                "estimated_reclaim_bytes": sum(int(target["bytes"]) for target in preview["targets"]),
+            },
+            reversible=False,
+        )
+        if dry_run:
+            preview["success"] = True
+            preview["destructive_plan"] = plan
+            preview["confirm_token"] = plan["confirm_token"]
+            return jsonify(preview)
+        if plan["targets"] and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         report = temp_cleanup.sweep(ttl_seconds=ttl)
-        return jsonify(report.to_dict())
+        result = report.to_dict()
+        result["destructive_plan"] = plan
+        return jsonify(result)
     except Exception as exc:  # noqa: BLE001
         return safe_error(exc, "temp_cleanup_sweep")
