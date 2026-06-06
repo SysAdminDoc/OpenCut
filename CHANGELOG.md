@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 140
+
+- Migrated the Video Chroma/Composite form shell to static locale hooks for composite modes, key colors, background/PiP/overlay paths, Browse buttons, tolerance, PiP position/scale, blend mode choices, and opacity while preserving option values, path placeholders, and slider constraints.
+- `client/locales/en.json` grows from 2,110 to 2,140 keys; `i18n-drift` reports 2,078 consumers, 62 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Chroma/Composite static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 139
 
 - Migrated the Video LUT Library form shell to static locale hooks for category filters, LUT preset choices, gallery ARIA copy, intensity title copy, auto-import copy, reference-image inputs, Browse, LUT name, and strength while preserving option values, slider constraints, placeholders, and checkbox state.
