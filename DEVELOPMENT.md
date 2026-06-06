@@ -14,9 +14,10 @@ pip install -e ".[dev]"
 
 # Install optional features as needed
 pip install -e ".[standard]"  # Common deps (whisper, opencv, etc.)
-pip install -e ".[ai]"       # AI tools (CPU)
-pip install -e ".[ai-gpu]"   # AI tools (GPU with onnxruntime-gpu)
-pip install -e ".[all]"      # Everything
+pip install -e ".[ai]"       # CPU enhancement extras
+pip install -e ".[ai-gpu]"   # GPU enhancement extras with onnxruntime-gpu
+pip install -e ".[all]"      # Release-audited convenience extras
+pip install -e ".[all,torch-stack]"  # Add Torch-backed backends explicitly
 
 # Run the server
 python -m opencut.server

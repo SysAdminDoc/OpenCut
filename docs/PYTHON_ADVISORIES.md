@@ -1,7 +1,10 @@
 # Python pip-audit advisory policy
 
-OpenCut release smoke audits both `requirements.txt` and the combined
-`pyproject[all]` optional install surface. Any Python advisory not listed here
+OpenCut release smoke audits `requirements.txt`, `requirements-lock.txt`, and
+the combined `pyproject[all]` optional install surface. The `[all]` extra is the
+release-audited convenience lane; optional stacks with unresolved upstream
+advisory or resolver conflicts stay in explicit extras such as `torch-stack`,
+`captions-whisperx`, `music`, and `enhance`. Any Python advisory not listed here
 causes `python -m opencut.tools.pip_audit_extras --json --extra all` and the
 `pip-audit` release-smoke step to fail.
 
@@ -9,16 +12,27 @@ causes `python -m opencut.tools.pip_audit_extras --json --extra all` and the
 
 | Advisory | Package | Status | Justification |
 |----------|---------|--------|---------------|
-| [CVE-2024-27763](https://github.com/advisories/GHSA-86w8-vhw6-q9qq) / GHSA-86w8-vhw6-q9qq | `basicsr` | **waived** | Pulled transitively by optional local RealESRGAN/GFPGAN enhancement paths. The upstream issue is a local BasicSR SLURM environment/scontrol execution edge case, OpenCut does not set `SLURM_NODELIST` or expose BasicSR as a network service, and no fixed BasicSR release exists. Remove this waiver when BasicSR publishes a fix or OpenCut replaces the dependency. |
-| [CVE-2026-1839](https://github.com/advisories/GHSA-69w3-r845-3855) / GHSA-69w3-r845-3855 | `transformers` | **waived** | The upstream fix is in Transformers 5.x, but the current `pyproject[all]` stack is constrained by WhisperX 3.8.5 requiring `huggingface-hub<1.0.0` while Transformers 5 requires `huggingface-hub>=1.3.0`. OpenCut does not use `transformers.Trainer` checkpoint resume, and the audited `[all]` resolution uses Torch 2.8. Remove this waiver when WhisperX supports the Transformers 5 dependency stack or Transformers 4 receives a backport. |
+| [CVE-2024-27763](https://github.com/advisories/GHSA-86w8-vhw6-q9qq) / GHSA-86w8-vhw6-q9qq | `basicsr` | **waived for explicit `torch-stack` lane** | Pulled transitively by optional local RealESRGAN/GFPGAN enhancement paths. The upstream issue is a local BasicSR SLURM environment/scontrol execution edge case, OpenCut does not set `SLURM_NODELIST` or expose BasicSR as a network service, and no fixed BasicSR release exists. The audited `[all]` extra excludes this stack. Remove this waiver when BasicSR publishes a fix or OpenCut replaces the dependency. |
+| [CVE-2026-1839](https://github.com/advisories/GHSA-69w3-r845-3855) / GHSA-69w3-r845-3855 | `transformers` | **waived for explicit `torch-stack` lane** | The upstream fix is in Transformers 5.x, but WhisperX 3.8.x requires `huggingface-hub<1.0.0` while Transformers 5 requires `huggingface-hub>=1.3.0`. OpenCut does not use `transformers.Trainer` checkpoint resume. The audited `[all]` extra excludes this stack so it can pass with zero advisories; remove this waiver when WhisperX supports the Transformers 5 dependency stack or Transformers 4 receives a backport. |
 
 To add a new entry, update both `ALLOWED_ADVISORIES` in
 `opencut/tools/pip_audit_extras.py` and this table in the same commit.
+
+## Explicit Torch stack
+
+`opencut[torch-stack]` restores the larger Torch/Transformers-backed feature
+surface for users who need WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio,
+TransNetV2, or depth models. It is not part of the default release-smoke audit
+because the live resolver still reports unwaived Torch and Transformers
+advisories. Keep those packages out of `[all]` until the dedicated
+`torch-stack` audit command below returns no unallowed findings, or until each
+remaining finding has a documented project-specific waiver.
 
 ## Operational commands
 
 ```sh
 python -m opencut.tools.pip_audit_extras --json --extra all
+python -m opencut.tools.pip_audit_extras --json --no-requirements --no-lockfile --extra torch-stack
 python scripts/release_smoke.py --json --only pip-audit
 ```
 

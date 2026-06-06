@@ -49,6 +49,12 @@ pip install -e ".[all]"
 python -m opencut.server
 ```
 
+Add `torch-stack` or narrower feature extras only when you need Torch-backed
+backends such as WhisperX diarized captioning, Demucs separation, pyannote
+diarization, RealESRGAN/GFPGAN restoration, or TransNetV2 scene detection.
+The source default keeps the audited convenience extra away from current
+Torch/Transformers advisory exposure.
+
 Then copy `extension/com.opencut.panel` to your CEP extensions folder and set `PlayerDebugMode = 1` in the registry.
 
 **Option C -- Install.bat:**
@@ -345,13 +351,22 @@ pip install opencut[standard]
 
 Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
 
-### Full (everything, ~2-5GB depending on GPU)
+### Audited convenience install (non-Torch optional stack)
 
 ```bash
 pip install opencut[all]
 ```
 
-Adds all standard deps plus: `whisperx`, `demucs`, `pyannote.audio`, `pedalboard`, `edge-tts`, `realesrgan`, `rembg`, `gfpgan`, `insightface`, `transnetv2-pytorch`, `opentimelineio`, and `otio-aaf-adapter`. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut[music]`, `opencut[enhance]`) because they hard-pin older Torch stacks.
+Adds all standard deps plus: `pedalboard`, `edge-tts`, `rembg`, `insightface`, `onnxruntime`, `auto-editor`, `opentimelineio`, and `otio-aaf-adapter`. Torch/Transformers-backed packages stay out of this release-audited lane until their advisory and resolver posture is clean.
+
+For the larger Torch-backed stack, install the explicit extra or narrower feature extras:
+
+```bash
+pip install opencut[all,torch-stack]
+pip install opencut[captions-whisperx]  # WhisperX diarized captions
+```
+
+`torch-stack` includes WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2, PyTorch, torchvision, and Transformers. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut[music]`, `opencut[enhance]`) because they hard-pin older Torch stacks.
 
 ### GPU Acceleration
 
@@ -492,7 +507,7 @@ A: Make sure the backend is running. Check that port 5679 is not blocked. The pa
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: Most AI features are optional. Install them individually or use `pip install opencut[all]`. Check the Dependency Dashboard in Settings to see what's installed. Each missing feature shows an install button in the panel.
+A: Most AI features are optional. Install them individually or use the audited `pip install opencut[all]` convenience lane. Torch-backed features use `pip install opencut[all,torch-stack]` or narrower extras such as `opencut[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed. Each missing feature shows an install button in the panel.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
