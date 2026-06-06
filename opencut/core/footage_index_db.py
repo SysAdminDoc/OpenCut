@@ -12,6 +12,7 @@ import threading
 import time
 
 from opencut.local_db_diagnostics import build_sqlite_diagnostic
+from opencut.local_db_maintenance import count_rows, prepare_destructive_result
 from opencut.local_db_migrations import migrate_user_version
 
 logger = logging.getLogger("opencut")
@@ -323,13 +324,30 @@ def get_db_diagnostics():
     return build_sqlite_diagnostic(_DB_PATH, store_name="footage_index")
 
 
-def clear_index():
+def clear_index(*, dry_run=False, backup=False, backup_dir=None):
     """Remove all entries from the index."""
+    init_db()
     conn = _get_conn()
+    affected = count_rows(conn, "footage")
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="footage_index",
+            operation="clear_index",
+            affected_rows=affected,
+            dry_run=bool(dry_run),
+            backup=bool(backup),
+            backup_dir=backup_dir,
+        )
+        if dry_run:
+            return result
     conn.execute("DELETE FROM footage")
     conn.execute("INSERT INTO footage_fts(footage_fts) VALUES ('rebuild')")
     conn.commit()
     logger.info("Footage index cleared")
+    if backup:
+        result["affected_rows"] = affected
+        return result
 
 
 def remove_missing_files():

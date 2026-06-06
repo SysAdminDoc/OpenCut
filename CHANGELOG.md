@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Local SQLite Wipe Safeguards
+
+- Closed RA-40/RA-06 by adding shared local SQLite destructive-maintenance helpers with dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
+- Journal clear/delete, old-job cleanup, SQLite footage-index clear, and pipeline-health metric reset/purge paths now expose dry-run and backup-aware store APIs without changing legacy default return values.
+- Added route support for dry-run/backup journal deletes and clears, plus dry-run/backup endpoints for the SQLite footage index and pipeline-health reset.
+
 ### Changed - Local SQLite Diagnostics
 
 - Closed RA-39/RA-08 by adding `opencut local-db-diagnostics` plus feature-area diagnostics routes for job, journal, footage-index, and pipeline-health SQLite stores.

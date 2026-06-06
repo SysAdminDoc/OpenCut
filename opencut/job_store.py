@@ -42,6 +42,7 @@ import time
 from typing import Optional
 
 from opencut.local_db_diagnostics import build_sqlite_diagnostic
+from opencut.local_db_maintenance import count_rows, prepare_destructive_result
 from opencut.local_db_migrations import migrate_user_version
 from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
@@ -428,11 +429,28 @@ def mark_interrupted():
     return count
 
 
-def cleanup_old_jobs():
+def cleanup_old_jobs(*, dry_run=False, backup=False, backup_dir=None):
     """Delete completed/errored/cancelled jobs older than COMPLETED_JOB_TTL."""
     init_db()
     conn = _get_conn()
     cutoff = time.time() - COMPLETED_JOB_TTL
+    where_clause = (
+        "status IN ('complete', 'error', 'cancelled', 'interrupted') "
+        "AND COALESCE(completed_at, created_at) < ?"
+    )
+    affected = count_rows(conn, "jobs", where_clause, (cutoff,))
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="jobs",
+            operation="cleanup_old_jobs",
+            affected_rows=affected,
+            dry_run=bool(dry_run),
+            backup=bool(backup),
+            backup_dir=backup_dir,
+        )
+        if dry_run:
+            return result
     count = conn.execute(
         "DELETE FROM jobs WHERE status IN ('complete', 'error', 'cancelled', 'interrupted') "
         "AND COALESCE(completed_at, created_at) < ?",
@@ -441,6 +459,9 @@ def cleanup_old_jobs():
     conn.commit()
     if count:
         logger.debug("Cleaned up %d old jobs from database", count)
+    if backup:
+        result["affected_rows"] = count
+        return result
     return count
 
 

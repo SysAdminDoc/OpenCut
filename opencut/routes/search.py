@@ -18,6 +18,7 @@ from opencut.jobs import (
 from opencut.security import (
     get_json_dict,
     require_csrf,
+    safe_bool,
     safe_int,
     validate_filepath,
 )
@@ -259,6 +260,24 @@ def search_db_stats():
     except Exception as e:
         logger.error("Failed to get index stats: %s", e)
         return safe_error(e, "search_db_stats")
+
+
+@search_bp.route("/search/db-index", methods=["DELETE"])
+@require_csrf
+def search_clear_db_index():
+    """Clear the SQLite footage index with optional dry-run/backup metadata."""
+    payload = request.get_json(silent=True) or {}
+    dry_run = safe_bool(request.args.get("dry_run", payload.get("dry_run", False)), False)
+    backup = safe_bool(request.args.get("backup", payload.get("backup", False)), False)
+    try:
+        from opencut.core.footage_index_db import clear_index
+        result = clear_index(dry_run=dry_run, backup=backup)
+        if isinstance(result, dict):
+            return jsonify(result)
+        return jsonify({"success": True})
+    except Exception as e:
+        logger.error("Failed to clear DB index: %s", e)
+        return safe_error(e, "search_clear_db_index")
 
 
 @search_bp.route("/search/db-diagnostics", methods=["GET"])
