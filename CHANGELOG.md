@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 148
+
+- Migrated the Video Object and Watermark Removal form shell to static locale hooks for method, method choices, region label, coordinate labels, coordinate ARIA labels, and region hint while preserving method values and numeric defaults.
+- `client/locales/en.json` grows from 2,227 to 2,239 keys; `i18n-drift` reports 2,181 consumers, 58 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Object and Watermark Removal static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 147
 
 - Migrated the Video Color Correction form shell to static locale hooks for exposure, contrast, saturation, temperature, shadows, and highlights while preserving slider ranges, defaults, and step values.

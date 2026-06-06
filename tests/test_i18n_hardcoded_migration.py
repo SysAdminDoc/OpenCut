@@ -1034,6 +1034,20 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.color_temperature", "data-i18n"),
     ("video.color_shadows", "data-i18n"),
     ("video.color_highlights", "data-i18n"),
+    # One-hundred-forty-eighth batch (Video Object and Watermark Removal parameter shell HTML).
+    ("forms.method", "data-i18n"),
+    ("video.remove_method_delogo", "data-i18n"),
+    ("video.remove_method_lama", "data-i18n"),
+    ("video.remove_region", "data-i18n"),
+    ("video.region_x_short", "data-i18n"),
+    ("video.remove_region_x_aria", "data-i18n-aria-label"),
+    ("video.region_y_short", "data-i18n"),
+    ("video.remove_region_y_aria", "data-i18n-aria-label"),
+    ("video.region_w_short", "data-i18n"),
+    ("video.remove_region_width_aria", "data-i18n-aria-label"),
+    ("video.region_h_short", "data-i18n"),
+    ("video.remove_region_height_aria", "data-i18n-aria-label"),
+    ("video.remove_region_hint", "data-i18n"),
 )
 
 
