@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-41 advanced; E15 rolling i18n migration, remaining destructive-route hardening, and Docker hardening remain open.
 - Shipped this cycle: shared destructive dry-run plan and confirm-token helpers now protect `/queue/clear`, `/logs/clear`, `/captions/cache/clear`, `/whisper/clear-cache`, and `/models/delete` before mutation.
-- Verification: focused destructive-operation plan/CSRF/cache pytest passed (19 tests), Ruff passed for the touched Python files, `py -3.12 scripts\sync_badges.py --check` passed, `py -3.12 scripts\check_doc_sizes.py --check` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed, and `rtk git diff --check` passed.
+- Verification: focused destructive-operation plan/CSRF/cache pytest passed (19 tests), Ruff passed for the touched Python files, generated route/API-alias/feature-readiness/MCP manifests passed `--check`, `py -3.12 scripts\sync_badges.py --check` passed, `py -3.12 scripts\check_doc_sizes.py --check` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (753 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
