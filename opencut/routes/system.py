@@ -79,6 +79,82 @@ _MODELS_CACHE_TTL = 300  # 5 minutes
 _server_start_time = time.time()
 
 
+def _path_size_bytes(path: str) -> tuple[int, list[str]]:
+    """Return recursive size and non-fatal read errors for a file or directory."""
+    errors: list[str] = []
+    if os.path.isfile(path):
+        try:
+            return os.path.getsize(path), errors
+        except OSError as exc:
+            return 0, [f"{path}: {exc}"]
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for filename in files:
+            item = os.path.join(root, filename)
+            try:
+                total += os.path.getsize(item)
+            except OSError as exc:
+                errors.append(f"{item}: {exc}")
+    return total, errors
+
+
+def _delete_cache_target(path: str) -> tuple[bool, str | None]:
+    """Delete one planned cache target and return a per-path error when it fails."""
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        elif os.path.isfile(path):
+            os.remove(path)
+        else:
+            return False, f"{path}: path not found"
+    except OSError as exc:
+        return False, f"{path}: {exc}"
+    return True, None
+
+
+def _cache_plan_entry(path: str, *, category: str) -> dict:
+    size, errors = _path_size_bytes(path)
+    entry = {
+        "path": path,
+        "category": category,
+        "type": "directory" if os.path.isdir(path) else "file",
+        "bytes": size,
+    }
+    if errors:
+        entry["errors"] = errors
+    return entry
+
+
+def _build_whisper_cache_plan() -> dict:
+    """Enumerate Whisper cache targets without deleting them."""
+    entries: list[dict] = []
+    errors: list[str] = []
+    cache_paths = [
+        ("huggingface-whisper", os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")),
+        ("whisper-cache", os.path.join(os.path.expanduser("~"), ".cache", "whisper")),
+        ("opencut-models", os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models")),
+    ]
+    for category, cache_dir in cache_paths:
+        if not cache_dir or not os.path.exists(cache_dir):
+            continue
+        if category == "huggingface-whisper":
+            try:
+                for item in os.listdir(cache_dir):
+                    if "whisper" in item.lower():
+                        entries.append(_cache_plan_entry(os.path.join(cache_dir, item), category=category))
+            except OSError as exc:
+                errors.append(f"{cache_dir}: {exc}")
+        else:
+            entries.append(_cache_plan_entry(cache_dir, category=category))
+    for entry in entries:
+        errors.extend(entry.get("errors", []))
+    return {
+        "entries": entries,
+        "total_bytes": sum(int(entry.get("bytes", 0)) for entry in entries),
+        "errors": errors,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Availability Helpers (local to this module)
 # ---------------------------------------------------------------------------
@@ -1435,37 +1511,35 @@ def whisper_settings():
 @require_csrf
 def whisper_clear_cache():
     """Clear downloaded Whisper model cache."""
+    data = get_json_dict() if request.data else {}
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    plan = _build_whisper_cache_plan()
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "plan": plan["entries"],
+            "total_bytes": plan["total_bytes"],
+            "cleared": [],
+            "errors": plan["errors"],
+            "message": f"Previewed {len(plan['entries'])} cache location(s)",
+        })
+
     cleared = []
-    errors = []
-
-    # Common cache locations
-    cache_paths = [
-        os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-        os.path.join(os.path.expanduser("~"), ".cache", "whisper"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models"),
-    ]
-
-    for cache_dir in cache_paths:
-        if not cache_dir or not os.path.exists(cache_dir):
-            continue
-
-        try:
-            # For huggingface, only remove whisper-related models
-            if "huggingface" in cache_dir:
-                for item in os.listdir(cache_dir):
-                    if "whisper" in item.lower():
-                        item_path = os.path.join(cache_dir, item)
-                        shutil.rmtree(item_path, ignore_errors=True)
-                        cleared.append(item_path)
-            else:
-                # Remove entire directory
-                shutil.rmtree(cache_dir, ignore_errors=True)
-                cleared.append(cache_dir)
-        except Exception as e:
-            errors.append(f"{cache_dir}: {e}")
+    errors = list(plan["errors"])
+    for entry in plan["entries"]:
+        path = str(entry.get("path", ""))
+        deleted, error = _delete_cache_target(path)
+        if deleted:
+            cleared.append(path)
+        elif error:
+            errors.append(error)
 
     return jsonify({
         "success": len(errors) == 0,
+        "dry_run": False,
+        "plan": plan["entries"],
+        "total_bytes": plan["total_bytes"],
         "cleared": cleared,
         "errors": errors,
         "message": f"Cleared {len(cleared)} cache location(s)"
@@ -1820,18 +1894,48 @@ def delete_model():
         allowed_roots.append(WHISPER_MODELS_DIR)
     if not is_path_within_any(path, allowed_roots):
         return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
+    if not os.path.isdir(path) and not os.path.isfile(path):
+        return jsonify({"error": "Path not found"}), 404
+
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    plan_entry = _cache_plan_entry(path, category="model-cache")
+    plan = [plan_entry]
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "plan": plan,
+            "total_bytes": plan_entry["bytes"],
+            "deleted": [],
+            "errors": plan_entry.get("errors", []),
+        })
+
+    deleted, delete_error = _delete_cache_target(path)
+    errors = list(plan_entry.get("errors", []))
+    if delete_error:
+        errors.append(delete_error)
     try:
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        elif os.path.isfile(path):
-            os.remove(path)
-        else:
-            return jsonify({"error": "Path not found"}), 404
+        if errors or not deleted:
+            return jsonify({
+                "success": False,
+                "dry_run": False,
+                "plan": plan,
+                "total_bytes": plan_entry["bytes"],
+                "deleted": [],
+                "errors": errors,
+            }), 500
         # Invalidate models cache after deletion
         with _models_cache_lock:
             _models_cache["data"] = None
             _models_cache["ts"] = 0
-        return jsonify({"success": True})
+        return jsonify({
+            "success": True,
+            "dry_run": False,
+            "plan": plan,
+            "total_bytes": plan_entry["bytes"],
+            "deleted": [path],
+            "errors": errors,
+        })
     except Exception as e:
         return safe_error(e, "delete_model")
 

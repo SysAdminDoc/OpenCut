@@ -479,7 +479,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-9,100+ estimated tests across 228 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+9,100+ estimated tests across 229 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -540,7 +540,7 @@ extension/
     main.js          # UXP panel (~6,014 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (9,100+ estimated tests, 228 root test files)
+tests/               # pytest test suite (9,100+ estimated tests, 229 root test files)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking
