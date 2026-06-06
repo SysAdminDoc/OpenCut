@@ -3,8 +3,8 @@ Generate a CycloneDX 1.5 SBOM for the OpenCut repository.
 
 Reads dependency declarations from ``pyproject.toml`` +
 ``requirements.txt`` plus OpenCut model-card metadata and emits a
-CycloneDX JSON document at ``dist/opencut-sbom.cyclonedx.json`` (or XML
-with ``--format xml``).
+declared-dependency CycloneDX JSON document at
+``dist/opencut-declared-sbom.cyclonedx.json`` (or XML with ``--format xml``).
 
 Does **not** walk installed site-packages — the output reflects the
 repository's *declared* dependency surface, which is what downstream
@@ -37,6 +37,11 @@ from typing import Dict, Iterable, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+SBOM_BASENAME = "opencut-declared-sbom.cyclonedx"
+SBOM_FIDELITY = "declared-only"
+SBOM_SOURCE_LABEL = "pyproject.toml, requirements.txt, opencut.model_cards"
+SBOM_EXCLUDES_LABEL = "installed transitive packages and requirements-lock.txt pins"
+SBOM_AUDIT_LABEL = "requirements.txt, requirements-lock.txt, pyproject[all] via opencut.tools.pip_audit_extras"
 
 
 def _read_file(path: str) -> str:
@@ -366,6 +371,12 @@ def build_sbom() -> Dict:
                 },
             ],
             "component": root_component,
+            "properties": [
+                {"name": "opencut:sbom:fidelity", "value": SBOM_FIDELITY},
+                {"name": "opencut:sbom:sources", "value": SBOM_SOURCE_LABEL},
+                {"name": "opencut:sbom:excludes", "value": SBOM_EXCLUDES_LABEL},
+                {"name": "opencut:sbom:vulnerability-audit-targets", "value": SBOM_AUDIT_LABEL},
+            ],
         },
         "components": components,
         "dependencies": _dependency_graph(root_component["bom-ref"], components),
@@ -392,6 +403,11 @@ def _to_xml(bom: Dict) -> str:
     meta = SubElement(root, "metadata")
     ts = SubElement(meta, "timestamp")
     ts.text = bom["metadata"]["timestamp"]
+    if bom["metadata"].get("properties"):
+        props_el = SubElement(meta, "properties")
+        for prop in bom["metadata"]["properties"]:
+            prop_el = SubElement(props_el, "property", {"name": prop.get("name", "")})
+            prop_el.text = str(prop.get("value", ""))
     rc = bom["metadata"]["component"]
     comp = SubElement(
         meta,
@@ -458,7 +474,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--output", default="",
-        help="Output path. Default: dist/opencut-sbom.cyclonedx.{json,xml}",
+        help=f"Output path. Default: dist/{SBOM_BASENAME}.{{json,xml}}",
     )
     args = parser.parse_args(argv)
 
@@ -470,7 +486,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         dist_dir = os.path.join(REPO_ROOT, "dist")
         os.makedirs(dist_dir, exist_ok=True)
         suffix = "json" if args.format == "json" else "xml"
-        out_path = os.path.join(dist_dir, f"opencut-sbom.cyclonedx.{suffix}")
+        out_path = os.path.join(dist_dir, f"{SBOM_BASENAME}.{suffix}")
 
     if args.format == "json":
         with open(out_path, "w", encoding="utf-8") as f:

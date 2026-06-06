@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Declared SBOM Fidelity
+
+- Closed RA-35 by renaming the release SBOM path and artifact to `opencut-declared-sbom.cyclonedx.json` / `OpenCut-Declared-Dependency-SBOM-CycloneDX`.
+- Added CycloneDX metadata properties that mark the SBOM as `declared-only`, name its declaration sources, and point vulnerability evidence to the separate pip-audit targets including `requirements-lock.txt`.
+- Updated release workflow, SECURITY.md, and SBOM tests so the old generic release SBOM name cannot return without an explicit contract change.
+
 ### Changed - README Count Drift Gate
 
 - Closed RA-28 by extending `scripts/check_doc_sizes.py` to validate README route, module, blueprint, panel line-count, and root test-file claims against generated manifests and the live filesystem.

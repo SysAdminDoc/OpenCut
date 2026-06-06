@@ -111,10 +111,14 @@ render a "Authentication required" hint.
 
 ## Software Bill of Materials (SBOM)
 
-Generate a CycloneDX SBOM from the pinned dependencies:
+Generate a declared-dependency CycloneDX SBOM from `pyproject.toml`,
+`requirements.txt`, and OpenCut model-card metadata:
 
 ```bash
 python scripts/sbom.py
 ```
 
-The script writes `dist/opencut-sbom.cyclonedx.json` (or `.xml` with `--format xml`).
+The script writes `dist/opencut-declared-sbom.cyclonedx.json` (or `.xml` with
+`--format xml`) and marks the CycloneDX metadata as `declared-only`. The
+committed `requirements-lock.txt` is audited separately by the pip-audit release
+gate; it is not presented as a resolved installed-package SBOM inventory.
