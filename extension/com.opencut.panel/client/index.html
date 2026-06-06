@@ -2737,31 +2737,31 @@
                         <p class="card-desc" data-i18n="video.merge_desc">Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.</p>
 
                         <div class="form-group">
-                            <label id="mergeFilesLabel">Merge Files</label>
+                            <label id="mergeFilesLabel" data-i18n="video.merge_files">Merge Files</label>
                             <div class="merge-file-list" id="mergeFileList" role="group" aria-labelledby="mergeFilesLabel">
-                                <div class="hint">Drag clips here or use the buttons below to add files.</div>
+                                <div class="hint" data-i18n="video.merge_file_hint">Drag clips here or use the buttons below to add files.</div>
                             </div>
                             <div class="btn-row gap-xs mt-xs">
-                                <button type="button" class="btn-sm btn-secondary" id="mergeAddCurrentBtn">Add Current Clip</button>
-                                <button type="button" class="btn-sm btn-secondary" id="mergeAddAllBtn">Add All Project Media</button>
-                                <button type="button" class="btn-sm btn-ghost" id="mergeClearBtn">Clear</button>
+                                <button type="button" class="btn-sm btn-secondary" id="mergeAddCurrentBtn" data-i18n="video.add_current_clip">Add Current Clip</button>
+                                <button type="button" class="btn-sm btn-secondary" id="mergeAddAllBtn" data-i18n="video.add_all_project_media">Add All Project Media</button>
+                                <button type="button" class="btn-sm btn-ghost" id="mergeClearBtn" data-i18n="common.clear">Clear</button>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="mergeMode">Mode</label>
+                            <label for="mergeMode" data-i18n="forms.mode">Mode</label>
                             <select id="mergeMode">
-                                <option value="concat_demux">Fast (same format clips)</option>
-                                <option value="concat_filter">Quality (mixed formats, slower)</option>
+                                <option value="concat_demux" data-i18n="video.merge_mode_fast">Fast (same format clips)</option>
+                                <option value="concat_filter" data-i18n="video.merge_mode_quality">Quality (mixed formats, slower)</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="mergeQuality">Quality</label>
+                            <label for="mergeQuality" data-i18n="forms.quality">Quality</label>
                             <select id="mergeQuality">
-                                <option value="high" selected>High (CRF 18)</option>
-                                <option value="medium">Medium (CRF 23)</option>
-                                <option value="low">Low (CRF 28)</option>
+                                <option value="high" selected data-i18n="video.quality_high_crf18">High (CRF 18)</option>
+                                <option value="medium" data-i18n="video.quality_medium_crf23">Medium (CRF 23)</option>
+                                <option value="low" data-i18n="video.quality_low_crf28">Low (CRF 28)</option>
                             </select>
                         </div>
 
