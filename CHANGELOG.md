@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Caption Round-Trip Sidecars
+
+- Advanced RA-09 by closing RA-46 with versioned `.opencut-captions.json` sidecars for caption exports.
+- Added sidecar-aware `/timeline/srt-to-captions` metadata preservation while explicitly warning when SRT-only parsing is lossy.
+
 ### Changed - CEP i18n Migration Batch 154
 
 - Migrated the Export Workflow Presets static shell to locale hooks for preset/library summaries, custom workflow draft/saved status, workflow name placeholder, step selector options, and load/save/run/delete controls.

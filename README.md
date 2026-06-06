@@ -290,7 +290,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
 |  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,534 API routes     |
-|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  599 core modules     |
+|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  600 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
             |                                            |
@@ -545,7 +545,7 @@ A: Go to Settings > AI Engine Preferences. Each feature domain (silence, transcr
 ```
 opencut/
   server.py          # Flask app factory + startup
-  core/              # 599 processing modules (silence, captions, audio, video, AI, VR, dubbing)
+  core/              # 600 processing modules (silence, captions, audio, video, AI, VR, dubbing)
   routes/            # 105 route modules / 107 manifest blueprints
   export/            # Premiere XML, SRT, VTT, ASS, OTIO exporters
   utils/             # Media probing, config dataclasses
