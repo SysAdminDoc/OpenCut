@@ -14,10 +14,37 @@ Every error carries:
 import logging
 import os
 
-from flask import jsonify, request
+from flask import g, has_request_context, jsonify, request
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound
 
 logger = logging.getLogger("opencut")
+
+
+def _current_request_id() -> str:
+    """Return the active request ID when request-correlation middleware is present."""
+    try:
+        if has_request_context():
+            rid = getattr(g, "request_id", "") or ""
+            if rid:
+                return str(rid)
+    except RuntimeError:
+        pass
+    try:
+        from opencut.core.request_correlation import get_request_id
+
+        return get_request_id()
+    except Exception:  # noqa: BLE001 - error rendering must stay best-effort
+        return ""
+
+
+def _attach_request_id(body: dict) -> dict:
+    request_id = _current_request_id()
+    if not request_id or body.get("request_id"):
+        return body
+    enriched = dict(body)
+    enriched["request_id"] = request_id
+    return enriched
+
 
 # ---------------------------------------------------------------------------
 # Base exception
@@ -41,7 +68,7 @@ class OpenCutError(Exception):
         }
         if self.suggestion:
             body["suggestion"] = self.suggestion
-        return jsonify(body), self.status
+        return jsonify(_attach_request_id(body)), self.status
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +92,7 @@ def error_response(code: str, message: str, status: int = 400,
         body["suggestion"] = suggestion
     if detail:
         body["detail"] = detail
-    return jsonify(body), status
+    return jsonify(_attach_request_id(body)), status
 
 
 # ---------------------------------------------------------------------------
@@ -330,45 +357,51 @@ def register_error_handlers(app):
 
     @app.errorhandler(TooManyJobsError)
     def handle_too_many_jobs(e):
-        return jsonify({
-            "error": str(e),
-            "code": "TOO_MANY_JOBS",
-            "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
-        }), 429
+        return error_response(
+            "TOO_MANY_JOBS",
+            str(e),
+            status=429,
+            suggestion="Wait for a job to finish or cancel one from the processing bar.",
+        )
 
     @app.errorhandler(BadRequest)
     def handle_bad_request(e):
         description = getattr(e, "description", "") or ""
         if "JSON body must be an object" in description:
-            return jsonify({
-                "error": "JSON body must be an object.",
-                "code": "INVALID_INPUT",
-                "suggestion": "Send a top-level JSON object in the request body.",
-            }), 400
+            return error_response(
+                "INVALID_INPUT",
+                "JSON body must be an object.",
+                status=400,
+                suggestion="Send a top-level JSON object in the request body.",
+            )
         if request.is_json or request.mimetype == "application/json":
-            return jsonify({
-                "error": "Invalid JSON request body.",
-                "code": "INVALID_JSON",
-                "suggestion": "Fix malformed JSON or send a top-level JSON object, then retry.",
-            }), 400
-        return jsonify({
-            "error": "Bad request.",
-            "code": "BAD_REQUEST",
-            "suggestion": getattr(e, "description", "") or "Check the request parameters and try again.",
-        }), 400
+            return error_response(
+                "INVALID_JSON",
+                "Invalid JSON request body.",
+                status=400,
+                suggestion="Fix malformed JSON or send a top-level JSON object, then retry.",
+            )
+        return error_response(
+            "BAD_REQUEST",
+            "Bad request.",
+            status=400,
+            suggestion=getattr(e, "description", "") or "Check the request parameters and try again.",
+        )
 
     @app.errorhandler(NotFound)
     def handle_not_found(e):
-        return jsonify({
-            "error": "Endpoint not found.",
-            "code": "NOT_FOUND",
-            "suggestion": "Check the URL or update the client to a supported endpoint.",
-        }), 404
+        return error_response(
+            "NOT_FOUND",
+            "Endpoint not found.",
+            status=404,
+            suggestion="Check the URL or update the client to a supported endpoint.",
+        )
 
     @app.errorhandler(MethodNotAllowed)
     def handle_method_not_allowed(e):
-        return jsonify({
-            "error": "Method not allowed for this endpoint.",
-            "code": "METHOD_NOT_ALLOWED",
-            "suggestion": "Use the HTTP method documented for this endpoint.",
-        }), 405
+        return error_response(
+            "METHOD_NOT_ALLOWED",
+            "Method not allowed for this endpoint.",
+            status=405,
+            suggestion="Use the HTTP method documented for this endpoint.",
+        )
