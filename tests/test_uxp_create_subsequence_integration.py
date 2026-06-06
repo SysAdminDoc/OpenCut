@@ -19,8 +19,8 @@ def test_f254_beta_snapshot_still_tracks_create_subsequence_version():
     data = json.loads(VERSIONS.read_text(encoding="utf-8"))
 
     assert data["package"] == "@adobe/premierepro"
-    assert data["dist_tags"]["beta"] == "26.3.0-beta.67"
-    assert "26.3.0-beta.67" in data["tracked_versions"]
+    assert data["dist_tags"]["beta"] == "26.3.0-beta.85"
+    assert "26.3.0-beta.85" in data["tracked_versions"]
 
 
 def test_f254_uxp_bridge_sets_range_before_creating_subsequence():
