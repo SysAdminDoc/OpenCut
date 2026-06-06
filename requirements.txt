@@ -3,23 +3,23 @@
 # For GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # === CORE (required) ===
-click>=8.0
-rich>=13.0
-flask>=3.0
+click>=8.0,<9
+rich>=13.0,<14
+flask>=3.0,<4
 flask-cors>=6.0,<7
 python-json-logger>=2.0,<3
 psutil>=5.9
 
 # === STANDARD (recommended) ===
-faster-whisper>=1.0
+faster-whisper>=1.1,<2
 opencv-python-headless>=4.13,<5
 Pillow>=12.2,<13
 numpy>=1.24
-librosa>=0.10
+librosa>=0.10,<1
 # pydub retired in F123; OpenCut does not import it and keeps an optional
 # audioop-lts compatibility shim for downstream plugins that install pydub.
-noisereduce>=3.0
-scenedetect[opencv]>=0.6
+noisereduce>=3.0,<4
+scenedetect[opencv]>=0.6,<1
 
 # === AUDIO (optional) ===
 # demucs>=4.0              # Stem separation (~1.5GB with models)

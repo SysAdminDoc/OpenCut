@@ -1,6 +1,6 @@
-from pathlib import Path
-
+import re
 import tomllib
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
@@ -17,6 +17,34 @@ def _dep_names(dependencies):
         name = dep.split("[", 1)[0].split(">", 1)[0].split("<", 1)[0].split("=", 1)[0].strip().lower()
         names[name] = dep
     return names
+
+
+def _active_requirements_txt() -> set[str]:
+    requirements = set()
+    for line in (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines():
+        requirement = line.strip()
+        if requirement and not requirement.startswith("#"):
+            requirements.add(requirement)
+    return requirements
+
+
+def _python_floor_target(requires_python: str) -> str:
+    match = re.fullmatch(r">=(\d+)\.(\d+)", requires_python)
+    assert match, f"unsupported requires-python floor: {requires_python}"
+    major, minor = match.groups()
+    return f"py{major}{minor}"
+
+
+def _classifier_versions(classifiers: list[str]) -> set[str]:
+    prefix = "Programming Language :: Python :: "
+    versions = set()
+    for classifier in classifiers:
+        if not classifier.startswith(prefix):
+            continue
+        suffix = classifier.removeprefix(prefix)
+        if re.fullmatch(r"\d+\.\d+", suffix):
+            versions.add(suffix)
+    return versions
 
 
 def test_deep_translator_removed_from_install_surfaces():
@@ -46,6 +74,17 @@ def test_python_floor_tracks_security_dependency_floor():
     assert "Programming Language :: Python :: 3.9" not in classifiers
     assert "Programming Language :: Python :: 3.10" not in classifiers
     assert "Programming Language :: Python :: 3.11" in classifiers
+
+
+def test_ruff_target_tracks_python_floor():
+    data = _pyproject()
+    project = data["project"]
+    floor_target = _python_floor_target(project["requires-python"])
+    advertised_versions = _classifier_versions(project["classifiers"])
+
+    assert data["tool"]["ruff"]["target-version"] == floor_target
+    assert "3.11" in advertised_versions
+    assert all(tuple(map(int, version.split("."))) >= (3, 11) for version in advertised_versions)
 
 
 def test_python_313_classifier_requires_ci_lane():
@@ -108,3 +147,11 @@ def test_requirements_txt_matches_security_floor():
     for needle in required:
         assert needle in text
     assert "pydub>=0.25" not in text
+
+
+def test_requirements_txt_matches_core_and_standard_pyproject_deps():
+    project = _pyproject()["project"]
+    expected = set(project["dependencies"])
+    expected.update(project["optional-dependencies"]["standard"])
+
+    assert expected <= _active_requirements_txt()

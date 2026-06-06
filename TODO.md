@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-03 direct typed error logging pass.
+Last synced: 2026-06-06 during the RA-01/RA-02 dependency surface alignment pass.
 
 ## Execution Order
 
@@ -45,8 +45,8 @@ Last synced: 2026-06-06 during the RA-03 direct typed error logging pass.
 - [x] **RA-44 model/cache clear preview** - Whisper cache clear and model delete now preview exact paths/bytes and report per-path deletion errors.
 - [x] **RA-45 user-data delete snapshots** - user-data deletes/replacements now write capped tombstone snapshots with list/restore metadata.
 - [x] **RA-03 direct typed error logging** - direct typed error responses now log code, status, request ID, method, path, and typed-error context fields.
-- [ ] **RA-01 Ruff target-version alignment** - make the lint target explicit.
-- [ ] **RA-02 requirements/pyproject alignment** - keep dependency metadata synchronized.
+- [x] **RA-01 Ruff target-version alignment** - Ruff now targets the declared Python 3.11 floor, with a dependency-surface guard for drift.
+- [x] **RA-02 requirements/pyproject alignment** - `requirements.txt` core/standard bounds now match `pyproject.toml`, with a guard for overlap drift.
 - [ ] **RA-09 timeline-native captions** - research and implement next timeline-native caption bridge.
 - [ ] **RA-10 magic clips macro** - research and implement the next operator-facing macro layer.
 - [ ] **RA-11 UXP least-privilege filesystem** - tighten UXP filesystem permission posture.
