@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Release Full Node Runtime Pin
+
+- Closed RA-22 by setting up Node 22 before Release Full's Linux CEP panel npm gates, matching the PR Fast runtime.
+- Added a workflow regression test that keeps Release Full and PR Fast panel runtime pins aligned.
+
 ### Changed - Docker Runtime Parity
 
 - Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping WebSocket 5680 and MCP 5681 sidecars opt-in, and guarding Dockerfile/Compose/README port parity.

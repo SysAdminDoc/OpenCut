@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-26 Docker runtime parity pass.
+Last synced: 2026-06-06 during the RA-22 Release Full Node pin pass.
 
 ## Execution Order
 
@@ -22,7 +22,7 @@ Last synced: 2026-06-06 during the RA-26 Docker runtime parity pass.
 - [x] **RA-19 UXP clipboard permission** - live and WebView manifests now declare the required clipboard permission, and UXP output copy uses a shared fallback helper.
 - [x] **RA-20 UXP confirmation guard** - search-index clearing now uses an inline second-click panel confirmation and static tests block raw UXP alert/prompt/confirm calls.
 - [ ] **RA-21 Python 3.13 classifier proof** - prove advertised Python 3.13 support with CI coverage or retract the classifier until it is tested.
-- [ ] **RA-22 Release Full Node pin** - pin the CEP panel Node runtime in Release Full to match PR Fast before trusting npm gates as release evidence.
+- [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [ ] **RA-23 GitHub Actions SHA pins** - pin workflow action references to full-length SHAs and guard against mutable action tags.
 - [ ] **RA-24 Release Full token permissions** - scope Release Full `GITHUB_TOKEN` permissions by job so only release uploads receive write access.
 - [x] **RA-35 release SBOM fidelity** - current release SBOM is explicitly labeled declared-only in its filename, artifact name, metadata, docs, and tests while lockfile vulnerability evidence remains in pip-audit.
