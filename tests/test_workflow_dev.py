@@ -819,8 +819,21 @@ class TestUndoRoutes:
             "operation": "x",
             "session_id": "clear_route",
         }), headers=csrf_headers(csrf_token))
+        rejected = client.post("/api/undo/clear", data=json.dumps({
+            "session_id": "clear_route",
+        }), headers=csrf_headers(csrf_token))
+        assert rejected.status_code == 409
+
+        preview = client.post("/api/undo/clear", data=json.dumps({
+            "session_id": "clear_route",
+            "dry_run": True,
+        }), headers=csrf_headers(csrf_token))
+        assert preview.status_code == 200
+        token = preview.get_json()["confirm_token"]
+
         resp = client.post("/api/undo/clear", data=json.dumps({
             "session_id": "clear_route",
+            "confirm_token": token,
         }), headers=csrf_headers(csrf_token))
         assert resp.status_code == 200
         data = resp.get_json()

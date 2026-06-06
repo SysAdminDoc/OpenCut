@@ -276,3 +276,112 @@ def test_temp_cleanup_sweep_requires_confirm_token(client, csrf_token, monkeypat
     assert confirmed.get_json()["bytes_reclaimed"] > 0
     assert not old_file.exists()
     assert not old_dir.exists()
+
+
+def test_chat_clear_requires_confirm_token_when_session_has_history(client, csrf_token):
+    from opencut.core import chat_editor
+
+    session = chat_editor.get_or_create_session("confirm-chat")
+    session.history[:] = [chat_editor.ChatMessage(role="user", content="hello")]
+
+    preview = client.post(
+        "/chat/clear",
+        json={"session_id": "confirm-chat", "dry_run": True},
+        headers=_headers(csrf_token),
+    )
+    preview_data = preview.get_json()
+
+    assert preview.status_code == 200
+    assert preview_data["would_clear"] == 1
+
+    missing_token = client.post(
+        "/chat/clear",
+        json={"session_id": "confirm-chat"},
+        headers=_headers(csrf_token),
+    )
+    assert missing_token.status_code == 409
+    assert any(
+        item["session_id"] == "confirm-chat" and item["message_count"] == 1
+        for item in chat_editor.list_sessions()
+    )
+
+    confirmed = client.post(
+        "/chat/clear",
+        json={"session_id": "confirm-chat", "confirm_token": preview_data["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert confirmed.status_code == 200
+    assert all(item["session_id"] != "confirm-chat" for item in chat_editor.list_sessions())
+
+
+def test_search_cleanup_requires_confirm_token_for_missing_files(client, csrf_token, monkeypatch, tmp_path):
+    from opencut.core import footage_index_db
+
+    footage_index_db.close_all_connections()
+    monkeypatch.setattr(footage_index_db, "_DB_PATH", str(tmp_path / "footage_index.db"))
+    footage_index_db.init_db()
+    missing_file = tmp_path / "missing.mp4"
+    footage_index_db.index_file(str(missing_file), "missing transcript")
+
+    preview = client.post(
+        "/search/cleanup",
+        json={"dry_run": True},
+        headers=_headers(csrf_token),
+    )
+    preview_data = preview.get_json()
+
+    assert preview.status_code == 200
+    assert preview_data["would_remove"] == 1
+    assert footage_index_db.get_stats()["total_files"] == 1
+
+    missing_token = client.post("/search/cleanup", json={}, headers=_headers(csrf_token))
+    assert missing_token.status_code == 409
+    assert missing_token.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
+
+    confirmed = client.post(
+        "/search/cleanup",
+        json={"confirm_token": preview_data["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert confirmed.status_code == 200
+    assert confirmed.get_json()["removed"] == 1
+    assert footage_index_db.get_stats()["total_files"] == 0
+
+
+def test_chat_clear_requires_confirm_token(client, csrf_token):
+    from opencut.core.chat_editor import get_or_create_session, list_sessions
+
+    session = get_or_create_session("destructive-chat")
+    session.add_message("user", "hello")
+
+    preview = client.post(
+        "/chat/clear",
+        json={"session_id": "destructive-chat", "dry_run": True},
+        headers=_headers(csrf_token),
+    )
+    preview_data = preview.get_json()
+
+    assert preview.status_code == 200
+    assert preview_data["dry_run"] is True
+    assert preview_data["would_clear"] == 1
+    assert preview_data["confirm_token"]
+
+    missing_token = client.post(
+        "/chat/clear",
+        json={"session_id": "destructive-chat"},
+        headers=_headers(csrf_token),
+    )
+    assert missing_token.status_code == 409
+    assert missing_token.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
+    assert any(item["session_id"] == "destructive-chat" for item in list_sessions())
+
+    confirmed = client.post(
+        "/chat/clear",
+        json={"session_id": "destructive-chat", "confirm_token": preview_data["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+
+    assert confirmed.status_code == 200
+    assert not any(item["session_id"] == "destructive-chat" for item in list_sessions())

@@ -226,7 +226,7 @@ class TestChatRoutes:
         assert resp.status_code in (200, 400)
 
     def test_chat_clear(self, client, csrf_token):
-        resp = client.post("/chat/clear", data=json.dumps({}),
+        resp = client.post("/chat/clear", data=json.dumps({"dry_run": True}),
                            headers=csrf_headers(csrf_token))
         assert resp.status_code in (200, 400, 429)
         assert resp.get_json() is not None
@@ -1473,7 +1473,7 @@ class TestSearchRoutes:
         assert resp.status_code == 200
 
     def test_search_cleanup(self, client, csrf_token):
-        resp = client.post("/search/cleanup", data=json.dumps({}),
+        resp = client.post("/search/cleanup", data=json.dumps({"dry_run": True}),
                            headers=csrf_headers(csrf_token))
         assert resp.status_code in (200, 400, 429)
         assert resp.get_json() is not None

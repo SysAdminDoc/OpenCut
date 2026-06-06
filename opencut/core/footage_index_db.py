@@ -374,6 +374,27 @@ def remove_missing_files():
     return len(to_remove)
 
 
+def missing_files_plan():
+    """Return indexed file rows whose backing files are missing without deleting."""
+    init_db()
+    conn = _get_conn()
+    rows = conn.execute("SELECT id, file_path FROM footage").fetchall()
+    entries = []
+    for row in rows:
+        path = row["file_path"]
+        if os.path.isfile(path):
+            continue
+        entries.append({
+            "id": int(row["id"]),
+            "path": path,
+            "category": "footage-index-missing-file",
+            "type": "record",
+            "bytes": 0,
+            "reversible": False,
+        })
+    return {"entries": entries, "missing_count": len(entries)}
+
+
 def get_all_indexed_files():
     """Return list of all indexed file paths."""
     conn = _get_conn()

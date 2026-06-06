@@ -16,11 +16,14 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
     get_json_dict,
     require_csrf,
     safe_bool,
     safe_int,
     validate_filepath,
+    verify_destructive_confirm_token,
 )
 
 logger = logging.getLogger("opencut")
@@ -299,9 +302,32 @@ def search_db_diagnostics():
 def cleanup_index():
     """Remove index entries for files that no longer exist."""
     try:
-        from opencut.core.footage_index_db import init_db, remove_missing_files
+        data = get_json_dict() if request.data else {}
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        from opencut.core.footage_index_db import init_db, missing_files_plan, remove_missing_files
         init_db()
+        cleanup_plan = missing_files_plan()
+        plan = build_destructive_plan(
+            "search.cleanup_missing_files",
+            records=cleanup_plan["entries"],
+            metadata={
+                "route": "/search/cleanup",
+                "missing_count": cleanup_plan["missing_count"],
+            },
+            reversible=False,
+        )
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "removed": 0,
+                "would_remove": cleanup_plan["missing_count"],
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if plan["records"] and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         removed = remove_missing_files()
-        return jsonify({"removed": removed})
+        return jsonify({"success": True, "removed": removed, "destructive_plan": plan})
     except Exception as e:
         return safe_error(e, "cleanup_index")

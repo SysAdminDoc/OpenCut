@@ -973,15 +973,45 @@ def assistant_dismiss():
 def assistant_dismiss_clear():
     """Clear every persisted dismissal for a sequence so they reappear."""
     from opencut.user_data import (
+        build_user_data_destructive_record,
         create_user_tombstone,
         load_assistant_dismissed,
         save_assistant_dismissed,
         summarize_user_tombstone,
     )
 
-    data = request.get_json(force=True, silent=True) or {}
+    data = get_json_dict() if request.data else {}
     sequence_key = (data.get("sequence_key") or "").strip() or "default"
     current = load_assistant_dismissed(sequence_key)
+    records = []
+    if current:
+        records.append(build_user_data_destructive_record(
+            "assistant_dismissed",
+            sequence_key,
+            current,
+            source_file="assistant_dismissed.json",
+            route="/assistant/dismiss-clear",
+            action="clear",
+        ))
+    plan = build_destructive_plan(
+        "assistant.dismiss_clear",
+        records=records,
+        metadata={"route": "/assistant/dismiss-clear", "sequence_key": sequence_key},
+        reversible=True,
+    )
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "sequence_key": sequence_key,
+            "dismissed": current,
+            "would_clear": len(current),
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+        })
+    if records and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
     tombstone = create_user_tombstone(
         "assistant_dismissed",
         sequence_key,
@@ -2320,9 +2350,39 @@ def chat_clear():
     data = get_json_dict()
     session_id = data.get("session_id", "default")
     try:
-        from opencut.core.chat_editor import clear_session
+        from opencut.core.chat_editor import clear_session, list_sessions
+        session = next((item for item in list_sessions() if item.get("session_id") == session_id), None)
+        records = []
+        if session and int(session.get("message_count", 0) or 0) > 0:
+            records.append({
+                "id": str(session_id),
+                "category": "chat-session",
+                "type": "session",
+                "message_count": int(session.get("message_count", 0) or 0),
+                "filepath": str(session.get("filepath", "")),
+                "bytes": 0,
+                "reversible": False,
+            })
+        plan = build_destructive_plan(
+            "chat.clear_session",
+            records=records,
+            metadata={"route": "/chat/clear", "session_id": str(session_id)},
+            reversible=False,
+        )
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "message": "Session clear previewed",
+                "would_clear": records[0]["message_count"] if records else 0,
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if records and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
         clear_session(session_id)
-        return jsonify({"success": True, "message": "Session cleared"})
+        return jsonify({"success": True, "message": "Session cleared", "destructive_plan": plan})
     except Exception as e:
         return safe_error(e, "chat_clear")
 
