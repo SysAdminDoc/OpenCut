@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Caption Metadata-Loss Regression Fixtures
+
+- Closed RA-50 and RA-09 by adding regression fixtures for SRT-only metadata loss, sidecar-backed import/diff preservation, split/merge/insert/delete classifications, stale sidecar warnings, and no-sidecar degraded diff mode.
+- Caption round-trip diff summaries now retain sidecar metadata on before/after cues and can warn when a supplied sidecar references a different SRT/export path.
+
 ### Changed - CEP Caption Write Contract
 
 - Closed RA-49 by normalizing CEP caption import/write results across native caption-track placement, video-track fallback, project-panel import, and manual-drag fallback.

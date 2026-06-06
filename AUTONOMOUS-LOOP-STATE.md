@@ -6,13 +6,13 @@ Last updated: 2026-06-06
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: RA-49 CEP/hybrid caption write contracts are closed under RA-09; RA-50 metadata-loss fixtures, E15 rolling work, and UXP permission-split work remain open.
-- Shipped this cycle: CEP caption import/write paths now return a normalized placement contract, `ocAddNativeCaptionTrack` accepts legacy arrays plus RA-46 sidecar/cue and caption-snapshot payloads, JSX mock coverage asserts native/video/project/manual placement modes, and UXP SRT Prep names the CEP `ocAddNativeCaptionTrack` handoff.
-- Verification: ExtendScript host syntax, UXP syntax, CEP client syntax, `node tests\jsx_mock.js` (41 tests), focused UXP/parity/i18n pytest guards (31 tests plus 3,672 subtests), doc-size checks, README badge sync, Ruff release-smoke, pytest-fast release-smoke (803 tests), roadmap source lint with existing appendix warnings, and `rtk git diff --check` all passed.
+- Cycle result: RA-50 caption metadata-loss fixtures are closed; RA-09 timeline-native captions is closed. E15 rolling work and UXP permission-split work remain open.
+- Shipped this cycle: caption regression fixtures now prove SRT-only metadata loss, sidecar-backed import/diff preservation, split/merge/insert/delete classifications, stale sidecar export-path warnings, and no-sidecar degraded diff mode; diff summaries now retain sidecar metadata on before/after cues.
+- Verification: `py -3.12 -m pytest -q tests\test_caption_language_confidence.py` passed (18 tests), focused Ruff passed, doc-size checks passed within tolerance, README badge sync passed, roadmap source lint passed with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (806 tests).
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue the compact queue with RA-50 caption metadata-loss fixtures, E15 batch 155, Magic Clips, or another remaining UXP permission-split item.
-- The next open queue items include RA-50 caption metadata-loss fixtures, E15 batch 155, RA-10 Magic Clips, and RA-11/RA-13/RA-14 UXP permission-split work.
+- Next cycle focus: inspect sequence-index and marker metadata workflows for reusable host locator patterns, then continue the compact queue with E15 batch 155, Magic Clips, or another remaining UXP permission-split item.
+- The next open queue items include RA-10 Magic Clips, RA-11/RA-13/RA-14 UXP permission-split work, E15 batch 155, and the sequence-index/marker metadata host-locator research lead.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.

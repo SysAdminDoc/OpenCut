@@ -268,13 +268,41 @@ def merge_segments_with_sidecar(
     return enriched, warnings
 
 
-def _cue_summary(cue: dict[str, Any]) -> dict[str, Any]:
-    return {
+_SUMMARY_METADATA_FIELDS = (
+    "source_segment_id",
+    "source_caption_id",
+    "source_caption_ids",
+    "transcript_cache_key",
+    "source_file_hash",
+    "word_ids",
+    "words",
+    "speaker",
+    "language",
+    "language_confidence",
+    "confidence",
+    "human_review_recommended",
+    "review_reasons",
+    "display_setting_token_ids",
+    "display_settings",
+    "export_format",
+    "host_locators",
+    "sidecar_index",
+)
+
+
+def _cue_summary(cue: dict[str, Any], fallback_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    summary = {
         "caption_id": cue.get("caption_id"),
         "start": cue.get("start", 0.0),
         "end": cue.get("end", 0.0),
         "text": cue.get("text", ""),
     }
+    for field in _SUMMARY_METADATA_FIELDS:
+        if field in cue:
+            summary[field] = cue[field]
+        elif fallback_metadata and field in fallback_metadata:
+            summary[field] = fallback_metadata[field]
+    return summary
 
 
 def _normal_text(text: Any) -> str:
@@ -395,7 +423,7 @@ def diff_caption_roundtrip(
             "change_type": cue_changes[0] if cue_changes else "unchanged",
             "changes": cue_changes,
             "before": _cue_summary(before),
-            "after": _cue_summary(after),
+            "after": _cue_summary(after, before if metadata_preserved else None),
         })
 
     confidence = 0.9 if metadata_preserved else 0.45
