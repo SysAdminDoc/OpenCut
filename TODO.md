@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-05 during the v4.265 E15 Export Batch Processing parameter static HTML i18n pass.
+Last synced: 2026-06-06 during the RA-16/RA-31/RA-32/RA-33 Adobe tracker hardening pass.
 
 ## Execution Order
 
@@ -13,10 +13,10 @@ Last synced: 2026-06-05 during the v4.265 E15 Export Batch Processing parameter 
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [ ] **RA-15 optional `[all]` advisory decision** - decide whether to keep a convenience extra, split it into build-lane extras, or document the known Torch/Transformers advisory exposure.
 - [x] **RA-34 lockfile advisory coverage** - restored `requirements-lock.txt` to release/audit coverage and refreshed the vulnerable `idna` lock pin.
-- [ ] **RA-16 Adobe release-channel dist-tags** - track stable Adobe `release-*` dist-tags in F251 alongside `latest` and `beta`.
-- [ ] **RA-31 Adobe tracker exit-code capture** - make the weekly Adobe tracker explicitly capture drift probe exit codes before notification logic runs.
-- [ ] **RA-32 Adobe tracker label contract** - seed or guard the labels used by automated Adobe tracker issue search and creation.
-- [ ] **RA-33 issue-label dry-run without `gh`** - let documented label dry-runs run without requiring GitHub CLI while preserving real-apply checks.
+- [x] **RA-16 Adobe release-channel dist-tags** - tracked stable Adobe `release-*` dist-tags in F251 alongside `latest` and `beta`.
+- [x] **RA-31 Adobe tracker exit-code capture** - the weekly Adobe tracker now captures drift probe exit codes before notification logic runs.
+- [x] **RA-32 Adobe tracker label contract** - the workflow search/create label set is shared and seeded in `.github/labels.yml`.
+- [x] **RA-33 issue-label dry-run without `gh`** - documented label dry-runs run without requiring GitHub CLI while real apply still checks it.
 - [ ] **RA-17 UXP manifest schema guard** - add an explicit supported `manifestVersion` and schema drift tests before package claims.
 - [ ] **RA-18 UXP deprecation sentinel** - block deprecated Clipboard and legacy `uxpvideo*` APIs from the UXP/WebView cutover path.
 - [ ] **RA-19 UXP clipboard permission** - declare the narrow clipboard permission and centralize copy fallback handling.

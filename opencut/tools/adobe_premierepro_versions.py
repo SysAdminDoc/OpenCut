@@ -3,8 +3,9 @@
 OpenCut's CEP -> UXP migration depends on the `@adobe/premierepro` npm
 package shipping new APIs (`createCaptionTrack`, `startDrag`, etc.) that
 close current CEP-only gaps. This tool catches the moment those APIs
-land by snapshotting Adobe's published `latest` / `beta` dist-tag pair
-and diffing it against a committed reference file.
+land by snapshotting Adobe's published `latest`, `beta`, and
+`release-*` dist-tags and diffing them against a committed reference
+file.
 
 Use it three ways:
 
@@ -45,12 +46,13 @@ PACKAGE = "@adobe/premierepro"
 REGISTRY_URL = f"https://registry.npmjs.org/{PACKAGE.replace('/', '%2F')}"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_PATH = REPO_ROOT / "opencut" / "_generated" / "adobe_premierepro_versions.json"
-SNAPSHOT_VERSION = 1
+SNAPSHOT_VERSION = 2
 
 # Track the dist-tags that matter for OpenCut's UXP migration. Anything
 # else Adobe publishes ("next", "experimental", etc.) is captured in the
 # "all" list but does not gate or notify.
 TRACKED_TAGS = ("latest", "beta")
+TRACKED_TAG_PREFIXES = ("release-",)
 
 
 @dataclass
@@ -67,6 +69,7 @@ class VersionSnapshot:
         )
     )
     dist_tags: Dict[str, str] = field(default_factory=dict)
+    tracked_dist_tags: Dict[str, str] = field(default_factory=dict)
     tracked_versions: List[str] = field(default_factory=list)
     latest_release_versions: List[str] = field(default_factory=list)
     release_count: int = 0
@@ -119,6 +122,22 @@ def _build_offline_snapshot(reason: str) -> VersionSnapshot:
     return snap
 
 
+def _select_tracked_dist_tags(dist_tags: dict) -> Dict[str, str]:
+    """Return named + release-channel tags in deterministic order."""
+    tracked: Dict[str, str] = {}
+    for tag in TRACKED_TAGS:
+        version = dist_tags.get(tag)
+        if isinstance(version, str):
+            tracked[tag] = version
+    for tag in sorted(str(k) for k in dist_tags.keys()):
+        if not any(tag.startswith(prefix) for prefix in TRACKED_TAG_PREFIXES):
+            continue
+        version = dist_tags.get(tag)
+        if isinstance(version, str):
+            tracked[tag] = version
+    return tracked
+
+
 def fetch_registry(*, timeout: float = 15.0) -> VersionSnapshot:
     """Fetch live `@adobe/premierepro` metadata from the npm registry."""
     try:
@@ -147,10 +166,7 @@ def fetch_registry(*, timeout: float = 15.0) -> VersionSnapshot:
     if not isinstance(versions_raw, dict):
         versions_raw = {}
 
-    tracked = {
-        tag: dist_tags_raw[tag] for tag in TRACKED_TAGS
-        if tag in dist_tags_raw and isinstance(dist_tags_raw[tag], str)
-    }
+    tracked = _select_tracked_dist_tags(dist_tags_raw)
     all_versions = sorted(
         (str(v) for v in versions_raw.keys()),
         key=_semver_key,
@@ -163,7 +179,8 @@ def fetch_registry(*, timeout: float = 15.0) -> VersionSnapshot:
             for k, v in sorted(dist_tags_raw.items())
             if isinstance(v, str)
         },
-        tracked_versions=[tracked[tag] for tag in TRACKED_TAGS if tag in tracked],
+        tracked_dist_tags=tracked,
+        tracked_versions=[tracked[tag] for tag in tracked],
         latest_release_versions=all_versions[:10],
         release_count=len(versions_raw),
     )

@@ -33,11 +33,14 @@ jobs:
 
       - name: Probe registry (drift check)
         id: probe
-        continue-on-error: true
         run: |
+          set +e
           python -m opencut.tools.adobe_premierepro_versions --check --json \
             > premierepro-drift.json
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          probe_rc=$?
+          set -e
+          echo "exit_code=${probe_rc}" >> "$GITHUB_OUTPUT"
+          exit 0
         shell: bash
 
       - name: Print drift summary
@@ -88,8 +91,9 @@ jobs:
             // Find an open issue with the same title to avoid spam.
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
+            const trackerLabels = ['f251', 'uxp', 'tracking'];
             const open  = await github.rest.issues.listForRepo({
-              owner, repo, state: 'open', labels: 'f251',
+              owner, repo, state: 'open', labels: trackerLabels.join(','),
               per_page: 100,
             });
             const existing = open.data.find(i => i.title === title);
@@ -100,6 +104,6 @@ jobs:
             } else {
               await github.rest.issues.create({
                 owner, repo, title, body,
-                labels: ['f251', 'uxp', 'tracking'],
+                labels: trackerLabels,
               });
             }

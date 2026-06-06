@@ -1,10 +1,12 @@
 {
   "dist_tags": {
-    "beta": "26.3.0-beta.67",
-    "latest": "26.2.0"
+    "beta": "26.3.0-beta.85",
+    "latest": "26.2.0",
+    "release-26.2": "26.2.1"
   },
   "error": null,
   "latest_release_versions": [
+    "26.3.0-beta.85",
     "26.3.0-beta.67",
     "26.3.0-beta.65",
     "26.3.0-beta.59",
@@ -13,17 +15,22 @@
     "26.3.0-beta.47",
     "26.3.0-beta.44",
     "26.3.0-beta.43",
-    "26.3.0-beta.39",
-    "26.3.0-beta.29"
+    "26.3.0-beta.39"
   ],
   "notes": [],
   "package": "@adobe/premierepro",
-  "recorded_at": "2026-05-18T01:24:37Z",
-  "release_count": 12,
-  "snapshot_version": 1,
+  "recorded_at": "2026-06-06T17:51:06Z",
+  "release_count": 14,
+  "snapshot_version": 2,
   "status": "ok",
+  "tracked_dist_tags": {
+    "beta": "26.3.0-beta.85",
+    "latest": "26.2.0",
+    "release-26.2": "26.2.1"
+  },
   "tracked_versions": [
     "26.2.0",
-    "26.3.0-beta.67"
+    "26.3.0-beta.85",
+    "26.2.1"
   ]
 }

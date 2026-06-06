@@ -386,7 +386,7 @@ def issue_already_seeded(seed: Seed, existing_titles: Iterable[str]) -> bool:
 
 
 def apply_labels(repo: str, labels: List[Label], *, dry_run: bool) -> List[str]:
-    if not _gh_available():
+    if not dry_run and not _gh_available():
         raise RuntimeError("gh CLI not found on PATH — install GitHub CLI or run --dry-run only")
 
     applied: List[str] = []
