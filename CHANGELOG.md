@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 136
+
+- Migrated the Video Social Media Posting form shell to static locale hooks for platform/title/description/privacy controls, placeholders and ARIA attributes, connect status/action copy, upload hint, and result copy while preserving platform/privacy values and input limits.
+- `client/locales/en.json` grows from 2,054 to 2,070 keys; `i18n-drift` reports 2,006 consumers, 64 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Social Media Posting static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 135
 
 - Migrated the Video Multimodal Diarization form shell to static locale hooks for speaker, sample-rate, confidence, dependency, install, Requires, and result-stat labels while preserving numeric speaker options, slider values, and package command text.

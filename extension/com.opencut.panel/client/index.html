@@ -2343,42 +2343,42 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="video.social_desc">Upload exported videos directly to social media platforms.</p>
                         <div class="form-group">
-                            <label for="socialPlatform">Platform</label>
-                            <select id="socialPlatform" aria-label="Social media platform">
-                                <option value="youtube" selected>YouTube</option>
-                                <option value="tiktok">TikTok</option>
-                                <option value="instagram">Instagram Reels</option>
+                            <label for="socialPlatform" data-i18n="forms.platform">Platform</label>
+                            <select id="socialPlatform" aria-label="Social media platform" data-i18n-aria-label="video.social_platform_aria">
+                                <option value="youtube" selected data-i18n="video.social_platform_youtube">YouTube</option>
+                                <option value="tiktok" data-i18n="video.social_platform_tiktok">TikTok</option>
+                                <option value="instagram" data-i18n="video.social_platform_instagram">Instagram Reels</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="socialTitle">Title</label>
-                            <input type="text" class="text-input" id="socialTitle" maxlength="100" placeholder="Video title" aria-label="Video title">
+                            <label for="socialTitle" data-i18n="forms.title">Title</label>
+                            <input type="text" class="text-input" id="socialTitle" maxlength="100" placeholder="Video title" aria-label="Video title" data-i18n-placeholder="video.social_title_placeholder" data-i18n-aria-label="video.social_title_aria">
                         </div>
                         <div class="form-group">
-                            <label for="socialDescription">Description</label>
-                            <textarea class="text-area" id="socialDescription" rows="3" maxlength="2200" placeholder="Video description / caption" aria-label="Video description"></textarea>
+                            <label for="socialDescription" data-i18n="forms.description">Description</label>
+                            <textarea class="text-area" id="socialDescription" rows="3" maxlength="2200" placeholder="Video description / caption" aria-label="Video description" data-i18n-placeholder="video.social_description_placeholder" data-i18n-aria-label="video.social_description_aria"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="socialPrivacy">Privacy</label>
-                            <select id="socialPrivacy" aria-label="Privacy level">
-                                <option value="private" selected>Private</option>
-                                <option value="unlisted">Unlisted</option>
-                                <option value="public">Public</option>
+                            <label for="socialPrivacy" data-i18n="forms.privacy">Privacy</label>
+                            <select id="socialPrivacy" aria-label="Privacy level" data-i18n-aria-label="video.social_privacy_aria">
+                                <option value="private" selected data-i18n="video.social_privacy_private">Private</option>
+                                <option value="unlisted" data-i18n="video.social_privacy_unlisted">Unlisted</option>
+                                <option value="public" data-i18n="video.social_privacy_public">Public</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <span class="badge hidden" id="socialConnectedBadge">Connected</span>
+                            <span class="badge hidden" id="socialConnectedBadge" data-i18n="video.social_connected">Connected</span>
                         <button type="button" class="btn-sm btn-secondary utility-btn" id="socialConnectBtn">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.25 6.75h-1.5a2 2 0 0 0-2 2v2.5a2 2 0 0 0 2 2h1.5"/><path d="M12.75 6.75h1.5a2 2 0 0 1 2 2v2.5a2 2 0 0 1-2 2h-1.5"/><path d="M7.5 10h5"/></svg>
                             </span>
-                            <span class="btn-label">Connect Account</span>
+                            <span class="btn-label" data-i18n="video.social_connect">Connect Account</span>
                         </button>
                         </div>
                         <button type="button" class="btn-primary" id="socialUploadBtn" disabled data-i18n="video.social_upload">Upload to Platform</button>
-                        <p class="cap-hint hidden" id="socialHint">Connect your account first to enable uploads.</p>
+                        <p class="cap-hint hidden" id="socialHint" data-i18n="video.social_connect_first">Connect your account first to enable uploads.</p>
                         <div class="hidden" id="socialResult">
-                            <p>Uploaded! <a href="#" id="socialResultUrl" target="_blank" rel="noopener">View on platform</a></p>
+                            <p><span data-i18n="video.social_uploaded">Uploaded!</span> <a href="#" id="socialResultUrl" target="_blank" rel="noopener" data-i18n="video.social_view_on_platform">View on platform</a></p>
                         </div>
                     </section>
                 </div>

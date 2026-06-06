@@ -20,7 +20,7 @@ Last consolidated: 2026-06-05.
 |---|---|
 | Core automation | Silence/filler removal, captions/transcription, audio cleanup, video effects, export, timeline actions, deliverables, search, workflow presets, NLP commands, and plugin loading. |
 | Job platform | `@async_job`, SQLite job persistence, priority workers, cancellation, interrupted-job marking, queue allowlists, structured errors, and log correlation. |
-| Panel UX | CEP panel, UXP panel, command palette, status surfaces, quick actions, E15 i18n migration through batch 135, keyboard/a11y gates, UXP Agent tab, caption display settings, and panel parity checks. |
+| Panel UX | CEP panel, UXP panel, command palette, status surfaces, quick actions, E15 i18n migration through batch 136, keyboard/a11y gates, UXP Agent tab, caption display settings, and panel parity checks. |
 | Release trust | Route manifest, OpenAPI checks, version sync, release smoke, pip/npm advisory gates, SBOM, installer policy, signing/notarization wiring, Linux packaging, and generated README badges. |
 | Review and delivery | Review bundles, marker sidecars, SVG annotations, threaded comments, LAN review portal, notifications/webhooks, transfer bundles, delivery standards, and audio-description draft planning. |
 | AI/model governance | Model cards, feature readiness registry, AI eval harness, C2PA sidecars, deepfake detection, AI feature reconciliation, optional telemetry policy, and local-first defaults. |
