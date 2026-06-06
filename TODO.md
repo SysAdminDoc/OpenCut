@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-15 optional `[all]` advisory policy pass.
+Last synced: 2026-06-06 during the RA-17 UXP manifest schema guard pass.
 
 ## Execution Order
 
@@ -17,7 +17,7 @@ Last synced: 2026-06-06 during the RA-15 optional `[all]` advisory policy pass.
 - [x] **RA-31 Adobe tracker exit-code capture** - the weekly Adobe tracker now captures drift probe exit codes before notification logic runs.
 - [x] **RA-32 Adobe tracker label contract** - the workflow search/create label set is shared and seeded in `.github/labels.yml`.
 - [x] **RA-33 issue-label dry-run without `gh`** - documented label dry-runs run without requiring GitHub CLI while real apply still checks it.
-- [ ] **RA-17 UXP manifest schema guard** - add an explicit supported `manifestVersion` and schema drift tests before package claims.
+- [x] **RA-17 UXP manifest schema guard** - live UXP manifest now declares Premiere-supported `manifestVersion: 5`, with tests separating it from the dormant WebView scaffold's v6 template.
 - [ ] **RA-18 UXP deprecation sentinel** - block deprecated Clipboard and legacy `uxpvideo*` APIs from the UXP/WebView cutover path.
 - [ ] **RA-19 UXP clipboard permission** - declare the narrow clipboard permission and centralize copy fallback handling.
 - [ ] **RA-20 UXP confirmation guard** - replace raw `window.confirm` or explicitly gate beta alert APIs with documented evidence.
