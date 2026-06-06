@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Release Full Token Permissions
+
+- Closed RA-24 by moving GitHub release uploads into a tag-only `release-upload` job with `contents: write`.
+- Kept the Release Full workflow default and build matrix on `contents: read`, with static tests preventing workflow-level write-token regressions.
+
 ### Fixed - Release Smoke Ruff Gate
 
 - Restored the package Ruff release-smoke gate by applying mechanical import ordering across existing package files.

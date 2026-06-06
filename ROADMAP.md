@@ -111,7 +111,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-21 | Python 3.13 classifier proof | M | Advertised but untested |
 | RA-22 | Release Full Node pin | S | Closed 2026-06-06: Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast |
 | RA-23 | GitHub Actions SHA pins | M | Mutable tag references |
-| RA-24 | Release Full token perms | M | Over-broad contents: write |
+| RA-24 | Release Full token perms | M | Closed 2026-06-06: Release Full build/test/package legs are read-only, with release uploads isolated in a write-scoped tag-only job |
 | RA-25 | Docker dependency surface | M | Closed 2026-06-06: Docker installs from tracked `requirements.txt` and no longer reintroduces retired packages |
 | RA-26 | Docker runtime parity | M | Closed 2026-06-06: Docker defaults publish HTTP 5679 only, with WebSocket/MCP sidecars documented as opt-in |
 | RA-27 | Docker GPU compose | S | Closed 2026-06-06: README and compose docs now use the committed GPU profile command |
@@ -425,7 +425,7 @@ tree.
 | UXP migration | UXP panel, WebView scaffold, UDT harness, migration dashboard | `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/bolt-webview/README.md`, `extension/com.opencut.uxp/uxp-udt-harness.json`, `PROJECT_CONTEXT.md` | High but externally gated | F252 remains gated by live Premiere UDT evidence and manifest cutover. |
 | Adobe API drift tracker | Weekly `@adobe/premierepro` workflow and Python registry probe | `.github/workflows/adobe-premierepro-versions.yml`, `opencut/tools/adobe_premierepro_versions.py` | Useful but fragile | RA-31/RA-32 are confirmed by local workflow evidence. |
 | GitHub issue seeding | YAML issue/label seeder with dry-run mode | `scripts/seed_github_issues.py`, `.github/labels.yml`, `.github/issue-seeds.yml` | Useful but fragile | RA-33 is confirmed: label dry-run still requires `gh` before checking `dry_run`. |
-| Release CI | PR Fast and Release Full workflows | `.github/workflows/pr-fast.yml`, `.github/workflows/build.yml` | Strong tests, weak token posture | RA-24 remains concrete: Release Full has workflow-level `contents: write`; PR Fast is already read-only. |
+| Release CI | PR Fast and Release Full workflows | `.github/workflows/pr-fast.yml`, `.github/workflows/build.yml` | Strong tests, narrower token posture | RA-24 is closed: Release Full defaults to `contents: read`, the build matrix is read-only, and only the tag-only release-upload job receives `contents: write`. |
 | Docker distribution | Multi-stage image, `.dockerignore`, compose | `Dockerfile`, `.dockerignore`, `docker-compose.yml`, README Docker section | Medium | RA-25/RA-26/RA-29/RA-30 are closed with dependency-surface, fail-closed install, HTTP-only default runtime, and build-context hygiene guards. |
 
 ### Cycle 3: Governance and release-trust specs
@@ -512,11 +512,14 @@ dedicated job that depends on build artifacts.
 **Affected files:** `.github/workflows/build.yml`,
 `tests/test_workflow_permissions.py`.
 
+**Status:** Closed 2026-06-06 with a read-only build matrix plus a tag-only
+write-scoped `release-upload` job.
+
 **Acceptance criteria:**
 
-- [ ] Non-upload jobs run with `contents: read`.
-- [ ] Release upload steps still have enough permission to publish tag assets.
-- [ ] Static tests fail if workflow-level `contents: write` returns.
+- [x] Non-upload jobs run with `contents: read`.
+- [x] Release upload steps still have enough permission to publish tag assets.
+- [x] Static tests fail if workflow-level `contents: write` returns.
 
 **Priority:** P1. **Effort:** M. **Confidence:** High.
 
@@ -645,7 +648,7 @@ support signed build-provenance claims for binaries and container images.
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
 | RA-23 full-SHA action pins | `.github/workflows/*.yml`; archived Cycle 12 research; GitHub action allowlist docs | Pin non-local workflow `uses:` references to full-length SHAs, keep adjacent version comments, and add a static test that rejects mutable tags/branches. | P1 |
-| RA-24 token least privilege | `.github/workflows/build.yml` workflow-level `contents: write`; PR Fast and Adobe tracker already scoped narrower | Default Release Full to `contents: read`; isolate release-upload permissions to the smallest tag/manual upload boundary. | P1 |
+| RA-24 token least privilege | Closed 2026-06-06: Release Full defaults to `contents: read`, the build matrix is read-only, and the tag-only `release-upload` job is the only `contents: write` boundary. | Keep release upload authority isolated from build/test/package jobs and guard against workflow-level write-token regressions. | Done |
 | RA-22 Release Full Node pin | Closed 2026-06-06: Release Full uses `actions/setup-node@v4` with Node 22 before Linux CEP panel npm gates, and PR Fast uses the same runtime. | Keep Release Full and PR Fast panel runtimes in lockstep before treating npm advisory/build evidence as deterministic release proof. | Done |
 | Release provenance attestation | Release Full uploads binaries, installers, Linux packages, and SBOM but no `attest-build-provenance` step appears in workflow scan | Add GitHub artifact attestations for release artifacts and SBOM after RA-24 narrows permissions; document verification commands. | P2 |
 
@@ -1228,6 +1231,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 39 | Docker runtime parity | Docker port-publishing docs, Dockerfile `EXPOSE`, `docker-compose.yml`, README Docker quick start, WebSocket/MCP sidecar evidence | Dockerfile and product docs mentioned WebSocket/MCP sidecar ports, but the image does not install/start/publish those sidecars by default. Publishing 5680/5681 would imply support the default container does not provide. | Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping sidecars opt-in, aligning Dockerfile/Compose/README, and extending Docker distribution tests to guard the port posture. |
 | 2026-06-06 | Cycle 40 | Release Full Node runtime pin | GitHub Actions setup-node docs, `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, panel CI gate tests | Release Full ran Linux CEP panel npm gates without the explicit Node 22 setup that PR Fast already used, so release evidence could drift with runner defaults. | Closed RA-22 by adding a Linux-only Node 22 setup step before the Release Full CEP panel gates and a regression test that compares the PR Fast and Release Full runtime pins. |
 | 2026-06-06 | Cycle 41 | Release smoke Ruff import-order cleanup | Release-smoke Ruff gate, `opencut/routes/__init__.py`, package import blocks, route manifest and collision tests | The broader release-smoke Ruff gate failed on 17 existing `I001` import-order findings, including the blueprint import block. | Restored the Ruff gate with mechanical import ordering and rechecked route-manifest plus route-collision invariants. |
+| 2026-06-06 | Cycle 42 | Release Full token permissions | `.github/workflows/build.yml`, release upload steps, workflow permission tests, SBOM workflow tests | Release Full still granted `contents: write` at workflow scope, so build/test/package matrix jobs and third-party actions received write-capable tokens even though only tag release uploads needed them. | Closed RA-24 by defaulting the workflow and build matrix to `contents: read`, moving all `gh release upload` calls into a tag-only `release-upload` job with `contents: write`, and adding static permission guards. |
 
 ### Research queries to run later
 
@@ -1248,23 +1252,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 42: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 43: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 44: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 45: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 46: Continue release-trust hardening on RA-21, RA-23, and RA-24.
+1. Cycle 43: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 44: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 45: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 46: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 47: Continue release-trust hardening on RA-21 and RA-23.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 41: Release smoke Ruff import-order cleanup.
+Cycle 42: Release Full token permissions.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-22, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-22, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1288,6 +1292,9 @@ unit, and build evidence as release proof.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
+RA-24 keeps Release Full build/test/package jobs on read-only contents
+permission while the tag-only release-upload job owns the write-capable release
+token.
 
 #### Important findings so far
 
@@ -1326,8 +1333,8 @@ blueprint import-block cleanup.
   matching PR Fast's panel runtime pin.
 - The package Ruff release-smoke gate is clean after mechanical import-order
   cleanup across existing package files.
-- Release Full still has workflow-level `contents: write`, mutable action tags,
-  and no artifact attestation step in the scanned workflows.
+- Release Full now keeps build/test/package jobs on `contents: read`; mutable
+  action tags and no artifact attestation step remain in the scanned workflows.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
@@ -1399,7 +1406,7 @@ blueprint import-block cleanup.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-21, RA-23, and RA-24 or the remaining UXP permission split rows.
+3. Continue release-trust hardening on RA-21 and RA-23 or the remaining UXP permission split rows.
 
 #### Unprocessed leads
 
