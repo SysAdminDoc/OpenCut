@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Python Dependency Surface
+
+- Closed RA-01 by aligning Ruff's explicit target version with the declared Python 3.11 floor and adding a dependency-surface guard for future drift.
+- Closed RA-02 by syncing `requirements.txt` core/standard dependency bounds with `pyproject.toml` and guarding that overlap in release-smoke coverage.
+
 ### Changed - Typed Error Logging
 
 - Closed RA-03 by logging direct typed error responses with structured code, status, request ID, method, path, and typed-error context fields.
