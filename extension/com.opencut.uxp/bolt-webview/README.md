@@ -9,6 +9,10 @@ The live UXP panel declares `manifestVersion: 5`, matching Premiere's supported
 manifest schema. This scaffold keeps `manifestVersion: 6` only for the future
 WebView/hybrid-style manifest generated during the F252 cutover.
 
+Both the live manifest and this scaffold declare clipboard `readAndWrite`
+permission because the panel writes generated output text to the system
+clipboard and handles denied access with a manual-copy fallback.
+
 The scaffold follows the current Bolt UXP WebView split:
 
 - `uxp.config.ts` is the least-privilege manifest/config template.
