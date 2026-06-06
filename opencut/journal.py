@@ -20,10 +20,13 @@ import sqlite3
 import threading
 import time
 
+from opencut.local_db_migrations import migrate_user_version
+
 logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "journal.db")
 _thread_local = threading.local()
+SCHEMA_VERSION = 2
 
 # Mirror job_store + footage_index_db connection tracking so atexit can
 # close every WAL-mode connection on shutdown.
@@ -104,9 +107,8 @@ def close_all_connections() -> None:
         pass
 
 
-def init_db() -> None:
-    conn = _get_conn()
-    conn.executescript("""
+def _create_schema_v1(conn: sqlite3.Connection) -> None:
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS journal (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at REAL NOT NULL,
@@ -116,17 +118,28 @@ def init_db() -> None:
             inverse_json TEXT NOT NULL DEFAULT '{}',
             reverted INTEGER NOT NULL DEFAULT 0,
             reverted_at REAL
-        );
-        CREATE INDEX IF NOT EXISTS idx_journal_created ON journal(created_at DESC);
+        )
     """)
-    # v1.10.3 (N): additive column for the forward op so the panel can
-    # replay it on a different clip. Existing rows get NULL — backfill
-    # isn't possible and the UI shows the button only when forward_json
-    # is present.
-    try:
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_created ON journal(created_at DESC)")
+
+
+def _migrate_schema_v2(conn: sqlite3.Connection) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(journal)").fetchall()}
+    if "forward_json" not in columns:
         conn.execute("ALTER TABLE journal ADD COLUMN forward_json TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+
+
+def init_db() -> None:
+    conn = _get_conn()
+    migrate_user_version(
+        conn,
+        store_name="journal",
+        target_version=SCHEMA_VERSION,
+        migrations={
+            1: _create_schema_v1,
+            2: _migrate_schema_v2,
+        },
+    )
     conn.commit()
 
 

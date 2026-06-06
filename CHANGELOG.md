@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Local SQLite Schema Versions
+
+- Closed RA-37/RA-05 by adding a shared local SQLite migration helper that records `PRAGMA user_version`.
+- `jobs.db`, `journal.db`, `footage_index.db`, and `pipeline_health.db` now initialize through explicit ordered migrations.
+- Added regression coverage that verifies user-version stamping and rejects newer unknown local database schemas before downgrade-prone access.
+
 ### Changed - Declared SBOM Fidelity
 
 - Closed RA-35 by renaming the release SBOM path and artifact to `opencut-declared-sbom.cyclonedx.json` / `OpenCut-Declared-Dependency-SBOM-CycloneDX`.

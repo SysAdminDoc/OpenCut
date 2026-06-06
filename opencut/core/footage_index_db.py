@@ -11,10 +11,13 @@ import sqlite3
 import threading
 import time
 
+from opencut.local_db_migrations import migrate_user_version
+
 logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "footage_index.db")
 _thread_local = threading.local()
+SCHEMA_VERSION = 1
 
 # Track all opened connections so close_all_connections() can close them
 # on server shutdown.  Mirrors the pattern in job_store.py — without this
@@ -81,10 +84,8 @@ def close_all_connections():
         pass
 
 
-def init_db():
-    """Create tables if they don't exist."""
-    conn = _get_conn()
-    conn.executescript("""
+def _create_schema_v1(conn: sqlite3.Connection) -> None:
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS footage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_path TEXT UNIQUE NOT NULL,
@@ -93,32 +94,47 @@ def init_db():
             file_mtime REAL NOT NULL DEFAULT 0,
             duration REAL NOT NULL DEFAULT 0,
             file_size INTEGER NOT NULL DEFAULT 0
-        );
-
+        )
+    """)
+    conn.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS footage_fts USING fts5(
             file_path,
             transcript,
             content=footage,
             content_rowid=id
-        );
-
+        )
+    """)
+    conn.execute("""
         CREATE TRIGGER IF NOT EXISTS footage_ai AFTER INSERT ON footage BEGIN
             INSERT INTO footage_fts(rowid, file_path, transcript)
             VALUES (new.id, new.file_path, new.transcript);
-        END;
-
+        END
+    """)
+    conn.execute("""
         CREATE TRIGGER IF NOT EXISTS footage_ad AFTER DELETE ON footage BEGIN
             INSERT INTO footage_fts(footage_fts, rowid, file_path, transcript)
             VALUES ('delete', old.id, old.file_path, old.transcript);
-        END;
-
+        END
+    """)
+    conn.execute("""
         CREATE TRIGGER IF NOT EXISTS footage_au AFTER UPDATE ON footage BEGIN
             INSERT INTO footage_fts(footage_fts, rowid, file_path, transcript)
             VALUES ('delete', old.id, old.file_path, old.transcript);
             INSERT INTO footage_fts(rowid, file_path, transcript)
             VALUES (new.id, new.file_path, new.transcript);
-        END;
+        END
     """)
+
+
+def init_db():
+    """Create tables if they don't exist."""
+    conn = _get_conn()
+    migrate_user_version(
+        conn,
+        store_name="footage index",
+        target_version=SCHEMA_VERSION,
+        migrations={1: _create_schema_v1},
+    )
     conn.commit()
 
 
