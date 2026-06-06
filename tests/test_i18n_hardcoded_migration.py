@@ -843,6 +843,20 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.scene_stat_avg_length", "data-i18n"),
     ("video.youtube_chapters", "data-i18n"),
     ("common.copy_to_clipboard", "data-i18n"),
+    # One-hundred-thirty-eighth batch (Video Speed and Ramp parameter shell HTML).
+    ("forms.mode", "data-i18n"),
+    ("video.speed_mode_constant", "data-i18n"),
+    ("video.speed_mode_reverse", "data-i18n"),
+    ("video.speed_mode_preset", "data-i18n"),
+    ("forms.speed_multiplier", "data-i18n"),
+    ("video.maintain_audio_pitch", "data-i18n"),
+    ("video.ramp_preset", "data-i18n"),
+    ("video.ramp_dramatic_slowmo", "data-i18n"),
+    ("video.ramp_speed_up_middle", "data-i18n"),
+    ("video.ramp_accelerate", "data-i18n"),
+    ("video.ramp_decelerate", "data-i18n"),
+    ("video.ramp_pulse", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
 )
 
 
