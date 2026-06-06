@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Docker Distribution Docs
+
+- Closed RA-27 by replacing the missing `docker-compose.gpu.yml` README command with `docker compose --profile gpu up opencut-server-gpu`.
+- Updated Docker run examples to persist data under `/home/opencut/.opencut`, removed the obsolete Compose `version` key, and added a release-smoke guard for Docker distribution docs.
+
 ### Changed - Adobe Tracker Hardening
 
 - Closed RA-16/RA-31/RA-32/RA-33 by tracking Adobe `release-*` npm dist-tags, refreshing `@adobe/premierepro` to `beta=26.3.0-beta.85` and `release-26.2=26.2.1`, and adding schema v2 `tracked_dist_tags`.

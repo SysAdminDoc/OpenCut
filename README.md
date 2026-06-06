@@ -58,8 +58,8 @@ Clone the repo and run `Install.bat` as Administrator. Handles FFmpeg check, Pyt
 **Option D -- Docker:**
 
 ```bash
-docker-compose up          # CPU only
-docker-compose -f docker-compose.gpu.yml up  # With GPU
+docker compose up opencut-server
+docker compose --profile gpu up opencut-server-gpu
 ```
 
 **Option E -- Linux desktop package:**

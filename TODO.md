@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-16/RA-31/RA-32/RA-33 Adobe tracker hardening pass.
+Last synced: 2026-06-06 during the RA-27 Docker GPU compose docs pass.
 
 ## Execution Order
 
@@ -28,7 +28,7 @@ Last synced: 2026-06-06 during the RA-16/RA-31/RA-32/RA-33 Adobe tracker hardeni
 - [ ] **RA-35 release SBOM fidelity** - publish a resolved release SBOM or label the current artifact as declared-only with matching evidence.
 - [ ] **RA-25 Docker dependency surface** - align Docker dependency installs with tracked Python install surfaces so retired packages cannot return through the container path.
 - [ ] **RA-26 Docker runtime parity** - align Docker runtime docs, non-root volume paths, and explicit HTTP/WebSocket container posture.
-- [ ] **RA-27 Docker GPU compose command** - align README and compose GPU launch commands so docs never reference a missing compose file.
+- [x] **RA-27 Docker GPU compose command** - README and compose comments now use the committed `gpu` profile service command, and release-smoke guards against missing compose overrides.
 - [ ] **RA-28 README non-badge count gate** - keep README prose, diagram, and project-structure count claims aligned with generated route/module truth.
 - [ ] **RA-29 Docker dependency install fail-closed guard** - make Docker dependency installs use canonical/quoted specifiers and fail instead of masking install errors.
 - [ ] **RA-30 Docker build-context secret/log hygiene** - align `.dockerignore` with Git-ignored secret/log patterns before `COPY . /app` can include local artifacts.

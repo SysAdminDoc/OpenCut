@@ -3,8 +3,8 @@
 # Multi-stage build for minimal final image
 #
 # Build:       docker build -t opencut .
-# Run (CPU):   docker run -d -p 5679:5679 -v opencut-data:/root/.opencut opencut
-# Run (GPU):   docker run -d --gpus all -p 5679:5679 -v opencut-data:/root/.opencut opencut
+# Run (CPU):   docker run -d -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
+# Run (GPU):   docker run -d --gpus all -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
 # ============================================================
 
 # Stage 1: Base with Python and system deps
