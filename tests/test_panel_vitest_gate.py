@@ -31,3 +31,26 @@ def test_ci_workflows_run_panel_unit_tests():
     assert "npm ci" in pr_workflow
     assert "npm ci --omit=optional" not in pr_workflow
     assert "--skip panel-unit" not in pr_workflow
+
+
+def test_release_full_pins_same_node_runtime_as_pr_fast():
+    release_workflow = (
+        (REPO_ROOT / ".github" / "workflows" / "build.yml")
+        .read_text(encoding="utf-8")
+        .replace("\r\n", "\n")
+    )
+    pr_workflow = (
+        (REPO_ROOT / ".github" / "workflows" / "pr-fast.yml")
+        .read_text(encoding="utf-8")
+        .replace("\r\n", "\n")
+    )
+
+    assert (
+        "- name: Set up Node\n"
+        "        if: runner.os == 'Linux'\n"
+        "        uses: actions/setup-node@v4\n"
+        "        with:\n"
+        "          node-version: '22'"
+    ) in release_workflow
+    assert "node-version: '22'" in pr_workflow
+    assert release_workflow.index("actions/setup-node@v4") < release_workflow.index("CEP panel")

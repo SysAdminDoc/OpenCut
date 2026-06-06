@@ -109,7 +109,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-19 | UXP clipboard permission | S | Closed 2026-06-06: live and WebView manifests declare clipboard `readAndWrite`, and copy actions use a shared fallback helper |
 | RA-20 | UXP confirmation guard | S | Closed 2026-06-06: raw UXP browser dialogs are blocked and search-index clear uses inline second-click confirmation |
 | RA-21 | Python 3.13 classifier proof | M | Advertised but untested |
-| RA-22 | Release Full Node pin | S | Unmatched Node versions |
+| RA-22 | Release Full Node pin | S | Closed 2026-06-06: Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast |
 | RA-23 | GitHub Actions SHA pins | M | Mutable tag references |
 | RA-24 | Release Full token perms | M | Over-broad contents: write |
 | RA-25 | Docker dependency surface | M | Closed 2026-06-06: Docker installs from tracked `requirements.txt` and no longer reintroduces retired packages |
@@ -646,7 +646,7 @@ support signed build-provenance claims for binaries and container images.
 |---|---|---|---|
 | RA-23 full-SHA action pins | `.github/workflows/*.yml`; archived Cycle 12 research; GitHub action allowlist docs | Pin non-local workflow `uses:` references to full-length SHAs, keep adjacent version comments, and add a static test that rejects mutable tags/branches. | P1 |
 | RA-24 token least privilege | `.github/workflows/build.yml` workflow-level `contents: write`; PR Fast and Adobe tracker already scoped narrower | Default Release Full to `contents: read`; isolate release-upload permissions to the smallest tag/manual upload boundary. | P1 |
-| RA-22 Release Full Node pin | PR Fast uses `actions/setup-node@v4` with Node 22; Release Full runs panel npm gates on Linux without a matching setup-node step | Add explicit Node 22 setup before Release Full panel gates so npm advisory/build evidence matches PR Fast. | P1 |
+| RA-22 Release Full Node pin | Closed 2026-06-06: Release Full uses `actions/setup-node@v4` with Node 22 before Linux CEP panel npm gates, and PR Fast uses the same runtime. | Keep Release Full and PR Fast panel runtimes in lockstep before treating npm advisory/build evidence as deterministic release proof. | Done |
 | Release provenance attestation | Release Full uploads binaries, installers, Linux packages, and SBOM but no `attest-build-provenance` step appears in workflow scan | Add GitHub artifact attestations for release artifacts and SBOM after RA-24 narrows permissions; document verification commands. | P2 |
 
 **External sources:** GitHub artifact attestations
@@ -1226,6 +1226,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 37 | UXP confirmation guard | Adobe Premiere UXP API changelog, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/manifest.json`, UXP confirmation tests | Adobe keeps browser alert/prompt/confirm APIs behind a beta `enableAlerts` flag. OpenCut used raw `window.confirm` for search-index clearing without a manifest feature-flag decision. | Closed RA-20 by replacing the raw dialog with an inline second-click panel confirmation, keeping `enableAlerts` disabled, and adding a static raw-dialog guard. |
 | 2026-06-06 | Cycle 38 | Docker dependency and context hardening | Docker build/context docs, pip requirement-specifier docs, `Dockerfile`, `.dockerignore`, `requirements.txt`, Docker guard tests | The Docker image still carried a hand-written optional dependency install list that could reintroduce retired packages, shell-parse unquoted specifiers, and mask pip failures, while `.dockerignore` did not explicitly block local secrets/logs/runtime DB state before `COPY . /app`. | Closed RA-25/RA-29/RA-30 by installing from tracked `requirements.txt`, keeping pip failures fatal, mirroring sensitive ignore patterns, excluding local runtime/cache DB artifacts, and extending Docker distribution guard tests. |
 | 2026-06-06 | Cycle 39 | Docker runtime parity | Docker port-publishing docs, Dockerfile `EXPOSE`, `docker-compose.yml`, README Docker quick start, WebSocket/MCP sidecar evidence | Dockerfile and product docs mentioned WebSocket/MCP sidecar ports, but the image does not install/start/publish those sidecars by default. Publishing 5680/5681 would imply support the default container does not provide. | Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping sidecars opt-in, aligning Dockerfile/Compose/README, and extending Docker distribution tests to guard the port posture. |
+| 2026-06-06 | Cycle 40 | Release Full Node runtime pin | GitHub Actions setup-node docs, `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, panel CI gate tests | Release Full ran Linux CEP panel npm gates without the explicit Node 22 setup that PR Fast already used, so release evidence could drift with runner defaults. | Closed RA-22 by adding a Linux-only Node 22 setup step before the Release Full CEP panel gates and a regression test that compares the PR Fast and Release Full runtime pins. |
 
 ### Research queries to run later
 
@@ -1246,23 +1247,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 40: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 41: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 42: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 43: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 44: Continue release-trust hardening on RA-21 through RA-24.
+1. Cycle 41: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 42: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 43: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 44: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 45: Continue release-trust hardening on RA-21, RA-23, and RA-24.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 39: Docker runtime parity.
+Cycle 40: Release Full Node runtime pin.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-22, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1280,7 +1281,9 @@ surface, fail closed on dependency install errors, and exclude local
 secret/log/runtime DB state from the Docker build context. RA-26 keeps the
 default Docker runtime explicitly HTTP-only on 5679 and leaves WebSocket/MCP
 sidecars to custom opt-in services. Continue with the remaining release-trust
-and product workflow specs.
+and product workflow specs. RA-22 keeps Release Full's Linux panel npm gates on
+the same explicit Node 22 runtime as PR Fast before treating panel advisory,
+unit, and build evidence as release proof.
 
 #### Important findings so far
 
@@ -1315,6 +1318,8 @@ and product workflow specs.
 - Docker runtime docs, Compose, and Dockerfile now agree that default containers
   publish HTTP 5679 only; WebSocket 5680 and MCP 5681 sidecars require explicit
   custom services/profiles.
+- Release Full's Linux panel npm gates now set up Node 22 before `npm ci`,
+  matching PR Fast's panel runtime pin.
 - Release Full still has workflow-level `contents: write`, mutable action tags,
   and no artifact attestation step in the scanned workflows.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
@@ -1388,7 +1393,7 @@ and product workflow specs.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-21 through RA-24 or the remaining UXP permission split rows.
+3. Continue release-trust hardening on RA-21, RA-23, and RA-24 or the remaining UXP permission split rows.
 
 #### Unprocessed leads
 
