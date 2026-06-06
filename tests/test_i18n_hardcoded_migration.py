@@ -1055,6 +1055,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.reference_face_image", "data-i18n"),
     ("video.reference_face_image_placeholder", "data-i18n-placeholder"),
     ("common.browse", "data-i18n"),
+    # One-hundred-fiftieth batch (Export Transcript parameter shell HTML).
+    ("forms.export_format", "data-i18n"),
+    ("export.transcript_format_plain", "data-i18n"),
+    ("export.transcript_format_timestamped", "data-i18n"),
+    ("export.transcript_format_srt", "data-i18n"),
+    ("export.transcript_format_vtt", "data-i18n"),
+    ("formats.ass_karaoke", "data-i18n"),
+    ("export.transcript_format_json", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small_accurate", "data-i18n"),
+    ("captions.model_medium_best", "data-i18n"),
 )
 
 

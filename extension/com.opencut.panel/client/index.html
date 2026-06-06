@@ -2865,23 +2865,23 @@
                 <div class="sub-panel" id="sub-exp-transcript">
                     <section class="card">
                         <div class="form-group">
-                            <label for="expTranscriptFormat">Export Format</label>
+                            <label for="expTranscriptFormat" data-i18n="forms.export_format">Export Format</label>
                             <select id="expTranscriptFormat">
-                                <option value="plain">Plain Text</option>
-                                <option value="timestamped">Timestamped Text</option>
-                                <option value="srt">SRT Subtitles</option>
-                                <option value="vtt">WebVTT Subtitles</option>
-                                <option value="ass">ASS (Karaoke)</option>
-                                <option value="json">JSON (Full Data)</option>
+                                <option value="plain" data-i18n="export.transcript_format_plain">Plain Text</option>
+                                <option value="timestamped" data-i18n="export.transcript_format_timestamped">Timestamped Text</option>
+                                <option value="srt" data-i18n="export.transcript_format_srt">SRT Subtitles</option>
+                                <option value="vtt" data-i18n="export.transcript_format_vtt">WebVTT Subtitles</option>
+                                <option value="ass" data-i18n="formats.ass_karaoke">ASS (Karaoke)</option>
+                                <option value="json" data-i18n="export.transcript_format_json">JSON (Full Data)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="expModel">Model</label>
+                            <label for="expModel" data-i18n="forms.model">Model</label>
                             <select id="expModel">
-                                <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
-                                <option value="small">Small (accurate)</option>
-                                <option value="medium">Medium (best)</option>
+                                <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
+                                <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
+                                <option value="small" data-i18n="captions.model_small_accurate">Small (accurate)</option>
+                                <option value="medium" data-i18n="captions.model_medium_best">Medium (best)</option>
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runExpTranscriptBtn" disabled data-i18n="export.run_transcript">Export Transcript</button>
