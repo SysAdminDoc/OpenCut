@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 153
+
+- Migrated the Export Batch Processing form shell to static locale hooks for operation label/options, batch instructions, queue overview ARIA, queue and operation summaries, idle status, empty-queue hint, Add Selected Clip, Add All Project Clips, and Clear while preserving operation values and button wiring.
+- `client/locales/en.json` grows from 2,258 to 2,273 keys; `i18n-drift` reports 2,218 consumers, 55 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Export Batch Processing static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 152
 
 - Migrated the Export Auto-Thumbnails form shell to static locale hooks for candidate count, resolution, resolution choices, and face-boost copy while preserving candidate values, width values, default selection, and checked state.

@@ -2978,41 +2978,41 @@
                         <p class="card-desc" data-i18n="export.batch_desc">Apply the same operation to multiple files. Add files from your project bin, pick an operation, and run.</p>
 
                         <div class="form-group">
-                            <label for="batchOperation">Operation</label>
+                            <label for="batchOperation" data-i18n="forms.operation">Operation</label>
                             <select id="batchOperation">
-                                <option value="denoise">Audio Denoise</option>
-                                <option value="normalize">Audio Normalize</option>
-                                <option value="stabilize">Video Stabilize</option>
-                                <option value="face_blur">Face Blur</option>
-                                <option value="vignette">Add Vignette</option>
-                                <option value="film_grain">Add Film Grain</option>
-                                <option value="letterbox">Add Letterbox</option>
-                                <option value="style_transfer">Style Transfer</option>
-                                <option value="export_preset">Export Preset</option>
+                                <option value="denoise" data-i18n="export.batch_operation_audio_denoise">Audio Denoise</option>
+                                <option value="normalize" data-i18n="export.batch_operation_audio_normalize">Audio Normalize</option>
+                                <option value="stabilize" data-i18n="export.batch_operation_video_stabilize">Video Stabilize</option>
+                                <option value="face_blur" data-i18n="video.face_blur">Face Blur</option>
+                                <option value="vignette" data-i18n="export.batch_operation_vignette">Add Vignette</option>
+                                <option value="film_grain" data-i18n="export.batch_operation_film_grain">Add Film Grain</option>
+                                <option value="letterbox" data-i18n="export.batch_operation_letterbox">Add Letterbox</option>
+                                <option value="style_transfer" data-i18n="video.style_transfer">Style Transfer</option>
+                                <option value="export_preset" data-i18n="favorites.op_export">Export Preset</option>
                             </select>
                         </div>
 
-                        <p class="card-desc">Select files from the clip picker above, then click "Run Batch" to process all selected clips with the chosen operation.</p>
-                        <div class="oc-inline-summary-grid" aria-label="Batch queue overview">
+                        <p class="card-desc" data-i18n="export.batch_instruction">Select files from the clip picker above, then click "Run Batch" to process all selected clips with the chosen operation.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Batch queue overview" data-i18n-aria-label="export.batch_queue_overview_aria">
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Queue</span>
-                                <span class="oc-inline-value" id="batchQueueSummary">No clips queued</span>
+                                <span class="oc-inline-label" data-i18n="batch.queue_label">Queue</span>
+                                <span class="oc-inline-value" id="batchQueueSummary" data-i18n="batch.queue_empty">No clips queued</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Operation</span>
-                                <span class="oc-inline-value" id="batchOperationSummary">Choose an operation to run across the queue</span>
+                                <span class="oc-inline-label" data-i18n="forms.operation">Operation</span>
+                                <span class="oc-inline-value" id="batchOperationSummary" data-i18n="batch.choose_operation_summary">Choose an operation to run across the queue</span>
                             </div>
                         </div>
-                        <div class="oc-status-line" id="batchStatusLine" data-state="idle" role="status" aria-live="polite">Add two or more clips to build a repeatable batch run.</div>
+                        <div class="oc-status-line" id="batchStatusLine" data-state="idle" role="status" aria-live="polite" data-i18n="batch.status_idle">Add two or more clips to build a repeatable batch run.</div>
 
                         <div class="batch-file-picker" id="batchFilePicker">
                             <div class="batch-file-list" id="batchFileList">
-                                <div class="hint">Add clips to build a batch queue.</div>
+                                <div class="hint" data-i18n="batch.queue_hint">Add clips to build a batch queue.</div>
                             </div>
                             <div class="btn-row gap-xs mt-xs">
-                                <button type="button" class="btn-outline btn-sm" id="batchAddSelectedBtn">Add Selected Clip</button>
-                                <button type="button" class="btn-outline btn-sm" id="batchAddAllBtn">Add All Project Clips</button>
-                                <button type="button" class="btn-outline btn-sm" id="batchClearBtn">Clear</button>
+                                <button type="button" class="btn-outline btn-sm" id="batchAddSelectedBtn" data-i18n="export.batch_add_selected_clip">Add Selected Clip</button>
+                                <button type="button" class="btn-outline btn-sm" id="batchAddAllBtn" data-i18n="export.batch_add_all_project_clips">Add All Project Clips</button>
+                                <button type="button" class="btn-outline btn-sm" id="batchClearBtn" data-i18n="common.clear">Clear</button>
                             </div>
                         </div>
 
