@@ -5,6 +5,7 @@ import os
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 
@@ -120,6 +121,38 @@ class TestJournalStore(unittest.TestCase):
 
         self.assertTrue(dummy.closed)
         self.assertNotIn(999999, jm._ALL_CONNECTIONS)
+
+    def test_large_payloads_spill_to_content_files(self):
+        from opencut import journal as jm
+
+        original_limit = jm.MAX_JOURNAL_PAYLOAD_JSON_BYTES
+        jm.MAX_JOURNAL_PAYLOAD_JSON_BYTES = 128
+        try:
+            entry = jm.record(
+                "add_markers",
+                "large",
+                {"markers": [{"comment": "x" * 2048}]},
+                forward_payload={
+                    "endpoint": "/timeline/markers",
+                    "payload": {"comment": "y" * 2048},
+                },
+            )
+        finally:
+            jm.MAX_JOURNAL_PAYLOAD_JSON_BYTES = original_limit
+
+        self.assertTrue(entry["inverse"]["_opencut_payload_spill"])
+        self.assertEqual(entry["inverse"]["field"], "inverse_json")
+        self.assertTrue(Path(entry["inverse"]["path"]).is_file())
+        self.assertEqual(
+            os.path.commonpath([os.path.dirname(jm._DB_PATH), entry["inverse"]["path"]]),
+            os.path.dirname(jm._DB_PATH),
+        )
+        with open(entry["inverse"]["path"], encoding="utf-8") as fh:
+            self.assertEqual(json.load(fh), {"markers": [{"comment": "x" * 2048}]})
+
+        self.assertTrue(entry["forward"]["_opencut_payload_spill"])
+        self.assertEqual(entry["forward"]["field"], "forward_json")
+        self.assertTrue(Path(entry["forward"]["path"]).is_file())
 
 
 class TestJournalRoutes(unittest.TestCase):

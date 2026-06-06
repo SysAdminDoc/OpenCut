@@ -21,12 +21,14 @@ import threading
 import time
 
 from opencut.local_db_migrations import migrate_user_version
+from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
 logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "journal.db")
 _thread_local = threading.local()
 SCHEMA_VERSION = 2
+MAX_JOURNAL_PAYLOAD_JSON_BYTES = 128 * 1024
 
 # Mirror job_store + footage_index_db connection tracking so atexit can
 # close every WAL-mode connection on shutdown.
@@ -164,12 +166,27 @@ def record(action: str, label: str, inverse_payload: dict,
         inverse_json = json.dumps(inverse_payload or {})
     except (TypeError, ValueError):
         inverse_json = "{}"
+    inverse_json = spill_json_if_needed(
+        inverse_json,
+        base_dir=os.path.dirname(_DB_PATH),
+        namespace="journal",
+        field_name="inverse_json",
+        max_bytes=MAX_JOURNAL_PAYLOAD_JSON_BYTES,
+    )
     forward_json = None
     if forward_payload:
         try:
             forward_json = json.dumps(forward_payload)
         except (TypeError, ValueError):
             forward_json = None
+        if forward_json is not None:
+            forward_json = spill_json_if_needed(
+                forward_json,
+                base_dir=os.path.dirname(_DB_PATH),
+                namespace="journal",
+                field_name="forward_json",
+                max_bytes=MAX_JOURNAL_PAYLOAD_JSON_BYTES,
+            )
     cur = conn.execute(
         """INSERT INTO journal (created_at, action, clip_path, label,
                                 inverse_json, forward_json)
@@ -241,14 +258,14 @@ def _row_to_dict(row) -> "dict | None":
     if row is None:
         return None
     try:
-        inverse = json.loads(row["inverse_json"])
+        inverse = decode_json_or_spill_marker(row["inverse_json"])
     except (json.JSONDecodeError, TypeError):
         inverse = {}
     forward = None
     try:
         raw_fwd = row["forward_json"]
         if raw_fwd:
-            forward = json.loads(raw_fwd)
+            forward = decode_json_or_spill_marker(raw_fwd)
     except (IndexError, KeyError, json.JSONDecodeError, TypeError):
         forward = None
     return {

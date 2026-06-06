@@ -94,7 +94,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-04 | Request ID in error bodies | S | Missing from JSON envelope |
 | RA-05 | SQLite PRAGMA user_version | M | Closed 2026-06-06: local SQLite stores now use explicit `user_version` migrations |
 | RA-06 | Destructive wipe backup | M | No dry-run or backup |
-| RA-07 | Job result_json cap | S | No ceiling on SQLite results |
+| RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | No VACUUM; no retention |
 | RA-09 | Timeline-native captions | L | UXP createCaptionTrack() |
 | RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
@@ -677,7 +677,7 @@ copies before destructive maintenance.
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
 | RA-37 SQLite schema versions | `opencut/job_store.py`, `opencut/journal.py`, `opencut/core/footage_index_db.py`, `opencut/core/pipeline_health.py` | Closed 2026-06-06: added a local-DB migration helper that records `user_version`, runs ordered idempotent migrations per store, and rejects newer unknown schemas with downgrade-safe errors. | P1 |
-| RA-38 payload-size quotas | `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` serialize arbitrary payloads into table rows; tests cover persistence, not max size or spillover | Define per-field byte limits, spill oversized payloads to content-addressed files under `.opencut`, and return structured truncation/spill metadata in list/detail APIs. | P1 |
+| RA-38 payload-size quotas | `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` | Closed 2026-06-06: added per-field JSON byte caps, content-addressed local spill files under `.opencut/payload_spills`, and structured spill metadata in job and journal list/detail payloads. | P1 |
 | RA-39 local DB maintenance diagnostics | `cleanup_old_jobs`, `journal.clear_all`, `clear_index`, and metric purges delete rows, but no shared page-count, freelist, WAL checkpoint, or vacuum diagnostics were found | Add a read-only diagnostics command/route for each local DB with `page_count`, `freelist_count`, WAL checkpoint status, file sizes, and recommended maintenance action. | P1 |
 | RA-40 backup-before-wipe policy | `journal.clear_all`, journal DELETE route, footage-index clear/rebuild, and health reset paths perform destructive local deletes without a common backup/dry-run contract | Standardize destructive local-store APIs on `dry_run`, affected-row count, optional `VACUUM INTO` backup, and audit journal entry before irreversible deletion. | P1 |
 
@@ -1207,6 +1207,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 18 | README generated-count drift gate | README, `scripts/check_doc_sizes.py`, route manifest, live panel/source files, root test files | README badges were already described as generated, but prose, architecture diagrams, and project-structure comments could still drift from route/module/test truth. | Closed RA-28 by extending doc-size checks to README non-badge route, module, blueprint, panel line-count, and root test-file claims. |
 | 2026-06-06 | Cycle 19 | Release SBOM fidelity | `scripts/sbom.py`, `.github/workflows/build.yml`, `tests/test_release_sbom.py`, `tests/test_sbom_completeness.py`, CycloneDX and GitHub artifact-attestation docs | The release SBOM is useful as a declared inventory, but it should not look like a resolved installed-environment vulnerability inventory. | Closed RA-35 by renaming the release SBOM path/artifact and adding declared-only CycloneDX metadata plus lockfile audit-target evidence. |
 | 2026-06-06 | Cycle 20 | Local SQLite schema versioning | `opencut/local_db_migrations.py`, `job_store.py`, `journal.py`, `footage_index_db.py`, `pipeline_health.py`, local DB migration tests | The local stores had idempotent schema creation but no durable SQLite `user_version` boundary or future-version rejection. | Closed RA-37/RA-05 with explicit per-store schema versions, ordered migrations, and downgrade-safe unknown-schema errors. |
+| 2026-06-06 | Cycle 21 | Local SQLite payload spillover | `opencut/local_db_payloads.py`, `job_store.py`, `journal.py`, job/journal tests | Job result and journal inverse/forward payloads could grow without a SQLite row-size boundary. | Closed RA-38/RA-07 with per-field caps, content-addressed spill files, and API-visible spill metadata. |
 
 ### Research queries to run later
 
@@ -1227,25 +1228,25 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 21: Continue local DB hardening with payload-size quotas, maintenance diagnostics, and backup-before-wipe policy for RA-38 through RA-40.
-2. Cycle 22: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Cycle 23: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-4. Cycle 24: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-5. Cycle 25: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-6. Cycle 26: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 22: Continue local DB hardening with maintenance diagnostics and backup-before-wipe policy for RA-39 and RA-40.
+2. Cycle 23: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+3. Cycle 24: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+4. Cycle 25: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+5. Cycle 26: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+6. Cycle 27: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 20: Local SQLite schema versioning.
+Cycle 21: Local SQLite payload spillover.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
-product workflow specs. RA-05/RA-37, RA-16, RA-27, RA-28, RA-31, RA-32, RA-33,
-and RA-35 are closed, and the bootstrap dev-check guard is in place; the next
-cycle should continue local DB hardening with RA-38 through RA-40.
+product workflow specs. RA-05/RA-37, RA-07/RA-38, RA-16, RA-27, RA-28, RA-31,
+RA-32, RA-33, and RA-35 are closed, and the bootstrap dev-check guard is in
+place; the next cycle should continue local DB hardening with RA-39 and RA-40.
 
 #### Important findings so far
 
@@ -1278,8 +1279,9 @@ cycle should continue local DB hardening with RA-38 through RA-40.
   and no artifact attestation step in the scanned workflows.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
-- `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` have no
-  scanned size quota or spillover contract.
+- `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
+  spill oversized JSON into content-addressed `.opencut/payload_spills` files
+  and return structured spill metadata instead of large inline rows.
 - Local-store deletes and clears have tests for behavior, but no common
   dry-run, backup, compaction, or diagnostic policy.
 - Destructive routes generally have CSRF and input validation, but no shared
