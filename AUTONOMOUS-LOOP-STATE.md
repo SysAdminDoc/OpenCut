@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-35 closed; E15 rolling i18n migration, local DB hardening, and broader Docker hardening remain open.
 - Shipped this cycle: release SBOM workflow paths and artifact names now state the declared-SBOM contract, and generated CycloneDX metadata carries `declared-only` fidelity, dependency-source, exclusion, and lockfile advisory-audit properties.
-- Verification: `py -3.12 scripts/sbom.py --format json --output $env:TEMP\opencut-declared-sbom-cycle19.json`, `py -3.12 -m pytest -q tests/test_release_sbom.py tests/test_sbom_completeness.py`, `py -3.12 -m ruff check scripts/sbom.py tests/test_release_sbom.py tests/test_sbom_completeness.py --select E,F,I --ignore E501,E402`, and `py -3.12 scripts/release_smoke.py --only pytest-fast --json` passed (753 tests).
+- Verification: `py -3.12 scripts/sbom.py --format json --output $env:TEMP\opencut-declared-sbom-cycle19.json`, `py -3.12 -m pytest -q tests/test_release_sbom.py tests/test_sbom_completeness.py`, `py -3.12 -m ruff check scripts/sbom.py tests/test_release_sbom.py tests/test_sbom_completeness.py --select E,F,I --ignore E501,E402`, `py -3.12 -m opencut.tools.pip_audit_extras --json --no-extras`, and `py -3.12 scripts/release_smoke.py --only pytest-fast --json` passed (753 tests). Full `pip-audit` remains open under RA-15 because optional `pyproject[all]` advisories still fail.
 
 ## Next Work
 
