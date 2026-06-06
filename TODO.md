@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-22 Release Full Node pin pass.
+Last synced: 2026-06-06 during the release-smoke Ruff import-order cleanup pass.
 
 ## Execution Order
 

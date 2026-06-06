@@ -20,7 +20,6 @@ from typing import Any
 
 from opencut.helpers import _try_import
 
-
 # ---------------------------------------------------------------------------
 # Structured failure registry (E5)
 # ---------------------------------------------------------------------------

@@ -42,6 +42,7 @@ def assert_no_route_collisions(app) -> None:
 
 def get_core_blueprints():
     """Return the ordered tuple of built-in OpenCut blueprints."""
+    from .agent_chat_routes import agent_chat_bp
     from .ai_content_routes import ai_content_bp
     from .ai_editing_routes import ai_editing_bp
     from .ai_intelligence_routes import ai_intel_bp
@@ -72,6 +73,7 @@ def get_core_blueprints():
     from .education_routes import education_bp
     from .encoding_routes import encoding_bp
     from .engagement_content_routes import engagement_content_bp
+    from .enhance_routes import enhance_bp
     from .enhanced_media_routes import enhanced_media_bp
     from .enhancement_routes import enhancement_bp
     from .format_routes import format_bp
@@ -82,6 +84,7 @@ def get_core_blueprints():
     from .integration_routes import integration_bp
     from .jobs_routes import jobs_bp
     from .journal import journal_bp
+    from .mcp_bridge_routes import mcp_bridge_bp
     from .motion_design_routes import motion_design_bp
     from .motion_gen_routes import motion_gen_bp
     from .multiview_repurpose_routes import multiview_repurpose_bp
@@ -104,7 +107,9 @@ def get_core_blueprints():
     from .remote_realtime_routes import remote_realtime_bp
     from .repair_gen_routes import repair_gen_bp
     from .search import search_bp
+    from .sequence_index_routes import sequence_index_bp
     from .settings import settings_bp
+    from .shorts_variants_routes import shorts_variants_bp
     from .solver_agent_routes import solver_agent_bp
     from .sound_music_routes import sound_music_bp
     from .subtitle_pro_routes import subtitle_pro_bp
@@ -137,11 +142,6 @@ def get_core_blueprints():
     from .wave_g_routes import wave_g_bp
     from .wave_h_routes import wave_h_bp
     from .wave_k_routes import wave_k_bp
-    from .agent_chat_routes import agent_chat_bp
-    from .enhance_routes import enhance_bp
-    from .mcp_bridge_routes import mcp_bridge_bp
-    from .sequence_index_routes import sequence_index_bp
-    from .shorts_variants_routes import shorts_variants_bp
     from .wave_l_routes import wave_l_bp
     from .wave_qrs_routes import wave_qrs_bp
     from .workflow import workflow_bp

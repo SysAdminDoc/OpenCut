@@ -6,9 +6,9 @@ Last updated: 2026-06-06
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: RA-22 closed; E15 rolling i18n migration, RA-21/RA-23/RA-24 release-trust CI hardening, RA-36 shared-folder Node command hardening, and remaining UXP permission-split work remain open.
-- Shipped this cycle: Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast's panel runtime pin before treating npm advisory, unit, and build evidence as deterministic release proof.
-- Verification: focused panel/workflow tests passed (15 tests), Ruff passed for the touched workflow test files, generated route/API-alias/feature-readiness/MCP manifests passed `--check`, badge/doc checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (760 tests), and `rtk git diff --check` passed.
+- Cycle result: Release-smoke Ruff import-order cleanup closed; E15 rolling i18n migration, RA-21/RA-23/RA-24 release-trust CI hardening, RA-36 shared-folder Node command hardening, and remaining UXP permission-split work remain open.
+- Shipped this cycle: Mechanical import ordering restored the package Ruff release-smoke gate across existing package files, including the route blueprint import block.
+- Verification: `py -3.12 scripts\release_smoke.py --only ruff --json` passed, package Ruff passed, route-manifest check passed, route-manifest/collision tests passed (14 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
