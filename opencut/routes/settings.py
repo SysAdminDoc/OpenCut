@@ -27,6 +27,7 @@ from opencut.security import (
     verify_destructive_confirm_token,
 )
 from opencut.user_data import (
+    build_user_data_destructive_record,
     create_user_tombstone,
     get_user_tombstone,
     list_user_tombstones,
@@ -214,6 +215,32 @@ def delete_preset():
             "code": "NOT_FOUND",
             "suggestion": "Refresh the preset list — it may have been deleted by another client.",
         }), 404
+    record = build_user_data_destructive_record(
+        "preset",
+        name,
+        presets[name],
+        source_file="user_presets.json",
+        route="/presets/delete",
+    )
+    plan = build_destructive_plan(
+        "user_data.preset.delete",
+        records=[record],
+        metadata={"route": "/presets/delete", "name": name, "tombstone": True},
+        reversible=True,
+    )
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "deleted": None,
+            "would_delete": name,
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+        })
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
+
     tombstone = create_user_tombstone(
         "preset",
         name,
@@ -340,6 +367,32 @@ def delete_workflow():
             "suggestion": "Refresh the workflow list — it may have been deleted by another client.",
         }), 404
     removed = next((wf for wf in workflows if wf.get("name") == name), None)
+    record = build_user_data_destructive_record(
+        "workflow",
+        name,
+        removed or {"name": name},
+        source_file="workflows.json",
+        route="/workflows/delete",
+    )
+    plan = build_destructive_plan(
+        "user_data.workflow.delete",
+        records=[record],
+        metadata={"route": "/workflows/delete", "name": name, "tombstone": True},
+        reversible=True,
+    )
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "deleted": None,
+            "would_delete": name,
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+        })
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
+
     tombstone = create_user_tombstone(
         "workflow",
         name,

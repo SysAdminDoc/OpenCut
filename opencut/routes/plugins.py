@@ -14,7 +14,16 @@ import uuid
 from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
-from opencut.security import get_json_dict, is_path_within, require_csrf, validate_path
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    is_path_within,
+    require_csrf,
+    safe_bool,
+    validate_path,
+    verify_destructive_confirm_token,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -61,6 +70,32 @@ def _quarantine_path(quarantine_id: str) -> str:
 
 def _metadata_path(quarantine_path: str) -> str:
     return os.path.join(quarantine_path, ".opencut-quarantine.json")
+
+
+def _path_size_bytes(path: str) -> int:
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    total = 0
+    if os.path.isdir(path):
+        for root, _dirs, files in os.walk(path):
+            for filename in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, filename))
+                except OSError:
+                    continue
+    return total
+
+
+def _plugin_target(path: str, *, name: str, category: str, reversible: bool) -> dict:
+    return {
+        "path": path,
+        "name": name,
+        "category": category,
+        "root": PLUGINS_DIR if category == "plugin-installation" else _quarantine_root(),
+        "type": "directory" if os.path.isdir(path) else "file",
+        "bytes": _path_size_bytes(path),
+        "reversible": reversible,
+    }
 
 
 def _write_quarantine_metadata(quarantine_path: str, metadata: dict) -> None:
@@ -248,12 +283,36 @@ def uninstall_plugin():
         return jsonify({"error": "Invalid plugin path"}), 400
     if not os.path.isdir(plugin_dir):
         return jsonify({"error": f"Plugin '{name}' not found"}), 404
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    target = _plugin_target(plugin_dir, name=name, category="plugin-installation", reversible=True)
+    plan = build_destructive_plan(
+        "plugins.uninstall",
+        targets=[target],
+        metadata={
+            "route": "/plugins/uninstall",
+            "name": name,
+            "quarantine_root": _quarantine_root(),
+        },
+        reversible=True,
+    )
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "plan": [target],
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+            "name": name,
+            "would_quarantine": True,
+        })
     confirm_name = data.get("confirm_name", "")
     if confirm_name != name:
         return jsonify({
             "error": "confirm_name must match the plugin name before uninstall",
             "code": "CONFIRMATION_REQUIRED",
         }), 400
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
 
     quarantine_id = _quarantine_id_for(name)
     quarantine_root = _quarantine_root()
@@ -288,6 +347,7 @@ def uninstall_plugin():
         "quarantined": True,
         "quarantine_id": quarantine_id,
         "quarantine_path": quarantine_path,
+        "destructive_plan": plan,
         "restore_route": "/plugins/quarantine/restore",
         "delete_route": "/plugins/quarantine/delete",
         "message": f"Plugin '{name}' moved to quarantine.",
@@ -357,11 +417,43 @@ def delete_plugin_quarantine():
     if metadata is None:
         return jsonify({"error": meta_error or "Plugin quarantine entry not found"}), 404
     name = str(metadata.get("name", ""))
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    target = _plugin_target(
+        metadata["quarantine_path"],
+        name=name,
+        category="plugin-quarantine",
+        reversible=False,
+    )
+    plan = build_destructive_plan(
+        "plugins.quarantine.delete",
+        targets=[target],
+        metadata={
+            "route": "/plugins/quarantine/delete",
+            "name": name,
+            "quarantine_id": quarantine_id,
+            "created_at": metadata.get("created_at"),
+            "original_path": metadata.get("original_path", ""),
+        },
+        reversible=False,
+    )
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "plan": [target],
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+            "name": name,
+            "quarantine_id": quarantine_id,
+            "would_delete": True,
+        })
     if data.get("confirm_name", "") != name:
         return jsonify({
             "error": "confirm_name must match the plugin name before permanent delete",
             "code": "CONFIRMATION_REQUIRED",
         }), 400
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
     try:
         shutil.rmtree(metadata["quarantine_path"])
     except OSError as exc:
@@ -372,4 +464,5 @@ def delete_plugin_quarantine():
         "name": name,
         "deleted": True,
         "quarantine_id": quarantine_id,
+        "destructive_plan": plan,
     })
