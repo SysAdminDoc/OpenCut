@@ -44,6 +44,9 @@
 **Pass 278 update (no standalone research file):**
 - Advanced RA-41 by adding shared destructive-operation dry-run plan and confirmation-token helpers, then applying them to `/queue/clear`, `/logs/clear`, `/captions/cache/clear`, `/whisper/clear-cache`, and `/models/delete` so those routes return plan metadata before mutation and reject unconfirmed clears.
 
+**Pass 279 update (no standalone research file):**
+- Advanced RA-41 by adding non-mutating render-cache cleanup/invalidation plans and temp-cleanup dry-run sweep targets, then applying the shared confirmation-token contract to `/cache/cleanup`, `/cache/invalidate`, and `/system/temp-cleanup/sweep`.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

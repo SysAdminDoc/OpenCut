@@ -101,6 +101,50 @@ def _safe_unlink_cached_file(cache_key: str, path: str) -> tuple[int, bool]:
     return size, True
 
 
+def _cache_plan_entry(cache_key: str, data: dict, *, category: str) -> dict:
+    """Build non-mutating metadata for one indexed cache entry."""
+    path = str(data.get("output_path", ""))
+    safe_path = _is_expected_cache_file(cache_key, path)
+    return {
+        "id": cache_key,
+        "path": path,
+        "category": category,
+        "root": CACHE_DIR,
+        "type": "file",
+        "bytes": int(data.get("file_size", 0) or 0),
+        "exists": safe_path and os.path.isfile(path),
+        "safe_path": safe_path,
+        "input_hash": str(data.get("input_hash", "")),
+        "operation": str(data.get("operation", "")),
+        "last_accessed": data.get("last_accessed", 0),
+        "reversible": False,
+    }
+
+
+def _downstream_cache_keys(index: Dict[str, dict], input_hash: str, operation: str) -> list[str]:
+    """Return the seed cache key plus dependent keys in deterministic walk order."""
+    seed_key = None
+    for key, data in index.items():
+        if data.get("input_hash") == input_hash and data.get("operation") == operation:
+            seed_key = key
+            break
+
+    if seed_key is None:
+        return []
+
+    to_remove = {seed_key}
+    ordered = [seed_key]
+    queue = [seed_key]
+    while queue:
+        current = queue.pop(0)
+        for key, data in index.items():
+            if key not in to_remove and current in data.get("dependencies", []):
+                to_remove.add(key)
+                ordered.append(key)
+                queue.append(key)
+    return ordered
+
+
 def _file_content_hash(filepath: str) -> str:
     """Compute a hash of file contents for input tracking."""
     if not os.path.isfile(filepath):
@@ -272,30 +316,12 @@ def invalidate_downstream(
         on_progress(20, "Scanning dependencies")
 
     index = _load_index()
-    seed_key = None
-    to_remove = set()
-
-    # Find the seed entry
-    for key, data in index.items():
-        if data.get("input_hash") == input_hash and data.get("operation") == operation:
-            seed_key = key
-            to_remove.add(key)
-            break
-
-    if seed_key is None:
+    to_remove = _downstream_cache_keys(index, input_hash, operation)
+    if not to_remove:
         return {"invalidated": 0, "freed_bytes": 0}
 
     if on_progress:
         on_progress(50, "Tracing dependency chain")
-
-    # BFS: find all entries that depend on the seed
-    queue = [seed_key]
-    while queue:
-        current = queue.pop(0)
-        for key, data in index.items():
-            if key not in to_remove and current in data.get("dependencies", []):
-                to_remove.add(key)
-                queue.append(key)
 
     if on_progress:
         on_progress(70, f"Removing {len(to_remove)} entries")
@@ -386,7 +412,7 @@ def cleanup_cache(
         on_progress(20, "Calculating cache size")
 
     index = _load_index()
-    total_size = sum(d.get("file_size", 0) for d in index.values())
+    total_size = sum(int(d.get("file_size", 0) or 0) for d in index.values())
 
     if total_size <= max_bytes:
         if on_progress:
@@ -432,4 +458,52 @@ def cleanup_cache(
         "current_size": total_size,
         "invalid_entries": invalid_entries,
         "missing_entries": missing_entries,
+    }
+
+
+def cleanup_cache_plan(max_size_gb: float = 5.0) -> Dict[str, Any]:
+    """Preview LRU render-cache entries that cleanup would remove."""
+    max_bytes = int(max_size_gb * 1024 * 1024 * 1024)
+    index = _load_index()
+    total_size = sum(int(d.get("file_size", 0) or 0) for d in index.values())
+    current_size = total_size
+    entries = []
+
+    if current_size > max_bytes:
+        for key, data in sorted(index.items(), key=lambda kv: kv[1].get("last_accessed", 0)):
+            if current_size <= max_bytes:
+                break
+            entries.append(_cache_plan_entry(key, data, category="render-cache-cleanup"))
+            current_size -= int(data.get("file_size", 0) or 0)
+
+    estimated_bytes = sum(int(entry["bytes"]) for entry in entries)
+    return {
+        "entries": entries,
+        "removed": len(entries),
+        "estimated_freed_bytes": estimated_bytes,
+        "current_size": current_size,
+        "total_size": total_size,
+        "max_size_bytes": max_bytes,
+    }
+
+
+def invalidate_downstream_plan(input_hash: str, operation: str) -> Dict[str, Any]:
+    """Preview render-cache entries invalidation would remove."""
+    index = _load_index()
+    keys = _downstream_cache_keys(index, input_hash, operation)
+    entries = [
+        _cache_plan_entry(key, index.get(key, {}), category="render-cache-invalidate")
+        for key in keys
+    ]
+    estimated_bytes = sum(int(entry["bytes"]) for entry in entries)
+    invalid_entries = sum(1 for entry in entries if not entry["safe_path"])
+    missing_entries = sum(1 for entry in entries if entry["safe_path"] and not entry["exists"])
+    return {
+        "entries": entries,
+        "invalidated": len(entries),
+        "estimated_freed_bytes": estimated_bytes,
+        "invalid_entries": invalid_entries,
+        "missing_entries": missing_entries,
+        "input_hash": str(input_hash),
+        "operation": str(operation),
     }
