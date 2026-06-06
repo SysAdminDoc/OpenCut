@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - CEP Caption Write Contract
+
+- Closed RA-49 by normalizing CEP caption import/write results across native caption-track placement, video-track fallback, project-panel import, and manual-drag fallback.
+- `ocAddNativeCaptionTrack` now accepts legacy arrays plus RA-46 sidecar/cue and caption-snapshot payloads, returns sidecar and host-version context, and UXP SRT Prep names the CEP `ocAddNativeCaptionTrack` handoff.
+
 ### Changed - UXP Caption Snapshot Read Bridge
 
 - Closed RA-48 with read-only `ocGetCaptionTrackSnapshot` UXP host-action support.
