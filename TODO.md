@@ -4,11 +4,11 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-01/RA-02 dependency surface alignment pass.
+Last synced: 2026-06-06 during the E15 i18n batch 154 pass.
 
 ## Execution Order
 
-- [ ] **E15 i18n migration rolling batches** - current detailed state: v4.265 / batch 153. Continue removing high-impact bare-English CEP panel strings in guarded batches.
+- [ ] **E15 i18n migration rolling batches** - current detailed state: v4.266 / batch 154. Continue removing high-impact bare-English CEP panel strings in guarded batches.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [x] **RA-15 optional `[all]` advisory decision** - `opencut[all]` is now the release-audited convenience lane; Torch/Transformers-backed packages remain in explicit feature extras and `torch-stack` until their advisory posture is clean.
