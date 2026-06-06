@@ -68,6 +68,9 @@
 **Pass 286 update (no standalone research file):**
 - Closed RA-19 by declaring the UXP clipboard permission in both manifest surfaces and routing output-copy behavior through a shared async fallback helper with static manifest/helper tests.
 
+**Pass 287 update (no standalone research file):**
+- Closed RA-20 by replacing the UXP search-index `window.confirm` path with an inline second-click panel confirmation, keeping beta browser alerts disabled, and adding static raw-dialog guard tests.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -88,7 +91,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **234 test_*.py files** + **2 Vitest panel test files** (9,300+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **235 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
