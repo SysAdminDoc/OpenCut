@@ -811,6 +811,28 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.diarize_stat_speakers", "data-i18n"),
     ("video.diarize_stat_faces", "data-i18n"),
     ("video.diarize_stat_mapped", "data-i18n"),
+    # One-hundred-thirty-sixth batch (Video Social Media Posting parameter shell HTML).
+    ("forms.platform", "data-i18n"),
+    ("video.social_platform_aria", "data-i18n-aria-label"),
+    ("video.social_platform_youtube", "data-i18n"),
+    ("video.social_platform_tiktok", "data-i18n"),
+    ("video.social_platform_instagram", "data-i18n"),
+    ("forms.title", "data-i18n"),
+    ("video.social_title_placeholder", "data-i18n-placeholder"),
+    ("video.social_title_aria", "data-i18n-aria-label"),
+    ("forms.description", "data-i18n"),
+    ("video.social_description_placeholder", "data-i18n-placeholder"),
+    ("video.social_description_aria", "data-i18n-aria-label"),
+    ("forms.privacy", "data-i18n"),
+    ("video.social_privacy_aria", "data-i18n-aria-label"),
+    ("video.social_privacy_private", "data-i18n"),
+    ("video.social_privacy_unlisted", "data-i18n"),
+    ("video.social_privacy_public", "data-i18n"),
+    ("video.social_connected", "data-i18n"),
+    ("video.social_connect", "data-i18n"),
+    ("video.social_connect_first", "data-i18n"),
+    ("video.social_uploaded", "data-i18n"),
+    ("video.social_view_on_platform", "data-i18n"),
 )
 
 

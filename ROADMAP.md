@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.247
+**Version**: 4.248
 **Updated**: 2026-06-05
 **Baseline**: v1.32.0 (1,523 routes, 107 blueprints, 599 core modules, 8,800+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -2780,6 +2780,22 @@ Validation after the batch: `py -3.12 -m json.tool extension/com.opencut.panel/c
 
 ---
 
+## 2026-06-05 v4.248 E15 Video Social Media Posting Static HTML i18n
+
+E15 remains open. This batch migrates the Video Social Media Posting parameter shell while preserving platform/privacy values, input limits, and social-upload payloads.
+
+| Surface | Status |
+|---|---|
+| Posting controls | Platform, Social media platform ARIA, YouTube/TikTok/Instagram options, Title, Description, placeholders, ARIA labels, Privacy, Privacy level ARIA, and privacy options now expose static locale hooks while preserving values and limits. |
+| Connect/result controls | Connected badge, Connect Account copy, upload-enable hint, Uploaded! text, and View on platform link copy now expose locale hooks while preserving upload action wiring. |
+| Locale ledger | `locales/en.json` now carries 16 additional Social Media Posting keys, bringing the guarded migration ledger to 1,664 keys across one hundred thirty-six rounds. |
+| Drift posture | `i18n-drift` reports 2,070 keys, 2,006 consumers, 64 dead keys, and 0 missing keys. |
+| Coverage | `tests/test_i18n_hardcoded_migration.py` now asserts the Video Social Media Posting static HTML hooks and matching locale keys. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_i18n_hardcoded_migration.py -q -p no:cacheprovider -o addopts=""` passed (`10 passed`), `py -3.12 -m json.tool extension/com.opencut.panel/client/locales/en.json` passed, `py -3.12 -m py_compile tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 -m ruff check tests/test_i18n_hardcoded_migration.py` passed, `py -3.12 scripts/i18n_lint.py --json` reported 2,070 keys, 2,006 consumers, 64 dead keys, and 0 missing keys, `git diff --check` passed, and a Browser local preview on `127.0.0.1:8776` loaded the migrated Video Social Media Posting hooks and preserved values with no current-port console errors.
+
+---
+
 ## 2026-06-05 v4.247 E15 Video Multimodal Diarization Static HTML i18n
 
 E15 remains open. This batch migrates the Video Multimodal Diarization parameter shell while preserving numeric speaker options, slider values, package command text, and diarization payloads.
@@ -2967,7 +2983,7 @@ Validation after the consolidation: `py -3.12 scripts\sync_version.py --check`, 
 - [x] **P2 — N10 request-ID propagation into subprocess stderr** — closed in v4.98 with worker request-ID restoration, `OPENCUT_REQUEST_ID` subprocess env tagging, and request-prefixed FFmpeg stderr logs.
 - [x] **P2 — E12 workflow allowlist derived from route manifest** — closed in v4.99 with per-route workflow metadata, route-manifest-derived validation, metadata-drift checks, and 53 explicit workflow-safe route opt-ins.
 - [x] **P2 — E13 CLI surface parity escape hatch** — closed in v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
-- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.247 with the one-hundred-thirty-fifth guarded Video Multimodal Diarization parameter static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
+- [ ] **P2 — E15 i18n migration rolling batches** — advanced in v4.248 with the one-hundred-thirty-sixth guarded Video Social Media Posting parameter static shell HTML migration; continue removing high-impact bare-English panel strings in rolling batches.
 - [ ] **External — F202 macOS notarization live acceptance** — repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External — F252 UXP WebView cutover** — repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 
