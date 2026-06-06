@@ -5,6 +5,9 @@
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
+**Pass 266 update (no standalone research file):**
+- Closed RA-27 by aligning Docker README and compose commands with the committed `gpu` profile service, moving Docker run examples to `/home/opencut/.opencut`, removing the obsolete Compose `version` key, and adding `tests/test_docker_distribution_docs.py` to release-smoke. Focused Docker docs tests, pytest-fast, and `docker compose --profile gpu config` cover the batch.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
