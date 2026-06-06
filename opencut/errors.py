@@ -46,6 +46,59 @@ def _attach_request_id(body: dict) -> dict:
     return enriched
 
 
+def _request_log_fields(context: str = "") -> dict:
+    fields = {
+        "error_context": context,
+        "request_id": _current_request_id(),
+        "request_method": "",
+        "request_path": "",
+    }
+    try:
+        if has_request_context():
+            fields["request_method"] = request.method
+            fields["request_path"] = request.path
+    except RuntimeError:
+        pass
+    return fields
+
+
+def _log_typed_error_response(code: str, message: str, status: int, context: str = "") -> None:
+    extra = _request_log_fields(context)
+    extra.update(
+        {
+            "error_code": code,
+            "error_status": status,
+        }
+    )
+    level = logging.ERROR if status >= 500 else logging.WARNING
+    log_ctx = f" in {context}" if context else ""
+    logger.log(
+        level,
+        "Typed error response [%s]%s status=%s request_id=%s method=%s path=%s: %s",
+        code,
+        log_ctx,
+        status,
+        extra["request_id"] or "-",
+        extra["request_method"] or "-",
+        extra["request_path"] or "-",
+        message,
+        extra=extra,
+    )
+
+
+def _log_open_cut_error(exc: "OpenCutError", context: str = "") -> None:
+    extra = _request_log_fields(context)
+    extra.update(
+        {
+            "error_code": exc.code,
+            "error_status": exc.status,
+        }
+    )
+    level = logging.ERROR if exc.status >= 500 else logging.WARNING
+    log_ctx = f" in {context}" if context else ""
+    logger.log(level, "OpenCutError [%s]%s: %s", exc.code, log_ctx, exc.message, extra=extra)
+
+
 # ---------------------------------------------------------------------------
 # Base exception
 # ---------------------------------------------------------------------------
@@ -61,13 +114,15 @@ class OpenCutError(Exception):
         self.suggestion = suggestion
         super().__init__(message)
 
-    def to_response(self):
+    def to_response(self, *, log: bool = True, context: str = ""):
         body = {
             "error": self.message,
             "code": self.code,
         }
         if self.suggestion:
             body["suggestion"] = self.suggestion
+        if log:
+            _log_open_cut_error(self, context)
         return jsonify(_attach_request_id(body)), self.status
 
 
@@ -76,7 +131,7 @@ class OpenCutError(Exception):
 # ---------------------------------------------------------------------------
 
 def error_response(code: str, message: str, status: int = 400,
-                   suggestion: str = "", detail: str = ""):
+                   suggestion: str = "", detail: str = "", log: bool = True):
     """Return a JSON error response tuple ready to be returned from a route.
 
     Usage::
@@ -92,6 +147,8 @@ def error_response(code: str, message: str, status: int = 400,
         body["suggestion"] = suggestion
     if detail:
         body["detail"] = detail
+    if log:
+        _log_typed_error_response(code, message, status)
     return jsonify(_attach_request_id(body)), status
 
 
@@ -124,7 +181,7 @@ def safe_error(exc, context=""):
     status = 500
 
     if isinstance(exc, OpenCutError):
-        return exc.to_response()
+        return exc.to_response(context=context)
 
     if getattr(exc, "code", "") == "GPU_BUSY":
         response, status_code = error_response(
@@ -191,7 +248,7 @@ def safe_error(exc, context=""):
     logger.exception("Error [%s]%s: %s", code, log_ctx, exc)
 
     return error_response(code, user_msg, status=status,
-                          suggestion=suggestion)
+                          suggestion=suggestion, log=False)
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +410,7 @@ def register_error_handlers(app):
 
     @app.errorhandler(OpenCutError)
     def handle_opencut_error(e):
-        return e.to_response()
+        return e.to_response(context="open_cut_error_handler")
 
     @app.errorhandler(TooManyJobsError)
     def handle_too_many_jobs(e):
