@@ -26,11 +26,12 @@ def test_f267_harness_covers_all_direct_uxp_host_actions():
         if entry["status"] == "direct_uxp"
     ]
     manifest = build_udt_harness_manifest()
+    expected_actions = [*direct_actions, "ocGetCaptionTrackSnapshot"]
 
     assert manifest["f_number"] == "F267"
-    assert manifest["scenario_count"] == 14
-    assert manifest["actions"] == direct_actions
-    assert {scenario["action"] for scenario in manifest["scenarios"]} == set(direct_actions)
+    assert manifest["scenario_count"] == 15
+    assert manifest["actions"] == expected_actions
+    assert {scenario["action"] for scenario in manifest["scenarios"]} == set(expected_actions)
     assert "ocAddNativeCaptionTrack" not in manifest["actions"]
     assert "ocQeReflect" not in manifest["actions"]
     assert "ocApplySequenceCuts" not in manifest["actions"]
@@ -40,9 +41,16 @@ def test_f267_harness_covers_all_direct_uxp_host_actions():
 def test_f267_scenarios_have_payloads_and_safety_boundaries():
     manifest = build_udt_harness_manifest()
 
-    assert manifest["safe_default_count"] == 5
+    assert manifest["safe_default_count"] == 6
     assert manifest["mutating_count"] == 8
     assert manifest["file_write_count"] == 1
+    caption_snapshot = next(
+        scenario for scenario in manifest["scenarios"]
+        if scenario["action"] == "ocGetCaptionTrackSnapshot"
+    )
+    assert "caption_api_missing" in caption_snapshot["acceptable_blockers"]
+    assert caption_snapshot["safe_by_default"] is True
+    assert caption_snapshot["mutates_project"] is False
     for scenario in manifest["scenarios"]:
         assert scenario["id"].startswith("f267-")
         assert scenario["status"] == "direct_uxp"
@@ -75,7 +83,7 @@ def test_f267_cli_check_passes_in_sync():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "14 scenarios" in result.stdout
+    assert "15 scenarios" in result.stdout
 
 
 def test_f267_panel_loads_bundled_udt_harness_runner():

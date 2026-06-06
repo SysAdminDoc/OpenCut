@@ -13,7 +13,8 @@
     "ocUnrenameItems",
     "ocRemoveImportedSequence",
     "ocSetSequencePlayhead",
-    "ocRemoveImportedItem"
+    "ocRemoveImportedItem",
+    "ocGetCaptionTrackSnapshot"
   ],
   "f_number": "F267",
   "file_write_count": 1,
@@ -22,8 +23,8 @@
   "panel_manifest": "extension/com.opencut.uxp/uxp-udt-harness.json",
   "read_only_command": "await window.OpenCutUXPUdtHarness.run()",
   "run_command": "await window.OpenCutUXPUdtHarness.run({ includeMutating: true })",
-  "safe_default_count": 5,
-  "scenario_count": 14,
+  "safe_default_count": 6,
+  "scenario_count": 15,
   "scenarios": [
     {
       "acceptable_blockers": [
@@ -429,6 +430,38 @@
       "safe_by_default": false,
       "status": "direct_uxp",
       "uxp_path": "Project item delete/remove APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found",
+        "caption_api_missing",
+        "caption_track_items_unavailable",
+        "CaptionTrack.getTrackItems"
+      ],
+      "action": "ocGetCaptionTrackSnapshot",
+      "expected_result_keys": [
+        "ok",
+        "reason_code",
+        "segments",
+        "tracks",
+        "count"
+      ],
+      "fixture": "active_sequence_with_optional_caption_track",
+      "id": "f267-15-ocGetCaptionTrackSnapshot",
+      "mutates_project": false,
+      "payload": {
+        "includeEmptyTrackItems": false
+      },
+      "risk": "low",
+      "role": "Read active-sequence caption-track items into the caption round-trip snapshot schema.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "Sequence.getCaptionTrackCount(), Sequence.getCaptionTrack(), and CaptionTrack.getTrackItems() read APIs.",
       "writes_files": false
     }
   ],

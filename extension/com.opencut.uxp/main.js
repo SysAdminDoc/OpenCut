@@ -254,6 +254,7 @@ const PProBridge = (() => {
     ocGetSequenceInfo: "getSequenceInfo",
     ocAddSequenceMarkers: "addMarkers",
     ocGetSequenceMarkers: "getSequenceMarkers",
+    ocGetCaptionTrackSnapshot: "getCaptionTrackSnapshot",
     ocApplyClipKeyframes: "applyClipKeyframes",
     ocBatchRenameProjectItems: "batchRenameProjectItems",
     ocCreateSmartBins: "createSmartBins",
@@ -843,6 +844,273 @@ const PProBridge = (() => {
     }
   }
 
+  async function _activeSequenceContext() {
+    if (!available || !ppro?.app?.getProjectList) {
+      return {
+        ok: false,
+        reason: "Premiere UXP project APIs are unavailable.",
+        reason_code: "uxp_unavailable",
+      };
+    }
+    try {
+      const projects = await ppro.app.getProjectList();
+      if (!projects || projects.length === 0) {
+        return { ok: false, reason: "No open project.", reason_code: "no_open_project" };
+      }
+      const project = projects[0];
+      const sequence = await project.getActiveSequence?.();
+      if (!sequence) {
+        return { ok: false, reason: "No active sequence.", reason_code: "no_active_sequence", project };
+      }
+      return { ok: true, project, sequence };
+    } catch (e) {
+      return { ok: false, reason: e.message, reason_code: "project_api_error" };
+    }
+  }
+
+  function _timeValueToSeconds(value) {
+    if (value == null) return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      if (value.seconds != null) {
+        const seconds = Number(value.seconds);
+        return Number.isFinite(seconds) ? seconds : null;
+      }
+      if (value.ticks != null) {
+        const seconds = Number(value.ticks) / 254016000000;
+        return Number.isFinite(seconds) ? seconds : null;
+      }
+      if (value.value != null) return _timeValueToSeconds(value.value);
+    }
+    return null;
+  }
+
+  async function _captionItemField(item, methodNames, propertyNames) {
+    for (const methodName of methodNames) {
+      if (typeof item?.[methodName] !== "function") continue;
+      try {
+        const value = await item[methodName]();
+        if (value != null) return value;
+      } catch (_) { /* try the next documented or observed shape */ }
+    }
+    for (const propertyName of propertyNames) {
+      if (item?.[propertyName] != null) return item[propertyName];
+    }
+    return null;
+  }
+
+  function _captionText(value) {
+    if (value == null) return "";
+    if (typeof value === "object") {
+      return String(value.text ?? value.value ?? value.content ?? value.name ?? "").trim();
+    }
+    return String(value).trim();
+  }
+
+  function _captionTrackItemTypeCandidates(payload) {
+    const candidates = [];
+    const add = (value) => {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && !candidates.includes(numeric)) candidates.push(numeric);
+    };
+    add(payload.trackItemType);
+    add(payload.captionTrackItemType);
+    add(ppro?.Constants?.TrackItemType?.CAPTION);
+    add(ppro?.TrackItemType?.CAPTION);
+    add(0);
+    add(1);
+    return candidates;
+  }
+
+  async function _captionTrackItems(track, payload) {
+    if (typeof track?.getTrackItems !== "function") {
+      return {
+        ok: false,
+        reason: "CaptionTrack.getTrackItems is unavailable.",
+        reason_code: "caption_api_missing",
+      };
+    }
+    const includeEmpty = payload.includeEmptyTrackItems === true;
+    const attempts = [];
+    for (const trackItemType of _captionTrackItemTypeCandidates(payload)) {
+      attempts.push([trackItemType, includeEmpty]);
+      attempts.push([trackItemType]);
+    }
+    attempts.push([]);
+    const warnings = [];
+    for (const args of attempts) {
+      try {
+        const items = await track.getTrackItems(...args);
+        return {
+          ok: true,
+          items: Array.from(items || []),
+          warnings,
+        };
+      } catch (e) {
+        warnings.push(`getTrackItems(${args.length}) failed: ${e.message}`);
+      }
+    }
+    return {
+      ok: false,
+      reason: "CaptionTrack.getTrackItems did not return readable items.",
+      reason_code: "caption_track_items_unavailable",
+      warnings,
+    };
+  }
+
+  async function _captionSegmentFromItem(item, trackIndex, itemIndex, sequenceName) {
+    const textValue = await _captionItemField(
+      item,
+      ["getText", "getName", "getTitle"],
+      ["text", "name", "title", "content"]
+    );
+    const startValue = await _captionItemField(
+      item,
+      ["getStartTime", "getStart", "getInPoint"],
+      ["start", "startTime", "inPoint"]
+    );
+    const endValue = await _captionItemField(
+      item,
+      ["getEndTime", "getEnd", "getOutPoint"],
+      ["end", "endTime", "outPoint"]
+    );
+    const nodeId = await _captionItemField(
+      item,
+      ["getNodeId", "getId"],
+      ["nodeId", "id", "guid"]
+    );
+    const start = _timeValueToSeconds(startValue) ?? 0;
+    const end = _timeValueToSeconds(endValue) ?? start;
+    const sourceId = nodeId ? String(nodeId) : `uxp_track_${trackIndex}_item_${itemIndex}`;
+    const captionId = `uxp_${sourceId}`;
+    return {
+      caption_id: captionId,
+      source_caption_id: sourceId,
+      source_caption_ids: [sourceId],
+      source_segment_id: sourceId,
+      start,
+      end,
+      text: _captionText(textValue),
+      words: [],
+      display_setting_token_ids: [],
+      display_settings: {},
+      export_format: "uxp_caption_track_snapshot",
+      track_index: trackIndex,
+      item_index: itemIndex,
+      host_locators: {
+        sequence_name: sequenceName,
+        caption_track_index: trackIndex,
+        caption_item_index: itemIndex,
+        caption_item_id: sourceId,
+      },
+    };
+  }
+
+  async function getCaptionTrackSnapshot(payload = {}) {
+    const parsed = _parseHostPayload(payload, {});
+    const context = await _activeSequenceContext();
+    if (!context.ok) {
+      return {
+        ok: false,
+        reason: context.reason,
+        reason_code: context.reason_code,
+        api_names: ["Sequence.getCaptionTrackCount", "Sequence.getCaptionTrack", "CaptionTrack.getTrackItems"],
+        tracks: [],
+        segments: [],
+        count: 0,
+      };
+    }
+    const seq = context.sequence;
+    if (typeof seq.getCaptionTrackCount !== "function" || typeof seq.getCaptionTrack !== "function") {
+      return {
+        ok: false,
+        reason: "Active sequence does not expose caption-track read APIs.",
+        reason_code: "caption_api_missing",
+        api_names: ["Sequence.getCaptionTrackCount", "Sequence.getCaptionTrack", "CaptionTrack.getTrackItems"],
+        tracks: [],
+        segments: [],
+        count: 0,
+      };
+    }
+    try {
+      const sequenceName = await seq.getName?.() ?? "";
+      const trackCount = Math.max(0, Number(await seq.getCaptionTrackCount()) || 0);
+      if (trackCount === 0) {
+        return {
+          ok: true,
+          reason: "Active sequence has no caption tracks.",
+          reason_code: "no_caption_tracks",
+          read_only: true,
+          schema: "opencut.caption_track_snapshot",
+          schema_version: 1,
+          sequence: { name: sequenceName, caption_track_count: 0 },
+          tracks: [],
+          segments: [],
+          count: 0,
+          metadata_preserved: false,
+          warnings: [],
+        };
+      }
+      const tracks = [];
+      const segments = [];
+      const warnings = [];
+      for (let trackIndex = 0; trackIndex < trackCount; trackIndex += 1) {
+        let track = await seq.getCaptionTrack(trackIndex);
+        if (!track && trackIndex === 0) track = await seq.getCaptionTrack();
+        if (!track) {
+          warnings.push(`caption_track_${trackIndex}_missing`);
+          continue;
+        }
+        const itemResult = await _captionTrackItems(track, parsed);
+        if (!itemResult.ok) {
+          return {
+            ok: false,
+            reason: itemResult.reason,
+            reason_code: itemResult.reason_code,
+            api_names: ["CaptionTrack.getTrackItems"],
+            tracks,
+            segments,
+            count: segments.length,
+            warnings: itemResult.warnings || warnings,
+          };
+        }
+        warnings.push(...(itemResult.warnings || []));
+        const trackSegments = [];
+        for (let itemIndex = 0; itemIndex < itemResult.items.length; itemIndex += 1) {
+          const segment = await _captionSegmentFromItem(itemResult.items[itemIndex], trackIndex, itemIndex, sequenceName);
+          trackSegments.push(segment);
+          segments.push(segment);
+        }
+        tracks.push({
+          track_index: trackIndex,
+          count: trackSegments.length,
+          segments: trackSegments,
+        });
+      }
+      return {
+        ok: true,
+        reason_code: segments.length ? "caption_tracks_read" : "caption_tracks_empty",
+        read_only: true,
+        schema: "opencut.caption_track_snapshot",
+        schema_version: 1,
+        sequence: { name: sequenceName, caption_track_count: trackCount },
+        track_count: trackCount,
+        tracks,
+        segments,
+        count: segments.length,
+        metadata_preserved: segments.length > 0,
+        warnings,
+      };
+    } catch (e) {
+      console.warn("[PProBridge] getCaptionTrackSnapshot failed:", e.message);
+      return { ok: false, reason: e.message, reason_code: "caption_snapshot_failed", tracks: [], segments: [], count: 0 };
+    }
+  }
+
   async function setSequencePlayhead(payload) {
     const parsed = _parseHostPayload(payload, {});
     const seconds = Number(parsed.seconds ?? parsed.time ?? parsed.value ?? payload ?? NaN);
@@ -1070,6 +1338,7 @@ const PProBridge = (() => {
       case "ocGetSequenceInfo": return { ok: true, data: await getSequenceInfo() };
       case "ocAddSequenceMarkers": return addMarkers(_arrayPayload(payload, "markers"));
       case "ocGetSequenceMarkers": return getSequenceMarkers();
+      case "ocGetCaptionTrackSnapshot": return getCaptionTrackSnapshot(payload);
       case "ocApplySequenceCuts": return applyCuts(_arrayPayload(payload, "cuts"));
       case "ocApplyClipKeyframes": return applyClipKeyframes(payload);
       case "ocBatchRenameProjectItems": return batchRenameProjectItems(payload);
@@ -1097,6 +1366,7 @@ const PProBridge = (() => {
     getSequenceInfo,
     addMarkers,
     getSequenceMarkers,
+    getCaptionTrackSnapshot,
     removeSequenceMarkers,
     applyCuts,
     invalidateCache,
@@ -1123,6 +1393,7 @@ if (typeof window !== "undefined") {
   window.OpenCutUXPHost = Object.freeze({
     executeHostAction: (action, payload) => PProBridge.executeHostAction(action, payload),
     getHostActionStatus: () => PProBridge.hostActionStatus(),
+    getCaptionTrackSnapshot: (payload) => PProBridge.getCaptionTrackSnapshot(payload),
     querySupportedTranscriptLanguages: () => PProBridge.querySupportedTranscriptLanguages(),
     getTranscriptState: (payload) => PProBridge.getTranscriptState(payload),
     getObjectMaskState: (payload) => PProBridge.getObjectMaskState(payload),
