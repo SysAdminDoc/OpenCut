@@ -1227,6 +1227,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 38 | Docker dependency and context hardening | Docker build/context docs, pip requirement-specifier docs, `Dockerfile`, `.dockerignore`, `requirements.txt`, Docker guard tests | The Docker image still carried a hand-written optional dependency install list that could reintroduce retired packages, shell-parse unquoted specifiers, and mask pip failures, while `.dockerignore` did not explicitly block local secrets/logs/runtime DB state before `COPY . /app`. | Closed RA-25/RA-29/RA-30 by installing from tracked `requirements.txt`, keeping pip failures fatal, mirroring sensitive ignore patterns, excluding local runtime/cache DB artifacts, and extending Docker distribution guard tests. |
 | 2026-06-06 | Cycle 39 | Docker runtime parity | Docker port-publishing docs, Dockerfile `EXPOSE`, `docker-compose.yml`, README Docker quick start, WebSocket/MCP sidecar evidence | Dockerfile and product docs mentioned WebSocket/MCP sidecar ports, but the image does not install/start/publish those sidecars by default. Publishing 5680/5681 would imply support the default container does not provide. | Closed RA-26 by documenting Docker as HTTP 5679 only by default, keeping sidecars opt-in, aligning Dockerfile/Compose/README, and extending Docker distribution tests to guard the port posture. |
 | 2026-06-06 | Cycle 40 | Release Full Node runtime pin | GitHub Actions setup-node docs, `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, panel CI gate tests | Release Full ran Linux CEP panel npm gates without the explicit Node 22 setup that PR Fast already used, so release evidence could drift with runner defaults. | Closed RA-22 by adding a Linux-only Node 22 setup step before the Release Full CEP panel gates and a regression test that compares the PR Fast and Release Full runtime pins. |
+| 2026-06-06 | Cycle 41 | Release smoke Ruff import-order cleanup | Release-smoke Ruff gate, `opencut/routes/__init__.py`, package import blocks, route manifest and collision tests | The broader release-smoke Ruff gate failed on 17 existing `I001` import-order findings, including the blueprint import block. | Restored the Ruff gate with mechanical import ordering and rechecked route-manifest plus route-collision invariants. |
 
 ### Research queries to run later
 
@@ -1247,17 +1248,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 41: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 42: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 43: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 44: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 45: Continue release-trust hardening on RA-21, RA-23, and RA-24.
+1. Cycle 42: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 43: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 44: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 45: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 46: Continue release-trust hardening on RA-21, RA-23, and RA-24.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 40: Release Full Node runtime pin.
+Cycle 41: Release smoke Ruff import-order cleanup.
 
 #### Current focus
 
@@ -1284,6 +1285,9 @@ sidecars to custom opt-in services. Continue with the remaining release-trust
 and product workflow specs. RA-22 keeps Release Full's Linux panel npm gates on
 the same explicit Node 22 runtime as PR Fast before treating panel advisory,
 unit, and build evidence as release proof.
+The package Ruff release-smoke gate is clean again after mechanical import
+ordering, with route-manifest and route-collision checks re-run after the
+blueprint import-block cleanup.
 
 #### Important findings so far
 
@@ -1320,6 +1324,8 @@ unit, and build evidence as release proof.
   custom services/profiles.
 - Release Full's Linux panel npm gates now set up Node 22 before `npm ci`,
   matching PR Fast's panel runtime pin.
+- The package Ruff release-smoke gate is clean after mechanical import-order
+  cleanup across existing package files.
 - Release Full still has workflow-level `contents: write`, mutable action tags,
   and no artifact attestation step in the scanned workflows.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via

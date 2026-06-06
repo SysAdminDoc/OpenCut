@@ -15,8 +15,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float, validate_output_path
-from opencut.security import get_json_dict
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, validate_output_path
 
 logger = logging.getLogger("opencut")
 

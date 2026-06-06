@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-06 (290 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-290 are recorded below.
+**Last consolidated:** 2026-06-06 (291 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-291 are recorded below.
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
@@ -79,6 +79,9 @@
 
 **Pass 290 update (no standalone research file):**
 - Closed RA-22 by adding an explicit Linux-only Node 22 setup step before Release Full's CEP panel npm gates, matching PR Fast's panel runtime pin, and adding a workflow regression test that compares the two CI paths.
+
+**Pass 291 update (no standalone research file):**
+- Restored the package Ruff release-smoke gate by applying Ruff's mechanical import ordering to 17 existing package files, including the route blueprint import block, then rechecking route-manifest and route-collision invariants.
 
 **Live version:** v1.32.0.
 
