@@ -2386,21 +2386,21 @@
                 <div class="sub-panel" id="sub-vid-scenes">
                     <section class="card">
                         <div class="form-group">
-                            <label for="sceneMethod">Detection Method</label>
+                            <label for="sceneMethod" data-i18n="forms.detection_method">Detection Method</label>
                             <select id="sceneMethod">
-                                <option value="ffmpeg" selected>FFmpeg (fast)</option>
-                                <option value="ml">ML TransNetV2 (accurate)</option>
+                                <option value="ffmpeg" selected data-i18n="video.scene_method_ffmpeg">FFmpeg (fast)</option>
+                                <option value="ml" data-i18n="video.scene_method_ml">ML TransNetV2 (accurate)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="sceneThreshold">Sensitivity</label>
+                            <label for="sceneThreshold" data-i18n="forms.sensitivity">Sensitivity</label>
                             <div class="slider-row">
                                 <input type="range" id="sceneThreshold" min="0.1" max="0.8" value="0.3" step="0.05">
                                 <span class="slider-val" id="sceneThresholdVal">0.30</span>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="minSceneLen">Min Scene Length</label>
+                            <label for="minSceneLen" data-i18n="video.min_scene_length">Min Scene Length</label>
                             <div class="slider-row">
                                 <input type="range" id="minSceneLen" min="0.5" max="10" value="2.0" step="0.5">
                                 <span class="slider-val" id="minSceneLenVal">2.0s</span>
@@ -2409,13 +2409,13 @@
                         <button type="button" class="btn-primary" id="runScenesBtn" disabled data-i18n="video.scenes_detect">Detect Scenes</button>
                         <div class="scene-results hidden" id="sceneResults">
                             <div class="stat-grid">
-                                <div class="stat-item"><span class="stat-value" id="sceneCount">--</span><span class="stat-label">Scenes</span></div>
-                                <div class="stat-item"><span class="stat-value" id="avgSceneLen">--</span><span class="stat-label">Avg Length</span></div>
+                                <div class="stat-item"><span class="stat-value" id="sceneCount">--</span><span class="stat-label" data-i18n="video.scene_stat_scenes">Scenes</span></div>
+                                <div class="stat-item"><span class="stat-value" id="avgSceneLen">--</span><span class="stat-label" data-i18n="video.scene_stat_avg_length">Avg Length</span></div>
                             </div>
                             <div class="yt-chapters hidden" id="ytChapters">
-                                <label for="ytChaptersText">YouTube Chapters</label>
+                                <label for="ytChaptersText" data-i18n="video.youtube_chapters">YouTube Chapters</label>
                                 <textarea class="text-area" id="ytChaptersText" rows="4" readonly></textarea>
-                                <button type="button" class="btn-sm" id="copyChaptersBtn">Copy to Clipboard</button>
+                                <button type="button" class="btn-sm" id="copyChaptersBtn" data-i18n="common.copy_to_clipboard">Copy to Clipboard</button>
                             </div>
                         </div>
                     </section>
