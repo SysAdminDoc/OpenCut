@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-26 closed; E15 rolling i18n migration, release-trust CI hardening, and remaining UXP permission-split work remain open.
 - Shipped this cycle: Docker's default runtime posture is now explicit HTTP API only on port 5679; WebSocket 5680 and MCP 5681 remain opt-in sidecar work instead of default published container ports.
-- Verification: focused Docker distribution tests passed (8 tests), Ruff passed for the Docker test file, `docker compose --profile gpu config` passed, generated route/API-alias/feature-readiness/MCP manifests passed `--check`, badge/doc checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (759 tests), and `rtk git diff --check` passed.
+- Verification: focused Docker distribution tests passed (8 tests), Ruff passed for the Docker test file, `docker compose --profile gpu config` passed, `docker build --target final -t opencut-runtime-smoke:latest .` passed, `docker image inspect opencut-runtime-smoke:latest --format '{{json .Config.ExposedPorts}}'` returned only `{"5679/tcp":{}}`, generated route/API-alias/feature-readiness/MCP manifests passed `--check`, badge/doc checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (759 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
