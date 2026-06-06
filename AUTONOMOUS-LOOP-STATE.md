@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-38/RA-07 closed; E15 rolling i18n migration, remaining local DB hardening, and broader Docker hardening remain open.
 - Shipped this cycle: oversized job-result and journal inverse/forward JSON payloads now spill to content-addressed files under `.opencut/payload_spills`, and job/journal reads return structured spill metadata instead of large SQLite rows.
-- Verification: focused local-DB pytest passed (180 tests), Ruff passed for the touched Python files, `py -3.12 scripts/check_doc_sizes.py --check` passed, `py -3.12 scripts/sync_badges.py --check` passed, `py -3.12 scripts/release_smoke.py --only pytest-fast --json` passed (753 tests), and `git diff --check` passed.
+- Verification: focused job/journal payload pytest passed (43 tests), Ruff passed for the touched Python files, `py -3.12 scripts\check_doc_sizes.py --check` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (753 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
