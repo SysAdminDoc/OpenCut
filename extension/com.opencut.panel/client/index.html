@@ -2624,14 +2624,14 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.titles">Titles &amp; Motion Graphics</div></div>
                         <p class="card-desc" data-i18n="video.titles_desc">Create animated title cards and lower thirds with fade, slide, typewriter, and bounce effects.</p>
-                        <div class="form-group"><label for="titleText">Title Text</label>
-                            <input type="text" id="titleText" class="text-input" placeholder="Your Title Here"></div>
-                        <div class="form-group"><label for="titleSubtext">Subtitle</label>
-                            <input type="text" id="titleSubtext" class="text-input" placeholder="Optional subtitle"></div>
-                        <div class="form-group"><label for="titlePreset">Preset</label>
-                            <select id="titlePreset"><option value="fade_center">Fade Center</option><option value="slide_left">Slide From Left</option><option value="typewriter">Typewriter</option><option value="lower_third">Lower Third</option><option value="countdown">Countdown</option><option value="kinetic_bounce">Kinetic Bounce</option></select></div>
-                        <div class="form-group"><label for="titleDur">Duration (sec)</label><div class="slider-row"><input type="range" id="titleDur" min="1" max="15" value="5" step="0.5"><span class="slider-val" id="titleDurVal">5</span></div></div>
-                        <div class="form-group"><label for="titleFontSize">Font Size</label><div class="slider-row"><input type="range" id="titleFontSize" min="24" max="150" value="72" step="2"><span class="slider-val" id="titleFontSizeVal">72</span></div></div>
+                        <div class="form-group"><label for="titleText" data-i18n="video.title_text">Title Text</label>
+                            <input type="text" id="titleText" class="text-input" placeholder="Your Title Here" data-i18n-placeholder="video.title_text_placeholder"></div>
+                        <div class="form-group"><label for="titleSubtext" data-i18n="video.subtitle">Subtitle</label>
+                            <input type="text" id="titleSubtext" class="text-input" placeholder="Optional subtitle" data-i18n-placeholder="video.subtitle_placeholder"></div>
+                        <div class="form-group"><label for="titlePreset" data-i18n="forms.preset">Preset</label>
+                            <select id="titlePreset"><option value="fade_center" data-i18n="video.title_preset_fade_center">Fade Center</option><option value="slide_left" data-i18n="video.title_preset_slide_left">Slide From Left</option><option value="typewriter" data-i18n="video.title_preset_typewriter">Typewriter</option><option value="lower_third" data-i18n="video.title_preset_lower_third">Lower Third</option><option value="countdown" data-i18n="video.title_preset_countdown">Countdown</option><option value="kinetic_bounce" data-i18n="video.title_preset_kinetic_bounce">Kinetic Bounce</option></select></div>
+                        <div class="form-group"><label for="titleDur" data-i18n="forms.duration">Duration (sec)</label><div class="slider-row"><input type="range" id="titleDur" min="1" max="15" value="5" step="0.5"><span class="slider-val" id="titleDurVal">5</span></div></div>
+                        <div class="form-group"><label for="titleFontSize" data-i18n="forms.font_size">Font Size</label><div class="slider-row"><input type="range" id="titleFontSize" min="24" max="150" value="72" step="2"><span class="slider-val" id="titleFontSizeVal">72</span></div></div>
                         <button type="button" class="btn-primary" id="runTitleOverlayBtn" disabled data-i18n="video.overlay_on_video">Overlay on Video</button>
                         <button type="button" class="btn-secondary" id="runTitleCardBtn" data-i18n="video.render_title_card">Render Title Card</button>
                     </section>
