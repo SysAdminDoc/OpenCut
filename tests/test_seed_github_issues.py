@@ -105,6 +105,22 @@ def test_apply_seeds_dry_run_does_not_invoke_gh(monkeypatch):
     assert all(action.startswith("DRY ") for action in actions)
 
 
+def test_apply_labels_dry_run_does_not_require_gh(monkeypatch):
+    seeder = load_seeder()
+    labels = seeder.load_labels()
+
+    def _fail(*_args, **_kwargs):
+        raise AssertionError("gh CLI must not be invoked in dry-run mode")
+
+    monkeypatch.setattr(seeder, "_run_gh", _fail)
+    monkeypatch.setattr(seeder, "_gh_available", lambda: False)
+
+    actions = seeder.apply_labels("owner/repo", labels, dry_run=True)
+
+    assert len(actions) == len(labels)
+    assert all(action.startswith("DRY: gh label create ") for action in actions)
+
+
 def test_good_first_filter_picks_labeled_seeds():
     seeder = load_seeder()
     seeds = seeder.load_seeds()

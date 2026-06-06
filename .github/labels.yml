@@ -77,6 +77,18 @@
   color: "f7e7c4"
   description: "External integrations: Premiere bridge, MCP, hosts."
 
+- name: "f251"
+  color: "5319e7"
+  description: "Adobe Premiere Pro npm typings tracker."
+
+- name: "uxp"
+  color: "5319e7"
+  description: "Adobe UXP migration and compatibility tracking."
+
+- name: "tracking"
+  color: "bfdadc"
+  description: "Automated recurring tracker issue."
+
 - name: "roadmap:now"
   color: "b60205"
   description: "Roadmap Now tier — current ship target."
@@ -131,4 +143,4 @@
 
 - name: "wontfix"
   color: "ffffff"
-  description: "Out of scope or explicitly rejected."
+  description: "Explicitly declined or rejected."
