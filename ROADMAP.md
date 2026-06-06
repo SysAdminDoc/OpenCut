@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-06
-**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,200+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,300+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -105,7 +105,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-15 | [all] advisory decision | M | Closed 2026-06-06: `opencut[all]` is the release-audited convenience lane; Torch/Transformers-backed packages are explicit via `torch-stack` and named feature extras |
 | RA-16 | Adobe dist-tag tracking | S | release-* tags untracked |
 | RA-17 | UXP manifest schema guard | M | Closed 2026-06-06: live UXP manifest declares Premiere-supported `manifestVersion: 5` and tests guard the dormant WebView v6 template separately |
-| RA-18 | UXP deprecation sentinel | M | Block deprecated APIs |
+| RA-18 | UXP deprecation sentinel | M | Closed 2026-06-06: static guard blocks deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events in UXP/WebView sources |
 | RA-19 | UXP clipboard permission | S | Missing declaration |
 | RA-20 | UXP confirmation guard | S | Raw window.confirm |
 | RA-21 | Python 3.13 classifier proof | M | Advertised but untested |
@@ -1221,6 +1221,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 32 | Worker-pool cleanup confirmation plan | `opencut/routes/architecture_routes.py`, `tests/test_architecture.py` | Worker-pool cleanup can terminate active worker processes without a dry-run target list or confirm-token review. | Closed RA-41 by adding active-worker dry-run plans and confirmation-token enforcement to `/architecture/worker-pool/cleanup`; final scan leaves journal clear under the existing local DB dry-run/backup contract. |
 | 2026-06-06 | Cycle 33 | Optional `[all]` advisory policy | `pyproject.toml`, `opencut/tools/pip_audit_extras.py`, `docs/PYTHON_ADVISORIES.md`, dependency/release-smoke tests, README | `pyproject[all]` pulled Torch/Transformers through WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, and TransNetV2, then failed pip-audit with five unallowed findings. | Closed RA-15 by keeping `opencut[all]` as the release-audited convenience lane, moving Torch/Transformers-backed packages to explicit `opencut[torch-stack]` or narrower feature extras, and verifying `pyproject[all]` has zero advisories. |
 | 2026-06-06 | Cycle 34 | UXP manifest schema guard | Adobe Premiere UXP manifest docs, `extension/com.opencut.uxp/manifest.json`, Bolt/WebView scaffold, UXP migration docs/tests | Adobe docs list `manifestVersion` as required and Premiere-supported version 5, while the live manifest omitted it and the dormant WebView scaffold declares version 6. | Closed RA-17 by declaring `manifestVersion: 5` in the live UXP manifest, documenting the live-vs-scaffold schema split, and adding `tests/test_uxp_manifest_schema.py`. |
+| 2026-06-06 | Cycle 35 | UXP deprecated API sentinel | Adobe Premiere UXP API changelog, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, `tests/test_uxp_deprecation_sentinel.py` | Adobe deprecates older Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` video events; OpenCut currently avoids them, but no static guard protected the UXP/WebView cutover path. | Closed RA-18 by adding a UXP/WebView source sentinel that fails on deprecated Clipboard APIs, object-form `writeText`, or legacy `uxpvideo*` event names while preserving the supported string clipboard write path. |
 
 ### Research queries to run later
 
@@ -1241,23 +1242,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 35: Continue UXP trust work with RA-18 deprecation sentinel, RA-19 clipboard permission, or RA-20 confirmation guard.
-2. Cycle 36: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 37: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 38: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 39: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
+1. Cycle 36: Continue UXP trust work with RA-19 clipboard permission or RA-20 confirmation guard.
+2. Cycle 37: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 38: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 39: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 40: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 34: UXP manifest schema guard.
+Cycle 35: UXP deprecated API sentinel.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1265,8 +1266,10 @@ journal clear is covered by the local DB dry-run/backup contract. RA-15 keeps
 `opencut[all]` as the audited convenience lane while Torch/Transformers-backed
 packages stay explicit through named feature extras and `torch-stack`. RA-17
 keeps the shipped UXP manifest on Premiere-supported schema version 5 while the
-WebView scaffold's version 6 template remains dormant. Continue with the
-remaining release-trust and product workflow specs.
+WebView scaffold's version 6 template remains dormant. RA-18 keeps deprecated
+Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events out
+of UXP/WebView sources. Continue with the remaining release-trust and product
+workflow specs.
 
 #### Important findings so far
 
@@ -1368,7 +1371,7 @@ remaining release-trust and product workflow specs.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-18/RA-19/RA-20 or Docker RA-25/RA-26/RA-29/RA-30.
+3. Continue release-trust hardening on RA-19/RA-20 or Docker RA-25/RA-26/RA-29/RA-30.
 
 #### Unprocessed leads
 

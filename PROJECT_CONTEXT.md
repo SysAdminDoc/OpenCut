@@ -62,6 +62,9 @@
 **Pass 284 update (no standalone research file):**
 - Closed RA-17 by adding explicit `manifestVersion: 5` to the shipped UXP manifest, documenting that the dormant Bolt/WebView scaffold keeps its separate version 6 template, and adding static schema guard tests for the live manifest and scaffold split.
 
+**Pass 285 update (no standalone research file):**
+- Closed RA-18 by adding a UXP/WebView source sentinel that blocks deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` event names while preserving the supported string clipboard write path.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -82,7 +85,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **232 test_*.py files** + **2 Vitest panel test files** (9,200+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **233 test_*.py files** + **2 Vitest panel test files** (9,300+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |

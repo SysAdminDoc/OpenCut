@@ -63,6 +63,14 @@ The shipped UXP panel declares `manifestVersion: 5`, which is the Premiere
 supported manifest schema. The dormant Bolt/WebView scaffold keeps
 `manifestVersion: 6` as a future cutover template and is not the live entrypoint.
 
+## Deprecated API Sentinel
+
+The live UXP/WebView source path uses `navigator.clipboard.writeText(...)` with
+a string value and does not use deprecated `Clipboard.setContent`,
+`Clipboard.getContent`, `Clipboard.clearContent`, object-form clipboard writes,
+or legacy `uxpvideo*` events. `tests/test_uxp_deprecation_sentinel.py` pins that
+contract for the F252 cutover path.
+
 ## Differences from CEP Panel
 
 | Aspect | CEP (`com.opencut.panel`) | UXP (`com.opencut.uxp`) |
