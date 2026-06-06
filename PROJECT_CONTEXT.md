@@ -9,7 +9,7 @@
 - Closed RA-27 by aligning Docker README and compose commands with the committed `gpu` profile service, moving Docker run examples to `/home/opencut/.opencut`, removing the obsolete Compose `version` key, and adding `tests/test_docker_distribution_docs.py` to release-smoke. Focused Docker docs tests, pytest-fast, and `docker compose --profile gpu config` cover the batch.
 
 **Pass 267 update (no standalone research file):**
-- Added `scripts/bootstrap_check.py --dev` so development/test imports are checked explicitly, documented the Python 3.12 `.venv` repair path in README, and covered the behavior in `tests/test_bootstrap_check.py`. The repo `.venv` now fails the dev check with a repair hint when it lacks pytest, while `py -3.12` passes the same check.
+- Added `scripts/bootstrap_check.py --dev` so development/test imports are checked explicitly, documented the Python 3.12 `.venv` repair path in README, and covered the behavior in `tests/test_bootstrap_check.py`. The repo `.venv` now fails the dev check with a repair hint when it lacks pytest, while `py -3.12` passes the same check; release-smoke bootstrap and pytest-fast both pass.
 
 **Live version:** v1.32.0.
 
