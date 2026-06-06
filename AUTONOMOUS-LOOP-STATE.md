@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.263 / batch 151 and remains open.
-- Shipped this cycle: Export Platform Presets title, category label/options, preset label, and auto-import copy now expose static locale hooks while preserving category values and checked state; the stale singular `export.platform_preset` locale key was removed after replacement.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,253 keys / 2,196 consumers / 57 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Platform Presets hooks, category values, and checked auto-import state with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.264 / batch 152 and remains open.
+- Shipped this cycle: Export Auto-Thumbnails candidate count, resolution, resolution choices, and face-boost copy now expose static locale hooks while preserving candidate values, width values, default selection, and checked state.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,258 keys / 2,202 consumers / 56 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Auto-Thumbnails hooks, values, default count selection, and checked face-boost state with no current-port console errors.
 
 ## Next Work
 

@@ -1078,6 +1078,13 @@ HTML_STATIC_SHELL_CALLS = (
     ("export.category_web", "data-i18n"),
     ("forms.preset", "data-i18n"),
     ("common.auto_import_result", "data-i18n"),
+    # One-hundred-fifty-second batch (Export Auto-Thumbnails parameter shell HTML).
+    ("export.thumbnail_count", "data-i18n"),
+    ("forms.resolution", "data-i18n"),
+    ("export.thumbnail_resolution_full_hd", "data-i18n"),
+    ("export.thumbnail_resolution_hd", "data-i18n"),
+    ("export.thumbnail_resolution_web", "data-i18n"),
+    ("export.thumbnail_boost_faces", "data-i18n"),
 )
 
 
