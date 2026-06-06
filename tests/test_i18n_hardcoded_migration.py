@@ -1048,6 +1048,13 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.region_h_short", "data-i18n"),
     ("video.remove_region_height_aria", "data-i18n-aria-label"),
     ("video.remove_region_hint", "data-i18n"),
+    # One-hundred-forty-ninth batch (Video Face AI parameter shell HTML).
+    ("forms.mode", "data-i18n"),
+    ("video.face_mode_enhance", "data-i18n"),
+    ("video.face_mode_swap", "data-i18n"),
+    ("video.reference_face_image", "data-i18n"),
+    ("video.reference_face_image_placeholder", "data-i18n-placeholder"),
+    ("common.browse", "data-i18n"),
 )
 
 
