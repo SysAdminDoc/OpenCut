@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.255 / batch 143 and remains open.
-- Shipped this cycle: Video Titles title/subtitle labels and placeholders, title preset options, duration, and font size now expose static locale hooks while preserving title preset values and slider constraints.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,178 keys / 2,116 consumers / 62 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Titles hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.256 / batch 144 and remains open.
+- Shipped this cycle: Video Reframe target formats, custom dimension labels/ARIA, resize and crop options, crop anchor hint, face smoothing, pad colors, and quality options now expose static locale hooks while preserving all option values plus input and slider constraints.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,208 keys / 2,149 consumers / 59 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Reframe hooks and preserved values with no current-port console errors.
 
 ## Next Work
 
