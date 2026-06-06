@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Local SQLite Payload Spillover
+
+- Closed RA-38/RA-07 by adding content-addressed spill files for oversized local SQLite JSON payloads.
+- `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now have per-field byte caps and return structured spill metadata from list/detail reads.
+- Added regression coverage for spilled job results and journal inverse/forward payloads.
+
 ### Changed - Local SQLite Schema Versions
 
 - Closed RA-37/RA-05 by adding a shared local SQLite migration helper that records `PRAGMA user_version`.

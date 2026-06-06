@@ -2,6 +2,9 @@
 Tests for OpenCut Job Store (SQLite persistence).
 """
 
+import json
+import os
+import sqlite3
 import time
 from unittest.mock import patch
 
@@ -261,3 +264,27 @@ class TestJobStore:
         assert isolate_db._get_conn() is not first_conn
         assert isolate_db.get_job("second-db")["resumable"] is True
         assert first_path != isolate_db._DB_PATH
+
+    def test_large_result_json_spills_to_content_file(self, isolate_db, monkeypatch):
+        large_text = "x" * 2048
+        monkeypatch.setattr(isolate_db, "MAX_RESULT_JSON_BYTES", 128)
+        isolate_db.save_job({
+            "id": "large-result",
+            "type": "test",
+            "status": "complete",
+            "created": time.time(),
+            "result": {"text": large_text},
+        })
+
+        job = isolate_db.get_job("large-result")
+
+        assert job["result"]["_opencut_payload_spill"] is True
+        assert job["result"]["field"] == "result_json"
+        assert job["result"]["bytes"] > isolate_db.MAX_RESULT_JSON_BYTES
+        assert os.path.isfile(job["result"]["path"])
+        assert os.path.commonpath([os.path.dirname(isolate_db._DB_PATH), job["result"]["path"]]) == os.path.dirname(isolate_db._DB_PATH)
+        with open(job["result"]["path"], encoding="utf-8") as fh:
+            assert json.load(fh) == {"text": large_text}
+        with sqlite3.connect(isolate_db._DB_PATH) as conn:
+            stored = conn.execute("SELECT result_json FROM jobs WHERE id = ?", ("large-result",)).fetchone()[0]
+        assert len(stored.encode("utf-8")) < job["result"]["bytes"]
