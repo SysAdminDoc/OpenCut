@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Typed Error Logging
+
+- Closed RA-03 by logging direct typed error responses with structured code, status, request ID, method, path, and typed-error context fields.
+- Kept `safe_error` exception paths on a single underlying exception log while preserving structured OpenCutError logs for direct typed failures.
+
 ### Changed - Request ID Error Bodies
 
 - Closed RA-04 by adding generated server request IDs to structured JSON error bodies.

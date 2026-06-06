@@ -747,6 +747,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_node_advisories.py",
     "tests/test_panel_node_entrypoints.py",
     "tests/test_error_request_ids.py",
+    "tests/test_error_logging.py",
     "tests/test_seed_github_issues.py",
     "tests/test_route_manifest.py",
     "tests/test_route_collisions.py",

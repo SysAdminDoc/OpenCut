@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-04 request ID error-body pass.
+Last synced: 2026-06-06 during the RA-03 direct typed error logging pass.
 
 ## Execution Order
 
@@ -44,7 +44,7 @@ Last synced: 2026-06-06 during the RA-04 request ID error-body pass.
 - [x] **RA-43 plugin uninstall quarantine** - plugin uninstall now moves through quarantine, restore, and permanent-delete states with typed confirmation.
 - [x] **RA-44 model/cache clear preview** - Whisper cache clear and model delete now preview exact paths/bytes and report per-path deletion errors.
 - [x] **RA-45 user-data delete snapshots** - user-data deletes/replacements now write capped tombstone snapshots with list/restore metadata.
-- [ ] **RA-03 direct typed error logging** - ensure direct typed error paths log with structured context.
+- [x] **RA-03 direct typed error logging** - direct typed error responses now log code, status, request ID, method, path, and typed-error context fields.
 - [ ] **RA-01 Ruff target-version alignment** - make the lint target explicit.
 - [ ] **RA-02 requirements/pyproject alignment** - keep dependency metadata synchronized.
 - [ ] **RA-09 timeline-native captions** - research and implement next timeline-native caption bridge.
