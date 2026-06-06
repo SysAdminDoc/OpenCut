@@ -96,7 +96,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-06 | Destructive wipe backup | M | Closed 2026-06-06: local SQLite destructive maintenance paths now expose dry-run counts, optional backups, and audit metadata |
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
-| RA-09 | Timeline-native captions | L | Advanced 2026-06-06: RA-46 sidecars and RA-47 diff/apply shipped; host snapshot/write contracts remain open |
+| RA-09 | Timeline-native captions | L | Advanced 2026-06-06: RA-46 sidecars, RA-47 diff/apply, and RA-48 UXP snapshot reads shipped; write contracts remain open |
 | RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
@@ -836,6 +836,11 @@ fallback to timing/text similarity.
 
 **Priority:** P1. **Effort:** M. **Confidence:** Medium-high.
 
+**Status:** Closed 2026-06-06. `ocGetCaptionTrackSnapshot` is now a read-only
+UXP direct host action with a safe-by-default UDT fixture, distinct failure
+reasons for project/sequence/caption API states, and snapshot segments shaped
+for `/captions/round-trip/diff`.
+
 **Evidence:** Current Adobe UXP reference pages list
 `Sequence.getCaptionTrack()`, `Sequence.getCaptionTrackCount()`, and
 `CaptionTrack.getTrackItems()`; OpenCut's UXP bridge already has read actions
@@ -851,12 +856,12 @@ capability failure with the API names and Premiere version.
 
 **Acceptance criteria:**
 
-- [ ] The action appears in the UXP direct-action manifest only when fixture
+- [x] The action appears in the UXP direct-action manifest only when fixture
       coverage proves a non-mutating read path.
-- [ ] Empty projects, no active sequence, no caption tracks, and API-missing
+- [x] Empty projects, no active sequence, no caption tracks, and API-missing
       states return distinct, test-covered reasons.
-- [ ] Snapshot output can be passed directly to `/captions/round-trip/diff`.
-- [ ] The implementation does not claim UXP caption creation/import support
+- [x] Snapshot output can be passed directly to `/captions/round-trip/diff`.
+- [x] The implementation does not claim UXP caption creation/import support
       until an official Adobe write API is documented and live-tested.
 
 **Risks:** Adobe forum evidence indicates `getTrackItems()` parameter behavior
@@ -1253,6 +1258,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 50 | CEP i18n workflow preset shell | CEP `index.html`, `en.json`, i18n hardcoded-migration tests | The Export Workflow Presets card still had bare static shell strings for preset/library status, custom workflow controls, and step selector options despite dynamic workflow text being localized. | Advanced E15 to batch 154 by wiring those static strings through `data-i18n*` attributes and locale keys; the drift gate now reports 2,295 keys, 2,242 consumers, 53 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 51 | Caption round-trip sidecars | `opencut/core/caption_roundtrip.py`, caption export routes, timeline SRT parser, caption metadata tests | Native UXP caption-track writes are still not documented, and SRT-only parsing drops speaker, word, language, review, cache, and style metadata needed for editable Premiere timeline round trips. | Closed RA-46 under RA-09 by writing versioned caption sidecars, returning sidecar metadata from caption exports, and enriching `/timeline/srt-to-captions` output from matching sidecars while explicitly warning when SRT-only metadata is unavailable. |
 | 2026-06-06 | Cycle 52 | Caption round-trip diff/apply | `opencut/core/caption_roundtrip.py`, `/captions/round-trip/*`, route manifest, caption metadata tests | Sidecars preserved metadata, but there was still no API for reviewing timeline edits or storing a confirmed transcript revision after an SRT/UXP caption-track round trip. | Closed RA-47 by adding sidecar-backed and lossy diff support, confirmation-token guarded apply, content-addressed revision storage, and route/manifest/test coverage for changed, unchanged, no-sidecar, and idempotent apply flows. |
+| 2026-06-06 | Cycle 53 | UXP caption-track snapshot read bridge | `extension/com.opencut.uxp/main.js`, UXP UDT harness manifests, UXP host-action tests | RA-47 could accept UXP caption-track snapshots, but the UXP bridge had no read-only caption-track action and still treated native captions as CEP-only write work. | Closed RA-48 by adding `ocGetCaptionTrackSnapshot`, distinct read failure reasons, diff-compatible snapshot segment payloads, and a safe-by-default UDT scenario while keeping caption creation/import unsupported in UXP. |
 
 ### Research queries to run later
 
@@ -1273,17 +1279,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 53: Implement UXP caption-track snapshot read bridge for RA-48.
-2. Cycle 54: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 55: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 56: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 57: Continue E15 or another remaining release-trust gap after batch 154.
+1. Cycle 54: Implement CEP/hybrid caption write contract for RA-49.
+2. Cycle 55: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 56: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 57: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 58: Continue E15 or another remaining release-trust gap after batch 154.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 52: Caption round-trip diff/apply.
+Cycle 53: UXP caption-track snapshot read bridge.
 
 #### Current focus
 
@@ -1342,6 +1348,9 @@ RA-47 through RA-50 before treating timeline-native captions as closed.
 RA-47 is closed under RA-09: caption round-trip diff/apply APIs now support
 sidecar-backed metadata-preserving reviews, lossy no-sidecar diffs, and
 confirmation-token guarded revision storage. Continue RA-48 through RA-50.
+RA-48 is closed under RA-09: UXP can now read caption-track snapshots into the
+round-trip diff schema when the host exposes caption read APIs. Continue RA-49
+through RA-50 before treating timeline-native captions as closed.
 
 #### Important findings so far
 
@@ -1404,6 +1413,10 @@ confirmation-token guarded revision storage. Continue RA-48 through RA-50.
 - Caption revision apply is content-addressed and idempotent for unchanged edits,
   but it intentionally stores a new revision file instead of mutating the
   original transcript cache entry.
+- UXP caption-track handling is still read-only: `ocGetCaptionTrackSnapshot`
+  advertises explicit `reason_code` values for no project, no active sequence,
+  no caption tracks, and missing caption APIs, while `ocAddNativeCaptionTrack`
+  remains CEP/hybrid-only until Adobe documents a write API.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now

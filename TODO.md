@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-09 caption diff/apply pass.
+Last synced: 2026-06-06 during the RA-09 UXP caption snapshot pass.
 
 ## Execution Order
 
@@ -47,7 +47,7 @@ Last synced: 2026-06-06 during the RA-09 caption diff/apply pass.
 - [x] **RA-03 direct typed error logging** - direct typed error responses now log code, status, request ID, method, path, and typed-error context fields.
 - [x] **RA-01 Ruff target-version alignment** - Ruff now targets the declared Python 3.11 floor, with a dependency-surface guard for drift.
 - [x] **RA-02 requirements/pyproject alignment** - `requirements.txt` core/standard bounds now match `pyproject.toml`, with a guard for overlap drift.
-- [ ] **RA-09 timeline-native captions** - RA-46 sidecars and RA-47 diff/apply are shipped; continue RA-48 UXP caption snapshots, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures.
+- [ ] **RA-09 timeline-native captions** - RA-46 sidecars, RA-47 diff/apply, and RA-48 UXP caption snapshots are shipped; continue RA-49 CEP/hybrid write contracts and RA-50 metadata-loss fixtures.
 - [ ] **RA-10 magic clips macro** - research and implement the next operator-facing macro layer.
 - [ ] **RA-11 UXP least-privilege filesystem** - tighten UXP filesystem permission posture.
 - [ ] **RA-12 hybrid plugin validator** - validate hybrid CEP/UXP plugin packaging.

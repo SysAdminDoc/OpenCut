@@ -40,21 +40,23 @@ def _passing_capture() -> dict:
 
 def test_f252_result_template_records_capture_contract():
     template = build_udt_result_template()
+    manifest = build_udt_harness_manifest()
 
     assert template["schema_version"] == 1
     assert template["f_number"] == "F252"
     assert template["source_harness_f_number"] == "F267"
     assert "includeMutating: true" in template["capture_command"]
-    assert template["capture"]["scenarioCount"] == 14
+    assert template["capture"]["scenarioCount"] == manifest["scenario_count"]
     assert template["capture"]["includeMutating"] is True
 
 
 def test_f252_passing_capture_is_ready_for_webview_cutover():
     report = validate_udt_result_capture(_passing_capture())
+    scenario_count = build_udt_harness_manifest()["scenario_count"]
 
     assert report["ok"] is True
     assert report["ready_for_webview_cutover"] is True
-    assert report["summary"] == {"passed": 14, "failed": 0, "blocked": 0, "skipped": 0}
+    assert report["summary"] == {"passed": scenario_count, "failed": 0, "blocked": 0, "skipped": 0}
     assert report["missing_ids"] == []
 
 
@@ -76,7 +78,7 @@ def test_f252_blocked_capture_is_diagnostic_only_when_allowed():
     capture = _passing_capture()
     capture["results"][0]["status"] = "blocked"
     capture["results"][0]["reason"] = "No active sequence"
-    capture["summary"] = {"passed": 13, "failed": 0, "blocked": 1, "skipped": 0}
+    capture["summary"] = {"passed": len(capture["results"]) - 1, "failed": 0, "blocked": 1, "skipped": 0}
 
     strict = validate_udt_result_capture(capture)
     diagnostic = validate_udt_result_capture(capture, allow_blocked=True)
@@ -94,7 +96,8 @@ def test_f252_validator_detects_summary_drift():
     report = validate_udt_result_capture(capture)
 
     assert report["ok"] is False
-    assert any("summary.passed must be 14" in error for error in report["errors"])
+    expected = build_udt_harness_manifest()["scenario_count"]
+    assert any(f"summary.passed must be {expected}" in error for error in report["errors"])
 
 
 def test_f252_cli_template_and_validation(tmp_path):

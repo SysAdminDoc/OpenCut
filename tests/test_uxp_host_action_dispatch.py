@@ -9,6 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
 PARITY_MANIFEST = REPO_ROOT / "opencut" / "_generated" / "cep_uxp_parity.json"
+UXP_ONLY_DIRECT_ACTIONS = {"ocGetCaptionTrackSnapshot"}
 
 
 def _read_main_js() -> str:
@@ -34,8 +35,10 @@ def test_direct_action_map_matches_parity_manifest():
         if entry["status"] == "direct_uxp"
     }
 
-    assert _direct_action_names(source) == direct_manifest_names
+    assert _direct_action_names(source) == direct_manifest_names | UXP_ONLY_DIRECT_ACTIONS
     assert len(direct_manifest_names) == 14
+    assert len(_direct_action_names(source)) == 15
+    assert "ocGetCaptionTrackSnapshot" in _direct_action_names(source)
     assert "ocAddNativeCaptionTrack" not in direct_manifest_names
     assert "ocQeReflect" not in direct_manifest_names
 
@@ -75,3 +78,22 @@ def test_direct_dispatch_stays_off_ceps_evalscript_path():
     assert "import(\"premierepro\")" in bridge_block
     assert "Sequence.createSubsequence is unavailable" in bridge_block
     assert "exportSubsequenceWithEncoder" in bridge_block
+
+
+def test_caption_track_snapshot_action_is_read_only_and_diff_compatible():
+    source = _read_main_js()
+    start = source.index("async function _activeSequenceContext")
+    end = source.index("async function setSequencePlayhead")
+    block = source[start:end]
+
+    assert "reason_code: \"no_open_project\"" in block
+    assert "reason_code: \"no_active_sequence\"" in block
+    assert "reason_code: \"no_caption_tracks\"" in block
+    assert "reason_code: \"caption_api_missing\"" in block
+    assert "CaptionTrack.getTrackItems" in block
+    assert "caption_track_snapshot" in block
+    assert "caption_id" in block
+    assert "source_segment_id" in block
+    assert "host_locators" in block
+    assert "createCaptionTrack" not in block
+    assert "addCaptionTrack" not in block
