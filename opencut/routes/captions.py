@@ -204,7 +204,8 @@ def _roundtrip_sidecar(data: dict) -> tuple[dict | None, list[str]]:
         sidecar_path = validate_filepath(sidecar_path)
     except ValueError:
         return None, ["sidecar_missing"]
-    return read_caption_sidecar(sidecar_path)
+    expected_export_path = str(data.get("srt_path") or data.get("export_path") or "").strip() or None
+    return read_caption_sidecar(sidecar_path, expected_export_path=expected_export_path)
 
 
 def _roundtrip_diff_from_data(data: dict) -> dict:
