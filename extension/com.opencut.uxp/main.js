@@ -27,6 +27,7 @@ const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
+const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.32.0";
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
@@ -226,6 +227,8 @@ let lastMarkers   = [];     // marker array from last beat detection
 let _lastSequenceInfo = null;
 let _lastDeliverableActivity = null;
 let _lastIndexStats = { total_files: 0, total_segments: 0, index_size_bytes: 0 };
+let _clearIndexConfirmUntil = 0;
+let _clearIndexConfirmTimer = null;
 let _lastCaptionsResult = null;
 let _lastCutsInfo = null;
 let _lastMarkersInfo = null;
@@ -2688,6 +2691,39 @@ function setIndexStatus(message, state = "idle", title) {
   line.title = title || message;
 }
 
+function resetClearIndexConfirmation({ resync = true } = {}) {
+  _clearIndexConfirmUntil = 0;
+  if (_clearIndexConfirmTimer) {
+    clearTimeout(_clearIndexConfirmTimer);
+    _clearIndexConfirmTimer = null;
+  }
+  const clearBtn = document.getElementById("clearIndexBtn");
+  if (clearBtn && !clearBtn.classList.contains("loading")) {
+    clearBtn.textContent = "Clear Index";
+  }
+  if (resync) syncSearchPanelState();
+}
+
+function requireClearIndexConfirmation() {
+  const now = Date.now();
+  if (_clearIndexConfirmUntil > now) {
+    resetClearIndexConfirmation();
+    return true;
+  }
+
+  _clearIndexConfirmUntil = now + INLINE_CONFIRM_MS;
+  if (_clearIndexConfirmTimer) clearTimeout(_clearIndexConfirmTimer);
+  _clearIndexConfirmTimer = setTimeout(() => resetClearIndexConfirmation(), INLINE_CONFIRM_MS);
+  const clearBtn = document.getElementById("clearIndexBtn");
+  if (clearBtn && !clearBtn.classList.contains("loading")) {
+    clearBtn.textContent = "Confirm Clear";
+    clearBtn.title = "Click again within 8 seconds to clear the current search index.";
+  }
+  setIndexStatus("Click Confirm Clear again to remove the current search index.", "warning");
+  UIController.showToast("Click Confirm Clear again to remove the current search index.", "warning");
+  return false;
+}
+
 function syncSearchPanelState() {
   const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
   const folder = document.getElementById("indexFolder")?.value?.trim() || "";
@@ -2708,12 +2744,21 @@ function syncSearchPanelState() {
 
   const clearBtn = document.getElementById("clearIndexBtn");
   if (clearBtn && !clearBtn.classList.contains("loading")) {
+    if (_clearIndexConfirmUntil && _clearIndexConfirmUntil <= Date.now()) {
+      resetClearIndexConfirmation({ resync: false });
+    }
     clearBtn.disabled = !backendOnline || !hasIndex;
-    clearBtn.title = !backendOnline
-      ? "Reconnect the backend before clearing the search index."
-      : (hasIndex
-          ? "Clear the current search index. You can rebuild it any time."
-          : "Build an index before clearing it.");
+    if (_clearIndexConfirmUntil > Date.now() && backendOnline && hasIndex) {
+      clearBtn.textContent = "Confirm Clear";
+      clearBtn.title = "Click again within 8 seconds to clear the current search index.";
+    } else {
+      clearBtn.textContent = "Clear Index";
+      clearBtn.title = !backendOnline
+        ? "Reconnect the backend before clearing the search index."
+        : (hasIndex
+            ? "Clear the current search index. You can rebuild it any time."
+            : "Build an index before clearing it.");
+    }
   }
 
   const searchBtn = document.getElementById("runFootageSearchBtn");
@@ -2794,14 +2839,14 @@ async function refreshFootageIndexStats(options = {}) {
 
 async function clearFootageIndex() {
   if (!(Number(_lastIndexStats?.total_files || 0) > 0)) {
+    resetClearIndexConfirmation();
     setIndexStatus("Build an index before clearing it.", "warning");
     UIController.showToast("Build an index before clearing it.", "warning");
     syncSearchPanelState();
     return;
   }
 
-  const confirmMessage = "Clear the current search index? You can rebuild it any time by indexing the folder again.";
-  if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(confirmMessage)) {
+  if (!requireClearIndexConfirmation()) {
     return;
   }
 
@@ -2827,6 +2872,7 @@ async function clearFootageIndex() {
   setTextAndTitle("indexStatsValue", "0 files indexed", "The search index is empty until you index a folder again.");
   setIndexStatus("Search index cleared. Re-index a folder to make library results available again.", "success");
   UIController.showToast("Search index cleared.", "success");
+  resetClearIndexConfirmation();
   syncSearchPanelState();
 }
 

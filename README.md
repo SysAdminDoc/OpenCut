@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1534-orange)
-![Tests](https://img.shields.io/badge/Tests-9300+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-9400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
@@ -494,7 +494,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-9,300+ estimated tests across 234 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+9,400+ estimated tests across 235 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -552,10 +552,10 @@ extension/
     host/            # ExtendScript host (index.jsx ~2,736 lines)
     CSXS/            # Extension manifest
   com.opencut.uxp/
-    main.js          # UXP panel (~6,036 lines)
+    main.js          # UXP panel (~6,082 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (9,300+ estimated tests, 234 root test files)
+tests/               # pytest test suite (9,400+ estimated tests, 235 root test files)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking

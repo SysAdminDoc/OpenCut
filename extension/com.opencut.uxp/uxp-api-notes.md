@@ -81,6 +81,14 @@ to the system clipboard. `copyTextToClipboard()` centralizes the runtime path an
 falls back to a manual-copy warning when clipboard access is unsupported or
 permission is denied. `tests/test_uxp_clipboard_permission.py` guards this.
 
+## Confirmation Policy
+
+The live manifest does not enable beta UXP browser alerts. Search-index clearing
+uses an inline second-click panel confirmation with an 8-second window instead
+of `window.confirm`. `tests/test_uxp_confirmation_guard.py` blocks raw
+`window.alert`, `window.prompt`, `window.confirm`, and bare dialog calls in UXP
+source.
+
 ## Differences from CEP Panel
 
 | Aspect | CEP (`com.opencut.panel`) | UXP (`com.opencut.uxp`) |
