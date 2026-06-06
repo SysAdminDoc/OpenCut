@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Python Classifier Metadata
+
+- Closed RA-21 by retracting the untested Python 3.13 classifier until CI proves that runtime.
+- Added a dependency-surface guard so the Python 3.13 classifier cannot return without a matching workflow lane.
+
 ### Changed - Release Full Token Permissions
 
 - Closed RA-24 by moving GitHub release uploads into a tag-only `release-upload` job with `contents: write`.
