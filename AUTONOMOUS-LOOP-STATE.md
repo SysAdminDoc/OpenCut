@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-42 closed; E15 rolling i18n migration, broad destructive-route hardening, and Docker hardening remain open.
 - Shipped this cycle: render-cache reads, cleanup, and downstream invalidation now reject forged `index.json` output paths outside `CACHE_DIR` or with non-matching cache-key basenames before returning or unlinking files.
-- Verification: focused render-cache/platform pytest passed (13 tests), Ruff passed for the touched Python files, `py -3.12 -m opencut.tools.dump_route_manifest --check` passed, `py -3.12 scripts/sync_badges.py --check` passed, `py -3.12 scripts/check_doc_sizes.py --check` passed, `py -3.12 scripts/release_smoke.py --only pytest-fast --json` passed (753 tests), and `git diff --check` passed.
+- Verification: focused render-cache/platform pytest passed (13 tests), Ruff passed for the touched Python files, `py -3.12 -m opencut.tools.dump_route_manifest --check` passed, `py -3.12 scripts\sync_badges.py --check` passed, `py -3.12 scripts\check_doc_sizes.py --check` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (753 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
