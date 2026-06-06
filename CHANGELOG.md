@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - UXP Manifest Schema Guard
+
+- Closed RA-17 by declaring Premiere-supported `manifestVersion: 5` in the live UXP manifest.
+- Added static schema guard tests for required live-manifest keys and the dormant Bolt/WebView scaffold's separate `manifestVersion: 6` template.
+- Documented the live v5 versus future scaffold v6 policy in UXP migration notes.
+
 ### Changed - Optional Dependency Advisory Policy
 
 - Closed RA-15 by keeping `opencut[all]` as the audited convenience install lane while moving Torch/Transformers-backed backends to explicit `opencut[torch-stack]` or narrower feature extras.

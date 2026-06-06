@@ -104,7 +104,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-14 | WebView permission split | M | Dev vs release permissions |
 | RA-15 | [all] advisory decision | M | Closed 2026-06-06: `opencut[all]` is the release-audited convenience lane; Torch/Transformers-backed packages are explicit via `torch-stack` and named feature extras |
 | RA-16 | Adobe dist-tag tracking | S | release-* tags untracked |
-| RA-17 | UXP manifest schema guard | M | Missing manifestVersion |
+| RA-17 | UXP manifest schema guard | M | Closed 2026-06-06: live UXP manifest declares Premiere-supported `manifestVersion: 5` and tests guard the dormant WebView v6 template separately |
 | RA-18 | UXP deprecation sentinel | M | Block deprecated APIs |
 | RA-19 | UXP clipboard permission | S | Missing declaration |
 | RA-20 | UXP confirmation guard | S | Raw window.confirm |
@@ -530,7 +530,7 @@ declare `manifestVersion`; it also still grants `localFileSystem: "fullAccess"`.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| RA-17 manifest schema guard | `extension/com.opencut.uxp/manifest.json`; Adobe UXP manifest docs | Add explicit manifest-version validation and schema drift tests before claiming packaged UXP readiness. | P1 |
+| RA-17 manifest schema guard | Closed 2026-06-06: live `extension/com.opencut.uxp/manifest.json` now declares `manifestVersion: 5`; `tests/test_uxp_manifest_schema.py` guards required live keys and the dormant WebView scaffold's separate v6 template. | Keep the live-vs-scaffold schema split documented until F252 WebView cutover changes the active entrypoint. | Done |
 | RA-11 least-privilege filesystem | `localFileSystem: "fullAccess"` in UXP manifest | Split development/full-access needs from release needs; document any required full-access paths and test the narrowed manifest once WebView cutover is validated. | P1 |
 | RA-19 clipboard permission | UXP permission queue in `TODO.md`; manifest lacks clipboard declaration | Add a central clipboard helper and manifest permission only when copy actions need it; test fallback copy messages. | P2 |
 | F252 WebView cutover | Adobe WebView UI guidance; `bolt-webview` scaffold exists | Keep cutover blocked until live UDT capture validates the 14 direct-UXP host actions and the manifest entrypoint switch. | P0 external |
@@ -611,7 +611,7 @@ research-only pass.
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
 | F252 live UDT capture | `tests/test_uxp_udt_results.py`, `extension/com.opencut.uxp/udt-smoke.js`, `docs/UXP_MIGRATION.md` | Treat WebView cutover as blocked until `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` is captured in Premiere and passes `validate_uxp_udt_results`. | P0 external |
-| RA-17 manifest-version guard | Live `manifest.json` lacks `manifestVersion`; dormant `bolt-webview/uxp.config.ts` uses `manifestVersion: 6`; Adobe docs currently describe Premiere manifest version `5`. | Add a manifest compatibility test that resolves the supported version from current Adobe docs or package schema, then fails if live and scaffold manifests diverge. | P1 |
+| RA-17 manifest-version guard | Closed 2026-06-06: live `manifest.json` declares `manifestVersion: 5`, while dormant `bolt-webview/uxp.config.ts` remains a separate v6 cutover template with explicit docs and tests. | Reopen only if Adobe changes Premiere's supported manifest schema or the F252 WebView entrypoint becomes live. | Done |
 | RA-11 filesystem permission split | Live and scaffold configs use `localFileSystem: "fullAccess"` | Make a release manifest profile that requests only required file operations after the UDT capture proves which host paths need direct access. | P1 |
 | RA-19 clipboard permission | TODO tracks clipboard permission; manifest does not declare clipboard-specific permissions | Centralize copy behavior, then declare the narrow permission only if UXP requires it for actual copy flows. | P2 |
 | RA-20 confirmation guard | TODO tracks raw `window.confirm` / beta alert posture | Search UXP/CEP code for confirmation APIs and replace with a panel-native dialog or explicit beta-gated helper. | P2 |
@@ -1220,6 +1220,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 31 | Adjacent state-clear confirmation plans | `opencut/routes/system.py`, `workflow_dev_routes.py`, `search.py`, `footage_index_db.py`, destructive-operation/user-data/workflow tests | Assistant dismissal clears, chat clears, undo-history clears, and search cleanup could mutate in-memory or local-index state without the shared review/confirm-token contract. | Advanced RA-41 with dry-run plans and confirmation-token enforcement for `/assistant/dismiss-clear`, `/chat/clear`, `/api/undo/clear`, and `/search/cleanup`; worker-pool cleanup remains the next process-lifecycle audit target. |
 | 2026-06-06 | Cycle 32 | Worker-pool cleanup confirmation plan | `opencut/routes/architecture_routes.py`, `tests/test_architecture.py` | Worker-pool cleanup can terminate active worker processes without a dry-run target list or confirm-token review. | Closed RA-41 by adding active-worker dry-run plans and confirmation-token enforcement to `/architecture/worker-pool/cleanup`; final scan leaves journal clear under the existing local DB dry-run/backup contract. |
 | 2026-06-06 | Cycle 33 | Optional `[all]` advisory policy | `pyproject.toml`, `opencut/tools/pip_audit_extras.py`, `docs/PYTHON_ADVISORIES.md`, dependency/release-smoke tests, README | `pyproject[all]` pulled Torch/Transformers through WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, and TransNetV2, then failed pip-audit with five unallowed findings. | Closed RA-15 by keeping `opencut[all]` as the release-audited convenience lane, moving Torch/Transformers-backed packages to explicit `opencut[torch-stack]` or narrower feature extras, and verifying `pyproject[all]` has zero advisories. |
+| 2026-06-06 | Cycle 34 | UXP manifest schema guard | Adobe Premiere UXP manifest docs, `extension/com.opencut.uxp/manifest.json`, Bolt/WebView scaffold, UXP migration docs/tests | Adobe docs list `manifestVersion` as required and Premiere-supported version 5, while the live manifest omitted it and the dormant WebView scaffold declares version 6. | Closed RA-17 by declaring `manifestVersion: 5` in the live UXP manifest, documenting the live-vs-scaffold schema split, and adding `tests/test_uxp_manifest_schema.py`. |
 
 ### Research queries to run later
 
@@ -1240,30 +1241,32 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 34: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 35: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 36: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 37: Revisit Adobe tracker drift after the next scheduled npm publish window.
-5. Cycle 38: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
+1. Cycle 35: Continue UXP trust work with RA-18 deprecation sentinel, RA-19 clipboard permission, or RA-20 confirmation guard.
+2. Cycle 36: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 37: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 38: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 39: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 33: Optional `[all]` advisory policy.
+Cycle 34: UXP manifest schema guard.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
 journal clear is covered by the local DB dry-run/backup contract. RA-15 keeps
 `opencut[all]` as the audited convenience lane while Torch/Transformers-backed
-packages stay explicit through named feature extras and `torch-stack`. Continue
-with the remaining release-trust and product workflow specs.
+packages stay explicit through named feature extras and `torch-stack`. RA-17
+keeps the shipped UXP manifest on Premiere-supported schema version 5 while the
+WebView scaffold's version 6 template remains dormant. Continue with the
+remaining release-trust and product workflow specs.
 
 #### Important findings so far
 
@@ -1365,12 +1368,12 @@ with the remaining release-trust and product workflow specs.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-15/RA-17+ or Docker RA-25/RA-26/RA-29/RA-30.
+3. Continue release-trust hardening on RA-18/RA-19/RA-20 or Docker RA-25/RA-26/RA-29/RA-30.
 
 #### Unprocessed leads
 
 - GitHub Actions artifact attestations for release provenance.
-- UXP `manifestVersion` and WebView permission split specifics.
+- WebView permission split specifics after the RA-17 live-manifest guard.
 - Whether RA-26 should map/expose MCP port 5681 in containerized runs or keep
   Docker documented as HTTP/WebSocket-only.
 - Whether the Magic Clips plan endpoint should be `/video/magic-clips/plan`,

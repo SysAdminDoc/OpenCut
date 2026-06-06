@@ -57,6 +57,12 @@ access:
 | `localFileSystem` | `fullAccess` | File/folder browse dialogs |
 | `ipc.enablePluginCommunication` | `true` | Inter-plugin messaging |
 
+## Manifest Schema
+
+The shipped UXP panel declares `manifestVersion: 5`, which is the Premiere
+supported manifest schema. The dormant Bolt/WebView scaffold keeps
+`manifestVersion: 6` as a future cutover template and is not the live entrypoint.
+
 ## Differences from CEP Panel
 
 | Aspect | CEP (`com.opencut.panel`) | UXP (`com.opencut.uxp`) |

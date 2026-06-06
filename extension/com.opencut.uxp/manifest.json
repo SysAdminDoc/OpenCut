@@ -1,4 +1,5 @@
 {
+  "manifestVersion": 5,
   "id": "com.opencut.uxp",
   "name": "OpenCut UXP",
   "version": "1.32.0",
