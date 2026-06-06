@@ -14355,8 +14355,10 @@
             cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
+                    var importedCount = r.captions_added || segments.length;
+                    var placement = r.placement_mode ? " (" + r.placement_mode.replace(/_/g, " ") + ")" : "";
                     showToast(t("captions.imported_captions", "Imported {count} captions")
-                        .replace("{count}", r.imported || segments.length), "success");
+                        .replace("{count}", importedCount) + placement, "success");
                 } catch (e) {
                     showAlert(t("captions.action_failed", "Error: {error}")
                         .replace("{error}", result || e.message));

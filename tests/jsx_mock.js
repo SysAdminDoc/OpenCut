@@ -69,6 +69,7 @@ function assertDeepEqual(actual, expected, msg) {
 
 /** Time object used by Premiere for start/end/duration values */
 function Time(seconds) {
+    seconds = Number(seconds || 0);
     this.seconds = seconds;
     this.ticks = String(Math.round(seconds * 254016000000));
 }
@@ -128,9 +129,37 @@ TrackItem.prototype.remove = function (ripple, align) {
 };
 
 /** Track mock */
-function Track(clips) {
+function Track(clips, opts) {
+    opts = opts || {};
     this.clips = _makeItemCollection(clips || []);
+    this._failInsert = !!opts.failInsert || !!opts.insertThrows;
+    this._inserted = [];
 }
+Track.prototype.insertClip = function (projectItem, time) {
+    if (this._failInsert) {
+        throw new Error("insertClip failed");
+    }
+    var clip = new TrackItem({
+        name: projectItem && projectItem.name ? projectItem.name : "Inserted",
+        startSeconds: time && time.seconds ? time.seconds : 0,
+        endSeconds: (time && time.seconds ? time.seconds : 0) + 1,
+        projectItem: projectItem || null
+    });
+    this.clips._items.push(clip);
+    this.clips.numItems = this.clips._items.length;
+    this._inserted.push(clip);
+    return true;
+};
+Track.prototype.overwriteClip = Track.prototype.insertClip;
+
+/** CaptionTrack mock */
+function CaptionTrack(clips, index, opts) {
+    Track.call(this, clips || [], opts || {});
+    this._index = index || 0;
+}
+CaptionTrack.prototype = Object.create(Track.prototype);
+CaptionTrack.prototype.constructor = CaptionTrack;
+CaptionTrack.prototype.getIndex = function () { return this._index; };
 
 /** TrackCollection: videoTracks / audioTracks container */
 function TrackCollection(tracks) {
@@ -140,6 +169,13 @@ function TrackCollection(tracks) {
         this[i] = this._tracks[i];
     }
 }
+TrackCollection.prototype.addTrack = function (track) {
+    this._tracks.push(track);
+    this.numTracks = this._tracks.length;
+    if (track) track._index = this.numTracks - 1;
+    this[this.numTracks - 1] = track;
+    return track;
+};
 
 /** Marker mock */
 function MarkerMock(time) {
@@ -170,6 +206,12 @@ function Sequence(opts) {
     this.sequenceID = opts.sequenceID || "seq-001";
     this.videoTracks = new TrackCollection(opts.videoTracks || []);
     this.audioTracks = new TrackCollection(opts.audioTracks || []);
+    if (opts.omitCaptionTracks) {
+        this.captionTracks = null;
+    } else {
+        this.captionTracks = new TrackCollection(opts.captionTracks || []);
+    }
+    this._captionAddFails = !!opts.captionAddFails;
     this.markers = new MarkersCollection();
     this.end = opts.end ? new Time(opts.end) : new Time(60);
     this.frameSizeHorizontal = opts.width || 1920;
@@ -177,6 +219,15 @@ function Sequence(opts) {
 }
 Sequence.prototype.getPlayerPosition = function () {
     return new Time(0);
+};
+Sequence.prototype.addCaptionTrack = function () {
+    if (this._captionAddFails) {
+        throw new Error("addCaptionTrack failed");
+    }
+    if (!this.captionTracks) {
+        this.captionTracks = new TrackCollection([]);
+    }
+    return this.captionTracks.addTrack(new CaptionTrack([], this.captionTracks.numTracks));
 };
 
 /** Fake CSInterface / CSEvent for CEP communication */
@@ -207,6 +258,7 @@ function FakeFile(path) {
     this.fsName = path;
     this._content = "";
     this._open = false;
+    this.exists = true;
 }
 FakeFile.prototype.open = function (mode) { this._open = true; return true; };
 FakeFile.prototype.writeln = function (line) { this._content += line + "\n"; };
@@ -218,7 +270,7 @@ FakeFile.prototype.remove = function () {};
 // ---------------------------------------------------------------------------
 
 // $ object (ExtendScript built-in)
-var $ = { writeln: function () {} };
+var $ = { writeln: function () {}, sleep: function () {} };
 
 // Folder.temp
 var Folder = { temp: { fsName: "/tmp" } };
@@ -266,13 +318,19 @@ function buildMockApp(opts) {
         name: "Main Edit",
         videoTracks: opts.videoTracks || [videoTrack1],
         audioTracks: opts.audioTracks || [audioTrack1],
+        captionTracks: opts.captionTracks || [],
+        omitCaptionTracks: opts.omitCaptionTracks,
+        captionAddFails: opts.captionAddFails,
         end: opts.sequenceEnd || 30
     });
 
     return {
+        name: "Premiere Pro",
+        version: opts.version || "25.6.0-mock",
+        build: opts.build || "mock-build",
         project: {
             rootItem: rootItem,
-            activeSequence: seq,
+            activeSequence: opts.activeSequence === null ? null : (opts.activeSequence || seq),
             name: "TestProject",
             path: "/projects/TestProject.prproj",
             importFiles: function (files, suppressUI, targetBin, asNumbered) {
@@ -499,6 +557,15 @@ describe("ocAddNativeCaptionTrack", function () {
         assert(!result.error, "should not error: " + result.error);
         assertEqual(result.success, true);
         assertEqual(result.captions_added, 2);
+        assertEqual(result.imported, true);
+        assertEqual(result.added_to_timeline, true);
+        assertEqual(result.addedToTimeline, true);
+        assertEqual(result.placement_mode, "native_caption_track");
+        assertEqual(result.bin_name, "OpenCut Captions");
+        assertEqual(result.caption_track_index, 0);
+        assertEqual(result.fallback_path, "");
+        assertEqual(result.host.bridge, "cep");
+        assertEqual(result.host_version, "25.6.0-mock");
     });
 
     it("should skip invalid segments (end <= start)", function () {
@@ -519,6 +586,97 @@ describe("ocAddNativeCaptionTrack", function () {
         ];
         var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify(segments)));
         assertEqual(result.captions_added, 1);
+    });
+
+    it("should accept sidecar-aware segment payloads", function () {
+        app = buildMockApp();
+        var payload = {
+            sidecar_path: "/tmp/captions.opencut-captions.json",
+            segments: [
+                { start: 0, end: 1.25, text: "Sidecar cue", speaker: "Narrator" }
+            ]
+        };
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify(payload)));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.success, true);
+        assertEqual(result.captions_added, 1);
+        assertEqual(result.sidecar_path, "/tmp/captions.opencut-captions.json");
+        assertEqual(result.segment_payload_source, "segments");
+        assertEqual(result.placement_mode, "native_caption_track");
+    });
+
+    it("should accept caption snapshot segment payloads", function () {
+        app = buildMockApp();
+        var payload = {
+            sidecar: { path: "/tmp/snapshot.sidecar.json" },
+            caption_track_snapshot: {
+                segments: [
+                    { start: 2, end: 4, text: "Snapshot cue", caption_id: "cap-1" }
+                ]
+            }
+        };
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify(payload)));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.captions_added, 1);
+        assertEqual(result.sidecar_path, "/tmp/snapshot.sidecar.json");
+        assertEqual(result.segment_payload_source, "caption_track_snapshot");
+    });
+
+    it("should accept RA-46 sidecar cue payloads", function () {
+        app = buildMockApp();
+        var payload = {
+            sidecar_path: "/tmp/sidecar.opencut-captions.json",
+            sidecar: {
+                schema: "opencut.caption_sidecar",
+                cues: [
+                    { start: 1, end: 2.5, text: "Cue from sidecar", caption_id: "cap-1" }
+                ]
+            }
+        };
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify(payload)));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.captions_added, 1);
+        assertEqual(result.sidecar_path, "/tmp/sidecar.opencut-captions.json");
+        assertEqual(result.segment_payload_source, "sidecar_cues");
+        assertEqual(result.placement_mode, "native_caption_track");
+    });
+
+    it("should report video-track fallback when native caption placement is unavailable", function () {
+        app = buildMockApp({ captionAddFails: true });
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify([{ start: 0, end: 1, text: "Fallback" }])));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.imported, true);
+        assertEqual(result.added_to_timeline, true);
+        assertEqual(result.placement_mode, "video_track");
+        assertEqual(result.video_track_index, 0);
+        assertEqual(result.fallback_path, "video_track");
+        assert(result.warnings.join(";").indexOf("caption_track_create_failed") !== -1, "should record native placement warning");
+    });
+
+    it("should report project import only when no sequence is active", function () {
+        app = buildMockApp();
+        app.project.activeSequence = null;
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify([{ start: 0, end: 1, text: "Project only" }])));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.imported, true);
+        assertEqual(result.added_to_timeline, false);
+        assertEqual(result.placement_mode, "project_import");
+        assertEqual(result.fallback_path, "project_panel");
+        assert(result.warnings.join(";").indexOf("no_active_sequence") !== -1, "should explain sequence state");
+    });
+
+    it("should report manual-drag fallback when all timeline placement paths fail", function () {
+        app = buildMockApp({
+            captionAddFails: true,
+            videoTracks: [new Track([], { failInsert: true })]
+        });
+        var result = JSON.parse(ocAddNativeCaptionTrack(JSON.stringify([{ start: 0, end: 1, text: "Manual" }])));
+        assert(!result.error, "should not error: " + result.error);
+        assertEqual(result.imported, true);
+        assertEqual(result.added_to_timeline, false);
+        assertEqual(result.placement_mode, "manual_drag");
+        assertEqual(result.fallback_path, "project_panel");
+        assert(result.warnings.join(";").indexOf("video_track_insert_failed") !== -1, "should record video fallback warning");
     });
 
     it("should return error for empty segments", function () {

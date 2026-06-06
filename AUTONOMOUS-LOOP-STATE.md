@@ -6,13 +6,13 @@ Last updated: 2026-06-06
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: RA-48 UXP caption-track snapshot reads are closed under RA-09; remaining E15 rolling work, RA-49 through RA-50, and UXP permission-split work remain open.
-- Shipped this cycle: `ocGetCaptionTrackSnapshot` reads active-sequence caption tracks into the caption round-trip snapshot schema, reports distinct read failure reasons, and remains read-only while caption creation/import stays CEP/hybrid-only.
-- Verification: focused UXP host-action/UDT/result/parity tests passed (31 tests), `node --check extension\com.opencut.uxp\main.js` passed, focused Python Ruff passed, UXP parity/dashboard/UDT generated checks passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (803 tests), `py -3.12 scripts\release_smoke.py --only ruff --json` passed, README badges are in sync, doc-size checks passed within tolerance, roadmap source lint passed with existing appendix warnings, and `rtk git diff --check` passed.
+- Cycle result: RA-49 CEP/hybrid caption write contracts are closed under RA-09; RA-50 metadata-loss fixtures, E15 rolling work, and UXP permission-split work remain open.
+- Shipped this cycle: CEP caption import/write paths now return a normalized placement contract, `ocAddNativeCaptionTrack` accepts legacy arrays plus RA-46 sidecar/cue and caption-snapshot payloads, JSX mock coverage asserts native/video/project/manual placement modes, and UXP SRT Prep names the CEP `ocAddNativeCaptionTrack` handoff.
+- Verification: ExtendScript host syntax, UXP syntax, CEP client syntax, `node tests\jsx_mock.js` (41 tests), focused UXP parity/migration pytest (19 tests), CEP/UXP parity and migration-dashboard generated checks, doc-size checks, README badge sync, Ruff release-smoke, pytest-fast release-smoke (803 tests), roadmap source lint with existing appendix warnings, and `rtk git diff --check` all passed.
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue the compact queue with RA-49 CEP/hybrid caption write contracts, E15 batch 155, Magic Clips, or another remaining UXP permission-split item.
-- The next open queue items include RA-49 CEP/hybrid caption write contracts, RA-50 caption metadata-loss fixtures, E15 batch 155, RA-10 Magic Clips, and RA-11/RA-13/RA-14 UXP permission-split work.
+- Next cycle focus: continue the compact queue with RA-50 caption metadata-loss fixtures, E15 batch 155, Magic Clips, or another remaining UXP permission-split item.
+- The next open queue items include RA-50 caption metadata-loss fixtures, E15 batch 155, RA-10 Magic Clips, and RA-11/RA-13/RA-14 UXP permission-split work.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.
