@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 131
+
+- Migrated the Video Style Transfer form shell to static locale hooks for style preset options, intensity label/title/help, and auto-import copy while preserving style option IDs, intensity slider values, and style-transfer payloads.
+- `client/locales/en.json` grows from 1,999 to 2,009 keys; `i18n-drift` reports 1,940 consumers, 69 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Style Transfer static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 130
 
 - Migrated the Video Face Blur form shell to static locale hooks for blur method, blur strength, detector, auto-import, and MediaPipe install-helper controls while preserving method option values, detector option values, slider values, and fallback install wiring.

@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.242 / batch 130 and remains open.
-- Shipped this cycle: Video Face Blur method labels/options, blur strength label/hint, detector labels/options, auto-import copy, MediaPipe fallback hint, and Install MediaPipe action now expose static locale hooks while preserving method values, detector values, slider values, and install wiring.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 1,999 keys / 1,929 consumers / 70 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Face Blur hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.243 / batch 131 and remains open.
+- Shipped this cycle: Video Style Transfer style labels/options, intensity label/title/help, and auto-import copy now expose static locale hooks while preserving style option IDs, intensity slider values, checked state, and style-transfer payloads.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,009 keys / 1,940 consumers / 69 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Style Transfer hooks and preserved values with no current-port console errors.
 
 ## Next Work
 
