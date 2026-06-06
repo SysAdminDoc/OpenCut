@@ -764,6 +764,23 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.watermark_not_installed", "data-i18n"),
     ("common.install_now", "data-i18n"),
     ("common.requires", "data-i18n"),
+    # One-hundred-thirty-third batch (Video Depth Effects parameter shell HTML).
+    ("forms.effect", "data-i18n"),
+    ("video.depth_effect_type", "data-i18n-aria-label"),
+    ("video.depth_effect_bokeh", "data-i18n"),
+    ("video.depth_effect_parallax", "data-i18n"),
+    ("video.depth_effect_map", "data-i18n"),
+    ("video.depth_focus_point", "data-i18n"),
+    ("forms.blur_strength", "data-i18n"),
+    ("video.depth_zoom_amount", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("video.depth_model_size", "data-i18n-aria-label"),
+    ("video.depth_model_small", "data-i18n"),
+    ("video.depth_model_base", "data-i18n"),
+    ("video.depth_model_large", "data-i18n"),
+    ("video.depth_not_installed", "data-i18n"),
+    ("common.install_now", "data-i18n"),
+    ("common.requires", "data-i18n"),
 )
 
 

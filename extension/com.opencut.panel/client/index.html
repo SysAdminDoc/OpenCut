@@ -2217,46 +2217,46 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="video.depth_desc">AI depth estimation for bokeh simulation, parallax zoom, and depth map export.</p>
                         <div class="form-group">
-                            <label for="depthEffect">Effect</label>
-                            <select id="depthEffect" aria-label="Depth effect type">
-                                <option value="bokeh" selected>Bokeh / Depth-of-Field</option>
-                                <option value="parallax">3D Parallax Zoom</option>
-                                <option value="map">Depth Map Export</option>
+                            <label for="depthEffect" data-i18n="forms.effect">Effect</label>
+                            <select id="depthEffect" aria-label="Depth effect type" data-i18n-aria-label="video.depth_effect_type">
+                                <option value="bokeh" selected data-i18n="video.depth_effect_bokeh">Bokeh / Depth-of-Field</option>
+                                <option value="parallax" data-i18n="video.depth_effect_parallax">3D Parallax Zoom</option>
+                                <option value="map" data-i18n="video.depth_effect_map">Depth Map Export</option>
                             </select>
                         </div>
                         <div class="form-group" id="depthBokehParams">
-                            <label for="depthFocusPoint">Focus Point</label>
+                            <label for="depthFocusPoint" data-i18n="video.depth_focus_point">Focus Point</label>
                             <div class="slider-row">
                                 <input type="range" id="depthFocusPoint" min="0" max="1" value="0.5" step="0.05">
                                 <span class="slider-val" id="depthFocusPointVal">0.50</span>
                             </div>
-                            <label for="depthBlurStrength">Blur Strength</label>
+                            <label for="depthBlurStrength" data-i18n="forms.blur_strength">Blur Strength</label>
                             <div class="slider-row">
                                 <input type="range" id="depthBlurStrength" min="3" max="75" value="25" step="2">
                                 <span class="slider-val" id="depthBlurStrengthVal">25</span>
                             </div>
                         </div>
                         <div class="form-group hidden" id="depthParallaxParams">
-                            <label for="depthZoomAmount">Zoom Amount</label>
+                            <label for="depthZoomAmount" data-i18n="video.depth_zoom_amount">Zoom Amount</label>
                             <div class="slider-row">
                                 <input type="range" id="depthZoomAmount" min="1.05" max="1.8" value="1.15" step="0.05">
                                 <span class="slider-val" id="depthZoomAmountVal">1.15x</span>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="depthModelSize">Model</label>
-                            <select id="depthModelSize" aria-label="Depth model size">
-                                <option value="small" selected>Small (fast)</option>
-                                <option value="base">Base (balanced)</option>
-                                <option value="large">Large (best quality)</option>
+                            <label for="depthModelSize" data-i18n="forms.model">Model</label>
+                            <select id="depthModelSize" aria-label="Depth model size" data-i18n-aria-label="video.depth_model_size">
+                                <option value="small" selected data-i18n="video.depth_model_small">Small (fast)</option>
+                                <option value="base" data-i18n="video.depth_model_base">Base (balanced)</option>
+                                <option value="large" data-i18n="video.depth_model_large">Large (best quality)</option>
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runDepthBtn" disabled data-i18n="video.depth_apply">Apply Depth Effect</button>
 
                         <div class="hint hidden" id="depthHint">
-                            Depth Anything V2 not installed.
-                            <button type="button" class="btn-install" id="installDepthBtn">Install Now</button>
-                            <div class="install-alt">Requires: <code>pip install torch transformers</code></div>
+                            <span data-i18n="video.depth_not_installed">Depth Anything V2 not installed.</span>
+                            <button type="button" class="btn-install" id="installDepthBtn" data-i18n="common.install_now">Install Now</button>
+                            <div class="install-alt"><span data-i18n="common.requires">Requires:</span> <code>pip install torch transformers</code></div>
                         </div>
                     </section>
                 </div>

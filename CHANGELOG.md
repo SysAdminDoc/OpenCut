@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 133
+
+- Migrated the Video Depth Effects form shell to static locale hooks for effect/model selectors, ARIA labels, focus/blur/zoom controls, install helper copy, and Requires text while preserving effect IDs, model IDs, slider values, and package command text.
+- `client/locales/en.json` grows from 2,021 to 2,032 keys; `i18n-drift` reports 1,963 consumers, 69 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Depth Effects static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 132
 
 - Migrated the Video Watermark Removal form shell to static locale hooks for detection sensitivity, prompt placeholder, frame-skip controls, checkbox copy, auto-detect ARIA/label text, install helper copy, and the shared Requires label while preserving prompt defaults, slider values, checkbox defaults, and package command text.
