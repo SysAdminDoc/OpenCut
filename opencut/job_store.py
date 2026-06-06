@@ -42,6 +42,7 @@ import time
 from typing import Optional
 
 from opencut.local_db_migrations import migrate_user_version
+from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
 logger = logging.getLogger("opencut")
 
@@ -57,6 +58,7 @@ SCHEMA_VERSION = 2
 # How long to keep completed jobs in the database
 COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
 
+MAX_RESULT_JSON_BYTES = 256 * 1024
 
 _MAX_JOB_LIST_LIMIT = 1000
 
@@ -259,6 +261,13 @@ def save_job(job_dict):
             result_json = json.dumps(job_dict["result"])
         except (TypeError, ValueError):
             result_json = str(job_dict["result"])
+        result_json = spill_json_if_needed(
+            result_json,
+            base_dir=os.path.dirname(_DB_PATH),
+            namespace="jobs",
+            field_name="result_json",
+            max_bytes=MAX_RESULT_JSON_BYTES,
+        )
 
     payload_json = None
     if job_dict.get("_payload") is not None:
@@ -479,7 +488,7 @@ def _row_to_dict(row):
     }
     if row["result_json"]:
         try:
-            d["result"] = json.loads(row["result_json"])
+            d["result"] = decode_json_or_spill_marker(row["result_json"])
         except (json.JSONDecodeError, TypeError):
             d["result"] = row["result_json"]
     else:

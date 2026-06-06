@@ -20,6 +20,9 @@
 **Pass 270 update (no standalone research file):**
 - Closed RA-37/RA-05 by adding a shared local SQLite migration helper, stamping explicit `PRAGMA user_version` values for the job store, operation journal, footage index, and pipeline-health database, and rejecting newer unknown local schemas before downgrade-prone access. Focused local DB tests and Ruff cover the batch.
 
+**Pass 271 update (no standalone research file):**
+- Closed RA-38/RA-07 by adding a shared local SQLite JSON spill helper, bounding `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json`, writing oversized payloads into content-addressed `.opencut/payload_spills` files, and returning structured spill metadata from job and journal reads. Focused job/journal tests and Ruff cover the batch.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

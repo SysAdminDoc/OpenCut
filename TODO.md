@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-37 local SQLite schema-version pass.
+Last synced: 2026-06-06 during the RA-38 local SQLite payload-spill pass.
 
 ## Execution Order
 
@@ -36,7 +36,7 @@ Last synced: 2026-06-06 during the RA-37 local SQLite schema-version pass.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [x] **RA-05/RA-37 SQLite `PRAGMA user_version`** - local SQLite stores now use explicit schema versions, ordered idempotent migrations, and newer-schema rejection.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
-- [ ] **RA-07 job `result_json` cap** - bound persisted job result payload sizes.
+- [x] **RA-07/RA-38 job and journal JSON payload caps** - oversized job results and journal inverse/forward payloads now spill to content-addressed local files with structured metadata.
 - [ ] **RA-08 DB compaction diagnostic** - add a maintenance diagnostic for database compaction posture.
 - [ ] **RA-03 direct typed error logging** - ensure direct typed error paths log with structured context.
 - [ ] **RA-01 Ruff target-version alignment** - make the lint target explicit.
