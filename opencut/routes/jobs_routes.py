@@ -611,6 +611,19 @@ def job_stats():
         return jsonify({"total": 0})
 
 
+@jobs_bp.route("/jobs/db-diagnostics", methods=["GET"])
+def job_db_diagnostics():
+    """Return read-only diagnostics for the persisted job SQLite store."""
+    try:
+        from opencut.job_store import get_db_diagnostics
+        return jsonify(get_db_diagnostics())
+    except ImportError:
+        return jsonify({"error": "Job history is unavailable"}), 503
+    except Exception as exc:
+        logger.exception("job_db_diagnostics failed")
+        return jsonify({"error": str(exc)}), 500
+
+
 @jobs_bp.route("/jobs/interrupted", methods=["GET"])
 def interrupted_jobs():
     """Return jobs that were interrupted by a server restart.

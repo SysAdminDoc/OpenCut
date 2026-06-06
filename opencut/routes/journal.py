@@ -12,8 +12,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut import journal
-from opencut.security import require_csrf, safe_bool, safe_int, validate_path
-from opencut.security import get_json_dict
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -38,6 +37,16 @@ def journal_list():
     except Exception as e:
         logger.exception("journal_list failed")
         return jsonify({"error": f"Could not read journal: {e}"}), 500
+
+
+@journal_bp.route("/journal/db-diagnostics", methods=["GET"])
+def journal_db_diagnostics():
+    """Return read-only diagnostics for the operation journal database."""
+    try:
+        return jsonify(journal.get_db_diagnostics())
+    except Exception as e:
+        logger.exception("journal_db_diagnostics failed")
+        return jsonify({"error": f"Could not read journal diagnostics: {e}"}), 500
 
 
 @journal_bp.route("/journal/record", methods=["POST"])

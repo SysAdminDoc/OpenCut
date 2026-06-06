@@ -5,6 +5,7 @@ import threading
 
 import pytest
 
+from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_migrations import (
     LocalDatabaseVersionError,
     get_user_version,
@@ -166,3 +167,40 @@ def test_pipeline_health_sets_user_version_and_rejects_future_schema(tmp_path, m
 
     with pytest.raises(LocalDatabaseVersionError, match="pipeline health.*refusing to downgrade"):
         pipeline_health._init_db()
+
+
+def test_sqlite_diagnostic_reports_pages_freelist_and_wal(tmp_path):
+    db_path = tmp_path / "diag.db"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA user_version = 3")
+        conn.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, value TEXT)")
+        conn.executemany("INSERT INTO items (value) VALUES (?)", [(str(i),) for i in range(5)])
+        conn.commit()
+    finally:
+        conn.close()
+
+    diagnostic = build_sqlite_diagnostic(str(db_path), store_name="test_store")
+
+    assert diagnostic["store"] == "test_store"
+    assert diagnostic["exists"] is True
+    assert diagnostic["page_count"] >= 1
+    assert diagnostic["page_size"] > 0
+    assert diagnostic["freelist_count"] >= 0
+    assert diagnostic["user_version"] == 3
+    assert diagnostic["files"]["database"]["bytes"] > 0
+    assert "wal_checkpoint" in diagnostic
+    assert diagnostic["recommended_action"] in {
+        "ok",
+        "checkpoint_recommended",
+        "vacuum_recommended",
+    }
+
+
+def test_sqlite_diagnostic_reports_missing_database(tmp_path):
+    diagnostic = build_sqlite_diagnostic(str(tmp_path / "missing.db"), store_name="missing")
+
+    assert diagnostic["exists"] is False
+    assert diagnostic["recommended_action"] == "not_initialized"
+    assert diagnostic["wal_checkpoint"]["error"] == "database_not_initialized"

@@ -137,3 +137,34 @@ def test_cli_route_rejects_unknown_manifest_route_before_http(monkeypatch):
 
     assert result.exit_code != 0
     assert "Route not found in manifest" in result.output
+
+
+def test_cli_local_db_diagnostics_json(monkeypatch):
+    monkeypatch.setattr(
+        cli_module,
+        "_local_db_diagnostics_payload",
+        lambda: {
+            "count": 1,
+            "stores": [
+                {
+                    "store": "jobs",
+                    "exists": True,
+                    "files": {
+                        "database": {"bytes": 4096},
+                        "wal": {"bytes": 0},
+                    },
+                    "page_count": 1,
+                    "freelist_count": 0,
+                    "recommended_action": "ok",
+                }
+            ],
+        },
+    )
+
+    result = CliRunner().invoke(cli_module.cli, ["local-db-diagnostics", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["count"] == 1
+    assert payload["stores"][0]["store"] == "jobs"
+    assert payload["stores"][0]["recommended_action"] == "ok"

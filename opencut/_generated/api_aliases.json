@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T03:54:33Z",
+  "generated_at": "2026-06-06T18:59:07Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_api_routes": 234,
+  "total_api_routes": 235,
   "alias_count": 17,
-  "api_only_count": 217,
+  "api_only_count": 218,
   "method_counts": {
     "DELETE": 5,
-    "GET": 57,
+    "GET": 58,
     "PATCH": 1,
     "POST": 169,
     "PUT": 2
@@ -1177,6 +1177,15 @@
       "endpoint": "pipeline_intel.pipeline_health",
       "blueprint": "pipeline_intel",
       "canonical_candidate": "/pipeline/health"
+    },
+    {
+      "rule": "/api/pipeline/health/db-diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.pipeline_health_db_diagnostics",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/health/db-diagnostics"
     },
     {
       "rule": "/api/pipeline/health/record",

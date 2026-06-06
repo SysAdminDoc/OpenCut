@@ -41,6 +41,7 @@ import threading
 import time
 from typing import Optional
 
+from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_migrations import migrate_user_version
 from opencut.local_db_payloads import decode_json_or_spill_marker, spill_json_if_needed
 
@@ -462,6 +463,11 @@ def get_job_stats():
     row = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()
     stats["total"] = row[0] if row else 0
     return stats
+
+
+def get_db_diagnostics():
+    """Return SQLite page, freelist, WAL, and size diagnostics for jobs.db."""
+    return build_sqlite_diagnostic(_DB_PATH, store_name="jobs")
 
 
 def _row_to_dict(row):

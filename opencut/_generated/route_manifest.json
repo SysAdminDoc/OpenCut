@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "generated_at": "2026-06-04T04:24:57Z",
-  "total_routes": 1523,
+  "generated_at": "2026-06-06T18:59:04Z",
+  "total_routes": 1527,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 15,
-    "GET": 381,
+    "GET": 385,
     "PATCH": 1,
     "POST": 1128,
     "PUT": 2
@@ -492,9 +492,9 @@
       ]
     },
     "jobs": {
-      "route_count": 15,
+      "route_count": 16,
       "method_counts": {
-        "GET": 10,
+        "GET": 11,
         "POST": 5
       },
       "sample_rules": [
@@ -504,15 +504,15 @@
       ]
     },
     "journal": {
-      "route_count": 5,
+      "route_count": 6,
       "method_counts": {
         "DELETE": 1,
-        "GET": 1,
+        "GET": 2,
         "POST": 3
       },
       "sample_rules": [
+        "/journal/db-diagnostics",
         "/journal/list",
-        "/journal/mark-reverted/<int:entry_id>",
         "/journal/record"
       ]
     },
@@ -632,17 +632,17 @@
       ]
     },
     "pipeline_intel": {
-      "route_count": 21,
+      "route_count": 22,
       "method_counts": {
         "DELETE": 1,
-        "GET": 12,
+        "GET": 13,
         "POST": 7,
         "PUT": 1
       },
       "sample_rules": [
         "/api/pipeline/errors",
         "/api/pipeline/health",
-        "/api/pipeline/health/record"
+        "/api/pipeline/health/db-diagnostics"
       ]
     },
     "platform_infra": {
@@ -787,10 +787,10 @@
       ]
     },
     "search": {
-      "route_count": 7,
+      "route_count": 8,
       "method_counts": {
         "DELETE": 1,
-        "GET": 1,
+        "GET": 2,
         "POST": 5
       },
       "sample_rules": [
@@ -2997,6 +2997,14 @@
         "GET"
       ],
       "endpoint": "pipeline_intel.pipeline_health",
+      "blueprint": "pipeline_intel"
+    },
+    {
+      "rule": "/api/pipeline/health/db-diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.pipeline_health_db_diagnostics",
       "blueprint": "pipeline_intel"
     },
     {
@@ -7620,6 +7628,14 @@
       "blueprint": "jobs"
     },
     {
+      "rule": "/jobs/db-diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "jobs.job_db_diagnostics",
+      "blueprint": "jobs"
+    },
+    {
       "rule": "/jobs/history",
       "methods": [
         "GET"
@@ -7673,6 +7689,14 @@
         "POST"
       ],
       "endpoint": "journal.journal_clear",
+      "blueprint": "journal"
+    },
+    {
+      "rule": "/journal/db-diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "journal.journal_db_diagnostics",
       "blueprint": "journal"
     },
     {
@@ -9393,6 +9417,14 @@
         "POST"
       ],
       "endpoint": "search.cleanup_index",
+      "blueprint": "search"
+    },
+    {
+      "rule": "/search/db-diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "search.search_db_diagnostics",
       "blueprint": "search"
     },
     {
