@@ -10,8 +10,21 @@ import time
 from flask import Blueprint, current_app, has_app_context, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf
-from opencut.user_data import create_user_tombstone, load_workflows, save_workflows, summarize_user_tombstone
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    verify_destructive_confirm_token,
+)
+from opencut.user_data import (
+    build_user_data_destructive_record,
+    create_user_tombstone,
+    load_workflows,
+    save_workflows,
+    summarize_user_tombstone,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -288,6 +301,32 @@ def delete_custom_workflow():
 
     if len(workflows) == original_len:
         return jsonify({"error": "Workflow not found"}), 404
+
+    record = build_user_data_destructive_record(
+        "workflow",
+        name,
+        removed or {"name": name},
+        source_file="workflows.json",
+        route="/workflow/delete",
+    )
+    plan = build_destructive_plan(
+        "user_data.workflow.delete",
+        records=[record],
+        metadata={"route": "/workflow/delete", "name": name, "tombstone": True},
+        reversible=True,
+    )
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "deleted": None,
+            "would_delete": name,
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+        })
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
 
     tombstone = create_user_tombstone(
         "workflow",

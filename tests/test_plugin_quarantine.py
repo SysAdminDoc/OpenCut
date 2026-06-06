@@ -43,22 +43,41 @@ def test_uninstall_requires_confirm_name(client, csrf_token, monkeypatch, tmp_pa
         json={"name": "demo-plugin"},
         headers={"X-OpenCut-Token": csrf_token},
     )
+    missing_token = client.post(
+        "/plugins/uninstall",
+        json={"name": "demo-plugin", "confirm_name": "demo-plugin"},
+        headers={"X-OpenCut-Token": csrf_token},
+    )
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "CONFIRMATION_REQUIRED"
+    assert missing_token.status_code == 409
+    assert missing_token.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
     assert plugin_dir.exists()
 
 
 def test_uninstall_moves_plugin_to_quarantine_and_restores(client, csrf_token, monkeypatch, tmp_path):
     routes, plugins_dir = _isolate_plugins(monkeypatch, tmp_path)
     plugin_dir = _write_plugin(plugins_dir)
+    preview_response = client.post(
+        "/plugins/uninstall",
+        json={"name": "demo-plugin", "dry_run": True},
+        headers={"X-OpenCut-Token": csrf_token},
+    )
+    preview = preview_response.get_json()
 
     response = client.post(
         "/plugins/uninstall",
-        json={"name": "demo-plugin", "confirm_name": "demo-plugin"},
+        json={
+            "name": "demo-plugin",
+            "confirm_name": "demo-plugin",
+            "confirm_token": preview["confirm_token"],
+        },
         headers={"X-OpenCut-Token": csrf_token},
     )
 
+    assert preview_response.status_code == 200
+    assert preview["would_quarantine"] is True
     assert response.status_code == 200
     data = response.get_json()
     quarantine_id = data["quarantine_id"]
@@ -88,9 +107,18 @@ def test_uninstall_moves_plugin_to_quarantine_and_restores(client, csrf_token, m
 def test_quarantine_permanent_delete_requires_confirm_name(client, csrf_token, monkeypatch, tmp_path):
     _routes, plugins_dir = _isolate_plugins(monkeypatch, tmp_path)
     _write_plugin(plugins_dir)
+    uninstall_preview = client.post(
+        "/plugins/uninstall",
+        json={"name": "demo-plugin", "dry_run": True},
+        headers=_csrf_headers(csrf_token),
+    )
     uninstall_response = client.post(
         "/plugins/uninstall",
-        json={"name": "demo-plugin", "confirm_name": "demo-plugin"},
+        json={
+            "name": "demo-plugin",
+            "confirm_name": "demo-plugin",
+            "confirm_token": uninstall_preview.get_json()["confirm_token"],
+        },
         headers=_csrf_headers(csrf_token),
     )
     quarantine_id = uninstall_response.get_json()["quarantine_id"]
@@ -100,14 +128,32 @@ def test_quarantine_permanent_delete_requires_confirm_name(client, csrf_token, m
         json={"quarantine_id": quarantine_id},
         headers=_csrf_headers(csrf_token),
     )
-    deleted = client.post(
+    preview = client.post(
+        "/plugins/quarantine/delete",
+        json={"quarantine_id": quarantine_id, "dry_run": True},
+        headers=_csrf_headers(csrf_token),
+    )
+    missing_token = client.post(
         "/plugins/quarantine/delete",
         json={"quarantine_id": quarantine_id, "confirm_name": "demo-plugin"},
+        headers=_csrf_headers(csrf_token),
+    )
+    deleted = client.post(
+        "/plugins/quarantine/delete",
+        json={
+            "quarantine_id": quarantine_id,
+            "confirm_name": "demo-plugin",
+            "confirm_token": preview.get_json()["confirm_token"],
+        },
         headers=_csrf_headers(csrf_token),
     )
 
     assert rejected.status_code == 400
     assert rejected.get_json()["code"] == "CONFIRMATION_REQUIRED"
+    assert preview.status_code == 200
+    assert preview.get_json()["would_delete"] is True
+    assert missing_token.status_code == 409
+    assert missing_token.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
     assert deleted.status_code == 200
     assert deleted.get_json()["deleted"] is True
     assert client.get("/plugins/quarantine/list").get_json()["total"] == 0

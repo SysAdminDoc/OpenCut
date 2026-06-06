@@ -262,10 +262,18 @@ class TestWorkflowSaveDelete:
             headers=csrf_headers(csrf_token),
         )
 
-        # Delete it
+        # Preview and delete it
+        preview = client.delete(
+            "/workflow/delete",
+            data=json.dumps({"name": "To Delete", "dry_run": True}),
+            headers=csrf_headers(csrf_token),
+        )
+        assert preview.status_code == 200
+        token = preview.get_json()["confirm_token"]
+
         resp = client.delete(
             "/workflow/delete",
-            data=json.dumps({"name": "To Delete"}),
+            data=json.dumps({"name": "To Delete", "confirm_token": token}),
             headers=csrf_headers(csrf_token),
         )
         assert resp.status_code == 200

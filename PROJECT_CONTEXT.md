@@ -47,6 +47,9 @@
 **Pass 279 update (no standalone research file):**
 - Advanced RA-41 by adding non-mutating render-cache cleanup/invalidation plans and temp-cleanup dry-run sweep targets, then applying the shared confirmation-token contract to `/cache/cleanup`, `/cache/invalidate`, and `/system/temp-cleanup/sweep`.
 
+**Pass 280 update (no standalone research file):**
+- Advanced RA-41 by requiring shared dry-run confirmation tokens for plugin uninstall/quarantine permanent delete and tombstone-backed preset/workflow deletes. The original RA-41 named route list now has the shared contract, while the next pass should audit adjacent clear/cleanup routes outside that list.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
