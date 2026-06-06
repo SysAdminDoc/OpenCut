@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 142
+
+- Migrated the Video Particle Effects form shell to static locale hooks for preset label/options, density label, and density hint while preserving particle preset values and density slider constraints.
+- `client/locales/en.json` grows from 2,159 to 2,168 keys; `i18n-drift` reports 2,106 consumers, 62 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Particle Effects static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 141
 
 - Migrated the Video Transition form shell to static locale hooks for second-clip path, Browse, transition label/options, and duration while preserving the clip path placeholder, all transition option values, and duration slider constraints.
