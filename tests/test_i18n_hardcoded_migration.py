@@ -922,6 +922,28 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.blend_dodge", "data-i18n"),
     ("video.blend_burn", "data-i18n"),
     ("forms.opacity", "data-i18n"),
+    # One-hundred-forty-first batch (Video Transition parameter shell HTML).
+    ("video.second_clip_path", "data-i18n"),
+    ("video.second_clip_path_placeholder", "data-i18n-placeholder"),
+    ("common.browse", "data-i18n"),
+    ("forms.transition", "data-i18n"),
+    ("video.transition_crossfade", "data-i18n"),
+    ("video.transition_wipe_left", "data-i18n"),
+    ("video.transition_wipe_right", "data-i18n"),
+    ("video.transition_slide_left", "data-i18n"),
+    ("video.transition_slide_right", "data-i18n"),
+    ("video.transition_circle_crop", "data-i18n"),
+    ("video.transition_circle_open", "data-i18n"),
+    ("video.transition_dissolve", "data-i18n"),
+    ("video.transition_pixelize", "data-i18n"),
+    ("video.transition_diagonal_tl", "data-i18n"),
+    ("video.transition_radial", "data-i18n"),
+    ("video.transition_zoom_in", "data-i18n"),
+    ("video.transition_fade_black", "data-i18n"),
+    ("video.transition_fade_white", "data-i18n"),
+    ("video.transition_smooth_left", "data-i18n"),
+    ("video.transition_squeeze_h", "data-i18n"),
+    ("forms.duration", "data-i18n"),
 )
 
 
