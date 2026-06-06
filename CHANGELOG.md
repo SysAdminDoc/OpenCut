@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 137
+
+- Migrated the Video Scene Detection form shell to static locale hooks for detection method, method options, sensitivity, minimum scene length, result stat labels, YouTube Chapters, and Copy to Clipboard while preserving method values, slider values, and readonly chapter output.
+- `client/locales/en.json` grows from 2,070 to 2,078 keys; `i18n-drift` reports 2,015 consumers, 63 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Scene Detection static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 136
 
 - Migrated the Video Social Media Posting form shell to static locale hooks for platform/title/description/privacy controls, placeholders and ARIA attributes, connect status/action copy, upload hint, and result copy while preserving platform/privacy values and input limits.

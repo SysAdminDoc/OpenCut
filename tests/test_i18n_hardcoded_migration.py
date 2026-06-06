@@ -833,6 +833,16 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.social_connect_first", "data-i18n"),
     ("video.social_uploaded", "data-i18n"),
     ("video.social_view_on_platform", "data-i18n"),
+    # One-hundred-thirty-seventh batch (Video Scene Detection parameter shell HTML).
+    ("forms.detection_method", "data-i18n"),
+    ("video.scene_method_ffmpeg", "data-i18n"),
+    ("video.scene_method_ml", "data-i18n"),
+    ("forms.sensitivity", "data-i18n"),
+    ("video.min_scene_length", "data-i18n"),
+    ("video.scene_stat_scenes", "data-i18n"),
+    ("video.scene_stat_avg_length", "data-i18n"),
+    ("video.youtube_chapters", "data-i18n"),
+    ("common.copy_to_clipboard", "data-i18n"),
 )
 
 
