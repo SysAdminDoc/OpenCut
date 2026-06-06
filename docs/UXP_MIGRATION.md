@@ -108,6 +108,9 @@ UXP Architecture (target):
 - [x] RA-18 deprecated API sentinel: `tests/test_uxp_deprecation_sentinel.py`
       blocks deprecated Clipboard APIs, object-form clipboard writes, and legacy
       `uxpvideo*` events from the live UXP and dormant WebView source paths.
+- [x] RA-19 clipboard permission/fallback guard: the live manifest and dormant
+      WebView scaffold declare `clipboard: "readAndWrite"`, and UXP copy actions
+      route through a shared denied/unavailable fallback helper.
 - [x] F252.1 Bolt/WebView scaffold setup at `extension/com.opencut.uxp/bolt-webview/`
 - [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
 - [x] F252.2 UXP host-action dispatcher maps the 14 direct-UXP `ocXxx` actions into `PProBridge.executeHostAction`

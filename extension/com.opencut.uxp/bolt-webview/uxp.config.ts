@@ -35,6 +35,7 @@ type OpenCutManifest = {
       enableMessageBridge: "localAndRemote";
     };
     localFileSystem: "fullAccess";
+    clipboard: "readAndWrite";
     ipc: { enablePluginCommunication: true };
   };
 };
@@ -97,6 +98,7 @@ export const manifest: OpenCutManifest = {
       enableMessageBridge: "localAndRemote",
     },
     localFileSystem: "fullAccess",
+    clipboard: "readAndWrite",
     ipc: {
       enablePluginCommunication: true,
     },

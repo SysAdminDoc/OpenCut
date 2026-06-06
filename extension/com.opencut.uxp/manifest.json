@@ -36,6 +36,7 @@
       ]
     },
     "localFileSystem": "fullAccess",
+    "clipboard": "readAndWrite",
     "ipc": {
       "enablePluginCommunication": true
     }

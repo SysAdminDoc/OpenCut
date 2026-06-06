@@ -55,6 +55,7 @@ access:
 |---|---|---|
 | `network.domains` | `127.0.0.1:5679`, `localhost:5679` | Backend HTTP calls |
 | `localFileSystem` | `fullAccess` | File/folder browse dialogs |
+| `clipboard` | `readAndWrite` | Generated-output copy button writes text to the system clipboard |
 | `ipc.enablePluginCommunication` | `true` | Inter-plugin messaging |
 
 ## Manifest Schema
@@ -70,6 +71,15 @@ a string value and does not use deprecated `Clipboard.setContent`,
 `Clipboard.getContent`, `Clipboard.clearContent`, object-form clipboard writes,
 or legacy `uxpvideo*` events. `tests/test_uxp_deprecation_sentinel.py` pins that
 contract for the F252 cutover path.
+
+## Clipboard Permission
+
+Adobe's Premiere UXP manifest contract defaults clipboard access to unavailable.
+OpenCut declares `requiredPermissions.clipboard: "readAndWrite"` in both the live
+manifest and dormant WebView scaffold because the output copy button writes text
+to the system clipboard. `copyTextToClipboard()` centralizes the runtime path and
+falls back to a manual-copy warning when clipboard access is unsupported or
+permission is denied. `tests/test_uxp_clipboard_permission.py` guards this.
 
 ## Differences from CEP Panel
 
