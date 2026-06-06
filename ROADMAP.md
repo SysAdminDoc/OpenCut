@@ -90,7 +90,7 @@ When this file and the live code disagree, **the code wins**.
 |---|---|---|---|
 | RA-01 | Ruff target-version alignment | S | py39 vs >=3.11 skew |
 | RA-02 | requirements/pyproject alignment | S | Pin drift weakens advisories |
-| RA-03 | Direct typed error logging | S | OpenCutError leaves no log |
+| RA-03 | Direct typed error logging | S | Closed 2026-06-06: direct typed errors now log structured context |
 | RA-04 | Request ID in error bodies | S | Closed 2026-06-06: structured error bodies now include the generated request ID |
 | RA-05 | SQLite PRAGMA user_version | M | Closed 2026-06-06: local SQLite stores now use explicit `user_version` migrations |
 | RA-06 | Destructive wipe backup | M | Closed 2026-06-06: local SQLite destructive maintenance paths now expose dry-run counts, optional backups, and audit metadata |
@@ -1237,6 +1237,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 45 | Release artifact provenance attestations | GitHub artifact attestation docs, `actions/attest` README, `.github/workflows/build.yml`, release provenance tests | Release Full uploaded packaged artifacts and the declared SBOM without a signed provenance claim for the exact uploaded files. | Closed the provenance follow-up by adding pinned `actions/attest@v4`, least-extra attestation permissions, pre-upload server packaging, verification docs, and release-smoke static guards. |
 | 2026-06-06 | Cycle 46 | CEP UNC/HGFS-safe Node commands | `extension/com.opencut.panel/package.json`, `panel-node-gate.ps1`, panel advisory/build docs, release-smoke tests | Documented panel npm gate commands could be launched from Windows shared-folder paths where `cmd.exe` falls back to `C:\Windows`, causing relative `scripts/*.mjs` paths to resolve incorrectly. | Closed RA-36 by adding Windows-safe `:win` aliases that locate the wrapper from `%INIT_CWD%`; the wrapper then executes the Node scripts from `$PSScriptRoot`, with docs and release-smoke coverage for the shared-folder entry points. |
 | 2026-06-06 | Cycle 47 | Request IDs in typed error bodies | `opencut/errors.py`, `opencut/server.py`, request-correlation middleware, hardening tests | Structured JSON error bodies echoed codes and suggestions but omitted the generated server request ID, forcing operators to correlate from response headers alone. | Closed RA-04 by enriching centralized typed error bodies with the generated request ID, routing direct server typed errors through the shared helper, and adding release-smoke coverage for `error_response`, `OpenCutError`, `safe_error`, and built-in error handlers. |
+| 2026-06-06 | Cycle 48 | Direct typed error logging | `opencut/errors.py`, request ID tests, typed-error logging tests, release-smoke list | `OpenCutError` and direct `error_response` paths returned useful JSON but did not reliably emit a structured log record with the code, status, request ID, method, path, and caller context. | Closed RA-03 by centralizing typed-error log records, preserving single exception logs for `safe_error`, and adding release-smoke coverage for raised `OpenCutError`, direct `error_response`, and `safe_error(OpenCutError)` paths. |
 
 ### Research queries to run later
 
@@ -1257,23 +1258,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 48: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 49: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 50: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 51: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 52: Continue E15, RA-03, or another remaining release-trust gap now that RA-04 is closed.
+1. Cycle 49: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 50: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 51: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 52: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 53: Continue E15, RA-01/RA-02, or another remaining release-trust gap now that RA-03 is closed.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 47: Request IDs in typed error bodies.
+Cycle 48: Direct typed error logging.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
+RA-03, RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1312,6 +1313,8 @@ resolve the wrapper from npm's original working directory and execute Node
 scripts from the wrapper's script directory.
 RA-04 keeps structured JSON error envelopes tied to the generated server
 request ID so client-visible errors can be correlated directly with logs.
+RA-03 keeps direct typed error responses logged with structured code, status,
+request ID, method, path, and typed-error context fields.
 
 #### Important findings so far
 
@@ -1361,6 +1364,8 @@ request ID so client-visible errors can be correlated directly with logs.
   Windows-safe `:win` aliases for UNC/HGFS checkouts.
 - Structured JSON error bodies now include the generated server request ID that
   matches the `X-Request-ID` response header.
+- Direct typed errors now emit structured log records for error code, status,
+  request ID, method, path, and typed-error context.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now
