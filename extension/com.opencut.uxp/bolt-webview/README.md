@@ -5,6 +5,10 @@ UXP WebView architecture. It is intentionally dormant: the shipped UXP panel
 still loads `../index.html` from `../manifest.json` until the WebView UI has a
 host-API smoke test inside Premiere.
 
+The live UXP panel declares `manifestVersion: 5`, matching Premiere's supported
+manifest schema. This scaffold keeps `manifestVersion: 6` only for the future
+WebView/hybrid-style manifest generated during the F252 cutover.
+
 The scaffold follows the current Bolt UXP WebView split:
 
 - `uxp.config.ts` is the least-privilege manifest/config template.

@@ -102,6 +102,9 @@ UXP Architecture (target):
 - [x] UXP panel with full feature parity (settings, engine registry, WebSocket, all video features)
 - [x] `csinterface-shim.js` — Drop-in CSInterface replacement for WebView mode
 - [x] Backend communication works natively (fetch in UXP/WebView)
+- [x] RA-17 live manifest schema guard: `extension/com.opencut.uxp/manifest.json`
+      declares Premiere-supported `manifestVersion: 5`; the dormant Bolt/WebView
+      scaffold keeps `manifestVersion: 6` until its separate UDT cutover.
 - [x] F252.1 Bolt/WebView scaffold setup at `extension/com.opencut.uxp/bolt-webview/`
 - [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
 - [x] F252.2 UXP host-action dispatcher maps the 14 direct-UXP `ocXxx` actions into `PProBridge.executeHostAction`
