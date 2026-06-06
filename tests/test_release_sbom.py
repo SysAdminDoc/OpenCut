@@ -39,7 +39,10 @@ def test_release_workflow_generates_and_uploads_sbom():
     assert "Archive release SBOM" in workflow
     assert "Upload SBOM to release" in workflow
     assert f"python scripts/sbom.py --format json --output {SBOM_PATH}" in workflow
-    assert f"gh release upload ${{{{ github.ref_name }}}} {SBOM_PATH} --clobber" in workflow
+    assert (
+        "gh release upload ${{ github.ref_name }} "
+        f"release-artifacts/OpenCut-Declared-Dependency-SBOM-CycloneDX/{SBOM_PATH.rsplit('/', maxsplit=1)[-1]} --clobber"
+    ) in workflow
     assert "OpenCut-Declared-Dependency-SBOM-CycloneDX" in workflow
     assert "OpenCut-SBOM-CycloneDX" not in workflow
     assert "dist/opencut-sbom.cyclonedx.json" not in workflow

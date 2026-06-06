@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the release-smoke Ruff import-order cleanup pass.
+Last synced: 2026-06-06 during the RA-24 Release Full token permissions pass.
 
 ## Execution Order
 
@@ -24,7 +24,7 @@ Last synced: 2026-06-06 during the release-smoke Ruff import-order cleanup pass.
 - [ ] **RA-21 Python 3.13 classifier proof** - prove advertised Python 3.13 support with CI coverage or retract the classifier until it is tested.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [ ] **RA-23 GitHub Actions SHA pins** - pin workflow action references to full-length SHAs and guard against mutable action tags.
-- [ ] **RA-24 Release Full token permissions** - scope Release Full `GITHUB_TOKEN` permissions by job so only release uploads receive write access.
+- [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.
 - [x] **RA-35 release SBOM fidelity** - current release SBOM is explicitly labeled declared-only in its filename, artifact name, metadata, docs, and tests while lockfile vulnerability evidence remains in pip-audit.
 - [x] **RA-25 Docker dependency surface** - Docker now installs from the tracked `requirements.txt` surface so retired packages cannot return through the container path.
 - [x] **RA-26 Docker runtime parity** - Docker now documents and tests HTTP-only default publishing on 5679, non-root data paths, and opt-in WebSocket/MCP sidecars.
