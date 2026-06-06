@@ -102,7 +102,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
 | RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
 | RA-14 | WebView permission split | M | Dev vs release permissions |
-| RA-15 | [all] advisory decision | M | 5 unwaived advisories |
+| RA-15 | [all] advisory decision | M | Closed 2026-06-06: `opencut[all]` is the release-audited convenience lane; Torch/Transformers-backed packages are explicit via `torch-stack` and named feature extras |
 | RA-16 | Adobe dist-tag tracking | S | release-* tags untracked |
 | RA-17 | UXP manifest schema guard | M | Missing manifestVersion |
 | RA-18 | UXP deprecation sentinel | M | Block deprecated APIs |
@@ -1219,6 +1219,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 30 | Plugin and user-data delete confirmation plans | `opencut/routes/plugins.py`, `settings.py`, `workflow.py`, `user_data.py`, plugin/user-data/workflow tests | Plugin uninstall/quarantine delete and tombstone-backed preset/workflow deletes still relied on typed names or restore snapshots without the shared dry-run token contract. | Advanced RA-41 with shared dry-run plans and confirmation-token enforcement for `/plugins/uninstall`, `/plugins/quarantine/delete`, `/presets/delete`, `/workflows/delete`, and `/workflow/delete`; closure scan found adjacent clear/cleanup routes for the next pass. |
 | 2026-06-06 | Cycle 31 | Adjacent state-clear confirmation plans | `opencut/routes/system.py`, `workflow_dev_routes.py`, `search.py`, `footage_index_db.py`, destructive-operation/user-data/workflow tests | Assistant dismissal clears, chat clears, undo-history clears, and search cleanup could mutate in-memory or local-index state without the shared review/confirm-token contract. | Advanced RA-41 with dry-run plans and confirmation-token enforcement for `/assistant/dismiss-clear`, `/chat/clear`, `/api/undo/clear`, and `/search/cleanup`; worker-pool cleanup remains the next process-lifecycle audit target. |
 | 2026-06-06 | Cycle 32 | Worker-pool cleanup confirmation plan | `opencut/routes/architecture_routes.py`, `tests/test_architecture.py` | Worker-pool cleanup can terminate active worker processes without a dry-run target list or confirm-token review. | Closed RA-41 by adding active-worker dry-run plans and confirmation-token enforcement to `/architecture/worker-pool/cleanup`; final scan leaves journal clear under the existing local DB dry-run/backup contract. |
+| 2026-06-06 | Cycle 33 | Optional `[all]` advisory policy | `pyproject.toml`, `opencut/tools/pip_audit_extras.py`, `docs/PYTHON_ADVISORIES.md`, dependency/release-smoke tests, README | `pyproject[all]` pulled Torch/Transformers through WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, and TransNetV2, then failed pip-audit with five unallowed findings. | Closed RA-15 by keeping `opencut[all]` as the release-audited convenience lane, moving Torch/Transformers-backed packages to explicit `opencut[torch-stack]` or narrower feature extras, and verifying `pyproject[all]` has zero advisories. |
 
 ### Research queries to run later
 
@@ -1239,29 +1240,30 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 33: Resolve RA-15 optional `[all]` advisory policy.
-2. Cycle 34: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 35: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 36: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 37: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 34: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+2. Cycle 35: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 36: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 37: Revisit Adobe tracker drift after the next scheduled npm publish window.
+5. Cycle 38: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 32: Worker-pool cleanup confirmation plan.
+Cycle 33: Optional `[all]` advisory policy.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
-journal clear is covered by the local DB dry-run/backup contract. Continue with
-RA-15 optional dependency advisory policy before returning to the remaining
-release-trust and product workflow specs.
+journal clear is covered by the local DB dry-run/backup contract. RA-15 keeps
+`opencut[all]` as the audited convenience lane while Torch/Transformers-backed
+packages stay explicit through named feature extras and `torch-stack`. Continue
+with the remaining release-trust and product workflow specs.
 
 #### Important findings so far
 

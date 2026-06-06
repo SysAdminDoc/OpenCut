@@ -133,9 +133,25 @@ depth = [
     "torchvision>=0.15",
     "transformers>=4.30",
 ]
+torch-stack = [
+    # RA-15 - keep Torch/Transformers-backed feature stacks out of the
+    # release-audited [all] lane until their advisory and resolver posture is
+    # clean. Users who accept that larger surface can install
+    # `opencut[all,torch-stack]` or the narrower feature extras directly.
+    "whisperx>=3.8.5,<4",
+    "demucs>=4.0,<5",
+    "realesrgan>=0.3,<1",
+    "gfpgan>=1.3,<2",
+    "pyannote.audio>=4.0,<5",
+    "transnetv2-pytorch>=1.0.5,<2",
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "transformers>=4.30",
+]
 all = [
     "faster-whisper>=1.1,<2",
-    "whisperx>=3.8.5,<4",
+    # RA-15 - [all] is the release-audited convenience lane. Torch-backed
+    # features remain explicit extras so pip-audit can fail closed here.
     "opencv-python-headless>=4.13,<5",
     "Pillow>=12.2,<13",
     "numpy>=1.24",
@@ -143,21 +159,12 @@ all = [
     # F123 — pydub dropped (see [standard] extra).
     "noisereduce>=3.0,<4",
     "scenedetect[opencv]>=0.6,<1",
-    "demucs>=4.0,<5",
     "pedalboard>=0.9,<1",
     "edge-tts>=6.1,<7",
-    "realesrgan>=0.3,<1",
     "rembg>=2.0,<3",
-    "gfpgan>=1.3,<2",
     "insightface>=0.7,<1",
     "onnxruntime>=1.25,<2",
-    # F263 — AudioCraft remains a separate `opencut[music]` install because
-    # its Torch 2.1 pin conflicts with WhisperX/Torch 2.8 in this combined extra.
-    "pyannote.audio>=4.0,<5",
     "auto-editor>=29.3,<30",
-    "transnetv2-pytorch>=1.0.5,<2",
-    # F263 — resemble-enhance remains a separate `opencut[enhance]` install
-    # because its deepspeed/Torch 2.1 stack conflicts with the combined AI extra.
     "opentimelineio>=0.17,<1",
     "otio-aaf-adapter>=2.0,<3",
 ]

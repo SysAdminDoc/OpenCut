@@ -56,6 +56,9 @@
 **Pass 282 update (no standalone research file):**
 - Closed RA-41 by adding confirmation-token dry-run plans to worker-pool cleanup. The final route scan found the remaining journal clear path already covered by the local DB dry-run/backup contract and no additional user-visible clear/delete route outside the destructive-plan pattern.
 
+**Pass 283 update (no standalone research file):**
+- Closed RA-15 by splitting the audited `opencut[all]` convenience lane away from Torch/Transformers-backed stacks with unresolved advisory posture. `opencut[torch-stack]` and narrower feature extras remain explicit, and the live pip-audit extra check now passes with zero advisories for `pyproject[all]`.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

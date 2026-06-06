@@ -119,8 +119,8 @@ def test_step_pip_audit_runs_pyproject_all_wrapper(monkeypatch):
                 },
                 {
                     "name": "pyproject[all]",
-                    "vulnerability_count": 2,
-                    "allowed_vulnerability_count": 2,
+                    "vulnerability_count": 0,
+                    "allowed_vulnerability_count": 0,
                     "unallowed_vulnerability_count": 0,
                 },
             ],
@@ -132,7 +132,7 @@ def test_step_pip_audit_runs_pyproject_all_wrapper(monkeypatch):
     result = module.step_pip_audit(argparse.Namespace())
 
     assert result.status == "ok"
-    assert "pyproject[all]=0 unallowed/2 allowed" in result.message
+    assert "pyproject[all]=0 unallowed/0 allowed" in result.message
 
 
 def test_step_npm_advisory_requires_machine_parseable_json(monkeypatch, tmp_path):
