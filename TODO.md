@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-35 declared-SBOM fidelity pass.
+Last synced: 2026-06-06 during the RA-37 local SQLite schema-version pass.
 
 ## Execution Order
 
@@ -34,7 +34,7 @@ Last synced: 2026-06-06 during the RA-35 declared-SBOM fidelity pass.
 - [ ] **RA-30 Docker build-context secret/log hygiene** - align `.dockerignore` with Git-ignored secret/log patterns before `COPY . /app` can include local artifacts.
 - [ ] **RA-36 CEP panel UNC/HGFS-safe Node commands** - make documented panel Node command entry points work from Windows shared-folder paths or route through a validated wrapper.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
-- [ ] **RA-05 SQLite `PRAGMA user_version`** - add explicit schema versioning for local SQLite stores.
+- [x] **RA-05/RA-37 SQLite `PRAGMA user_version`** - local SQLite stores now use explicit schema versions, ordered idempotent migrations, and newer-schema rejection.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
 - [ ] **RA-07 job `result_json` cap** - bound persisted job result payload sizes.
 - [ ] **RA-08 DB compaction diagnostic** - add a maintenance diagnostic for database compaction posture.
