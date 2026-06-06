@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Adobe Tracker Hardening
+
+- Closed RA-16/RA-31/RA-32/RA-33 by tracking Adobe `release-*` npm dist-tags, refreshing `@adobe/premierepro` to `beta=26.3.0-beta.85` and `release-26.2=26.2.1`, and adding schema v2 `tracked_dist_tags`.
+- The weekly Adobe tracker workflow now captures the probe exit code under bash `-e` before notification logic runs and uses one shared tracker-label list for issue search/create.
+- Added tracker labels to `.github/labels.yml`, allowed label dry-runs without GitHub CLI, and pinned the workflow/label contracts in release-smoke tests.
+
 ### Changed - CEP i18n Migration Batch 153
 
 - Migrated the Export Batch Processing form shell to static locale hooks for operation label/options, batch instructions, queue overview ARIA, queue and operation summaries, idle status, empty-queue hint, Add Selected Clip, Add All Project Clips, and Clear while preserving operation values and button wiring.

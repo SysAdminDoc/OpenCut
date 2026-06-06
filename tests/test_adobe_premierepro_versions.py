@@ -1,7 +1,7 @@
 """F251 — @adobe/premierepro npm version tracker tests.
 
-The tool fetches Adobe's published `latest` / `beta` dist-tag pair and
-diffs it against a committed snapshot. CI surfaces drift as a
+The tool fetches Adobe's published `latest`, `beta`, and `release-*`
+dist-tags and diffs them against a committed snapshot. CI surfaces drift as a
 notification rather than a hard failure, so the contract these tests
 pin is:
 
@@ -12,6 +12,7 @@ pin is:
    output suitable for the wrapping CI step.
 4. Offline mode does not crash and produces a recognisable placeholder
    snapshot.
+5. Adobe stable release-channel tags are tracked alongside latest/beta.
 """
 
 from __future__ import annotations
@@ -63,6 +64,23 @@ def test_committed_snapshot_carries_dist_tags_when_ok():
     )
 
 
+def test_committed_snapshot_tracks_release_channel_tags_when_present():
+    data = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    if data["status"] != "ok":
+        pytest.skip("snapshot was captured offline; dist-tag contract not asserted")
+    release_tags = {
+        tag: version
+        for tag, version in (data.get("dist_tags") or {}).items()
+        if tag.startswith("release-")
+    }
+    if not release_tags:
+        pytest.skip("Adobe has not published release-* tags in this snapshot")
+    tracked = data.get("tracked_dist_tags") or {}
+    for tag, version in release_tags.items():
+        assert tracked.get(tag) == version
+        assert version in (data.get("tracked_versions") or [])
+
+
 # ---------------------------------------------------------------------------
 # Diff function contract
 # ---------------------------------------------------------------------------
@@ -75,8 +93,17 @@ def _ok_snapshot(**overrides) -> dict:
         "error": None,
         "snapshot_version": tool.SNAPSHOT_VERSION,
         "recorded_at": "2026-05-17T00:00:00Z",
-        "dist_tags": {"beta": "26.3.0-beta.67", "latest": "26.2.0"},
-        "tracked_versions": ["26.2.0", "26.3.0-beta.67"],
+        "dist_tags": {
+            "beta": "26.3.0-beta.67",
+            "latest": "26.2.0",
+            "release-26.2": "26.2.1",
+        },
+        "tracked_dist_tags": {
+            "latest": "26.2.0",
+            "beta": "26.3.0-beta.67",
+            "release-26.2": "26.2.1",
+        },
+        "tracked_versions": ["26.2.0", "26.3.0-beta.67", "26.2.1"],
         "latest_release_versions": ["26.3.0-beta.67", "26.2.0"],
         "release_count": 2,
         "notes": [],
@@ -129,6 +156,19 @@ def test_diff_flags_new_latest_release():
         "from": "26.2.0",
         "to": "26.3.0",
     }
+
+
+def test_select_tracked_dist_tags_includes_release_channels():
+    dist_tags = {
+        "latest": "26.2.0",
+        "beta": "26.3.0-beta.85",
+        "release-26.1": "26.1.4",
+        "release-26.2": "26.2.1",
+        "next": "27.0.0-alpha.1",
+    }
+    tracked = tool._select_tracked_dist_tags(dist_tags)
+    assert list(tracked) == ["latest", "beta", "release-26.1", "release-26.2"]
+    assert "next" not in tracked
 
 
 def test_diff_first_time_when_committed_is_none():

@@ -3,7 +3,7 @@
 Root summary of shipped roadmap work. Detailed historical ledgers remain in
 [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md) and [CHANGELOG.md](CHANGELOG.md).
 
-Last consolidated: 2026-06-05.
+Last consolidated: 2026-06-06.
 
 ## Current Delivered Baseline
 
@@ -21,7 +21,7 @@ Last consolidated: 2026-06-05.
 | Core automation | Silence/filler removal, captions/transcription, audio cleanup, video effects, export, timeline actions, deliverables, search, workflow presets, NLP commands, and plugin loading. |
 | Job platform | `@async_job`, SQLite job persistence, priority workers, cancellation, interrupted-job marking, queue allowlists, structured errors, and log correlation. |
 | Panel UX | CEP panel, UXP panel, command palette, status surfaces, quick actions, E15 i18n migration through batch 153, keyboard/a11y gates, UXP Agent tab, caption display settings, and panel parity checks. |
-| Release trust | Route manifest, OpenAPI checks, version sync, release smoke, pip/npm advisory gates, SBOM, installer policy, signing/notarization wiring, Linux packaging, and generated README badges. |
+| Release trust | Route manifest, OpenAPI checks, version sync, release smoke, pip/npm advisory gates, SBOM, installer policy, signing/notarization wiring, Linux packaging, generated README badges, and Adobe tracker hardening for release-channel tags, deterministic probe exit codes, tracker labels, and no-`gh` label dry-runs. |
 | Review and delivery | Review bundles, marker sidecars, SVG annotations, threaded comments, LAN review portal, notifications/webhooks, transfer bundles, delivery standards, and audio-description draft planning. |
 | AI/model governance | Model cards, feature readiness registry, AI eval harness, C2PA sidecars, deepfake detection, AI feature reconciliation, optional telemetry policy, and local-first defaults. |
 | Research closures | The May 25 plan closed or advanced route-surface, agent, UXP MCP, sequence-index, shorts-variant, enhance macro, test-breadth, i18n, a11y, security, and CI governance items. |
