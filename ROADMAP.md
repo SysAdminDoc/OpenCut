@@ -114,7 +114,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-24 | Release Full token perms | M | Over-broad contents: write |
 | RA-25 | Docker dependency surface | M | Retired packages installed |
 | RA-26 | Docker runtime parity | M | Old paths, missing ports |
-| RA-27 | Docker GPU compose | S | References untracked file |
+| RA-27 | Docker GPU compose | S | Closed 2026-06-06: README and compose docs now use the committed GPU profile command |
 | RA-28 | README count gate | S | Stale prose counts |
 | RA-29 | Docker fail-closed | M | Unquoted specifiers |
 | RA-30 | Docker build-context hygiene | S | Missing .env*/.log ignores |
@@ -618,18 +618,16 @@ research-only pass.
 
 ### Cycle 9: Docker/runtime parity audit
 
-The repo has `docker-compose.yml` with both CPU and GPU services; the GPU path
-is selected through `docker compose --profile gpu up`. No
-`docker-compose.gpu.yml` file was found by the filtered file scan, but README
-still documents `docker-compose -f docker-compose.gpu.yml up`. The compose file
-mounts the named volume to `/home/opencut/.opencut`, matching the non-root
-runtime user, while the Dockerfile comment examples still mount
-`/root/.opencut`.
+The repo has `docker-compose.yml` with both CPU and GPU services. The GPU path
+is selected through `docker compose --profile gpu up opencut-server-gpu` so the
+profiled service is targeted directly and the default CPU service does not
+collide on port 5679. README and Dockerfile copy-paste commands now match the
+committed compose file and the non-root `/home/opencut/.opencut` data path.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| RA-26 Docker runtime parity | `README.md` Docker GPU command references a missing `docker-compose.gpu.yml`; `docker-compose.yml` uses `profiles: [gpu]` | Update README to `docker compose --profile gpu up`, and add a docs test that every referenced compose file exists or every profile command matches the actual compose file. | P1 |
-| RA-26 non-root volume docs | `docker-compose.yml` uses `/home/opencut/.opencut`; Dockerfile comments still use `/root/.opencut` | Update Dockerfile comments and README examples to the non-root home path so copy-pasted `docker run` commands persist state correctly. | P2 |
+| RA-27 Docker GPU compose command | README previously referenced a missing `docker-compose.gpu.yml`; `docker-compose.yml` uses `profiles: [gpu]` | Closed by updating README/compose comments to `docker compose --profile gpu up opencut-server-gpu` and adding a release-smoke docs guard. | Done |
+| RA-26 non-root volume docs | `docker-compose.yml` uses `/home/opencut/.opencut`; Dockerfile comments previously used `/root/.opencut` | Dockerfile comments now match the non-root home path; broader RA-26 port/runtime posture remains open. | Partial |
 | RA-25 Docker dependency surface | Dockerfile still installs `pydub` and `deep-translator`; tests elsewhere forbid `pydub` pins and project extras removed it | Generate Docker optional dependency install lists from tracked package metadata or remove retired packages from the container path. | P1 |
 | RA-29 fail-closed install | Dockerfile masks optional dependency failures with `|| echo "Some optional deps failed -- continuing"` | Replace with explicit optional-stage selection or a known-fail waiver file; release builds should fail when declared Docker deps fail to install. | P1 |
 | RA-30 build-context hygiene | `.gitignore` excludes `.env`, `.env.*`, `*.key`, `*.pem`, `credentials*.json`, and `*.log`; `.dockerignore` does not | Mirror the sensitive `.gitignore` patterns into `.dockerignore` and add a test for secret/log pattern parity. | P1 |
@@ -1204,6 +1202,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 13 | Caption timeline bridge and round-trip feasibility | `captions.py`, `timeline.py`, `export/srt.py`, transcript cache/edit modules, CEP/UXP host bridges, caption tests, Adobe UXP docs | Caption generation/export is mature, but native timeline placement is CEP/hybrid-only and SRT validation drops metadata without a canonical sidecar/diff model. | Added RA-46 through RA-50 and refreshed RA-09 implementation direction. |
 | 2026-06-06 | Cycle 14 | Shorts pipeline and Magic Clips macro composition | `shorts_pipeline.py`, `video_specialty.py`, workflow core/routes, `shorts_variants.py`, `virality_score.py`, `export_presets.py`, thumbnail modules, UXP/CEP panel paths, Riverside/OpusClip/Descript/CapCut docs | OpenCut has the rendering primitives and a variant dry-run precedent, but no Magic Clips plan graph, explainable candidate board, preset-driven multi-platform contract, resumable intermediates, or output manifest. | Added RA-51 through RA-56 and refined RA-10 as the parent macro. |
 | 2026-06-06 | Cycle 15 | Adobe/NPM tracker hardening | `opencut/tools/adobe_premierepro_versions.py`, `.github/workflows/adobe-premierepro-versions.yml`, `.github/labels.yml`, `scripts/seed_github_issues.py`, npm registry live dist-tags, GitHub Actions workflow docs | Live Adobe npm tags now include `beta=26.3.0-beta.85` and `release-26.2=26.2.1`; GitHub bash steps run with `-e`, so drift exit codes must be captured before a success exit; tracker labels need one shared search/create contract. | Closed RA-16, RA-31, RA-32, and RA-33 with schema v2 tracking, workflow and label tests, and release-smoke coverage. |
+| 2026-06-06 | Cycle 16 | Distribution packaging and Docker docs | README, Dockerfile, docker-compose.yml, LosslessCut downloads, Homebrew Cask docs, Microsoft WinGet docs, Snapcraft docs, PyPI trusted publishing docs | Broad distribution requires stable release artifacts, checksums, silent-install metadata, and package-manager-specific manifests; the immediate repo bug was a missing Docker GPU compose override and root-home Docker run examples. | Closed RA-27 with committed GPU profile commands, non-root Docker run examples, Compose config cleanup, and release-smoke docs coverage. |
 
 ### Research queries to run later
 
@@ -1224,29 +1223,28 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 16: Refresh distribution competitor packaging paths and OpenCut package install docs.
-2. Cycle 17: Prepare a minimal test-environment repair plan for the broken `.venv` path.
-3. Cycle 18: Inspect README badge/count drift against generated manifests.
-4. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
-5. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
-6. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-7. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-8. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-9. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-10. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 17: Prepare a minimal test-environment repair plan for the broken `.venv` path.
+2. Cycle 18: Inspect README badge/count drift against generated manifests.
+3. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+4. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+5. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+6. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+7. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+8. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+9. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 15: Adobe/NPM tracker hardening implementation.
+Cycle 16: Docker distribution command and docs hardening.
 
 #### Current focus
 
-Continue from active release-trust and migration hardening plus product
-workflow specs. RA-16, RA-31, RA-32, and RA-33 are closed; the next cycle
-should refresh distribution competitor packaging paths and OpenCut package
-install docs.
+Continue from active release-trust, migration hardening, Docker hardening, and
+product workflow specs. RA-16, RA-27, RA-31, RA-32, and RA-33 are closed; the
+next cycle should prepare the minimal test-environment repair plan for the
+broken `.venv` path.
 
 #### Important findings so far
 
@@ -1265,8 +1263,9 @@ install docs.
   repair.
 - Focused UXP pytest validation could not run because system Python 3.12/3.13
   lack `pytest`, and the repo `.venv` resolves to a placeholder Python path.
-- Docker GPU docs currently point at a missing compose override file, while the
-  actual GPU service is exposed through the `gpu` profile in `docker-compose.yml`.
+- Docker GPU docs now point at the committed `gpu` profile service command, and
+  `tests/test_docker_distribution_docs.py` guards against missing compose
+  override references.
 - Release Full still has workflow-level `contents: write`, mutable action tags,
   and no artifact attestation step in the scanned workflows.
 - The scanned SQLite stores use WAL but no explicit `PRAGMA user_version`; job
@@ -1338,8 +1337,8 @@ install docs.
 
 - GitHub Actions artifact attestations for release provenance.
 - UXP `manifestVersion` and WebView permission split specifics.
-- Docker GPU compose command drift and whether `docker-compose.gpu.yml` exists
-  outside the initial filtered file scan.
+- Whether RA-26 should map/expose MCP port 5681 in containerized runs or keep
+  Docker documented as HTTP/WebSocket-only.
 - Whether the Magic Clips plan endpoint should be `/video/magic-clips/plan`,
   `/video/shorts-pipeline/dry-run`, or both with one canonical core planner.
 - Whether RA-51 through RA-56 should be added as separate active TODO rows or
@@ -1406,6 +1405,12 @@ Key external sources referenced in this roadmap:
 - [S90] https://ffmpeg.org
 - [S91] https://www.w3.org/TR/ttml-imsc1.3/
 - [S92] https://c2pa.org/specifications/specifications/2.3/specs/C2PA_Specification.html
+- [S93] https://losslesscut.net/
+- [S94] https://docs.brew.sh/Cask-Cookbook
+- [S95] https://formulae.brew.sh/cask/losslesscut
+- [S96] https://learn.microsoft.com/en-us/windows/package-manager/package/manifest
+- [S97] https://snapcraft.io/docs/snapcraft-yaml-schema/
+- [S98] https://docs.pypi.org/trusted-publishers/
 
 ---
 

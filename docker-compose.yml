@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   opencut-server:
     build: .
@@ -21,7 +19,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # GPU-enabled variant — use: docker compose --profile gpu up
+  # GPU-enabled variant - use: docker compose --profile gpu up opencut-server-gpu
   opencut-server-gpu:
     build:
       context: .
