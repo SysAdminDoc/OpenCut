@@ -96,7 +96,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-06 | Destructive wipe backup | M | Closed 2026-06-06: local SQLite destructive maintenance paths now expose dry-run counts, optional backups, and audit metadata |
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
-| RA-09 | Timeline-native captions | L | UXP createCaptionTrack() |
+| RA-09 | Timeline-native captions | L | Advanced 2026-06-06: RA-46 sidecar schema shipped; diff/apply and host snapshot/write contracts remain open |
 | RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
@@ -761,6 +761,12 @@ canonical sidecars for lossless metadata.
 
 **Priority:** P1. **Effort:** M. **Confidence:** High.
 
+**Status:** Closed 2026-06-06. `opencut/core/caption_roundtrip.py` now writes
+versioned `.opencut-captions.json` sidecars for caption exports, caption routes
+return `sidecar_path`/`metadata_preserved`, and `/timeline/srt-to-captions`
+uses matching sidecars to restore metadata while labeling SRT-only parses as
+lossy.
+
 **Evidence:** `/captions` returns `transcript_cache_key`; `/transcript` emits
 editable segment IDs and word timings; `export_json()` preserves full transcript
 metadata; `/timeline/srt-to-captions` drops everything except `start`, `end`,
@@ -777,14 +783,14 @@ export format, and optional host locators such as `sequence_guid`,
 
 **Acceptance criteria:**
 
-- [ ] Generating captions writes a versioned sidecar for SRT/VTT/ASS/JSON
+- [x] Generating captions writes a versioned sidecar for SRT/VTT/ASS/JSON
       exports without changing existing response fields.
-- [ ] The sidecar round-trips all metadata currently preserved by
+- [x] The sidecar round-trips all metadata currently preserved by
       `export_json()`, including words, speaker, language, confidence, and
       review fields.
-- [ ] Missing or stale sidecars produce explicit warnings, not silent metadata
+- [x] Missing or stale sidecars produce explicit warnings, not silent metadata
       loss.
-- [ ] Tests prove SRT-only parse remains lossy while sidecar-backed parse is
+- [x] Tests prove SRT-only parse remains lossy while sidecar-backed parse is
       metadata-preserving.
 
 **Risks:** Host track-item identifiers may not be stable across Premiere
@@ -1240,6 +1246,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 48 | Direct typed error logging | `opencut/errors.py`, request ID tests, typed-error logging tests, release-smoke list | `OpenCutError` and direct `error_response` paths returned useful JSON but did not reliably emit a structured log record with the code, status, request ID, method, path, and caller context. | Closed RA-03 by centralizing typed-error log records, preserving single exception logs for `safe_error`, and adding release-smoke coverage for raised `OpenCutError`, direct `error_response`, and `safe_error(OpenCutError)` paths. |
 | 2026-06-06 | Cycle 49 | Python dependency and lint alignment | `pyproject.toml`, `requirements.txt`, dependency-surface tests, Ruff import ordering | Ruff still targeted Python 3.9 despite the package floor being Python 3.11+, and the installable `requirements.txt` surface had looser bounds than the audited `pyproject.toml` core/standard declarations. | Closed RA-01/RA-02 by setting Ruff to `py311`, syncing core/standard requirement bounds, and adding drift guards that derive the lint target from `requires-python` and ensure `requirements.txt` contains the `pyproject.toml` core plus standard dependency surface. |
 | 2026-06-06 | Cycle 50 | CEP i18n workflow preset shell | CEP `index.html`, `en.json`, i18n hardcoded-migration tests | The Export Workflow Presets card still had bare static shell strings for preset/library status, custom workflow controls, and step selector options despite dynamic workflow text being localized. | Advanced E15 to batch 154 by wiring those static strings through `data-i18n*` attributes and locale keys; the drift gate now reports 2,295 keys, 2,242 consumers, 53 dead keys, and 0 missing keys. |
+| 2026-06-06 | Cycle 51 | Caption round-trip sidecars | `opencut/core/caption_roundtrip.py`, caption export routes, timeline SRT parser, caption metadata tests | Native UXP caption-track writes are still not documented, and SRT-only parsing drops speaker, word, language, review, cache, and style metadata needed for editable Premiere timeline round trips. | Closed RA-46 under RA-09 by writing versioned caption sidecars, returning sidecar metadata from caption exports, and enriching `/timeline/srt-to-captions` output from matching sidecars while explicitly warning when SRT-only metadata is unavailable. |
 
 ### Research queries to run later
 
@@ -1260,17 +1267,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 51: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-2. Cycle 52: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 53: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 54: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 55: Continue E15 or another remaining release-trust gap after batch 154.
+1. Cycle 52: Implement caption diff/apply endpoints for RA-47.
+2. Cycle 53: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 54: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 55: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 56: Continue E15 or another remaining release-trust gap after batch 154.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 50: CEP i18n workflow preset shell.
+Cycle 51: Caption round-trip sidecars.
 
 #### Current focus
 
@@ -1323,6 +1330,9 @@ keep `requirements.txt` core/standard dependency bounds synchronized with
 E15 is advanced through batch 154: Workflow Presets static shell strings now use
 locale hooks, and the drift gate reports 2,295 keys, 2,242 consumers, 53 dead
 keys, and 0 missing keys.
+RA-46 is closed under RA-09: caption exports now write versioned sidecars and
+timeline SRT parsing can preserve metadata when a sidecar is available. Continue
+RA-47 through RA-50 before treating timeline-native captions as closed.
 
 #### Important findings so far
 
@@ -1379,6 +1389,9 @@ keys, and 0 missing keys.
   target.
 - E15 batch 154 reduced dead locale keys from 55 to 53 while adding Workflow
   Presets static-shell consumers.
+- SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
+  preservation contract for caption timeline round trips until native UXP writes
+  or hybrid caption writes are live-tested.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now

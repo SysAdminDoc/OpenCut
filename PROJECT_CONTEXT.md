@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-06 (300 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-300 are recorded below.
+**Last consolidated:** 2026-06-06 (301 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-301 are recorded below.
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
@@ -110,6 +110,9 @@
 **Pass 300 update (no standalone research file):**
 - Advanced E15 to batch 154 by wiring the Export Workflow Presets static shell through locale hooks for preset/library summaries, custom-workflow draft/saved status, workflow name placeholder, step selector options, and workflow load/save/run/delete controls. The live i18n drift report now shows 2,295 keys, 2,242 consumers, 53 dead keys, and 0 missing keys.
 
+**Pass 301 update (no standalone research file):**
+- Closed RA-46 under RA-09 by adding versioned caption round-trip sidecars for SRT/VTT/ASS/JSON exports, returning sidecar metadata from caption export routes, and enriching `/timeline/srt-to-captions` from sidecars while labeling SRT-only parses as metadata-lossy.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -128,7 +131,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 |---|---|---|
 | API routes | **1,534** | `opencut/_generated/route_manifest.json` (F099) |
 | Blueprints | **107** | same |
-| Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
+| Core processing modules (`opencut/core/`) | **600** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
 | Tests | **235 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
@@ -164,7 +167,7 @@ Hold both in your head. When a new piece of work arrives, ask: "is this a model 
 ```
 Premiere CEP panel ─┐
 Premiere UXP panel ─┼─► HTTP localhost:5679  ─► Flask app (create_app() factory)
-DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (107 blueprints) ─► core/* (599 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
+DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (107 blueprints) ─► core/* (600 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
 MCP client     ─────┘   MCP HTTP :5681            ├─ jobs.py (@async_job decorator, SQLite persistence, GPU rate limit)
                                                   ├─ security.py (CSRF, path-traversal, SSRF guards, safe_pip_install)
                                                   ├─ auth.py (loopback bypass + 256-bit token for non-loopback)
