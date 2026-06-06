@@ -111,6 +111,9 @@ UXP Architecture (target):
 - [x] RA-19 clipboard permission/fallback guard: the live manifest and dormant
       WebView scaffold declare `clipboard: "readAndWrite"`, and UXP copy actions
       route through a shared denied/unavailable fallback helper.
+- [x] RA-20 confirmation guard: UXP search-index clearing uses an inline
+      second-click panel confirmation instead of beta `window.confirm`, and
+      static tests block raw UXP alert/prompt/confirm calls.
 - [x] F252.1 Bolt/WebView scaffold setup at `extension/com.opencut.uxp/bolt-webview/`
 - [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
 - [x] F252.2 UXP host-action dispatcher maps the 14 direct-UXP `ocXxx` actions into `PProBridge.executeHostAction`

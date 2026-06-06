@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Confirmation Guard
+
+- Closed RA-20 by replacing the raw UXP `window.confirm` search-index clear prompt with an inline second-click confirmation.
+- Added a static guard against raw UXP `window.alert`, `window.prompt`, `window.confirm`, and bare dialog calls while leaving beta `enableAlerts` disabled.
+
 ### Changed - UXP Clipboard Permission
 
 - Closed RA-19 by declaring `requiredPermissions.clipboard: "readAndWrite"` in the live UXP manifest and dormant WebView scaffold.

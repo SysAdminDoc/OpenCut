@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-06
-**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,300+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,534 routes, 107 blueprints, 599 core modules, 9,400+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -107,7 +107,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-17 | UXP manifest schema guard | M | Closed 2026-06-06: live UXP manifest declares Premiere-supported `manifestVersion: 5` and tests guard the dormant WebView v6 template separately |
 | RA-18 | UXP deprecation sentinel | M | Closed 2026-06-06: static guard blocks deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events in UXP/WebView sources |
 | RA-19 | UXP clipboard permission | S | Closed 2026-06-06: live and WebView manifests declare clipboard `readAndWrite`, and copy actions use a shared fallback helper |
-| RA-20 | UXP confirmation guard | S | Raw window.confirm |
+| RA-20 | UXP confirmation guard | S | Closed 2026-06-06: raw UXP browser dialogs are blocked and search-index clear uses inline second-click confirmation |
 | RA-21 | Python 3.13 classifier proof | M | Advertised but untested |
 | RA-22 | Release Full Node pin | S | Unmatched Node versions |
 | RA-23 | GitHub Actions SHA pins | M | Mutable tag references |
@@ -614,7 +614,7 @@ research-only pass.
 | RA-17 manifest-version guard | Closed 2026-06-06: live `manifest.json` declares `manifestVersion: 5`, while dormant `bolt-webview/uxp.config.ts` remains a separate v6 cutover template with explicit docs and tests. | Reopen only if Adobe changes Premiere's supported manifest schema or the F252 WebView entrypoint becomes live. | Done |
 | RA-11 filesystem permission split | Live and scaffold configs use `localFileSystem: "fullAccess"` | Make a release manifest profile that requests only required file operations after the UDT capture proves which host paths need direct access. | P1 |
 | RA-19 clipboard permission | Closed 2026-06-06: the live manifest and WebView scaffold declare `clipboard: "readAndWrite"`, and `tests/test_uxp_clipboard_permission.py` guards the helper/manifest contract. | Revisit only if copy flows are removed or Adobe changes the Premiere UXP clipboard permission contract. | Done |
-| RA-20 confirmation guard | TODO tracks raw `window.confirm` / beta alert posture | Search UXP/CEP code for confirmation APIs and replace with a panel-native dialog or explicit beta-gated helper. | P2 |
+| RA-20 confirmation guard | Closed 2026-06-06: UXP source no longer calls raw browser dialogs; `tests/test_uxp_confirmation_guard.py` blocks `window.alert`, `window.prompt`, `window.confirm`, and bare dialog calls. | Keep destructive UXP actions on panel-native confirmation flows unless the manifest explicitly opts into beta alerts with live evidence. | Done |
 
 ### Cycle 9: Docker/runtime parity audit
 
@@ -1223,6 +1223,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 34 | UXP manifest schema guard | Adobe Premiere UXP manifest docs, `extension/com.opencut.uxp/manifest.json`, Bolt/WebView scaffold, UXP migration docs/tests | Adobe docs list `manifestVersion` as required and Premiere-supported version 5, while the live manifest omitted it and the dormant WebView scaffold declares version 6. | Closed RA-17 by declaring `manifestVersion: 5` in the live UXP manifest, documenting the live-vs-scaffold schema split, and adding `tests/test_uxp_manifest_schema.py`. |
 | 2026-06-06 | Cycle 35 | UXP deprecated API sentinel | Adobe Premiere UXP API changelog, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, `tests/test_uxp_deprecation_sentinel.py` | Adobe deprecates older Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` video events; OpenCut currently avoids them, but no static guard protected the UXP/WebView cutover path. | Closed RA-18 by adding a UXP/WebView source sentinel that fails on deprecated Clipboard APIs, object-form `writeText`, or legacy `uxpvideo*` event names while preserving the supported string clipboard write path. |
 | 2026-06-06 | Cycle 36 | UXP clipboard permission and fallback | Adobe Premiere UXP clipboard and manifest docs, `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, Bolt/WebView scaffold | Adobe defaults clipboard access to unavailable unless `requiredPermissions.clipboard` is declared. OpenCut writes copied output text but the manifests lacked the permission and the copy path handled async denial inline. | Closed RA-19 by declaring clipboard `readAndWrite` in both manifest surfaces, centralizing output copy through `copyTextToClipboard()`, and adding manifest/helper regression tests. |
+| 2026-06-06 | Cycle 37 | UXP confirmation guard | Adobe Premiere UXP API changelog, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/manifest.json`, UXP confirmation tests | Adobe keeps browser alert/prompt/confirm APIs behind a beta `enableAlerts` flag. OpenCut used raw `window.confirm` for search-index clearing without a manifest feature-flag decision. | Closed RA-20 by replacing the raw dialog with an inline second-click panel confirmation, keeping `enableAlerts` disabled, and adding a static raw-dialog guard. |
 
 ### Research queries to run later
 
@@ -1243,23 +1244,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 37: Continue UXP trust work with RA-20 confirmation guard.
-2. Cycle 38: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-3. Cycle 39: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-4. Cycle 40: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-5. Cycle 41: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
+1. Cycle 38: Continue Docker dependency/runtime hardening on RA-25/RA-26/RA-29/RA-30.
+2. Cycle 39: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+3. Cycle 40: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+4. Cycle 41: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+5. Cycle 42: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 36: UXP clipboard permission and fallback.
+Cycle 37: UXP confirmation guard.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-15, RA-16, RA-17, RA-18, RA-19, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
+RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-27, RA-28, RA-31, RA-32, RA-33, RA-35, RA-42, RA-43, RA-44, and
 RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1270,8 +1271,9 @@ keeps the shipped UXP manifest on Premiere-supported schema version 5 while the
 WebView scaffold's version 6 template remains dormant. RA-18 keeps deprecated
 Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events out
 of UXP/WebView sources. RA-19 declares the clipboard permission and routes copy
-behavior through a shared fallback helper. Continue with the remaining
-release-trust and product workflow specs.
+behavior through a shared fallback helper. RA-20 keeps UXP destructive
+confirmation on a panel-native second-click flow rather than beta browser
+dialogs. Continue with the remaining release-trust and product workflow specs.
 
 #### Important findings so far
 
@@ -1373,7 +1375,7 @@ release-trust and product workflow specs.
 
 1. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 2. Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-3. Continue release-trust hardening on RA-20 or Docker RA-25/RA-26/RA-29/RA-30.
+3. Continue release-trust hardening on Docker RA-25/RA-26/RA-29/RA-30 or the remaining UXP permission split rows.
 
 #### Unprocessed leads
 
