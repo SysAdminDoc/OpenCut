@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-37/RA-05 closed; E15 rolling i18n migration, remaining local DB hardening, and broader Docker hardening remain open.
 - Shipped this cycle: local SQLite stores now use explicit `PRAGMA user_version` schema boundaries through a shared ordered migration helper, with downgrade-safe rejection for newer unknown local schemas.
-- Verification: `py -3.12 -m pytest -q tests/test_local_db_migrations.py tests/test_job_store.py tests/test_job_resume.py tests/test_journal.py tests/test_footage_index_db.py tests/test_pipeline_intel.py` passed (178 tests), and `py -3.12 -m ruff check opencut/local_db_migrations.py opencut/job_store.py opencut/journal.py opencut/core/footage_index_db.py opencut/core/pipeline_health.py tests/test_local_db_migrations.py --select E,F,I --ignore E501,E402` passed.
+- Verification: focused local-DB pytest passed (178 tests), Ruff passed for the touched Python files, `py -3.12 scripts\check_doc_sizes.py --check` passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (753 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
