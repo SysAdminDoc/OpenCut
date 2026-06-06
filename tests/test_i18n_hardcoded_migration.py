@@ -1018,6 +1018,15 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.quality_high_crf18", "data-i18n"),
     ("video.quality_medium_crf23", "data-i18n"),
     ("video.quality_low_crf28", "data-i18n"),
+    # One-hundred-forty-sixth batch (Video Pro Upscaling parameter shell HTML).
+    ("forms.quality_preset", "data-i18n"),
+    ("video.upscale_preset_fast", "data-i18n"),
+    ("video.upscale_preset_balanced", "data-i18n"),
+    ("video.upscale_preset_premium", "data-i18n"),
+    ("forms.scale", "data-i18n"),
+    ("video.upscale_scale_2x", "data-i18n"),
+    ("video.upscale_scale_3x", "data-i18n"),
+    ("video.upscale_scale_4x", "data-i18n"),
 )
 
 
