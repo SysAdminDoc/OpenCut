@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.264 / batch 152 and remains open.
-- Shipped this cycle: Export Auto-Thumbnails candidate count, resolution, resolution choices, and face-boost copy now expose static locale hooks while preserving candidate values, width values, default selection, and checked state.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,258 keys / 2,202 consumers / 56 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Auto-Thumbnails hooks, values, default count selection, and checked face-boost state with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.265 / batch 153 and remains open.
+- Shipped this cycle: Export Batch Processing operation label/options, batch instructions, queue overview ARIA, queue and operation summaries, idle status, empty-queue hint, Add Selected Clip, Add All Project Clips, and Clear now expose static locale hooks while preserving operation values and button wiring.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,273 keys / 2,218 consumers / 55 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Export Batch Processing hooks, operation values, status rendering, and button wiring with no current-port console errors.
 
 ## Next Work
 

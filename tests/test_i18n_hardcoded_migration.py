@@ -1085,6 +1085,28 @@ HTML_STATIC_SHELL_CALLS = (
     ("export.thumbnail_resolution_hd", "data-i18n"),
     ("export.thumbnail_resolution_web", "data-i18n"),
     ("export.thumbnail_boost_faces", "data-i18n"),
+    # One-hundred-fifty-third batch (Export Batch Processing parameter shell HTML).
+    ("forms.operation", "data-i18n"),
+    ("export.batch_operation_audio_denoise", "data-i18n"),
+    ("export.batch_operation_audio_normalize", "data-i18n"),
+    ("export.batch_operation_video_stabilize", "data-i18n"),
+    ("video.face_blur", "data-i18n"),
+    ("export.batch_operation_vignette", "data-i18n"),
+    ("export.batch_operation_film_grain", "data-i18n"),
+    ("export.batch_operation_letterbox", "data-i18n"),
+    ("video.style_transfer", "data-i18n"),
+    ("favorites.op_export", "data-i18n"),
+    ("export.batch_instruction", "data-i18n"),
+    ("export.batch_queue_overview_aria", "data-i18n-aria-label"),
+    ("batch.queue_label", "data-i18n"),
+    ("batch.queue_empty", "data-i18n"),
+    ("forms.operation", "data-i18n"),
+    ("batch.choose_operation_summary", "data-i18n"),
+    ("batch.status_idle", "data-i18n"),
+    ("batch.queue_hint", "data-i18n"),
+    ("export.batch_add_selected_clip", "data-i18n"),
+    ("export.batch_add_all_project_clips", "data-i18n"),
+    ("common.clear", "data-i18n"),
 )
 
 
