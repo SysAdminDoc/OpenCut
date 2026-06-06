@@ -1,8 +1,8 @@
 """
 Tests for scripts/check_doc_sizes.py (RESEARCH_FEATURE_PLAN_2026-05-25 E1).
 
-The script enforces that CLAUDE.md and PROJECT_CONTEXT.md size claims
-stay within ±15% of the live filesystem. The tests:
+The script enforces that project documentation size/count claims stay within
+±15% of the live filesystem or generated manifests. The tests:
   - exercise the regex against both the bare ``(~N lines)`` form and the
     dated ``(~N lines as of YYYY; was ~M lines through v1.9.x)`` form;
   - confirm ``--check`` passes against the current in-sync tree;
@@ -11,7 +11,6 @@ stay within ±15% of the live filesystem. The tests:
 from __future__ import annotations
 
 import importlib.util
-import os
 import shutil
 import subprocess
 import sys
@@ -61,6 +60,15 @@ class TestDocSizeRegex(unittest.TestCase):
         self.assertIsNotNone(m)
         # Must capture the *current* (first) number, not the historic one.
         self.assertEqual(m.group(1), "15263")
+
+    def test_readme_route_count_regex_matches_feature_overview(self):
+        route_re = next(
+            t.regex for t in self.mod.TARGETS
+            if t.label == "README feature overview API routes"
+        )
+        m = route_re.search("OpenCut v1.32.0 includes **1,523 API routes**, **8 panel tabs**")
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), "1,523")
 
 
 class TestDocSizeCLI(unittest.TestCase):

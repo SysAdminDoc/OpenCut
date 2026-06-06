@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - README Count Drift Gate
+
+- Closed RA-28 by extending `scripts/check_doc_sizes.py` to validate README route, module, blueprint, panel line-count, and root test-file claims against generated manifests and the live filesystem.
+- Refreshed README non-badge counts for routes, core modules, route blueprints, panel source line counts, and root test-file totals.
+- Updated release smoke's doc-size failure wording to cover all documented size/count drift.
+
 ### Changed - Test Environment Bootstrap
 
 - Added `scripts/bootstrap_check.py --dev` to verify pytest, pytest-cov, pytest-xdist, and Ruff before trusting a selected Python for test work.

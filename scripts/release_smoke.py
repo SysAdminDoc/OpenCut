@@ -578,7 +578,7 @@ def step_doc_sizes(_args: argparse.Namespace) -> StepResult:
         message=(
             "documented sizes match live filesystem"
             if status == "ok"
-            else "CLAUDE.md / PROJECT_CONTEXT.md size drift > 15% (run: python scripts/check_doc_sizes.py)"
+            else "documented size/count drift > 15% (run: python scripts/check_doc_sizes.py)"
         ),
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),

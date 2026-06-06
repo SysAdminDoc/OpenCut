@@ -115,7 +115,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-25 | Docker dependency surface | M | Retired packages installed |
 | RA-26 | Docker runtime parity | M | Old paths, missing ports |
 | RA-27 | Docker GPU compose | S | Closed 2026-06-06: README and compose docs now use the committed GPU profile command |
-| RA-28 | README count gate | S | Stale prose counts |
+| RA-28 | README count gate | S | Closed 2026-06-06: README non-badge count claims are checked against generated/live counts |
 | RA-29 | Docker fail-closed | M | Unquoted specifiers |
 | RA-30 | Docker build-context hygiene | S | Missing .env*/.log ignores |
 | RA-31 | Adobe tracker exit-code | S | Exit codes lost |
@@ -1204,6 +1204,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 15 | Adobe/NPM tracker hardening | `opencut/tools/adobe_premierepro_versions.py`, `.github/workflows/adobe-premierepro-versions.yml`, `.github/labels.yml`, `scripts/seed_github_issues.py`, npm registry live dist-tags, GitHub Actions workflow docs | Live Adobe npm tags now include `beta=26.3.0-beta.85` and `release-26.2=26.2.1`; GitHub bash steps run with `-e`, so drift exit codes must be captured before a success exit; tracker labels need one shared search/create contract. | Closed RA-16, RA-31, RA-32, and RA-33 with schema v2 tracking, workflow and label tests, and release-smoke coverage. |
 | 2026-06-06 | Cycle 16 | Distribution packaging and Docker docs | README, Dockerfile, docker-compose.yml, LosslessCut downloads, Homebrew Cask docs, Microsoft WinGet docs, Snapcraft docs, PyPI trusted publishing docs | Broad distribution requires stable release artifacts, checksums, silent-install metadata, and package-manager-specific manifests; the immediate repo bug was a missing Docker GPU compose override and root-home Docker run examples. | Closed RA-27 with committed GPU profile commands, non-root Docker run examples, Compose config cleanup, and release-smoke docs coverage. |
 | 2026-06-06 | Cycle 17 | Test environment repair guard | `.venv`, `py -3.12`, `scripts/bootstrap_check.py`, `tests/test_bootstrap_check.py`, README Testing | The repo `.venv` can pass metadata bootstrap while lacking pytest/dev tooling, so test runs need an explicit dev-import check and repair command. | Added `bootstrap_check.py --dev`, README `.venv` repair commands, and focused bootstrap tests. |
+| 2026-06-06 | Cycle 18 | README generated-count drift gate | README, `scripts/check_doc_sizes.py`, route manifest, live panel/source files, root test files | README badges were already described as generated, but prose, architecture diagrams, and project-structure comments could still drift from route/module/test truth. | Closed RA-28 by extending doc-size checks to README non-badge route, module, blueprint, panel line-count, and root test-file claims. |
 
 ### Research queries to run later
 
@@ -1224,27 +1225,26 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 18: Inspect README badge/count drift against generated manifests.
-2. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
-3. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
-4. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
-5. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
-6. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-7. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-8. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
+1. Cycle 19: Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+2. Cycle 20: Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
+3. Cycle 21: Inspect destructive-operation implementation shape and test fixture needs for RA-41 through RA-45.
+4. Cycle 22: Inspect caption round-trip implementation fixtures for RA-46 through RA-50.
+5. Cycle 23: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+6. Cycle 24: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+7. Cycle 25: Revisit Adobe tracker drift after the next scheduled npm publish window.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 17: Test environment bootstrap dev-check and repair documentation.
+Cycle 18: README generated-count drift gate.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
-product workflow specs. RA-16, RA-27, RA-31, RA-32, and RA-33 are closed, and
-the bootstrap dev-check guard is in place; the next cycle should inspect README
-badge/count drift against generated manifests.
+product workflow specs. RA-16, RA-27, RA-28, RA-31, RA-32, and RA-33 are
+closed, and the bootstrap dev-check guard is in place; the next cycle should
+inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
 
 #### Important findings so far
 
@@ -1264,6 +1264,9 @@ badge/count drift against generated manifests.
 - The repo `.venv` can launch but lacks pytest/dev tooling; `bootstrap_check.py
   --metadata-only --dev` now catches that state, while `py -3.12` passes the
   same dev check in this workspace.
+- README non-badge route, module, blueprint, panel line-count, and root test-file
+  claims now run through `scripts/check_doc_sizes.py` beside the older
+  documentation size targets.
 - Docker GPU docs now point at the committed `gpu` profile service command, and
   `tests/test_docker_distribution_docs.py` guards against missing compose
   override references.
@@ -1329,8 +1332,8 @@ badge/count drift against generated manifests.
 
 #### Next best actions
 
-1. Inspect README badge/count drift against generated manifests.
-2. Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+1. Inspect generated SBOM fidelity and lockfile coverage after RA-34/RA-35.
+2. Inspect local DB migration implementation shape and test fixture needs for RA-37 through RA-40.
 3. Continue release-trust hardening on RA-15/RA-17+ or Docker RA-25/RA-26/RA-29/RA-30.
 
 #### Unprocessed leads

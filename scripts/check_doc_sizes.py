@@ -8,6 +8,10 @@ historically drift 2-3x away from the live filesystem. F252 (CEP→UXP
 migration) is sized against those numbers, so the drift directly
 mis-prices the migration estimate.
 
+RA-28 extends this same check to README.md non-badge generated-count claims so
+the route/module/test counts in prose, diagrams, and project-structure comments
+stay pinned to generated manifests and the live filesystem.
+
 This script enforces a tolerance window (default ±15%) between each
 documented size claim and the live ``wc -l`` / file count. Run it
 manually before doc edits, and as a release-smoke gate to catch silent
@@ -34,6 +38,8 @@ from typing import Callable
 ROOT = Path(__file__).resolve().parent.parent
 CLAUDE_MD = ROOT / "CLAUDE.md"
 PROJECT_CONTEXT = ROOT / "PROJECT_CONTEXT.md"
+README = ROOT / "README.md"
+ROUTE_MANIFEST = ROOT / "opencut" / "_generated" / "route_manifest.json"
 
 DEFAULT_TOLERANCE_PCT = 15.0  # ±% drift permitted before --check fails
 
@@ -66,6 +72,21 @@ def _route_module_count() -> int:
 
 def _test_file_count() -> int:
     return sum(1 for p in (ROOT / "tests").glob("test_*.py"))
+
+
+def _route_manifest_value(key: str) -> int:
+    if not ROUTE_MANIFEST.exists():
+        return 0
+    payload = json.loads(ROUTE_MANIFEST.read_text(encoding="utf-8"))
+    return int(payload.get(key) or 0)
+
+
+def _route_count() -> int:
+    return _route_manifest_value("total_routes")
+
+
+def _blueprint_count() -> int:
+    return _route_manifest_value("blueprint_count")
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +138,90 @@ TARGETS: list[DocClaim] = [
         regex=re.compile(r"Tests\s*\|\s*\*\*([\d,]+)\s*test_\*\.py\s*files", re.IGNORECASE),
         live=_test_file_count,
         docs=(PROJECT_CONTEXT,),
+        unit="files",
+    ),
+    DocClaim(
+        label="README feature overview API routes",
+        regex=re.compile(r"OpenCut\s+v[\d.]+\s+includes\s+\*\*([\d,]+)\s+API routes\*\*", re.IGNORECASE),
+        live=_route_count,
+        docs=(README,),
+        unit="routes",
+    ),
+    DocClaim(
+        label="README architecture API routes",
+        regex=re.compile(r"\|\s*([\d,]+)\s+API routes\s*\|", re.IGNORECASE),
+        live=_route_count,
+        docs=(README,),
+        unit="routes",
+    ),
+    DocClaim(
+        label="README architecture core modules",
+        regex=re.compile(r"\|\s*([\d,]+)\s+core modules\s*\|", re.IGNORECASE),
+        live=lambda: _dir_py_count("opencut/core"),
+        docs=(README,),
+        unit="modules",
+    ),
+    DocClaim(
+        label="README architecture route blueprints",
+        regex=re.compile(r"\|\s*([\d,]+)\s+route blueprints\s*\|", re.IGNORECASE),
+        live=_blueprint_count,
+        docs=(README,),
+        unit="blueprints",
+    ),
+    DocClaim(
+        label="README project structure core modules",
+        regex=re.compile(r"core/\s+#\s+([\d,]+)\s+processing modules", re.IGNORECASE),
+        live=lambda: _dir_py_count("opencut/core"),
+        docs=(README,),
+        unit="modules",
+    ),
+    DocClaim(
+        label="README project structure route modules",
+        regex=re.compile(r"routes/\s+#\s+([\d,]+)\s+route modules", re.IGNORECASE),
+        live=_route_module_count,
+        docs=(README,),
+        unit="modules",
+    ),
+    DocClaim(
+        label="README CEP panel main.js lines",
+        regex=re.compile(r"CEP panel \(index\.html,\s+main\.js\s+~([\d,]+)\s+lines", re.IGNORECASE),
+        live=lambda: _file_lines("extension/com.opencut.panel/client/main.js"),
+        docs=(README,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="README CEP panel style.css lines",
+        regex=re.compile(r"CEP panel \(index\.html,[^\n]*style\.css\s+~([\d,]+)\s+lines", re.IGNORECASE),
+        live=lambda: _file_lines("extension/com.opencut.panel/client/style.css"),
+        docs=(README,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="README ExtendScript host lines",
+        regex=re.compile(r"host/\s+#\s+ExtendScript host \(index\.jsx\s+~([\d,]+)\s+lines", re.IGNORECASE),
+        live=lambda: _file_lines("extension/com.opencut.panel/host/index.jsx"),
+        docs=(README,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="README UXP panel main.js lines",
+        regex=re.compile(r"main\.js\s+#\s+UXP panel \(~([\d,]+)\s+lines", re.IGNORECASE),
+        live=lambda: _file_lines("extension/com.opencut.uxp/main.js"),
+        docs=(README,),
+        unit="lines",
+    ),
+    DocClaim(
+        label="README testing root test files",
+        regex=re.compile(r"estimated tests across\s+([\d,]+)\s+root test files", re.IGNORECASE),
+        live=_test_file_count,
+        docs=(README,),
+        unit="files",
+    ),
+    DocClaim(
+        label="README project structure test files",
+        regex=re.compile(r"tests/\s+#\s+pytest test suite \([\d,]+\+ estimated tests,\s+([\d,]+)\s+root test files", re.IGNORECASE),
+        live=_test_file_count,
+        docs=(README,),
         unit="files",
     ),
 ]
@@ -195,7 +300,7 @@ def cmd_report(tolerance: float) -> int:
             any_over = True
     print(f"\nTolerance: ±{tolerance:.0f}%.")
     if any_over:
-        print("DRIFT DETECTED — update CLAUDE.md / PROJECT_CONTEXT.md.")
+        print("DRIFT DETECTED — update the documented size/count claims.")
     else:
         print("All documented sizes within tolerance.")
     return 1 if any_over else 0
@@ -214,7 +319,7 @@ def cmd_json(tolerance: float) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Check CLAUDE.md / PROJECT_CONTEXT.md size claims against the filesystem.")
+    parser = argparse.ArgumentParser(description="Check documented size/count claims against the filesystem and route manifest.")
     parser.add_argument("--check", action="store_true", help="Exit 1 if drift exceeds tolerance.")
     parser.add_argument("--json", action="store_true", help="Emit JSON for CI.")
     parser.add_argument("--tolerance", type=float, default=DEFAULT_TOLERANCE_PCT,
