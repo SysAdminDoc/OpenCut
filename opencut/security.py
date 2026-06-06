@@ -5,7 +5,9 @@ Path validation, CSRF protection, and safe pip install helpers.
 """
 
 import functools
+import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -161,6 +163,60 @@ def get_json_dict(*, force: bool = True, silent: bool = False) -> dict:
     if not isinstance(data, dict):
         raise BadRequest("JSON body must be an object")
     return data
+
+
+def _destructive_plan_payload(plan: dict) -> bytes:
+    clean_plan = {key: value for key, value in plan.items() if key != "confirm_token"}
+    return json.dumps(clean_plan, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+
+
+def _destructive_confirmation_secret() -> str:
+    header_token = request.headers.get("X-OpenCut-Token", "")
+    return header_token or get_csrf_token()
+
+
+def destructive_confirm_token(plan: dict) -> str:
+    """Return a request-scoped confirmation token for a destructive plan."""
+    secret = _destructive_confirmation_secret().encode("utf-8")
+    return hmac.new(secret, _destructive_plan_payload(plan), hashlib.sha256).hexdigest()
+
+
+def build_destructive_plan(
+    operation: str,
+    *,
+    targets=None,
+    records=None,
+    metadata=None,
+    reversible: bool = False,
+) -> dict:
+    """Build a stable dry-run plan with a confirmation token."""
+    plan = {
+        "operation": str(operation),
+        "targets": list(targets or []),
+        "records": list(records or []),
+        "metadata": dict(metadata or {}),
+        "reversible": bool(reversible),
+    }
+    plan["confirm_token"] = destructive_confirm_token(plan)
+    return plan
+
+
+def verify_destructive_confirm_token(plan: dict, confirm_token) -> bool:
+    """Validate a client confirmation token against the current request plan."""
+    if not isinstance(confirm_token, str) or not confirm_token:
+        return False
+    return hmac.compare_digest(confirm_token, destructive_confirm_token(plan))
+
+
+def destructive_confirmation_required_response(plan: dict) -> dict:
+    """Return the standard response body for missing destructive confirmation."""
+    return {
+        "error": "confirm_token required",
+        "code": "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+        "suggestion": "Run with dry_run=true, review the plan, then pass the returned confirm_token.",
+        "dry_run": False,
+        "plan": plan,
+    }
 
 
 # ---------------------------------------------------------------------------

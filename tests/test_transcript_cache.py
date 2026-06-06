@@ -198,9 +198,28 @@ def test_caption_cache_routes(monkeypatch, tmp_path, client, csrf_token):
     assert stats["entries"] == 1
     assert stats["bytes"] > 0
 
-    clear_resp = client.delete(
+    rejected = client.delete(
         "/captions/cache/clear",
         data=json.dumps({}),
+        headers=csrf_headers(csrf_token),
+    )
+    assert rejected.status_code == 409
+    assert rejected.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
+
+    preview_resp = client.delete(
+        "/captions/cache/clear",
+        data=json.dumps({"dry_run": True}),
+        headers=csrf_headers(csrf_token),
+    )
+    assert preview_resp.status_code == 200
+    preview = preview_resp.get_json()
+    assert preview["dry_run"] is True
+    assert preview["removed_entries"] == 0
+    assert transcript_cache.cache_stats()["entries"] == 1
+
+    clear_resp = client.delete(
+        "/captions/cache/clear",
+        data=json.dumps({"confirm_token": preview["confirm_token"]}),
         headers=csrf_headers(csrf_token),
     )
     assert clear_resp.status_code == 200

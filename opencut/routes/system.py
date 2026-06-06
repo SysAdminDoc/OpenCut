@@ -41,6 +41,8 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    build_destructive_plan,
+    destructive_confirmation_required_response,
     get_csrf_token,
     get_json_dict,
     is_path_within_any,
@@ -54,6 +56,7 @@ from opencut.security import (
     safe_pip_install,
     validate_filepath,
     validate_path,
+    verify_destructive_confirm_token,
 )
 from opencut.user_data import load_whisper_settings, save_whisper_settings
 
@@ -114,11 +117,14 @@ def _delete_cache_target(path: str) -> tuple[bool, str | None]:
 
 def _cache_plan_entry(path: str, *, category: str) -> dict:
     size, errors = _path_size_bytes(path)
+    root = os.path.dirname(path) if os.path.isfile(path) else path
     entry = {
         "path": path,
         "category": category,
+        "root": root,
         "type": "directory" if os.path.isdir(path) else "file",
         "bytes": size,
+        "reversible": False,
     }
     if errors:
         entry["errors"] = errors
@@ -1531,21 +1537,31 @@ def whisper_clear_cache():
     """Clear downloaded Whisper model cache."""
     data = get_json_dict() if request.data else {}
     dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
-    plan = _build_whisper_cache_plan()
+    cache_plan = _build_whisper_cache_plan()
+    plan = build_destructive_plan(
+        "whisper.clear_cache",
+        targets=cache_plan["entries"],
+        metadata={"route": "/whisper/clear-cache", "total_bytes": cache_plan["total_bytes"]},
+        reversible=False,
+    )
     if dry_run:
         return jsonify({
             "success": True,
             "dry_run": True,
-            "plan": plan["entries"],
-            "total_bytes": plan["total_bytes"],
+            "plan": cache_plan["entries"],
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+            "total_bytes": cache_plan["total_bytes"],
             "cleared": [],
-            "errors": plan["errors"],
-            "message": f"Previewed {len(plan['entries'])} cache location(s)",
+            "errors": cache_plan["errors"],
+            "message": f"Previewed {len(cache_plan['entries'])} cache location(s)",
         })
+    if plan["targets"] and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
 
     cleared = []
-    errors = list(plan["errors"])
-    for entry in plan["entries"]:
+    errors = list(cache_plan["errors"])
+    for entry in plan["targets"]:
         path = str(entry.get("path", ""))
         deleted, error = _delete_cache_target(path)
         if deleted:
@@ -1556,8 +1572,9 @@ def whisper_clear_cache():
     return jsonify({
         "success": len(errors) == 0,
         "dry_run": False,
-        "plan": plan["entries"],
-        "total_bytes": plan["total_bytes"],
+        "plan": cache_plan["entries"],
+        "destructive_plan": plan,
+        "total_bytes": cache_plan["total_bytes"],
         "cleared": cleared,
         "errors": errors,
         "message": f"Cleared {len(cleared)} cache location(s)"
@@ -1917,16 +1934,26 @@ def delete_model():
 
     dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
     plan_entry = _cache_plan_entry(path, category="model-cache")
-    plan = [plan_entry]
+    entries = [plan_entry]
+    plan = build_destructive_plan(
+        "models.delete",
+        targets=entries,
+        metadata={"route": "/models/delete", "total_bytes": plan_entry["bytes"]},
+        reversible=False,
+    )
     if dry_run:
         return jsonify({
             "success": True,
             "dry_run": True,
-            "plan": plan,
+            "plan": entries,
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
             "total_bytes": plan_entry["bytes"],
             "deleted": [],
             "errors": plan_entry.get("errors", []),
         })
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
 
     deleted, delete_error = _delete_cache_target(path)
     errors = list(plan_entry.get("errors", []))
@@ -1937,7 +1964,8 @@ def delete_model():
             return jsonify({
                 "success": False,
                 "dry_run": False,
-                "plan": plan,
+                "plan": entries,
+                "destructive_plan": plan,
                 "total_bytes": plan_entry["bytes"],
                 "deleted": [],
                 "errors": errors,
@@ -1949,7 +1977,8 @@ def delete_model():
         return jsonify({
             "success": True,
             "dry_run": False,
-            "plan": plan,
+            "plan": entries,
+            "destructive_plan": plan,
             "total_bytes": plan_entry["bytes"],
             "deleted": [path],
             "errors": errors,

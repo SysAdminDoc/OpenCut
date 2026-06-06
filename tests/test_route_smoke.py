@@ -1099,7 +1099,7 @@ class TestJobsRoutes:
         assert resp.status_code == 200
 
     def test_queue_clear(self, client, csrf_token):
-        resp = client.post("/queue/clear", data=json.dumps({}),
+        resp = client.post("/queue/clear", data=json.dumps({"dry_run": True}),
                            headers=csrf_headers(csrf_token))
         assert resp.status_code == 200
 
@@ -1227,7 +1227,7 @@ class TestSettingsRoutes:
         assert resp.status_code in (200, 404)
 
     def test_logs_clear(self, client, csrf_token):
-        resp = client.post("/logs/clear", data=json.dumps({}),
+        resp = client.post("/logs/clear", data=json.dumps({"dry_run": True}),
                            headers=csrf_headers(csrf_token))
         assert resp.status_code in (200, 400, 429)
         assert resp.get_json() is not None
