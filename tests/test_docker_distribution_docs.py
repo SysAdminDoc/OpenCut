@@ -38,3 +38,46 @@ def test_gpu_compose_command_targets_gpu_service_only():
     assert not compose.startswith("version:")
     assert "docker compose --profile gpu up opencut-server-gpu" in compose
     assert re.search(r"opencut-server-gpu:\s+build:", compose, re.S)
+
+
+def test_dockerfile_uses_tracked_dependency_surface():
+    dockerfile = _read("Dockerfile")
+    assert "pip install --no-cache-dir --requirement requirements.txt" in dockerfile
+    forbidden_fail_open_tokens = ["|| echo", "|| true", "set +e", "Some optional deps failed"]
+    for token in forbidden_fail_open_tokens:
+        assert token not in dockerfile
+    assert "pydub" not in dockerfile
+    assert "deep-translator" not in dockerfile
+
+
+def test_dockerignore_mirrors_sensitive_gitignore_patterns():
+    gitignore = _read(".gitignore").splitlines()
+    dockerignore = {line.strip() for line in _read(".dockerignore").splitlines() if line.strip()}
+    sensitive_patterns = [
+        ".env",
+        ".env.*",
+        "*.key",
+        "*.pem",
+        "credentials*.json",
+        "*.log",
+    ]
+    missing_from_gitignore = [pattern for pattern in sensitive_patterns if pattern not in gitignore]
+    missing_from_dockerignore = [pattern for pattern in sensitive_patterns if pattern not in dockerignore]
+    assert missing_from_gitignore == []
+    assert missing_from_dockerignore == []
+
+
+def test_dockerignore_excludes_local_runtime_state():
+    dockerignore = {line.strip() for line in _read(".dockerignore").splitlines() if line.strip()}
+    required_patterns = [
+        ".coverage",
+        "htmlcov/",
+        ".opencut/",
+        "*.db",
+        "*.db-*",
+        "*.sqlite",
+        "*.sqlite3",
+        "*.sqlite3-*",
+    ]
+    missing = [pattern for pattern in required_patterns if pattern not in dockerignore]
+    assert missing == []
