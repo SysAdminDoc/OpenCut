@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Deprecated API Sentinel
+
+- Closed RA-18 by adding a static guard against deprecated Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events in the UXP/WebView source path.
+- Documented the supported string clipboard write posture for the F252 UXP/WebView cutover path.
+
 ### Changed - UXP Manifest Schema Guard
 
 - Closed RA-17 by declaring Premiere-supported `manifestVersion: 5` in the live UXP manifest.
