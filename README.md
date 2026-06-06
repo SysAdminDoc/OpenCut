@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1523-orange)
-![Tests](https://img.shields.io/badge/Tests-8800+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-8900+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
@@ -76,7 +76,7 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 
 ## Feature Overview
 
-OpenCut v1.28.0 includes **1,334 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.32.0 includes **1,523 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -278,9 +278,9 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  980 API routes       |
-|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  360 core modules     |
-|  Keyboard shortcuts   |   SSE streaming    |  73 route blueprints  |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,523 API routes     |
+|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  599 core modules     |
+|  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
             |                                            |
 +-----------+-----------+                    +-----------+-----------+
@@ -479,7 +479,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-5,742+ tests across 77 test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+8,900+ estimated tests across 223 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -519,8 +519,8 @@ A: Go to Settings > AI Engine Preferences. Each feature domain (silence, transcr
 ```
 opencut/
   server.py          # Flask app factory + startup
-  core/              # 360 processing modules (silence, captions, audio, video, AI, VR, dubbing)
-  routes/            # 73 route blueprints (audio, video, captions, timeline, etc.)
+  core/              # 599 processing modules (silence, captions, audio, video, AI, VR, dubbing)
+  routes/            # 105 route modules / 107 manifest blueprints
   export/            # Premiere XML, SRT, VTT, ASS, OTIO exporters
   utils/             # Media probing, config dataclasses
   checks.py          # Dependency availability checks
@@ -533,14 +533,14 @@ opencut/
   cli.py             # CLI entry point
 extension/
   com.opencut.panel/
-    client/          # CEP panel (index.html, main.js ~8500 lines, style.css ~5000 lines)
-    host/            # ExtendScript host (index.jsx ~2200 lines)
+    client/          # CEP panel (index.html, main.js ~16,661 lines, style.css ~17,960 lines)
+    host/            # ExtendScript host (index.jsx ~2,736 lines)
     CSXS/            # Extension manifest
   com.opencut.uxp/
-    main.js          # UXP panel (~1700 lines)
+    main.js          # UXP panel (~6,014 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (5,742+ tests, 77 test files)
+tests/               # pytest test suite (8,900+ estimated tests, 223 root test files)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking

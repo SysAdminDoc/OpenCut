@@ -11,6 +11,9 @@
 **Pass 267 update (no standalone research file):**
 - Added `scripts/bootstrap_check.py --dev` so development/test imports are checked explicitly, documented the Python 3.12 `.venv` repair path in README, and covered the behavior in `tests/test_bootstrap_check.py`. The repo `.venv` now fails the dev check with a repair hint when it lacks pytest, while `py -3.12` passes the same check; release-smoke bootstrap and pytest-fast both pass.
 
+**Pass 268 update (no standalone research file):**
+- Closed RA-28 by extending `scripts/check_doc_sizes.py` to validate README non-badge route, module, blueprint, panel line-count, and root test-file claims against generated manifests and the live filesystem. README counts now match the route manifest and local file counts, and the doc-size release-smoke step covers the expanded size/count drift contract.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
