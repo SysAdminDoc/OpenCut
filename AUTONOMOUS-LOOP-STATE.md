@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.259 / batch 147 and remains open.
-- Shipped this cycle: Video Color Correction exposure, contrast, saturation, temperature, shadows, and highlights labels now expose static locale hooks while preserving slider ranges, defaults, and step values.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,227 keys / 2,169 consumers / 58 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Color Correction hooks and preserved slider attributes with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.260 / batch 148 and remains open.
+- Shipped this cycle: Video Object and Watermark Removal method, method choices, region label, coordinate labels, coordinate ARIA labels, and region hint now expose static locale hooks while preserving method values and numeric defaults.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,239 keys / 2,181 consumers / 58 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Object and Watermark Removal hooks, ARIA labels, method values, and coordinate defaults with no current-port console errors.
 
 ## Next Work
 
