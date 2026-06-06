@@ -2566,28 +2566,28 @@
                     <section class="card">
                         <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.composite">Compositing &amp; Keying</div></div>
                         <p class="card-desc" data-i18n="video.composite_desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
-                        <div class="form-group"><label for="chromaMode">Mode</label>
-                            <select id="chromaMode"><option value="chromakey">Green / Blue Screen Removal</option><option value="pip">Picture-in-Picture Overlay</option><option value="blend">Blend Two Clips</option></select></div>
+                        <div class="form-group"><label for="chromaMode" data-i18n="forms.mode">Mode</label>
+                            <select id="chromaMode"><option value="chromakey" data-i18n="video.composite_mode_chromakey">Green / Blue Screen Removal</option><option value="pip" data-i18n="video.composite_mode_pip">Picture-in-Picture Overlay</option><option value="blend" data-i18n="video.composite_mode_blend">Blend Two Clips</option></select></div>
                         <div id="chromakeyParams">
-                            <div class="form-group"><label for="chromaColor">Key Color</label>
-                                <select id="chromaColor"><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
-                            <div class="form-group"><label for="chromaBgPath">Background Path</label>
-                                <div class="path-input-row"><input type="text" id="chromaBgPath" name="chroma_bg_path" class="text-input" placeholder="/path/to/background.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="chromaBgPath">Browse</button></div></div>
-                            <div class="form-group"><label for="chromaTol">Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
+                            <div class="form-group"><label for="chromaColor" data-i18n="forms.key_color">Key Color</label>
+                                <select id="chromaColor"><option value="green" data-i18n="video.key_color_green">Green</option><option value="blue" data-i18n="video.key_color_blue">Blue</option><option value="red" data-i18n="video.key_color_red">Red</option></select></div>
+                            <div class="form-group"><label for="chromaBgPath" data-i18n="video.background_path">Background Path</label>
+                                <div class="path-input-row"><input type="text" id="chromaBgPath" name="chroma_bg_path" class="text-input" placeholder="/path/to/background.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.background_path_placeholder"><button type="button" class="btn-browse" data-target="chromaBgPath" data-i18n="common.browse">Browse</button></div></div>
+                            <div class="form-group"><label for="chromaTol" data-i18n="forms.tolerance">Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
                         </div>
                         <div id="pipParams" class="hidden">
-                            <div class="form-group"><label for="pipPath">PiP Video Path</label>
-                                <div class="path-input-row"><input type="text" id="pipPath" name="pip_path" class="text-input" placeholder="/path/to/pip_video.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="pipPath">Browse</button></div></div>
-                            <div class="form-group"><label for="pipPosition">Position</label>
-                                <select id="pipPosition"><option value="bottom_right">Bottom Right</option><option value="bottom_left">Bottom Left</option><option value="top_right">Top Right</option><option value="top_left">Top Left</option><option value="center">Center</option></select></div>
-                            <div class="form-group"><label for="pipScale">Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
+                            <div class="form-group"><label for="pipPath" data-i18n="video.pip_video_path">PiP Video Path</label>
+                                <div class="path-input-row"><input type="text" id="pipPath" name="pip_path" class="text-input" placeholder="/path/to/pip_video.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.pip_video_path_placeholder"><button type="button" class="btn-browse" data-target="pipPath" data-i18n="common.browse">Browse</button></div></div>
+                            <div class="form-group"><label for="pipPosition" data-i18n="forms.position">Position</label>
+                                <select id="pipPosition"><option value="bottom_right" data-i18n="video.position_bottom_right">Bottom Right</option><option value="bottom_left" data-i18n="video.position_bottom_left">Bottom Left</option><option value="top_right" data-i18n="video.position_top_right">Top Right</option><option value="top_left" data-i18n="video.position_top_left">Top Left</option><option value="center" data-i18n="video.position_center">Center</option></select></div>
+                            <div class="form-group"><label for="pipScale" data-i18n="forms.scale">Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
                         </div>
                         <div id="blendParams" class="hidden">
-                            <div class="form-group"><label for="blendOverlay">Overlay Path</label>
-                                <div class="path-input-row"><input type="text" id="blendOverlay" name="blend_overlay_path" class="text-input" placeholder="/path/to/overlay.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="blendOverlay">Browse</button></div></div>
-                            <div class="form-group"><label for="blendMode">Blend Mode</label>
-                                <select id="blendMode"><option value="overlay">Overlay</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="softlight">Soft Light</option><option value="hardlight">Hard Light</option><option value="difference">Difference</option><option value="addition">Addition</option><option value="dodge">Dodge</option><option value="burn">Burn</option></select></div>
-                            <div class="form-group"><label for="blendOpacity">Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
+                            <div class="form-group"><label for="blendOverlay" data-i18n="video.overlay_path">Overlay Path</label>
+                                <div class="path-input-row"><input type="text" id="blendOverlay" name="blend_overlay_path" class="text-input" placeholder="/path/to/overlay.mp4" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.overlay_path_placeholder"><button type="button" class="btn-browse" data-target="blendOverlay" data-i18n="common.browse">Browse</button></div></div>
+                            <div class="form-group"><label for="blendMode" data-i18n="forms.blend_mode">Blend Mode</label>
+                                <select id="blendMode"><option value="overlay" data-i18n="video.blend_overlay">Overlay</option><option value="multiply" data-i18n="video.blend_multiply">Multiply</option><option value="screen" data-i18n="video.blend_screen">Screen</option><option value="softlight" data-i18n="video.blend_soft_light">Soft Light</option><option value="hardlight" data-i18n="video.blend_hard_light">Hard Light</option><option value="difference" data-i18n="video.blend_difference">Difference</option><option value="addition" data-i18n="video.blend_addition">Addition</option><option value="dodge" data-i18n="video.blend_dodge">Dodge</option><option value="burn" data-i18n="video.blend_burn">Burn</option></select></div>
+                            <div class="form-group"><label for="blendOpacity" data-i18n="forms.opacity">Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
                         </div>
                         <button type="button" class="btn-primary" id="runChromaBtn" disabled data-i18n="video.apply_composite">Apply Composite</button>
                     </section>
