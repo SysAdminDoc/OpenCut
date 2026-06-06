@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 154
+
+- Migrated the Export Workflow Presets static shell to locale hooks for preset/library summaries, custom workflow draft/saved status, workflow name placeholder, step selector options, and load/save/run/delete controls.
+- `client/locales/en.json` grows from 2,273 to 2,295 keys; `i18n-drift` reports 2,242 consumers, 53 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Workflow Presets static HTML hooks plus matching locale keys.
+
 ### Changed - Python Dependency Surface
 
 - Closed RA-01 by aligning Ruff's explicit target version with the declared Python 3.11 floor and adding a dependency-surface guard for future drift.

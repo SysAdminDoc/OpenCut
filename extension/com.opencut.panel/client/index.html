@@ -3025,75 +3025,75 @@
 
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="workflow.title">Workflow Presets</div></div>
-                        <p class="card-desc">Run a multi-step pipeline on the selected clip. Each step runs automatically after the previous one finishes.</p>
-                        <div class="oc-inline-summary-grid" aria-label="Workflow preset overview">
+                        <p class="card-desc" data-i18n="workflow.desc">Run a multi-step pipeline on the selected clip. Each step runs automatically after the previous one finishes.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Workflow preset overview" data-i18n-aria-label="workflow.preset_overview_aria">
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Preset</span>
-                                <span class="oc-status-pill" id="workflowPresetPill" data-state="working">Loading...</span>
+                                <span class="oc-inline-label" data-i18n="forms.preset">Preset</span>
+                                <span class="oc-status-pill" id="workflowPresetPill" data-state="working" data-i18n="workflow.preset_loading_pill">Loading...</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Library</span>
-                                <span class="oc-inline-value" id="workflowPresetSummary">Checking built-in and custom workflow presets...</span>
+                                <span class="oc-inline-label" data-i18n="workflow.library_label">Library</span>
+                                <span class="oc-inline-value" id="workflowPresetSummary" data-i18n="workflow.preset_loading_summary">Checking built-in and custom workflow presets...</span>
                             </div>
                         </div>
-                        <div class="oc-status-line" id="workflowPresetStatus" data-state="working" role="status" aria-live="polite">Loading workflow presets for repeatable editorial runs.</div>
+                        <div class="oc-status-line" id="workflowPresetStatus" data-state="working" role="status" aria-live="polite" data-i18n="workflow.preset_status_loading">Loading workflow presets for repeatable editorial runs.</div>
 
                         <div class="form-group">
-                            <label for="workflowPreset">Preset</label>
+                            <label for="workflowPreset" data-i18n="forms.preset">Preset</label>
                             <select id="workflowPreset">
-                            <option value="" disabled selected>Loading presets…</option>
+                                <option value="" disabled selected data-i18n="workflow.loading_presets_option">Loading presets…</option>
                             </select>
                             <div class="hint" id="workflowPresetDesc"></div>
                         </div>
 
                         <button type="button" class="btn-primary" id="runWorkflowBtn" disabled data-i18n="workflow.run">Run Workflow</button>
                         <div class="border-t">
-                            <div class="card-header card-header--flush"><div class="card-title card-title--sm">Custom Workflows</div></div>
-                            <div class="oc-inline-summary-grid" aria-label="Custom workflow overview">
+                            <div class="card-header card-header--flush"><div class="card-title card-title--sm" data-i18n="workflow.custom">Custom Workflows</div></div>
+                            <div class="oc-inline-summary-grid" aria-label="Custom workflow overview" data-i18n-aria-label="workflow.custom_overview_aria">
                                 <div class="oc-inline-stat">
-                                    <span class="oc-inline-label">Draft</span>
-                                    <span class="oc-inline-value" id="customWorkflowSummary">No custom workflow steps yet</span>
+                                    <span class="oc-inline-label" data-i18n="workflow.draft_label">Draft</span>
+                                    <span class="oc-inline-value" id="customWorkflowSummary" data-i18n="workflow.custom_summary_empty">No custom workflow steps yet</span>
                                 </div>
                                 <div class="oc-inline-stat">
-                                    <span class="oc-inline-label">Saved</span>
-                                    <span class="oc-inline-value" id="savedWorkflowSummary">Checking saved workflows...</span>
+                                    <span class="oc-inline-label" data-i18n="workflow.saved_label">Saved</span>
+                                    <span class="oc-inline-value" id="savedWorkflowSummary" data-i18n="workflow.saved_loading_label">Checking saved workflows...</span>
                                 </div>
                             </div>
-                            <div class="oc-status-line" id="customWorkflowStatus" data-state="idle" role="status" aria-live="polite">Add steps to build a repeatable workflow for the current editorial style.</div>
+                            <div class="oc-status-line" id="customWorkflowStatus" data-state="idle" role="status" aria-live="polite" data-i18n="workflow.custom_status_empty">Add steps to build a repeatable workflow for this editorial style.</div>
                             <div class="form-group">
-                                <label for="customWorkflowName">Name</label>
-                                <input type="text" id="customWorkflowName" class="text-input" placeholder="My Workflow">
+                                <label for="customWorkflowName" data-i18n="forms.name">Name</label>
+                                <input type="text" id="customWorkflowName" class="text-input" placeholder="My Workflow" data-i18n-placeholder="workflow.name_placeholder">
                             </div>
                             <div class="workflow-step-list" id="workflowStepList">
-                                <div class="hint">Add steps to build a custom workflow.</div>
+                                <div class="hint" data-i18n="workflow.empty_hint">Add steps to build a custom workflow.</div>
                             </div>
                             <div class="btn-row gap-xs mt-xs">
-                                <select id="workflowStepSelect" class="inline-select flex-1" aria-label="Workflow step to add">
-                                    <option value="/cut/silence">Remove Silences</option>
-                                    <option value="/audio/denoise">Denoise Audio</option>
-                                    <option value="/audio/normalize">Normalize Audio</option>
-                                    <option value="/captions/styled">Styled Captions</option>
-                                    <option value="/captions/subtitle">Export Subtitles</option>
-                                    <option value="/captions/burnin">Burn-in Captions</option>
-                                    <option value="/video/stabilize">Stabilize Video</option>
-                                    <option value="/video/effects">Video Effects</option>
-                                    <option value="/export/preset">Export Preset</option>
+                                <select id="workflowStepSelect" class="inline-select flex-1" aria-label="Workflow step to add" data-i18n-aria-label="workflow.step_to_add_aria">
+                                    <option value="/cut/silence" data-i18n="workflow.step_remove_silences">Remove Silences</option>
+                                    <option value="/audio/denoise" data-i18n="workflow.step_denoise_audio">Denoise Audio</option>
+                                    <option value="/audio/normalize" data-i18n="workflow.step_normalize_audio">Normalize Audio</option>
+                                    <option value="/captions/styled" data-i18n="workflow.step_styled_captions">Styled Captions</option>
+                                    <option value="/captions/subtitle" data-i18n="workflow.step_export_subtitles">Export Subtitles</option>
+                                    <option value="/captions/burnin" data-i18n="workflow.step_burn_in_captions">Burn-in Captions</option>
+                                    <option value="/video/stabilize" data-i18n="workflow.step_stabilize_video">Stabilize Video</option>
+                                    <option value="/video/effects" data-i18n="workflow.step_video_effects">Video Effects</option>
+                                    <option value="/export/preset" data-i18n="workflow.step_export_preset">Export Preset</option>
                                 </select>
-                                <button type="button" class="btn-sm" id="workflowAddStepBtn">Add Step</button>
+                                <button type="button" class="btn-sm" id="workflowAddStepBtn" data-i18n="workflow.add_step">Add Step</button>
                             </div>
                             <div class="btn-row gap-xs mt-xs">
-                                <button type="button" class="btn-outline btn-sm" id="saveCustomWorkflowBtn">Save Workflow</button>
-                                <button type="button" class="btn-outline btn-sm" id="runCustomWorkflowBtn" disabled>Run Custom</button>
+                                <button type="button" class="btn-outline btn-sm" id="saveCustomWorkflowBtn" data-i18n="workflow.save">Save Workflow</button>
+                                <button type="button" class="btn-outline btn-sm" id="runCustomWorkflowBtn" disabled data-i18n="workflow.run_custom">Run Custom</button>
                             </div>
                             <div class="form-group mt-xs">
-                                <label for="savedWorkflowSelect">Saved Workflows</label>
+                                <label for="savedWorkflowSelect" data-i18n="workflow.saved_workflows_label">Saved Workflows</label>
                                 <select id="savedWorkflowSelect">
-                                    <option value="" disabled selected>No saved workflows yet</option>
+                                    <option value="" disabled selected data-i18n="workflow.saved_empty_label">No saved workflows yet</option>
                                 </select>
                             </div>
                             <div class="btn-row gap-xs">
-                                <button type="button" class="btn-outline btn-sm" id="loadCustomWorkflowBtn">Load</button>
-                                <button type="button" class="btn-outline btn-sm" id="deleteCustomWorkflowBtn">Delete</button>
+                                <button type="button" class="btn-outline btn-sm" id="loadCustomWorkflowBtn" data-i18n="common.load">Load</button>
+                                <button type="button" class="btn-outline btn-sm" id="deleteCustomWorkflowBtn" data-i18n="common.delete">Delete</button>
                             </div>
                         </div>
                     </section>
