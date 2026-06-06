@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
 from opencut.core.captions import TranscriptionResult, caption_segment_to_dict
 from opencut.core.transcript_cache import source_digest
+from opencut.user_data import OPENCUT_DIR
 
 SIDECAR_SCHEMA = "opencut.caption_sidecar"
 SIDECAR_VERSION = 1
 SIDECAR_SUFFIX = ".opencut-captions.json"
+REVISION_SCHEMA = "opencut.caption_revision"
+REVISION_VERSION = 1
+REVISION_DIR_ENV = "OPENCUT_CAPTION_REVISION_DIR"
+_TIME_RE = re.compile(r"(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})")
 
 
 def caption_sidecar_path(export_path: str) -> str:
@@ -47,6 +54,47 @@ def _source_identity(source_path: str | None) -> dict[str, Any]:
         "source_size_bytes": digest.get("source_size_bytes"),
         "source_mtime_ns": digest.get("source_mtime_ns"),
     }
+
+
+def _stable_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+
+
+def _tc_to_seconds(timecode: str) -> float:
+    clean = str(timecode).replace(",", ".")
+    hours, minutes, seconds = clean.split(":")
+    return float(hours) * 3600 + float(minutes) * 60 + float(seconds)
+
+
+def parse_srt_text(content: str, *, max_segments: int = 10000) -> list[dict[str, Any]]:
+    """Parse SRT text into lossy ``start``/``end``/``text`` segments."""
+    segments: list[dict[str, Any]] = []
+    blocks = re.split(r"\n\s*\n", str(content or "").strip())
+    for block in blocks:
+        if len(segments) >= max_segments:
+            break
+        lines = block.strip().splitlines()
+        if len(lines) < 2:
+            continue
+        time_index = None
+        for index, line in enumerate(lines):
+            if _TIME_RE.match(line.strip()):
+                time_index = index
+                break
+        if time_index is None:
+            continue
+        match = _TIME_RE.match(lines[time_index].strip())
+        if not match:
+            continue
+        text = " ".join(lines[time_index + 1:]).strip()
+        text = re.sub(r"<[^>]+>", "", text)
+        if text:
+            segments.append({
+                "start": _tc_to_seconds(match.group(1)),
+                "end": _tc_to_seconds(match.group(2)),
+                "text": text,
+            })
+    return segments
 
 
 def _segment_source_id(segment: dict[str, Any], index: int) -> str:
@@ -218,3 +266,193 @@ def merge_segments_with_sidecar(
         cue["sidecar_index"] = index
         enriched.append(cue)
     return enriched, warnings
+
+
+def _cue_summary(cue: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "caption_id": cue.get("caption_id"),
+        "start": cue.get("start", 0.0),
+        "end": cue.get("end", 0.0),
+        "text": cue.get("text", ""),
+    }
+
+
+def _normal_text(text: Any) -> str:
+    return " ".join(str(text or "").split())
+
+
+def _timing_changed(before: dict[str, Any], after: dict[str, Any], tolerance: float = 0.001) -> bool:
+    return (
+        abs(float(before.get("start", 0.0) or 0.0) - float(after.get("start", 0.0) or 0.0)) > tolerance
+        or abs(float(before.get("end", 0.0) or 0.0) - float(after.get("end", 0.0) or 0.0)) > tolerance
+    )
+
+
+def _style_payload(cue: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "display_setting_token_ids": list(cue.get("display_setting_token_ids") or []),
+        "display_settings": dict(cue.get("display_settings") or {}),
+    }
+
+
+def _source_caption_ids(cue: dict[str, Any]) -> list[str]:
+    raw = cue.get("source_caption_ids")
+    if isinstance(raw, list):
+        return [str(item) for item in raw if str(item).strip()]
+    for key in ("source_caption_id", "caption_id"):
+        value = str(cue.get(key, "")).strip()
+        if value:
+            return [value]
+    return []
+
+
+def diff_caption_roundtrip(
+    *,
+    sidecar: dict[str, Any] | None = None,
+    edited_segments: list[dict[str, Any]] | None = None,
+    original_segments: list[dict[str, Any]] | None = None,
+    warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    """Return a deterministic caption round-trip diff payload."""
+    diff_warnings = list(warnings or [])
+    sidecar_cues = (sidecar or {}).get("cues")
+    has_sidecar_cues = isinstance(sidecar_cues, list)
+    metadata_preserved = bool(sidecar) and has_sidecar_cues
+    originals = list(sidecar_cues if has_sidecar_cues else original_segments or [])
+    edited = list(edited_segments or [])
+    if sidecar and not has_sidecar_cues and "sidecar_cues_missing" not in diff_warnings:
+        diff_warnings.append("sidecar_cues_missing")
+    if not metadata_preserved:
+        diff_warnings.append("metadata_unavailable")
+    if len(originals) != len(edited):
+        diff_warnings.append("cue_count_mismatch")
+
+    source_counts: dict[str, int] = {}
+    for cue in edited:
+        for source_id in _source_caption_ids(cue):
+            source_counts[source_id] = source_counts.get(source_id, 0) + 1
+
+    counts = {
+        "unchanged": 0,
+        "changed": 0,
+        "text_changed": 0,
+        "timing_changed": 0,
+        "style_changed": 0,
+        "split": 0,
+        "merge": 0,
+        "deleted": 0,
+        "inserted": 0,
+    }
+    changes: list[dict[str, Any]] = []
+    max_len = max(len(originals), len(edited))
+    for index in range(max_len):
+        if index >= len(originals):
+            counts["changed"] += 1
+            counts["inserted"] += 1
+            changes.append({
+                "caption_id": edited[index].get("caption_id"),
+                "change_type": "inserted",
+                "changes": ["inserted"],
+                "before": None,
+                "after": _cue_summary(edited[index]),
+            })
+            continue
+        if index >= len(edited):
+            counts["changed"] += 1
+            counts["deleted"] += 1
+            changes.append({
+                "caption_id": originals[index].get("caption_id"),
+                "change_type": "deleted",
+                "changes": ["deleted"],
+                "before": _cue_summary(originals[index]),
+                "after": None,
+            })
+            continue
+
+        before = originals[index]
+        after = edited[index]
+        cue_changes: list[str] = []
+        if _normal_text(before.get("text")) != _normal_text(after.get("text")):
+            cue_changes.append("text_changed")
+        if _timing_changed(before, after):
+            cue_changes.append("timing_changed")
+        if _style_payload(before) != _style_payload(after):
+            cue_changes.append("style_changed")
+        source_ids = _source_caption_ids(after)
+        if any(source_counts.get(source_id, 0) > 1 for source_id in source_ids):
+            cue_changes.append("split")
+        if len(source_ids) > 1:
+            cue_changes.append("merge")
+
+        if cue_changes:
+            counts["changed"] += 1
+            for change in sorted(set(cue_changes), key=cue_changes.index):
+                counts[change] += 1
+        else:
+            counts["unchanged"] += 1
+        changes.append({
+            "caption_id": before.get("caption_id") or after.get("caption_id"),
+            "change_type": cue_changes[0] if cue_changes else "unchanged",
+            "changes": cue_changes,
+            "before": _cue_summary(before),
+            "after": _cue_summary(after),
+        })
+
+    confidence = 0.9 if metadata_preserved else 0.45
+    if "cue_count_mismatch" in diff_warnings:
+        confidence = min(confidence, 0.65)
+    if any(warning.endswith("mismatch") for warning in diff_warnings):
+        confidence = min(confidence, 0.6)
+
+    return {
+        "metadata_preserved": metadata_preserved,
+        "confidence": round(confidence, 2),
+        "confidence_label": "high" if confidence >= 0.8 else "medium" if confidence >= 0.6 else "low",
+        "warnings": sorted(set(diff_warnings)),
+        "counts": counts,
+        "changes": changes,
+        "summary": {
+            "changed": counts["changed"] > 0,
+            "changed_cues": counts["changed"],
+            "unchanged_cues": counts["unchanged"],
+            "total_before": len(originals),
+            "total_after": len(edited),
+            "metadata_preserved": metadata_preserved,
+        },
+        "source": {
+            "transcript_cache_key": (sidecar or {}).get("source", {}).get("transcript_cache_key"),
+            "source_file_hash": (sidecar or {}).get("source", {}).get("source_file_hash"),
+        },
+    }
+
+
+def caption_revision_dir() -> str:
+    override = os.environ.get(REVISION_DIR_ENV)
+    if override:
+        return _safe_realpath(override)
+    return os.path.join(OPENCUT_DIR, "caption_revisions")
+
+
+def store_caption_revision(diff_payload: dict[str, Any]) -> dict[str, Any]:
+    """Persist a content-addressed caption round-trip revision."""
+    source = diff_payload.get("source") or {}
+    revision_body = {
+        "schema": REVISION_SCHEMA,
+        "schema_version": REVISION_VERSION,
+        "source": source,
+        "diff": diff_payload,
+    }
+    revision_id = hashlib.sha256(_stable_json(revision_body).encode("utf-8")).hexdigest()
+    revision_body["revision_id"] = revision_id
+    root = caption_revision_dir()
+    os.makedirs(root, exist_ok=True)
+    path = os.path.join(root, f"{revision_id}.json")
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(revision_body, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+    return {
+        "revision_id": revision_id,
+        "revision_path": path,
+        "transcript_cache_key": source.get("transcript_cache_key"),
+        "source_file_hash": source.get("source_file_hash"),
+    }

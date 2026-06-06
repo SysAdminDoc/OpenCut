@@ -96,7 +96,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-06 | Destructive wipe backup | M | Closed 2026-06-06: local SQLite destructive maintenance paths now expose dry-run counts, optional backups, and audit metadata |
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
-| RA-09 | Timeline-native captions | L | Advanced 2026-06-06: RA-46 sidecar schema shipped; diff/apply and host snapshot/write contracts remain open |
+| RA-09 | Timeline-native captions | L | Advanced 2026-06-06: RA-46 sidecars and RA-47 diff/apply shipped; host snapshot/write contracts remain open |
 | RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
@@ -801,6 +801,11 @@ time/text matching.
 
 **Priority:** P1. **Effort:** L. **Confidence:** High.
 
+**Status:** Closed 2026-06-06. `POST /captions/round-trip/diff` now compares
+sidecar-backed or lossy caption edits, classifies text/timing/style/split/merge
+and inserted/deleted changes, and `POST /captions/round-trip/apply` persists a
+confirmed content-addressed revision without overwriting transcript cache state.
+
 **Evidence:** `/transcript/export` exports edited segments but does not mutate
 transcript cache/state; `/timeline/srt-to-captions` validates SRTs but does not
 compare them against original transcripts or prior exports.
@@ -815,12 +820,12 @@ cache revision rather than overwriting the original transcript entry.
 
 **Acceptance criteria:**
 
-- [ ] Diff returns counts, per-cue changes, confidence, warnings, and an
+- [x] Diff returns counts, per-cue changes, confidence, warnings, and an
       unchanged/changed summary suitable for a review UI.
-- [ ] Apply stores a new revision linked to the original `transcript_cache_key`
+- [x] Apply stores a new revision linked to the original `transcript_cache_key`
       and source file hash.
-- [ ] Apply is idempotent for unchanged SRT plus matching sidecar.
-- [ ] A no-sidecar request still works as a lossy timing/text diff and labels
+- [x] Apply is idempotent for unchanged SRT plus matching sidecar.
+- [x] A no-sidecar request still works as a lossy timing/text diff and labels
       metadata preservation as unavailable.
 
 **Risks:** SRT editors can reorder, split, or merge cues in ways that require
@@ -1247,6 +1252,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 49 | Python dependency and lint alignment | `pyproject.toml`, `requirements.txt`, dependency-surface tests, Ruff import ordering | Ruff still targeted Python 3.9 despite the package floor being Python 3.11+, and the installable `requirements.txt` surface had looser bounds than the audited `pyproject.toml` core/standard declarations. | Closed RA-01/RA-02 by setting Ruff to `py311`, syncing core/standard requirement bounds, and adding drift guards that derive the lint target from `requires-python` and ensure `requirements.txt` contains the `pyproject.toml` core plus standard dependency surface. |
 | 2026-06-06 | Cycle 50 | CEP i18n workflow preset shell | CEP `index.html`, `en.json`, i18n hardcoded-migration tests | The Export Workflow Presets card still had bare static shell strings for preset/library status, custom workflow controls, and step selector options despite dynamic workflow text being localized. | Advanced E15 to batch 154 by wiring those static strings through `data-i18n*` attributes and locale keys; the drift gate now reports 2,295 keys, 2,242 consumers, 53 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 51 | Caption round-trip sidecars | `opencut/core/caption_roundtrip.py`, caption export routes, timeline SRT parser, caption metadata tests | Native UXP caption-track writes are still not documented, and SRT-only parsing drops speaker, word, language, review, cache, and style metadata needed for editable Premiere timeline round trips. | Closed RA-46 under RA-09 by writing versioned caption sidecars, returning sidecar metadata from caption exports, and enriching `/timeline/srt-to-captions` output from matching sidecars while explicitly warning when SRT-only metadata is unavailable. |
+| 2026-06-06 | Cycle 52 | Caption round-trip diff/apply | `opencut/core/caption_roundtrip.py`, `/captions/round-trip/*`, route manifest, caption metadata tests | Sidecars preserved metadata, but there was still no API for reviewing timeline edits or storing a confirmed transcript revision after an SRT/UXP caption-track round trip. | Closed RA-47 by adding sidecar-backed and lossy diff support, confirmation-token guarded apply, content-addressed revision storage, and route/manifest/test coverage for changed, unchanged, no-sidecar, and idempotent apply flows. |
 
 ### Research queries to run later
 
@@ -1267,17 +1273,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 52: Implement caption diff/apply endpoints for RA-47.
-2. Cycle 53: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-3. Cycle 54: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-4. Cycle 55: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-5. Cycle 56: Continue E15 or another remaining release-trust gap after batch 154.
+1. Cycle 53: Implement UXP caption-track snapshot read bridge for RA-48.
+2. Cycle 54: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Cycle 55: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+4. Cycle 56: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+5. Cycle 57: Continue E15 or another remaining release-trust gap after batch 154.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 51: Caption round-trip sidecars.
+Cycle 52: Caption round-trip diff/apply.
 
 #### Current focus
 
@@ -1333,6 +1339,9 @@ keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available. Continue
 RA-47 through RA-50 before treating timeline-native captions as closed.
+RA-47 is closed under RA-09: caption round-trip diff/apply APIs now support
+sidecar-backed metadata-preserving reviews, lossy no-sidecar diffs, and
+confirmation-token guarded revision storage. Continue RA-48 through RA-50.
 
 #### Important findings so far
 
@@ -1392,6 +1401,9 @@ RA-47 through RA-50 before treating timeline-native captions as closed.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
   preservation contract for caption timeline round trips until native UXP writes
   or hybrid caption writes are live-tested.
+- Caption revision apply is content-addressed and idempotent for unchanged edits,
+  but it intentionally stores a new revision file instead of mutating the
+  original transcript cache entry.
 - The scanned SQLite stores now stamp explicit SQLite `user_version` values via
   ordered idempotent local migrations and reject newer unknown schemas.
 - `jobs.result_json`, `journal.inverse_json`, and `journal.forward_json` now

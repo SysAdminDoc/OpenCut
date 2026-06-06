@@ -13,7 +13,13 @@ from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
 
-from opencut.core.caption_roundtrip import write_caption_sidecar
+from opencut.core.caption_roundtrip import (
+    diff_caption_roundtrip,
+    parse_srt_text,
+    read_caption_sidecar,
+    store_caption_revision,
+    write_caption_sidecar,
+)
 from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
@@ -132,6 +138,87 @@ def _write_caption_roundtrip_sidecar(result, out_path: str, sub_format: str, fil
         logger.warning("Caption sidecar write failed for %s: %s", out_path, exc)
         return "", ["sidecar_write_failed"]
     return sidecar_path, []
+
+
+def _clean_roundtrip_segments(raw_segments) -> list[dict]:
+    if not isinstance(raw_segments, list):
+        return []
+    cleaned = []
+    for item in raw_segments:
+        if not isinstance(item, dict):
+            continue
+        segment = dict(item)
+        segment["start"] = safe_float(segment.get("start", 0.0), default=0.0, min_val=0.0)
+        segment["end"] = safe_float(segment.get("end", 0.0), default=0.0, min_val=0.0)
+        segment["text"] = str(segment.get("text", "")).strip()
+        cleaned.append(segment)
+    return cleaned
+
+
+def _snapshot_segments(snapshot) -> list[dict]:
+    if not isinstance(snapshot, dict):
+        return []
+    if isinstance(snapshot.get("segments"), list):
+        return _clean_roundtrip_segments(snapshot.get("segments"))
+    segments = []
+    for track in snapshot.get("tracks") or []:
+        if not isinstance(track, dict):
+            continue
+        for key in ("segments", "cues", "items", "track_items"):
+            if isinstance(track.get(key), list):
+                segments.extend(track[key])
+                break
+    return _clean_roundtrip_segments(segments)
+
+
+def _roundtrip_edited_segments(data: dict) -> tuple[list[dict], list[str]]:
+    warnings = []
+    for key in ("edited_segments", "segments"):
+        if isinstance(data.get(key), list):
+            return _clean_roundtrip_segments(data.get(key)), warnings
+    snapshot = data.get("caption_track_snapshot")
+    if snapshot is not None:
+        return _snapshot_segments(snapshot), warnings
+    srt_text = data.get("srt_text")
+    if isinstance(srt_text, str) and srt_text.strip():
+        return parse_srt_text(srt_text), warnings
+    srt_path = str(data.get("srt_path", "")).strip()
+    if srt_path:
+        try:
+            srt_path = validate_filepath(srt_path)
+            with open(srt_path, encoding="utf-8-sig", errors="replace") as handle:
+                return parse_srt_text(handle.read()), warnings
+        except (OSError, ValueError):
+            warnings.append("srt_unavailable")
+    return [], warnings
+
+
+def _roundtrip_sidecar(data: dict) -> tuple[dict | None, list[str]]:
+    sidecar = data.get("sidecar")
+    if isinstance(sidecar, dict):
+        return sidecar, []
+    sidecar_path = str(data.get("sidecar_path", "")).strip()
+    if not sidecar_path:
+        return None, ["sidecar_missing"]
+    try:
+        sidecar_path = validate_filepath(sidecar_path)
+    except ValueError:
+        return None, ["sidecar_missing"]
+    return read_caption_sidecar(sidecar_path)
+
+
+def _roundtrip_diff_from_data(data: dict) -> dict:
+    sidecar, sidecar_warnings = _roundtrip_sidecar(data)
+    edited_segments, input_warnings = _roundtrip_edited_segments(data)
+    if not edited_segments:
+        raise ValueError("Provide edited_segments, segments, caption_track_snapshot, srt_text, or srt_path.")
+    original_segments = _clean_roundtrip_segments(data.get("original_segments"))
+    return diff_caption_roundtrip(
+        sidecar=sidecar,
+        edited_segments=edited_segments,
+        original_segments=original_segments,
+        warnings=sidecar_warnings + input_warnings,
+    )
 
 
 def _export_srt_with_policy(result, out_path: str, *, legacy_windows_bom: bool = False) -> str:
@@ -751,6 +838,65 @@ def export_edited_transcript():
         return jsonify(payload)
     except Exception as e:
         return safe_error(e, "export_edited_transcript")
+
+
+@captions_bp.route("/captions/round-trip/diff", methods=["POST"])
+@require_csrf
+def captions_round_trip_diff():
+    """Compare edited timeline captions against a sidecar or lossy original segments."""
+    data = get_json_dict()
+    try:
+        return jsonify(_roundtrip_diff_from_data(data))
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "captions_round_trip_diff")
+
+
+@captions_bp.route("/captions/round-trip/apply", methods=["POST"])
+@require_csrf
+def captions_round_trip_apply():
+    """Persist a confirmed caption round-trip diff as a new revision."""
+    data = get_json_dict()
+    try:
+        diff_payload = _roundtrip_diff_from_data(data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "captions_round_trip_apply")
+
+    plan = build_destructive_plan(
+        "caption_roundtrip_apply",
+        records=[{
+            "changed_cues": diff_payload["summary"]["changed_cues"],
+            "total_before": diff_payload["summary"]["total_before"],
+            "total_after": diff_payload["summary"]["total_after"],
+        }],
+        metadata={
+            "transcript_cache_key": diff_payload["source"].get("transcript_cache_key"),
+            "source_file_hash": diff_payload["source"].get("source_file_hash"),
+            "metadata_preserved": diff_payload["metadata_preserved"],
+        },
+        reversible=True,
+    )
+    if safe_bool(data.get("dry_run", False), default=False):
+        return jsonify({
+            "dry_run": True,
+            "confirm_token": plan["confirm_token"],
+            "plan": plan,
+            "diff": diff_payload,
+        })
+    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
+    try:
+        revision = store_caption_revision(diff_payload)
+    except Exception as exc:
+        return safe_error(exc, "captions_round_trip_apply")
+    return jsonify({
+        "applied": True,
+        "revision": revision,
+        "diff": diff_payload,
+    })
 
 
 # ---------------------------------------------------------------------------

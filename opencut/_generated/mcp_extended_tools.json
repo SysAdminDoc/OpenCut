@@ -6,12 +6,12 @@
     "DELETE": 15,
     "GET": 376,
     "PATCH": 1,
-    "POST": 1083,
+    "POST": 1085,
     "PUT": 2
   },
   "response_schema_count": 101,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1477,
+  "tool_count": 1479,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -23324,6 +23324,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_captions_qa_validate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /captions/round-trip/apply"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/round-trip/apply.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "captions",
+        "endpoint": "captions.captions_round_trip_apply",
+        "generated": true,
+        "method": "POST",
+        "path": "/captions/round-trip/apply",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_captions_round_trip_apply"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /captions/round-trip/diff"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/round-trip/diff.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "captions",
+        "endpoint": "captions.captions_round_trip_diff",
+        "generated": true,
+        "method": "POST",
+        "path": "/captions/round-trip/diff",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_captions_round_trip_diff"
     },
     {
       "annotations": {

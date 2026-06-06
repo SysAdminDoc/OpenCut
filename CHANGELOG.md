@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Caption Round-Trip Diff And Apply
+
+- Closed RA-47 with `POST /captions/round-trip/diff` and `POST /captions/round-trip/apply`.
+- Added confirmation-token guarded caption revision storage linked to the original transcript cache key and source hash.
+
 ### Changed - Caption Round-Trip Sidecars
 
 - Advanced RA-09 by closing RA-46 with versioned `.opencut-captions.json` sidecars for caption exports.
