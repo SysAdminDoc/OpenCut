@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1534-orange)
-![Tests](https://img.shields.io/badge/Tests-9400+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-9500+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
@@ -493,6 +493,12 @@ python -m pytest tests/test_core_modules.py tests/test_core_modules_batch2.py -q
 
 # Run ExtendScript mock tests
 node tests/jsx_mock.js
+
+# CEP panel checks from Windows UNC/HGFS checkouts
+cd extension/com.opencut.panel
+npm run audit:check:win -- --json
+npm run audit:esbuild:win -- --json
+npm run build:verify:win
 
 # Pre-commit hooks (auto-runs ruff lint/format on commit, pytest smoke on push)
 pre-commit install

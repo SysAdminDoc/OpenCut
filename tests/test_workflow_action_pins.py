@@ -13,6 +13,7 @@ USE_RE = re.compile(r"^\s*-?\s*uses:\s*(?P<target>\S+)(?:\s+#\s*(?P<comment>\S+)
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 EXPECTED_ACTION_PINS = {
+    "actions/attest": ("281a49d4cbb0a72c9575a50d18f6deb515a11deb", "v4"),
     "actions/checkout": ("34e114876b0b11c390a56381ad16ebd13914f8d5", "v4"),
     "actions/download-artifact": ("d3f86a106a0bac45b974a628896c90dbdf5c8093", "v4"),
     "actions/github-script": ("f28e40c7f34bde8b3046d885e986cb6290c5673b", "v7"),
