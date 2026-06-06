@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 129
+
+- Migrated the Video AI tools form shell to static locale hooks for tool, upscale, background-removal, interpolation, denoise, auto-import, and install-helper controls while preserving backend tool IDs, model IDs, backend values, background color values, interpolation multipliers, denoise method values, and AI processing payloads.
+- `client/locales/en.json` grows from 1,961 to 1,991 keys; `i18n-drift` reports 1,918 consumers, 73 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video AI tools static HTML hooks plus matching locale keys.
+
 ### Security - Lockfile advisory coverage
 
 - Added `requirements-lock.txt` to `opencut.tools.pip_audit_extras` and the release-smoke `pip-audit` step so the committed lockfile is audited alongside runtime requirements and `pyproject[all]`.
