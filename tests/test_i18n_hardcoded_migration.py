@@ -1027,6 +1027,13 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.upscale_scale_2x", "data-i18n"),
     ("video.upscale_scale_3x", "data-i18n"),
     ("video.upscale_scale_4x", "data-i18n"),
+    # One-hundred-forty-seventh batch (Video Color Correction parameter shell HTML).
+    ("video.color_exposure", "data-i18n"),
+    ("video.color_contrast", "data-i18n"),
+    ("video.color_saturation", "data-i18n"),
+    ("video.color_temperature", "data-i18n"),
+    ("video.color_shadows", "data-i18n"),
+    ("video.color_highlights", "data-i18n"),
 )
 
 

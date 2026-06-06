@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.258 / batch 146 and remains open.
-- Shipped this cycle: Video Pro Upscaling quality preset, preset choices, scale, and scale choices now expose static locale hooks while preserving preset values and scale values.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,221 keys / 2,163 consumers / 58 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Pro Upscaling hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.259 / batch 147 and remains open.
+- Shipped this cycle: Video Color Correction exposure, contrast, saturation, temperature, shadows, and highlights labels now expose static locale hooks while preserving slider ranges, defaults, and step values.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,227 keys / 2,169 consumers / 58 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Color Correction hooks and preserved slider attributes with no current-port console errors.
 
 ## Next Work
 
