@@ -1793,6 +1793,8 @@ class TestCSRFEnforcement:
         "/context/analyze",
         "/plugins/install",
         "/plugins/uninstall",
+        "/plugins/quarantine/restore",
+        "/plugins/quarantine/delete",
         "/social/upload",
         "/chat",
     ])
