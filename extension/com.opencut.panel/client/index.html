@@ -2490,48 +2490,48 @@
                         <p class="card-desc" data-i18n="video.lut_desc">Apply cinematic color grading via mathematically-generated .cube LUTs. 10 built-in looks + support for custom .cube files.</p>
 
                         <div class="form-group">
-                            <label for="lutCategory">Category</label>
+                            <label for="lutCategory" data-i18n="forms.category">Category</label>
                             <select id="lutCategory">
-                                <option value="all">All</option>
-                                <option value="cinematic">Cinematic</option>
-                                <option value="film">Film</option>
-                                <option value="bw">Black &amp; White</option>
-                                <option value="creative">Creative</option>
+                                <option value="all" data-i18n="video.lut_category_all">All</option>
+                                <option value="cinematic" data-i18n="video.lut_category_cinematic">Cinematic</option>
+                                <option value="film" data-i18n="video.lut_category_film">Film</option>
+                                <option value="bw" data-i18n="video.lut_category_black_white">Black &amp; White</option>
+                                <option value="creative" data-i18n="video.lut_category_creative">Creative</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="lutSelect">LUT</label>
+                            <label for="lutSelect" data-i18n="video.lut_label">LUT</label>
                             <select id="lutSelect">
-                                <option value="teal_orange">Teal &amp; Orange</option>
-                                <option value="vintage_warm">Vintage Warm</option>
-                                <option value="cool_desaturate">Cool Desaturated</option>
-                                <option value="high_contrast_bw">High Contrast B&amp;W</option>
-                                <option value="sepia">Sepia</option>
-                                        <option value="cyberpunk">Studio Graphite</option>
-                                <option value="bleach_bypass">Bleach Bypass</option>
-                                <option value="golden_hour">Golden Hour</option>
-                                <option value="moonlight">Moonlight</option>
-                                <option value="cross_process">Cross Process</option>
+                                <option value="teal_orange" data-i18n="video.lut_teal_orange">Teal &amp; Orange</option>
+                                <option value="vintage_warm" data-i18n="video.lut_vintage_warm">Vintage Warm</option>
+                                <option value="cool_desaturate" data-i18n="video.lut_cool_desaturate">Cool Desaturated</option>
+                                <option value="high_contrast_bw" data-i18n="video.lut_high_contrast_bw">High Contrast B&amp;W</option>
+                                <option value="sepia" data-i18n="video.lut_sepia">Sepia</option>
+                                <option value="cyberpunk" data-i18n="video.lut_studio_graphite">Studio Graphite</option>
+                                <option value="bleach_bypass" data-i18n="video.lut_bleach_bypass">Bleach Bypass</option>
+                                <option value="golden_hour" data-i18n="video.lut_golden_hour">Golden Hour</option>
+                                <option value="moonlight" data-i18n="video.lut_moonlight">Moonlight</option>
+                                <option value="cross_process" data-i18n="video.lut_cross_process">Cross Process</option>
                             </select>
                         </div>
 
                         <!-- v1.9.35 (I): visual LUT grid under the dropdown -->
-                        <div class="lut-grid" id="lutGrid" role="radiogroup" aria-label="LUT gallery">
+                        <div class="lut-grid" id="lutGrid" role="radiogroup" aria-label="LUT gallery" data-i18n-aria-label="video.lut_gallery_aria">
                             <!-- populated by renderLutGrid() -->
                         </div>
 
                         <div class="form-group">
-                            <label for="lutIntensity">Intensity</label>
+                            <label for="lutIntensity" data-i18n="forms.intensity">Intensity</label>
                             <div class="slider-row">
-                                <input type="range" id="lutIntensity" min="0.1" max="1.0" value="1.0" step="0.05" title="Blend between original and LUT-graded look">
+                                <input type="range" id="lutIntensity" min="0.1" max="1.0" value="1.0" step="0.05" title="Blend between original and LUT-graded look" data-i18n-title="video.lut_intensity_title">
                                 <span class="slider-val" id="lutIntensityVal">1.0</span>
                             </div>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="lutAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runLutBtn" disabled data-i18n="video.apply_lut">Apply LUT</button>
@@ -2539,18 +2539,18 @@
                         <div class="border-t">
                             <div class="card-header"><div class="card-title" data-i18n="video.lut_ref">Generate LUT from Reference</div></div>
                             <div class="form-group">
-                                <label for="lutRefPath">Reference Image</label>
+                                <label for="lutRefPath" data-i18n="video.reference_image">Reference Image</label>
                                 <div class="path-input-row">
-                                    <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image…" autocomplete="off" spellcheck="false">
-                                    <button type="button" class="btn-sm btn-browse" data-target="lutRefPath">Browse</button>
+                                    <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image..." autocomplete="off" spellcheck="false" data-i18n-placeholder="video.reference_image_placeholder">
+                                    <button type="button" class="btn-sm btn-browse" data-target="lutRefPath" data-i18n="common.browse">Browse</button>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="lutRefName">LUT Name</label>
-                                <input type="text" id="lutRefName" class="text-input" placeholder="my_color_grade" value="">
+                                <label for="lutRefName" data-i18n="video.lut_name">LUT Name</label>
+                                <input type="text" id="lutRefName" class="text-input" placeholder="my_color_grade" value="" data-i18n-placeholder="video.lut_name_placeholder">
                             </div>
                             <div class="form-group">
-                                <label for="lutRefStrength">Strength</label>
+                                <label for="lutRefStrength" data-i18n="forms.strength">Strength</label>
                                 <div class="slider-row">
                                     <input type="range" id="lutRefStrength" min="0.1" max="1.0" value="0.8" step="0.05">
                                     <span class="slider-val" id="lutRefStrengthVal">0.8</span>

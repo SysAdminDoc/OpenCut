@@ -6,9 +6,9 @@ Last updated: 2026-06-05
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: E15 rolling i18n migration advanced to v4.250 / batch 138 and remains open.
-- Shipped this cycle: Video Speed and Ramp mode choices, speed multiplier, maintain-pitch copy, ramp preset choices, and auto-import copy now expose static locale hooks while preserving mode values, ramp values, slider constraints, and checkbox state.
-- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,088 keys / 2,026 consumers / 62 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video Speed and Ramp hooks and preserved values with no current-port console errors.
+- Cycle result: E15 rolling i18n migration advanced to v4.251 / batch 139 and remains open.
+- Shipped this cycle: Video LUT Library category filters, LUT preset choices, gallery ARIA copy, intensity title copy, auto-import copy, reference-image inputs, Browse, LUT name, and strength now expose static locale hooks while preserving option values, slider constraints, placeholders, and checkbox state.
+- Verification: focused i18n/drift tests passed, JSON parsing passed, focused Ruff passed, `scripts/i18n_lint.py --json` reported 2,110 keys / 2,048 consumers / 62 dead / 0 missing, `git diff --check` passed, and a local Browser preview loaded the migrated Video LUT Library hooks and preserved values with no current-port console errors.
 
 ## Next Work
 
