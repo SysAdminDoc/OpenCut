@@ -781,6 +781,24 @@ HTML_STATIC_SHELL_CALLS = (
     ("video.depth_not_installed", "data-i18n"),
     ("common.install_now", "data-i18n"),
     ("common.requires", "data-i18n"),
+    # One-hundred-thirty-fourth batch (Video AI B-Roll parameter shell HTML).
+    ("forms.description", "data-i18n"),
+    ("video.broll_prompt_placeholder", "data-i18n-placeholder"),
+    ("video.broll_description_aria", "data-i18n-aria-label"),
+    ("forms.backend", "data-i18n"),
+    ("video.broll_backend_aria", "data-i18n-aria-label"),
+    ("video.broll_backend_auto", "data-i18n"),
+    ("video.broll_backend_cogvideox", "data-i18n"),
+    ("video.broll_backend_wan", "data-i18n"),
+    ("video.broll_backend_hunyuan", "data-i18n"),
+    ("video.broll_backend_svd", "data-i18n"),
+    ("video.broll_seed_optional", "data-i18n"),
+    ("common.random", "data-i18n-placeholder"),
+    ("video.broll_random_seed_aria", "data-i18n-aria-label"),
+    ("video.broll_analyze", "data-i18n"),
+    ("video.broll_dependencies_not_installed", "data-i18n"),
+    ("common.install_now", "data-i18n"),
+    ("common.requires", "data-i18n"),
 )
 
 
