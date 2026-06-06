@@ -1068,6 +1068,16 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.model_base", "data-i18n"),
     ("captions.model_small_accurate", "data-i18n"),
     ("captions.model_medium_best", "data-i18n"),
+    # One-hundred-fifty-first batch (Export Platform Presets parameter shell HTML).
+    ("export.platform_presets_title", "data-i18n"),
+    ("forms.category", "data-i18n"),
+    ("export.category_youtube", "data-i18n"),
+    ("export.category_social", "data-i18n"),
+    ("export.category_audio", "data-i18n"),
+    ("export.category_archive", "data-i18n"),
+    ("export.category_web", "data-i18n"),
+    ("forms.preset", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
 )
 
 
