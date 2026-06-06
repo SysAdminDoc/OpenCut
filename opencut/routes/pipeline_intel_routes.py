@@ -77,6 +77,21 @@ def pipeline_health_record():
     return jsonify(metric.to_dict())
 
 
+@pipeline_intel_bp.route("/api/pipeline/health/reset", methods=["POST"])
+@require_csrf
+def pipeline_health_reset():
+    """Clear pipeline health metrics with optional dry-run/backup metadata."""
+    from opencut.core.pipeline_health import reset_health_db
+
+    data = request.get_json(silent=True) or {}
+    dry_run = safe_bool(data.get("dry_run"), False)
+    backup = safe_bool(data.get("backup"), False)
+    result = reset_health_db(dry_run=dry_run, backup=backup)
+    if isinstance(result, dict):
+        return jsonify(result)
+    return jsonify({"ok": True})
+
+
 # =========================================================================
 # Scheduled Jobs
 # =========================================================================

@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-06T18:59:04Z",
-  "total_routes": 1527,
+  "generated_at": "2026-06-06T19:11:08Z",
+  "total_routes": 1529,
   "blueprint_count": 107,
   "method_counts": {
-    "DELETE": 15,
+    "DELETE": 16,
     "GET": 385,
     "PATCH": 1,
-    "POST": 1128,
+    "POST": 1129,
     "PUT": 2
   },
   "blueprints": {
@@ -632,11 +632,11 @@
       ]
     },
     "pipeline_intel": {
-      "route_count": 22,
+      "route_count": 23,
       "method_counts": {
         "DELETE": 1,
         "GET": 13,
-        "POST": 7,
+        "POST": 8,
         "PUT": 1
       },
       "sample_rules": [
@@ -787,9 +787,9 @@
       ]
     },
     "search": {
-      "route_count": 8,
+      "route_count": 9,
       "method_counts": {
-        "DELETE": 1,
+        "DELETE": 2,
         "GET": 2,
         "POST": 5
       },
@@ -3013,6 +3013,14 @@
         "POST"
       ],
       "endpoint": "pipeline_intel.pipeline_health_record",
+      "blueprint": "pipeline_intel"
+    },
+    {
+      "rule": "/api/pipeline/health/reset",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.pipeline_health_reset",
       "blueprint": "pipeline_intel"
     },
     {
@@ -9425,6 +9433,14 @@
         "GET"
       ],
       "endpoint": "search.search_db_diagnostics",
+      "blueprint": "search"
+    },
+    {
+      "rule": "/search/db-index",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "search.search_clear_db_index",
       "blueprint": "search"
     },
     {

@@ -26,6 +26,9 @@
 **Pass 272 update (no standalone research file):**
 - Closed RA-39/RA-08 by adding `opencut local-db-diagnostics`, feature-area diagnostics routes, and a shared local SQLite diagnostic helper that reports page count, page size, freelist count/ratio, estimated free bytes, user version, DB/WAL/SHM file sizes, WAL checkpoint status, and a recommended maintenance action for the job, journal, footage-index, and pipeline-health stores.
 
+**Pass 273 update (no standalone research file):**
+- Closed RA-40/RA-06 by adding a shared local SQLite maintenance helper for destructive operations, returning dry-run affected-row counts, creating optional compact `VACUUM INTO` backups, and writing JSONL audit metadata for old-job cleanup, journal deletes/clears, footage-index clears, and pipeline-health purge/reset paths.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -42,11 +45,11 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 
 | Surface | Count | Source of truth |
 |---|---|---|
-| API routes | **1,527** | `opencut/_generated/route_manifest.json` (F099) |
+| API routes | **1,529** | `opencut/_generated/route_manifest.json` (F099) |
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **599** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **225 test_*.py files** + **2 Vitest panel test files** (9,000+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **226 test_*.py files** + **2 Vitest panel test files** (9,000+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **235** total; **17** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
@@ -309,7 +312,7 @@ Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's re
 
 These deserve explicit attention because they are not currently owned by any single document:
 
-1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,527 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
+1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,529 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
 2. **UXP MCP transport (F146)** — every competing PPro MCP server today is CEP-bound and will break Sept 2026. The first UXP-MCP wins post-EOL.
 3. **Real-time editor-loop preview (F158)** — StreamDiffusionV2 + Diffusion Templates (Apr 2026, MIT) unlock real-time on existing LTX-2.3 / Wan backends. CapCut / Runway / Captions charge for this.
 4. **Caption translation standalone (F139)** — every commercial editor ships it; OpenCut has full dubbing but no SRT-in-SRT-out path.

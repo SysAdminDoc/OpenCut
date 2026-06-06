@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the RA-39 local SQLite diagnostics pass.
+Last synced: 2026-06-06 during the RA-40 local SQLite wipe-safeguard pass.
 
 ## Execution Order
 
@@ -35,7 +35,7 @@ Last synced: 2026-06-06 during the RA-39 local SQLite diagnostics pass.
 - [ ] **RA-36 CEP panel UNC/HGFS-safe Node commands** - make documented panel Node command entry points work from Windows shared-folder paths or route through a validated wrapper.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [x] **RA-05/RA-37 SQLite `PRAGMA user_version`** - local SQLite stores now use explicit schema versions, ordered idempotent migrations, and newer-schema rejection.
-- [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
+- [x] **RA-06/RA-40 destructive wipe backup/confirm** - local SQLite destructive maintenance paths now support dry-run metadata, optional `VACUUM INTO` backups, and JSONL audit records.
 - [x] **RA-07/RA-38 job and journal JSON payload caps** - oversized job results and journal inverse/forward payloads now spill to content-addressed local files with structured metadata.
 - [x] **RA-08/RA-39 DB compaction diagnostic** - CLI and feature-area routes now report page, freelist, WAL, file-size, and recommended-action posture for local SQLite stores.
 - [ ] **RA-03 direct typed error logging** - ensure direct typed error paths log with structured context.

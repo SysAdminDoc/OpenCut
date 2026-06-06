@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.local_db_diagnostics import build_sqlite_diagnostic
+from opencut.local_db_maintenance import count_rows, prepare_destructive_result
 from opencut.local_db_migrations import migrate_user_version
 
 logger = logging.getLogger("opencut")
@@ -555,24 +556,59 @@ def get_error_summary(
 # ---------------------------------------------------------------------------
 # Maintenance
 # ---------------------------------------------------------------------------
-def purge_old_metrics(days: int = 90) -> int:
+def purge_old_metrics(days: int = 90, *, dry_run: bool = False,
+                      backup: bool = False, backup_dir: str | None = None) -> int | dict:
     """Delete metrics older than *days*. Returns count of deleted rows."""
     _init_db()
     conn = _get_conn()
     cutoff = time.time() - (days * 86400)
+    affected = count_rows(conn, "health_metrics", "timestamp < ?", (cutoff,))
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="pipeline_health",
+            operation="purge_old_metrics",
+            affected_rows=affected,
+            dry_run=dry_run,
+            backup=backup,
+            backup_dir=backup_dir,
+        )
+        result["days"] = days
+        if dry_run:
+            return result
     cursor = conn.execute("DELETE FROM health_metrics WHERE timestamp < ?", (cutoff,))
     conn.commit()
     deleted = cursor.rowcount
     logger.info("Purged %d health metrics older than %d days", deleted, days)
+    if backup:
+        result["affected_rows"] = deleted
+        return result
     return deleted
 
 
-def reset_health_db() -> None:
+def reset_health_db(*, dry_run: bool = False, backup: bool = False,
+                    backup_dir: str | None = None) -> dict | None:
     """Drop all metrics. Used for testing."""
     _init_db()
     conn = _get_conn()
+    affected = count_rows(conn, "health_metrics")
+    if dry_run or backup:
+        result = prepare_destructive_result(
+            _DB_PATH,
+            store_name="pipeline_health",
+            operation="reset_health_db",
+            affected_rows=affected,
+            dry_run=dry_run,
+            backup=backup,
+            backup_dir=backup_dir,
+        )
+        if dry_run:
+            return result
     conn.execute("DELETE FROM health_metrics")
     conn.commit()
+    if backup:
+        result["affected_rows"] = affected
+        return result
 
 
 def get_db_diagnostics() -> dict:
