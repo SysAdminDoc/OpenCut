@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Model Cache Clear Preview
+
+- Closed RA-44 by adding dry-run/preview plans for Whisper cache clear and model cache deletion.
+- `/whisper/clear-cache` and `/models/delete` now return exact planned paths, byte counts, categories, and per-path errors before or during deletion.
+- Replaced silent `ignore_errors=True` cache removal with explicit per-target deletion results and regression coverage.
+
 ### Changed - Plugin Uninstall Quarantine
 
 - Closed RA-43 by moving plugin uninstall through a timestamped quarantine directory instead of immediate deletion.
