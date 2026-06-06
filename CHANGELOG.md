@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 147
+
+- Migrated the Video Color Correction form shell to static locale hooks for exposure, contrast, saturation, temperature, shadows, and highlights while preserving slider ranges, defaults, and step values.
+- `client/locales/en.json` grows from 2,221 to 2,227 keys; `i18n-drift` reports 2,169 consumers, 58 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Color Correction static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 146
 
 - Migrated the Video Pro Upscaling form shell to static locale hooks for quality preset, preset choices, scale, and scale choices while preserving preset values and scale values.
