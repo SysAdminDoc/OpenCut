@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-06T19:48:34Z",
-  "total_routes": 1534,
+  "generated_at": "2026-06-06T23:11:49Z",
+  "total_routes": 1536,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
     "GET": 387,
     "PATCH": 1,
-    "POST": 1132,
+    "POST": 1134,
     "PUT": 2
   },
   "blueprints": {
@@ -172,11 +172,11 @@
       ]
     },
     "captions": {
-      "route_count": 29,
+      "route_count": 31,
       "method_counts": {
         "DELETE": 2,
         "GET": 8,
-        "POST": 19
+        "POST": 21
       },
       "sample_rules": [
         "/caption-styles",
@@ -5739,6 +5739,22 @@
       "workflow": {
         "label": "Detecting repeats"
       }
+    },
+    {
+      "rule": "/captions/round-trip/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_round_trip_apply",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/round-trip/diff",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_round_trip_diff",
+      "blueprint": "captions"
     },
     {
       "rule": "/captions/style/apply",

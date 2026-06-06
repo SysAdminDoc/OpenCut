@@ -258,6 +258,145 @@ def test_timeline_srt_to_captions_rejects_cueless_sidecar_metadata(client, csrf_
     assert payload["segments"] == [{"start": 1.0, "end": 2.0, "text": "Edited text"}]
 
 
+def test_caption_roundtrip_diff_endpoint_reports_sidecar_changes(client, csrf_token, tmp_path):
+    from opencut.core.caption_roundtrip import write_caption_sidecar
+    from opencut.core.captions import CaptionSegment, TranscriptionResult
+
+    source = tmp_path / "clip.wav"
+    source.write_bytes(b"RIFF")
+    export_path = tmp_path / "clip.srt"
+    result = TranscriptionResult(
+        segments=[CaptionSegment(text="Original text", start=1.0, end=2.0, speaker="A")],
+        language="en",
+        duration=2.0,
+        cache_key="c" * 64,
+    )
+    sidecar_path = write_caption_sidecar(result, str(export_path), export_format="srt", source_path=str(source))
+
+    response = client.post(
+        "/captions/round-trip/diff",
+        json={
+            "sidecar_path": sidecar_path,
+            "edited_segments": [{"start": 1.25, "end": 2.25, "text": "Edited text"}],
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["metadata_preserved"] is True
+    assert payload["confidence_label"] == "high"
+    assert payload["counts"]["text_changed"] == 1
+    assert payload["counts"]["timing_changed"] == 1
+    assert payload["summary"]["changed"] is True
+    assert payload["changes"][0]["before"]["text"] == "Original text"
+    assert payload["changes"][0]["after"]["text"] == "Edited text"
+    assert payload["source"]["transcript_cache_key"] == "c" * 64
+
+
+def test_caption_roundtrip_diff_endpoint_supports_lossy_no_sidecar(client, csrf_token):
+    response = client.post(
+        "/captions/round-trip/diff",
+        json={
+            "original_segments": [{"start": 0.0, "end": 1.0, "text": "Original"}],
+            "edited_segments": [{"start": 0.0, "end": 1.0, "text": "Edited"}],
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["metadata_preserved"] is False
+    assert payload["confidence_label"] == "low"
+    assert set(payload["warnings"]) == {"metadata_unavailable", "sidecar_missing"}
+    assert payload["counts"]["text_changed"] == 1
+
+
+def test_caption_roundtrip_diff_endpoint_accepts_srt_text(client, csrf_token, tmp_path):
+    from opencut.core.caption_roundtrip import write_caption_sidecar
+    from opencut.core.captions import CaptionSegment, TranscriptionResult
+
+    source = tmp_path / "clip.wav"
+    source.write_bytes(b"RIFF")
+    export_path = tmp_path / "clip.srt"
+    result = TranscriptionResult(
+        segments=[CaptionSegment(text="Original text", start=1.0, end=2.0, speaker="A")],
+        language="en",
+        duration=2.0,
+        cache_key="e" * 64,
+    )
+    sidecar_path = write_caption_sidecar(result, str(export_path), export_format="srt", source_path=str(source))
+
+    response = client.post(
+        "/captions/round-trip/diff",
+        json={
+            "sidecar_path": sidecar_path,
+            "srt_text": "1\n00:00:01,000 --> 00:00:02,000\nOriginal text\n",
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["metadata_preserved"] is True
+    assert payload["summary"]["changed"] is False
+    assert payload["counts"]["unchanged"] == 1
+
+
+def test_caption_roundtrip_apply_requires_confirmation_and_stores_revision(client, csrf_token, tmp_path, monkeypatch):
+    from opencut.core.caption_roundtrip import write_caption_sidecar
+    from opencut.core.captions import CaptionSegment, TranscriptionResult
+
+    monkeypatch.setenv("OPENCUT_CAPTION_REVISION_DIR", str(tmp_path / "revisions"))
+    source = tmp_path / "clip.wav"
+    source.write_bytes(b"RIFF")
+    export_path = tmp_path / "clip.srt"
+    result = TranscriptionResult(
+        segments=[CaptionSegment(text="Original", start=0.0, end=1.0, speaker="A")],
+        language="en",
+        duration=1.0,
+        cache_key="d" * 64,
+    )
+    sidecar_path = write_caption_sidecar(result, str(export_path), export_format="srt", source_path=str(source))
+    request_json = {
+        "sidecar_path": sidecar_path,
+        "edited_segments": [{"start": 0.0, "end": 1.0, "text": "Original"}],
+    }
+
+    missing = client.post(
+        "/captions/round-trip/apply",
+        json=request_json,
+        headers=csrf_headers(csrf_token),
+    )
+    assert missing.status_code == 409
+    preview = client.post(
+        "/captions/round-trip/apply",
+        json={**request_json, "dry_run": True},
+        headers=csrf_headers(csrf_token),
+    )
+    assert preview.status_code == 200
+    token = preview.get_json()["confirm_token"]
+
+    applied = client.post(
+        "/captions/round-trip/apply",
+        json={**request_json, "confirm_token": token},
+        headers=csrf_headers(csrf_token),
+    )
+    assert applied.status_code == 200
+    payload = applied.get_json()
+    revision = payload["revision"]
+    assert revision["transcript_cache_key"] == "d" * 64
+    assert Path(revision["revision_path"]).exists()
+
+    applied_again = client.post(
+        "/captions/round-trip/apply",
+        json={**request_json, "confirm_token": token},
+        headers=csrf_headers(csrf_token),
+    )
+    assert applied_again.status_code == 200
+    assert applied_again.get_json()["revision"]["revision_id"] == revision["revision_id"]
+
+
 def test_remap_preserves_review_metadata():
     from opencut.core.captions import CaptionSegment, TranscriptionResult, remap_captions_to_segments
 
