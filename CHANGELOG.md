@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 141
+
+- Migrated the Video Transition form shell to static locale hooks for second-clip path, Browse, transition label/options, and duration while preserving the clip path placeholder, all transition option values, and duration slider constraints.
+- `client/locales/en.json` grows from 2,140 to 2,159 keys; `i18n-drift` reports 2,097 consumers, 62 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Transition static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 140
 
 - Migrated the Video Chroma/Composite form shell to static locale hooks for composite modes, key colors, background/PiP/overlay paths, Browse buttons, tolerance, PiP position/scale, blend mode choices, and opacity while preserving option values, path placeholders, and slider constraints.
