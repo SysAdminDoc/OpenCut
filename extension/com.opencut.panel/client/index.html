@@ -2840,11 +2840,11 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.face_ai">Face AI</div></div>
                         <p class="card-desc" data-i18n="video.face_ai_desc">Enhance facial detail in low-quality footage, or swap faces between subjects. GPU recommended.</p>
-                        <div class="form-group"><label for="faceAiMode">Mode</label>
-                            <select id="faceAiMode"><option value="enhance">Enhance Facial Detail</option><option value="swap">Swap Faces</option></select></div>
+                        <div class="form-group"><label for="faceAiMode" data-i18n="forms.mode">Mode</label>
+                            <select id="faceAiMode"><option value="enhance" data-i18n="video.face_mode_enhance">Enhance Facial Detail</option><option value="swap" data-i18n="video.face_mode_swap">Swap Faces</option></select></div>
                         <div id="faceSwapParams" class="hidden">
-                            <div class="form-group"><label for="faceRefPath">Reference Face Image</label>
-                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="faceRefPath">Browse</button></div></div>
+                            <div class="form-group"><label for="faceRefPath" data-i18n="video.reference_face_image">Reference Face Image</label>
+                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg" data-i18n-placeholder="video.reference_face_image_placeholder" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="faceRefPath" data-i18n="common.browse">Browse</button></div></div>
                         </div>
                         <button type="button" class="btn-primary" id="runFaceAiBtn" disabled data-i18n="video.enhance_faces">Enhance Faces</button>
                     </section>

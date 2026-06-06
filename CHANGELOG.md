@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 149
+
+- Migrated the Video Face AI form shell to static locale hooks for mode, Enhance/Swap choices, reference-face label, reference-face placeholder, and Browse while preserving mode values and browse target wiring.
+- `client/locales/en.json` grows from 2,239 to 2,243 keys; `i18n-drift` reports 2,185 consumers, 58 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Video Face AI static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 148
 
 - Migrated the Video Object and Watermark Removal form shell to static locale hooks for method, method choices, region label, coordinate labels, coordinate ARIA labels, and region hint while preserving method values and numeric defaults.
