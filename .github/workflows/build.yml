@@ -32,6 +32,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Node
+        if: runner.os == 'Linux'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install ffmpeg (macOS)
         if: runner.os == 'macOS'
         run: brew install ffmpeg
