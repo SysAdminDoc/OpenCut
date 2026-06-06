@@ -2266,29 +2266,29 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="video.broll_desc">Generate B-roll video clips from text descriptions using AI text-to-video models.</p>
                         <div class="form-group">
-                            <label for="brollGenPrompt">Description</label>
-                            <textarea class="text-area" id="brollGenPrompt" rows="3" placeholder="e.g. aerial shot of cityscape at sunset, slow motion water droplets, abstract data visualization" aria-label="B-roll description"></textarea>
+                            <label for="brollGenPrompt" data-i18n="forms.description">Description</label>
+                            <textarea class="text-area" id="brollGenPrompt" rows="3" placeholder="e.g. aerial shot of cityscape at sunset, slow motion water droplets, abstract data visualization" aria-label="B-roll description" data-i18n-placeholder="video.broll_prompt_placeholder" data-i18n-aria-label="video.broll_description_aria"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="brollGenBackend">Backend</label>
-                            <select id="brollGenBackend" aria-label="Text-to-video backend">
-                                <option value="auto" selected>Auto (best available)</option>
-                                <option value="cogvideox">CogVideoX</option>
-                                <option value="wan">Wan 2.2</option>
-                                <option value="hunyuan">HunyuanVideo</option>
-                                <option value="svd">Stable Video Diffusion</option>
+                            <label for="brollGenBackend" data-i18n="forms.backend">Backend</label>
+                            <select id="brollGenBackend" aria-label="Text-to-video backend" data-i18n-aria-label="video.broll_backend_aria">
+                                <option value="auto" selected data-i18n="video.broll_backend_auto">Auto (best available)</option>
+                                <option value="cogvideox" data-i18n="video.broll_backend_cogvideox">CogVideoX</option>
+                                <option value="wan" data-i18n="video.broll_backend_wan">Wan 2.2</option>
+                                <option value="hunyuan" data-i18n="video.broll_backend_hunyuan">HunyuanVideo</option>
+                                <option value="svd" data-i18n="video.broll_backend_svd">Stable Video Diffusion</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="brollGenSeed">Seed (optional)</label>
-                            <input type="number" class="text-input" id="brollGenSeed" placeholder="Random" min="0" step="1" aria-label="Random seed">
+                            <label for="brollGenSeed" data-i18n="video.broll_seed_optional">Seed (optional)</label>
+                            <input type="number" class="text-input" id="brollGenSeed" placeholder="Random" min="0" step="1" aria-label="Random seed" data-i18n-placeholder="common.random" data-i18n-aria-label="video.broll_random_seed_aria">
                         </div>
-                        <button type="button" class="btn-primary" id="runBrollPlanBtn" disabled>Analyze for B-Roll</button>
+                        <button type="button" class="btn-primary" id="runBrollPlanBtn" disabled data-i18n="video.broll_analyze">Analyze for B-Roll</button>
                         <button type="button" class="btn-primary" id="runBrollGenBtn" disabled data-i18n="video.broll_generate">Generate B-Roll</button>
                         <div class="hint hidden" id="brollGenHint">
-                            <span class="hint-copy">AI B-roll generation dependencies are not installed.</span>
-                            <button type="button" class="btn-install" id="installBrollGenBtn">Install Now</button>
-                            <div class="install-alt">Requires: <code>pip install torch torchvision diffusers transformers accelerate</code></div>
+                            <span class="hint-copy" data-i18n="video.broll_dependencies_not_installed">AI B-roll generation dependencies are not installed.</span>
+                            <button type="button" class="btn-install" id="installBrollGenBtn" data-i18n="common.install_now">Install Now</button>
+                            <div class="install-alt"><span data-i18n="common.requires">Requires:</span> <code>pip install torch torchvision diffusers transformers accelerate</code></div>
                         </div>
                     </section>
                 </div>
