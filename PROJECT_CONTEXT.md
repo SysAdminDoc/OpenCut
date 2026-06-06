@@ -50,6 +50,9 @@
 **Pass 280 update (no standalone research file):**
 - Advanced RA-41 by requiring shared dry-run confirmation tokens for plugin uninstall/quarantine permanent delete and tombstone-backed preset/workflow deletes. The original RA-41 named route list now has the shared contract, while the next pass should audit adjacent clear/cleanup routes outside that list.
 
+**Pass 281 update (no standalone research file):**
+- Advanced RA-41 adjacent-route hardening by adding confirmation-token dry-run plans for assistant dismissal clears, chat session clears, undo-history clears, and footage-index missing-file cleanup. Journal clear already uses the local DB dry-run/backup contract; worker-pool cleanup remains the next process-lifecycle route to audit.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.

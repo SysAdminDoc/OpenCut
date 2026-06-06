@@ -167,9 +167,26 @@ def test_assistant_dismiss_clear_creates_restorable_tombstone(client, csrf_token
     user_data = _isolate_user_data(monkeypatch, tmp_path)
     user_data.save_assistant_dismissed("sequence-a", ["silence-dead-air", "generate-chapters"])
 
-    response = client.post(
+    rejected = client.post(
         "/assistant/dismiss-clear",
         json={"sequence_key": "sequence-a"},
+        headers=_headers(csrf_token),
+    )
+    assert rejected.status_code == 409
+    assert user_data.load_assistant_dismissed("sequence-a") == ["silence-dead-air", "generate-chapters"]
+
+    preview = client.post(
+        "/assistant/dismiss-clear",
+        json={"sequence_key": "sequence-a", "dry_run": True},
+        headers=_headers(csrf_token),
+    )
+    preview_data = preview.get_json()
+    assert preview.status_code == 200
+    assert preview_data["would_clear"] == 2
+
+    response = client.post(
+        "/assistant/dismiss-clear",
+        json={"sequence_key": "sequence-a", "confirm_token": preview_data["confirm_token"]},
         headers=_headers(csrf_token),
     )
 

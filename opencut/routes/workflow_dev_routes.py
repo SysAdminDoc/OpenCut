@@ -9,12 +9,22 @@ Blueprint: workflow_dev_bp
 15 routes covering all 8 features.
 """
 
+import json
 import logging
 
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, validate_path
+from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    validate_path,
+    verify_destructive_confirm_token,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -151,7 +161,7 @@ def undo_clear():
 
         {"session_id": "default"}
     """
-    from opencut.core.undo_stack import clear_history
+    from opencut.core.undo_stack import clear_history, get_history
 
     data, error = _json_object_or_400()
     if error:
@@ -162,8 +172,38 @@ def undo_clear():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    history = get_history(session_id=session_id)
+    record = {
+        "id": session_id,
+        "kind": "undo-history",
+        "key": session_id,
+        "category": "undo-history",
+        "type": "session",
+        "count": len(history),
+        "bytes": len(json.dumps(history, sort_keys=True, default=str).encode("utf-8")),
+        "reversible": False,
+    }
+    plan = build_destructive_plan(
+        "undo_history.clear",
+        records=[record],
+        metadata={"route": "/api/undo/clear", "session_id": session_id, "record_count": len(history)},
+        reversible=False,
+    )
+    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+    if dry_run:
+        return jsonify({
+            "success": True,
+            "dry_run": True,
+            "cleared": 0,
+            "would_clear": len(history),
+            "destructive_plan": plan,
+            "confirm_token": plan["confirm_token"],
+        })
+    if history and not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+        return jsonify(destructive_confirmation_required_response(plan)), 409
+
     count = clear_history(session_id=session_id)
-    return jsonify({"success": True, "cleared": count})
+    return jsonify({"success": True, "cleared": count, "destructive_plan": plan})
 
 
 # ===========================================================================
