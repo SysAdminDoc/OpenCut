@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: RA-23 closed; E15 rolling i18n migration, RA-36 shared-folder Node command hardening, release provenance attestation, and remaining UXP permission-split work remain open.
 - Shipped this cycle: Non-local workflow actions are pinned to full-length SHAs with adjacent version comments, and pytest-fast rejects mutable or unreviewed action refs.
-- Verification: focused workflow action/panel/permission tests passed (10 tests), focused Ruff passed, mutable action-ref scan found no `@v*` workflow/test/script refs, package Ruff release-smoke passed, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (772 tests), badge/doc checks passed, roadmap source lint passed with existing appendix warnings, and `rtk git diff --check` passed.
+- Verification: upstream action tag refs matched the pinned SHAs via `git ls-remote`, workflow YAML parsing passed, focused dependency/workflow tests passed (32 tests), focused Ruff passed for touched tests and `scripts/release_smoke.py`, metadata/workflow scans found no untested Python 3.13 classifier or mutable action refs, generated route/API-alias/feature-readiness/MCP manifests passed `--check`, badge/doc checks passed, roadmap source lint passed with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (772 tests), and `rtk git diff --check` passed.
 
 ## Next Work
 
