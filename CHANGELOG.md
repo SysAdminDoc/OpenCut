@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Docker Dependency Surface
+
+- Closed RA-25/RA-29 by moving Docker dependency installation to the committed `requirements.txt` surface and removing masked optional pip failures.
+- Closed RA-30 by mirroring secret/log ignore patterns into `.dockerignore`, excluding local runtime/cache DB artifacts, and adding Docker distribution tests for dependency and build-context hygiene.
+
 ### Changed - UXP Confirmation Guard
 
 - Closed RA-20 by replacing the raw UXP `window.confirm` search-index clear prompt with an inline second-click confirmation.

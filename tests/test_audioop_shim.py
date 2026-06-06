@@ -146,7 +146,4 @@ def test_no_pydub_imports_in_opencut_tree():
             continue
         if re.search(r"^\s*(?:from|import)\s+pydub\b", text, re.M):
             offenders.append(str(py.relative_to(REPO_ROOT)))
-    assert not offenders, (
-        f"F123 forbids new pydub imports. Found in:\n  - "
-        + "\n  - ".join(offenders)
-    )
+    assert not offenders, "F123 forbids new pydub imports. Found in:\n  - " + "\n  - ".join(offenders)

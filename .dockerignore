@@ -16,6 +16,23 @@ img/
 node_modules
 .venv
 venv
+
+# Local secrets, credentials, logs, and runtime state
+.env
+.env.*
+*.key
+*.pem
+credentials*.json
+*.log
+.coverage
+htmlcov/
+.opencut/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+
 *.spec
 .pre-commit-config.yaml
 .editorconfig
