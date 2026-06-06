@@ -2070,41 +2070,41 @@
                         <p class="card-desc" data-i18n="video.face_blur_desc">Automatically detect and blur all faces in your video for privacy. Choose between blur, pixelate, or black box.</p>
 
                         <div class="form-group">
-                            <label for="faceBlurMethod">Blur Method</label>
+                            <label for="faceBlurMethod" data-i18n="forms.blur_method">Blur Method</label>
                             <select id="faceBlurMethod">
-                                <option value="gaussian">Gaussian Blur</option>
-                                <option value="pixelate">Pixelate (Mosaic)</option>
-                                <option value="black">Black Box</option>
+                                <option value="gaussian" data-i18n="video.face_blur_method_gaussian">Gaussian Blur</option>
+                                <option value="pixelate" data-i18n="video.face_blur_method_pixelate">Pixelate (Mosaic)</option>
+                                <option value="black" data-i18n="video.face_blur_method_black_box">Black Box</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="faceBlurStrength">Blur Strength</label>
+                            <label for="faceBlurStrength" data-i18n="forms.blur_strength">Blur Strength</label>
                             <div class="slider-row">
                                 <input type="range" id="faceBlurStrength" min="11" max="101" value="51" step="10">
                                 <span class="slider-val" id="faceBlurStrengthVal">51</span>
                             </div>
-                            <span class="hint-inline">Higher = more heavily obscured faces</span>
+                            <span class="hint-inline" data-i18n="video.face_blur_strength_hint">Higher = more heavily obscured faces</span>
                         </div>
 
                         <div class="form-group">
-                            <label for="faceDetector">Detector</label>
+                            <label for="faceDetector" data-i18n="forms.detector">Detector</label>
                             <select id="faceDetector">
-                                <option value="mediapipe">High Quality (requires install)</option>
-                                <option value="haar">Basic (built-in, no install)</option>
+                                <option value="mediapipe" data-i18n="video.face_detector_mediapipe">High Quality (requires install)</option>
+                                <option value="haar" data-i18n="video.face_detector_haar">Basic (built-in, no install)</option>
                             </select>
                         </div>
 
                         <label class="checkbox-row">
                             <input type="checkbox" id="faceBlurAutoImport" checked>
-                            Auto-import result to project
+                            <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
                         <button type="button" class="btn-primary" id="runFaceBlurBtn" disabled data-i18n="video.blur_faces">Blur Faces</button>
 
                         <div class="hint hidden" id="faceHint">
-                            MediaPipe not installed. Using OpenCV Haar fallback.
-                            <button type="button" class="btn-install" id="installMediapipeBtn">Install MediaPipe</button>
+                            <span data-i18n="video.mediapipe_not_installed">MediaPipe not installed. Using OpenCV Haar fallback.</span>
+                            <button type="button" class="btn-install" id="installMediapipeBtn" data-i18n="video.install_mediapipe">Install MediaPipe</button>
                         </div>
                     </section>
                 </div>
