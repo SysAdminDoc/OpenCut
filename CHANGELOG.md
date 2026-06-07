@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Security - CLIP Cache Deserialization
+
+- Hardened semantic video search caching by replacing raw pickle CLIP embedding caches with compressed `.npz` files that store JSON metadata and load arrays with `allow_pickle=False`.
+
 ### Security - Open Path Allowlist
 
 - Hardened `/system/open-path` direct-open mode by replacing executable-extension blocklisting with an explicit safe media/document allowlist while preserving reveal mode for validated paths.

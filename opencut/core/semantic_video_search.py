@@ -16,9 +16,9 @@ Functions:
 """
 
 import hashlib
+import json
 import logging
 import os
-import pickle
 import tempfile
 import time
 from dataclasses import asdict, dataclass, field
@@ -98,7 +98,7 @@ class ClipIndexEntry:
     duration: float = 0.0
     frame_timestamps: List[float] = field(default_factory=list)
     frame_paths: List[str] = field(default_factory=list)
-    # Embeddings stored separately as numpy arrays in pickle cache
+    # Embeddings stored separately as numpy arrays in the npz cache
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -126,7 +126,7 @@ def _clip_file_hash(filepath: str) -> str:
 def _cache_path(clip_hash: str) -> str:
     """Return the cache file path for a clip hash."""
     os.makedirs(CACHE_DIR, exist_ok=True)
-    return os.path.join(CACHE_DIR, f"clip_{clip_hash}.pkl")
+    return os.path.join(CACHE_DIR, f"clip_{clip_hash}.npz")
 
 
 def _load_cached_embeddings(clip_hash: str) -> Optional[Dict]:
@@ -135,8 +135,12 @@ def _load_cached_embeddings(clip_hash: str) -> Optional[Dict]:
     if not os.path.isfile(path):
         return None
     try:
-        with open(path, "rb") as f:
-            return pickle.load(f)
+        import numpy as np
+
+        with np.load(path, allow_pickle=False) as cache:
+            metadata = json.loads(str(cache["metadata"].item()))
+            metadata["embeddings"] = cache["embeddings"]
+            return metadata
     except Exception as e:
         logger.warning("Failed to load clip cache %s: %s", path, e)
         return None
@@ -146,9 +150,18 @@ def _save_cached_embeddings(clip_hash: str, data: Dict):
     """Save embeddings to cache."""
     path = _cache_path(clip_hash)
     try:
+        import numpy as np
+
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "wb") as f:
-            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        metadata = {key: value for key, value in data.items() if key != "embeddings"}
+        embeddings = data.get("embeddings")
+        if embeddings is None:
+            embeddings = np.zeros((0, 512), dtype="float32")
+        np.savez_compressed(
+            path,
+            metadata=json.dumps(metadata),
+            embeddings=embeddings,
+        )
     except Exception as e:
         logger.warning("Failed to save clip cache %s: %s", path, e)
 

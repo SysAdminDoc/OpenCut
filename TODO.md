@@ -4,11 +4,11 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the `open-path` allowlist hardening pass.
+Last synced: 2026-06-07 during the CLIP cache safe-deserialization hardening pass.
 
 ## Execution Order
 
-- [ ] **Security hardening queue** - PyTorch deserialization and `open-path` allowlist hardening are closed; continue with safe CLIP cache deserialization or scripting-console resource limits from `RESEARCH_FEATURE_PLAN_2026-06-06.md`.
+- [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, and CLIP cache safe deserialization are closed; continue with scripting-console resource limits from `RESEARCH_FEATURE_PLAN_2026-06-06.md`.
 - [ ] **E15 i18n migration rolling batches** - current detailed state: v4.280 / batch 168 with a zero-dead-key baseline and JS metadata-key scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.

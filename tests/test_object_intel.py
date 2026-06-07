@@ -10,12 +10,11 @@ Covers:
   - Object intelligence routes (smoke tests)
 """
 
-import json
 import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -535,13 +534,65 @@ class TestSemanticSearchHelpers(unittest.TestCase):
     def test_cache_path_creates_dir(self):
         from opencut.core.semantic_video_search import _cache_path
         path = _cache_path("testhash123")
-        self.assertTrue(path.endswith(".pkl"))
+        self.assertTrue(path.endswith(".npz"))
         self.assertIn("testhash123", path)
 
     def test_load_cached_nonexistent(self):
         from opencut.core.semantic_video_search import _load_cached_embeddings
         result = _load_cached_embeddings("nonexistent_hash_xyz")
         self.assertIsNone(result)
+
+    def test_load_cached_embeddings_disables_numpy_pickle(self):
+        from opencut.core.semantic_video_search import _cache_path, _load_cached_embeddings
+
+        calls = []
+
+        def fake_load(path, **kwargs):
+            calls.append((path, kwargs))
+            raise ValueError("stop after option capture")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("opencut.core.semantic_video_search.CACHE_DIR", tmp):
+                path = _cache_path("abc123")
+                with open(path, "wb") as f:
+                    f.write(b"placeholder")
+                with patch("numpy.load", side_effect=fake_load):
+                    result = _load_cached_embeddings("abc123")
+
+        self.assertIsNone(result)
+        self.assertEqual(calls[0][1]["allow_pickle"], False)
+
+    def test_cached_embeddings_round_trip_without_pickle(self):
+        import numpy as np
+
+        from opencut.core.semantic_video_search import (
+            _load_cached_embeddings,
+            _save_cached_embeddings,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("opencut.core.semantic_video_search.CACHE_DIR", tmp):
+                embeddings = np.array([[0.1, 0.2, 0.3]], dtype="float32")
+                _save_cached_embeddings(
+                    "abc123",
+                    {
+                        "clip_path": "/tmp/example.mp4",
+                        "clip_hash": "abc123",
+                        "frame_count": 1,
+                        "fps": 24.0,
+                        "duration": 1.5,
+                        "timestamps": [0.0],
+                        "frame_paths": ["/tmp/frame.jpg"],
+                        "embeddings": embeddings,
+                    },
+                )
+
+                loaded = _load_cached_embeddings("abc123")
+
+        self.assertIsNotNone(loaded)
+        self.assertEqual(loaded["clip_hash"], "abc123")
+        self.assertEqual(loaded["frame_count"], 1)
+        np.testing.assert_allclose(loaded["embeddings"], embeddings)
 
     def test_semantic_search_empty_clips_raises(self):
         from opencut.core.semantic_video_search import semantic_search
