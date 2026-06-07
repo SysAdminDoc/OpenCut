@@ -837,56 +837,56 @@
           </div>
         </div>
 
-        <div class="oc-section-title">Shorts Pipeline</div>
+        <div class="oc-section-title" data-i18n="uxp.video.shorts_pipeline">Shorts Pipeline</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="shortsPipelineBody">
-            <span>One-Click Short-Form Clips</span>
+            <span data-i18n="uxp.video.one_click_short_form_clips">One-Click Short-Form Clips</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="shortsPipelineBody">
-            <p class="oc-hint">Transcribe, detect highlights, face-reframe, burn captions, and export short-form clips in one step.</p>
+            <p class="oc-hint" data-i18n="uxp.video.shorts_pipeline_hint">Transcribe, detect highlights, face-reframe, burn captions, and export short-form clips in one step.</p>
             <div class="oc-field-row">
-              <label class="oc-label" for="shortsPlatformUxp">Platform</label>
+              <label class="oc-label" for="shortsPlatformUxp" data-i18n="uxp.video.platform">Platform</label>
               <select class="oc-input" id="shortsPlatformUxp">
-                <option value="tiktok" selected>TikTok (1080x1920)</option>
-                <option value="youtube_shorts">YouTube Shorts (1080x1920)</option>
-                <option value="instagram_reels">Instagram Reels (1080x1920)</option>
-                <option value="instagram_feed">Square Feed (1080x1080)</option>
+                <option value="tiktok" selected data-i18n="uxp.video.tiktok_1080x1920">TikTok (1080x1920)</option>
+                <option value="youtube_shorts" data-i18n="uxp.video.youtube_shorts_1080x1920">YouTube Shorts (1080x1920)</option>
+                <option value="instagram_reels" data-i18n="uxp.video.instagram_reels_1080x1920">Instagram Reels (1080x1920)</option>
+                <option value="instagram_feed" data-i18n="uxp.video.square_feed_1080x1080">Square Feed (1080x1080)</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="shortsMaxUxp">Max Clips</label>
+              <label class="oc-label" for="shortsMaxUxp" data-i18n="uxp.video.max_clips">Max Clips</label>
               <input type="number" class="oc-input" id="shortsMaxUxp" value="5" min="1" max="20">
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="shortsCaptionStyleUxp">Caption Style</label>
+              <label class="oc-label" for="shortsCaptionStyleUxp" data-i18n="uxp.video.caption_style">Caption Style</label>
               <select class="oc-select" id="shortsCaptionStyleUxp">
-                <option value="default" selected>Default</option>
-                <option value="bold_yellow">Bold Yellow</option>
-                <option value="boxed_dark">Boxed Dark</option>
-                <option value="neon_cyan">Neon Cyan</option>
-                <option value="cinematic_serif">Cinematic Serif</option>
-                <option value="top_center">Top Center</option>
+                <option value="default" selected data-i18n="uxp.video.caption_style_default">Default</option>
+                <option value="bold_yellow" data-i18n="uxp.video.caption_style_bold_yellow">Bold Yellow</option>
+                <option value="boxed_dark" data-i18n="uxp.video.caption_style_boxed_dark">Boxed Dark</option>
+                <option value="neon_cyan" data-i18n="uxp.video.caption_style_neon_cyan">Neon Cyan</option>
+                <option value="cinematic_serif" data-i18n="uxp.video.caption_style_cinematic_serif">Cinematic Serif</option>
+                <option value="top_center" data-i18n="uxp.video.caption_style_top_center">Top Center</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="shortsMinUxp">Clip Duration</label>
+              <label class="oc-label" for="shortsMinUxp" data-i18n="uxp.video.clip_duration">Clip Duration</label>
               <div class="oc-inline-inputs">
-                <input type="number" class="oc-input" id="shortsMinUxp" value="15" min="5" max="300" step="5" aria-label="Minimum short duration">
-                <input type="number" class="oc-input" id="shortsMaxDurUxp" value="60" min="10" max="600" step="5" aria-label="Maximum short duration">
+                <input type="number" class="oc-input" id="shortsMinUxp" value="15" min="5" max="300" step="5" aria-label="Minimum short duration" data-i18n-aria-label="uxp.video.minimum_short_duration">
+                <input type="number" class="oc-input" id="shortsMaxDurUxp" value="60" min="10" max="600" step="5" aria-label="Maximum short duration" data-i18n-aria-label="uxp.video.maximum_short_duration">
               </div>
             </div>
             <div class="oc-check-row">
               <input type="checkbox" id="shortsFaceTrackUxp" checked>
-              <label for="shortsFaceTrackUxp">Face tracking reframe</label>
+              <label for="shortsFaceTrackUxp" data-i18n="uxp.video.face_tracking_reframe">Face tracking reframe</label>
             </div>
             <div class="oc-check-row">
               <input type="checkbox" id="shortsCaptionsUxp" checked>
-              <label for="shortsCaptionsUxp">Burn-in captions</label>
+              <label for="shortsCaptionsUxp" data-i18n="uxp.video.burn_in_captions">Burn-in captions</label>
             </div>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="previewShortsPlanBtnUxp">Preview Plan</button>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runShortsPipelineBtnUxp">Generate Shorts</button>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="renderShortsApprovedBtnUxp" disabled>Render Approved</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="previewShortsPlanBtnUxp" data-i18n="uxp.video.preview_plan">Preview Plan</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runShortsPipelineBtnUxp" data-i18n="uxp.video.generate_shorts">Generate Shorts</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="renderShortsApprovedBtnUxp" disabled data-i18n="uxp.video.render_approved">Render Approved</button>
             <div class="oc-result-area hidden" id="shortsReviewBoardUxp" data-state="idle" aria-live="polite">
               <div class="oc-result-header" id="shortsReviewSummaryUxp"></div>
               <div class="oc-result-list" id="shortsReviewListUxp"></div>
@@ -894,39 +894,39 @@
           </div>
         </div>
 
-        <div class="oc-section-title">Social Media Upload</div>
+        <div class="oc-section-title" data-i18n="uxp.video.social_media_upload">Social Media Upload</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="socialBody">
-            <span>Post to Social Media</span>
+            <span data-i18n="uxp.video.post_to_social_media">Post to Social Media</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="socialBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="socialPlatformUxp">Platform</label>
-              <select id="socialPlatformUxp" class="oc-select" aria-label="Social media platform">
-                <option value="youtube" selected>YouTube</option>
-                <option value="tiktok">TikTok</option>
-                <option value="instagram">Instagram Reels</option>
+              <label class="oc-label" for="socialPlatformUxp" data-i18n="uxp.video.platform">Platform</label>
+              <select id="socialPlatformUxp" class="oc-select" aria-label="Social media platform" data-i18n-aria-label="uxp.video.social_media_platform">
+                <option value="youtube" selected data-i18n="uxp.video.youtube">YouTube</option>
+                <option value="tiktok" data-i18n="uxp.video.tiktok">TikTok</option>
+                <option value="instagram" data-i18n="uxp.video.instagram_reels">Instagram Reels</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="socialTitleUxp">Title</label>
-              <input type="text" id="socialTitleUxp" class="oc-input" maxlength="100" placeholder="Video title" aria-label="Video title">
+              <label class="oc-label" for="socialTitleUxp" data-i18n="uxp.video.title">Title</label>
+              <input type="text" id="socialTitleUxp" class="oc-input" maxlength="100" placeholder="Video title" aria-label="Video title" data-i18n-placeholder="uxp.video.video_title_placeholder" data-i18n-aria-label="uxp.video.video_title">
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="socialDescriptionUxp">Description</label>
-              <textarea id="socialDescriptionUxp" class="oc-textarea" rows="2" maxlength="2200" placeholder="Caption" aria-label="Description"></textarea>
+              <label class="oc-label" for="socialDescriptionUxp" data-i18n="uxp.video.description">Description</label>
+              <textarea id="socialDescriptionUxp" class="oc-textarea" rows="2" maxlength="2200" placeholder="Caption" aria-label="Description" data-i18n-placeholder="uxp.video.caption_placeholder" data-i18n-aria-label="uxp.video.description"></textarea>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="socialPrivacyUxp">Privacy</label>
-              <select id="socialPrivacyUxp" class="oc-select" aria-label="Privacy level">
-                <option value="private" selected>Private</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="public">Public</option>
+              <label class="oc-label" for="socialPrivacyUxp" data-i18n="uxp.video.privacy">Privacy</label>
+              <select id="socialPrivacyUxp" class="oc-select" aria-label="Privacy level" data-i18n-aria-label="uxp.video.privacy_level">
+                <option value="private" selected data-i18n="uxp.video.privacy_private">Private</option>
+                <option value="unlisted" data-i18n="uxp.video.privacy_unlisted">Unlisted</option>
+                <option value="public" data-i18n="uxp.video.privacy_public">Public</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="socialConnectBtnUxp">Connect Account</button>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="socialUploadBtnUxp">Upload</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="socialConnectBtnUxp" data-i18n="uxp.video.connect_account">Connect Account</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="socialUploadBtnUxp" data-i18n="uxp.video.upload">Upload</button>
           </div>
         </div>
       </div>

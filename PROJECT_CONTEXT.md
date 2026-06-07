@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (350 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-350 are recorded below.
+**Last consolidated:** 2026-06-07 (351 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-351 are recorded below.
+
+**Pass 351 update (no standalone research file):**
+- Completed the current Video tab static-shell i18n sweep by wiring Shorts Pipeline and Social Media Upload labels, options, checkbox text, placeholders, ARIA labels, and action buttons through UXP locale keys.
+- Raised `tests/test_uxp_i18n.py` to require at least 370 static i18n attributes plus representative Shorts/Social Video-tab keys, lifting the current UXP static count to 373.
 
 **Pass 350 update (no standalone research file):**
 - Extended the UXP i18n foundation deeper into the Video tab shell: Emotion Highlights, B-Roll Analysis, Chat Editor, AI Upscale, Scene Detection, and Style Transfer controls, placeholders, select options, ARIA labels, hints, and action buttons now use UXP locale keys.

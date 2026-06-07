@@ -90,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 325
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 370
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -139,6 +139,13 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.video.detect_scene_boundaries",
         "uxp.video.style_transfer",
         "uxp.video.apply_style",
+        "uxp.video.shorts_pipeline",
+        "uxp.video.minimum_short_duration",
+        "uxp.video.face_tracking_reframe",
+        "uxp.video.social_media_upload",
+        "uxp.video.video_title_placeholder",
+        "uxp.video.privacy_level",
+        "uxp.video.connect_account",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",

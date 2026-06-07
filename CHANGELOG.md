@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Video Shorts and Social Shell
+
+- Expanded the UXP i18n foundation through the remaining Video tab Shorts Pipeline and Social Media Upload shell, including visible labels, select options, checkbox text, placeholders, ARIA labels, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 370+ attribute baseline and representative Shorts/Social Video-tab locale keys.
+
 ### Changed - UXP i18n Video Effects Shell
 
 - Expanded the UXP i18n foundation deeper into the Video tab shell, including Emotion Highlights, B-Roll Analysis, Chat Editor, AI Upscale, Scene Detection, and Style Transfer controls, placeholders, select options, ARIA labels, hints, and action buttons.
