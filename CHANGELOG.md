@@ -2,10 +2,15 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Cut Tab Shell
+
+- Expanded the UXP i18n foundation into the Cut & Clean tab shell, including clip input, silence detection, filler cleanup, result-summary labels, placeholders, select options, and accessible names.
+- Raised the UXP i18n static guard to require the expanded 90+ attribute baseline and matching locale keys.
+
 ### Added - UXP i18n Foundation
 
 - Added a UXP-local `locales/en.json` ledger plus `loadLocale()`, `t()`, and `applyI18nToDOM()` support in the UXP panel.
-- Wired the UXP first-viewport shell, tab bar, processing banner, connection label, and workspace overview/guide through `data-i18n*` hooks and dynamic locale lookups.
+- Wired the UXP shell, tab bar, processing banner, connection label, workspace overview/guide, and Cut & Clean tab controls through 96 `data-i18n*` hooks and dynamic locale lookups.
 - Added `tests/test_uxp_i18n.py` and wired it into release smoke so UXP i18n attributes, dynamic locale keys, and connection-state checks stay guarded.
 
 ### Changed - CEP i18n Settings Preferences Shell
