@@ -105,13 +105,14 @@ def test_uxp_i18n_loader_supports_dom_text_and_attributes():
     assert js.index("await loadLocale();") < js.index("bindEvents();")
 
 
-def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
+def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     english = _locale()
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 1140 <= len(spanish) < len(english)
+    assert len(spanish) == len(english)
     assert sorted(key for key in spanish if key not in english) == []
+    assert sorted(key for key in english if key not in spanish) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
     assert sorted(key for key in english if key.startswith("uxp.cut.") and key not in spanish) == []
@@ -175,8 +176,11 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.captions.runtime.transcription_complete"] == "Transcripcion completa."
     assert spanish["uxp.captions.runtime.chapter_generation_done_status"] == "Generacion de capitulos completa - {count} capitulos."
     assert spanish["uxp.captions.runtime.repeat_review_ready_status"].startswith("La revision de repeticiones")
-    assert english["uxp.video.clip_path"] == "Clip Path"
-    assert "uxp.video.clip_path" not in spanish
+    assert sorted(key for key in english if key.startswith("uxp.video.") and key not in spanish) == []
+    assert spanish["uxp.video.clip_path"] == "Ruta del clip"
+    assert spanish["uxp.video.color_match"] == "Igualar color"
+    assert spanish["uxp.video.runtime.generated_short_form_clips"] == "Se generaron {count} clip(s) cortos."
+    assert spanish["uxp.video.runtime.shorts_score_range"] == "Puntuacion {score} | {start}s-{end}s"
 
 
 def test_uxp_shell_i18n_attributes_are_present_and_covered():
