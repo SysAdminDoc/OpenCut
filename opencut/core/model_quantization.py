@@ -8,6 +8,7 @@ stores quantized variants alongside the full-precision originals.
 
 import logging
 import os
+import pickle
 import platform
 import shutil
 import subprocess
@@ -368,7 +369,13 @@ def _quantize_pytorch(
     if on_progress:
         on_progress({"step": "loading_model"})
 
-    model = torch.load(model_path, map_location="cpu", weights_only=False)
+    try:
+        model = torch.load(model_path, map_location="cpu", weights_only=True)
+    except pickle.UnpicklingError as exc:
+        raise ValueError(
+            "Unsupported or unsafe PyTorch checkpoint: quantization only accepts tensor state dictionaries "
+            "loadable with torch.load(weights_only=True)."
+        ) from exc
 
     if on_progress:
         on_progress({"step": "quantizing", "precision": precision})

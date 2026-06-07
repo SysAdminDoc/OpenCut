@@ -102,8 +102,8 @@ def test_torch_stack_collects_advisory_heavy_backends():
         "gfpgan>=1.3,<2",
         "pyannote.audio>=4.0,<5",
         "transnetv2-pytorch>=1.0.5,<2",
-        "torch>=2.0",
-        "torchvision>=0.15",
+        "torch>=2.6",
+        "torchvision>=0.21",
         "transformers>=4.30",
     }
     assert expected.issubset(set(requirements))

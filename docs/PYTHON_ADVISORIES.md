@@ -23,8 +23,10 @@ To add a new entry, update both `ALLOWED_ADVISORIES` in
 `opencut[torch-stack]` restores the larger Torch/Transformers-backed feature
 surface for users who need WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio,
 TransNetV2, or depth models. It is not part of the default release-smoke audit
-because the live resolver still reports unwaived Torch and Transformers
-advisories. Keep those packages out of `[all]` until the dedicated
+because the live resolver can still report unwaived Torch-stack and Transformers
+advisories. The declared Torch floor stays at `torch>=2.6` / `torchvision>=0.21`
+so known `torch.load` deserialization advisories from older Torch releases are
+not admitted by OpenCut extras. Keep those packages out of `[all]` until the dedicated
 `torch-stack` audit command below returns no unallowed findings, or until each
 remaining finding has a documented project-specific waiver.
 

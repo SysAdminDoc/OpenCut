@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Security - PyTorch Deserialization Hardening
+
+- Hardened model quantization by loading PyTorch checkpoints with `weights_only=True`, rejecting unsafe or unsupported pickle payloads with a clear error, and raising Torch-backed optional extras to `torch>=2.6` / `torchvision>=0.21`.
+
+### Changed - CEP i18n Footage Search Shell
+
+- Advanced E15 to batch 168 by localizing the Footage Search card title/description, index summary labels, empty-state copy, query controls, search action, and results region label. The live drift report now shows 2,386 keys, 2,386 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Tab Panels and Audio Normalize Shell
 
 - Advanced E15 to batch 167 by localizing the remaining CEP tab panel `aria-label` region names plus the Audio Normalize platform preset, loudness meter, and preview controls. The live drift report now shows 2,372 keys, 2,372 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
