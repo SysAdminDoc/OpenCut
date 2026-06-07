@@ -99,7 +99,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-09 | Timeline-native captions | L | Closed 2026-06-06: RA-46 sidecars, RA-47 diff/apply, RA-48 UXP snapshot reads, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures shipped |
 | RA-10 | Magic clips macro | L | Closed 2026-06-06: RA-51 through RA-56 shipped dry-run plan graphs, approved-candidate render handoff, explainable scoring, platform preset rendering, CEP/UXP review-board parity, checkpointed resumable runs, and output bundle handoff manifests |
 | RA-11 | UXP least-privilege filesystem | M | Closed 2026-06-06: live and WebView manifests use picker-scoped `localFileSystem: "request"` with static guards against direct file APIs |
-| RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
+| RA-12 | Hybrid plugin validator | M | Closed 2026-06-06: static validator checks UXP Hybrid `.uxpaddon` manifest opt-in, safe addon names, host shape, and mac arm64/mac x64/win x64 package layout |
 | RA-13 | UXP external launch perms | M | Closed 2026-06-06: live and WebView manifests declare HTTPS-only `launchProcess`, OAuth launches validate HTTPS URLs, and static tests block file-launch APIs |
 | RA-14 | WebView permission split | M | Closed 2026-06-06: dormant WebView config exports development and release manifest profiles with dev-only hot reload domains and release-local message bridge |
 | RA-15 | [all] advisory decision | M | Closed 2026-06-06: `opencut[all]` is the release-audited convenience lane; Torch/Transformers-backed packages are explicit via `torch-stack` and named feature extras |
@@ -1302,6 +1302,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 64 | UXP filesystem permission | `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `docs/UXP_MIGRATION.md`, `docs/UXP_MACOS_HTTP.md`, `tests/test_uxp_filesystem_permission.py` | UXP file access already went through `getFileForOpening()` and `getFolder()` pickers, but both manifest surfaces still requested broad `localFileSystem: "fullAccess"`. | Closed RA-11 by narrowing both manifest surfaces to `localFileSystem: "request"`, documenting the picker-scoped boundary, and adding static guards that reject direct filesystem APIs until a separate permission review exists. |
 | 2026-06-06 | Cycle 65 | UXP WebView permission profiles | `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `extension/com.opencut.uxp/bolt-webview/README.md`, `docs/UXP_MIGRATION.md`, `tests/test_uxp_webview_permission_split.py`, `tests/test_uxp_webview_scaffold.py` | The dormant WebView scaffold carried one dev-shaped permission profile with Vite domains, hot-reload WebSocket domains, and `localAndRemote` messaging, so release packaging had no static boundary for local-only WebView content. | Closed RA-14 by exporting development and release manifest profiles, keeping hot reload/Vite domains dev-only, using `localOnly` release messaging with no remote WebView domains, and adding static guards for the split. |
 | 2026-06-06 | Cycle 66 | CEP i18n deliverables and settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | E15 had the Export Workflow Presets shell localized, but Export Deliverables, LLM settings, preset diagnostics, and related controls still carried static English shell copy. | Advanced E15 through batches 155 and 156 by wiring those controls through `data-i18n*` hooks and locale keys; the drift gate now reports 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys. |
+| 2026-06-06 | Cycle 67 | UXP Hybrid package validator | Adobe UXP Hybrid packaging docs, `opencut/core/uxp_hybrid_package.py`, `opencut/tools/validate_uxp_hybrid_package.py`, `tests/test_uxp_hybrid_package.py` | Adobe's Hybrid plugin rules require manifest v6+, `addon.name`, `requiredPermissions.enableAddon`, and strict `.uxpaddon` placement for mac arm64, mac x64, and win x64; OpenCut had no repository-side validator before adding native addons. | Closed RA-12 by adding a static validator and CLI for unpacked UXP bundles, keeping the live UXP manifest valid as non-hybrid, allowing independent partial-architecture warnings, failing Marketplace layout gaps, and wiring the guard into release-smoke pytest-fast. |
 
 ### Research queries to run later
 
@@ -1322,23 +1323,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 67: Validate hybrid CEP/UXP plugin packaging around RA-12.
-2. Cycle 68: Continue E15 batch 157 or another remaining panel-i18n cleanup.
-3. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
-4. Cycle 70: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 71: Revisit UXP cutover only after live UDT evidence is available.
+1. Cycle 68: Continue E15 batch 157 or another remaining panel-i18n cleanup.
+2. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+3. Cycle 70: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 71: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 72: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 66: CEP i18n deliverables and settings shell.
+Cycle 67: UXP Hybrid package validator.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-01, RA-02, RA-03, RA-04, RA-11, RA-13, RA-14, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
+RA-01, RA-02, RA-03, RA-04, RA-11, RA-12, RA-13, RA-14, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
 RA-45, RA-54, RA-55, and RA-56 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1369,6 +1370,9 @@ blueprint import-block cleanup.
 RA-24 keeps Release Full build/test/package jobs on read-only contents
 permission while the tag-only release-upload job owns the write-capable release
 token.
+RA-12 keeps future UXP Hybrid addon packaging behind a static validator that
+checks manifest v6+/`enableAddon`, safe `.uxpaddon` names, production host
+shape, and the mac arm64/mac x64/win x64 layout before release claims.
 RA-21 keeps package metadata to the tested Python classifier set until a 3.13
 workflow lane proves runtime support.
 RA-23 keeps non-local workflow actions pinned to full-length SHAs with adjacent
@@ -1459,6 +1463,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batches 155 and 156 reduced dead locale keys from 53 to 48 while adding
   Export Deliverables, LLM settings, and preset diagnostics static-shell
   consumers.
+- RA-12 is closed as a static packaging guard; actual native addon loading
+  still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
   preservation contract for caption timeline round trips until native UXP writes
   or hybrid caption writes are live-tested.
@@ -1538,9 +1544,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Validate hybrid CEP/UXP plugin packaging around RA-12.
-2. Continue E15 rolling CEP i18n migration with batch 157.
-3. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+1. Continue E15 rolling CEP i18n migration with batch 157.
+2. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
 
