@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Agent Tab Shell
+
+- Expanded the UXP i18n foundation into the Agent tab shell, including Chat Conductor, One-Click Enhance, Shorts A/B Variants, Sequence Index, MCP Bridge labels, placeholders, ARIA labels, status text, select options, hints, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 605+ attribute baseline and representative Agent-tab locale keys.
+
 ### Changed - UXP i18n Deliverables Tab Shell
 
 - Expanded the UXP i18n foundation into the Deliverables tab shell, including sequence readiness, document export controls, deliverable cards, project report options, placeholders, ARIA labels, status text, and action buttons.

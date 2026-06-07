@@ -1409,99 +1409,99 @@
            uses the command palette + NLP tab; see PANEL_PARITY.json). -->
       <div class="oc-tab-panel" id="tab-agent" role="tabpanel" aria-labelledby="tabBtnAgent">
 
-        <div class="oc-section-title">Chat Conductor (F143)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.chat_conductor_f143">Chat Conductor (F143)</div>
         <div class="oc-card">
-          <p class="oc-hint">Describe an edit in plain language. The conductor turns it into a step-by-step plan you can review before any work runs.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.chat_conductor_hint">Describe an edit in plain language. The conductor turns it into a step-by-step plan you can review before any work runs.</p>
           <div class="oc-field-row">
-            <label class="oc-label" for="agentChatIntent">Intent</label>
-            <textarea class="oc-input" id="agentChatIntent" rows="3" placeholder="e.g. Cut silences then add captions in Spanish"></textarea>
+            <label class="oc-label" for="agentChatIntent" data-i18n="uxp.agent.intent">Intent</label>
+            <textarea class="oc-input" id="agentChatIntent" rows="3" placeholder="e.g. Cut silences then add captions in Spanish" data-i18n-placeholder="uxp.agent.intent_placeholder"></textarea>
           </div>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-primary" id="agentChatPlanBtn">Plan</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatReviewBtn" disabled>Self-Review</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatClearBtn">Clear</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="agentChatPlanBtn" data-i18n="uxp.agent.plan">Plan</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatReviewBtn" disabled data-i18n="uxp.agent.self_review">Self-Review</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatClearBtn" data-i18n="uxp.agent.clear">Clear</button>
           </div>
-          <div class="oc-status-line" id="agentChatStatus" role="status" aria-live="polite">No active session.</div>
+          <div class="oc-status-line" id="agentChatStatus" role="status" aria-live="polite" data-i18n="uxp.agent.no_active_session">No active session.</div>
           <div class="oc-card oc-card--nested" id="agentChatPlanBox" hidden>
-            <div class="oc-card-header"><span>Planned Steps</span></div>
-            <ol class="oc-step-list" id="agentChatPlanList" aria-label="Conductor plan steps"></ol>
+            <div class="oc-card-header"><span data-i18n="uxp.agent.planned_steps">Planned Steps</span></div>
+            <ol class="oc-step-list" id="agentChatPlanList" aria-label="Conductor plan steps" data-i18n-aria-label="uxp.agent.conductor_plan_steps"></ol>
           </div>
           <div class="oc-card oc-card--nested" id="agentChatReviewBox" hidden>
-            <div class="oc-card-header"><span>Self-Review</span></div>
+            <div class="oc-card-header"><span data-i18n="uxp.agent.self_review">Self-Review</span></div>
             <p class="oc-hint" id="agentChatReviewSummary"></p>
-            <ul id="agentChatReviewNotes" aria-label="Drift notes"></ul>
+            <ul id="agentChatReviewNotes" aria-label="Drift notes" data-i18n-aria-label="uxp.agent.drift_notes"></ul>
           </div>
         </div>
 
-        <div class="oc-section-title">One-Click Enhance (Q3)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.one_click_enhance_q3">One-Click Enhance (Q3)</div>
         <div class="oc-card">
-          <p class="oc-hint">Loudness, denoise, stabilize, deflicker, and grade in one pass. Pick a style — Social, Speech, or Cinematic.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.one_click_enhance_hint">Loudness, denoise, stabilize, deflicker, and grade in one pass. Pick a style - Social, Speech, or Cinematic.</p>
           <div class="oc-field-row">
-            <label class="oc-label" for="enhanceClipPath">Clip Path</label>
-            <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path…">
+            <label class="oc-label" for="enhanceClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
+            <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="enhanceStyle">Style</label>
+            <label class="oc-label" for="enhanceStyle" data-i18n="uxp.agent.style">Style</label>
             <select class="oc-input" id="enhanceStyle">
-              <option value="social">Social (-16 LUFS, vibrant grade)</option>
-              <option value="speech">Speech (-16 LUFS, no grade)</option>
-              <option value="cinematic">Cinematic (-23 LUFS, full chain)</option>
+              <option value="social" data-i18n="uxp.agent.style_social">Social (-16 LUFS, vibrant grade)</option>
+              <option value="speech" data-i18n="uxp.agent.style_speech">Speech (-16 LUFS, no grade)</option>
+              <option value="cinematic" data-i18n="uxp.agent.style_cinematic">Cinematic (-23 LUFS, full chain)</option>
             </select>
           </div>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-secondary" id="enhanceDryRunBtn">Preview Plan</button>
-            <button type="button" class="oc-btn oc-btn-primary" id="enhanceRunBtn">Run Enhance</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="enhanceDryRunBtn" data-i18n="uxp.agent.preview_plan">Preview Plan</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="enhanceRunBtn" data-i18n="uxp.agent.run_enhance">Run Enhance</button>
           </div>
-          <div class="oc-status-line" id="enhanceStatus" role="status" aria-live="polite">Pick a clip, pick a style, then Preview Plan to see what will run.</div>
+          <div class="oc-status-line" id="enhanceStatus" role="status" aria-live="polite" data-i18n="uxp.agent.enhance_status">Pick a clip, pick a style, then Preview Plan to see what will run.</div>
         </div>
 
-        <div class="oc-section-title">Shorts A/B Variants (Q8)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.shorts_ab_variants_q8">Shorts A/B Variants (Q8)</div>
         <div class="oc-card">
-          <p class="oc-hint">Render 2–6 short-form variants of the same window with different hook tightness, caption style, and focal point. A/B test before posting.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.shorts_ab_variants_hint">Render 2-6 short-form variants of the same window with different hook tightness, caption style, and focal point. A/B test before posting.</p>
           <div class="oc-field-row">
-            <label class="oc-label" for="variantsClipPath">Clip Path</label>
-            <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path…">
+            <label class="oc-label" for="variantsClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
+            <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
           </div>
           <div class="oc-slider-row">
-            <label class="oc-label" for="variantsStart">Start (s)</label>
+            <label class="oc-label" for="variantsStart" data-i18n="uxp.agent.start_seconds">Start (s)</label>
             <input type="number" class="oc-input" id="variantsStart" value="0" min="0" step="0.1">
           </div>
           <div class="oc-slider-row">
-            <label class="oc-label" for="variantsEnd">End (s)</label>
+            <label class="oc-label" for="variantsEnd" data-i18n="uxp.agent.end_seconds">End (s)</label>
             <input type="number" class="oc-input" id="variantsEnd" value="15" min="0.1" step="0.1">
           </div>
           <div class="oc-slider-row">
-            <label class="oc-label" for="variantsN">Variants</label>
+            <label class="oc-label" for="variantsN" data-i18n="uxp.agent.variants">Variants</label>
             <input type="number" class="oc-input" id="variantsN" value="3" min="2" max="6" step="1">
           </div>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-secondary" id="variantsDryRunBtn">Preview Variants</button>
-            <button type="button" class="oc-btn oc-btn-primary" id="variantsRunBtn">Generate</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="variantsDryRunBtn" data-i18n="uxp.agent.preview_variants">Preview Variants</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="variantsRunBtn" data-i18n="uxp.agent.generate">Generate</button>
           </div>
-          <div class="oc-status-line" id="variantsStatus" role="status" aria-live="polite">2–6 variants per source window.</div>
+          <div class="oc-status-line" id="variantsStatus" role="status" aria-live="polite" data-i18n="uxp.agent.variants_status">2-6 variants per source window.</div>
         </div>
 
-        <div class="oc-section-title">Sequence Index (Q7 / F273)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.sequence_index_q7_f273">Sequence Index (Q7 / F273)</div>
         <div class="oc-card">
-          <p class="oc-hint">Spreadsheet-style read of the active Premiere sequence — clip name, timecode, duration, effects, ratings, transcript excerpts. Sort + filter without re-walking the timeline.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.sequence_index_hint">Spreadsheet-style read of the active Premiere sequence - clip name, timecode, duration, effects, ratings, transcript excerpts. Sort and filter without re-walking the timeline.</p>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-primary" id="sequenceIndexBuildBtn">Build Index</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="sequenceIndexInfoBtn">Capability</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="sequenceIndexBuildBtn" data-i18n="uxp.agent.build_index">Build Index</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="sequenceIndexInfoBtn" data-i18n="uxp.agent.capability">Capability</button>
           </div>
-          <div class="oc-status-line" id="sequenceIndexStatus" role="status" aria-live="polite">No index yet.</div>
+          <div class="oc-status-line" id="sequenceIndexStatus" role="status" aria-live="polite" data-i18n="uxp.agent.no_index_yet">No index yet.</div>
           <div class="oc-card oc-card--nested" id="sequenceIndexBox" hidden>
             <div class="oc-status-line" id="sequenceIndexSummary"></div>
           </div>
         </div>
 
-        <div class="oc-section-title">MCP Bridge (F146)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.mcp_bridge_f146">MCP Bridge (F146)</div>
         <div class="oc-card">
-          <p class="oc-hint">UXP-native bridge to the MCP tool catalogue (survives Adobe's CEP EOL). 39 curated tools plus 1,325 opt-in extended tools.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.mcp_bridge_hint">UXP-native bridge to the MCP tool catalogue. 39 curated tools plus 1,325 opt-in extended tools.</p>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeInfoBtn">Capability</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeListBtn">List Tools</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeInfoBtn" data-i18n="uxp.agent.capability">Capability</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeListBtn" data-i18n="uxp.agent.list_tools">List Tools</button>
           </div>
-          <div class="oc-status-line" id="mcpBridgeStatus" role="status" aria-live="polite">Bridge ready.</div>
+          <div class="oc-status-line" id="mcpBridgeStatus" role="status" aria-live="polite" data-i18n="uxp.agent.bridge_ready">Bridge ready.</div>
         </div>
 
       </div>
