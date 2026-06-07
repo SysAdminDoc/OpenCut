@@ -8,7 +8,7 @@ Last updated: 2026-06-07
 - Branch: `main`
 - Cycle result: Cycle 96 UXP Captions tab i18n shell is shipped. Full UXP i18n parity, external F202 notarization, and F252 WebView cutover evidence remain open.
 - Shipped this cycle: Extended the UXP i18n foundation into the Captions tab, wiring transcription, chapter generation, repeat detection, result metadata, placeholders, options, checkbox labels, and accessible names through `data-i18n*` hooks while raising the UXP static coverage floor to 170 attributes.
-- Verification: `py -3.12 -m pytest -q tests\test_uxp_i18n.py` (5 passed); `py -3.12 -m ruff check tests\test_uxp_i18n.py`; scoped `git diff --check`; Browser localhost check confirmed Captions labels/placeholders/options/ARIA names and no current-page console error; static UXP i18n count verified at 178 attributes; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (105 gate test files / 858 tests passed); `py -3.12 scripts\release_smoke.py --only ruff --json`.
+- Verification: `py -3.12 -m pytest -q tests\test_uxp_i18n.py` (5 passed); `py -3.12 -m ruff check tests\test_uxp_i18n.py`; `py -3.12 -m pytest -q tests\test_uxp_i18n.py tests\test_uxp_backend_client_contract.py tests\test_uxp_manifest_schema.py tests\test_panel_tab_parity.py tests\test_roadmap_mirror.py tests\test_roadmap_lint.py tests\test_check_doc_sizes.py tests\test_sync_badges.py` (53 passed); `py -3.12 scripts\sync_badges.py --check`; `py -3.12 scripts\check_doc_sizes.py --check`; `git diff --check`; `py -3.12 scripts\release_smoke.py --only ruff --json`; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (105 gate test files / 858 tests passed); static UXP i18n count verified at 178 attributes.
 
 ## Next Work
 
