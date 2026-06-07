@@ -232,6 +232,19 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.cut.runtime.no_silences_found",
         "uxp.cut.runtime.filler_detected",
         "uxp.cut.runtime.no_changes_yet",
+        "uxp.captions.runtime.copy_unavailable_title",
+        "uxp.captions.runtime.word_timing_on",
+        "uxp.captions.runtime.reconnect_backend",
+        "uxp.captions.runtime.review_output_ready",
+        "uxp.captions.runtime.repeat_ranges_flagged",
+        "uxp.captions.runtime.transcript_ready",
+        "uxp.captions.runtime.chapter_generation_done_status",
+        "uxp.captions.runtime.repeat_detection_done_status",
+        "uxp.captions.runtime.transcribing_long",
+        "uxp.captions.runtime.transcription_complete",
+        "uxp.captions.runtime.generated_chapters",
+        "uxp.captions.runtime.detected_repeats",
+        "uxp.captions.runtime.timeline_import_needs_srt",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -261,6 +274,34 @@ def test_uxp_cut_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showProcessing("Detecting filler words' not in cut_js
     assert "Detected ${count} filler word" not in cut_js
     assert "Filler detection done" in _locale()["uxp.cut.runtime.filler_done_status"]
+
+
+def test_uxp_captions_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    captions_state_js = js[
+        js.index("function syncCaptionsActionButtons")
+        : js.index("function rememberTimelineCuts")
+    ]
+    captions_jobs_js = js[
+        js.index("async function runTranscribe")
+        : js.index("/** ── DENOISE")
+    ]
+
+    assert 'copyBtn.title = copyBtn.disabled\n      ? "Copy becomes available' not in captions_state_js
+    assert 'const note = `${wordLevel ? "Word timing is on"' not in captions_state_js
+    assert 'setCaptionsSessionState(\n      "Offline"' not in captions_state_js
+    assert '|| "Review output";' not in captions_state_js
+    assert 'const headerParts = [`Repeat ${index + 1}`];' not in captions_state_js
+    assert 'UIController.showToast("Please select a clip first."' not in captions_jobs_js
+    assert 'UIController.showProcessing("Transcribing' not in captions_jobs_js
+    assert 'UIController.showToast("Transcription complete.' not in captions_jobs_js
+    assert "UIController.showToast(`Transcription error:" not in captions_jobs_js
+    assert 'UIController.showProcessing("Generating chapters' not in captions_jobs_js
+    assert "UIController.setStatus(`Chapter generation complete" not in captions_jobs_js
+    assert "UIController.showToast(`Detected ${count} repeat" not in captions_jobs_js
+    assert "UIController.setStatus(`Repeat detection done" not in captions_jobs_js
+    assert "Repeat review is ready" in _locale()["uxp.captions.runtime.repeat_review_ready_status"]
+    assert "Transcription complete" in _locale()["uxp.captions.runtime.transcription_complete"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():
