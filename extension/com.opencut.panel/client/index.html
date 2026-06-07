@@ -3748,39 +3748,39 @@
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ai_engine_prefs">Engine Routing</div>
-                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine availability">
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine availability" data-i18n-title="engines.settings_refresh_title">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label">Refresh Availability</span>
+                            <span class="btn-label" data-i18n="engines.settings_refresh_label">Refresh Availability</span>
                         </button>
                     </div>
-                    <p class="card-desc">Choose which engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available engine selected for this machine.</p>
+                    <p class="card-desc" data-i18n="engines.settings_desc">Choose which engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available engine selected for this machine.</p>
                     <div id="engineRegistryGrid" class="dep-grid">
-                        <div class="hint">Refresh availability to load engine options for this machine.</div>
+                        <div class="hint" data-i18n="engines.settings_empty_hint">Refresh availability to load engine options for this machine.</div>
                     </div>
-                    <div class="oc-status-line mt-xs" id="engineRegistryStatus" data-state="idle" role="status" aria-live="polite">Refresh engine availability to review Auto routing and any pinned domains.</div>
+                    <div class="oc-status-line mt-xs" id="engineRegistryStatus" data-state="idle" role="status" aria-live="polite" data-i18n="engines.settings_refresh_title">Refresh engine availability to review Auto routing and any pinned domains.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ws_bridge">Live Updates Bridge</div>
                     </div>
-                    <p class="card-desc">Keep progress, completion, and cancel feedback flowing between the backend and the panel while longer jobs run.</p>
+                    <p class="card-desc" data-i18n="ws.settings_desc">Keep progress, completion, and cancel feedback flowing between the backend and the panel while longer jobs run.</p>
                     <div class="settings-row settings-row-inline">
-                        <span class="settings-label">Bridge</span>
-                        <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown">Checking…</span>
+                        <span class="settings-label" data-i18n="ws.label_bridge">Bridge</span>
+                        <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown" data-i18n="ws.status_checking">Checking…</span>
                     </div>
                     <div class="settings-row settings-row-inline">
-                        <span class="settings-label">Listeners</span>
-                        <span class="settings-value settings-inline-value" id="wsClientCount">0 listeners</span>
+                        <span class="settings-label" data-i18n="ws.label_listeners">Listeners</span>
+                        <span class="settings-value settings-inline-value" id="wsClientCount" data-i18n="ws.listener_count_zero">0 listeners</span>
                     </div>
                     <div class="btn-row gap-xs mt-sm">
-                        <button type="button" class="btn-outline btn-sm" id="wsStartBtn">Start Bridge</button>
-                        <button type="button" class="btn-outline btn-sm" id="wsStopBtn">Stop Bridge</button>
-                        <button type="button" class="btn-outline btn-sm" id="wsConnectBtn">Connect Live Updates</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsStartBtn" data-i18n="ws.button_start_bridge">Start Bridge</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsStopBtn" data-i18n="ws.button_stop_bridge">Stop Bridge</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsConnectBtn" data-i18n="ws.button_connect">Connect Live Updates</button>
                     </div>
-                    <div class="oc-status-line mt-xs" id="wsHint" data-state="idle" role="status" aria-live="polite">Start the bridge to stream progress from the backend into the panel during longer runs.</div>
+                    <div class="oc-status-line mt-xs" id="wsHint" data-state="idle" role="status" aria-live="polite" data-i18n="ws.hint_start_bridge">Start the bridge to stream progress from the backend into the panel during longer runs.</div>
                 </section>
 
                 <section class="card">

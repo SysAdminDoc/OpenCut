@@ -1191,6 +1191,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("models.refresh_hint", "data-i18n"),
     ("models.total_size", "data-i18n"),
     ("models.status_idle", "data-i18n"),
+    # One-hundred-fifty-eighth batch (Settings engine routing and live-updates bridge shell HTML).
+    ("engines.settings_refresh_title", "data-i18n-title"),
+    ("engines.settings_refresh_label", "data-i18n"),
+    ("engines.settings_desc", "data-i18n"),
+    ("engines.settings_empty_hint", "data-i18n"),
+    ("engines.settings_refresh_title", "data-i18n"),
+    ("ws.settings_desc", "data-i18n"),
+    ("ws.label_bridge", "data-i18n"),
+    ("ws.status_checking", "data-i18n"),
+    ("ws.label_listeners", "data-i18n"),
+    ("ws.listener_count_zero", "data-i18n"),
+    ("ws.button_start_bridge", "data-i18n"),
+    ("ws.button_stop_bridge", "data-i18n"),
+    ("ws.button_connect", "data-i18n"),
+    ("ws.hint_start_bridge", "data-i18n"),
 )
 
 
