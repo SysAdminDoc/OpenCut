@@ -709,15 +709,18 @@ def test_shorts_pipeline_route_returns_magic_bundle_manifest(client, csrf_token,
     media.write_bytes(b"fake")
     bundle_path = tmp_path / "out" / "magic_clips_manifest.json"
     csv_path = tmp_path / "out" / "magic_clips_manifest.csv"
+    export_path = tmp_path / "out" / "out.mp4"
     bundle_payload = {
         "schema_version": "opencut.magic_clips.bundle.v1",
+        "output_dir": str(tmp_path / "out"),
         "candidate_count": 1,
         "output_count": 1,
         "candidates": [
             {
                 "candidate_id": "mcc:keep",
                 "title": "Keep",
-                "outputs": [{"platform_preset": "youtube_shorts", "export_path": str(tmp_path / "out.mp4")}],
+                "social_metadata": {"suggested_caption": "Ship the useful part", "hashtags": ["#editing"]},
+                "outputs": [{"platform_preset": "youtube_shorts", "export_path": str(export_path)}],
             },
         ],
     }
@@ -725,13 +728,14 @@ def test_shorts_pipeline_route_returns_magic_bundle_manifest(client, csrf_token,
     def fake_generate(_filepath, config, output_dir, on_progress):
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         bundle_path.parent.mkdir(parents=True, exist_ok=True)
+        export_path.write_bytes(b"clip")
         bundle_path.write_text(json.dumps(bundle_payload), encoding="utf-8")
         csv_path.write_text("candidate_id,platform_preset\nmcc:keep,youtube_shorts\n", encoding="utf-8")
         on_progress(100, "done")
         return [
             SimpleNamespace(
                 index=1,
-                output_path=str(tmp_path / "out.mp4"),
+                output_path=str(export_path),
                 start=5.0,
                 end=20.0,
                 duration=15.0,
@@ -776,6 +780,12 @@ def test_shorts_pipeline_route_returns_magic_bundle_manifest(client, csrf_token,
     assert result["magic_clips_bundle_csv"] == str(csv_path)
     assert result["magic_clips_bundle"] == bundle_payload
     assert result["clips"][0]["bundle_manifest_path"] == str(bundle_path)
+    handoff = result["magic_clips_downstream_handoff"]
+    assert handoff["schema_version"] == "opencut.magic_clips.downstream.v1"
+    assert handoff["timeline_import_count"] == 1
+    assert handoff["social_upload_count"] == 1
+    assert handoff["timeline_imports"][0]["import_path"] == str(export_path)
+    assert handoff["social_uploads"][0]["upload_payload"]["platform"] == "youtube"
 
 
 def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csrf_token, tmp_path):
@@ -792,7 +802,7 @@ def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csr
 
     with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
             patch("opencut.routes.video_specialty.rate_limit_release"), \
-            patch("opencut.core.shorts_pipeline.generate_shorts") as mock_generate:
+            patch("opencut.core.shorts_pipeline.generate_shorts"):
         resp = client.post(
             "/video/shorts-pipeline",
             data=json.dumps({
@@ -807,4 +817,198 @@ def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csr
     assert resp.status_code == 200
     assert job["status"] == "error"
     assert "approved Magic Clips handoff requires candidate windows" in job["error"]
-    mock_generate.assert_not_called()
+
+
+def test_magic_clips_bundle_builds_social_upload_plan(tmp_path):
+    from opencut.core.social_post import build_magic_clips_social_upload_plan
+
+    export_path = tmp_path / "first_youtube.mp4"
+    export_path.write_bytes(b"clip")
+    bundle_path = tmp_path / "magic_clips_manifest.json"
+    bundle_path.write_text(json.dumps({
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "plan_id": "mcplan:social",
+        "candidates": [
+            {
+                "candidate_id": "mcc:first",
+                "title": "First hook",
+                "transcript_excerpt": "This hook explains the result.",
+                "social_metadata": {
+                    "suggested_caption": "Fast edit breakdown",
+                    "hashtags": ["#editing", "#premiere"],
+                },
+                "outputs": [
+                    {
+                        "platform_preset": "youtube_shorts",
+                        "export_path": str(export_path),
+                        "caption_path": str(tmp_path / "first.srt"),
+                        "thumbnail_path": str(tmp_path / "thumb.jpg"),
+                        "start": 5.0,
+                        "end": 20.0,
+                        "duration": 15.0,
+                    },
+                    {
+                        "platform_preset": "instagram_feed",
+                        "export_path": str(tmp_path / "first_instagram.mp4"),
+                    },
+                ],
+            },
+        ],
+    }), encoding="utf-8")
+
+    plan = build_magic_clips_social_upload_plan(
+        str(bundle_path),
+        platform="youtube",
+        candidate_ids=["mcc:first"],
+        privacy="unlisted",
+    )
+
+    assert plan["schema_version"] == "opencut.magic_clips.social_upload_plan.v1"
+    assert plan["source_manifest"] == str(bundle_path)
+    assert plan["plan_id"] == "mcplan:social"
+    assert plan["upload_count"] == 1
+    assert plan["platforms"] == ["youtube"]
+    upload = plan["uploads"][0]
+    assert upload["candidate_id"] == "mcc:first"
+    assert upload["platform"] == "youtube"
+    assert upload["platform_preset"] == "youtube_shorts"
+    assert upload["filepath"] == str(export_path)
+    assert upload["title"] == "First hook"
+    assert upload["description"] == "Fast edit breakdown"
+    assert upload["tags"] == ["#editing", "#premiere"]
+    assert upload["privacy"] == "unlisted"
+    assert upload["ready"] is True
+    assert upload["warnings"] == []
+
+
+def test_magic_clips_downstream_handoff_skips_outputs_outside_bundle_root(tmp_path):
+    from opencut.core.shorts_pipeline import build_magic_clips_downstream_handoff
+
+    output_dir = tmp_path / "bundle"
+    output_dir.mkdir()
+    outside = tmp_path / "outside.mp4"
+    outside.write_bytes(b"secret")
+    bundle_path = output_dir / "magic_clips_manifest.json"
+    bundle_path.write_text(json.dumps({
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "output_dir": str(output_dir),
+        "candidates": [
+            {
+                "candidate_id": "mcc:first",
+                "title": "First hook",
+                "outputs": [{"platform_preset": "youtube_shorts", "export_path": str(outside)}],
+            },
+        ],
+    }), encoding="utf-8")
+
+    handoff = build_magic_clips_downstream_handoff(str(bundle_path))
+
+    assert handoff["timeline_imports"] == []
+    assert handoff["social_uploads"] == []
+    assert handoff["warnings"][0]["type"] == "output_outside_bundle_root"
+
+
+def test_social_upload_dry_run_consumes_magic_clips_bundle_manifest(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    youtube_path = tmp_path / "first_youtube.mp4"
+    instagram_path = tmp_path / "first_instagram.mp4"
+    youtube_path.write_bytes(b"yt")
+    instagram_path.write_bytes(b"ig")
+    bundle_path = tmp_path / "magic_clips_manifest.json"
+    bundle_path.write_text(json.dumps({
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "plan_id": "mcplan:social-route",
+        "candidates": [
+            {
+                "candidate_id": "mcc:first",
+                "title": "First hook",
+                "social_metadata": {"suggested_caption": "Ready for the feed"},
+                "outputs": [
+                    {"platform_preset": "youtube_shorts", "export_path": str(youtube_path)},
+                    {"platform_preset": "instagram_feed", "export_path": str(instagram_path)},
+                ],
+            },
+        ],
+    }), encoding="utf-8")
+
+    resp = client.post(
+        "/social/upload",
+        data=json.dumps({
+            "magic_clips_bundle_manifest": str(bundle_path),
+            "dry_run": True,
+            "platform": "instagram",
+            "candidate_ids": ["mcc:first"],
+            "privacy": "public",
+        }),
+        headers=csrf_headers(csrf_token),
+    )
+    job = _poll_job(client, resp.get_json()["job_id"])
+
+    assert resp.status_code == 200
+    assert job["status"] == "complete"
+    result = job["result"]
+    assert result["dry_run"] is True
+    assert result["source_manifest"] == str(bundle_path)
+    assert result["upload_count"] == 1
+    assert result["platforms"] == ["instagram"]
+    assert result["uploads"][0]["filepath"] == str(instagram_path)
+    assert result["uploads"][0]["platform"] == "instagram"
+    assert result["uploads"][0]["privacy"] == "public"
+    assert result["uploads"][0]["ready"] is True
+
+
+def test_social_upload_rejects_magic_bundle_without_dry_run(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    bundle_path = tmp_path / "magic_clips_manifest.json"
+    bundle_path.write_text(json.dumps({
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "candidates": [],
+    }), encoding="utf-8")
+
+    resp = client.post(
+        "/social/upload",
+        data=json.dumps({"magic_clips_bundle_manifest": str(bundle_path)}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 400
+    assert "dry_run=true" in resp.get_json()["error"]
+
+
+def test_timeline_magic_clips_import_plan_reads_bundle_manifest(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    output_dir = tmp_path / "bundle"
+    output_dir.mkdir()
+    export_path = output_dir / "first_youtube.mp4"
+    export_path.write_bytes(b"yt")
+    bundle_path = output_dir / "magic_clips_manifest.json"
+    bundle_path.write_text(json.dumps({
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "plan_id": "mcplan:timeline-route",
+        "output_dir": str(output_dir),
+        "candidates": [
+            {
+                "candidate_id": "mcc:first",
+                "title": "First hook",
+                "outputs": [
+                    {"platform_preset": "youtube_shorts", "export_path": str(export_path), "start": 1.0, "end": 9.0},
+                ],
+            },
+        ],
+    }), encoding="utf-8")
+
+    resp = client.post(
+        "/timeline/magic-clips-import-plan",
+        data=json.dumps({"bundle_manifest_path": str(bundle_path)}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload["schema_version"] == "opencut.magic_clips.downstream.v1"
+    assert payload["timeline_import_count"] == 1
+    assert payload["timeline_imports"][0]["import_path"] == str(export_path)
+    assert payload["timeline_imports"][0]["source"] == "magic_clips_bundle"

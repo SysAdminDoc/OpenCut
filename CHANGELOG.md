@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Downstream Handoff
+
+- Added a shared Magic Clips downstream handoff that turns `magic_clips_manifest.json` into timeline import records and social upload dry-run payloads with output-root containment checks.
+- `/video/shorts-pipeline` now returns the handoff beside bundle data, `/social/upload` dry-runs Magic Clips bundle uploads through it, and `/timeline/magic-clips-import-plan` exposes the timeline import plan.
+
 ### Changed - UXP Hybrid Package Validator
 
 - Closed RA-12 with a static validator and CLI for UXP Hybrid `.uxpaddon` bundles, covering manifest opt-in, safe addon filenames, production host shape, Marketplace architecture layout, independent partial-architecture warnings, and release-smoke wiring.

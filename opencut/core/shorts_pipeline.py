@@ -29,6 +29,27 @@ MAGIC_CLIPS_MANIFEST_NAME = "magic_clips_run_manifest.json"
 MAGIC_CLIPS_BUNDLE_SCHEMA = "opencut.magic_clips.bundle.v1"
 MAGIC_CLIPS_BUNDLE_MANIFEST_NAME = "magic_clips_manifest.json"
 MAGIC_CLIPS_BUNDLE_CSV_NAME = "magic_clips_manifest.csv"
+MAGIC_CLIPS_DOWNSTREAM_SCHEMA = "opencut.magic_clips.downstream.v1"
+
+_SOCIAL_PLATFORM_BY_PRESET = {
+    "youtube_shorts": "youtube",
+    "youtube_1080p": "youtube",
+    "youtube_4k": "youtube",
+    "youtube_long": "youtube",
+    "tiktok": "tiktok",
+    "instagram_feed": "instagram",
+    "instagram_post": "instagram",
+    "instagram_reel": "instagram",
+    "instagram_reels": "instagram",
+    "instagram_story": "instagram",
+    "twitter": "twitter",
+    "twitter_x": "twitter",
+    "linkedin": "linkedin",
+    "snapchat": "snapchat",
+    "facebook_post": "facebook",
+    "facebook_reel": "facebook",
+    "pinterest": "pinterest",
+}
 
 
 @dataclass
@@ -626,6 +647,215 @@ def _write_magic_clips_bundle_artifacts(
                     "transcript_excerpt": candidate.get("transcript_excerpt", ""),
                 })
     return bundle_manifest_path, bundle_csv_path
+
+
+def _path_within_root(path: str, root: str) -> bool:
+    if not path or not root:
+        return False
+    try:
+        resolved = os.path.normcase(os.path.realpath(path))
+        resolved_root = os.path.normcase(os.path.realpath(root))
+        return os.path.commonpath([resolved, resolved_root]) == resolved_root
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def _resolve_bundle_path(raw_path: Any, *, bundle_dir: str) -> str:
+    path = str(raw_path or "").strip()
+    if not path:
+        return ""
+    if os.path.isabs(path):
+        return os.path.realpath(path)
+    return os.path.realpath(os.path.join(bundle_dir, path))
+
+
+def _normalise_hashtags(raw_tags: Any) -> list[str]:
+    if not isinstance(raw_tags, list):
+        return []
+    tags: list[str] = []
+    for raw in raw_tags:
+        tag = str(raw or "").strip()
+        if not tag:
+            continue
+        if not tag.startswith("#"):
+            tag = f"#{tag}"
+        if tag not in tags:
+            tags.append(tag[:64])
+    return tags[:30]
+
+
+def _tags_for_upload(hashtags: list[str]) -> list[str]:
+    return [tag.lstrip("#") for tag in hashtags if tag.lstrip("#")][:30]
+
+
+def _string_field(value: Any, limit: int | None = None) -> str:
+    text = str(value or "").strip()
+    if limit is not None:
+        return text[:limit]
+    return text
+
+
+def _social_platform_for_preset(preset_id: str) -> str:
+    return _SOCIAL_PLATFORM_BY_PRESET.get(str(preset_id or "").strip().lower(), "")
+
+
+def build_magic_clips_downstream_handoff(bundle_manifest_path: str) -> dict[str, Any]:
+    """Build timeline-import and social-upload payloads from a Magic Clips bundle."""
+    manifest_path = os.path.realpath(str(bundle_manifest_path or "").strip())
+    if not manifest_path or not os.path.isfile(manifest_path):
+        raise ValueError("Magic Clips bundle manifest not found")
+
+    bundle = _load_json_file(manifest_path)
+    if bundle.get("schema_version") != MAGIC_CLIPS_BUNDLE_SCHEMA:
+        raise ValueError("Unsupported Magic Clips bundle schema")
+
+    bundle_dir = os.path.dirname(manifest_path)
+    output_root = _resolve_bundle_path(bundle.get("output_dir") or bundle_dir, bundle_dir=bundle_dir)
+    if not os.path.isdir(output_root):
+        output_root = bundle_dir
+
+    warnings: list[dict[str, Any]] = []
+    timeline_imports: list[dict[str, Any]] = []
+    social_uploads: list[dict[str, Any]] = []
+    candidates = [item for item in bundle.get("candidates") or [] if isinstance(item, dict)]
+
+    for candidate_index, candidate in enumerate(candidates, start=1):
+        candidate_id = _string_field(candidate.get("candidate_id") or f"candidate:{candidate_index}")
+        title = _string_field(candidate.get("title") or f"Candidate {candidate_index}", 100)
+        transcript_excerpt = _string_field(candidate.get("transcript_excerpt"), 500)
+        social_metadata = candidate.get("social_metadata") if isinstance(candidate.get("social_metadata"), dict) else {}
+        caption = _string_field(
+            social_metadata.get("suggested_caption")
+            or candidate.get("suggested_caption")
+            or transcript_excerpt
+            or title,
+            5000,
+        )
+        hashtags = _normalise_hashtags(social_metadata.get("hashtags") or candidate.get("hashtags"))
+        outputs = [item for item in candidate.get("outputs") or [] if isinstance(item, dict)]
+        for output_index, output in enumerate(outputs, start=1):
+            preset_id = _string_field(output.get("platform_preset"))
+            export_path = _resolve_bundle_path(
+                output.get("export_path") or output.get("output_path"),
+                bundle_dir=bundle_dir,
+            )
+            if not export_path:
+                warnings.append({
+                    "type": "missing_export_path",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                })
+                continue
+            if not _path_within_root(export_path, output_root):
+                warnings.append({
+                    "type": "output_outside_bundle_root",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                    "export_path": export_path,
+                })
+                continue
+
+            caption_path = _resolve_bundle_path(output.get("caption_path"), bundle_dir=bundle_dir)
+            if caption_path and not _path_within_root(caption_path, output_root):
+                warnings.append({
+                    "type": "caption_outside_bundle_root",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                    "caption_path": caption_path,
+                })
+                caption_path = ""
+            thumbnail_path = _resolve_bundle_path(output.get("thumbnail_path"), bundle_dir=bundle_dir)
+            if thumbnail_path and not _path_within_root(thumbnail_path, output_root):
+                warnings.append({
+                    "type": "thumbnail_outside_bundle_root",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                    "thumbnail_path": thumbnail_path,
+                })
+                thumbnail_path = ""
+
+            exists = os.path.isfile(export_path)
+            if not exists:
+                warnings.append({
+                    "type": "missing_output_file",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                    "export_path": export_path,
+                })
+
+            timeline_record = {
+                "source": "magic_clips_bundle",
+                "bundle_manifest_path": manifest_path,
+                "candidate_id": candidate_id,
+                "candidate_index": candidate_index,
+                "output_index": int(output.get("output_index") or output_index),
+                "title": title,
+                "import_path": export_path,
+                "caption_path": caption_path,
+                "thumbnail_path": thumbnail_path,
+                "platform_preset": preset_id,
+                "start": _safe_float(output.get("start", candidate.get("start")), 0.0),
+                "end": _safe_float(output.get("end", candidate.get("end")), 0.0),
+                "duration": _safe_float(output.get("duration", candidate.get("duration")), 0.0),
+                "width": int(output.get("width") or 0),
+                "height": int(output.get("height") or 0),
+                "exists": exists,
+            }
+            timeline_imports.append(timeline_record)
+
+            platform = _social_platform_for_preset(preset_id)
+            if not platform:
+                warnings.append({
+                    "type": "unsupported_social_platform",
+                    "candidate_id": candidate_id,
+                    "output_index": output_index,
+                    "platform_preset": preset_id,
+                })
+                continue
+
+            upload_payload = {
+                "filepath": export_path,
+                "platform": platform,
+                "title": title,
+                "description": caption,
+                "tags": _tags_for_upload(hashtags),
+                "privacy": "private",
+            }
+            social_uploads.append({
+                "source": "magic_clips_bundle",
+                "bundle_manifest_path": manifest_path,
+                "candidate_id": candidate_id,
+                "candidate_index": candidate_index,
+                "output_index": timeline_record["output_index"],
+                "title": title,
+                "output_path": export_path,
+                "platform": platform,
+                "platform_preset": preset_id,
+                "caption": caption,
+                "hashtags": hashtags,
+                "thumbnail_path": thumbnail_path,
+                "start": timeline_record["start"],
+                "end": timeline_record["end"],
+                "duration": timeline_record["duration"],
+                "exists": exists,
+                "upload_payload": upload_payload,
+            })
+
+    return {
+        "schema_version": MAGIC_CLIPS_DOWNSTREAM_SCHEMA,
+        "bundle_schema_version": MAGIC_CLIPS_BUNDLE_SCHEMA,
+        "bundle_manifest_path": manifest_path,
+        "run_manifest_path": str(bundle.get("run_manifest_path") or ""),
+        "plan_id": str(bundle.get("plan_id") or ""),
+        "source": bundle.get("source") if isinstance(bundle.get("source"), dict) else {},
+        "candidate_count": len(candidates),
+        "output_count": sum(len(c.get("outputs") or []) for c in candidates),
+        "timeline_import_count": len(timeline_imports),
+        "social_upload_count": len(social_uploads),
+        "timeline_imports": timeline_imports,
+        "social_uploads": social_uploads,
+        "warnings": warnings,
+    }
 
 
 def _normalise_transcript_segments(raw_segments: Any) -> List[dict[str, Any]]:
