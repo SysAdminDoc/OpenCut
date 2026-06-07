@@ -3788,26 +3788,26 @@
                         <div class="card-title" data-i18n="settings.audio_zoom">Audio &amp; Zoom Defaults</div>
                     </div>
                     <div class="form-group">
-                        <label for="defaultLufs">Default Loudness Target</label>
+                        <label for="defaultLufs" data-i18n="settings.default_loudness_target">Default Loudness Target</label>
                         <div class="slider-row">
                             <input type="range" id="defaultLufs" min="-23" max="-9" step="0.5" value="-14">
                             <span class="slider-val" id="defaultLufsVal">-14 LUFS</span>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="defaultZoom">Auto Zoom Amount</label>
+                        <label for="defaultZoom" data-i18n="settings.default_zoom_amount">Auto Zoom Amount</label>
                         <div class="slider-row">
                             <input type="range" id="defaultZoom" min="1.05" max="1.5" step="0.01" value="1.15">
                             <span class="slider-val" id="defaultZoomVal">1.15&times;</span>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="defaultZoomEasing">Zoom Easing</label>
+                        <label for="defaultZoomEasing" data-i18n="settings.zoom_easing">Zoom Easing</label>
                         <select id="defaultZoomEasing">
-                            <option value="ease_in_out">Ease In/Out</option>
-                            <option value="ease_in">Ease In</option>
-                            <option value="ease_out">Ease Out</option>
-                            <option value="linear">Linear</option>
+                            <option value="ease_in_out" data-i18n="settings.zoom_ease_in_out">Ease In/Out</option>
+                            <option value="ease_in" data-i18n="settings.zoom_ease_in">Ease In</option>
+                            <option value="ease_out" data-i18n="settings.zoom_ease_out">Ease Out</option>
+                            <option value="linear" data-i18n="settings.zoom_linear">Linear</option>
                         </select>
                     </div>
                     <button type="button" class="btn-outline btn-sm" id="saveAudioZoomDefaultsBtn" data-i18n="settings.save_defaults">Save Defaults</button>
@@ -3818,23 +3818,23 @@
                         <div class="card-title" data-i18n="settings.gpu_rec">GPU Recommendation</div>
                     </div>
                     <div id="gpuRecContent">
-                        <button type="button" class="btn-outline btn-sm" id="getGpuRecBtn">Get Recommendation</button>
+                        <button type="button" class="btn-outline btn-sm" id="getGpuRecBtn" data-i18n="gpu.get_recommendation">Get Recommendation</button>
                     </div>
                     <div class="gpu-rec hidden" id="gpuRecResults">
                         <div class="settings-row">
-                            <span class="settings-label">Recommended Model</span>
+                            <span class="settings-label" data-i18n="gpu.recommended_model">Recommended Model</span>
                             <span class="settings-value" id="gpuRecModel">--</span>
                         </div>
                         <div class="settings-row">
-                            <span class="settings-label">Quality</span>
+                            <span class="settings-label" data-i18n="gpu.quality">Quality</span>
                             <span class="settings-value" id="gpuRecQuality">--</span>
                         </div>
                         <div class="settings-row">
-                            <span class="settings-label">Device</span>
+                            <span class="settings-label" data-i18n="gpu.device">Device</span>
                             <span class="settings-value" id="gpuRecDevice">--</span>
                         </div>
                         <div class="gpu-rec-notes" id="gpuRecNotes"></div>
-                        <button type="button" class="btn-outline btn-sm mt-sm" id="applyGpuRecBtn">Apply Recommendations</button>
+                        <button type="button" class="btn-outline btn-sm mt-sm" id="applyGpuRecBtn" data-i18n="gpu.apply_recommendations">Apply Recommendations</button>
                     </div>
                 </section>
 

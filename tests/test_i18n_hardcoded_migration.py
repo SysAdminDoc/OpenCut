@@ -1206,6 +1206,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("ws.button_stop_bridge", "data-i18n"),
     ("ws.button_connect", "data-i18n"),
     ("ws.hint_start_bridge", "data-i18n"),
+    # One-hundred-fifty-ninth batch (Settings audio/zoom defaults and GPU recommendation shell HTML).
+    ("settings.default_loudness_target", "data-i18n"),
+    ("settings.default_zoom_amount", "data-i18n"),
+    ("settings.zoom_easing", "data-i18n"),
+    ("settings.zoom_ease_in_out", "data-i18n"),
+    ("settings.zoom_ease_in", "data-i18n"),
+    ("settings.zoom_ease_out", "data-i18n"),
+    ("settings.zoom_linear", "data-i18n"),
+    ("gpu.get_recommendation", "data-i18n"),
+    ("gpu.recommended_model", "data-i18n"),
+    ("gpu.quality", "data-i18n"),
+    ("gpu.device", "data-i18n"),
+    ("gpu.apply_recommendations", "data-i18n"),
 )
 
 
