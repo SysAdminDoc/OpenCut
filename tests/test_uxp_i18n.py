@@ -47,6 +47,12 @@ def _js_i18n_keys() -> set[str]:
     keys = set(re.findall(r'(?<![A-Za-z0-9_$])t\(\s*"([^"]+)"', js))
     keys.update(
         re.findall(
+            r'(?<![A-Za-z0-9_$])setStatus\(\s*"([a-z0-9_.-]+\.[a-z0-9_.-]+)"',
+            js,
+        )
+    )
+    keys.update(
+        re.findall(
             r"(?:titleKey|subtitleKey|kickerKey|textKey|actionLabelKey):\s*\"([^\"]+)\"",
             js,
         )
@@ -84,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 170
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 190
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -104,6 +110,13 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.cut.filler_detection_backend",
         "uxp.cut.detect_remove_fillers",
         "uxp.cut.apply_cuts_to_timeline",
+        "uxp.fcc.caption_display_settings",
+        "uxp.fcc.compliance_notice_prefix",
+        "uxp.fcc.source_link",
+        "uxp.fcc.text_color",
+        "uxp.fcc.preview",
+        "uxp.fcc.loading_tokens",
+        "uxp.fcc.caption_preview_sample",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
@@ -127,6 +140,10 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.status.backend_offline",
         "uxp.guide.backend_offline_title",
         "uxp.guide.writeback_ready_title",
+        "uxp.fcc.rendering_preview",
+        "uxp.fcc.preview_failed",
+        "uxp.fcc.defaults_loaded",
+        "uxp.fcc.token_schema_failed",
         "uxp.workspace.library_clip_count_many",
     }.issubset(js_keys)
 

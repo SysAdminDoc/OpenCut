@@ -6628,9 +6628,17 @@ function initCaptionDisplaySettingsCard() {
 
   let cachedSchema = null;
 
-  const setStatus = (text) => {
+  const formatMessage = (key, fallback, params = {}) => {
+    let message = t(key, fallback);
+    for (const [name, value] of Object.entries(params)) {
+      message = message.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
+    }
+    return message;
+  };
+
+  const setStatus = (key, fallback, params = {}) => {
     const el = $("capDispStatus");
-    if (el) el.textContent = text;
+    if (el) el.textContent = formatMessage(key, fallback, params);
   };
 
   function populateSelects(schema) {
@@ -6670,7 +6678,7 @@ function initCaptionDisplaySettingsCard() {
     const box = $("capDispPreviewBox");
     if (!area || !sample || !box) return;
     box.hidden = false;
-    sample.textContent = payload.sample_text || "Caption preview";
+    sample.textContent = payload.sample_text || t("uxp.fcc.caption_preview_sample", "Caption preview");
     const styles = payload.preview_css || {};
     // The /captions/display-settings/preview payload returns ready-to-use
     // CSS strings keyed by attribute name. Apply directly.
@@ -6684,20 +6692,20 @@ function initCaptionDisplaySettingsCard() {
   async function refreshPreview() {
     const btn = $("capDispPreviewBtn");
     if (btn) btn.disabled = true;
-    setStatus("Rendering preview…");
+    setStatus("uxp.fcc.rendering_preview", "Rendering preview...");
     try {
       const resp = await BackendClient.post("/captions/display-settings/preview", {
         settings: readSettings(),
-        sample_text: "The quick brown fox jumps over the lazy dog.",
+        sample_text: t("uxp.fcc.preview_sample_text", "The quick brown fox jumps over the lazy dog."),
       });
       if (!resp || resp.error) {
-        setStatus("Preview failed: " + (resp?.error || "unknown"));
+        setStatus("uxp.fcc.preview_failed", "Preview failed: {error}", { error: resp?.error || t("common.unknown", "unknown") });
         return;
       }
       applyPreviewStyles(resp);
-      setStatus("Preview updated. These are the FCC display tokens applied to burn-in.");
+      setStatus("uxp.fcc.preview_updated", "Preview updated. These are the FCC display tokens applied to burn-in.");
     } catch (err) {
-      setStatus("Preview error: " + (err?.message || err));
+      setStatus("uxp.fcc.preview_error", "Preview error: {error}", { error: err?.message || err });
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -6712,7 +6720,7 @@ function initCaptionDisplaySettingsCard() {
       const settingKey = spec.key || spec.category;
       if (defaults[settingKey]) sel.value = defaults[settingKey];
     }
-    setStatus("Reset to FCC defaults. Click Preview to re-render.");
+    setStatus("uxp.fcc.reset_defaults_status", "Reset to FCC defaults. Click Preview to re-render.");
   }
 
   // Lazy-load the token catalogue once the card is first painted.
@@ -6722,18 +6730,18 @@ function initCaptionDisplaySettingsCard() {
     try {
       const schema = await BackendClient.get("/captions/display-settings/tokens");
       if (!schema || schema.error) {
-        setStatus("Could not load FCC token schema. The card will stay empty.");
+        setStatus("uxp.fcc.schema_unavailable", "Could not load FCC token schema. The card will stay empty.");
         return;
       }
       populateSelects(schema);
       // Surface the compliance-date string in the hint if the backend supplies one.
-      const notice = document.getElementById("fccComplianceNotice");
-      if (notice && schema.compliance_date) {
-        notice.textContent = notice.textContent.replace("2026-08-17", schema.compliance_date);
+      const complianceDate = document.getElementById("fccComplianceDate");
+      if (complianceDate && schema.compliance_date) {
+        complianceDate.textContent = schema.compliance_date;
       }
-      setStatus("Defaults loaded. Adjust tokens then Preview.");
+      setStatus("uxp.fcc.defaults_loaded", "Defaults loaded. Adjust tokens then Preview.");
     } catch (err) {
-      setStatus("Token-schema fetch failed: " + (err?.message || err));
+      setStatus("uxp.fcc.token_schema_failed", "Token-schema fetch failed: {error}", { error: err?.message || err });
     }
   }
 

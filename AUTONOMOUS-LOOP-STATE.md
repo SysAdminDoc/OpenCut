@@ -6,13 +6,13 @@ Last updated: 2026-06-07
 
 - Project: `C:\Users\--\repos\OpenCut`
 - Branch: `main`
-- Cycle result: Cycle 96 UXP Captions tab i18n shell is shipped. Full UXP i18n parity, external F202 notarization, and F252 WebView cutover evidence remain open.
-- Shipped this cycle: Extended the UXP i18n foundation into the Captions tab, wiring transcription, chapter generation, repeat detection, result metadata, placeholders, options, checkbox labels, and accessible names through `data-i18n*` hooks while raising the UXP static coverage floor to 170 attributes.
-- Verification: `py -3.12 -m pytest -q tests\test_uxp_i18n.py` (5 passed); `py -3.12 -m ruff check tests\test_uxp_i18n.py`; `py -3.12 -m pytest -q tests\test_uxp_i18n.py tests\test_uxp_backend_client_contract.py tests\test_uxp_manifest_schema.py tests\test_panel_tab_parity.py tests\test_roadmap_mirror.py tests\test_roadmap_lint.py tests\test_check_doc_sizes.py tests\test_sync_badges.py` (53 passed); `py -3.12 scripts\sync_badges.py --check`; `py -3.12 scripts\check_doc_sizes.py --check`; `git diff --check`; `py -3.12 scripts\release_smoke.py --only ruff --json`; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (105 gate test files / 858 tests passed); static UXP i18n count verified at 178 attributes.
+- Cycle result: Cycle 97 UXP FCC caption display i18n shell is shipped. Full UXP i18n parity, external F202 notarization, and F252 WebView cutover evidence remain open.
+- Shipped this cycle: Extended the UXP i18n foundation into the F236 caption display-settings card, wiring static labels, compliance notice text, source link, preview labels, dynamic status feedback, preview sample fallback, and compliance-date replacement through UXP locale keys while preserving the FCC source link.
+- Verification: `py -3.12 -m pytest -q tests\test_uxp_i18n.py tests\test_uxp_caption_display_settings_ui.py` (19 passed / 33 subtests passed); `py -3.12 -m ruff check tests\test_uxp_i18n.py tests\test_uxp_caption_display_settings_ui.py`; `py -3.12 -m pytest -q tests\test_uxp_i18n.py tests\test_uxp_caption_display_settings_ui.py tests\test_uxp_backend_client_contract.py tests\test_uxp_manifest_schema.py tests\test_panel_tab_parity.py tests\test_roadmap_mirror.py tests\test_roadmap_lint.py tests\test_check_doc_sizes.py tests\test_sync_badges.py` (67 passed / 33 subtests passed); `py -3.12 scripts\sync_badges.py --check`; `py -3.12 scripts\check_doc_sizes.py --check`; `git diff --check`; `py -3.12 scripts\release_smoke.py --only ruff --json`; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (105 gate test files / 858 tests passed); static UXP i18n count verified at 194 attributes.
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue UXP i18n coverage into the FCC caption display card, Audio tab, or resume E15 hardcoded-shell/scanner cleanup.
-- The next open queue items include full UXP i18n parity, UXP FCC caption display localization, Audio-tab localization, E15 hardcoded-shell/scanner cleanup, caption style gallery, and the external F202/F252 evidence gates.
+- Next cycle focus: continue UXP i18n coverage into the Audio tab or resume E15 hardcoded-shell/scanner cleanup.
+- The next open queue items include full UXP i18n parity, Audio-tab localization, E15 hardcoded-shell/scanner cleanup, caption style gallery, and the external F202/F252 evidence gates.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.
