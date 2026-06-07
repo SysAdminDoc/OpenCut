@@ -30,8 +30,14 @@ const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.32.0";
+const UXP_LOCALE_PATH  = "locales/en.json";
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
+const CONNECTION_LABEL_KEYS = {
+  connected: "conn.online",
+  connecting: "conn.connecting",
+  disconnected: "conn.offline",
+};
 const DELIVERABLE_LABELS = {
   vfx_sheet: "VFX Sheet",
   adr_list: "ADR List",
@@ -46,104 +52,228 @@ const DELIVERABLE_BUTTON_IDS = {
 };
 const WORKSPACE_META   = {
   cut: {
+    titleKey: "uxp.workspace.cut_title",
     title: "Cut & Clean",
+    subtitleKey: "uxp.workspace.cut_subtitle",
     subtitle: "Trim dead space, fillers, and rough pacing with a tighter review flow.",
     sourceIds: ["clipPathCut"],
   },
   captions: {
+    titleKey: "uxp.tabs.captions",
     title: "Captions",
+    subtitleKey: "uxp.workspace.captions_subtitle",
     subtitle: "Transcribe, structure, and style subtitles without leaving the panel.",
     sourceIds: ["clipPathCaptions"],
   },
   audio: {
+    titleKey: "uxp.tabs.audio",
     title: "Audio",
+    subtitleKey: "uxp.workspace.audio_subtitle",
     subtitle: "Denoise, normalize, loudness-match, and cut to rhythm from one focused surface.",
     sourceIds: ["clipPathAudio"],
   },
   video: {
+    titleKey: "uxp.tabs.video",
     title: "Video",
+    subtitleKey: "uxp.workspace.video_subtitle",
     subtitle: "Shape the image, plan coverage, and build short-form versions with a cleaner finishing toolkit.",
     sourceIds: ["clipPathVideo"],
   },
   timeline: {
+    titleKey: "uxp.tabs.timeline",
     title: "Timeline",
+    subtitleKey: "uxp.workspace.timeline_subtitle",
     subtitle: "Write changes back into Premiere, export interchange, and run batch production tasks with confidence.",
     sourceIds: ["clipPathCut", "clipPathVideo", "clipPathAudio"],
   },
   search: {
+    titleKey: "uxp.tabs.search",
     title: "Search",
+    subtitleKey: "uxp.workspace.search_subtitle",
     subtitle: "Index the library, search footage, and trigger edit actions from natural-language commands.",
     sourceIds: ["clipPathVideo", "clipPathCaptions", "clipPathCut", "clipPathAudio"],
   },
   deliverables: {
+    titleKey: "uxp.tabs.deliverables",
     title: "Deliverables",
+    subtitleKey: "uxp.workspace.deliverables_subtitle",
     subtitle: "Review sequence context and export reports, documents, and final handoff assets.",
     sourceIds: ["clipPathCut", "clipPathVideo", "clipPathAudio"],
   },
   settings: {
+    titleKey: "uxp.tabs.settings",
     title: "Settings",
+    subtitleKey: "uxp.workspace.settings_subtitle",
     subtitle: "Tune engine routing, realtime connections, and shared defaults across the studio.",
     sourceIds: [],
   },
 };
 const WORKSPACE_GUIDES = {
   cut: {
+    kickerKey: "uxp.guide.cut_kicker",
     kicker: "Cut pass",
+    titleKey: "uxp.guide.cut_title",
     title: "Build a cleaner first pass of the edit.",
+    textKey: "uxp.guide.cut_text",
     text: "Start with silence detection or filler cleanup, then review the suggested cut ranges before writing them back to the timeline.",
     action: "focus-runSilenceBtn",
+    actionLabelKey: "uxp.guide.run_silence",
     actionLabel: "Run Silence Detection",
   },
   captions: {
+    kickerKey: "uxp.guide.captions_kicker",
     kicker: "Transcript",
+    titleKey: "uxp.guide.captions_title",
     title: "Turn the active shot into reviewable text.",
+    textKey: "uxp.guide.captions_text",
     text: "Transcribe first, then move into chapters, repeat detection, or timeline import once the wording looks right.",
     action: "focus-runTranscribeBtn",
+    actionLabelKey: "uxp.guide.transcribe_clip",
     actionLabel: "Transcribe Clip",
   },
   audio: {
+    kickerKey: "uxp.guide.audio_kicker",
     kicker: "Audio pass",
+    titleKey: "uxp.guide.audio_title",
     title: "Clean the voice bed before the rest of the finish.",
+    textKey: "uxp.guide.audio_text",
     text: "Start with denoise or normalization, then add rhythm markers if the cut needs to lock to music.",
     action: "focus-runDenoiseBtn",
+    actionLabelKey: "uxp.guide.run_denoise",
     actionLabel: "Run Denoise",
   },
   video: {
+    kickerKey: "uxp.guide.video_kicker",
     kicker: "Finishing",
+    titleKey: "uxp.guide.video_title",
     title: "Shape the frame and build derivative edits from one source.",
+    textKey: "uxp.guide.video_text",
     text: "Use color, reframe, multicam, and short-form tools without repatching the same clip every time.",
     action: "focus-runColorMatchBtn",
+    actionLabelKey: "uxp.guide.match_color",
     actionLabel: "Match Color",
   },
   timeline: {
+    kickerKey: "uxp.guide.timeline_kicker",
     kicker: "Write-back",
+    titleKey: "uxp.guide.timeline_title",
     title: "Send approved changes back into Premiere with less friction.",
+    textKey: "uxp.guide.timeline_text",
     text: "Apply the latest cuts or markers, then export OTIO, markers, or captions from the same review session.",
     action: "focus-applyTimelineCutsBtn",
+    actionLabelKey: "uxp.guide.apply_latest_cuts",
     actionLabel: "Apply Latest Cuts",
   },
   search: {
+    kickerKey: "uxp.guide.search_kicker",
     kicker: "Discovery",
+    titleKey: "uxp.guide.search_title",
     title: "Search the library, then reuse the result instantly.",
+    textKey: "uxp.guide.search_text",
     text: "Index a folder once, search with natural language, and pull the matching shot back into the rest of the workspace.",
     action: "focus-searchQuery",
+    actionLabelKey: "uxp.guide.start_search",
     actionLabel: "Start Search",
   },
   deliverables: {
+    kickerKey: "uxp.guide.deliverables_kicker",
     kicker: "Handoff",
+    titleKey: "uxp.guide.deliverables_title",
     title: "Pull sequence context before generating delivery docs.",
+    textKey: "uxp.guide.deliverables_text",
     text: "Load the active Premiere sequence, choose an output folder, and generate reports with cleaner defaults.",
     action: "focus-loadSeqInfoBtn",
+    actionLabelKey: "uxp.guide.load_sequence_info",
     actionLabel: "Load Sequence Info",
   },
   settings: {
+    kickerKey: "uxp.guide.settings_kicker",
     kicker: "Studio setup",
+    titleKey: "uxp.guide.settings_title",
     title: "Keep routing, engines, and live services healthy.",
+    textKey: "uxp.guide.settings_text",
     text: "Refresh engine availability, verify the bridge, and make sure the panel is connected to the right backend.",
     action: "focus-uxpRefreshEnginesBtn",
+    actionLabelKey: "uxp.guide.refresh_engines",
     actionLabel: "Refresh Engines",
   },
 };
+
+// ─────────────────────────────────────────────────────────────
+// i18n / Localization
+// ─────────────────────────────────────────────────────────────
+let _currentLang = "en";
+let _i18n = {};
+
+function t(key, fallback) {
+  return (_i18n && _i18n[key]) || fallback || key;
+}
+
+function applyI18nToDOM(root = document) {
+  const scope = root || document;
+  scope.querySelectorAll("[data-i18n]").forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (!key) return;
+    const labelTarget = node.querySelector(".btn-label, .i18n-text");
+    if (!node.hasAttribute("data-i18n-fallback")) {
+      node.setAttribute("data-i18n-fallback", labelTarget ? labelTarget.textContent : node.textContent);
+    }
+    const fallback = node.getAttribute("data-i18n-fallback") || "";
+    const translated = t(key, fallback);
+    if (labelTarget) labelTarget.textContent = translated;
+    else node.textContent = translated;
+  });
+
+  const attrMappings = [
+    ["data-i18n-title", "title"],
+    ["data-i18n-label", "label"],
+    ["data-i18n-alt", "alt"],
+    ["data-i18n-placeholder", "placeholder"],
+    ["data-i18n-aria-label", "aria-label"],
+  ];
+  attrMappings.forEach(([dataAttr, targetAttr]) => {
+    scope.querySelectorAll(`[${dataAttr}]`).forEach((node) => {
+      const key = node.getAttribute(dataAttr);
+      if (!key) return;
+      const fallbackAttr = `${dataAttr}-fallback`;
+      if (!node.hasAttribute(fallbackAttr)) {
+        node.setAttribute(fallbackAttr, node.getAttribute(targetAttr) || "");
+      }
+      node.setAttribute(targetAttr, t(key, node.getAttribute(fallbackAttr) || ""));
+    });
+  });
+}
+
+async function loadLocale(lang = "en") {
+  const nextLang = String(lang || "en").trim() || "en";
+  try {
+    const response = await fetch(UXP_LOCALE_PATH);
+    if (response && (response.ok || response.status === 0)) {
+      _i18n = await response.json();
+      _currentLang = nextLang;
+    }
+  } catch (err) {
+    console.warn("[OpenCut UXP] Locale file unavailable; using inline English fallbacks.", err);
+    _i18n = {};
+    _currentLang = "en";
+  }
+  document.documentElement.lang = _currentLang;
+  applyI18nToDOM();
+  return _currentLang;
+}
+
+function localizeWorkspaceMeta(meta, field) {
+  return t(meta?.[`${field}Key`], meta?.[field] || "");
+}
+
+function getWorkspaceTitle(tabId) {
+  const fallbackTitle = tabId ? tabId.charAt(0).toUpperCase() + tabId.slice(1) : "Cut & Clean";
+  return localizeWorkspaceMeta(WORKSPACE_META[tabId] || WORKSPACE_META.cut, "title") || fallbackTitle;
+}
+
+function isBackendConnected() {
+  return document.getElementById("connectionStatus")?.dataset.state === "connected";
+}
 
 function isTimeoutError(err) {
   const message = String(err?.message || err || "");
@@ -1757,7 +1887,9 @@ const UIController = (() => {
       panel.setAttribute("aria-hidden", active ? "false" : "true");
     });
     updateWorkspaceOverview(tabId);
-    setStatus(`${(WORKSPACE_META[tabId] && WORKSPACE_META[tabId].title) || (tabId.charAt(0).toUpperCase() + tabId.slice(1))} workspace`);
+    setStatus(
+      t("uxp.status.workspace", "{workspace} workspace").replace("{workspace}", getWorkspaceTitle(tabId))
+    );
   }
 
   // ── Processing banner ──
@@ -1854,7 +1986,11 @@ const UIController = (() => {
     dot.className = `oc-conn-dot ${state}`;
     if (status) status.dataset.state = state;
     if (statusBar) statusBar.dataset.connection = state;
-    const labels = { connected: "Online", connecting: "Connecting…", disconnected: "Offline" };
+    const labels = {
+      connected: t("conn.online", "Online"),
+      connecting: t("conn.connecting", "Connecting..."),
+      disconnected: t("conn.offline", "Offline"),
+    };
     label.textContent = labels[state] ?? state;
     updateWorkspaceOverview();
   }
@@ -2075,7 +2211,7 @@ function getWorkspaceSource(tabId) {
 }
 
 function formatWorkspaceSource(pathValue) {
-  if (!pathValue) return "No source selected";
+  if (!pathValue) return t("uxp.workspace.no_source_selected", "No source selected");
   const normalized = pathValue.replace(/\\/g, "/");
   const parts = normalized.split("/");
   return parts[parts.length - 1] || pathValue;
@@ -2185,7 +2321,7 @@ function setCaptionsSessionState(pillText, pillState, statusMessage, statusState
 }
 
 function syncCaptionsActionButtons() {
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const sourcePath = document.getElementById("clipPathCaptions")?.value?.trim() || getWorkspaceSource("captions");
   const hasSource = !!sourcePath;
 
@@ -2227,7 +2363,7 @@ function updateCaptionsPlanSummary() {
 function updateCaptionsWorkspaceSummary() {
   updateCaptionsPlanSummary();
 
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const sourcePath = document.getElementById("clipPathCaptions")?.value?.trim() || getWorkspaceSource("captions");
   const hasSource = !!sourcePath;
 
@@ -2474,7 +2610,7 @@ function buildExportWindows() {
 }
 
 function updateTimelineReadiness() {
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const bridgeReady = PProBridge.available();
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim()
     || document.getElementById("clipPathCut")?.value?.trim()
@@ -2672,17 +2808,21 @@ function setWorkspaceGuide(guide) {
   const textEl = document.getElementById("workspaceGuideText");
   const actionEl = document.getElementById("workspaceGuideAction");
   const guideState = guide.state || "ready";
+  const kicker = t(guide.kickerKey, guide.kicker);
+  const title = t(guide.titleKey, guide.title);
+  const text = t(guide.textKey, guide.text);
+  const actionLabel = t(guide.actionLabelKey, guide.actionLabel || t("common.open", "Open"));
 
   if (guideEl) {
     guideEl.dataset.state = guideState;
-    guideEl.title = guide.text || guide.title || "";
+    guideEl.title = text || title || "";
   }
-  if (kickerEl) kickerEl.textContent = guide.kicker;
-  if (titleEl) titleEl.textContent = guide.title;
-  if (textEl) textEl.textContent = guide.text;
+  if (kickerEl) kickerEl.textContent = kicker;
+  if (titleEl) titleEl.textContent = title;
+  if (textEl) textEl.textContent = text;
   if (actionEl) {
     actionEl.dataset.action = guide.action || "";
-    actionEl.textContent = guide.actionLabel || "Open";
+    actionEl.textContent = actionLabel;
     actionEl.disabled = !guide.action;
     actionEl.hidden = !guide.actionLabel;
   }
@@ -2719,8 +2859,9 @@ function updateWorkspaceOverview(tabId) {
   const activeTab = getWorkspaceTabId(tabId);
   const meta = WORKSPACE_META[activeTab] || WORKSPACE_META.cut;
   const sourcePath = getWorkspaceSource(activeTab);
-  const backendLabel = document.getElementById("connLabel")?.textContent?.trim() || "Offline";
-  const backendOnline = backendLabel === "Online";
+  const connectionState = document.getElementById("connectionStatus")?.dataset.state || "disconnected";
+  const backendLabel = t(CONNECTION_LABEL_KEYS[connectionState] || "conn.offline", "Offline");
+  const backendOnline = isBackendConnected();
   const overviewTitle = document.getElementById("workspaceOverviewTitle");
   const overviewSubtitle = document.getElementById("workspaceOverviewSubtitle");
   const sourceValue = document.getElementById("workspaceSourceValue");
@@ -2729,11 +2870,11 @@ function updateWorkspaceOverview(tabId) {
 
   applyWorkspaceShellState(activeTab, backendOnline, sourcePath);
 
-  if (overviewTitle) overviewTitle.textContent = meta.title;
-  if (overviewSubtitle) overviewSubtitle.textContent = meta.subtitle;
+  if (overviewTitle) overviewTitle.textContent = localizeWorkspaceMeta(meta, "title");
+  if (overviewSubtitle) overviewSubtitle.textContent = localizeWorkspaceMeta(meta, "subtitle");
   if (sourceValue) {
     sourceValue.textContent = formatWorkspaceSource(sourcePath);
-    sourceValue.title = sourcePath || "Choose a clip or paste a path to start";
+    sourceValue.title = sourcePath || t("uxp.workspace.choose_source_title", "Choose a clip or paste a path to start");
     sourceValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", sourcePath ? "ready" : "empty");
   }
   if (backendValue) {
@@ -2742,36 +2883,51 @@ function updateWorkspaceOverview(tabId) {
   }
   if (libraryValue) {
     const count = Array.isArray(_projectClips) ? _projectClips.length : 0;
-    libraryValue.textContent = `${count} ${count === 1 ? "clip" : "clips"}`;
+    libraryValue.textContent = (count === 1
+      ? t("uxp.workspace.library_clip_count_one", "{count} clip")
+      : t("uxp.workspace.library_clip_count_many", "{count} clips")
+    ).replace("{count}", String(count));
     libraryValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", count > 0 ? "ready" : "empty");
   }
 
   let guide = WORKSPACE_GUIDES[activeTab] || WORKSPACE_GUIDES.cut;
   if (!backendOnline) {
     guide = {
+      kickerKey: "uxp.guide.backend_offline_kicker",
       kicker: "Backend offline",
+      titleKey: "uxp.guide.backend_offline_title",
       title: "Reconnect the local OpenCut backend before running jobs.",
+      textKey: "uxp.guide.backend_offline_text",
       text: "The workspace is ready, but processing, engine refresh, and timeline handoff all depend on the backend service being online.",
       state: "error",
       action: "refresh-backend",
+      actionLabelKey: "uxp.guide.refresh_backend",
       actionLabel: "Refresh Backend",
     };
   } else if (TABS_REQUIRING_SOURCE.has(activeTab) && !sourcePath) {
     guide = {
+      kickerKey: "uxp.guide.choose_media_kicker",
       kicker: "Choose media",
+      titleKey: "uxp.guide.choose_media_title",
       title: "Choose one active shot to unlock this workspace.",
+      textKey: "uxp.guide.choose_media_text",
       text: "OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.",
       state: "warning",
       action: "choose-clip",
+      actionLabelKey: "uxp.workspace.choose_media",
       actionLabel: "Choose Media",
     };
   } else if (activeTab === "timeline" && !lastCuts.length && !lastMarkers.length) {
     guide = {
+      kickerKey: "uxp.guide.writeback_ready_kicker",
       kicker: "Ready for write-back",
+      titleKey: "uxp.guide.writeback_ready_title",
       title: "Generate cuts or markers first, then bring them back to the sequence.",
+      textKey: "uxp.guide.writeback_ready_text",
       text: "Run a cleanup or beat pass in Cut or Audio, then return here to apply the result, export OTIO, or batch markers.",
       state: "warning",
       action: "switch-cut",
+      actionLabelKey: "uxp.guide.open_cut_workspace",
       actionLabel: "Open Cut Workspace",
     };
   }
@@ -2846,7 +3002,7 @@ function updateDeliverablesPlanSummary(outputSummary = getDeliverablesOutputSumm
   const selectedTypes = getSelectedReportTypes();
   const selectionSummary = getDeliverablesSelectionSummary(selectedTypes);
   const formatSummary = getDeliverablesFormatSummary();
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const hasSequence = !!_lastSequenceInfo;
   const canGenerate = hasSequence && backendOnline;
 
@@ -2922,7 +3078,7 @@ function updateDeliverablesSummary() {
   const output = getDeliverablesOutputSummary();
   const hasOutputDestination = !!document.getElementById("delivOutputDir")?.value?.trim();
   const selectedTypes = getSelectedReportTypes();
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
 
   if (info) {
     const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : "Unknown size";
@@ -3032,7 +3188,7 @@ function requireClearIndexConfirmation() {
 }
 
 function syncSearchPanelState() {
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const folder = document.getElementById("indexFolder")?.value?.trim() || "";
   const query = document.getElementById("searchQuery")?.value?.trim() || "";
   const nlpCommand = document.getElementById("nlpCommand")?.value?.trim() || "";
@@ -4155,7 +4311,7 @@ async function runIndexLibrary() {
 async function runFootageSearch() {
   const query = document.getElementById("searchQuery")?.value?.trim();
   const limit = parseInt(document.getElementById("searchResultCount")?.value ?? 10);
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   const indexedFiles = Number(_lastIndexStats?.total_files || 0);
   if (!backendOnline) {
     setTextAndTitle("searchStatus", "Reconnect the backend before searching the library.", "Reconnect the backend before searching the library.");
@@ -4271,7 +4427,7 @@ async function runNlpCommand() {
   const llmProvider = window._llmSettings?.provider || "ollama";
   const command  = document.getElementById("nlpCommand")?.value?.trim();
   const provider = document.getElementById("nlpLlmProvider")?.value ?? llmProvider;
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   if (!backendOnline) {
     UIController.showToast("Reconnect the backend before running natural-language commands.", "warning");
     syncSearchPanelState();
@@ -4367,7 +4523,7 @@ async function loadSequenceInfo() {
 /** ── DELIVERABLES ── */
 async function runDeliverables(type) {
   const deliverableLabel = DELIVERABLE_LABELS[type] || humanizeDomain(type);
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   if (!backendOnline) {
     setDeliverablesStatus(`Reconnect the backend before generating ${deliverableLabel}.`, "error");
     UIController.showToast("Reconnect the backend before generating deliverables.", "warning");
@@ -4433,7 +4589,7 @@ async function runDeliverables(type) {
 
 /** ── FULL PROJECT REPORT (generates all 4 deliverables) ── */
 async function runFullReport() {
-  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const backendOnline = isBackendConnected();
   if (!backendOnline) {
     setDeliverablesStatus("Reconnect the backend before generating the report package.", "error");
     UIController.showToast("Reconnect the backend before generating the report package.", "warning");
@@ -4698,10 +4854,13 @@ async function checkConnection() {
   UIController.setConnection(alive ? "connected" : "disconnected");
 
   if (alive) {
-    UIController.setStatus("OpenCut backend connected.", "success");
+    UIController.setStatus(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
     UIController.setStatusRight(`v${VERSION}`);
   } else {
-    UIController.setStatus("OpenCut backend offline. Start the local service to run jobs.", "error");
+    UIController.setStatus(
+      t("uxp.status.backend_offline", "OpenCut backend offline. Start the local service to run jobs."),
+      "error"
+    );
     UIController.setStatusRight("");
   }
 
@@ -6037,6 +6196,7 @@ async function initApp() {
   const aboutVersion = document.getElementById("uxpVersionDisplay");
   if (headerVersion) headerVersion.textContent = `v${VERSION}`;
   if (aboutVersion) aboutVersion.textContent = `${VERSION} (UXP)`;
+  await loadLocale();
 
   // Detect which port the backend is running on (5679-5689)
   BACKEND = await detectBackend();
@@ -6069,7 +6229,7 @@ async function initApp() {
     _healthBackoff = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
     await loadLlmSettings();
-    UIController.showToast("OpenCut backend connected.", "success");
+    UIController.showToast(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
 
     // Auto-connect WebSocket for real-time progress
     uxpWsConnect();

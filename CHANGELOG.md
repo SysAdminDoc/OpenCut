@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added - UXP i18n Foundation
+
+- Added a UXP-local `locales/en.json` ledger plus `loadLocale()`, `t()`, and `applyI18nToDOM()` support in the UXP panel.
+- Wired the UXP first-viewport shell, tab bar, processing banner, connection label, and workspace overview/guide through `data-i18n*` hooks and dynamic locale lookups.
+- Added `tests/test_uxp_i18n.py` and wired it into release smoke so UXP i18n attributes, dynamic locale keys, and connection-state checks stay guarded.
+
 ### Changed - CEP i18n Settings Preferences Shell
 
 - Advanced E15 to batch 173 by wiring the remaining Settings preferences shell labels, output-location options, theme options, GPU checking label, backend log button label, and UI language choices through locale hooks.
