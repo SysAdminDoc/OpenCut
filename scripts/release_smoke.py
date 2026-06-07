@@ -771,6 +771,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_caption_language_confidence.py",
     "tests/test_captions_translate_srt.py",
     "tests/test_uxp_macos_http.py",
+    "tests/test_uxp_hybrid_package.py",
     "tests/test_adobe_premierepro_versions.py",
     "tests/test_adobe_premierepro_versions_workflow.py",
     "tests/test_mcp_registry_manifest.py",

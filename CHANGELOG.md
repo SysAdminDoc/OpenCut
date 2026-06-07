@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP Hybrid Package Validator
+
+- Closed RA-12 with a static validator and CLI for UXP Hybrid `.uxpaddon` bundles, covering manifest opt-in, safe addon filenames, production host shape, Marketplace architecture layout, independent partial-architecture warnings, and release-smoke wiring.
+
 ### Changed - CEP i18n Settings and Deliverables
 
 - Advanced E15 through batches 155 and 156 by adding locale hooks for the Export Deliverables shell, LLM settings, preset diagnostics controls, and guarded migration coverage. The live drift report now shows 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys.
