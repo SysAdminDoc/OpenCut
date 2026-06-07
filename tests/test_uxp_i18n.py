@@ -90,12 +90,19 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 190
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 220
     assert {
         "common.skip_to_main",
         "conn.backend_status",
         "nav.feature_tabs",
         "processing.progress",
+        "uxp.audio.clip_path",
+        "uxp.audio.ai_noise_reduction",
+        "uxp.audio.select_clip_placeholder",
+        "uxp.audio.denoise_afftdn",
+        "uxp.audio.limit_true_peak",
+        "uxp.audio.reference_audio_placeholder",
+        "uxp.audio.detect_beats_add_markers",
         "uxp.captions.transcription",
         "uxp.captions.workflow_readiness",
         "uxp.captions.select_clip_placeholder",
