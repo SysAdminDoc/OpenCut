@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline/Search/Deliverables/Agent/Settings runtime feedback + update/depth-install toasts + partial Spanish backend-offline/Settings locale packaging) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, Timeline/Search/Deliverables/Agent/Settings runtime-feedback, update/depth-install guards, and partial Spanish backend-offline/Settings fallback merging while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline/Search/Deliverables/Agent/Settings runtime feedback + update/depth-install toasts + partial Spanish Cut/backend-offline/Settings locale packaging) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, Timeline/Search/Deliverables/Agent/Settings runtime-feedback, update/depth-install guards, and partial Spanish Cut/backend-offline/Settings fallback merging while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1354,8 +1354,9 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 115 | UXP Search/Deliverables runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Search and Deliverables tabs still had hardcoded search result metadata, indexing/search/NLP state, sequence readiness, deliverable selection, document-generation, and package feedback outside the locale layer. | Routed those Search/Deliverables runtime states through locale keys and added guards so direct dynamic labels, statuses, toasts, and errors cannot return. |
 | 2026-06-07 | Cycle 116 | UXP Agent runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Agent tab still had hardcoded conductor plan/review, one-click enhance, variants, sequence-index, and MCP bridge runtime feedback while also reading backend payload fields before unwrapping the shared client response shape. | Routed those Agent runtime states through locale keys, fixed response unwrapping for the Agent handlers, and added guards so direct Agent status strings and raw payload assumptions cannot return. |
 | 2026-06-07 | Cycle 117 | UXP shared/Settings runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | Settings and adjacent shared runtime paths still had hardcoded reconnect/cancel toasts, relative-time fallbacks, live-update listener counts/titles, engine option labels, migration-risk row/tag summaries, update-available copy, a Timeline batch-export no-clip warning, and Depth Anything install feedback outside the locale layer. | Routed those shared/Settings generated runtime states through locale keys and added guards so direct Settings labels, statuses, update/depth install toasts, and shared runtime strings cannot return. |
-| 2026-06-07 | Cycle 118 | UXP partial Spanish locale packaging | UXP `main.js`, `locales/es.json`, `tests/test_uxp_i18n.py` | UXP could load only `locales/en.json`, so the first non-English packaging step could not be verified without replacing the entire English catalogue. | Added query/browser-language locale candidate selection, merged partial packs over English fallback strings, seeded a guarded partial Spanish locale for first-viewport chrome and shared runtime essentials, and verified the Spanish render plus Settings-tab English fallback in the in-app browser. |
+| 2026-06-07 | Cycle 118 | UXP partial Spanish locale packaging | UXP `main.js`, `locales/es.json`, `tests/test_uxp_i18n.py` | UXP could load only `locales/en.json`, so the first non-English packaging step could not be verified without replacing the entire English catalogue. | Added query/browser-language locale candidate selection, merged partial packs over English fallback strings, seeded a guarded partial Spanish locale for first-viewport chrome, tab/workspace labels, connection state, and shared runtime essentials, and verified the Spanish render plus deeper feature fallback behavior. |
 | 2026-06-07 | Cycle 119 | UXP Spanish Settings locale expansion | UXP `locales/es.json`, `tests/test_uxp_i18n.py` | The first partial Spanish pack covered first-viewport and shared essentials, but the backend-offline guide and generated Settings shell/status strings still fell back to English. | Expanded the partial Spanish pack into backend-offline guidance plus Settings shell/status coverage for engine routing, live updates, migration risk, keyboard, about, bridge state, engine failures, and migration status while preserving English fallback for deeper untranslated features. |
+| 2026-06-07 | Cycle 120 | UXP Spanish Cut locale expansion | UXP `locales/es.json`, `tests/test_uxp_i18n.py` | The default UXP Cut workspace still fell back to English even after first-viewport and Settings Spanish coverage shipped. | Added Spanish coverage for all `uxp.cut.*` keys, including clip input, silence controls, filler controls, result summaries, and runtime cut/filler feedback, while preserving deeper Video keys as the explicit fallback sample. |
 
 ### Research queries to run later
 
@@ -1376,17 +1377,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 120: Re-audit remaining UXP locale drift against generated DOM/status surfaces, or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 121: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 122: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 123: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 124: Expand non-English UXP locale packs beyond Settings/backend-offline coverage.
+1. Cycle 121: Re-audit remaining UXP locale drift against generated DOM/status surfaces, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 122: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 123: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 124: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 125: Expand non-English UXP locale packs beyond Cut/Settings/backend-offline coverage.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 119: UXP Spanish Settings locale expansion.
+Cycle 120: UXP Spanish Cut locale expansion.
 
 #### Current focus
 
@@ -1579,7 +1580,8 @@ Cycle 118 added the first non-English UXP locale-pack path: the loader now
 selects `?lang=` or browser-language locale candidates, merges packaged partial
 locale packs over English fallback strings, keeps the document language aligned
 with the active pack, and ships a guarded partial Spanish pack for first-viewport
-chrome, tab/workspace labels, connection state, and shared runtime essentials.
+chrome, tab/workspace labels, connection state, Settings shell/status feedback,
+Cut workspace coverage, and shared runtime essentials.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.

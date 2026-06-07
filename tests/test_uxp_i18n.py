@@ -110,10 +110,15 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 130 <= len(spanish) < len(english)
+    assert 190 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
+    assert sorted(key for key in english if key.startswith("uxp.cut.") and key not in spanish) == []
+    assert spanish["uxp.cut.clip_input"] == "Entrada de clip"
+    assert spanish["uxp.cut.remove_silence"] == "Eliminar silencio"
+    assert spanish["uxp.cut.runtime.cut_index"] == "Corte {index}"
+    assert spanish["uxp.cut.runtime.cut_windows_summary"] == "{count} ventana{plural} de corte - {removed} eliminado{longest}"
     assert spanish["uxp.runtime.select_clip_first"] == "Selecciona primero un clip."
     assert spanish["uxp.guide.backend_offline_title"] == "Reconecta el backend local de OpenCut antes de ejecutar trabajos."
     assert spanish["uxp.settings.engine_routing"] == "Enrutamiento de motores"
