@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Output Bundle Handoff
+
+- Closed RA-56 by writing `magic_clips_manifest.json` plus CSV bundle handoff files, grouping multi-platform outputs under one candidate, returning bundle paths/payloads from `/video/shorts-pipeline`, and rendering completed bundle contents in CEP and UXP review boards.
+
 ### Changed - Magic Clips Checkpointed Resume
 
 - Closed RA-55 by writing versioned Magic Clips run manifests, preserving reviewed-run intermediates, marking the shorts pipeline route resumable, exposing manifest paths in job metadata/results, and resuming only when source/config hashes match.

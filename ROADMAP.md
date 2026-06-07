@@ -97,7 +97,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
 | RA-09 | Timeline-native captions | L | Closed 2026-06-06: RA-46 sidecars, RA-47 diff/apply, RA-48 UXP snapshot reads, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures shipped |
-| RA-10 | Magic clips macro | L | RA-51 through RA-55 closed 2026-06-06 with dry-run plan graph, approved-candidate render handoff, explainable scoring, platform preset rendering, CEP/UXP review-board parity, and checkpointed resumable runs; RA-56 remains open |
+| RA-10 | Magic clips macro | L | Closed 2026-06-06: RA-51 through RA-56 shipped dry-run plan graphs, approved-candidate render handoff, explainable scoring, platform preset rendering, CEP/UXP review-board parity, checkpointed resumable runs, and output bundle handoff manifests |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
 | RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
@@ -1140,12 +1140,12 @@ consume this manifest instead of re-discovering files.
 
 **Acceptance criteria:**
 
-- [ ] Every rendered clip has a manifest record with enough metadata to audit
+- [x] Every rendered clip has a manifest record with enough metadata to audit
       why it was selected and how it was rendered.
-- [ ] Manifest schema version is explicit and covered by fixture tests.
-- [ ] The manifest can represent multi-platform variants without duplicate
+- [x] Manifest schema version is explicit and covered by fixture tests.
+- [x] The manifest can represent multi-platform variants without duplicate
       candidate records.
-- [ ] UXP/CEP can open the output folder and display completed bundle contents
+- [x] UXP/CEP can open the output folder and display completed bundle contents
       from the manifest.
 
 ### New implementation-ready product specs
@@ -1293,6 +1293,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 59 | Magic Clips platform presets | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `tests/test_magic_clips.py` | Magic Clips plans exposed preset IDs, but approved rendering still used ad-hoc width/height settings and produced only one output per candidate. | Closed RA-53 by deriving render targets from `export_presets.py`, passing platform IDs from approved plans into `/video/shorts-pipeline`, clamping output durations, conforming preset dimensions, emitting target dimensions, and testing YouTube Shorts, TikTok, Reels, and square feed outputs. |
 | 2026-06-06 | Cycle 60 | Magic Clips review-board parity | CEP and UXP panel HTML/JS/CSS, `tests/test_magic_clips_panel_ui.py` | CEP still went straight to render and UXP lacked duration/platform/caption controls plus approved-candidate review, so users could not preview the dry-run plan or render only approved clips from both panel surfaces. | Closed RA-54 by adding CEP and UXP Magic Clips review boards, dry-run plan buttons, approved-only render actions, preset/caption/LLM payload parity, Plan/Analyze/Render status text, and static route/payload tests. |
 | 2026-06-06 | Cycle 61 | Magic Clips checkpointed resume | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `tests/test_magic_clips.py`, `tests/test_job_resume.py` | Reviewed Magic Clips renders still relied on temp intermediates and generic job resume metadata, so an interrupted run could not preserve transcript/highlight/render state or skip already-completed clips. | Closed RA-55 by writing a versioned run manifest, keeping reviewed intermediates under a run directory, marking the shorts route resumable, storing manifest paths in job metadata and responses, resuming only when source/config hashes match, and testing cancel-after-transcribe, cancel-after-first-render, and config mismatch paths. |
+| 2026-06-06 | Cycle 62 | Magic Clips output bundle handoff | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, CEP/UXP Magic Clips panel code, `tests/test_magic_clips.py`, `tests/test_magic_clips_panel_ui.py` | Magic Clips reviewed renders produced files and run checkpoints, but downstream tools still had to rediscover exports and could not consume a grouped candidate/variant bundle. | Closed RA-56 by writing `magic_clips_manifest.json` plus CSV handoff files, grouping multi-platform variants under one candidate, surfacing bundle paths/payloads through the route and clip results, and rendering completed bundle contents in CEP and UXP review boards. |
 
 ### Research queries to run later
 
@@ -1313,24 +1314,24 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 62: Continue RA-56 output bundle manifest and downstream handoff.
-2. Cycle 63: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-3. Cycle 64: Continue E15 or another remaining release-trust gap after batch 154.
-4. Cycle 65: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 66: Inspect marker metadata workflows for remaining reusable host locator needs.
+1. Cycle 63: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+2. Cycle 64: Continue E15 or another remaining release-trust gap after batch 154.
+3. Cycle 65: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 66: Inspect marker metadata workflows for remaining reusable host locator needs.
+5. Cycle 67: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 61: Magic Clips checkpointed resume.
+Cycle 62: Magic Clips output bundle handoff.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
 RA-01, RA-02, RA-03, RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
-RA-45, RA-54, and RA-55 are closed, and the bootstrap dev-check guard is in place. RA-41 is
+RA-45, RA-54, RA-55, and RA-56 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
 journal clear is covered by the local DB dry-run/backup contract. RA-15 keeps
@@ -1523,9 +1524,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue RA-56 output bundle manifest and downstream handoff.
-2. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-3. Continue E15 rolling CEP i18n migration.
+1. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+2. Continue E15 rolling CEP i18n migration.
+3. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
 
 #### Unprocessed leads
 

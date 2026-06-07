@@ -67,6 +67,17 @@ class TestCepMagicClipsReviewBoard(unittest.TestCase):
             with self.subTest(state_label=state_label):
                 self.assertIn(state_label, review_flow)
 
+    def test_completed_bundle_summary_reads_manifest_payload(self):
+        bundle_flow = _between(self.js, "function renderShortsBundleSummary", "function renderApprovedShorts()")
+        self.assertIn("result.magic_clips_bundle", bundle_flow)
+        self.assertIn("candidate.outputs", bundle_flow)
+        self.assertIn("result.magic_clips_bundle_manifest", bundle_flow)
+        listener_flow = _between(self.js, 'job.type !== "shorts_pipeline"', "// --- Slider value display updaters ---")
+        self.assertIn("renderShortsBundleSummary(job.result)", listener_flow)
+        results_flow = _between(self.js, "function showResults(job)", "function cancelJob()")
+        self.assertIn("r.magic_clips_bundle", results_flow)
+        self.assertIn("r.magic_clips_bundle_manifest ||", results_flow)
+
 
 class TestUxpMagicClipsReviewBoard(unittest.TestCase):
     @classmethod
@@ -112,6 +123,13 @@ class TestUxpMagicClipsReviewBoard(unittest.TestCase):
         for state_label in ("Plan state", "Analyze state", "Render state"):
             with self.subTest(state_label=state_label):
                 self.assertIn(state_label, review_flow)
+
+    def test_completed_bundle_summary_reads_manifest_payload(self):
+        bundle_flow = _between(self.js, "function renderShortsBundleSummaryUxp", "async function renderApprovedShortsUxp()")
+        self.assertIn("result?.magic_clips_bundle", bundle_flow)
+        self.assertIn("candidate.outputs", bundle_flow)
+        self.assertIn("result.magic_clips_bundle_manifest", bundle_flow)
+        self.assertIn("renderShortsBundleSummaryUxp(result)", self.js)
 
     def test_buttons_have_event_handlers(self):
         for button_id in (

@@ -4422,6 +4422,13 @@
                 .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
                 .replace("{names}", stemNames.join(", "));
         }
+        if (r.magic_clips_bundle) {
+            var bundleOutputs = Number(r.magic_clips_bundle.output_count || 0);
+            var bundleCandidates = Number(r.magic_clips_bundle.candidate_count || 0);
+            stats += (stats ? "<br>" : "") + "Magic Clips bundle: " +
+                bundleOutputs + " output" + (bundleOutputs === 1 ? "" : "s") +
+                " across " + bundleCandidates + " candidate" + (bundleCandidates === 1 ? "" : "s");
+        }
         // Scene detection
         if (r.total_scenes) {
             stats += (stats ? "<br>" : "") + t("progress.result_scenes", "Scenes: {count} | Avg: {seconds}s")
@@ -4439,7 +4446,7 @@
             }
         }
 
-        var resultPath = r.xml_path || r.output_path || r.overlay_path || (r.output_paths
+        var resultPath = r.magic_clips_bundle_manifest || r.xml_path || r.output_path || r.overlay_path || (r.output_paths
             ? t("progress.result_files_exported", "{count} file{plural} exported")
                 .replace("{count}", r.output_paths.length)
                 .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
@@ -13858,6 +13865,35 @@
         });
     }
 
+    function shortsBundleFileName(path) {
+        return String(path || "").split(/[\\/]/).pop() || "output";
+    }
+
+    function renderShortsBundleSummary(result) {
+        var bundle = result && result.magic_clips_bundle;
+        var candidates = bundle && bundle.candidates;
+        if (!candidates || !candidates.length || !el.shortsReviewBoard || !el.shortsReviewList || !el.shortsReviewSummary) return;
+        el.shortsReviewBoard.classList.remove("hidden");
+        el.shortsReviewBoard.setAttribute("data-state", "complete");
+        el.shortsReviewSummary.textContent = "Bundle state: " + (bundle.output_count || 0) + " output" + ((bundle.output_count || 0) === 1 ? "" : "s") + " saved with " + shortsBundleFileName(result.magic_clips_bundle_manifest) + ".";
+        el.shortsReviewList.innerHTML = "";
+        candidates.forEach(function (candidate, index) {
+            var card = document.createElement("div");
+            card.className = "shorts-review-card";
+            appendShortsText(card, "shorts-review-title", (index + 1) + ". " + (candidate.title || "Candidate"));
+            appendShortsText(card, "shorts-review-meta", "Score " + (candidate.score || 0) + " | " + (candidate.start || 0) + "s-" + (candidate.end || 0) + "s");
+            appendShortsText(card, "shorts-review-excerpt", candidate.transcript_excerpt || "");
+            (candidate.outputs || []).forEach(function (output) {
+                appendShortsText(
+                    card,
+                    "shorts-review-platforms",
+                    (output.platform_preset || "default") + ": " + shortsBundleFileName(output.export_path)
+                );
+            });
+            el.shortsReviewList.appendChild(card);
+        });
+    }
+
     function renderApprovedShorts() {
         if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         var ids = selectedShortsCandidateIds();
@@ -13880,6 +13916,12 @@
             startJob("/video/shorts-pipeline", buildShortsPayload());
         });
     }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "shorts_pipeline" || job.status !== "complete" || !job.result) return false;
+        renderShortsBundleSummary(job.result);
+        return false;
+    });
 
     // --- Slider value display updaters ---
     function initNewSliderDisplays() {

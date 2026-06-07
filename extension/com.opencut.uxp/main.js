@@ -5910,6 +5910,39 @@ async function previewShortsPlanUxp() {
   renderShortsReviewBoardUxp(r.data);
 }
 
+function shortsBundleFileNameUxp(path) {
+  return String(path || "").split(/[\\/]/).pop() || "output";
+}
+
+function renderShortsBundleSummaryUxp(result) {
+  const bundle = result?.magic_clips_bundle;
+  const candidates = Array.isArray(bundle?.candidates) ? bundle.candidates : [];
+  const board = document.getElementById("shortsReviewBoardUxp");
+  const list = document.getElementById("shortsReviewListUxp");
+  const summary = document.getElementById("shortsReviewSummaryUxp");
+  if (!candidates.length || !board || !list || !summary) return;
+  board.classList.remove("hidden");
+  board.dataset.state = "complete";
+  const outputCount = bundle.output_count || 0;
+  summary.textContent = `Bundle state: ${outputCount} output${outputCount === 1 ? "" : "s"} saved with ${shortsBundleFileNameUxp(result.magic_clips_bundle_manifest)}.`;
+  list.innerHTML = "";
+  candidates.forEach((candidate, index) => {
+    const card = document.createElement("div");
+    card.className = "shorts-review-card";
+    appendShortsReviewTextUxp(card, "shorts-review-title", `${index + 1}. ${candidate.title || "Candidate"}`);
+    appendShortsReviewTextUxp(card, "shorts-review-meta", `Score ${candidate.score || 0} | ${candidate.start || 0}s-${candidate.end || 0}s`);
+    appendShortsReviewTextUxp(card, "shorts-review-excerpt", candidate.transcript_excerpt || "");
+    (candidate.outputs || []).forEach(output => {
+      appendShortsReviewTextUxp(
+        card,
+        "shorts-review-platforms",
+        `${output.platform_preset || "default"}: ${shortsBundleFileNameUxp(output.export_path)}`,
+      );
+    });
+    list.appendChild(card);
+  });
+}
+
 async function renderApprovedShortsUxp() {
   const ids = selectedShortsCandidateIdsUxp();
   if (!shortsReviewPlanUxp || !ids.length) {
@@ -5930,6 +5963,7 @@ async function renderApprovedShortsUxp() {
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.total_clips || result?.clips?.length || 0;
+      renderShortsBundleSummaryUxp(result);
       UIController.showToast(`Rendered ${count} approved short-form clips.`, "success");
     } catch (e) {
       UIController.showToast(`Approved render failed: ${e.message}`, "error");
@@ -5951,6 +5985,7 @@ async function runShortsPipelineUxp() {
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.total_clips || result?.clips?.length || 0;
+      renderShortsBundleSummaryUxp(result);
       UIController.showToast(`Generated ${count} short-form clips.`, "success");
     } catch (e) {
       UIController.showToast(`Shorts pipeline failed: ${e.message}`, "error");

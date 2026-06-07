@@ -7,6 +7,7 @@ Chains existing modules to produce social-media-ready vertical clips.
 Depends on: captions, highlights, face_reframe, caption_burnin
 """
 
+import csv
 import hashlib
 import json
 import logging
@@ -25,6 +26,9 @@ logger = logging.getLogger("opencut")
 
 MAGIC_CLIPS_RUN_SCHEMA = "opencut.magic_clips.run.v1"
 MAGIC_CLIPS_MANIFEST_NAME = "magic_clips_run_manifest.json"
+MAGIC_CLIPS_BUNDLE_SCHEMA = "opencut.magic_clips.bundle.v1"
+MAGIC_CLIPS_BUNDLE_MANIFEST_NAME = "magic_clips_manifest.json"
+MAGIC_CLIPS_BUNDLE_CSV_NAME = "magic_clips_manifest.csv"
 
 
 @dataclass
@@ -76,6 +80,8 @@ class ShortClip:
     width: int = 0
     height: int = 0
     manifest_path: str = ""
+    bundle_manifest_path: str = ""
+    bundle_csv_path: str = ""
 
 
 def _probe_duration(filepath: str) -> float:
@@ -451,6 +457,8 @@ def _completed_export(
             width=int(item.get("width") or getattr(contract, "width", 0)),
             height=int(item.get("height") or getattr(contract, "height", 0)),
             manifest_path=str(manifest.get("manifest_path") or ""),
+            bundle_manifest_path=str(manifest.get("bundle_manifest_path") or ""),
+            bundle_csv_path=str(manifest.get("bundle_csv_path") or ""),
         )
     return None
 
@@ -459,6 +467,165 @@ def _upsert_final_export(manifest: dict[str, Any], record: dict[str, Any]) -> No
     exports = [item for item in manifest.get("final_exports") or [] if item.get("key") != record["key"]]
     exports.append(record)
     manifest["final_exports"] = exports
+
+
+def _window_transcript_excerpt(
+    transcript_segments: list[dict[str, Any]],
+    start: float,
+    end: float,
+    max_chars: int = 240,
+) -> str:
+    parts: list[str] = []
+    for segment in transcript_segments:
+        seg_start = _safe_float(segment.get("start"), 0.0)
+        seg_end = _safe_float(segment.get("end"), seg_start)
+        if seg_end < start or seg_start > end:
+            continue
+        text = str(segment.get("text") or "").strip()
+        if text:
+            parts.append(text)
+    excerpt = " ".join(parts).strip()
+    return excerpt[:max_chars]
+
+
+def _bundle_candidate_seed(manifest: dict[str, Any], index: int, highlight: dict[str, Any]) -> dict[str, Any]:
+    config_candidates = manifest.get("config", {}).get("approved_candidates") or []
+    raw = config_candidates[index] if index < len(config_candidates) and isinstance(config_candidates[index], dict) else {}
+    start = _safe_float(raw.get("start", raw.get("start_s", highlight.get("start"))), 0.0)
+    end = _safe_float(raw.get("end", raw.get("end_s", highlight.get("end"))), start)
+    candidate_id = str(raw.get("candidate_id") or raw.get("id") or highlight.get("candidate_id") or f"candidate:{index + 1}")
+    transcript_excerpt = str(raw.get("transcript_excerpt") or "").strip()
+    if not transcript_excerpt:
+        transcript_excerpt = _window_transcript_excerpt(manifest.get("transcript_segments") or [], start, end)
+    return {
+        "candidate_id": candidate_id,
+        "title": str(raw.get("title") or raw.get("name") or highlight.get("title") or f"Candidate {index + 1}"),
+        "start": start,
+        "end": end,
+        "duration": max(0.0, _safe_float(raw.get("duration", end - start), end - start)),
+        "score": _safe_float(raw.get("score", highlight.get("score")), 0.0),
+        "selection_reason": str(raw.get("selection_reason") or raw.get("reason") or ""),
+        "score_breakdown": raw.get("score_breakdown") if isinstance(raw.get("score_breakdown"), dict) else {},
+        "transcript_excerpt": transcript_excerpt,
+        "social_metadata": {
+            "suggested_caption": str(raw.get("suggested_caption") or raw.get("description") or ""),
+            "hashtags": list(raw.get("hashtags") or []),
+        },
+        "outputs": [],
+    }
+
+
+def _build_magic_clips_bundle_manifest(
+    manifest: dict[str, Any],
+    output_dir: str,
+    bundle_manifest_path: str,
+    bundle_csv_path: str,
+) -> dict[str, Any]:
+    highlights = [item for item in manifest.get("highlights") or [] if isinstance(item, dict)]
+    candidates: dict[str, dict[str, Any]] = {}
+    candidate_order: list[str] = []
+    for index, highlight in enumerate(highlights):
+        candidate = _bundle_candidate_seed(manifest, index, highlight)
+        candidates[candidate["candidate_id"]] = candidate
+        candidate_order.append(candidate["candidate_id"])
+
+    for export in manifest.get("final_exports") or []:
+        if not isinstance(export, dict):
+            continue
+        candidate_index = int(export.get("candidate_index") or 0)
+        candidate_id = str(export.get("candidate_id") or "")
+        if not candidate_id:
+            candidate_id = f"candidate:{candidate_index or len(candidate_order) + 1}"
+        if candidate_id not in candidates:
+            fallback = {
+                "candidate_id": candidate_id,
+                "start": export.get("start", 0.0),
+                "end": export.get("end", 0.0),
+                "duration": export.get("duration", 0.0),
+                "title": export.get("title", candidate_id),
+                "score": export.get("score", 0.0),
+            }
+            candidates[candidate_id] = _bundle_candidate_seed(manifest, max(candidate_index - 1, 0), fallback)
+            candidate_order.append(candidate_id)
+        key = str(export.get("key") or "")
+        caption_record = (manifest.get("caption_files") or {}).get(key, {})
+        thumbnail_record = (manifest.get("thumbnail_candidates") or {}).get(key, {})
+        candidates[candidate_id]["outputs"].append({
+            "output_index": int(export.get("output_index") or 0),
+            "platform_preset": str(export.get("platform_preset") or ""),
+            "export_path": str(export.get("output_path") or ""),
+            "caption_path": str(caption_record.get("path") or ""),
+            "thumbnail_path": str(thumbnail_record.get("path") or ""),
+            "thumbnail_timestamp": _safe_float(thumbnail_record.get("timestamp"), 0.0),
+            "width": int(export.get("width") or 0),
+            "height": int(export.get("height") or 0),
+            "start": _safe_float(export.get("start"), 0.0),
+            "end": _safe_float(export.get("end"), 0.0),
+            "duration": _safe_float(export.get("duration"), 0.0),
+            "variant_paths": export.get("intermediate_paths") or {},
+        })
+
+    ordered_candidates = [candidates[key] for key in candidate_order if key in candidates]
+    return {
+        "schema_version": MAGIC_CLIPS_BUNDLE_SCHEMA,
+        "source": manifest.get("source") or {},
+        "plan_id": manifest.get("approved_plan_id") or "",
+        "run_manifest_path": str(manifest.get("manifest_path") or ""),
+        "bundle_manifest_path": bundle_manifest_path,
+        "bundle_csv_path": bundle_csv_path,
+        "output_dir": os.path.abspath(output_dir),
+        "candidate_count": len(ordered_candidates),
+        "output_count": sum(len(candidate.get("outputs") or []) for candidate in ordered_candidates),
+        "candidates": ordered_candidates,
+    }
+
+
+def _write_magic_clips_bundle_artifacts(
+    manifest: dict[str, Any],
+    output_dir: str,
+) -> tuple[str, str]:
+    if not manifest.get("manifest_path") or not manifest.get("final_exports"):
+        return "", ""
+    bundle_manifest_path = os.path.join(output_dir, MAGIC_CLIPS_BUNDLE_MANIFEST_NAME)
+    bundle_csv_path = os.path.join(output_dir, MAGIC_CLIPS_BUNDLE_CSV_NAME)
+    bundle = _build_magic_clips_bundle_manifest(manifest, output_dir, bundle_manifest_path, bundle_csv_path)
+    with open(bundle_manifest_path, "w", encoding="utf-8") as handle:
+        json.dump(bundle, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    with open(bundle_csv_path, "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "candidate_id",
+                "platform_preset",
+                "start",
+                "end",
+                "duration",
+                "title",
+                "score",
+                "export_path",
+                "caption_path",
+                "thumbnail_path",
+                "transcript_excerpt",
+            ],
+        )
+        writer.writeheader()
+        for candidate in bundle["candidates"]:
+            for output in candidate.get("outputs") or []:
+                writer.writerow({
+                    "candidate_id": candidate["candidate_id"],
+                    "platform_preset": output.get("platform_preset", ""),
+                    "start": output.get("start", candidate.get("start", 0.0)),
+                    "end": output.get("end", candidate.get("end", 0.0)),
+                    "duration": output.get("duration", candidate.get("duration", 0.0)),
+                    "title": candidate.get("title", ""),
+                    "score": candidate.get("score", 0.0),
+                    "export_path": output.get("export_path", ""),
+                    "caption_path": output.get("caption_path", ""),
+                    "thumbnail_path": output.get("thumbnail_path", ""),
+                    "transcript_excerpt": candidate.get("transcript_excerpt", ""),
+                })
+    return bundle_manifest_path, bundle_csv_path
 
 
 def _normalise_transcript_segments(raw_segments: Any) -> List[dict[str, Any]]:
@@ -1001,10 +1168,14 @@ def generate_shorts(
                     width=contract.width,
                     height=contract.height,
                     manifest_path=str(manifest.get("manifest_path") or ""),
+                    bundle_manifest_path=str(manifest.get("bundle_manifest_path") or ""),
+                    bundle_csv_path=str(manifest.get("bundle_csv_path") or ""),
                 )
                 results.append(clip)
                 _upsert_final_export(manifest, {
                     "key": checkpoint_key,
+                    "candidate_index": i + 1,
+                    "output_index": output_index,
                     "candidate_id": str(getattr(highlight, "candidate_id", "") or ""),
                     "output_path": final_path,
                     "platform_preset": contract.preset_id,
@@ -1045,6 +1216,14 @@ def generate_shorts(
 
     if on_progress:
         on_progress(100, f"Generated {len(results)} shorts")
+
+    bundle_manifest_path, bundle_csv_path = _write_magic_clips_bundle_artifacts(manifest, output_dir)
+    if bundle_manifest_path:
+        manifest["bundle_manifest_path"] = bundle_manifest_path
+        manifest["bundle_csv_path"] = bundle_csv_path
+        for clip in results:
+            clip.bundle_manifest_path = bundle_manifest_path
+            clip.bundle_csv_path = bundle_csv_path
 
     manifest["status"] = "complete"
     manifest["next_step"] = "complete"
