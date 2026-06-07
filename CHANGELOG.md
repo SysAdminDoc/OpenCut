@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Settings/Form Cleanup
+
+- Advanced E15 to batch 162 by wiring Settings Preferences and Whisper CPU-mode labels through existing locale keys, then removing nine unused generic form locale keys. The live drift report now shows 2,334 keys, 2,313 consumers, 21 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Dead-Key Cleanup
 
 - Advanced E15 cleanup to batch 161 by removing six unused locale keys for already-localized audio, captions, silence, and shortcut controls, pruning repeated GPU/settings label entries, and adding a duplicate-key guard for the live locale file. The live drift report now shows 2,343 keys, 2,307 consumers, 36 dead keys, and 0 missing keys.
