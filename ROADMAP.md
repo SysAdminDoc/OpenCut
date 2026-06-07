@@ -1368,7 +1368,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 112: Continue UXP dynamic status localization into Timeline write-back/runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
+1. Cycle 112: Continue UXP dynamic status localization into Video AI/effects runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
 2. Cycle 113: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
 3. Cycle 114: Revisit UXP cutover only after live UDT evidence is available.
 4. Cycle 115: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
