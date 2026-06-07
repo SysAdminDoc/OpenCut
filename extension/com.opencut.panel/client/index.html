@@ -3535,7 +3535,7 @@
                     <p class="card-desc" data-i18n="settings.system_desc">Review local acceleration, backend connectivity, and service health for the current machine.</p>
                     <div class="settings-row">
                         <span class="settings-label" data-i18n="settings.system_gpu_label">GPU</span>
-                        <span class="settings-value" id="gpuName">Checking…</span>
+                        <span class="settings-value" id="gpuName" data-i18n="settings.system_gpu_checking">Checking…</span>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label" data-i18n="settings.system_vram_label">VRAM</span>
@@ -3550,13 +3550,13 @@
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M10 6.5v3.5h2.5"/></svg>
                             </span>
-                            <span class="btn-label">Restart Backend</span>
+                            <span class="btn-label" data-i18n="settings.restart_backend">Restart Backend</span>
                         </button>
                         <button type="button" class="btn-outline btn-sm utility-btn" id="openLogsBtn" data-i18n="settings.open_logs">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h6l3 3v10H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z"/><path d="M12 3.5v3h3"/><path d="M7.5 10h5"/><path d="M7.5 13h5"/></svg>
                             </span>
-                            <span class="btn-label">View Logs</span>
+                            <span class="btn-label" data-i18n="settings.open_logs">View Logs</span>
                         </button>
                     </div>
                     <div class="oc-status-line mt-xs" id="systemStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="settings.system_status_checking">Checking local acceleration and backend details.</div>
@@ -3581,7 +3581,7 @@
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.preferences">Preferences</div></div>
-                    <p class="card-desc">These defaults shape how OpenCut imports, opens, and stores results unless a tool overrides them.</p>
+                    <p class="card-desc" data-i18n="settings.preferences_desc">These defaults shape how OpenCut imports, opens, and stores results unless a tool overrides them.</p>
                     <div class="checkbox-row">
                         <input type="checkbox" id="settingsAutoImport" checked>
                         <label for="settingsAutoImport" data-i18n="settings.auto_import">Auto-import sequence after processing</label>
@@ -3597,32 +3597,32 @@
                     <div class="form-group mt-md">
                         <label for="settingsOutputDir" data-i18n="settings.output_dir">Output Directory</label>
                         <select id="settingsOutputDir">
-                            <option value="source" selected>Same as source file</option>
-                            <option value="project">Project folder</option>
-                                    <option value="custom">Custom location…</option>
+                            <option value="source" selected data-i18n="settings.output_same_source">Same as source file</option>
+                            <option value="project" data-i18n="settings.output_project_folder">Project folder</option>
+                                    <option value="custom" data-i18n="settings.output_custom_location">Custom location…</option>
                         </select>
                     </div>
                     <div class="form-group mt-md">
-                        <label for="settingsTheme">Appearance</label>
+                        <label for="settingsTheme" data-i18n="settings.appearance">Appearance</label>
                         <select id="settingsTheme">
-                            <option value="auto">Auto (system)</option>
-                            <option value="dark" selected>Dark</option>
-                            <option value="light">Light</option>
+                            <option value="auto" data-i18n="settings.theme_auto">Auto (system)</option>
+                            <option value="dark" selected data-i18n="settings.theme_dark">Dark</option>
+                            <option value="light" data-i18n="settings.theme_light">Light</option>
                         </select>
                     </div>
                     <div class="form-group mt-md">
                         <label for="settingsLang" data-i18n="settings.language">UI Language</label>
                         <select id="settingsLang">
-                            <option value="en" selected>English</option>
-                            <option value="es">Espa&ntilde;ol</option>
-                            <option value="fr">Fran&ccedil;ais</option>
-                            <option value="de">Deutsch</option>
-                            <option value="ja">日本語</option>
-                            <option value="ko">한국어</option>
-                            <option value="zh">中文</option>
-                            <option value="pt">Portugu&ecirc;s</option>
-                            <option value="ru">Русский</option>
-                            <option value="it">Italiano</option>
+                            <option value="en" selected data-i18n="language.ui_english">English</option>
+                            <option value="es" data-i18n="language.ui_spanish">Espa&ntilde;ol</option>
+                            <option value="fr" data-i18n="language.ui_french">Fran&ccedil;ais</option>
+                            <option value="de" data-i18n="language.ui_german">Deutsch</option>
+                            <option value="ja" data-i18n="language.ui_japanese">日本語</option>
+                            <option value="ko" data-i18n="language.ui_korean">한국어</option>
+                            <option value="zh" data-i18n="language.ui_chinese">中文</option>
+                            <option value="pt" data-i18n="language.ui_portuguese">Portugu&ecirc;s</option>
+                            <option value="ru" data-i18n="language.ui_russian">Русский</option>
+                            <option value="it" data-i18n="language.ui_italian">Italiano</option>
                         </select>
                     </div>
                 </section>

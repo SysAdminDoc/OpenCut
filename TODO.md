@@ -4,11 +4,11 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the CEP structured empty-state pass.
+Last synced: 2026-06-07 during the CEP Settings preferences i18n pass.
 
 ## Execution Order
 
-- [ ] **E15 i18n migration rolling batches** - current detailed state: batch 172 with a zero-dead-key baseline, JS metadata-key scanner coverage, and `data-i18n-alt` scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
+- [ ] **E15 i18n migration rolling batches** - current detailed state: batch 173 with a zero-dead-key baseline, JS metadata-key scanner coverage, and `data-i18n-alt` scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
 - [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, cleanup-thread lazy initialization, WCAG contrast audit, and async route rate-limit migration are closed; continue with remaining release-trust findings and external evidence gates.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
