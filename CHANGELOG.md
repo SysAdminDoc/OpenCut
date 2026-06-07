@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - UXP Agent Runtime i18n
+
+- Routed UXP Agent runtime feedback through locale keys, including conductor plan/review status, one-click enhance, variants, sequence-index, and MCP bridge status/error messages.
+- Fixed Agent tab runtime handlers to unwrap the shared backend client response shape before reading plan, review, enhance, variant, sequence-index, and MCP payload fields.
+- Added Agent runtime guard coverage so those dynamic labels, statuses, and backend response paths cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Search and Deliverables Runtime i18n
 
 - Routed UXP Search and Deliverables runtime feedback through locale keys, including search result metadata, indexing/search/NLP state, sequence readiness, deliverable selection summaries, document generation, and package status/error messages.
