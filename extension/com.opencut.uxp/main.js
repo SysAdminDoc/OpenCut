@@ -100,6 +100,13 @@ const WORKSPACE_META   = {
     subtitle: "Review sequence context and export reports, documents, and final handoff assets.",
     sourceIds: ["clipPathCut", "clipPathVideo", "clipPathAudio"],
   },
+  agent: {
+    titleKey: "uxp.tabs.agent",
+    title: "Agent",
+    subtitleKey: "uxp.workspace.agent_subtitle",
+    subtitle: "Plan, enhance, index, and bridge assisted edit workflows from one workspace.",
+    sourceIds: ["enhanceClipPath", "variantsClipPath"],
+  },
   settings: {
     titleKey: "uxp.tabs.settings",
     title: "Settings",
@@ -185,6 +192,17 @@ const WORKSPACE_GUIDES = {
     action: "focus-loadSeqInfoBtn",
     actionLabelKey: "uxp.guide.load_sequence_info",
     actionLabel: "Load Sequence Info",
+  },
+  agent: {
+    kickerKey: "uxp.guide.agent_kicker",
+    kicker: "Agent tools",
+    titleKey: "uxp.guide.agent_title",
+    title: "Plan and run assisted edit workflows.",
+    textKey: "uxp.guide.agent_text",
+    text: "Use the conductor, one-click enhance, variants, sequence index, and MCP bridge from one tab.",
+    action: "focus-agentChatIntent",
+    actionLabelKey: "uxp.guide.describe_intent",
+    actionLabel: "Describe Intent",
   },
   settings: {
     kickerKey: "uxp.guide.settings_kicker",

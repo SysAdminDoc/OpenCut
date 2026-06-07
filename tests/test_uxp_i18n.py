@@ -90,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 560
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 605
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -170,6 +170,14 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.deliverables.project_report_summary",
         "uxp.deliverables.report_format_xlsx_unavailable",
         "uxp.deliverables.generate_full_report",
+        "uxp.agent.chat_conductor_f143",
+        "uxp.agent.intent_placeholder",
+        "uxp.agent.conductor_plan_steps",
+        "uxp.agent.one_click_enhance_q3",
+        "uxp.agent.style_cinematic",
+        "uxp.agent.shorts_ab_variants_q8",
+        "uxp.agent.sequence_index_q7_f273",
+        "uxp.agent.mcp_bridge_f146",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
