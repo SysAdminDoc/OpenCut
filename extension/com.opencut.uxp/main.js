@@ -3145,8 +3145,8 @@ function getDeliverablesOutputSummary() {
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim() || "";
   if (!outputDir) {
     return {
-      label: "Session temp folder",
-      title: "Deliverables will be saved to the session temp folder until you choose an output folder.",
+      label: t("uxp.deliverables.session_temp_folder", "Session temp folder"),
+      title: t("uxp.deliverables.session_temp_folder_title", "Deliverables will be saved to the session temp folder until you choose an output folder."),
     };
   }
   return {
