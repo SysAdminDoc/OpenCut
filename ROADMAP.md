@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, and Audio runtime-feedback guards while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio/Video runtime feedback) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, and Video runtime-feedback guards while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1347,6 +1347,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 108 | UXP Cut runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Cut tab still had hardcoded silence-removal, filler-detection, and cut-result runtime feedback strings outside the locale layer. | Routed Cut progress text, success/error toasts, status summaries, result-card labels, and empty states through locale keys, then added a Cut-runtime guard for those strings. |
 | 2026-06-07 | Cycle 109 | UXP Captions runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Captions tab still had hardcoded transcript, chapter, repeat-review, copy/import, SRT handoff, result-card, and workflow-readiness runtime strings outside the locale layer. | Routed those Captions runtime states through locale keys and added a Captions-runtime guard so transcript/chapter/repeat direct strings cannot return. |
 | 2026-06-07 | Cycle 110 | UXP Audio runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Audio tab still had hardcoded denoise, normalization, loudness-match, and beat-marker progress, success, status, and error strings outside the locale layer. | Routed those Audio runtime states through locale keys and added an Audio-runtime guard so direct audio feedback strings cannot return. |
+| 2026-06-07 | Cycle 111 | UXP Video runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Video tab core actions still had hardcoded Color Match, Auto Zoom, and Multicam progress, success, status, and error strings outside the locale layer. | Routed those Video runtime states through locale keys and added a Video-runtime guard so direct Color Match, Auto Zoom, and Multicam feedback strings cannot return. |
 
 ### Research queries to run later
 
@@ -1367,17 +1368,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 111: Continue UXP dynamic status localization into Video runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 112: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 113: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 114: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 115: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
+1. Cycle 112: Continue UXP dynamic status localization into Timeline write-back/runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 113: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 114: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 115: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 116: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 110: UXP Audio runtime feedback i18n.
+Cycle 111: UXP Video runtime feedback i18n.
 
 #### Current focus
 
@@ -1527,6 +1528,10 @@ Cycle 110 extended UXP i18n coverage into Audio tab runtime feedback: denoise,
 normalization, loudness-match, and beat-marker progress/status/toast/error
 strings now use locale keys, with static guard coverage preventing direct Audio
 runtime feedback strings from returning.
+Cycle 111 extended UXP i18n coverage into Video tab core runtime feedback:
+Color Match, Auto Zoom, and Multicam progress/status/toast/error strings now
+use locale keys, with static guard coverage preventing direct Video runtime
+feedback strings from returning.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.

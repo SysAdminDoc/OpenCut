@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (360 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-360 are recorded below.
+**Last consolidated:** 2026-06-07 (361 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-361 are recorded below.
+
+**Pass 361 update (no standalone research file):**
+- Extended UXP i18n into Video tab core runtime feedback: Color Match, Auto Zoom, and Multicam progress, success, status, and error strings now use UXP locale keys.
+- Added guard coverage for the Video runtime feedback slice so direct hardcoded Color Match, Auto Zoom, and Multicam strings cannot return.
 
 **Pass 360 update (no standalone research file):**
 - Extended UXP i18n into Audio tab runtime feedback: denoise, normalization, loudness-match, and beat-marker progress, success, status, and error strings now use UXP locale keys.

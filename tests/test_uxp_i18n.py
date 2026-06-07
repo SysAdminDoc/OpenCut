@@ -249,6 +249,10 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.audio.runtime.denoise_complete_output",
         "uxp.audio.runtime.normalization_complete_output",
         "uxp.audio.runtime.beats_detected_add_markers",
+        "uxp.video.runtime.matching_color_grading",
+        "uxp.video.runtime.color_match_complete_output",
+        "uxp.video.runtime.auto_zoom_complete_output",
+        "uxp.video.runtime.multicam_cuts_generated",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -320,6 +324,25 @@ def test_uxp_audio_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showToast("Please select an audio/music file.' not in audio_js
     assert "Detected ${beats.length} beats" not in audio_js
     assert "Denoise complete" in _locale()["uxp.audio.runtime.denoise_complete_status"]
+
+
+def test_uxp_video_core_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    video_js = js[
+        js.index("/** ── COLOR MATCH ──")
+        : js.index("/** ── APPLY TIMELINE CUTS")
+    ]
+
+    assert 'UIController.showToast("Please select both input and reference clips.' not in video_js
+    assert 'UIController.showProcessing("Matching color grading' not in video_js
+    assert "UIController.showToast(`Color match complete. Output:" not in video_js
+    assert 'UIController.showToast("Please select a clip first."' not in video_js
+    assert 'UIController.showProcessing("Applying auto zoom' not in video_js
+    assert "UIController.showToast(`Auto zoom complete. Output:" not in video_js
+    assert 'UIController.showToast("Please select both camera files.' not in video_js
+    assert 'UIController.showProcessing("Generating multicam cuts' not in video_js
+    assert "Generated ${cuts.length} multicam cut point" not in video_js
+    assert "Multicam cuts ready" in _locale()["uxp.video.runtime.multicam_cuts_ready_status"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():
