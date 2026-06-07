@@ -1234,6 +1234,13 @@ HTML_STATIC_SHELL_CALLS = (
     ("settings.github", "data-i18n"),
     ("settings.report_bug", "data-i18n"),
     ("settings.wiki", "data-i18n"),
+    # One-hundred-sixty-first batch (Settings preferences and CPU mode shell HTML).
+    ("settings.force_cpu", "data-i18n"),
+    ("settings.auto_import", "data-i18n"),
+    ("settings.auto_open", "data-i18n"),
+    ("settings.notifications", "data-i18n"),
+    ("settings.output_dir", "data-i18n"),
+    ("settings.language", "data-i18n"),
 )
 
 
