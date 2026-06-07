@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Cut Locale
+
+- Expanded the partial Spanish UXP locale pack across the full Cut workspace, including clip input, silence-removal controls, filler-word controls, cut-pass summaries, and Cut runtime feedback.
+- Added guard coverage requiring every `uxp.cut.*` key to be present in the Spanish pack while deeper Video keys remain an explicit English fallback sample.
+
 ### Changed - UXP Spanish Settings Locale
 
 - Expanded the partial Spanish UXP locale pack into backend-offline guide copy and the Settings shell, including Engine Routing, Live Updates Bridge, Migration Risk, Keyboard, About, and common Settings status strings.
