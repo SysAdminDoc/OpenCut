@@ -7034,6 +7034,9 @@ function initAgentTab() {
     if (el) el.textContent = text;
   };
 
+  const responseData = (response) => response?.data ?? response ?? {};
+  const responseError = (response) => response?.error || response?.data?.error || t("common.unknown", "unknown");
+
   const showBox = (id, show) => {
     const el = $(id);
     if (el) el.hidden = !show;
@@ -7045,7 +7048,7 @@ function initAgentTab() {
     list.innerHTML = "";
     if (!Array.isArray(plan) || plan.length === 0) {
       const li = document.createElement("li");
-      li.textContent = "No steps matched — try a more specific intent.";
+      li.textContent = t("uxp.agent.runtime.no_steps_matched", "No steps matched - try a more specific intent.");
       list.appendChild(li);
       return;
     }
@@ -7072,8 +7075,14 @@ function initAgentTab() {
     if (!box || !summary || !notes) return;
     box.hidden = false;
     const score = typeof review.drift_score === "number" ? review.drift_score : 100;
-    const matched = review.matched ? "Matched" : "Drift detected";
-    summary.textContent = `${matched} (drift score ${score}/100, source: ${review.source || "heuristic"})`;
+    const matched = review.matched
+      ? t("uxp.agent.runtime.review_matched", "Matched")
+      : t("uxp.agent.runtime.review_drift_detected", "Drift detected");
+    summary.textContent = formatI18n(
+      "uxp.agent.runtime.review_summary",
+      "{matched} (drift score {score}/100, source: {source})",
+      { matched, score, source: review.source || t("uxp.agent.runtime.heuristic", "heuristic") }
+    );
     notes.innerHTML = "";
     (review.drift_notes || []).forEach((n) => {
       const li = document.createElement("li");
@@ -7082,7 +7091,14 @@ function initAgentTab() {
     });
     if (review.suggested_retry && review.suggested_retry.endpoint) {
       const li = document.createElement("li");
-      li.textContent = `↻ Suggested retry: ${review.suggested_retry.label} (${review.suggested_retry.endpoint})`;
+      li.textContent = formatI18n(
+        "uxp.agent.runtime.suggested_retry",
+        "Suggested retry: {label} ({endpoint})",
+        {
+          label: review.suggested_retry.label,
+          endpoint: review.suggested_retry.endpoint,
+        }
+      );
       notes.appendChild(li);
     }
   }
@@ -7093,27 +7109,38 @@ function initAgentTab() {
     planBtn.addEventListener("click", async () => {
       const intent = ($("agentChatIntent")?.value || "").trim();
       if (!intent) {
-        setStatus("agentChatStatus", "Enter an intent first.");
+        setStatus("agentChatStatus", t("uxp.agent.runtime.enter_intent_first", "Enter an intent first."));
         return;
       }
       planBtn.disabled = true;
-      setStatus("agentChatStatus", "Building plan…");
+      setStatus("agentChatStatus", t("uxp.agent.runtime.building_plan", "Building plan..."));
       try {
         const resp = await BackendClient.post("/agent/chat/plan", { intent });
-        if (!resp || resp.error) {
-          setStatus("agentChatStatus", "Plan failed: " + (resp?.error || "unknown"));
+        if (!resp || resp.error || resp.ok === false) {
+          setStatus("agentChatStatus", formatI18n("uxp.agent.runtime.plan_failed", "Plan failed: {error}", { error: responseError(resp) }));
           return;
         }
-        activeSessionId = resp.session_id || "";
-        renderPlan(resp.plan);
+        const data = responseData(resp);
+        activeSessionId = data.session_id || "";
+        renderPlan(data.plan);
         showBox("agentChatPlanBox", true);
         showBox("agentChatReviewBox", false);
-        setStatus("agentChatStatus",
-          `Plan: ${resp.plan?.length || 0} step(s) via ${resp.source}. Session ${activeSessionId.slice(0, 8)}.`);
+        setStatus(
+          "agentChatStatus",
+          formatI18n(
+            "uxp.agent.runtime.plan_ready",
+            "Plan: {count} step(s) via {source}. Session {session}.",
+            {
+              count: data.plan?.length || 0,
+              source: data.source || t("common.unknown", "unknown"),
+              session: activeSessionId.slice(0, 8) || t("common.unknown", "unknown"),
+            }
+          )
+        );
         const reviewBtn = $("agentChatReviewBtn");
         if (reviewBtn) reviewBtn.disabled = false;
       } catch (err) {
-        setStatus("agentChatStatus", "Plan error: " + (err?.message || err));
+        setStatus("agentChatStatus", formatI18n("uxp.agent.runtime.plan_error", "Plan error: {error}", { error: err?.message || err }));
       } finally {
         planBtn.disabled = false;
       }
@@ -7124,24 +7151,30 @@ function initAgentTab() {
   if (reviewBtn) {
     reviewBtn.addEventListener("click", async () => {
       if (!activeSessionId) {
-        setStatus("agentChatStatus", "Run Plan first to start a session.");
+        setStatus("agentChatStatus", t("uxp.agent.runtime.run_plan_first", "Run Plan first to start a session."));
         return;
       }
       reviewBtn.disabled = true;
-      setStatus("agentChatStatus", "Running self-review…");
+      setStatus("agentChatStatus", t("uxp.agent.runtime.running_self_review", "Running self-review..."));
       try {
         const resp = await BackendClient.post("/agent/chat/review", {
           session_id: activeSessionId,
         });
-        if (!resp || resp.error) {
-          setStatus("agentChatStatus", "Review failed: " + (resp?.error || "unknown"));
+        if (!resp || resp.error || resp.ok === false) {
+          setStatus("agentChatStatus", formatI18n("uxp.agent.runtime.review_failed", "Review failed: {error}", { error: responseError(resp) }));
           return;
         }
-        renderReview(resp);
-        setStatus("agentChatStatus",
-          `Reviewed (${resp.source}). Drift score ${resp.drift_score}/100.`);
+        const data = responseData(resp);
+        renderReview(data);
+        setStatus(
+          "agentChatStatus",
+          formatI18n("uxp.agent.runtime.reviewed_status", "Reviewed ({source}). Drift score {score}/100.", {
+            source: data.source || t("common.unknown", "unknown"),
+            score: data.drift_score ?? 100,
+          })
+        );
       } catch (err) {
-        setStatus("agentChatStatus", "Review error: " + (err?.message || err));
+        setStatus("agentChatStatus", formatI18n("uxp.agent.runtime.review_error", "Review error: {error}", { error: err?.message || err }));
       } finally {
         reviewBtn.disabled = false;
       }
@@ -7158,7 +7191,7 @@ function initAgentTab() {
       showBox("agentChatReviewBox", false);
       const rb = $("agentChatReviewBtn");
       if (rb) rb.disabled = true;
-      setStatus("agentChatStatus", "Cleared.");
+      setStatus("agentChatStatus", t("uxp.agent.runtime.cleared", "Cleared."));
     });
   }
 
@@ -7167,30 +7200,41 @@ function initAgentTab() {
     const filepath = ($("enhanceClipPath")?.value || "").trim();
     const style = $("enhanceStyle")?.value || "social";
     if (!filepath) {
-      setStatus("enhanceStatus", "Enter a clip path first.");
+      setStatus("enhanceStatus", t("uxp.agent.runtime.enter_clip_path_first", "Enter a clip path first."));
       return;
     }
     const btnId = dryRun ? "enhanceDryRunBtn" : "enhanceRunBtn";
     const btn = $(btnId);
     if (btn) btn.disabled = true;
-    setStatus("enhanceStatus", dryRun ? "Building plan…" : "Running Enhance…");
+    setStatus(
+      "enhanceStatus",
+      dryRun
+        ? t("uxp.agent.runtime.building_plan", "Building plan...")
+        : t("uxp.agent.runtime.running_enhance", "Running Enhance...")
+    );
     try {
       const endpoint = dryRun ? "/enhance/auto/dry-run" : "/enhance/auto";
       const resp = await BackendClient.post(endpoint, { filepath, style });
-      if (!resp || resp.error) {
-        setStatus("enhanceStatus", "Failed: " + (resp?.error || "unknown"));
+      if (!resp || resp.error || resp.ok === false) {
+        setStatus("enhanceStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
         return;
       }
+      const data = responseData(resp);
       if (dryRun) {
-        const steps = resp.steps || [];
+        const steps = data.steps || [];
         const skipped = steps.filter((s) => s.status === "skipped").length;
-        setStatus("enhanceStatus",
-          `Plan: ${steps.length - skipped} step(s) will run, ${skipped} skipped.`);
+        setStatus(
+          "enhanceStatus",
+          formatI18n("uxp.agent.runtime.enhance_plan_ready", "Plan: {runCount} step(s) will run, {skipped} skipped.", {
+            runCount: steps.length - skipped,
+            skipped,
+          })
+        );
       } else {
-        setStatus("enhanceStatus", "Job queued — watch the progress bar above.");
+        setStatus("enhanceStatus", t("uxp.agent.runtime.job_queued", "Job queued - watch the progress bar above."));
       }
     } catch (err) {
-      setStatus("enhanceStatus", "Error: " + (err?.message || err));
+      setStatus("enhanceStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -7205,33 +7249,38 @@ function initAgentTab() {
     const end = Number($("variantsEnd")?.value || 0);
     const n_variants = Math.max(2, Math.min(6, Number($("variantsN")?.value || 3)));
     if (!filepath) {
-      setStatus("variantsStatus", "Enter a clip path first.");
+      setStatus("variantsStatus", t("uxp.agent.runtime.enter_clip_path_first", "Enter a clip path first."));
       return;
     }
     if (end <= start) {
-      setStatus("variantsStatus", "End must be greater than start.");
+      setStatus("variantsStatus", t("uxp.agent.runtime.end_after_start", "End must be greater than start."));
       return;
     }
     const btnId = dryRun ? "variantsDryRunBtn" : "variantsRunBtn";
     const btn = $(btnId);
     if (btn) btn.disabled = true;
-    setStatus("variantsStatus", dryRun ? "Planning variants…" : "Rendering variants…");
+    setStatus(
+      "variantsStatus",
+      dryRun
+        ? t("uxp.agent.runtime.planning_variants", "Planning variants...")
+        : t("uxp.agent.runtime.rendering_variants", "Rendering variants...")
+    );
     try {
       const endpoint = dryRun ? "/shorts/variants/dry-run" : "/shorts/variants";
       const resp = await BackendClient.post(endpoint, {
         filepath, start, end, n_variants,
       });
-      if (!resp || resp.error) {
-        setStatus("variantsStatus", "Failed: " + (resp?.error || "unknown"));
+      if (!resp || resp.error || resp.ok === false) {
+        setStatus("variantsStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
         return;
       }
-      const variants = resp.variants || [];
+      const variants = responseData(resp).variants || [];
       setStatus("variantsStatus",
         dryRun
-          ? `Plan: ${variants.length} variant(s) will be generated.`
-          : `Generated ${variants.length} variant(s).`);
+          ? formatI18n("uxp.agent.runtime.variant_plan_ready", "Plan: {count} variant(s) will be generated.", { count: variants.length })
+          : formatI18n("uxp.agent.runtime.variants_generated", "Generated {count} variant(s).", { count: variants.length }));
     } catch (err) {
-      setStatus("variantsStatus", "Error: " + (err?.message || err));
+      setStatus("variantsStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -7243,34 +7292,43 @@ function initAgentTab() {
   $("sequenceIndexBuildBtn")?.addEventListener("click", async () => {
     const btn = $("sequenceIndexBuildBtn");
     if (btn) btn.disabled = true;
-    setStatus("sequenceIndexStatus", "Reading active sequence…");
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence..."));
     try {
       // PProBridge.getSequenceInfo() returns the same JSON shape that
       // host/index.jsx::ocGetSequenceInfo() produces, which is exactly
       // what /timeline/sequence-index expects.
       const sequence = await PProBridge.getSequenceInfo();
       if (!sequence || sequence.error) {
-        setStatus("sequenceIndexStatus", "No active sequence: " + (sequence?.error || "unknown"));
+        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.no_active_sequence", "No active sequence: {error}", { error: sequence?.error || t("common.unknown", "unknown") }));
         return;
       }
       const resp = await BackendClient.post("/timeline/sequence-index", { sequence });
-      if (!resp || resp.error) {
-        setStatus("sequenceIndexStatus", "Failed: " + (resp?.error || "unknown"));
+      if (!resp || resp.error || resp.ok === false) {
+        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
         return;
       }
+      const data = responseData(resp);
       const summary = $("sequenceIndexSummary");
       const box = $("sequenceIndexBox");
       if (summary && box) {
         box.hidden = false;
         summary.textContent =
-          `${resp.sequence_name || "Sequence"} — ${resp.total_rows} clips ` +
-          `(${resp.duration_s?.toFixed?.(1) || 0}s @ ${resp.fps}fps), ` +
-          `${resp.marker_count} markers.`;
+          formatI18n("uxp.agent.runtime.sequence_index_summary", "{name} - {rows} clips ({duration}s @ {fps}fps), {markers} markers.", {
+            name: data.sequence_name || t("uxp.agent.runtime.sequence", "Sequence"),
+            rows: data.total_rows ?? 0,
+            duration: data.duration_s?.toFixed?.(1) || 0,
+            fps: data.fps ?? 0,
+            markers: data.marker_count ?? 0,
+          });
       }
       setStatus("sequenceIndexStatus",
-        `Index built: ${resp.total_rows} rows across ${resp.width}×${resp.height} sequence.`);
+        formatI18n("uxp.agent.runtime.sequence_index_built", "Index built: {rows} rows across {width}x{height} sequence.", {
+          rows: data.total_rows ?? 0,
+          width: data.width ?? 0,
+          height: data.height ?? 0,
+        }));
     } catch (err) {
-      setStatus("sequenceIndexStatus", "Error: " + (err?.message || err));
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -7279,12 +7337,13 @@ function initAgentTab() {
   $("sequenceIndexInfoBtn")?.addEventListener("click", async () => {
     try {
       const info = await BackendClient.get("/timeline/sequence-index/info");
+      const data = responseData(info);
       setStatus("sequenceIndexStatus",
-        info?.available
-          ? `Capability OK — sort keys: ${(info.sort_keys || []).join(", ")}`
-          : "Sequence Index unavailable");
+        data?.available
+          ? formatI18n("uxp.agent.runtime.sequence_index_capability_ok", "Capability OK - sort keys: {keys}", { keys: (data.sort_keys || []).join(", ") })
+          : t("uxp.agent.runtime.sequence_index_unavailable", "Sequence Index unavailable"));
     } catch (err) {
-      setStatus("sequenceIndexStatus", "Capability check failed: " + (err?.message || err));
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.capability_check_failed", "Capability check failed: {error}", { error: err?.message || err }));
     }
   });
 
@@ -7292,21 +7351,27 @@ function initAgentTab() {
   $("mcpBridgeInfoBtn")?.addEventListener("click", async () => {
     try {
       const info = await BackendClient.get("/mcp/info");
+      const data = responseData(info);
       setStatus("mcpBridgeStatus",
-        `v${info.version}: ${info.curated_count} curated + ${info.extended_count} extended ` +
-        `(extended ${info.extended_enabled_by_default ? "on" : "off"} by default).`);
+        formatI18n("uxp.agent.runtime.mcp_bridge_info", "v{version}: {curated} curated + {extended} extended (extended {state} by default).", {
+          version: data.version || t("common.unknown", "unknown"),
+          curated: data.curated_count ?? 0,
+          extended: data.extended_count ?? 0,
+          state: data.extended_enabled_by_default ? t("uxp.agent.runtime.on", "on") : t("uxp.agent.runtime.off", "off"),
+        }));
     } catch (err) {
-      setStatus("mcpBridgeStatus", "Capability check failed: " + (err?.message || err));
+      setStatus("mcpBridgeStatus", formatI18n("uxp.agent.runtime.capability_check_failed", "Capability check failed: {error}", { error: err?.message || err }));
     }
   });
   $("mcpBridgeListBtn")?.addEventListener("click", async () => {
     try {
       const resp = await BackendClient.get("/mcp/tools?include_extended=false");
-      const names = (resp.tools || []).map((t) => t.name).slice(0, 5);
+      const data = responseData(resp);
+      const names = (data.tools || []).map((tool) => tool.name).slice(0, 5);
       setStatus("mcpBridgeStatus",
-        `${resp.count} tool(s). First 5: ${names.join(", ")}`);
+        formatI18n("uxp.agent.runtime.mcp_tools_summary", "{count} tool(s). First 5: {names}", { count: data.count ?? names.length, names: names.join(", ") }));
     } catch (err) {
-      setStatus("mcpBridgeStatus", "List failed: " + (err?.message || err));
+      setStatus("mcpBridgeStatus", formatI18n("uxp.agent.runtime.list_failed", "List failed: {error}", { error: err?.message || err }));
     }
   });
 }
