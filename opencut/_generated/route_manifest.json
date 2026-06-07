@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "generated_at": "2026-06-07T02:42:20Z",
-  "total_routes": 1538,
+  "generated_at": "2026-06-07T05:45:17Z",
+  "total_routes": 1539,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
-    "GET": 387,
+    "GET": 388,
     "PATCH": 1,
     "POST": 1136,
     "PUT": 2
@@ -883,10 +883,10 @@
       ]
     },
     "system": {
-      "route_count": 64,
+      "route_count": 65,
       "method_counts": {
         "DELETE": 1,
-        "GET": 32,
+        "GET": 33,
         "POST": 33
       },
       "sample_rules": [
@@ -10295,6 +10295,14 @@
         "GET"
       ],
       "endpoint": "system.system_ai_eval_compare_backends",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/system/audit-log",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_audit_log",
       "blueprint": "system"
     },
     {

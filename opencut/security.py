@@ -22,6 +22,12 @@ from typing import Iterable, Optional, Tuple
 from flask import Request, jsonify, request
 from werkzeug.exceptions import BadRequest
 
+from opencut.security_audit import (
+    record_csrf_rejection,
+    record_path_validation_rejection,
+    record_rate_limit_rejection,
+)
+
 logger = logging.getLogger("opencut")
 
 # Valid Whisper model names for input validation
@@ -117,6 +123,7 @@ def validate_csrf_request():
     header_token = request.headers.get("X-OpenCut-Token", "")
     if is_csrf_token_valid(header_token):
         return None
+    record_csrf_rejection(token_present=bool(header_token))
     return jsonify({"error": "Invalid or missing CSRF token"}), 403
 
 
@@ -261,45 +268,49 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     Returns the resolved absolute path.
     Raises ``ValueError`` on invalid/dangerous input.
     """
+    def _reject(reason: str) -> None:
+        record_path_validation_rejection(path, reason, allowed_base=allowed_base)
+        raise ValueError(reason)
+
     if not path or not isinstance(path, str):
-        raise ValueError("Empty or invalid path")
+        _reject("Empty or invalid path")
 
     # Reject whitespace-only paths — ``os.path.normpath("  ")`` becomes ``"."``
     # which would silently resolve to the server's CWD.
     stripped = path.strip()
     if not stripped:
-        raise ValueError("Empty or whitespace-only path")
+        _reject("Empty or whitespace-only path")
 
     # Block null bytes
     if "\x00" in path:
-        raise ValueError("Null byte in path")
+        _reject("Null byte in path")
 
     # Block UNC / network / Win32 device paths (SSRF / NTLM hash leak risk).
     # Covers both slashes because Windows accepts forward-slash UNC as well.
     prefix_checks = (path, path.replace("/", "\\"))
     if any(p.startswith("\\\\") for p in prefix_checks):
-        raise ValueError("UNC/network paths are not allowed")
+        _reject("UNC/network paths are not allowed")
 
     # Block Windows Alternate Data Streams (e.g. "file.txt:hidden" or
     # "file.txt::$DATA").  ADS names are invisible in Explorer and can
     # be used to hide data or bypass basename-based checks.
     basename = os.path.basename(path)
     if ":" in basename and not re.match(r"^[A-Za-z]:$", basename):
-        raise ValueError("Alternate data stream references are not allowed")
+        _reject("Alternate data stream references are not allowed")
 
     # Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
     stem = os.path.splitext(basename)[0].upper()
     if stem in {"CON", "PRN", "AUX", "NUL"} or re.match(r"^(COM|LPT)\d$", stem):
-        raise ValueError("Windows reserved device name in path")
+        _reject("Windows reserved device name in path")
 
     # Normalise and block .. components
     normed = os.path.normpath(path)
     # Re-check after normpath (could produce UNC from edge cases)
     if normed.startswith("\\\\") or normed.startswith("//"):
-        raise ValueError("UNC/network paths are not allowed")
+        _reject("UNC/network paths are not allowed")
     parts = normed.replace("\\", "/").split("/")
     if ".." in parts:
-        raise ValueError("Path traversal blocked")
+        _reject("Path traversal blocked")
 
     # Resolve to absolute real path (follows symlinks)
     resolved = os.path.realpath(normed)
@@ -309,14 +320,14 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     # form so the SSRF / NTLM-hash-leak guard above can't be tunnelled
     # through a pre-staged symlink.
     if resolved.startswith("\\\\") or resolved.startswith("//"):
-        raise ValueError("Resolved path points to a UNC/network location")
+        _reject("Resolved path points to a UNC/network location")
 
     # Optional base-directory confinement. Windows paths are case-insensitive,
     # so compare under ``normcase`` to avoid false negatives when ``realpath``
     # returns a different case than the caller passed for ``allowed_base``.
     if allowed_base is not None:
         if not is_path_within(resolved, allowed_base):
-            raise ValueError("Path outside allowed directory")
+            _reject("Path outside allowed directory")
 
     return resolved
 
@@ -654,12 +665,20 @@ def rate_limit(key: str, max_concurrent: int = 1) -> bool:
 
     Call ``rate_limit_release(key)`` when the operation finishes.
     """
+    rejected: Optional[Tuple[int, int]] = None
     with _rate_lock:
         current = _rate_limits.get(key, 0)
         if current >= max_concurrent:
-            return False
-        _rate_limits[key] = current + 1
-        return True
+            rejected = (current, max_concurrent)
+        else:
+            _rate_limits[key] = current + 1
+            return True
+    record_rate_limit_rejection(
+        key,
+        current=rejected[0],
+        max_concurrent=rejected[1],
+    )
+    return False
 
 
 def rate_limit_release(key: str):

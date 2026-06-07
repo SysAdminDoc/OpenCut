@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1538-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1539-orange)
 ![Tests](https://img.shields.io/badge/Tests-9900+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
@@ -87,7 +87,7 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 
 ## Feature Overview
 
-OpenCut v1.32.0 includes **1,538 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.32.0 includes **1,539 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -289,7 +289,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,538 API routes     |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,539 API routes     |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  601 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+

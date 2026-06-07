@@ -383,6 +383,8 @@ def create_app(config=None):
             token = _auth.extract_request_token(request.headers, request.args)
             if _auth.is_token_valid(token):
                 return None
+            from opencut.security_audit import record_auth_token_rejection
+            record_auth_token_rejection()
             return _error_response(
                 "AUTH_REQUIRED",
                 "Missing or invalid X-OpenCut-Auth token",

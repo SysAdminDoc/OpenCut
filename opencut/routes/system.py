@@ -3166,6 +3166,25 @@ def system_capabilities():
         return safe_error(exc, "system_capabilities")
 
 
+@system_bp.route("/system/audit-log", methods=["GET"])
+def system_audit_log():
+    """Return recent structured security rejection audit events."""
+    try:
+        from opencut.security_audit import read_security_events, security_audit_log_path
+
+        limit = safe_int(request.args.get("limit", 100), default=100, min_val=1, max_val=1000)
+        events = read_security_events(limit)
+        return jsonify(
+            {
+                "events": events,
+                "count": len(events),
+                "log_path": security_audit_log_path(),
+            }
+        )
+    except Exception as exc:
+        return safe_error(exc, "system_audit_log")
+
+
 @system_bp.route("/system/check-failures", methods=["GET", "DELETE"])
 @require_csrf
 def check_failures():
