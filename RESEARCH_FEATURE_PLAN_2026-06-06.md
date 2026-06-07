@@ -660,7 +660,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ## Open Questions
 
-1. **UXP i18n priority vs CEP i18n completion:** E15 is at batch 153/~160 for CEP. Should UXP i18n (EI-04) start in parallel, or wait until E15 completes? The CEP EOL deadline (~September 2026) suggests parallel work is warranted.
+1. **UXP i18n priority vs CEP i18n completion:** E15 is at batch 172/~160+ for CEP. Should UXP i18n (EI-04) start in parallel, or wait until E15 completes? The CEP EOL deadline (~September 2026) suggests parallel work is warranted.
 
 2. **Expression engine scope:** Is `evaluate_timeline()` actually used in production, or is it a planned capability? If unused, the per-frame thread fix (EI-01) can be deprioritized. Verify with `grep -rn "evaluate_timeline" opencut/`.
 

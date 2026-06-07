@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (338 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-338 are recorded below.
+**Last consolidated:** 2026-06-07 (339 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-339 are recorded below.
+
+**Pass 339 update (no standalone research file):**
+- Advanced E15 to batch 172 by localizing Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders and MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders in the CEP panel.
+- Added focused migration coverage for the nested Captions quick-action labels and expanded the static HTML shell ledger. The drift gate reports 2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
 
 **Pass 338 update (no standalone research file):**
 - Closed the cleanup-thread lazy initialization finding by deferring the `opencut-temp-cleanup` daemon in `opencut.helpers` until the first `_schedule_temp_cleanup()` call. Importing `opencut.helpers` no longer starts a background thread, while scheduled cleanup still uses the shared daemon worker once work exists.
@@ -258,7 +262,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | MCP curated tools | **39** | `opencut/mcp_server.py` (F195) |
 | MCP extended route tools | **1,482 opt-in** | `opencut/_generated/mcp_extended_tools.json` (F194) |
 | CEP JSX host functions | **18 total; 2 CEP-only** | `opencut/_generated/cep_uxp_parity.json` (F198) |
-| CEP locale keys (English) | **2,515** | `extension/com.opencut.panel/client/locales/en.json` |
+| CEP locale keys (English) | **2,543** | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
 
 The README route badge is regenerated from the route manifest. **The manifest is the source of truth.** Never quote a hand-edited number in CI or docs that bypasses the manifest.

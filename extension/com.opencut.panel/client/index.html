@@ -691,7 +691,7 @@
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="13" height="10" rx="2"/><path d="M6.5 8h7"/><path d="M6.5 10.75h4.5"/><path d="M8.75 14v2"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Auto Subtitle</span>
+                                <span class="btn-label" data-i18n="captions.auto_subtitle">Auto Subtitle</span>
                                 <span class="quick-action-meta" data-i18n="quick_actions.auto_subtitle_meta">Transcript to subtitle file in one pass</span>
                             </span>
                         </span>
@@ -703,7 +703,7 @@
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.25h7"/><path d="M8 4v2.25c0 2.9-1.8 5.3-4.25 6.4"/><path d="M6.25 8.75c.7 1.65 1.95 3.05 3.75 4.15"/><path d="M12.5 6.25h3"/><path d="m14 4.5 2.5 7"/><path d="m12.75 9.5 2.5-5 2.5 5"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Translate</span>
+                                <span class="btn-label" data-i18n="captions.translate">Translate</span>
                                 <span class="quick-action-meta" data-i18n="quick_actions.translate_meta">Generate multilingual captions from source speech</span>
                             </span>
                         </span>
@@ -1208,11 +1208,11 @@
                         </div>
                         <div class="form-group">
                             <label for="chaptersLlmModel" data-i18n="forms.model">Model</label>
-                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3" autocomplete="off" spellcheck="false">
+                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3" autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.model_placeholder">
                         </div>
                         <div class="form-group hidden" id="chaptersApiKeyGroup">
                             <label for="chaptersApiKey" data-i18n="forms.api_key">API Key</label>
-                            <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
+                            <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-..." autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.api_key_placeholder">
                         </div>
                         <div class="form-group">
                             <label for="chaptersMax" data-i18n="forms.max_chapters">Max Chapters</label>
@@ -1239,10 +1239,10 @@
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.srt_import">Import SRT as Native Captions</div></div>
                         <p class="card-desc" data-i18n="captions.srt_import_desc">Parse an SRT file and inject caption segments into the active Premiere sequence as native captions.</p>
                         <div class="form-group">
-                            <label for="srtImportPath">SRT File</label>
+                            <label for="srtImportPath" data-i18n="captions.srt_file">SRT File</label>
                             <div class="input-row">
-                                <input type="text" id="srtImportPath" class="text-input" placeholder="Path to .srt file…" readonly autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn-sm btn-browse" data-target="srtImportPath">Browse</button>
+                                <input type="text" id="srtImportPath" class="text-input" placeholder="Path to .srt file…" readonly autocomplete="off" spellcheck="false" data-i18n-placeholder="captions.srt_path_placeholder">
+                                <button type="button" class="btn-sm btn-browse" data-target="srtImportPath" data-i18n="captions.srt_browse">Browse</button>
                             </div>
                         </div>
                         <button type="button" class="btn-primary" id="runSrtImportBtn" data-i18n="captions.srt_import_run">Import Captions</button>
@@ -1482,19 +1482,19 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="audio.beats_desc">Detect the tempo and beat positions in your music for rhythm-synced editing.</p>
                         <div class="form-group">
-                            <label for="beatSensitivity">Sensitivity</label>
+                            <label for="beatSensitivity" data-i18n="audio.beat_sensitivity">Sensitivity</label>
                             <div class="slider-row">
-                                <input type="range" id="beatSensitivity" min="0.1" max="1.0" value="0.5" step="0.1" title="How sensitive beat detection is (lower = fewer but stronger beats)">
+                                <input type="range" id="beatSensitivity" min="0.1" max="1.0" value="0.5" step="0.1" title="How sensitive beat detection is (lower = fewer but stronger beats)" data-i18n-title="audio.beat_sensitivity_title">
                                 <span class="slider-val" id="beatSensitivityVal">0.5</span>
                             </div>
-                            <span class="hint-inline">Lower = fewer, stronger beats</span>
+                            <span class="hint-inline" data-i18n="audio.beat_sensitivity_hint">Lower = fewer, stronger beats</span>
                         </div>
                         <button type="button" class="btn-primary" id="runBeatsBtn" disabled data-i18n="timeline.detect_beats">Detect Beats</button>
                         <div class="beat-results hidden" id="beatResults">
                             <div class="stat-grid">
-                                <div class="stat-item"><span class="stat-value" id="bpmValue">--</span><span class="stat-label">BPM</span></div>
-                                <div class="stat-item"><span class="stat-value" id="beatCount">--</span><span class="stat-label">Beats</span></div>
-                                <div class="stat-item"><span class="stat-value" id="beatConfidence">--</span><span class="stat-label">Confidence</span></div>
+                                <div class="stat-item"><span class="stat-value" id="bpmValue">--</span><span class="stat-label" data-i18n="audio.bpm_label">BPM</span></div>
+                                <div class="stat-item"><span class="stat-value" id="beatCount">--</span><span class="stat-label" data-i18n="audio.beats_label">Beats</span></div>
+                                <div class="stat-item"><span class="stat-value" id="beatConfidence">--</span><span class="stat-label" data-i18n="audio.beat_confidence_label">Confidence</span></div>
                             </div>
                         </div>
                     </section>
@@ -1673,7 +1673,7 @@
 
                         <div class="form-group">
                             <label for="duckMusicPath" data-i18n="audio.music_file_path">Music File Path</label>
-                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="duckMusicPath" data-i18n="common.browse">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false" data-i18n-placeholder="audio.duck_music_path_placeholder"><button type="button" class="btn-browse" data-target="duckMusicPath" data-i18n="common.browse">Browse</button></div>
                         </div>
 
                         <div class="form-group">
@@ -1706,13 +1706,13 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.music_ai">AI Music Generation</div></div>
                         <p class="card-desc" data-i18n="audio.music_ai_desc">Generate original music from a text description. Describe a mood, genre, or style and get a unique track. GPU recommended.</p>
-                        <div class="form-group"><label for="musicAiPrompt">Prompt</label>
-                            <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios"></textarea></div>
-                        <div class="form-group"><label for="musicAiModel">Model</label>
-                            <select id="musicAiModel"><option value="small" selected>Small (300M, 1.2GB)</option><option value="medium">Medium (1.5B, 6GB)</option><option value="large">Large (3.3B, 13GB)</option></select></div>
-                        <div class="form-group"><label for="musicAiDur">Duration (sec)</label><div class="slider-row"><input type="range" id="musicAiDur" min="5" max="30" value="10" step="1"><span class="slider-val" id="musicAiDurVal">10</span></div></div>
-                        <div class="form-group"><label for="musicAiTemp">Temperature</label><div class="slider-row"><input type="range" id="musicAiTemp" min="0.5" max="1.5" value="1.0" step="0.05"><span class="slider-val" id="musicAiTempVal">1.0</span></div></div>
-                        <label class="checkbox-row"><input type="checkbox" id="musicAiAutoImport" checked>Auto-import result to project</label>
+                        <div class="form-group"><label for="musicAiPrompt" data-i18n="forms.prompt">Prompt</label>
+                            <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios" data-i18n-placeholder="audio.music_prompt_placeholder"></textarea></div>
+                        <div class="form-group"><label for="musicAiModel" data-i18n="forms.model">Model</label>
+                            <select id="musicAiModel"><option value="small" selected data-i18n="audio.music_model_small">Small (300M, 1.2GB)</option><option value="medium" data-i18n="audio.music_model_medium">Medium (1.5B, 6GB)</option><option value="large" data-i18n="audio.music_model_large">Large (3.3B, 13GB)</option></select></div>
+                        <div class="form-group"><label for="musicAiDur" data-i18n="forms.duration">Duration (sec)</label><div class="slider-row"><input type="range" id="musicAiDur" min="5" max="30" value="10" step="1"><span class="slider-val" id="musicAiDurVal">10</span></div></div>
+                        <div class="form-group"><label for="musicAiTemp" data-i18n="forms.temperature">Temperature</label><div class="slider-row"><input type="range" id="musicAiTemp" min="0.5" max="1.5" value="1.0" step="0.05"><span class="slider-val" id="musicAiTempVal">1.0</span></div></div>
+                        <label class="checkbox-row"><input type="checkbox" id="musicAiAutoImport" checked><span data-i18n="common.auto_import_result">Auto-import result to project</span></label>
                         <button type="button" class="btn-primary" id="runMusicAiBtn" data-i18n="audio.music_generate">Generate Music</button>
                     </section>
                 </div>
@@ -1740,10 +1740,10 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="loudMatchOutputDir">Output Directory</label>
+                            <label for="loudMatchOutputDir" data-i18n="audio.loudmatch_output_dir">Output Directory</label>
                             <div class="input-row">
-                                <input type="text" id="loudMatchOutputDir" class="text-input" placeholder="Same as source if blank">
-                                <button type="button" class="btn-sm btn-browse" data-target="loudMatchOutputDir">Browse</button>
+                                <input type="text" id="loudMatchOutputDir" class="text-input" placeholder="Same as source if blank" data-i18n-placeholder="audio.loudmatch_output_placeholder">
+                                <button type="button" class="btn-sm btn-browse" data-target="loudMatchOutputDir" data-i18n="audio.loudmatch_browse">Browse</button>
                             </div>
                         </div>
                         <button type="button" class="btn-primary" id="runLoudMatchBtn" disabled data-i18n="audio.normalize_all">Normalize All to Target</button>
@@ -1915,7 +1915,7 @@
                         <div class="vfx-params hidden" id="vfxParams-lut">
                             <div class="form-group">
                                 <label for="vfxLutPath" data-i18n="forms.lut_file_path">LUT File Path</label>
-                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="vfxLutPath" data-i18n="common.browse">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false" data-i18n-placeholder="video.lut_file_path_placeholder"><button type="button" class="btn-browse" data-target="vfxLutPath" data-i18n="common.browse">Browse</button></div>
                             </div>
                             <div class="form-group">
                                 <label for="vfxLutIntensity" data-i18n="forms.intensity">Intensity</label>
@@ -3397,21 +3397,21 @@
                 <!-- NLP COMMAND -->
                 <div class="sub-panel" id="sub-nlp-command">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">AI Command</div></div>
-                        <p class="card-desc">Type a natural language instruction and let AI route it to the correct operation.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="nlp.command_title">AI Command</div></div>
+                        <p class="card-desc" data-i18n="nlp.command_desc">Type a natural language instruction and let AI route it to the correct operation.</p>
                         <div class="form-group">
-                            <label for="nlpCommandText">Command</label>
-                            <textarea id="nlpCommandText" rows="3" placeholder="e.g. remove silence and add captions in Spanish"></textarea>
+                            <label for="nlpCommandText" data-i18n="nlp.command_label">Command</label>
+                            <textarea id="nlpCommandText" rows="3" placeholder="e.g. remove silence and add captions in Spanish" data-i18n-placeholder="nlp.command_placeholder"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="nlpLlmProvider">LLM Provider</label>
+                            <label for="nlpLlmProvider" data-i18n="forms.llm_provider">LLM Provider</label>
                             <select id="nlpLlmProvider">
-                                <option value="ollama" selected>Ollama (Local)</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
+                                <option value="ollama" selected data-i18n="llm.provider_ollama_local">Ollama (Local)</option>
+                                <option value="openai" data-i18n="llm.provider_openai">OpenAI</option>
+                                <option value="anthropic" data-i18n="llm.provider_anthropic">Anthropic</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runNlpCommandBtn">Run Command</button>
+                        <button type="button" class="btn-primary" id="runNlpCommandBtn" data-i18n="nlp.run_command">Run Command</button>
                         <div class="result-area hidden mt-sm" id="nlpCommandResult">
                             <div class="hint" id="nlpCommandRoute"></div>
                             <div class="hint mt-xs" id="nlpCommandConf"></div>
@@ -3636,22 +3636,22 @@
                     <div class="form-group">
                         <label for="llmProvider" data-i18n="forms.provider">Provider</label>
                         <select id="llmProvider" class="form-select">
-                            <option value="ollama" selected>Ollama (Local)</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic</option>
+                            <option value="ollama" selected data-i18n="llm.provider_ollama_local">Ollama (Local)</option>
+                            <option value="openai" data-i18n="llm.provider_openai">OpenAI</option>
+                            <option value="anthropic" data-i18n="llm.provider_anthropic">Anthropic</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="llmModel" data-i18n="forms.model">Model</label>
-                        <input type="text" id="llmModel" name="llm_model" class="text-input" placeholder="llama3.1" autocomplete="off" spellcheck="false">
+                        <input type="text" id="llmModel" name="llm_model" class="text-input" placeholder="llama3.1" autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.model_placeholder">
                     </div>
                     <div class="form-group hidden" id="llmApiKeyGroup">
                         <label for="llmApiKey" data-i18n="forms.api_key">API Key</label>
-                        <input type="password" id="llmApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
+                        <input type="password" id="llmApiKey" class="text-input" placeholder="sk-..." autocomplete="off" spellcheck="false" data-i18n-placeholder="llm.api_key_placeholder">
                     </div>
                     <div class="form-group">
                         <label for="llmBaseUrl" data-i18n="forms.base_url">Base URL</label>
-                        <input type="url" id="llmBaseUrl" name="llm_base_url" class="text-input" placeholder="http://localhost:11434" inputmode="url" autocomplete="url" spellcheck="false">
+                        <input type="url" id="llmBaseUrl" name="llm_base_url" class="text-input" placeholder="http://localhost:11434" inputmode="url" autocomplete="url" spellcheck="false" data-i18n-placeholder="llm.base_url_placeholder">
                     </div>
                     <div class="oc-status-line mt-xs" id="llmStatus" data-state="idle" role="status" aria-live="polite" data-i18n="settings.llm_status_idle">Test the provider before using chapters, summaries, or highlight suggestions.</div>
                 </section>
