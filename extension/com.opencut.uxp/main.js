@@ -4519,7 +4519,7 @@ async function runBatchExport() {
 
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
   const markersToExport = buildExportWindows();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   if (markersToExport.length === 0) {
     UIController.showToast(t("uxp.timeline.runtime.no_markers_or_cuts_to_export", "No markers or cuts to export. Run beat detection or silence removal first."), "warning");
     return;
@@ -5329,7 +5329,7 @@ function humanizeDomain(domain) {
 
 function formatLocaleTime(value) {
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "just now";
+  if (Number.isNaN(date.getTime())) return t("uxp.runtime.just_now", "just now");
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -5338,11 +5338,11 @@ function formatLocaleTime(value) {
 
 function formatRelativeTime(value) {
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "just now";
+  if (Number.isNaN(date.getTime())) return t("uxp.runtime.just_now", "just now");
   const diffMs = date.getTime() - Date.now();
   const absMinutes = Math.abs(diffMs) / 60000;
   const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (absMinutes < 1) return "just now";
+  if (absMinutes < 1) return t("uxp.runtime.just_now", "just now");
   if (absMinutes < 60) return formatter.format(Math.round(diffMs / 60000), "minute");
   const absHours = Math.abs(diffMs) / 3600000;
   if (absHours < 24) return formatter.format(Math.round(diffMs / 3600000), "hour");
@@ -5413,7 +5413,7 @@ async function checkConnection() {
     });
     // Show reconnection toast when server comes back
     if (alive && wasAlive === false) {
-      UIController.showToast("Server reconnected.", "success");
+      UIController.showToast(t("uxp.status.server_reconnected", "Server reconnected."), "success");
     }
   }
 
@@ -5441,7 +5441,7 @@ const _shortcutActions = {
   "export-video":     () => { const b = document.getElementById("runBatchExportBtn"); if (b && !b.disabled) b.click(); },
   "cancel-job":       () => { if (activeJobId) JobPoller.cancel().then(() => {
     UIController.hideProcessing();
-    UIController.showToast("Job cancelled.", "warning");
+    UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   }); },
 };
 
@@ -5618,7 +5618,7 @@ function bindEvents() {
   document.getElementById("cancelBtn")?.addEventListener("click", async () => {
     await JobPoller.cancel();
     UIController.hideProcessing();
-    UIController.showToast("Job cancelled.", "warning");
+    UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   });
 
   // ── Cut & Clean ──
@@ -5779,8 +5779,12 @@ function bindEvents() {
   document.getElementById("runDepthBtnUxp")?.addEventListener("click", runDepthEffect);
   document.getElementById("installDepthBtnUxp")?.addEventListener("click", async () => {
     const r = await BackendClient.post("/video/depth/install", {});
-  if (r.ok) UIController.showToast("Installing Depth Anything V2…", "info");
-    else UIController.showToast("Install failed: " + (r.error || "unknown"), "error");
+    if (r.ok) {
+      UIController.showToast(t("uxp.video.runtime.installing_depth_anything", "Installing Depth Anything V2..."), "info");
+    } else {
+      const error = r.error || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.depth_install_failed", "Install failed: {error}", { error }), "error");
+    }
   });
 
   // ── Emotion Highlights ──
@@ -6127,12 +6131,22 @@ async function uxpUpdateWsStatus() {
     const listenerLabel = clients === 1
       ? t("uxp.settings.listener", "listener")
       : t("uxp.settings.listeners_count_label", "listeners");
-    countEl.textContent = `${clients} ${listenerLabel}`;
+    countEl.textContent = formatCountI18n(
+      clients,
+      "uxp.settings.listener_count_one",
+      "{count} listener",
+      "uxp.settings.listener_count_many",
+      "{count} listeners"
+    );
     countEl.dataset.state = clients > 0 ? "active" : "idle";
     countEl.title = clients
-      ? `${clients} ${clients === 1
-          ? t("uxp.settings.listener_attached_title", "listener is currently attached to the live-updates bridge.")
-          : t("uxp.settings.listeners_attached_title", "listeners are currently attached to the live-updates bridge.")}`
+      ? formatI18n(
+          clients === 1 ? "uxp.settings.listener_attached_title_one" : "uxp.settings.listener_attached_title_many",
+          clients === 1
+            ? "{count} listener is currently attached to the live-updates bridge."
+            : "{count} listeners are currently attached to the live-updates bridge.",
+          { count: clients }
+        )
       : t("uxp.settings.no_listeners_attached_title", "No listeners are attached to the live-updates bridge right now.");
   }
   if (panelStateEl) {
@@ -6296,7 +6310,17 @@ async function uxpLoadEngines() {
       const sel = (preferred === eng.name) ? " selected" : "";
       const avail = eng.available ? "" : t("uxp.settings.option_unavailable_suffix", " - unavailable");
       const activeSuffix = eng.name === active ? t("uxp.settings.option_active_suffix", " - active") : "";
-      const label = `${eng.display_name} - ${eng.quality}/${eng.speed}${avail}${activeSuffix}`;
+      const label = formatI18n(
+        "uxp.settings.engine_option_label",
+        "{name} - {quality}/{speed}{unavailable}{active}",
+        {
+          name: eng.display_name,
+          quality: eng.quality,
+          speed: eng.speed,
+          unavailable: avail,
+          active: activeSuffix,
+        }
+      );
       html += `<option value="${UIController.escapeHtml(eng.name)}"${sel}>${UIController.escapeHtml(label)}</option>`;
     }
     html += `</select></div>`;
@@ -6424,7 +6448,9 @@ async function uxpLoadMigrationRisk() {
 
   try {
     const response = await fetch(`uxp-migration-dashboard.json?ts=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(formatI18n("uxp.settings.migration_fetch_failed", "HTTP {status}", { status: response.status }));
+    }
     const manifest = await response.json();
     const summary = manifest.summary || {};
     const rows = Array.isArray(manifest.rows) ? manifest.rows : [];
@@ -6466,8 +6492,11 @@ async function uxpLoadMigrationRisk() {
         row.risk ? formatI18n("uxp.settings.risk_tag", "Risk: {risk}", { risk: row.risk }) : "",
         row.needs_hybrid ? t("uxp.settings.hybrid_candidate", "Hybrid candidate") : "",
         Array.isArray(row.f_numbers) && row.f_numbers.length ? row.f_numbers.join(", ") : "",
-      ].filter(Boolean).join(" | ");
-      const summaryText = `${row.role || t("uxp.settings.host_action", "Host action")} ${row.replacement_plan || row.uxp_path || ""}`.trim();
+      ].filter(Boolean).join(t("uxp.settings.tag_separator", " | "));
+      const summaryText = formatI18n("uxp.settings.migration_row_summary", "{role} {plan}", {
+        role: row.role || t("uxp.settings.host_action", "Host action"),
+        plan: row.replacement_plan || row.uxp_path || "",
+      }).trim();
       return `<div class="oc-engine-row">
         <div class="oc-engine-copy">
           <div class="oc-engine-title-row">
@@ -6953,7 +6982,11 @@ async function initApp() {
     const ur = await BackendClient.get("/system/update-check");
     if (ur.ok && ur.data && ur.data.update_available) {
       UIController.showToast(
-        `OpenCut v${ur.data.latest_version} available \u2014 visit GitHub to update`,
+        formatI18n(
+          "uxp.status.update_available",
+          "OpenCut v{version} available - visit GitHub to update",
+          { version: ur.data.latest_version }
+        ),
         "info",
         6000
       );

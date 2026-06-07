@@ -216,6 +216,8 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "conn.offline",
         "uxp.status.backend_connected",
         "uxp.status.backend_offline",
+        "uxp.status.server_reconnected",
+        "uxp.status.update_available",
         "uxp.guide.backend_offline_title",
         "uxp.guide.writeback_ready_title",
         "uxp.fcc.rendering_preview",
@@ -232,6 +234,8 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.runtime.file_browser_unavailable",
         "uxp.runtime.folder_browser_unavailable",
         "uxp.runtime.executing_actions",
+        "uxp.runtime.job_cancelled",
+        "uxp.runtime.just_now",
         "uxp.runtime.premiere_api_available",
         "uxp.cut.runtime.detecting_silences",
         "uxp.cut.runtime.silences_removed",
@@ -277,6 +281,10 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.agent.runtime.enhance_plan_ready",
         "uxp.agent.runtime.sequence_index_built",
         "uxp.agent.runtime.mcp_bridge_info",
+        "uxp.settings.listener_count_many",
+        "uxp.settings.engine_option_label",
+        "uxp.settings.migration_row_summary",
+        "uxp.status.server_reconnected",
         "uxp.video.runtime.matching_color_grading",
         "uxp.video.runtime.color_match_complete_output",
         "uxp.video.runtime.auto_zoom_complete_output",
@@ -286,6 +294,8 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.video.runtime.uploading_to_platform",
         "uxp.video.runtime.uploaded_to_platform",
         "uxp.video.runtime.depth_effect_complete",
+        "uxp.video.runtime.depth_install_failed",
+        "uxp.video.runtime.installing_depth_anything",
         "uxp.video.runtime.broll_analysis_complete",
         "uxp.video.runtime.upscaled_output",
         "uxp.video.runtime.scene_boundaries_found",
@@ -303,11 +313,16 @@ def test_uxp_runtime_toasts_use_locale_helpers():
     js = _js()
 
     assert "function showSelectClipWarning()" in js
+    assert 'UIController.showToast("' not in js
     assert 'UIController.showToast("Select a clip first."' not in js
+    assert 'UIController.showToast("Please select a clip first."' not in js
+    assert 'UIController.showToast("Server reconnected.' not in js
+    assert 'UIController.showToast("Job cancelled.' not in js
     assert 'UIController.showToast("Clipboard is unavailable' not in js
     assert 'UIController.showToast("File browser not available' not in js
     assert 'UIController.showToast("Folder browser not available' not in js
     assert 'UIController.showToast("UXP Premiere Pro API available.' not in js
+    assert "OpenCut v${ur.data.latest_version} available" not in js
 
 
 def test_uxp_cut_runtime_feedback_uses_locale_helpers():
@@ -498,6 +513,32 @@ def test_uxp_agent_runtime_feedback_uses_locale_helpers():
     assert "Index built" in _locale()["uxp.agent.runtime.sequence_index_built"]
 
 
+def test_uxp_settings_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    shared_runtime_js = js[
+        js.index("async function checkConnection")
+        : js.index("// ─────────────────────────────────────────────────────────────\n// Periodic media scan")
+    ]
+    settings_js = js[
+        js.index("async function uxpUpdateWsStatus")
+        : js.index("// ─────────────────────────────────────────────────────────────\n// Application init")
+    ]
+    combined = shared_runtime_js + settings_js
+
+    assert 'UIController.showToast("Server reconnected.' not in combined
+    assert 'UIController.showToast("Job cancelled.' not in combined
+    assert 'return "just now";' not in combined
+    assert 'countEl.textContent = `${clients} ${listenerLabel}`;' not in combined
+    assert "? `${clients} ${clients === 1" not in combined
+    assert "const label = `${eng.display_name} - ${eng.quality}/${eng.speed}${avail}${activeSuffix}`;" not in combined
+    assert "throw new Error(`HTTP ${response.status}`);" not in combined
+    assert '].filter(Boolean).join(" | ");' not in combined
+    assert 'const summaryText = `${row.role || t("uxp.settings.host_action", "Host action")} ${row.replacement_plan || row.uxp_path || ""}`.trim();' not in combined
+    assert "Server reconnected" in _locale()["uxp.status.server_reconnected"]
+    assert "{count} listeners" in _locale()["uxp.settings.listener_count_many"]
+    assert "{name}" in _locale()["uxp.settings.engine_option_label"]
+
+
 def test_uxp_video_core_runtime_feedback_uses_locale_helpers():
     js = _js()
     video_js = js[
@@ -547,6 +588,8 @@ def test_uxp_video_ai_effects_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showProcessing("Running depth effect' not in combined
     assert "UIController.showToast(`Depth effect complete:" not in combined
     assert "UIController.showToast(`Depth effect failed:" not in combined
+    assert 'UIController.showToast("Installing Depth Anything V2' not in combined
+    assert 'UIController.showToast("Install failed:' not in combined
     assert 'UIController.showProcessing("Analyzing emotions' not in combined
     assert "UIController.showToast(`Emotion analysis complete:" not in combined
     assert "UIController.showToast(`Emotion analysis failed:" not in combined
