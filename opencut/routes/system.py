@@ -62,6 +62,14 @@ from opencut.user_data import load_whisper_settings, save_whisper_settings
 
 logger = logging.getLogger("opencut")
 
+_OPEN_PATH_ALLOWED_EXTS = frozenset({
+    ".aac", ".aif", ".aiff", ".ass", ".avi", ".bmp", ".csv", ".edl",
+    ".fcpxml", ".flac", ".gif", ".jpeg", ".jpg", ".json", ".log", ".m4a",
+    ".m4v", ".mkv", ".mov", ".mp3", ".mp4", ".mpeg", ".mpg", ".mxf",
+    ".ogg", ".opus", ".otio", ".png", ".srt", ".tif", ".tiff", ".tsv",
+    ".txt", ".vtt", ".wav", ".webm", ".webp", ".wmv", ".xml",
+})
+
 system_bp = Blueprint("system", __name__)
 
 # ---------------------------------------------------------------------------
@@ -862,16 +870,9 @@ def open_path():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    # Block executable file types from os.startfile — prevent code execution
-    _BLOCKED_EXTS = frozenset({
-        ".exe", ".bat", ".cmd", ".com", ".scr", ".pif", ".msi", ".msp",
-        ".ps1", ".psm1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh",
-        ".sh", ".bash", ".csh", ".ksh", ".reg", ".inf", ".hta", ".lnk",
-        ".py", ".pyw", ".rb", ".pl", ".php",
-    })
     ext = os.path.splitext(filepath)[1].lower()
-    if mode == "open" and ext in _BLOCKED_EXTS:
-        return jsonify({"error": f"Cannot open executable file type: {ext}"}), 403
+    if mode == "open" and ext not in _OPEN_PATH_ALLOWED_EXTS:
+        return jsonify({"error": f"Cannot open unsupported file type: {ext or '(none)'}"}), 403
 
     try:
         if sys.platform == "win32":
@@ -880,7 +881,7 @@ def open_path():
                           creationflags=_sp.CREATE_NEW_PROCESS_GROUP
                           if hasattr(_sp, "CREATE_NEW_PROCESS_GROUP") else 0)
             else:
-                os.startfile(filepath)  # noqa: S606 — validated path, exec exts blocked above
+                os.startfile(filepath)  # noqa: S606 — validated path, open-mode extension allowlisted above
         elif sys.platform == "darwin":
             if mode == "reveal":
                 _sp.Popen(["open", "-R", filepath], start_new_session=True)
