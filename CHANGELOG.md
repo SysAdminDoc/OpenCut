@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Checkpointed Resume
+
+- Closed RA-55 by writing versioned Magic Clips run manifests, preserving reviewed-run intermediates, marking the shorts pipeline route resumable, exposing manifest paths in job metadata/results, and resuming only when source/config hashes match.
+
 ### Changed - Magic Clips Review Boards
 
 - Closed RA-54 by adding CEP and UXP Magic Clips review boards with dry-run plan preview, approve/reject candidate controls, approved-only render handoff, preset/caption/LLM payload parity, and visible Plan/Analyze/Render states.

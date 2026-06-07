@@ -246,6 +246,9 @@ def test_checkpointable_routes_are_marked_resumable():
             '@async_job("export", disk_operation="video_export", resumable=True)',
             '@async_job("export_preset", disk_operation="video_export", resumable=True)',
         ],
+        "opencut/routes/video_specialty.py": [
+            '@async_job("shorts_pipeline", resumable=True)',
+        ],
         "opencut/routes/wave_l_routes.py": [
             '@async_job("depth_estimate_v2", resumable=True)',
         ],

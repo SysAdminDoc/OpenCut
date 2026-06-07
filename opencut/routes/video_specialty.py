@@ -254,7 +254,7 @@ def _magic_clip_platform_presets(data, candidates):
 @video_specialty_bp.route("/video/shorts-pipeline", methods=["POST"])
 @require_csrf
 @workflow_step("Running shorts pipeline")
-@async_job("shorts_pipeline")
+@async_job("shorts_pipeline", resumable=True)
 def video_shorts_pipeline(job_id, filepath, data):
     """Generate short-form clips from a long video (transcribe + highlight + reframe + captions)."""
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
@@ -264,7 +264,11 @@ def video_shorts_pipeline(job_id, filepath, data):
         raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.llm import LLMConfig
-        from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+        from opencut.core.shorts_pipeline import (
+            ShortsPipelineConfig,
+            generate_shorts,
+            magic_clips_run_manifest_path,
+        )
 
         def _on_progress(pct, msg=""):
             _update_job(job_id, progress=pct, message=msg)
@@ -283,6 +287,13 @@ def video_shorts_pipeline(job_id, filepath, data):
         if _shorts_whisper not in VALID_WHISPER_MODELS:
             _shorts_whisper = "base"
         approved_candidates = _approved_magic_clip_candidates(data)
+        checkpoint_manifest_path = str(
+            data.get("checkpoint_manifest_path")
+            or data.get("partial_output_path")
+            or ""
+        ).strip()
+        if checkpoint_manifest_path:
+            checkpoint_manifest_path = validate_path(checkpoint_manifest_path)
         config = ShortsPipelineConfig(
             whisper_model=_shorts_whisper,
             max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
@@ -301,13 +312,27 @@ def video_shorts_pipeline(job_id, filepath, data):
             approved_candidates=approved_candidates,
             platform_presets=_magic_clip_platform_presets(data, approved_candidates),
             transcript_segments=data.get("transcript_segments") if isinstance(data.get("transcript_segments"), list) else None,
+            checkpoint_manifest_path=checkpoint_manifest_path,
+            resume=safe_bool(data.get("resume", True), True),
         )
+        if not config.checkpoint_manifest_path and (config.approved_plan_id or config.approved_candidates):
+            config.checkpoint_manifest_path = magic_clips_run_manifest_path(
+                filepath,
+                config=config,
+                output_dir=output_dir,
+            )
+        if config.checkpoint_manifest_path:
+            _update_job(job_id, partial_output_path=config.checkpoint_manifest_path)
 
         clips = generate_shorts(
             filepath,
             config=config,
             output_dir=output_dir,
             on_progress=_on_progress,
+        )
+        manifest_path = next(
+            (getattr(c, "manifest_path", "") for c in clips if getattr(c, "manifest_path", "")),
+            config.checkpoint_manifest_path,
         )
 
         return {
@@ -323,6 +348,7 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "platform_preset": getattr(c, "platform_preset", ""),
                     "width": getattr(c, "width", 0),
                     "height": getattr(c, "height", 0),
+                    "manifest_path": getattr(c, "manifest_path", ""),
                     "engagement": {
                         "hook_strength": getattr(c.engagement, "hook_strength", 0),
                         "emotional_peak": getattr(c.engagement, "emotional_peak", 0),
@@ -334,6 +360,7 @@ def video_shorts_pipeline(job_id, filepath, data):
                 for c in clips
             ],
             "total_clips": len(clips),
+            "magic_clips_manifest": manifest_path,
         }
     finally:
         if acquired:
