@@ -230,6 +230,27 @@ def _magic_clip_plan_id(data):
     return str(data.get("approved_plan_id") or data.get("plan_id") or plan.get("plan_id") or "")
 
 
+def _magic_clip_platform_presets(data, candidates):
+    raw_presets = data.get("platform_presets", data.get("platform_preset"))
+    if raw_presets in (None, "") and candidates:
+        raw_presets = []
+        for candidate in candidates:
+            for platform in candidate.get("platform_presets") or []:
+                if isinstance(platform, dict):
+                    preset_id = platform.get("preset_id")
+                else:
+                    preset_id = platform
+                if preset_id and preset_id not in raw_presets:
+                    raw_presets.append(preset_id)
+    if raw_presets in (None, ""):
+        return None
+    if isinstance(raw_presets, str):
+        return [raw_presets]
+    if isinstance(raw_presets, list):
+        return [str(item).strip() for item in raw_presets if str(item).strip()]
+    raise ValueError("platform_presets must be a list")
+
+
 @video_specialty_bp.route("/video/shorts-pipeline", methods=["POST"])
 @require_csrf
 @workflow_step("Running shorts pipeline")
@@ -261,6 +282,7 @@ def video_shorts_pipeline(job_id, filepath, data):
         _shorts_whisper = data.get("whisper_model", "base")
         if _shorts_whisper not in VALID_WHISPER_MODELS:
             _shorts_whisper = "base"
+        approved_candidates = _approved_magic_clip_candidates(data)
         config = ShortsPipelineConfig(
             whisper_model=_shorts_whisper,
             max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
@@ -276,7 +298,8 @@ def video_shorts_pipeline(job_id, filepath, data):
             llm_api_key=llm_config.api_key,
             llm_base_url=llm_config.base_url,
             approved_plan_id=_magic_clip_plan_id(data),
-            approved_candidates=_approved_magic_clip_candidates(data),
+            approved_candidates=approved_candidates,
+            platform_presets=_magic_clip_platform_presets(data, approved_candidates),
             transcript_segments=data.get("transcript_segments") if isinstance(data.get("transcript_segments"), list) else None,
         )
 
@@ -297,6 +320,9 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "duration": c.duration,
                     "title": c.title,
                     "score": round(c.score, 3) if c.score else 0,
+                    "platform_preset": getattr(c, "platform_preset", ""),
+                    "width": getattr(c, "width", 0),
+                    "height": getattr(c, "height", 0),
                     "engagement": {
                         "hook_strength": getattr(c.engagement, "hook_strength", 0),
                         "emotional_peak": getattr(c.engagement, "emotional_peak", 0),

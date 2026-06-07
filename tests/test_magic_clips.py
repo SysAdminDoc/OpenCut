@@ -170,6 +170,34 @@ def test_heuristic_fallback_metadata_surfaces_without_llm(tmp_path):
     assert "duration_fit" in candidate.score_breakdown
 
 
+def test_plan_platform_contracts_cover_social_targets(tmp_path):
+    from opencut.core.magic_clips import build_magic_clips_plan
+
+    media = tmp_path / "platforms.mp4"
+    media.write_bytes(b"fake")
+    presets = ["youtube_shorts", "tiktok", "instagram_reels", "instagram_feed"]
+    plan = build_magic_clips_plan(
+        str(media),
+        {
+            "transcript_segments": _segments(),
+            "platform_presets": presets,
+            "min_duration": 10,
+        },
+    )
+
+    candidate = plan.candidates[0]
+    assert [platform["preset_id"] for platform in candidate.platform_presets] == presets
+    outputs = {output["preset_id"]: output for output in candidate.estimated_outputs}
+    assert outputs["youtube_shorts"]["width"] == 1080
+    assert outputs["youtube_shorts"]["height"] == 1920
+    assert outputs["youtube_shorts"]["max_duration"] == 60
+    assert outputs["tiktok"]["max_duration"] == 600
+    assert outputs["instagram_reels"]["max_duration"] == 90
+    assert outputs["instagram_feed"]["width"] == 1080
+    assert outputs["instagram_feed"]["height"] == 1080
+    assert all(candidate.candidate_id.replace(":", "_") in item["filename_template"] for item in outputs.values())
+
+
 def test_no_cached_data_returns_analysis_required_steps(tmp_path):
     from opencut.core.magic_clips import build_magic_clips_plan
 
@@ -257,12 +285,18 @@ def test_shorts_pipeline_renders_only_approved_magic_candidates(tmp_path, monkey
     media.write_bytes(b"fake-media")
     output_dir = tmp_path / "out"
     trim_calls = []
+    conform_calls = []
 
     def fake_trim(_input_path, start, end, output_path):
         trim_calls.append((start, end))
         Path(output_path).write_bytes(b"clip")
 
+    def fake_conform(input_path, width, height, output_path):
+        conform_calls.append((Path(input_path).name, width, height, Path(output_path).name))
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
     monkeypatch.setattr("opencut.core.shorts_pipeline._trim_clip", fake_trim)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._conform_clip_dimensions", fake_conform)
     monkeypatch.setattr("opencut.core.shorts_pipeline._probe_duration", lambda _path: 0.0)
 
     clips = generate_shorts(
@@ -281,12 +315,105 @@ def test_shorts_pipeline_renders_only_approved_magic_candidates(tmp_path, monkey
     )
 
     assert trim_calls == [(10.0, 25.0), (40.0, 52.5)]
+    assert conform_calls == []
     assert [clip.title for clip in clips] == ["First hook", "Second turn"]
     assert [clip.score for clip in clips] == [88.0, 74.0]
     assert sorted(path.name for path in output_dir.iterdir()) == [
         "source_short_1_First_hook.mp4",
         "source_short_2_Second_turn.mp4",
     ]
+
+
+def test_shorts_pipeline_platform_presets_render_variants_and_clamp_duration(tmp_path, monkeypatch):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+    output_dir = tmp_path / "out"
+    trim_calls = []
+    conform_calls = []
+
+    def fake_trim(_input_path, start, end, output_path):
+        trim_calls.append((start, end, Path(output_path).name))
+        Path(output_path).write_bytes(b"clip")
+
+    def fake_conform(input_path, width, height, output_path):
+        conform_calls.append((Path(input_path).name, width, height, Path(output_path).name))
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
+    monkeypatch.setattr("opencut.core.shorts_pipeline._trim_clip", fake_trim)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._conform_clip_dimensions", fake_conform)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._probe_duration", lambda _path: 0.0)
+
+    clips = generate_shorts(
+        str(media),
+        config=ShortsPipelineConfig(
+            max_shorts=1,
+            face_track=False,
+            burn_captions=False,
+            approved_candidates=[
+                {"candidate_id": "mcc:first", "start": 0.0, "end": 120.0, "title": "Long hook", "score": 88.0},
+            ],
+            platform_presets=["youtube_shorts", "tiktok", "instagram_reels", "instagram_feed"],
+        ),
+        output_dir=str(output_dir),
+    )
+
+    assert [(start, end) for start, end, _name in trim_calls] == [
+        (0.0, 60.0),
+        (0.0, 120.0),
+        (0.0, 90.0),
+        (0.0, 60.0),
+    ]
+    assert [clip.platform_preset for clip in clips] == [
+        "youtube_shorts",
+        "tiktok",
+        "instagram_reels",
+        "instagram_feed",
+    ]
+    assert [(clip.width, clip.height) for clip in clips] == [
+        (1080, 1920),
+        (1080, 1920),
+        (1080, 1920),
+        (1080, 1080),
+    ]
+    assert [(width, height) for _name, width, height, _output in conform_calls] == [
+        (1080, 1920),
+        (1080, 1920),
+        (1080, 1920),
+        (1080, 1080),
+    ]
+    assert sorted(path.name for path in output_dir.iterdir()) == [
+        "source_short_1_instagram_feed_Long_hook.mp4",
+        "source_short_1_instagram_reels_Long_hook.mp4",
+        "source_short_1_tiktok_Long_hook.mp4",
+        "source_short_1_youtube_shorts_Long_hook.mp4",
+    ]
+
+
+def test_shorts_pipeline_rejects_unknown_platform_preset(tmp_path):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+
+    try:
+        generate_shorts(
+            str(media),
+            config=ShortsPipelineConfig(
+                face_track=False,
+                burn_captions=False,
+                approved_candidates=[
+                    {"candidate_id": "mcc:first", "start": 0.0, "end": 30.0, "title": "Hook"},
+                ],
+                platform_presets=["unknown"],
+            ),
+            output_dir=str(tmp_path / "out"),
+        )
+    except ValueError as exc:
+        assert "Unknown platform preset" in str(exc)
+    else:
+        raise AssertionError("expected unknown platform preset to fail")
 
 
 def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_token, tmp_path):
@@ -299,6 +426,7 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
     def fake_generate(_filepath, config, output_dir, on_progress):
         captured["approved_plan_id"] = config.approved_plan_id
         captured["approved_candidates"] = config.approved_candidates
+        captured["platform_presets"] = config.platform_presets
         captured["output_dir"] = output_dir
         on_progress(100, "done")
         return []
@@ -306,7 +434,16 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
     plan = {
         "plan_id": "mcplan:abc",
         "candidates": [
-            {"candidate_id": "mcc:keep", "start": 5.0, "end": 20.0, "title": "Keep"},
+            {
+                "candidate_id": "mcc:keep",
+                "start": 5.0,
+                "end": 20.0,
+                "title": "Keep",
+                "platform_presets": [
+                    {"preset_id": "youtube_shorts"},
+                    {"preset_id": "instagram_feed"},
+                ],
+            },
             {"candidate_id": "mcc:skip", "start": 25.0, "end": 40.0, "title": "Skip"},
         ],
     }
@@ -331,6 +468,7 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
     assert job["status"] == "complete"
     assert captured["approved_plan_id"] == "mcplan:abc"
     assert captured["approved_candidates"] == [plan["candidates"][0]]
+    assert captured["platform_presets"] == ["youtube_shorts", "instagram_feed"]
 
 
 def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csrf_token, tmp_path):

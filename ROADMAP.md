@@ -97,7 +97,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
 | RA-09 | Timeline-native captions | L | Closed 2026-06-06: RA-46 sidecars, RA-47 diff/apply, RA-48 UXP snapshot reads, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures shipped |
-| RA-10 | Magic clips macro | L | RA-51 and RA-52 closed 2026-06-06 with dry-run plan graph, approved-candidate render handoff, and explainable scoring; RA-53 through RA-56 remain open |
+| RA-10 | Magic clips macro | L | RA-51 through RA-53 closed 2026-06-06 with dry-run plan graph, approved-candidate render handoff, explainable scoring, and platform preset rendering; RA-54 through RA-56 remain open |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
 | RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
@@ -1067,6 +1067,10 @@ modules. Persist `selection_reason`, `score_breakdown`, `fallback_mode`, and
 
 #### RA-53 Platform preset and multi-ratio export contract
 
+Closed 2026-06-06: Magic Clips plans and approved renders now carry platform
+preset IDs from `export_presets.py`, expose social target constraints, and
+render one preset-clamped, dimension-conformed output per approved platform target.
+
 **Priority:** P1. **Effort:** M. **Confidence:** High.
 
 **Recommended implementation:** Replace panel-side dimension maps with preset
@@ -1078,12 +1082,12 @@ square/social feed, or custom dimensions. Reuse `batch_reframe.py` and
 
 **Acceptance criteria:**
 
-- [ ] UXP and CEP send preset IDs, not ad-hoc width/height maps.
-- [ ] Plans expose platform constraints, target dimensions, max duration, and
+- [x] UXP and CEP send preset IDs, not ad-hoc width/height maps.
+- [x] Plans expose platform constraints, target dimensions, max duration, and
       output filename templates before rendering.
-- [ ] Rendering enforces preset duration/dimension constraints consistently with
+- [x] Rendering enforces preset duration/dimension constraints consistently with
       `export_presets.py`.
-- [ ] Tests verify at least YouTube Shorts, TikTok, Reels, and square outputs.
+- [x] Tests verify at least YouTube Shorts, TikTok, Reels, and square outputs.
 
 #### RA-54 Review-board UI parity for UXP and CEP
 
@@ -1286,6 +1290,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 56 | Sequence-index host locators | `opencut/core/sequence_index.py`, `opencut/routes/sequence_index_routes.py`, `tests/test_sequence_index.py`, Adobe UXP marker/sequence docs | Sequence Index ratings/tags were keyed by clip path only, CEP sequence info used snake-case track keys, and marker payloads were counted but not returned with reusable locator metadata. | Added stable `locator_id` and `host_locators` fields to Sequence Index rows, preserved them through filter route round-trips, made locator-keyed ratings/tags override path fallbacks, propagated sequence GUIDs, returned normalized marker locator payloads, and accepted CEP `video_tracks`/`audio_tracks`. |
 | 2026-06-06 | Cycle 57 | Magic Clips plan graph | `opencut/core/magic_clips.py`, `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, generated route/MCP manifests, Magic Clips tests | The shorts pipeline rendered directly from selected highlights, but RA-51 needed a reviewable dry-run graph and a way to render only approved candidates. | Closed RA-51 with stable Magic Clips plan/candidate/step IDs, source/config hashes, estimated platform outputs, analysis-required fallback steps, and approved-candidate render handoff support. |
 | 2026-06-06 | Cycle 58 | Magic Clips candidate scoring | `opencut/core/magic_clips.py`, `tests/test_magic_clips.py` | RA-51 exposed candidates, but the plan lacked explainable ordering, score breakdowns, fallback labels, and rejected-candidate evidence for short, overlapping, or malformed inputs. | Closed RA-52 with deterministic heuristic scoring, per-candidate selection reasons, fallback mode metadata, score breakdowns, rejected-candidate diagnostics, and focused regression tests. |
+| 2026-06-06 | Cycle 59 | Magic Clips platform presets | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `tests/test_magic_clips.py` | Magic Clips plans exposed preset IDs, but approved rendering still used ad-hoc width/height settings and produced only one output per candidate. | Closed RA-53 by deriving render targets from `export_presets.py`, passing platform IDs from approved plans into `/video/shorts-pipeline`, clamping output durations, conforming preset dimensions, emitting target dimensions, and testing YouTube Shorts, TikTok, Reels, and square feed outputs. |
 
 ### Research queries to run later
 
@@ -1306,17 +1311,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 59: Continue RA-53 platform preset and multi-ratio export contract.
-2. Cycle 60: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-3. Cycle 61: Continue E15 or another remaining release-trust gap after batch 154.
-4. Cycle 62: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 63: Inspect marker metadata workflows for remaining reusable host locator needs.
+1. Cycle 60: Continue RA-54 review-board UI parity for UXP and CEP.
+2. Cycle 61: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+3. Cycle 62: Continue E15 or another remaining release-trust gap after batch 154.
+4. Cycle 63: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+5. Cycle 64: Inspect marker metadata workflows for remaining reusable host locator needs.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 58: Magic Clips candidate scoring and explainable selection.
+Cycle 59: Magic Clips platform preset rendering.
 
 #### Current focus
 
@@ -1516,7 +1521,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue RA-53 platform preset and multi-ratio export contract.
+1. Continue RA-54 review-board UI parity for UXP and CEP.
 2. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
 3. Continue E15 rolling CEP i18n migration.
 

@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the Magic Clips candidate scoring pass.
+Last synced: 2026-06-06 during the Magic Clips platform preset pass.
 
 ## Execution Order
 
@@ -48,7 +48,7 @@ Last synced: 2026-06-06 during the Magic Clips candidate scoring pass.
 - [x] **RA-01 Ruff target-version alignment** - Ruff now targets the declared Python 3.11 floor, with a dependency-surface guard for drift.
 - [x] **RA-02 requirements/pyproject alignment** - `requirements.txt` core/standard bounds now match `pyproject.toml`, with a guard for overlap drift.
 - [x] **RA-09 timeline-native captions** - RA-46 sidecars, RA-47 diff/apply, RA-48 UXP caption snapshots, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures are shipped.
-- [ ] **RA-10 magic clips macro** - RA-51 dry-run plan graph, approved-candidate render handoff, and RA-52 explainable scoring are shipped; continue RA-53 platform preset and multi-ratio export contract.
+- [ ] **RA-10 magic clips macro** - RA-51 through RA-53 are shipped; continue RA-54 review-board UI parity for UXP and CEP.
 - [ ] **RA-11 UXP least-privilege filesystem** - tighten UXP filesystem permission posture.
 - [ ] **RA-12 hybrid plugin validator** - validate hybrid CEP/UXP plugin packaging.
 - [ ] **RA-13 UXP external launch permissions** - document and validate external launch permission behavior.
