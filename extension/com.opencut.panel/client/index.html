@@ -683,7 +683,7 @@
             </div>
 
             <!-- ======== TAB: CAPTIONS ======== -->
-            <div class="nav-panel" id="panel-captions" role="tabpanel" aria-label="Captions">
+            <div class="nav-panel" id="panel-captions" role="tabpanel" aria-label="Captions" data-i18n-aria-label="tabs.captions">
                 <div class="quick-actions" id="quickActionsCaptions">
                     <button type="button" class="quick-action-btn" id="quickAutoSubtitle" disabled title="Transcribe + export SRT subtitles" data-i18n="captions.auto_subtitle" data-i18n-title="quick_actions.auto_subtitle_title">
                         <span class="quick-action-head">
@@ -1252,7 +1252,7 @@
             </div>
 
             <!-- ======== TAB: AUDIO ======== -->
-            <div class="nav-panel" id="panel-audio" role="tabpanel" aria-label="Audio">
+            <div class="nav-panel" id="panel-audio" role="tabpanel" aria-label="Audio" data-i18n-aria-label="tabs.audio">
                 <div class="quick-actions" id="quickActionsAudio">
                     <button type="button" class="quick-action-btn" id="quickStudioAudio" disabled title="Denoise + normalize + loudness match" data-i18n-title="quick_actions.audio_studio_title">
                         <span class="quick-action-head">
@@ -1451,20 +1451,20 @@
                     <section class="card">
                         <p class="card-desc" data-i18n="audio.normalize_desc">Match your audio loudness to platform standards so your content sounds consistent everywhere.</p>
                         <div class="form-group">
-                            <label for="normalizePreset">Platform Preset</label>
+                            <label for="normalizePreset" data-i18n="audio.normalize_platform_preset">Platform Preset</label>
                             <select id="normalizePreset">
-                                <option value="youtube" selected>YouTube (-14 LUFS)</option>
-                                <option value="podcast">Podcast (-16 LUFS)</option>
-                                <option value="broadcast">Broadcast (-23 LUFS)</option>
-                                <option value="spotify">Spotify (-14 LUFS)</option>
-                                <option value="apple_podcasts">Apple Podcasts (-16 LUFS)</option>
-                                <option value="tiktok">TikTok (-14 LUFS)</option>
+                                <option value="youtube" selected data-i18n="audio.normalize_preset_youtube">YouTube (-14 LUFS)</option>
+                                <option value="podcast" data-i18n="audio.normalize_preset_podcast">Podcast (-16 LUFS)</option>
+                                <option value="broadcast" data-i18n="audio.normalize_preset_broadcast">Broadcast (-23 LUFS)</option>
+                                <option value="spotify" data-i18n="audio.normalize_preset_spotify">Spotify (-14 LUFS)</option>
+                                <option value="apple_podcasts" data-i18n="audio.normalize_preset_apple_podcasts">Apple Podcasts (-16 LUFS)</option>
+                                <option value="tiktok" data-i18n="audio.normalize_preset_tiktok">TikTok (-14 LUFS)</option>
                             </select>
                         </div>
                         <div class="loudness-meter hidden" id="loudnessMeter">
-                            <div class="meter-row"><span class="meter-label">Integrated</span><span class="meter-value" id="meterLUFS">-- LUFS</span></div>
-                            <div class="meter-row"><span class="meter-label">True Peak</span><span class="meter-value" id="meterTP">-- dBTP</span></div>
-                            <div class="meter-row"><span class="meter-label">Range</span><span class="meter-value" id="meterLRA">-- LU</span></div>
+                            <div class="meter-row"><span class="meter-label" data-i18n="audio.loudness_integrated">Integrated</span><span class="meter-value" id="meterLUFS">-- LUFS</span></div>
+                            <div class="meter-row"><span class="meter-label" data-i18n="audio.loudness_true_peak">True Peak</span><span class="meter-value" id="meterTP">-- dBTP</span></div>
+                            <div class="meter-row"><span class="meter-label" data-i18n="audio.loudness_range">Range</span><span class="meter-value" id="meterLRA">-- LU</span></div>
                         </div>
                         <div class="btn-row-split">
                             <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled data-i18n="audio.measure">Measure</button>
@@ -1472,7 +1472,7 @@
                         </div>
                         <!-- v1.10.2 (M): live 10s preview at target LUFS -->
                         <div class="audio-preview-row">
-                            <button type="button" class="btn-secondary btn-sm" id="normalizePreviewBtn" disabled title="Render a 10s preview at the target LUFS">Preview 10s</button>
+                            <button type="button" class="btn-secondary btn-sm" id="normalizePreviewBtn" disabled title="Render a 10s preview at the target LUFS" data-i18n="audio.preview_10s" data-i18n-title="audio.normalize_preview_10s_title">Preview 10s</button>
                             <audio id="normalizePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
                     </section>
@@ -1755,7 +1755,7 @@
             </div>
 
             <!-- ======== TAB: VIDEO ======== -->
-            <div class="nav-panel" id="panel-video" role="tabpanel" aria-label="Video">
+            <div class="nav-panel" id="panel-video" role="tabpanel" aria-label="Video" data-i18n-aria-label="tabs.video">
                 <div class="quick-actions" id="quickActionsVideo">
                     <button type="button" class="quick-action-btn" id="quickAutoColor" disabled title="One-click color correction" data-i18n-title="quick_actions.video_auto_color_title">
                         <span class="quick-action-head">
@@ -2852,7 +2852,7 @@
             </div>
 
             <!-- ======== TAB: EXPORT ======== -->
-            <div class="nav-panel" id="panel-export" role="tabpanel" aria-label="Export">
+            <div class="nav-panel" id="panel-export" role="tabpanel" aria-label="Export" data-i18n-aria-label="tabs.export">
                 <div class="sub-tabs" role="tablist" id="exportSubTabs">
                     <button type="button" class="sub-tab active" data-sub="exp-platform" data-i18n="subtabs.presets">Presets</button>
                     <button type="button" class="sub-tab" data-sub="exp-transcript" data-i18n="subtabs.transcript">Transcript</button>
@@ -3208,7 +3208,7 @@
             </div>
 
             <!-- ======== TAB: TIMELINE ======== -->
-            <div class="nav-panel" id="panel-timeline" role="tabpanel" aria-label="Timeline Tools">
+            <div class="nav-panel" id="panel-timeline" role="tabpanel" aria-label="Timeline Tools" data-i18n-aria-label="headers.timeline">
                 <div class="sub-tabs" role="tablist" id="timelineSubTabs">
                     <button type="button" class="sub-tab active" data-sub="tl-writeback" data-i18n="subtabs.write_back">Write-Back</button>
                     <button type="button" class="sub-tab" data-sub="tl-beats" data-i18n="subtabs.beat_markers">Beat Markers</button>
@@ -3347,7 +3347,7 @@
             </div>
 
             <!-- ======== TAB: NLP / SEARCH ======== -->
-            <div class="nav-panel" id="panel-nlp" role="tabpanel" aria-label="Search &amp; NLP">
+            <div class="nav-panel" id="panel-nlp" role="tabpanel" aria-label="Search &amp; NLP" data-i18n-aria-label="nav.search_nlp_panel">
                 <div class="sub-tabs" role="tablist" id="nlpSubTabs">
                     <button type="button" class="sub-tab active" data-sub="nlp-search" data-i18n="subtabs.footage_search">Footage Search</button>
                     <button type="button" class="sub-tab" data-sub="nlp-command" data-i18n="subtabs.command">AI Command</button>

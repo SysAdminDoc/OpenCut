@@ -1283,6 +1283,26 @@ HTML_STATIC_SHELL_CALLS = (
     ("settings.studio_label_ai_routing", "data-i18n"),
     ("engines.settings_refresh_label", "data-i18n"),
     ("settings.studio_environment_checking", "data-i18n"),
+    # One-hundred-sixty-seventh batch (Tab panel accessible region labels).
+    ("tabs.captions", "data-i18n-aria-label"),
+    ("tabs.audio", "data-i18n-aria-label"),
+    ("tabs.video", "data-i18n-aria-label"),
+    ("tabs.export", "data-i18n-aria-label"),
+    ("headers.timeline", "data-i18n-aria-label"),
+    ("nav.search_nlp_panel", "data-i18n-aria-label"),
+    # One-hundred-sixty-seventh batch continued (Audio Normalize shell).
+    ("audio.normalize_platform_preset", "data-i18n"),
+    ("audio.normalize_preset_youtube", "data-i18n"),
+    ("audio.normalize_preset_podcast", "data-i18n"),
+    ("audio.normalize_preset_broadcast", "data-i18n"),
+    ("audio.normalize_preset_spotify", "data-i18n"),
+    ("audio.normalize_preset_apple_podcasts", "data-i18n"),
+    ("audio.normalize_preset_tiktok", "data-i18n"),
+    ("audio.loudness_integrated", "data-i18n"),
+    ("audio.loudness_true_peak", "data-i18n"),
+    ("audio.loudness_range", "data-i18n"),
+    ("audio.preview_10s", "data-i18n"),
+    ("audio.normalize_preview_10s_title", "data-i18n-title"),
 )
 
 
