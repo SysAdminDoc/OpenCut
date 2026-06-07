@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Auto Shorts and Settings Shell
+
+- Advanced E15 to batch 166 by localizing Auto Shorts form labels/options/buttons, Magic Clips review-board status/detail copy, the approved-render alert, and the Settings studio-readiness overview shell. The live drift report now shows 2,360 keys, 2,360 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n JS Metadata Scanner
 
 - Advanced E15 to batch 165 by counting supported JS locale-key metadata fields such as `labelKey` as drift-scan consumers while preserving the zero-dead-key baseline. The live drift report now shows 2,320 keys, 2,320 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.

@@ -13784,8 +13784,10 @@
         }
         if (el.shortsReviewSummary && shortsReviewPlan && !shortsReviewPlan.requires_analysis) {
             el.shortsReviewSummary.textContent = ids.length
-                ? "Render state: " + ids.length + " approved candidate" + (ids.length === 1 ? "" : "s") + " will be sent to /video/shorts-pipeline."
-                : "Plan state: approve at least one candidate before rendering.";
+                ? t("export.shorts_review_render_state", "Render state: {count} approved candidate{plural} will be sent to /video/shorts-pipeline.")
+                    .replace("{count}", ids.length)
+                    .replace("{plural}", ids.length === 1 ? "" : "s")
+                : t("export.shorts_review_approve_prompt", "Plan state: approve at least one candidate before rendering.");
         }
     }
 
@@ -13807,13 +13809,15 @@
         var state = plan && plan.requires_analysis ? "analyze" : "plan";
         el.shortsReviewBoard.setAttribute("data-state", state);
         el.shortsReviewSummary.textContent = plan && plan.requires_analysis
-            ? "Analyze state: cached transcript or highlight data is required before review."
-            : "Plan state: " + candidates.length + " candidate" + (candidates.length === 1 ? "" : "s") + " ready for approval.";
+            ? t("export.shorts_review_analyze_state", "Analyze state: cached transcript or highlight data is required before review.")
+            : t("export.shorts_review_plan_ready", "Plan state: {count} candidate{plural} ready for approval.")
+                .replace("{count}", candidates.length)
+                .replace("{plural}", candidates.length === 1 ? "" : "s");
         if (!candidates.length) {
             var empty = document.createElement("div");
             empty.className = "shorts-review-card";
             var steps = (plan && plan.steps || []).map(function (step) { return step.step_type + ": " + step.status; }).join(", ");
-            empty.textContent = steps || "No candidate windows are available yet.";
+            empty.textContent = steps || t("export.shorts_no_candidates", "No candidate windows are available yet.");
             el.shortsReviewList.appendChild(empty);
             updateShortsReviewActions();
             return;
@@ -13832,13 +13836,19 @@
             });
             label.appendChild(checkbox);
             var body = document.createElement("span");
-            appendShortsText(body, "shorts-review-title", (index + 1) + ". " + (candidate.title || "Candidate"));
-            appendShortsText(body, "shorts-review-meta", "Score " + (candidate.score || 0) + " | " + (candidate.start || 0) + "s-" + (candidate.end || 0) + "s");
+            appendShortsText(body, "shorts-review-title", (index + 1) + ". " + (candidate.title || t("export.shorts_candidate_fallback", "Candidate")));
+            appendShortsText(body, "shorts-review-meta", t("export.shorts_score_meta", "Score {score} | {start}s-{end}s")
+                .replace("{score}", candidate.score || 0)
+                .replace("{start}", candidate.start || 0)
+                .replace("{end}", candidate.end || 0));
             appendShortsText(body, "shorts-review-reason", candidate.selection_reason || (candidate.reasons || []).join("; "));
             appendShortsText(body, "shorts-review-excerpt", candidate.transcript_excerpt || "");
-            appendShortsText(body, "shorts-review-platforms", "Targets: " + ((candidate.platform_presets || []).map(function (p) { return p.preset_id || p; }).join(", ") || getShortsPlatformPresets().join(", ")));
-            appendShortsText(body, "shorts-review-meta", "Caption style: " + (candidate.caption_style || (el.shortsCaptionStyle ? el.shortsCaptionStyle.value : "default")));
-            appendShortsText(body, "shorts-review-meta", "Thumbnail: first frame at " + (candidate.start || 0) + "s");
+            appendShortsText(body, "shorts-review-platforms", t("export.shorts_targets_meta", "Targets: {targets}")
+                .replace("{targets}", ((candidate.platform_presets || []).map(function (p) { return p.preset_id || p; }).join(", ") || getShortsPlatformPresets().join(", "))));
+            appendShortsText(body, "shorts-review-meta", t("export.shorts_caption_style_meta", "Caption style: {style}")
+                .replace("{style}", candidate.caption_style || (el.shortsCaptionStyle ? el.shortsCaptionStyle.value : "default")));
+            appendShortsText(body, "shorts-review-meta", t("export.shorts_thumbnail_meta", "Thumbnail: first frame at {start}s")
+                .replace("{start}", candidate.start || 0));
             label.appendChild(body);
             card.appendChild(label);
             el.shortsReviewList.appendChild(card);
@@ -13853,7 +13863,7 @@
         if (el.shortsReviewBoard && el.shortsReviewSummary) {
             el.shortsReviewBoard.classList.remove("hidden");
             el.shortsReviewBoard.setAttribute("data-state", "plan");
-            el.shortsReviewSummary.textContent = "Plan state: building candidate review board.";
+            el.shortsReviewSummary.textContent = t("export.shorts_review_building", "Plan state: building candidate review board.");
         }
         api("POST", "/video/magic-clips/plan", payload, function (err, data) {
             if (el.previewShortsPlanBtn) el.previewShortsPlanBtn.disabled = false;
@@ -13875,13 +13885,19 @@
         if (!candidates || !candidates.length || !el.shortsReviewBoard || !el.shortsReviewList || !el.shortsReviewSummary) return;
         el.shortsReviewBoard.classList.remove("hidden");
         el.shortsReviewBoard.setAttribute("data-state", "complete");
-        el.shortsReviewSummary.textContent = "Bundle state: " + (bundle.output_count || 0) + " output" + ((bundle.output_count || 0) === 1 ? "" : "s") + " saved with " + shortsBundleFileName(result.magic_clips_bundle_manifest) + ".";
+        el.shortsReviewSummary.textContent = t("export.shorts_bundle_state", "Bundle state: {count} output{plural} saved with {bundle}.")
+            .replace("{count}", bundle.output_count || 0)
+            .replace("{plural}", (bundle.output_count || 0) === 1 ? "" : "s")
+            .replace("{bundle}", shortsBundleFileName(result.magic_clips_bundle_manifest));
         el.shortsReviewList.innerHTML = "";
         candidates.forEach(function (candidate, index) {
             var card = document.createElement("div");
             card.className = "shorts-review-card";
-            appendShortsText(card, "shorts-review-title", (index + 1) + ". " + (candidate.title || "Candidate"));
-            appendShortsText(card, "shorts-review-meta", "Score " + (candidate.score || 0) + " | " + (candidate.start || 0) + "s-" + (candidate.end || 0) + "s");
+            appendShortsText(card, "shorts-review-title", (index + 1) + ". " + (candidate.title || t("export.shorts_candidate_fallback", "Candidate")));
+            appendShortsText(card, "shorts-review-meta", t("export.shorts_score_meta", "Score {score} | {start}s-{end}s")
+                .replace("{score}", candidate.score || 0)
+                .replace("{start}", candidate.start || 0)
+                .replace("{end}", candidate.end || 0));
             appendShortsText(card, "shorts-review-excerpt", candidate.transcript_excerpt || "");
             (candidate.outputs || []).forEach(function (output) {
                 appendShortsText(
@@ -13897,7 +13913,7 @@
     function renderApprovedShorts() {
         if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         var ids = selectedShortsCandidateIds();
-        if (!shortsReviewPlan || !ids.length) { showAlert("Approve at least one Magic Clips candidate first."); return; }
+        if (!shortsReviewPlan || !ids.length) { showAlert(t("toast.shorts_approve_candidate_first", "Approve at least one Magic Clips candidate first.")); return; }
         preflightPipeline("shorts-pipeline", selectedPath, projectFolder, function (go) {
             if (!go) return;
             var payload = buildShortsPayload();

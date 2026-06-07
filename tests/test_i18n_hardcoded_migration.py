@@ -1245,10 +1245,44 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.enhance_denoise", "data-i18n"),
     ("audio.enhance_upscale", "data-i18n"),
     ("audio.loudmatch_target", "data-i18n"),
+    # One-hundred-sixty-sixth batch (Auto Shorts form/review and Settings readiness shell).
+    ("export.shorts_platform", "data-i18n"),
+    ("export.shorts_platform_tiktok", "data-i18n"),
+    ("export.shorts_platform_youtube", "data-i18n"),
+    ("export.shorts_platform_instagram_reels", "data-i18n"),
+    ("export.shorts_platform_instagram_feed", "data-i18n"),
+    ("export.shorts_max_clips", "data-i18n"),
+    ("export.shorts_caption_style", "data-i18n"),
+    ("export.shorts_style_default", "data-i18n"),
+    ("export.shorts_style_bold_yellow", "data-i18n"),
+    ("export.shorts_style_boxed_dark", "data-i18n"),
+    ("export.shorts_style_neon_cyan", "data-i18n"),
+    ("export.shorts_style_cinematic_serif", "data-i18n"),
+    ("export.shorts_style_top_center", "data-i18n"),
+    ("export.shorts_clip_duration", "data-i18n"),
+    ("export.shorts_min_duration_aria", "data-i18n-aria-label"),
+    ("export.shorts_duration_to", "data-i18n"),
+    ("export.shorts_max_duration_aria", "data-i18n-aria-label"),
     ("export.shorts_face_track", "data-i18n"),
     ("export.shorts_captions", "data-i18n"),
+    ("export.shorts_preview_plan", "data-i18n"),
+    ("export.shorts_render_approved", "data-i18n"),
     ("timeline.get_markers", "data-i18n"),
     ("timeline.export_marked", "data-i18n"),
+    # One-hundred-sixty-sixth batch continued (Settings studio-readiness overview shell HTML).
+    ("headers.settings", "data-i18n-aria-label"),
+    ("settings.studio_readiness_title", "data-i18n"),
+    ("settings.studio_readiness_desc", "data-i18n"),
+    ("settings.studio_readiness_aria", "data-i18n-aria-label"),
+    ("settings.studio_label_backend", "data-i18n"),
+    ("settings.studio_backend_checking", "data-i18n"),
+    ("settings.studio_label_speech", "data-i18n"),
+    ("settings.studio_speech_checking", "data-i18n"),
+    ("settings.studio_label_bridge", "data-i18n"),
+    ("ws.studio_checking", "data-i18n"),
+    ("settings.studio_label_ai_routing", "data-i18n"),
+    ("engines.settings_refresh_label", "data-i18n"),
+    ("settings.studio_environment_checking", "data-i18n"),
 )
 
 
@@ -2891,6 +2925,20 @@ MIGRATED_KEYS = (
     "video.key_blue_screen",
     "video.key_green_screen",
     "video.stabilize_smoothing_hint",
+    # One-hundred-sixty-sixth batch (Auto Shorts dynamic review shell).
+    "export.shorts_bundle_state",
+    "export.shorts_candidate_fallback",
+    "export.shorts_caption_style_meta",
+    "export.shorts_no_candidates",
+    "export.shorts_review_analyze_state",
+    "export.shorts_review_approve_prompt",
+    "export.shorts_review_building",
+    "export.shorts_review_plan_ready",
+    "export.shorts_review_render_state",
+    "export.shorts_score_meta",
+    "export.shorts_targets_meta",
+    "export.shorts_thumbnail_meta",
+    "toast.shorts_approve_candidate_first",
 )
 
 
@@ -8612,6 +8660,72 @@ EXPECTED_CALLS = (
         "workflow.preset_status_ready_on",
         re.compile(r't\(\s*"workflow\.preset_status_ready_on"'),
         re.compile(r'preset\.name\s*\+\s*" is ready to run on "'),
+    ),
+    # --- One-hundred-sixty-sixth batch ------------------------------
+    (
+        "export.shorts_review_render_state",
+        re.compile(r't\(\s*"export\.shorts_review_render_state"'),
+        re.compile(r'"Render state:\s*"\s*\+'),
+    ),
+    (
+        "export.shorts_review_approve_prompt",
+        re.compile(r't\(\s*"export\.shorts_review_approve_prompt"'),
+        re.compile(r':\s*"Plan state: approve at least one candidate before rendering\."'),
+    ),
+    (
+        "export.shorts_review_analyze_state",
+        re.compile(r't\(\s*"export\.shorts_review_analyze_state"'),
+        re.compile(r'\?\s*"Analyze state: cached transcript or highlight data is required before review\."'),
+    ),
+    (
+        "export.shorts_review_plan_ready",
+        re.compile(r't\(\s*"export\.shorts_review_plan_ready"'),
+        re.compile(r'"Plan state:\s*"\s*\+\s*candidates\.length'),
+    ),
+    (
+        "export.shorts_no_candidates",
+        re.compile(r't\(\s*"export\.shorts_no_candidates"'),
+        re.compile(r'steps\s*\|\|\s*"No candidate windows are available yet\."'),
+    ),
+    (
+        "export.shorts_candidate_fallback",
+        re.compile(r't\(\s*"export\.shorts_candidate_fallback"'),
+        re.compile(r'candidate\.title\s*\|\|\s*"Candidate"'),
+    ),
+    (
+        "export.shorts_score_meta",
+        re.compile(r't\(\s*"export\.shorts_score_meta"'),
+        re.compile(r'"Score "\s*\+'),
+    ),
+    (
+        "export.shorts_targets_meta",
+        re.compile(r't\(\s*"export\.shorts_targets_meta"'),
+        re.compile(r'"Targets: "\s*\+'),
+    ),
+    (
+        "export.shorts_caption_style_meta",
+        re.compile(r't\(\s*"export\.shorts_caption_style_meta"'),
+        re.compile(r'"Caption style: "\s*\+'),
+    ),
+    (
+        "export.shorts_thumbnail_meta",
+        re.compile(r't\(\s*"export\.shorts_thumbnail_meta"'),
+        re.compile(r'"Thumbnail: first frame at "\s*\+'),
+    ),
+    (
+        "export.shorts_review_building",
+        re.compile(r't\(\s*"export\.shorts_review_building"'),
+        re.compile(r'textContent\s*=\s*"Plan state: building candidate review board\."'),
+    ),
+    (
+        "export.shorts_bundle_state",
+        re.compile(r't\(\s*"export\.shorts_bundle_state"'),
+        re.compile(r'"Bundle state:\s*"\s*\+'),
+    ),
+    (
+        "toast.shorts_approve_candidate_first",
+        re.compile(r't\(\s*"toast\.shorts_approve_candidate_first"'),
+        re.compile(r'showAlert\(\s*"Approve at least one Magic Clips candidate first\."'),
     ),
 )
 
