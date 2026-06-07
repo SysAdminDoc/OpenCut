@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Video Tab Core Shell
+
+- Expanded the UXP i18n foundation into the top/core Video tab shell, including clip input, Color Match, Auto Zoom, Multicam Switch, Multimodal Diarization, and B-roll Generation controls, placeholders, select options, ARIA labels, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 260+ attribute baseline and representative Video-tab locale keys.
+
 ### Changed - UXP i18n Audio Tab Shell
 
 - Expanded the UXP i18n foundation into the Audio tab shell, including clip input, denoise method controls, normalization controls, loudness-match fields, beat-marker inputs, placeholders, option labels, checkbox text, and action buttons.
