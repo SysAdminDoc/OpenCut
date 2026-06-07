@@ -256,11 +256,15 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.video.runtime.generating_ai_broll",
         "uxp.video.runtime.diarization_complete_summary",
         "uxp.video.runtime.uploading_to_platform",
+        "uxp.video.runtime.uploaded_to_platform",
         "uxp.video.runtime.depth_effect_complete",
         "uxp.video.runtime.broll_analysis_complete",
         "uxp.video.runtime.upscaled_output",
         "uxp.video.runtime.scene_boundaries_found",
         "uxp.video.runtime.style_applied_output",
+        "uxp.video.runtime.shorts_plan_state_candidates",
+        "uxp.video.runtime.generated_short_form_clips",
+        "uxp.video.runtime.shorts_bundle_state_outputs",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -397,6 +401,30 @@ def test_uxp_video_ai_effects_runtime_feedback_uses_locale_helpers():
     assert "UIController.showToast(`Style transfer failed:" not in combined
     assert "B-roll analysis complete" in _locale()["uxp.video.runtime.broll_analysis_complete"]
     assert "Style applied" in _locale()["uxp.video.runtime.style_applied_output"]
+
+
+def test_uxp_video_shorts_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    shorts_js = js[
+        js.index("// Shorts Pipeline")
+        : js.index("async function initApp")
+    ]
+
+    assert 'summary.textContent = "Plan state: building candidate review board."' not in shorts_js
+    assert ': "Plan state: approve at least one candidate before rendering."' not in shorts_js
+    assert '? "Analyze state: cached transcript or highlight data is required before review."' not in shorts_js
+    assert 'steps || "No candidate windows are available yet."' not in shorts_js
+    assert "Targets: ${(candidate.platform_presets" not in shorts_js
+    assert "Caption style: ${candidate.caption_style" not in shorts_js
+    assert "Thumbnail: first frame at ${candidate.start" not in shorts_js
+    assert "Bundle state: ${outputCount}" not in shorts_js
+    assert 'UIController.showToast("Approve at least one Magic Clips candidate first."' not in shorts_js
+    assert "UIController.showToast(`Rendered ${count} approved short-form clips." not in shorts_js
+    assert "UIController.showToast(`Approved render failed:" not in shorts_js
+    assert "UIController.showToast(`Generated ${count} short-form clips." not in shorts_js
+    assert "UIController.showToast(`Shorts pipeline failed:" not in shorts_js
+    assert "Generated" in _locale()["uxp.video.runtime.generated_short_form_clips"]
+    assert "Bundle state" in _locale()["uxp.video.runtime.shorts_bundle_state_outputs"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():
