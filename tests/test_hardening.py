@@ -520,28 +520,29 @@ def test_models_delete_rejects_non_string_path(client, csrf_token):
     assert "path must be a string" in data["error"]
 
 
-def test_open_path_blocks_executable_extensions(client, csrf_token):
-    """open-path route blocks executable file types."""
+def test_open_path_allows_only_safe_document_media_extensions(client, csrf_token):
+    """open-path route blocks unsafe shell/control file types."""
+    import os
     import tempfile
 
-    # Create a fake .bat file
-    with tempfile.NamedTemporaryFile(suffix=".bat", delete=False, mode="w") as f:
-        f.write("echo hello")
-        bat_path = f.name
+    unsafe_paths = []
+    for suffix in (".bat", ".msc", ".cpl", ".settingcontent-ms", ".url"):
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, mode="w") as f:
+            f.write("test")
+            unsafe_paths.append(f.name)
 
     try:
-        import os
-        resp = client.post(
-            "/system/open-path",
-            data=json.dumps({"path": bat_path, "mode": "open"}),
-            headers=csrf_headers(csrf_token),
-        )
-        assert resp.status_code == 403
-        data = resp.get_json()
-        assert "executable" in data["error"].lower() or ".bat" in data["error"]
+        for path in unsafe_paths:
+            resp = client.post(
+                "/system/open-path",
+                data=json.dumps({"path": path, "mode": "open"}),
+                headers=csrf_headers(csrf_token),
+            )
+            assert resp.status_code == 403
+            assert "unsupported file type" in resp.get_json()["error"].lower()
     finally:
-        import os
-        os.unlink(bat_path)
+        for path in unsafe_paths:
+            os.unlink(path)
 
 
 def test_validate_output_path_rejects_non_writable_directory(tmp_path):

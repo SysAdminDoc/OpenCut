@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Security - Open Path Allowlist
+
+- Hardened `/system/open-path` direct-open mode by replacing executable-extension blocklisting with an explicit safe media/document allowlist while preserving reveal mode for validated paths.
+
 ### Security - PyTorch Deserialization Hardening
 
 - Hardened model quantization by loading PyTorch checkpoints with `weights_only=True`, rejecting unsafe or unsupported pickle payloads with a clear error, and raising Torch-backed optional extras to `torch>=2.6` / `torchvision>=0.21`.
