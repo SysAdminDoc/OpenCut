@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (168/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.280 / batch 168. |
+| E15 | CEP i18n migration | Rolling batches (169/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.281 / batch 169. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -596,7 +596,7 @@ strings and dynamic-rendering scanner gaps.
 |---|---|---|---|
 | E15 dead-key cleanup | `scripts/i18n_lint.py --json` now reports 0 dead keys and a 0-key baseline | Keep the baseline at zero and remove or wire any future dead key in the same batch that introduces it. | P2 |
 | E15 scanner coverage | `scripts/i18n_lint.py` scans `data-i18n*`, direct `t(...)` calls, and supported JS key-field metadata | Continue targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
-| E15 roadmap status | `TODO.md` now tracks v4.280 / batch 168 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
+| E15 roadmap status | `TODO.md` now tracks v4.281 / batch 169 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
 
 ### Cycle 8: UXP/WebView cutover audit
 
@@ -1320,6 +1320,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 81 | `open-path` allowlist hardening | `opencut/routes/system.py`, `tests/test_hardening.py`, `tests/test_new_features.py` | `/system/open-path` direct-open mode used an executable-extension blocklist that missed Windows control/shell payloads such as `.msc`, `.cpl`, `.settingcontent-ms`, and `.url`. | Replaced the blocklist with a safe media/document extension allowlist for direct open mode while preserving reveal mode for validated files; regression coverage rejects the missed dangerous extensions. |
 | 2026-06-07 | Cycle 82 | CLIP cache safe deserialization | `opencut/core/semantic_video_search.py`, `tests/test_object_intel.py` | Semantic video search loaded predictable `~/.opencut/clip_cache/clip_*.pkl` files with raw `pickle.load()`, creating a cache-poisoning execution path if an attacker could write to the cache directory. | Replaced raw pickle caches with compressed `.npz` files that store JSON metadata and load arrays via `numpy.load(..., allow_pickle=False)`; regression coverage verifies both the safe-load option and a no-pickle cache round trip. |
 | 2026-06-07 | Cycle 83 | Scripting-console resource limit | `opencut/core/scripting_console.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/workflow_dev_routes.py`, `tests/test_dev_scripting.py`, `tests/test_workflow_dev.py` | The scripting console had output and timeout caps but no source-size cap, allowing oversized code payloads to consume avoidable compile/exec resources. | Added a 100 KiB (102,400-byte) `MAX_CODE_LENGTH_BYTES` cap, enforced it in the core sandbox and both scripting HTTP routes before compile/exec, and covered direct core rejection plus HTTP 400 `CODE_TOO_LARGE` responses for 200 KiB submitted scripts. |
+| 2026-06-07 | Cycle 84 | CEP i18n Timeline and Settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness copy still had bare-English shell strings after the prior Footage Search batch. | Advanced E15 to batch 169 by wiring those surfaces through locale hooks; the drift gate now reports 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1340,17 +1341,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 84: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 85: Audit the remaining release-trust findings that can close with local evidence.
-3. Cycle 86: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 87: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 88: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 85: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 86: Audit the remaining release-trust findings that can close with local evidence.
+3. Cycle 87: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 88: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 89: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 83: Scripting-console resource limit.
+Cycle 84: CEP i18n Timeline and Settings shell.
 
 #### Current focus
 
@@ -1407,7 +1408,10 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 168: Footage Search shell copy, tab panel region labels, Audio Normalize shell controls, Auto Shorts form labels/options/buttons,
+E15 is advanced through batch 169: Timeline write-back, OTIO, beat-marker,
+multicam, marker-export, rename/smart-bin controls, Settings system,
+dependency-health, Whisper readiness, Footage Search shell copy, tab panel
+region labels, Audio Normalize shell controls, Auto Shorts form labels/options/buttons,
 Magic Clips review-board status/detail copy, the approved-render alert, and the
 Settings studio-readiness overview shell now use locale hooks, the final unused
 CEP locale keys have been removed, the dead-key baseline is zero, the scanner counts supported JS metadata locale keys
@@ -1418,7 +1422,7 @@ Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
 diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,386 keys, 2,386 consumers, 16 JS metadata consumers, 0 dead
+the drift gate reports 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1507,6 +1511,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
   copy.
 - E15 batch 168 localized the Footage Search card, index summary, empty state,
   query controls, search action, and results region label.
+- E15 batch 169 localized Timeline write-back, OTIO, beat-marker, multicam,
+  marker-export, rename/smart-bin controls plus Settings system,
+  dependency-health, and Whisper readiness shell copy.
 - PyTorch deserialization hardening is closed: quantization loads now use
   `weights_only=True`, unsafe pickle checkpoints produce a clear error, and
   Torch-backed optional extras require `torch>=2.6` / `torchvision>=0.21`.

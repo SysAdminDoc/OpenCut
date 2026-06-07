@@ -210,6 +210,9 @@
 **Pass 333 update (no standalone research file):**
 - Closed the scripting-console resource-limit item by adding a 100 KiB (102,400-byte) source-size cap enforced in the core sandbox API plus `/api/scripting/execute` and `/api/workflow/scripting/execute` before compile/exec. Regression coverage verifies direct core rejection and HTTP 400 `CODE_TOO_LARGE` responses for 200 KiB submitted scripts.
 
+**Pass 334 update (no standalone research file):**
+- Advanced E15 to batch 169 by localizing Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness shell copy. The live i18n drift report now shows 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -239,7 +242,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | MCP curated tools | **39** | `opencut/mcp_server.py` (F195) |
 | MCP extended route tools | **1,480 opt-in** | `opencut/_generated/mcp_extended_tools.json` (F194) |
 | CEP JSX host functions | **18 total; 2 CEP-only** | `opencut/_generated/cep_uxp_parity.json` (F198) |
-| CEP locale keys (English) | **2,386** | `extension/com.opencut.panel/client/locales/en.json` |
+| CEP locale keys (English) | **2,431** | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
 
 The README route badge is regenerated from the route manifest. **The manifest is the source of truth.** Never quote a hand-edited number in CI or docs that bypasses the manifest.
