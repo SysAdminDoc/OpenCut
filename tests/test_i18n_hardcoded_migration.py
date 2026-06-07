@@ -1241,6 +1241,14 @@ HTML_STATIC_SHELL_CALLS = (
     ("settings.notifications", "data-i18n"),
     ("settings.output_dir", "data-i18n"),
     ("settings.language", "data-i18n"),
+    # One-hundred-sixty-second batch (Audio enhancement and timeline export shell HTML).
+    ("audio.enhance_denoise", "data-i18n"),
+    ("audio.enhance_upscale", "data-i18n"),
+    ("audio.loudmatch_target", "data-i18n"),
+    ("export.shorts_face_track", "data-i18n"),
+    ("export.shorts_captions", "data-i18n"),
+    ("timeline.get_markers", "data-i18n"),
+    ("timeline.export_marked", "data-i18n"),
 )
 
 

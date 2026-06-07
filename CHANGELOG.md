@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Audio/Shorts/Timeline Shell
+
+- Advanced E15 to batch 163 by wiring audio enhancement, loudness target, shorts export, and timeline marker export labels through existing locale keys. The live drift report now shows 2,334 keys, 2,320 consumers, 14 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Settings/Form Cleanup
 
 - Advanced E15 to batch 162 by wiring Settings Preferences and Whisper CPU-mode labels through existing locale keys, then removing nine unused generic form locale keys. The live drift report now shows 2,334 keys, 2,313 consumers, 21 dead keys, and 0 missing keys.
