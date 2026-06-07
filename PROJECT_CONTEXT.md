@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (351 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-351 are recorded below.
+**Last consolidated:** 2026-06-07 (352 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-352 are recorded below.
+
+**Pass 352 update (no standalone research file):**
+- Extended the UXP i18n foundation into the Timeline tab static shell: preview notice, readiness summaries, sequence write-back, OTIO export, beat markers, batch export, batch rename, smart bins, and SRT prep labels, options, placeholders, ARIA labels, status text, and action buttons now use UXP locale keys.
+- Raised `tests/test_uxp_i18n.py` to require at least 465 static i18n attributes plus representative Timeline-tab keys, lifting the current UXP static count to 471.
 
 **Pass 351 update (no standalone research file):**
 - Completed the current Video tab static-shell i18n sweep by wiring Shorts Pipeline and Social Media Upload labels, options, checkbox text, placeholders, ARIA labels, and action buttons through UXP locale keys.

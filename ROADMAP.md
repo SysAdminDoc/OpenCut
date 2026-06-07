@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video static-shell slices) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video locale guards while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline static-shell slices) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline locale guards while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1338,6 +1338,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 99 | UXP Video tab core i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The top/core Video tab still had bare-English clip input, Color Match, Auto Zoom, Multicam Switch, Multimodal Diarization, B-roll Generation, and Depth Effects labels, placeholders, select options, ARIA labels, hints, and action buttons. | Localized the Video shell through Depth Effects, then raised the UXP i18n static guard to a 280+ attribute floor with representative Video-tab keys. |
 | 2026-06-07 | Cycle 100 | UXP Video effects i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The next Video-tab run still had bare-English Emotion Highlights, B-Roll Analysis, Chat Editor, AI Upscale, Scene Detection, and Style Transfer labels, placeholders, select options, ARIA labels, hints, and action buttons. | Localized the Video effects shell through Style Transfer, then raised the UXP i18n static guard to a 325+ attribute floor with representative Video-tab keys and verified the rendered UXP Video tab in the in-app browser. |
 | 2026-06-07 | Cycle 101 | UXP Video Shorts/Social i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The remaining Video-tab Shorts Pipeline and Social Media Upload shell still had bare-English labels, select options, checkbox text, placeholders, ARIA labels, and action buttons. | Localized the remaining Video tab static shell, then raised the UXP i18n static guard to a 370+ attribute floor with representative Shorts/Social keys. |
+| 2026-06-07 | Cycle 102 | UXP Timeline tab i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Timeline tab still had bare-English preview, readiness, sequence write-back, OTIO export, beat marker, batch export, batch rename, smart bins, and SRT prep shell copy. | Localized the Timeline tab static shell through SRT Prep, then raised the UXP i18n static guard to a 465+ attribute floor with representative Timeline keys and verified the rendered Timeline tab in the in-app browser. |
 
 ### Research queries to run later
 
@@ -1358,17 +1359,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 102: Continue UXP i18n coverage into the Timeline tab shell or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 103: Continue E15 scanner coverage or another release-trust gap from the June 6 plan.
-3. Cycle 104: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 105: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 106: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 103: Continue UXP i18n coverage into the Search tab shell or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 104: Continue Deliverables/Agent/Settings UXP i18n coverage or another release-trust gap from the June 6 plan.
+3. Cycle 105: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 106: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 107: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 101: UXP Video Shorts/Social i18n shell.
+Cycle 102: UXP Timeline tab i18n shell.
 
 #### Current focus
 
@@ -1476,6 +1477,11 @@ Cycle 101 completed the current Video tab static-shell i18n sweep by localizing
 the Shorts Pipeline and Social Media Upload labels, select options, checkbox
 text, placeholders, ARIA labels, and action buttons. The static guard now
 requires at least 370 UXP i18n attributes.
+Cycle 102 extended the UXP i18n coverage into the Timeline tab static shell:
+preview notice, readiness summaries, sequence write-back, OTIO export, beat
+markers, batch export, batch rename, smart bins, and SRT prep labels, options,
+placeholders, ARIA labels, status text, and action buttons now use locale keys,
+and the static guard requires at least 465 UXP i18n attributes.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1529,7 +1535,7 @@ controls, LUT path placeholders, NLP command shell, and LLM settings
 placeholders now use locale hooks, and the CEP drift gate reports
 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys. UXP i18n has a first shell plus Cut/Captions/FCC
-display/Audio/Video static-shell foundation and a 370+ static locale-coverage
+display/Audio/Video/Timeline static-shell foundation and a 465+ static locale-coverage
 guard, but full UXP parity remains open.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
