@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: Cycle 74 CEP i18n settings/form cleanup is shipped. External F202 notarization and F252 WebView cutover evidence remain open.
 - Shipped this cycle: Wired Settings Preferences and Whisper CPU-mode labels through existing locale keys, then removed nine unused generic form locale keys. The live drift report now shows 2,334 keys, 2,313 consumers, 21 dead keys, and 0 missing keys.
-- Verification: `py -3.12 scripts\i18n_lint.py --json`, `py -3.12 scripts\i18n_lint.py --check`, `py -3.12 -m pytest -q tests\test_i18n_drift.py tests\test_i18n_hardcoded_migration.py` (11 passed / 3,757 subtests), `py -3.12 -m pytest -q tests\test_i18n_drift.py tests\test_i18n_hardcoded_migration.py tests\test_roadmap_mirror.py tests\test_roadmap_lint.py` (26 passed / 3,763 subtests), focused Ruff, doc-size check, roadmap source lint (warnings only for existing unreferenced appendix rows), badge sync check, `rtk git diff --check`, release-smoke Ruff JSON, and release-smoke pytest-fast JSON (101 gate tests / 840 pytest cases) passed.
+- Verification: `py -3.12 scripts\i18n_lint.py --json`, `py -3.12 -m pytest -q tests\test_i18n_hardcoded_migration.py tests\test_i18n_drift.py` (11 passed / 3,763 subtests), focused Ruff, badge sync check, doc-size check, roadmap mirror/lint tests (15 passed), route manifest check (1,538 routes), `git diff --check`, release-smoke Ruff JSON, and release-smoke pytest-fast JSON (101 gate tests / 840 pytest cases) passed.
 
 ## Next Work
 
