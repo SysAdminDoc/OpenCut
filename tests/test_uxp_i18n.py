@@ -110,7 +110,7 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 750 <= len(spanish) < len(english)
+    assert 950 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
@@ -162,6 +162,15 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.search.command_placeholder"] == 'p. ej. "elimina todos los silencios de mas de 1 segundo"'
     assert spanish["uxp.search.runtime.searching_for_query"] == 'Buscando "{query}"...'
     assert spanish["uxp.search.runtime.loaded_match_toast"] == "{label} cargado en el espacio de trabajo."
+    assert sorted(key for key in english if key.startswith("uxp.timeline.") and key not in spanish) == []
+    assert spanish["uxp.timeline.sequence_write_back"] == "Escritura de secuencia"
+    assert spanish["uxp.timeline.runtime.uxp_writeback_available_title"].startswith("La escritura de secuencia UXP")
+    assert spanish["uxp.timeline.runtime.export_window_ready_many"] == "{count} ventanas listas"
+    assert spanish["uxp.timeline.runtime.backend_reconnect_timeline_status"].startswith("Reconecta el backend local")
+    assert spanish["uxp.timeline.runtime.srt_ready_status"] == "SRT listo - {count} segmentos de subtitulos interpretados."
+    assert spanish["uxp.timeline.runtime.otio_exported_output"] == "OTIO exportado: {output}"
+    assert english["uxp.captions.ai_chapters"] == "AI Chapters"
+    assert "uxp.captions.ai_chapters" not in spanish
     assert english["uxp.video.clip_path"] == "Clip Path"
     assert "uxp.video.clip_path" not in spanish
 
@@ -456,6 +465,7 @@ def test_uxp_audio_runtime_feedback_uses_locale_helpers():
 
 def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
     js = _js()
+    readiness_js = js[js.index("function updateTimelineReadiness") : js.index("function focusControl")]
     timeline_jobs_js = js[
         js.index("/** ── APPLY TIMELINE CUTS")
         : js.index("/** ── INDEX LIBRARY")
@@ -465,6 +475,19 @@ def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
         : js.index("// ── Search ──")
     ]
     combined = timeline_jobs_js + otio_js
+
+    assert 'bridgeReady ? "UXP ready" : "CEP fallback"' not in readiness_js
+    assert 'setStatusPill("timelineRenamePill", "CEP panel required"' not in readiness_js
+    assert 'setStatusPill("timelineSmartBinsPill", "CEP panel required"' not in readiness_js
+    assert 'setTextAndTitle("timelineExportOutputValue", outputDir ? formatWorkspaceSource(outputDir) : "Choose output folder"' not in readiness_js
+    assert 'setTimelineStatus(\n      "Reconnect the local backend' not in readiness_js
+    assert 'setTimelineStatus(\n      "Timeline assets are ready' not in readiness_js
+    assert 'setTimelineStatus(\n      "Generate cuts or beat markers first' not in readiness_js
+    assert "uxp.timeline.runtime.uxp_writeback_available_title" in readiness_js
+    assert "uxp.timeline.runtime.stage_cuts_title" in readiness_js
+    assert "uxp.timeline.runtime.export_window_ready_many" in readiness_js
+    assert "uxp.timeline.runtime.backend_reconnect_timeline_status" in readiness_js
+    assert "uxp.timeline.runtime.assets_ready_actions_status" in readiness_js
 
     assert 'UIController.showToast("No cuts to apply.' not in combined
     assert 'UIController.setStatus("Applying cuts to timeline' not in combined

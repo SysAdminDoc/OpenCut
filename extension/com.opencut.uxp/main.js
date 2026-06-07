@@ -2822,68 +2822,119 @@ function updateTimelineReadiness() {
   const srtPath = document.getElementById("srtFilePath")?.value?.trim() || "";
   const trackIndex = Math.max(1, parseInt(document.getElementById("srtTrackIndex")?.value ?? 1, 10) || 1);
   const renamePattern = document.getElementById("renamePattern")?.value?.trim() || "{name}_{index:03d}";
-  const smartBinsStrategy = getSelectLabel("binStrategy", "File Type");
+  const smartBinsStrategy = getSelectLabel("binStrategy", t("uxp.timeline.organize_file_type", "File Type"));
   const exportWindows = buildExportWindows();
 
   setStatusPill(
     "timelineBridgePill",
-    bridgeReady ? "UXP ready" : "CEP fallback",
+    bridgeReady ? t("uxp.timeline.uxp_ready", "UXP ready") : t("uxp.timeline.cep_fallback", "CEP fallback"),
     bridgeReady ? "success" : "warning",
     bridgeReady
-      ? "UXP sequence write-back is available in this Premiere session."
-      : "Direct sequence write-back is not available here. Use the CEP panel for dependable timeline execution."
+      ? t("uxp.timeline.runtime.uxp_writeback_available_title", "UXP sequence write-back is available in this Premiere session.")
+      : t("uxp.timeline.runtime.direct_write_unavailable_cep_title", "Direct sequence write-back is not available here. Use the CEP panel for dependable timeline execution.")
   );
 
   const cutsLabel = _lastCutsInfo
-    ? `${_lastCutsInfo.count} cut${_lastCutsInfo.count === 1 ? "" : "s"} • ${_lastCutsInfo.source}`
-    : "No cuts ready";
+    ? formatCountI18n(
+        _lastCutsInfo.count,
+        "uxp.timeline.runtime.cuts_ready_source_one",
+        "{count} cut - {source}",
+        "uxp.timeline.runtime.cuts_ready_source_many",
+        "{count} cuts - {source}",
+        { source: _lastCutsInfo.source }
+      )
+    : t("uxp.timeline.no_cuts_ready", "No cuts ready");
+  const cutsPath = _lastCutsInfo?.clipPath
+    ? formatI18n("uxp.timeline.runtime.source_path_suffix", " - {path}", { path: _lastCutsInfo.clipPath })
+    : "";
   const cutsTitle = _lastCutsInfo
-    ? `${_lastCutsInfo.count} cut${_lastCutsInfo.count === 1 ? "" : "s"} from ${_lastCutsInfo.source}${_lastCutsInfo.clipPath ? ` • ${_lastCutsInfo.clipPath}` : ""}`
-    : "Run silence, filler, or multicam cleanup to stage cuts for timeline write-back.";
+    ? formatCountI18n(
+        _lastCutsInfo.count,
+        "uxp.timeline.runtime.cuts_from_source_one",
+        "{count} cut from {source}{path}",
+        "uxp.timeline.runtime.cuts_from_source_many",
+        "{count} cuts from {source}{path}",
+        { source: _lastCutsInfo.source, path: cutsPath }
+      )
+    : t("uxp.timeline.runtime.stage_cuts_title", "Run silence, filler, or multicam cleanup to stage cuts for timeline write-back.");
   setTextAndTitle("timelineCutsValue", cutsLabel, cutsTitle);
-  setTextAndTitle("timelineCutsSourceValue", _lastCutsInfo ? `${_lastCutsInfo.source} • ${_lastCutsInfo.count} cuts` : "Run a cut pass first", cutsTitle);
+  setTextAndTitle("timelineCutsSourceValue", _lastCutsInfo ? cutsLabel : t("uxp.timeline.run_cut_pass_first", "Run a cut pass first"), cutsTitle);
 
   const markersLabel = _lastMarkersInfo
-    ? `${_lastMarkersInfo.count} marker${_lastMarkersInfo.count === 1 ? "" : "s"} • ${_lastMarkersInfo.source}`
-    : "No markers ready";
+    ? formatCountI18n(
+        _lastMarkersInfo.count,
+        "uxp.timeline.runtime.markers_ready_source_one",
+        "{count} marker - {source}",
+        "uxp.timeline.runtime.markers_ready_source_many",
+        "{count} markers - {source}",
+        { source: _lastMarkersInfo.source }
+      )
+    : t("uxp.timeline.no_markers_ready", "No markers ready");
+  const markersPath = _lastMarkersInfo?.clipPath
+    ? formatI18n("uxp.timeline.runtime.source_path_suffix", " - {path}", { path: _lastMarkersInfo.clipPath })
+    : "";
   const markersTitle = _lastMarkersInfo
-    ? `${_lastMarkersInfo.count} marker${_lastMarkersInfo.count === 1 ? "" : "s"} from ${_lastMarkersInfo.source}${_lastMarkersInfo.clipPath ? ` • ${_lastMarkersInfo.clipPath}` : ""}`
-    : "Run beat detection to stage markers for sequence write-back or marker-based export.";
+    ? formatCountI18n(
+        _lastMarkersInfo.count,
+        "uxp.timeline.runtime.markers_from_source_one",
+        "{count} marker from {source}{path}",
+        "uxp.timeline.runtime.markers_from_source_many",
+        "{count} markers from {source}{path}",
+        { source: _lastMarkersInfo.source, path: markersPath }
+      )
+    : t("uxp.timeline.runtime.stage_markers_title", "Run beat detection to stage markers for sequence write-back or marker-based export.");
   setTextAndTitle("timelineMarkersValue", markersLabel, markersTitle);
 
   const lastActionLabel = _lastTimelineAction
     ? `${_lastTimelineAction.detailLabel} • ${formatLocaleTime(_lastTimelineAction.time)}`
-    : "No write-back activity";
+    : t("uxp.timeline.no_write_back_activity", "No write-back activity");
   setTextAndTitle(
     "timelineLastActionValue",
     lastActionLabel,
-    _lastTimelineAction?.title || "No timeline write-back, export, or validation action has run in this session."
+    _lastTimelineAction?.title || t("uxp.timeline.runtime.no_timeline_activity_title", "No timeline write-back, export, or validation action has run in this session.")
   );
 
   const sequenceLabel = bridgeReady
-    ? (_lastSequenceInfo?.name || "UXP bridge ready")
-    : "Use CEP panel for write-back";
+    ? (_lastSequenceInfo?.name || t("uxp.timeline.uxp_bridge_ready", "UXP bridge ready"))
+    : t("uxp.timeline.use_cep_panel_for_writeback", "Use CEP panel for write-back");
   const sequenceTitle = bridgeReady
-    ? (_lastSequenceInfo?.name || "The UXP bridge is ready. Direct sequence calls will use the active sequence when available.")
-    : "Direct sequence write-back is not available in this UXP session.";
+    ? (_lastSequenceInfo?.name || t("uxp.timeline.runtime.uxp_bridge_ready_title", "The UXP bridge is ready. Direct sequence calls will use the active sequence when available."))
+    : t("uxp.timeline.runtime.direct_write_unavailable_short", "Direct sequence write-back is not available in this UXP session.");
   setTextAndTitle("timelineSequenceValue", sequenceLabel, sequenceTitle);
 
   const exportSourceLabel = exportWindows.length
-    ? `${exportWindows.length} ${exportWindows.length === 1 ? "window" : "windows"} ready`
-    : "Awaiting cuts or markers";
+    ? formatCountI18n(
+        exportWindows.length,
+        "uxp.timeline.runtime.export_window_ready_one",
+        "{count} window ready",
+        "uxp.timeline.runtime.export_window_ready_many",
+        "{count} windows ready"
+      )
+    : t("uxp.timeline.awaiting_cuts_or_markers", "Awaiting cuts or markers");
+  const exportSource = Array.isArray(lastMarkers) && lastMarkers.length
+    ? t("uxp.timeline.runtime.marker_lower", "marker")
+    : t("uxp.timeline.runtime.cut_lower", "cut");
   const exportSourceTitle = exportWindows.length
-    ? `${exportWindows.length} export window${exportWindows.length === 1 ? "" : "s"} are staged from the latest ${Array.isArray(lastMarkers) && lastMarkers.length ? "marker" : "cut"} pass.`
-    : "Run beat detection or create cuts first, then export those windows from the current clip.";
+    ? formatCountI18n(
+        exportWindows.length,
+        "uxp.timeline.runtime.export_windows_staged_one",
+        "{count} export window is staged from the latest {source} pass.",
+        "uxp.timeline.runtime.export_windows_staged_many",
+        "{count} export windows are staged from the latest {source} pass.",
+        { source: exportSource }
+      )
+    : t("uxp.timeline.runtime.stage_export_windows_title", "Run beat detection or create cuts first, then export those windows from the current clip.");
   setTextAndTitle("timelineExportSourceValue", exportSourceLabel, exportSourceTitle);
-  setTextAndTitle("timelineExportOutputValue", outputDir ? formatWorkspaceSource(outputDir) : "Choose output folder", outputDir || "Choose an export destination for marker-based segments.");
+  setTextAndTitle("timelineExportOutputValue", outputDir ? formatWorkspaceSource(outputDir) : t("uxp.timeline.choose_output_folder", "Choose output folder"), outputDir || t("uxp.timeline.runtime.choose_export_destination_title", "Choose an export destination for marker-based segments."));
 
-  setStatusPill("timelineRenamePill", "CEP panel required", "warning", "Batch rename still executes through the CEP panel on this build.");
+  setStatusPill("timelineRenamePill", t("uxp.timeline.cep_panel_required", "CEP panel required"), "warning", t("uxp.timeline.runtime.batch_rename_cep_title", "Batch rename still executes through the CEP panel on this build."));
   setTextAndTitle("timelineRenamePatternValue", renamePattern, renamePattern);
-  setStatusPill("timelineSmartBinsPill", "CEP panel required", "warning", "Smart bin execution still runs through the CEP panel on this build.");
+  setStatusPill("timelineSmartBinsPill", t("uxp.timeline.cep_panel_required", "CEP panel required"), "warning", t("uxp.timeline.runtime.smart_bins_cep_title", "Smart bin execution still runs through the CEP panel on this build."));
   setTextAndTitle("timelineSmartBinsValue", smartBinsStrategy, smartBinsStrategy);
 
-  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : "Choose .srt file", srtPath || "Choose an .srt file to validate before the CEP ocAddNativeCaptionTrack bridge places it.");
-  setTextAndTitle("timelineSrtTrackValue", `Track ${trackIndex}`, `Track ${trackIndex} target for the CEP ocAddNativeCaptionTrack handoff.`);
+  setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : t("uxp.timeline.choose_srt_file", "Choose .srt file"), srtPath || t("uxp.timeline.runtime.choose_srt_file_title", "Choose an .srt file to validate before the CEP ocAddNativeCaptionTrack bridge places it."));
+  const trackLabel = formatI18n("uxp.timeline.runtime.track_index", "Track {index}", { index: trackIndex });
+  setTextAndTitle("timelineSrtTrackValue", trackLabel, formatI18n("uxp.timeline.runtime.target_track_title", "Track {index} target for the CEP ocAddNativeCaptionTrack handoff.", { index: trackIndex }));
 
   const hasCuts = Array.isArray(lastCuts) && lastCuts.length > 0;
   const hasMarkers = Array.isArray(lastMarkers) && lastMarkers.length > 0;
@@ -2925,29 +2976,29 @@ function updateTimelineReadiness() {
 
   if (!backendOnline) {
     setTimelineStatus(
-      "Reconnect the local backend before exporting windows, validating captions, or packaging timeline handoff.",
+      t("uxp.timeline.runtime.backend_reconnect_timeline_status", "Reconnect the local backend before exporting windows, validating captions, or packaging timeline handoff."),
       "error"
     );
   } else if (!bridgeReady && (hasCuts || hasMarkers)) {
     setTimelineStatus(
-      "Timeline assets are ready, but direct sequence write-back still needs the CEP panel on this Premiere setup. OTIO export and SRT validation remain available here.",
+      t("uxp.timeline.runtime.assets_ready_cep_status", "Timeline assets are ready, but direct sequence write-back still needs the CEP panel on this Premiere setup. OTIO export and SRT validation remain available here."),
       "warning"
     );
   } else if (!bridgeReady) {
     setTimelineStatus(
-      "Generate cuts or beat markers first. Direct sequence write-back will fall back to the CEP panel on this setup.",
+      t("uxp.timeline.runtime.generate_assets_cep_status", "Generate cuts or beat markers first. Direct sequence write-back will fall back to the CEP panel on this setup."),
       "warning"
     );
   } else if (_lastTimelineAction) {
     setTimelineStatus(_lastTimelineAction.statusMessage, _lastTimelineAction.state, _lastTimelineAction.title);
   } else if (!hasCuts && !hasMarkers) {
     setTimelineStatus(
-      "Generate cuts or beat markers first, then return here to write back, export OTIO, or validate captions for sequence import.",
+      t("uxp.timeline.status_line", "Generate cuts or beat markers first, then return here to write back, export OTIO, or validate captions for sequence import."),
       "idle"
     );
   } else {
     setTimelineStatus(
-      "Timeline assets are ready. Apply cuts, add markers, export OTIO, or validate an SRT before the handoff pass.",
+      t("uxp.timeline.runtime.assets_ready_actions_status", "Timeline assets are ready. Apply cuts, add markers, export OTIO, or validate an SRT before the handoff pass."),
       "ready"
     );
   }
