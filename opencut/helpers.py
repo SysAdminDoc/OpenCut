@@ -81,9 +81,12 @@ def output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
 # ---------------------------------------------------------------------------
 _cleanup_scheduled = set()
 _cleanup_schedule_lock = threading.Lock()
-# Single daemon thread handles all deferred deletions to avoid Timer thread spam
+# Single daemon thread handles all deferred deletions to avoid Timer thread spam.
+# It is started lazily so importing helpers has no background-thread side effect.
 _cleanup_queue: list = []
 _cleanup_event = threading.Event()
+_cleanup_thread = None
+_cleanup_thread_lock = threading.Lock()
 
 
 def _cleanup_worker():
@@ -132,9 +135,17 @@ def _cleanup_worker():
             default_wait = 5.0
 
 
-_cleanup_thread = threading.Thread(target=_cleanup_worker, daemon=True,
-                                   name="opencut-temp-cleanup")
-_cleanup_thread.start()
+def _ensure_cleanup_thread_started():
+    """Start the deferred-cleanup worker on first scheduled cleanup."""
+    global _cleanup_thread
+    if _cleanup_thread is not None and _cleanup_thread.is_alive():
+        return
+    with _cleanup_thread_lock:
+        if _cleanup_thread is not None and _cleanup_thread.is_alive():
+            return
+        _cleanup_thread = threading.Thread(target=_cleanup_worker, daemon=True,
+                                           name="opencut-temp-cleanup")
+        _cleanup_thread.start()
 
 
 def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
@@ -151,6 +162,7 @@ def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
             return
         _cleanup_scheduled.add(norm)
         _cleanup_queue.append((filepath, 1, retries, time.time() + delay, delay))
+    _ensure_cleanup_thread_started()
     _cleanup_event.set()
 
 # ---------------------------------------------------------------------------

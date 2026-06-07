@@ -4,12 +4,12 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the security audit logging pass.
+Last synced: 2026-06-07 during the cleanup-thread lazy initialization pass.
 
 ## Execution Order
 
 - [ ] **E15 i18n migration rolling batches** - current detailed state: batch 171 with a zero-dead-key baseline, JS metadata-key scanner coverage, and `data-i18n-alt` scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
-- [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, and security rejection audit logging are closed; continue with remaining release-trust findings such as cleanup-thread lazy initialization from `RESEARCH_FEATURE_PLAN_2026-06-06.md`.
+- [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, and cleanup-thread lazy initialization are closed; continue with remaining release-trust findings such as the WCAG contrast audit from `RESEARCH_FEATURE_PLAN_2026-06-06.md`.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [x] **Magic Clips downstream bundle reuse** - `magic_clips_manifest.json` now feeds shared timeline import records, `/social/upload` dry-run payloads, `/video/shorts-pipeline` handoff results, and `/timeline/magic-clips-import-plan`.

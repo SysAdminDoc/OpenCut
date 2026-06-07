@@ -351,12 +351,13 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P1
 
 ### EI-06: Cleanup Thread Lazy Initialization
-- **Current behavior:** `helpers.py:135-137` starts a daemon cleanup thread at module import time, meaning `import opencut.helpers` anywhere (tests, CLI tools) starts a background thread as a side effect.
-- **Problem:** Surprising side effect of importing a utility module. Tests and CLI tools that import helpers get an unwanted background thread.
-- **Recommended change:** Defer thread start to first call of `_schedule_temp_cleanup()` using a `threading.Event` or `once` guard.
-- **Code locations:** `opencut/helpers.py` lines 135-137
+- **Status:** Closed 2026-06-07 by deferring the `opencut-temp-cleanup` daemon until `_schedule_temp_cleanup()` is first called.
+- **Prior behavior:** `helpers.py:135-137` started a daemon cleanup thread at module import time, meaning `import opencut.helpers` anywhere (tests, CLI tools) started a background thread as a side effect.
+- **Problem:** Surprising side effect of importing a utility module. Tests and CLI tools that imported helpers previously got an unwanted background thread.
+- **Implemented change:** `_ensure_cleanup_thread_started()` now starts the shared daemon once, after the first queued temp cleanup.
+- **Code locations:** `opencut/helpers.py`, `tests/test_helpers_cleanup.py`
 - **Backward compatibility:** Same behavior at runtime, cleaner in test/CLI contexts
-- **Verification:** Import `opencut.helpers` in a test, verify no thread starts until cleanup is scheduled.
+- **Verification:** `tests/test_helpers_cleanup.py` imports `opencut.helpers` in a fresh interpreter, verifies no cleanup thread appears, then schedules cleanup and verifies the worker starts.
 - **Complexity:** S
 - **Priority:** P3
 
@@ -598,12 +599,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: First launch shows content-type selection then guided tour of top 5 features
   - Verify: Fresh install flow completes tour end-to-end
 
-- [ ] P3 - **Cleanup thread lazy initialization**
+- [x] P3 - **Cleanup thread lazy initialization**
   - Why: `import opencut.helpers` starts a daemon thread as side effect
-  - Evidence: `opencut/helpers.py:135-137` starts thread at module import
-  - Touches: `opencut/helpers.py`
+  - Evidence: closed 2026-06-07 in `opencut/helpers.py`; `_ensure_cleanup_thread_started()` starts `opencut-temp-cleanup` only after `_schedule_temp_cleanup()` queues work
+  - Touches: `opencut/helpers.py`, `tests/test_helpers_cleanup.py`
   - Acceptance: Thread only starts on first `_schedule_temp_cleanup()` call
-  - Verify: Import helpers in a test, verify no background thread until cleanup scheduled
+  - Verify: `tests/test_helpers_cleanup.py` covers fresh-interpreter import and first-schedule startup
 
 - [ ] P2 - **WCAG contrast audit in CI**
   - Why: No automated accessibility contrast checking; 195 ARIA attributes but no validation they're correct
@@ -623,7 +624,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 3 | Switch `os.startfile()` to allowlist | Shipped 2026-06-07 | Closed extension-bypass vector |
 | 4 | Fix `send_file()` path confinement | Shipped 2026-06-07 | Closed file-serve bypass with temp/`~/.opencut` confinement and 403 regression coverage |
 | 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |
-| 6 | Defer cleanup thread start | S (threading.Event guard) | Cleaner test/CLI imports |
+| 6 | Defer cleanup thread start | Shipped 2026-06-07 | Cleaner test/CLI imports |
 | 7 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |
 
 ---
