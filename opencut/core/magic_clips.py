@@ -93,6 +93,9 @@ class MagicClipCandidate:
     transcript_excerpt: str = ""
     score: float = 0.0
     reasons: list[str] = field(default_factory=list)
+    selection_reason: str = ""
+    score_breakdown: dict[str, float] = field(default_factory=dict)
+    fallback_mode: str = "heuristic_no_llm"
     source: str = "cached_transcript"
     platform_presets: list[dict[str, Any]] = field(default_factory=list)
     estimated_outputs: list[dict[str, Any]] = field(default_factory=list)
@@ -108,6 +111,9 @@ class MagicClipCandidate:
             "transcript_excerpt": self.transcript_excerpt,
             "score": self.score,
             "reasons": list(self.reasons),
+            "selection_reason": self.selection_reason,
+            "score_breakdown": dict(self.score_breakdown),
+            "fallback_mode": self.fallback_mode,
             "source": self.source,
             "platform_presets": [dict(item) for item in self.platform_presets],
             "estimated_outputs": [dict(item) for item in self.estimated_outputs],
@@ -124,12 +130,16 @@ class MagicClipsPlan:
     dry_run: bool = True
     requires_analysis: bool = False
     candidates: list[MagicClipCandidate] = field(default_factory=list)
+    rejected_candidates: list[dict[str, Any]] = field(default_factory=list)
+    fallback_mode: str = "heuristic_no_llm"
     steps: list[MagicClipStep] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def __getitem__(self, key: str) -> Any:
         if key == "candidates":
             return [candidate.to_dict() for candidate in self.candidates]
+        if key == "rejected_candidates":
+            return [dict(candidate) for candidate in self.rejected_candidates]
         if key == "steps":
             return [step.to_dict() for step in self.steps]
         return getattr(self, key)
@@ -144,6 +154,8 @@ class MagicClipsPlan:
             "dry_run",
             "requires_analysis",
             "candidates",
+            "rejected_candidates",
+            "fallback_mode",
             "steps",
             "notes",
         )
@@ -250,35 +262,54 @@ def config_from_payload(payload: Mapping[str, Any] | None = None) -> MagicClipsC
     )
 
 
-def _normalise_segment(raw: Any) -> dict[str, Any] | None:
+def _normalise_segment(raw: Any, index: int) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     if not isinstance(raw, Mapping):
-        return None
+        return None, {"input_index": index, "reason": "malformed_transcript_segment"}
     start = _coerce_float(raw.get("start", raw.get("start_s")), 0.0)
     end = _coerce_float(raw.get("end", raw.get("end_s")), start)
     if start < 0 or end <= start:
-        return None
+        return None, {
+            "input_index": index,
+            "reason": "malformed_transcript_segment",
+            "start": start,
+            "end": end,
+        }
     text = str(raw.get("text") or raw.get("transcript") or "").strip()
-    return {"start": round(start, 3), "end": round(end, 3), "text": text}
+    speaker = str(raw.get("speaker") or raw.get("speaker_label") or "").strip()
+    return {"start": round(start, 3), "end": round(end, 3), "text": text, "speaker": speaker}, None
 
 
-def _normalise_segments(raw: Any) -> list[dict[str, Any]]:
+def _normalise_segments(raw: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not isinstance(raw, list):
-        return []
-    segments = [_normalise_segment(item) for item in raw]
-    return sorted((segment for segment in segments if segment), key=lambda item: (item["start"], item["end"]))
+        return [], []
+    segments: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for index, item in enumerate(raw):
+        segment, rejection = _normalise_segment(item, index)
+        if segment:
+            segments.append(segment)
+        if rejection:
+            rejected.append(rejection)
+    return sorted(segments, key=lambda item: (item["start"], item["end"])), rejected
 
 
-def _normalise_highlight(raw: Any, index: int) -> dict[str, Any] | None:
+def _normalise_highlight(raw: Any, index: int) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     if not isinstance(raw, Mapping):
-        return None
+        return None, {"input_index": index, "reason": "malformed_highlight"}
     start = _coerce_float(raw.get("start", raw.get("start_s")), 0.0)
     end = _coerce_float(raw.get("end", raw.get("end_s")), start)
     if start < 0 or end <= start:
-        return None
+        return None, {
+            "input_index": index,
+            "reason": "malformed_highlight",
+            "start": start,
+            "end": end,
+        }
     title = str(raw.get("title") or raw.get("name") or f"Candidate {index + 1}").strip()
     score = _coerce_float(raw.get("score"), 0.0)
     reason = str(raw.get("reason") or raw.get("selection_reason") or "cached highlight").strip()
     return {
+        "input_index": index,
         "start": round(start, 3),
         "end": round(end, 3),
         "duration": round(end - start, 3),
@@ -286,14 +317,21 @@ def _normalise_highlight(raw: Any, index: int) -> dict[str, Any] | None:
         "score": round(max(0.0, min(100.0, score)), 3),
         "reasons": [reason],
         "source": "cached_highlight",
-    }
+    }, None
 
 
-def _normalise_highlights(raw: Any) -> list[dict[str, Any]]:
+def _normalise_highlights(raw: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not isinstance(raw, list):
-        return []
-    highlights = [_normalise_highlight(item, index) for index, item in enumerate(raw)]
-    return sorted((item for item in highlights if item), key=lambda item: (item["start"], item["end"]))
+        return [], []
+    highlights: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for index, item in enumerate(raw):
+        highlight, rejection = _normalise_highlight(item, index)
+        if highlight:
+            highlights.append(highlight)
+        if rejection:
+            rejected.append(rejection)
+    return sorted(highlights, key=lambda item: (item["start"], item["end"])), rejected
 
 
 def _text_for_window(segments: list[dict[str, Any]], start: float, end: float) -> str:
@@ -339,6 +377,137 @@ def _window_from_segments(segments: list[dict[str, Any]], index: int) -> dict[st
         "score": round(score, 3),
         "reasons": ["cached transcript window"],
         "source": "cached_transcript",
+        "input_index": index,
+    }
+
+
+def _duration_fit_score(duration: float, config: MagicClipsConfig) -> float:
+    if duration < config.min_duration or duration > config.max_duration:
+        return 0.0
+    target = min(config.max_duration, max(config.min_duration, 30.0))
+    span = max(config.max_duration - config.min_duration, 1.0)
+    return round(max(70.0, 100.0 - (abs(duration - target) / span) * 30.0), 3)
+
+
+def _speaker_continuity_score(segments: list[dict[str, Any]], start: float, end: float) -> float:
+    speakers = [
+        segment.get("speaker", "")
+        for segment in segments
+        if segment.get("speaker")
+        and not (segment["end"] < start or segment["start"] > end)
+    ]
+    if not speakers:
+        return 70.0
+    transitions = sum(1 for prev, curr in zip(speakers, speakers[1:]) if prev != curr)
+    return round(max(40.0, 100.0 - transitions * 15.0), 3)
+
+
+def _hook_score(text: str) -> tuple[float, str]:
+    try:
+        from opencut.core.virality_score import _hook_lexicon_score
+
+        score, phrase = _hook_lexicon_score(text)
+        return round(float(score), 3), str(phrase or "")
+    except Exception:
+        words = len(text.split())
+        return round(min(100.0, words * 2.0), 3), ""
+
+
+def _score_candidate(item: dict[str, Any], segments: list[dict[str, Any]], config: MagicClipsConfig) -> dict[str, Any]:
+    excerpt = _text_for_window(segments, item["start"], item["end"])
+    hook_score, hook_phrase = _hook_score(excerpt)
+    duration_fit = _duration_fit_score(item["duration"], config)
+    speaker_continuity = _speaker_continuity_score(segments, item["start"], item["end"])
+    highlight_score = round(float(item.get("score") or 0.0), 3)
+    if highlight_score <= 0:
+        highlight_score = 50.0
+    score_breakdown = {
+        "highlight_score": highlight_score,
+        "transcript_hook": hook_score,
+        "duration_fit": duration_fit,
+        "speaker_continuity": speaker_continuity,
+    }
+    total = round(
+        highlight_score * 0.4
+        + hook_score * 0.3
+        + duration_fit * 0.2
+        + speaker_continuity * 0.1,
+        3,
+    )
+    reasons = list(item.get("reasons") or [])
+    if hook_phrase:
+        reasons.append(f"hook phrase: {hook_phrase}")
+    if duration_fit >= 90:
+        reasons.append("duration fits platform window")
+    if speaker_continuity >= 90:
+        reasons.append("speaker continuity is strong")
+    item = dict(item)
+    item.update({
+        "score": total,
+        "score_breakdown": score_breakdown,
+        "selection_reason": "; ".join(reasons[:3]) or "heuristic candidate score",
+        "reasons": reasons or ["heuristic candidate score"],
+        "fallback_mode": "heuristic_no_llm",
+        "transcript_excerpt": excerpt,
+    })
+    return item
+
+
+def _reject_duration_outliers(items: list[dict[str, Any]], config: MagicClipsConfig) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for item in items:
+        if item["duration"] < config.min_duration:
+            rejected.append(_rejected_from_item(item, "too_short"))
+        elif item["duration"] > config.max_duration:
+            rejected.append(_rejected_from_item(item, "too_long"))
+        else:
+            accepted.append(item)
+    return accepted, rejected
+
+
+def _select_non_overlapping(
+    items: list[dict[str, Any]],
+    config: MagicClipsConfig,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ordered = sorted(
+        items,
+        key=lambda item: (-float(item.get("score") or 0.0), item["start"], int(item.get("input_index", 0))),
+    )
+    selected: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for item in ordered:
+        if len(selected) >= config.max_candidates:
+            rejected.append(_rejected_from_item(item, "below_selection_cutoff"))
+            continue
+        overlaps = next(
+            (
+                chosen
+                for chosen in selected
+                if not (item["end"] <= chosen["start"] or item["start"] >= chosen["end"])
+            ),
+            None,
+        )
+        if overlaps:
+            rejected_item = _rejected_from_item(item, "overlap_with_selected")
+            rejected_item["overlaps_candidate_start"] = overlaps["start"]
+            rejected_item["overlaps_candidate_end"] = overlaps["end"]
+            rejected.append(rejected_item)
+            continue
+        selected.append(item)
+    return selected, rejected
+
+
+def _rejected_from_item(item: dict[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        "input_index": int(item.get("input_index", 0)),
+        "start": item.get("start"),
+        "end": item.get("end"),
+        "duration": item.get("duration"),
+        "title": item.get("title", ""),
+        "reason": reason,
+        "score": item.get("score", 0.0),
+        "score_breakdown": dict(item.get("score_breakdown") or {}),
     }
 
 
@@ -459,14 +628,24 @@ def build_magic_clips_plan(
     config_hash = _stable_hash(config.to_dict(), "cfg:")
     plan_id = _stable_hash({"source": source_path_hash, "config": config_hash}, "mcplan:")
 
-    segments = _normalise_segments(payload.get("transcript_segments"))
-    highlights = _normalise_highlights(payload.get("highlights", payload.get("candidates")))
+    segments, rejected_candidates = _normalise_segments(payload.get("transcript_segments"))
+    highlights, rejected_highlights = _normalise_highlights(payload.get("highlights", payload.get("candidates")))
+    rejected_candidates.extend(rejected_highlights)
     if not highlights and segments:
         highlights = _candidate_windows_from_segments(segments, config)
 
+    highlights, duration_rejections = _reject_duration_outliers(highlights, config)
+    rejected_candidates.extend(duration_rejections)
+    scored_highlights = [
+        _score_candidate(item, segments, config)
+        for item in highlights
+    ]
+    highlights, selection_rejections = _select_non_overlapping(scored_highlights, config)
+    rejected_candidates.extend(selection_rejections)
+
     platforms = _platform_contracts(config)
     candidates: list[MagicClipCandidate] = []
-    for index, item in enumerate(highlights[: config.max_candidates]):
+    for index, item in enumerate(highlights):
         duration = round(item["end"] - item["start"], 3)
         if duration <= 0:
             continue
@@ -478,7 +657,7 @@ def build_magic_clips_plan(
             "title": item["title"],
         }
         candidate_id = _stable_hash(candidate_payload, "mcc:")
-        excerpt = _text_for_window(segments, item["start"], item["end"])
+        excerpt = str(item.get("transcript_excerpt") or "")
         if len(excerpt) > 240:
             excerpt = excerpt[:239].rstrip() + "..."
         estimated = _estimated_outputs(source_path, candidate_id, item["title"], platforms)
@@ -492,6 +671,9 @@ def build_magic_clips_plan(
             transcript_excerpt=excerpt,
             score=item["score"],
             reasons=list(item["reasons"]),
+            selection_reason=str(item.get("selection_reason") or ""),
+            score_breakdown=dict(item.get("score_breakdown") or {}),
+            fallback_mode=str(item.get("fallback_mode") or "heuristic_no_llm"),
             source=item["source"],
             platform_presets=platforms,
             estimated_outputs=estimated,
@@ -513,6 +695,8 @@ def build_magic_clips_plan(
         dry_run=True,
         requires_analysis=requires_analysis,
         candidates=candidates,
+        rejected_candidates=rejected_candidates,
+        fallback_mode="heuristic_no_llm",
         steps=steps,
         notes=notes,
     )

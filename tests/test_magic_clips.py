@@ -76,16 +76,98 @@ def test_plan_from_cached_highlights_includes_reasons_and_steps(tmp_path):
             ],
             "caption_style": "bold_yellow",
             "burn_captions": True,
+            "min_duration": 5,
         },
     )
 
     candidate = plan.candidates[0]
     assert candidate.title == "Why it works"
-    assert candidate.score == 87.4
-    assert candidate.reasons == ["strong explanation"]
+    assert candidate.score > 0
+    assert candidate.score_breakdown["highlight_score"] == 87.4
+    assert candidate.selection_reason.startswith("strong explanation")
+    assert candidate.fallback_mode == "heuristic_no_llm"
+    assert "strong explanation" in candidate.reasons
     assert "why the trick works" in candidate.transcript_excerpt
     assert [step.step_type for step in plan.steps] == ["trim", "reframe", "captions", "export"]
     assert plan.steps[-1].depends_on == [plan.steps[-2].step_id]
+
+
+def test_candidates_are_ranked_with_deterministic_tie_breaks(tmp_path):
+    from opencut.core.magic_clips import build_magic_clips_plan
+
+    media = tmp_path / "ranking.mp4"
+    media.write_bytes(b"fake")
+    plan = build_magic_clips_plan(
+        str(media),
+        {
+            "transcript_segments": [
+                {"start": 0.0, "end": 12.0, "text": "watch this exact idea"},
+                {"start": 20.0, "end": 32.0, "text": "watch this exact idea"},
+            ],
+            "highlights": [
+                {"start": 20.0, "end": 32.0, "title": "Second", "score": 70},
+                {"start": 0.0, "end": 12.0, "title": "First", "score": 70},
+            ],
+            "min_duration": 5,
+            "max_candidates": 2,
+        },
+    )
+
+    assert [candidate.title for candidate in plan.candidates] == ["First", "Second"]
+    assert plan.candidates[0].score == plan.candidates[1].score
+
+
+def test_rejected_candidates_record_too_short_overlap_and_malformed_inputs(tmp_path):
+    from opencut.core.magic_clips import build_magic_clips_plan
+
+    media = tmp_path / "rejects.mp4"
+    media.write_bytes(b"fake")
+    plan = build_magic_clips_plan(
+        str(media),
+        {
+            "transcript_segments": [
+                {"start": 0.0, "end": 12.0, "text": "why this clip works", "speaker": "A"},
+                {"start": 7.0, "end": 3.0, "text": "bad"},
+            ],
+            "highlights": [
+                {"start": 0.0, "end": 12.0, "title": "Keeper", "score": 95},
+                {"start": 2.0, "end": 10.0, "title": "Overlap", "score": 80},
+                {"start": 30.0, "end": 32.0, "title": "Too short", "score": 99},
+                {"start": 50.0, "end": 40.0, "title": "Bad"},
+            ],
+            "min_duration": 5,
+            "max_candidates": 3,
+        },
+    )
+
+    assert [candidate.title for candidate in plan.candidates] == ["Keeper"]
+    reasons = {item["reason"] for item in plan.rejected_candidates}
+    assert "malformed_transcript_segment" in reasons
+    assert "malformed_highlight" in reasons
+    assert "too_short" in reasons
+    assert "overlap_with_selected" in reasons
+
+
+def test_heuristic_fallback_metadata_surfaces_without_llm(tmp_path):
+    from opencut.core.magic_clips import build_magic_clips_plan
+
+    media = tmp_path / "fallback.mp4"
+    media.write_bytes(b"fake")
+    plan = build_magic_clips_plan(
+        str(media),
+        {
+            "transcript_segments": [
+                {"start": 0.0, "end": 16.0, "text": "why you should stop making this mistake now"},
+            ],
+            "min_duration": 5,
+        },
+    )
+
+    assert plan.fallback_mode == "heuristic_no_llm"
+    candidate = plan.candidates[0]
+    assert candidate.fallback_mode == "heuristic_no_llm"
+    assert candidate.score_breakdown["transcript_hook"] > 0
+    assert "duration_fit" in candidate.score_breakdown
 
 
 def test_no_cached_data_returns_analysis_required_steps(tmp_path):
