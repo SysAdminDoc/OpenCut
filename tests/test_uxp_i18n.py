@@ -57,6 +57,7 @@ def _js_i18n_keys() -> set[str]:
             js,
         )
     )
+    keys.update(re.findall(r'formatI18n\(\s*"([^"]+)"', js))
     return keys
 
 
@@ -90,7 +91,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 605
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 660
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -178,6 +179,16 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.agent.shorts_ab_variants_q8",
         "uxp.agent.sequence_index_q7_f273",
         "uxp.agent.mcp_bridge_f146",
+        "uxp.settings.engine_routing",
+        "uxp.settings.engine_routing_summary",
+        "uxp.settings.refresh_availability",
+        "uxp.settings.live_updates_bridge",
+        "uxp.settings.connect_live_updates",
+        "uxp.settings.migration_risk",
+        "uxp.settings.migration_risk_summary",
+        "uxp.settings.keyboard_shortcuts",
+        "uxp.settings.cancel_active_job_text",
+        "uxp.settings.panel_premiere_uxp",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
@@ -206,6 +217,9 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.fcc.defaults_loaded",
         "uxp.fcc.token_schema_failed",
         "uxp.workspace.library_clip_count_many",
+        "uxp.settings.bridge_unavailable",
+        "uxp.settings.engine_availability_failed",
+        "uxp.settings.migration_dashboard_unavailable_status",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)

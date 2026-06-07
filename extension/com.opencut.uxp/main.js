@@ -227,6 +227,14 @@ function t(key, fallback) {
   return (_i18n && _i18n[key]) || fallback || key;
 }
 
+function formatI18n(key, fallback, values = {}) {
+  let text = t(key, fallback);
+  Object.keys(values).forEach((name) => {
+    text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(values[name]));
+  });
+  return text;
+}
+
 function applyI18nToDOM(root = document) {
   const scope = root || document;
   scope.querySelectorAll("[data-i18n]").forEach((node) => {
@@ -5469,13 +5477,13 @@ let _uxpWsConnected = false;
 
 function uxpWsConnect() {
   if (_uxpWs && (_uxpWs.readyState === WebSocket.OPEN || _uxpWs.readyState === WebSocket.CONNECTING)) {
-    UIController.showToast("Live updates are already connected.", "info");
+    UIController.showToast(t("uxp.settings.live_updates_already_connected", "Live updates are already connected."), "info");
     return;
   }
   try {
     _uxpWs = new WebSocket("ws://127.0.0.1:5680");
   } catch (e) {
-    UIController.showToast("Could not open the live-updates bridge.", "warning");
+    UIController.showToast(t("uxp.settings.bridge_open_failed", "Could not open the live-updates bridge."), "warning");
     return;
   }
 
@@ -5484,8 +5492,8 @@ function uxpWsConnect() {
     _uxpWs.send(JSON.stringify({ type: "identify", client_type: "uxp", id: "uxp-1" }));
     _uxpWs.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error"] }, id: "sub-1" }));
     uxpUpdateWsStatus();
-    UIController.setStatus("Live updates connected.", "success");
-    UIController.showToast("Live updates connected.", "success");
+    UIController.setStatus(t("uxp.settings.live_updates_connected_status", "Live updates connected."), "success");
+    UIController.showToast(t("uxp.settings.live_updates_connected_status", "Live updates connected."), "success");
   };
 
   _uxpWs.onmessage = (evt) => {
@@ -5534,38 +5542,46 @@ async function uxpUpdateWsStatus() {
   const connectBtn = document.getElementById("uxpWsConnectBtn");
   const startBtn = document.getElementById("uxpWsStartBtn");
   const stopBtn = document.getElementById("uxpWsStopBtn");
-  let statusText = _uxpWsConnected ? "Live updates connected" : "Bridge unavailable";
+  let statusText = _uxpWsConnected
+    ? t("uxp.settings.live_updates_connected", "Live updates connected")
+    : t("uxp.settings.bridge_unavailable", "Bridge unavailable");
   let statusState = _uxpWsConnected ? "connected" : "unknown";
-  let panelStateText = _uxpWsConnected ? "Connected" : "Waiting to connect";
+  let panelStateText = _uxpWsConnected
+    ? t("uxp.settings.connected", "Connected")
+    : t("uxp.settings.waiting_to_connect", "Waiting to connect");
   let bridgeRunning = false;
   let clients = 0;
-  let statusDetail = "Start the bridge, then connect this panel to receive live job updates.";
+  let statusDetail = t("uxp.settings.start_bridge_then_connect", "Start the bridge, then connect this panel to receive live job updates.");
 
   const r = await BackendClient.get("/ws/status");
   if (r.ok && r.data) {
     bridgeRunning = !!r.data.running;
     clients = Number(r.data.clients || 0);
     if (_uxpWsConnected) {
-      statusText = clients > 0 ? "Live updates connected" : "Panel connected";
+      statusText = clients > 0
+        ? t("uxp.settings.live_updates_connected", "Live updates connected")
+        : t("uxp.settings.panel_connected", "Panel connected");
       statusState = "connected";
-      panelStateText = "Connected";
-      statusDetail = "Live updates are flowing into this panel. Long-running jobs can report progress, completion, and cancel feedback here.";
+      panelStateText = t("uxp.settings.connected", "Connected");
+      statusDetail = t("uxp.settings.live_updates_flowing", "Live updates are flowing into this panel. Long-running jobs can report progress, completion, and cancel feedback here.");
     } else if (bridgeRunning) {
-      statusText = clients > 0 ? "Bridge ready" : "Bridge idle";
+      statusText = clients > 0
+        ? t("uxp.settings.bridge_ready", "Bridge ready")
+        : t("uxp.settings.bridge_idle", "Bridge idle");
       statusState = "ready";
-      panelStateText = "Ready to connect";
-      statusDetail = "The bridge is running, but this panel is not attached yet. Connect live updates to bring job progress back into the workspace.";
+      panelStateText = t("uxp.settings.ready_to_connect", "Ready to connect");
+      statusDetail = t("uxp.settings.bridge_running_not_attached", "The bridge is running, but this panel is not attached yet. Connect live updates to bring job progress back into the workspace.");
     } else {
-      statusText = "Bridge stopped";
+      statusText = t("uxp.settings.bridge_stopped", "Bridge stopped");
       statusState = "stopped";
-      panelStateText = "Not linked";
-      statusDetail = "Start the live-updates bridge to bring long-running job feedback back into the panel.";
+      panelStateText = t("uxp.settings.not_linked", "Not linked");
+      statusDetail = t("uxp.settings.start_live_updates_bridge", "Start the live-updates bridge to bring long-running job feedback back into the panel.");
     }
   } else if (!_uxpWsConnected) {
-    statusText = "Bridge unavailable";
+    statusText = t("uxp.settings.bridge_unavailable", "Bridge unavailable");
     statusState = "error";
-    panelStateText = "Unavailable";
-    statusDetail = "The panel could not read bridge status right now. Refresh the backend, then try again.";
+    panelStateText = t("uxp.settings.unavailable", "Unavailable");
+    statusDetail = t("uxp.settings.bridge_status_unreadable", "The panel could not read bridge status right now. Refresh the backend, then try again.");
   }
 
   if (statusEl) {
@@ -5574,11 +5590,16 @@ async function uxpUpdateWsStatus() {
     statusEl.title = statusDetail;
   }
   if (countEl) {
-    countEl.textContent = `${clients} ${clients === 1 ? "listener" : "listeners"}`;
+    const listenerLabel = clients === 1
+      ? t("uxp.settings.listener", "listener")
+      : t("uxp.settings.listeners_count_label", "listeners");
+    countEl.textContent = `${clients} ${listenerLabel}`;
     countEl.dataset.state = clients > 0 ? "active" : "idle";
     countEl.title = clients
-      ? `${clients} ${clients === 1 ? "listener is" : "listeners are"} currently attached to the live-updates bridge.`
-      : "No listeners are attached to the live-updates bridge right now.";
+      ? `${clients} ${clients === 1
+          ? t("uxp.settings.listener_attached_title", "listener is currently attached to the live-updates bridge.")
+          : t("uxp.settings.listeners_attached_title", "listeners are currently attached to the live-updates bridge.")}`
+      : t("uxp.settings.no_listeners_attached_title", "No listeners are attached to the live-updates bridge right now.");
   }
   if (panelStateEl) {
     panelStateEl.textContent = panelStateText;
@@ -5588,34 +5609,36 @@ async function uxpUpdateWsStatus() {
   if (startBtn) {
     startBtn.disabled = bridgeRunning;
     startBtn.title = bridgeRunning
-      ? "The live-updates bridge is already running."
-      : "Start the live-updates bridge for panel progress and completion updates.";
+      ? t("uxp.settings.live_updates_bridge_already_running_title", "The live-updates bridge is already running.")
+      : t("uxp.settings.start_live_updates_bridge_title", "Start the live-updates bridge for panel progress and completion updates.");
   }
   if (stopBtn) {
     stopBtn.disabled = !bridgeRunning;
     stopBtn.title = bridgeRunning
-      ? "Stop the live-updates bridge."
-      : "The live-updates bridge is not running.";
+      ? t("uxp.settings.stop_live_updates_bridge_title", "Stop the live-updates bridge.")
+      : t("uxp.settings.bridge_not_running_title", "The live-updates bridge is not running.");
   }
   if (connectBtn) {
-    connectBtn.textContent = _uxpWsConnected ? "Live Updates Connected" : "Connect Live Updates";
+    connectBtn.textContent = _uxpWsConnected
+      ? t("uxp.settings.live_updates_connected_button", "Live Updates Connected")
+      : t("uxp.settings.connect_live_updates", "Connect Live Updates");
     connectBtn.disabled = !bridgeRunning || _uxpWsConnected;
     connectBtn.title = _uxpWsConnected
-      ? "This panel is already receiving live updates."
+      ? t("uxp.settings.panel_receiving_updates_title", "This panel is already receiving live updates.")
       : (!bridgeRunning
-          ? "Start the bridge before connecting this panel."
-          : "Connect this panel to receive live job updates.");
+          ? t("uxp.settings.start_bridge_before_connecting_title", "Start the bridge before connecting this panel.")
+          : t("uxp.settings.connect_panel_updates_title", "Connect this panel to receive live job updates."));
   }
 }
 
 async function uxpWsStartBridge() {
   const r = await BackendClient.post("/ws/start", {});
   if (r.ok && r.data?.success) {
-    UIController.setStatus("Live-updates bridge started.", "success");
-    UIController.showToast("Live-updates bridge started.", "success");
+    UIController.setStatus(t("uxp.settings.live_updates_bridge_started", "Live-updates bridge started."), "success");
+    UIController.showToast(t("uxp.settings.live_updates_bridge_started", "Live-updates bridge started."), "success");
     setTimeout(() => uxpWsConnect(), 500);
   } else {
-    UIController.showToast(r.error || "Failed to start bridge.", "error");
+    UIController.showToast(r.error || t("uxp.settings.failed_start_bridge", "Failed to start bridge."), "error");
   }
 }
 
@@ -5623,8 +5646,8 @@ async function uxpWsStopBridge() {
   uxpWsDisconnect();
   const r = await BackendClient.post("/ws/stop", {});
   if (r.ok) {
-    UIController.setStatus("Live-updates bridge stopped.", "neutral");
-    UIController.showToast("Live-updates bridge stopped.", "success");
+    UIController.setStatus(t("uxp.settings.live_updates_bridge_stopped", "Live-updates bridge stopped."), "neutral");
+    UIController.showToast(t("uxp.settings.live_updates_bridge_stopped", "Live-updates bridge stopped."), "success");
     uxpUpdateWsStatus();
   }
 }
@@ -5635,26 +5658,26 @@ async function uxpWsStopBridge() {
 async function uxpLoadEngines() {
   const grid = document.getElementById("uxpEngineGrid");
   if (!grid) return;
-  setTextAndTitle("settingsEngineDefaultsValue", "Loading…", "Loading automatic engine routing coverage.");
-  setTextAndTitle("settingsEnginePinnedValue", "Loading…", "Loading pinned engine preferences.");
-  setTextAndTitle("settingsEngineCoverageValue", "Loading…", "Loading engine availability.");
-  setSettingsStatus("settingsEngineStatus", "Loading engine availability…", "working");
+  setTextAndTitle("settingsEngineDefaultsValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_automatic_engine_routing_coverage", "Loading automatic engine routing coverage."));
+  setTextAndTitle("settingsEnginePinnedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_pinned_engine_preferences", "Loading pinned engine preferences."));
+  setTextAndTitle("settingsEngineCoverageValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_engine_availability_title", "Loading engine availability."));
+  setSettingsStatus("settingsEngineStatus", t("uxp.settings.loading_engine_availability", "Loading engine availability..."), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
-      <div class="oc-empty-state-kicker">Engine routing</div>
-      <p>Loading available engines and saved preferences…</p>
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_routing", "Engine routing"))}</div>
+      <p>${UIController.escapeHtml(t("uxp.settings.loading_engines_preferences", "Loading available engines and saved preferences..."))}</p>
     </div>`;
 
   const r = await BackendClient.get("/engines");
   if (!r.ok || !r.data?.engines) {
-    setTextAndTitle("settingsEngineDefaultsValue", "Unavailable", "OpenCut could not load automatic engine routing coverage.");
-    setTextAndTitle("settingsEnginePinnedValue", "Unavailable", "OpenCut could not load pinned engine preferences.");
-    setTextAndTitle("settingsEngineCoverageValue", "Refresh needed", "Refresh availability after the backend reconnects.");
-    setSettingsStatus("settingsEngineStatus", "Engine availability could not be loaded. Refresh the backend, then try again.", "error");
+    setTextAndTitle("settingsEngineDefaultsValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.engine_defaults_unavailable_title", "OpenCut could not load automatic engine routing coverage."));
+    setTextAndTitle("settingsEnginePinnedValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.engine_pinned_unavailable_title", "OpenCut could not load pinned engine preferences."));
+    setTextAndTitle("settingsEngineCoverageValue", t("uxp.settings.refresh_needed", "Refresh needed"), t("uxp.settings.engine_refresh_needed_title", "Refresh availability after the backend reconnects."));
+    setSettingsStatus("settingsEngineStatus", t("uxp.settings.engine_availability_failed", "Engine availability could not be loaded. Refresh the backend, then try again."), "error");
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
-        <div class="oc-empty-state-kicker">Engine data unavailable</div>
-        <p>OpenCut could not load engine availability right now. Refresh the backend and try again.</p>
+        <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_data_unavailable", "Engine data unavailable"))}</div>
+        <p>${UIController.escapeHtml(t("uxp.settings.engine_data_unavailable_hint", "OpenCut could not load engine availability right now. Refresh the backend and try again."))}</p>
       </div>`;
     return;
   }
@@ -5686,7 +5709,11 @@ async function uxpLoadEngines() {
     }
     usedEngineIds.add(domainId);
     availableEngineCount += availableCount;
-    const modeLabel = preferredInfo ? "Pinned" : availableCount ? "Auto" : "Needs attention";
+    const modeLabel = preferredInfo
+      ? t("uxp.settings.pinned", "Pinned")
+      : availableCount
+        ? t("uxp.settings.auto", "Auto")
+        : t("uxp.settings.needs_attention", "Needs attention");
     const modeClass = preferredInfo ? "manual" : availableCount ? "auto" : "warning";
     if (preferredInfo) pinnedCount += 1;
     else if (availableCount) autoCount += 1;
@@ -5694,18 +5721,31 @@ async function uxpLoadEngines() {
     let summary = "";
 
     if (preferredInfo) {
-      summary = `${preferredInfo.display_name} is preferred for ${domainLabel.toLowerCase()}.`;
+      summary = formatI18n("uxp.settings.engine_preferred_summary", "{engine} is preferred for {domain}.", {
+        engine: preferredInfo.display_name,
+        domain: domainLabel.toLowerCase(),
+      });
       if (activeInfo && activeInfo.name === preferredInfo.name) {
-        summary += " It is also active right now.";
+        summary += " " + t("uxp.settings.engine_also_active_summary", "It is also active right now.");
       } else if (activeInfo) {
-        summary += ` Current active engine: ${activeInfo.display_name}.`;
+        summary += " " + formatI18n("uxp.settings.engine_current_active_summary", "Current active engine: {engine}.", {
+          engine: activeInfo.display_name,
+        });
       }
     } else if (activeInfo) {
-      summary = `${activeInfo.display_name} is active right now. Auto mode keeps the best available engine selected for this system.`;
+      summary = formatI18n("uxp.settings.engine_auto_active_summary", "{engine} is active right now. Auto mode keeps the best available engine selected for this system.", {
+        engine: activeInfo.display_name,
+      });
     } else if (availableCount) {
-      summary = `${availableCount} ${availableCount === 1 ? "engine is" : "engines are"} available. Auto mode will pick the best fit at run time.`;
+      summary = formatI18n(
+        availableCount === 1 ? "uxp.settings.engine_available_one_summary" : "uxp.settings.engine_available_many_summary",
+        availableCount === 1
+          ? "{count} engine is available. Auto mode will pick the best fit at run time."
+          : "{count} engines are available. Auto mode will pick the best fit at run time.",
+        { count: availableCount }
+      );
     } else {
-      summary = "No available engines detected yet. Refresh availability after installs finish.";
+      summary = t("uxp.settings.no_engines_available_summary", "No available engines detected yet. Refresh availability after installs finish.");
     }
 
     html += `<div class="oc-engine-row">`;
@@ -5716,12 +5756,13 @@ async function uxpLoadEngines() {
     html += `</div>`;
     html += `<p class="oc-engine-meta">${UIController.escapeHtml(summary)}</p>`;
     html += `</div>`;
-    html += `<select class="oc-select oc-engine-sel" id="${UIController.escapeHtml(domainId)}" data-domain="${UIController.escapeHtml(domain)}" aria-label="${UIController.escapeHtml(domainLabel)} engine preference">`;
-    html += `<option value="">Auto (best available)</option>`;
+    html += `<select class="oc-select oc-engine-sel" id="${UIController.escapeHtml(domainId)}" data-domain="${UIController.escapeHtml(domain)}" aria-label="${UIController.escapeHtml(formatI18n("uxp.settings.engine_preference_label", "{domain} engine preference", { domain: domainLabel }))}">`;
+    html += `<option value="">${UIController.escapeHtml(t("uxp.settings.auto_best_available", "Auto (best available)"))}</option>`;
     for (const eng of entries) {
       const sel = (preferred === eng.name) ? " selected" : "";
-      const avail = eng.available ? "" : " - unavailable";
-      const label = `${eng.display_name} - ${eng.quality}/${eng.speed}${avail}${eng.name === active ? " - active" : ""}`;
+      const avail = eng.available ? "" : t("uxp.settings.option_unavailable_suffix", " - unavailable");
+      const activeSuffix = eng.name === active ? t("uxp.settings.option_active_suffix", " - active") : "";
+      const label = `${eng.display_name} - ${eng.quality}/${eng.speed}${avail}${activeSuffix}`;
       html += `<option value="${UIController.escapeHtml(eng.name)}"${sel}>${UIController.escapeHtml(label)}</option>`;
     }
     html += `</select></div>`;
@@ -5730,37 +5771,59 @@ async function uxpLoadEngines() {
   grid.innerHTML = html;
   setTextAndTitle(
     "settingsEngineDefaultsValue",
-    `${autoCount} auto`,
-    `${autoCount} ${autoCount === 1 ? "domain is" : "domains are"} currently using automatic engine routing.`
+    formatI18n("uxp.settings.auto_count", "{count} auto", { count: autoCount }),
+    formatI18n(
+      autoCount === 1 ? "uxp.settings.auto_title_one" : "uxp.settings.auto_title_many",
+      autoCount === 1
+        ? "{count} domain is currently using automatic engine routing."
+        : "{count} domains are currently using automatic engine routing.",
+      { count: autoCount }
+    )
   );
   setTextAndTitle(
     "settingsEnginePinnedValue",
-    `${pinnedCount} pinned`,
-    `${pinnedCount} ${pinnedCount === 1 ? "domain has" : "domains have"} a pinned engine preference.`
+    formatI18n("uxp.settings.pinned_count", "{count} pinned", { count: pinnedCount }),
+    formatI18n(
+      pinnedCount === 1 ? "uxp.settings.pinned_title_one" : "uxp.settings.pinned_title_many",
+      pinnedCount === 1
+        ? "{count} domain has a pinned engine preference."
+        : "{count} domains have pinned engine preferences.",
+      { count: pinnedCount }
+    )
   );
   setTextAndTitle(
     "settingsEngineCoverageValue",
     issueCount
-      ? `${issueCount} ${issueCount === 1 ? "issue" : "issues"}`
-      : `${availableEngineCount} ${availableEngineCount === 1 ? "engine" : "engines"} ready`,
-    `${availableEngineCount} available ${availableEngineCount === 1 ? "engine" : "engines"} detected across ${domains.length} ${domains.length === 1 ? "domain" : "domains"}.`
+      ? formatI18n(issueCount === 1 ? "uxp.settings.issue_count_one" : "uxp.settings.issue_count_many", issueCount === 1 ? "{count} issue" : "{count} issues", { count: issueCount })
+      : formatI18n(availableEngineCount === 1 ? "uxp.settings.engine_ready_count_one" : "uxp.settings.engine_ready_count_many", availableEngineCount === 1 ? "{count} engine ready" : "{count} engines ready", { count: availableEngineCount }),
+    formatI18n(
+      "uxp.settings.engine_coverage_title",
+      "{engineCount} available engines detected across {domainCount} domains.",
+      { engineCount: availableEngineCount, domainCount: domains.length }
+    )
   );
   if (issueCount) {
     setSettingsStatus(
       "settingsEngineStatus",
-      `${issueCount} ${issueCount === 1 ? "domain still needs attention" : "domains still need attention"}. Refresh availability after installs finish or return those domains to Auto when engines are ready.`,
+      formatI18n(
+        issueCount === 1 ? "uxp.settings.engine_issue_status_one" : "uxp.settings.engine_issue_status_many",
+        issueCount === 1
+          ? "{count} domain still needs attention. Refresh availability after installs finish or return that domain to Auto when engines are ready."
+          : "{count} domains still need attention. Refresh availability after installs finish or return those domains to Auto when engines are ready.",
+        { count: issueCount }
+      ),
       "warning"
     );
   } else if (pinnedCount) {
     setSettingsStatus(
       "settingsEngineStatus",
-      "Engine routing is healthy. Auto covers the remaining domains, and pinned preferences will stay in place until you change them.",
+      t("uxp.settings.engine_routing_pinned_healthy", "Engine routing is healthy. Auto covers the remaining domains, and pinned preferences will stay in place until you change them."),
       "success"
     );
   } else {
     setSettingsStatus(
       "settingsEngineStatus",
-      "Engine routing is healthy. Auto mode will keep the best available engine selected for each domain.",
+      t("uxp.settings.engine_routing_auto_healthy", "Engine routing is healthy. Auto mode will keep the best available engine selected for each domain."),
       "ready"
     );
   }
@@ -5770,24 +5833,24 @@ async function uxpLoadEngines() {
       const dom = sel.dataset.domain;
       const eng = sel.value;
       const domainLabel = humanizeDomain(dom);
-      const selectedLabel = sel.options[sel.selectedIndex]?.textContent || "Auto";
+      const selectedLabel = sel.options[sel.selectedIndex]?.textContent || t("uxp.settings.auto", "Auto");
       const pr = await BackendClient.post("/engines/preference", { domain: dom, engine: eng });
       if (pr.ok && pr.data?.success) {
         UIController.setStatus(
           eng
-            ? `${domainLabel} engine routing updated.`
-            : `${domainLabel} returned to automatic engine routing.`,
+            ? formatI18n("uxp.settings.engine_routing_updated_status", "{domain} engine routing updated.", { domain: domainLabel })
+            : formatI18n("uxp.settings.engine_routing_auto_status", "{domain} returned to automatic engine routing.", { domain: domainLabel }),
           "success"
         );
         UIController.showToast(
           eng
-            ? `${domainLabel} now prefers ${selectedLabel}.`
-            : `${domainLabel} is back on Auto routing.`,
+            ? formatI18n("uxp.settings.engine_preference_saved_toast", "{domain} now prefers {engine}.", { domain: domainLabel, engine: selectedLabel })
+            : formatI18n("uxp.settings.engine_auto_saved_toast", "{domain} is back on Auto routing.", { domain: domainLabel }),
           "success"
         );
         await uxpLoadEngines();
       } else {
-        UIController.showToast(pr.error || "Failed to save preference.", "error");
+        UIController.showToast(pr.error || t("uxp.settings.failed_save_preference", "Failed to save preference."), "error");
         await uxpLoadEngines();
       }
     });
@@ -5799,10 +5862,10 @@ async function uxpLoadEngines() {
 // ─────────────────────────────────────────────────────────────
 function migrationStatusLabel(status) {
   return ({
-    direct_uxp: "Direct UXP",
-    partial_uxp: "Partial UXP",
-    cep_only: "CEP fallback",
-    different_mechanism: "Different mechanism",
+    direct_uxp: t("uxp.settings.status_direct_uxp", "Direct UXP"),
+    partial_uxp: t("uxp.settings.status_partial_uxp", "Partial UXP"),
+    cep_only: t("uxp.settings.status_cep_fallback", "CEP fallback"),
+    different_mechanism: t("uxp.settings.status_different_mechanism", "Different mechanism"),
   })[status] || status;
 }
 
@@ -5815,14 +5878,14 @@ function migrationStateClass(row) {
 async function uxpLoadMigrationRisk() {
   const grid = document.getElementById("uxpMigrationRiskGrid");
   if (!grid) return;
-  setTextAndTitle("settingsMigrationDirectValue", "Loading…", "Loading direct UXP host-action coverage.");
-  setTextAndTitle("settingsMigrationFallbackValue", "Loading…", "Loading CEP fallback count.");
-  setTextAndTitle("settingsMigrationRiskValue", "Loading…", "Loading high-risk migration count.");
-  setSettingsStatus("settingsMigrationStatus", "Loading UXP migration risk data…", "working");
+  setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_direct_uxp_coverage", "Loading direct UXP host-action coverage."));
+  setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_cep_fallback_count", "Loading CEP fallback count."));
+  setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_high_risk_migration_count", "Loading high-risk migration count."));
+  setSettingsStatus("settingsMigrationStatus", t("uxp.settings.loading_migration_risk_data", "Loading UXP migration risk data..."), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
-      <div class="oc-empty-state-kicker">Migration risk</div>
-      <p>Loading CEP and UXP host-action coverage…</p>
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_risk", "Migration risk"))}</div>
+      <p>${UIController.escapeHtml(t("uxp.settings.loading_host_action_coverage", "Loading CEP and UXP host-action coverage..."))}</p>
     </div>`;
 
   try {
@@ -5836,17 +5899,29 @@ async function uxpLoadMigrationRisk() {
     const fallback = Number(summary.cep_only ?? 0);
     const highRisk = Number(summary.high_risk ?? 0);
 
-    setTextAndTitle("settingsMigrationDirectValue", `${direct} direct`, `${direct} host actions are covered by direct UXP APIs.`);
-    setTextAndTitle("settingsMigrationFallbackValue", `${fallback} fallback`, `${fallback} host actions still require CEP or hybrid handling.`);
-    setTextAndTitle("settingsMigrationRiskValue", `${highRisk} high`, `${highRisk} host actions are high-risk migration items.`);
+    setTextAndTitle(
+      "settingsMigrationDirectValue",
+      formatI18n("uxp.settings.direct_count", "{count} direct", { count: direct }),
+      formatI18n("uxp.settings.direct_count_title", "{count} host actions are covered by direct UXP APIs.", { count: direct })
+    );
+    setTextAndTitle(
+      "settingsMigrationFallbackValue",
+      formatI18n("uxp.settings.fallback_count", "{count} fallback", { count: fallback }),
+      formatI18n("uxp.settings.fallback_count_title", "{count} host actions still require CEP or hybrid handling.", { count: fallback })
+    );
+    setTextAndTitle(
+      "settingsMigrationRiskValue",
+      formatI18n("uxp.settings.high_risk_count", "{count} high", { count: highRisk }),
+      formatI18n("uxp.settings.high_risk_count_title", "{count} host actions are high-risk migration items.", { count: highRisk })
+    );
 
     if (!rows.length) {
       grid.innerHTML = `
         <div class="oc-empty-state oc-empty-state-inline">
-          <div class="oc-empty-state-kicker">Migration data empty</div>
-          <p>The generated migration dashboard did not contain host-action rows.</p>
+          <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_dashboard_empty", "Migration data empty"))}</div>
+          <p>${UIController.escapeHtml(t("uxp.settings.migration_dashboard_empty_hint", "The generated migration dashboard did not contain host-action rows."))}</p>
         </div>`;
-      setSettingsStatus("settingsMigrationStatus", "Migration dashboard is empty. Regenerate the F260 dashboard artifact.", "warning");
+      setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_empty_status", "Migration dashboard is empty. Regenerate the F260 dashboard artifact."), "warning");
       return;
     }
 
@@ -5854,15 +5929,15 @@ async function uxpLoadMigrationRisk() {
       const statusLabel = migrationStatusLabel(row.status);
       const stateClass = migrationStateClass(row);
       const tags = [
-        row.risk ? `Risk: ${row.risk}` : "",
-        row.needs_hybrid ? "Hybrid candidate" : "",
+        row.risk ? formatI18n("uxp.settings.risk_tag", "Risk: {risk}", { risk: row.risk }) : "",
+        row.needs_hybrid ? t("uxp.settings.hybrid_candidate", "Hybrid candidate") : "",
         Array.isArray(row.f_numbers) && row.f_numbers.length ? row.f_numbers.join(", ") : "",
       ].filter(Boolean).join(" | ");
-      const summaryText = `${row.role || "Host action"} ${row.replacement_plan || row.uxp_path || ""}`.trim();
+      const summaryText = `${row.role || t("uxp.settings.host_action", "Host action")} ${row.replacement_plan || row.uxp_path || ""}`.trim();
       return `<div class="oc-engine-row">
         <div class="oc-engine-copy">
           <div class="oc-engine-title-row">
-            <span class="oc-engine-domain">${UIController.escapeHtml(row.name || "Unknown action")}</span>
+            <span class="oc-engine-domain">${UIController.escapeHtml(row.name || t("uxp.settings.unknown_action", "Unknown action"))}</span>
             <span class="oc-engine-state is-${UIController.escapeHtml(stateClass)}">${UIController.escapeHtml(statusLabel)}</span>
           </div>
           <p class="oc-engine-meta">${UIController.escapeHtml(summaryText)}</p>
@@ -5872,18 +5947,18 @@ async function uxpLoadMigrationRisk() {
     }).join("");
 
     const status = fallback || partial || highRisk
-      ? `${fallback} CEP fallback and ${partial} partial UXP host actions remain.`
-      : "All catalogued host actions are direct UXP or resolved through non-CEP mechanisms.";
+      ? formatI18n("uxp.settings.migration_remaining_status", "{fallback} CEP fallback and {partial} partial UXP host actions remain.", { fallback, partial })
+      : t("uxp.settings.migration_resolved_status", "All catalogued host actions are direct UXP or resolved through non-CEP mechanisms.");
     setSettingsStatus("settingsMigrationStatus", status, fallback || highRisk ? "warning" : "success");
   } catch (e) {
-    setTextAndTitle("settingsMigrationDirectValue", "Unavailable", "OpenCut could not load the generated UXP migration dashboard.");
-    setTextAndTitle("settingsMigrationFallbackValue", "Unavailable", "OpenCut could not load CEP fallback count.");
-    setTextAndTitle("settingsMigrationRiskValue", "Refresh needed", "Refresh after regenerating or packaging the dashboard artifact.");
-    setSettingsStatus("settingsMigrationStatus", "Migration dashboard could not be loaded. Regenerate the F260 dashboard artifact, then refresh.", "error");
+    setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_direct_unavailable_title", "OpenCut could not load the generated UXP migration dashboard."));
+    setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_fallback_unavailable_title", "OpenCut could not load CEP fallback count."));
+    setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.refresh_needed", "Refresh needed"), t("uxp.settings.migration_refresh_needed_title", "Refresh after regenerating or packaging the dashboard artifact."));
+    setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_unavailable_status", "Migration dashboard could not be loaded. Regenerate the F260 dashboard artifact, then refresh."), "error");
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
-        <div class="oc-empty-state-kicker">Migration data unavailable</div>
-        <p>OpenCut could not load the bundled UXP migration dashboard right now.</p>
+        <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.migration_data_unavailable", "Migration data unavailable"))}</div>
+        <p>${UIController.escapeHtml(t("uxp.settings.migration_data_unavailable_hint", "OpenCut could not load the bundled UXP migration dashboard right now."))}</p>
       </div>`;
   }
 }
@@ -6248,6 +6323,8 @@ async function initApp() {
   updateWorkspaceOverview();
   updateDeliverablesSummary();
   updateTimelineReadiness();
+  uxpLoadEngines();
+  uxpUpdateWsStatus();
   await uxpLoadMigrationRisk();
 
   // Initial connection check

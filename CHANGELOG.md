@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Settings Tab Shell
+
+- Expanded the UXP i18n foundation into the Settings tab shell, including Engine Routing, Live Updates Bridge, Migration Risk, Keyboard, and About labels, ARIA labels, status text, empty states, button labels, and generated Settings status strings.
+- Raised the UXP i18n static guard to require the expanded 660+ attribute baseline, representative Settings-tab locale keys, and `formatI18n()` dynamic-key coverage.
+
 ### Changed - UXP i18n Agent Tab Shell
 
 - Expanded the UXP i18n foundation into the Agent tab shell, including Chat Conductor, One-Click Enhance, Shorts A/B Variants, Sequence Index, MCP Bridge labels, placeholders, ARIA labels, status text, select options, hints, and action buttons.
