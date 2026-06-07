@@ -3874,12 +3874,12 @@
             <!-- ======== PROGRESS ======== -->
             <section class="card hidden" id="progressSection">
                 <div class="progress-header">
-                    <div class="progress-track"><div class="progress-fill" id="progressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Job progress"></div></div>
+                    <div class="progress-track"><div class="progress-fill" id="progressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Job progress" data-i18n-aria-label="progress.job_progress"></div></div>
                     <span class="progress-elapsed" id="progressElapsed"></span>
                 </div>
                 <div class="progress-row">
                     <span class="progress-label" id="progressLabel" data-i18n="progress.starting">Starting…</span>
-                    <button type="button" class="btn-cancel hidden" id="cancelBtn" title="Cancel processing" data-i18n="progress.cancel">Cancel</button>
+                    <button type="button" class="btn-cancel hidden" id="cancelBtn" title="Cancel processing" data-i18n="progress.cancel" data-i18n-title="progress.cancel_processing">Cancel</button>
                 </div>
             </section>
 
@@ -3888,7 +3888,7 @@
                 <div class="results-card" id="resultsCard">
                     <div class="results-title" id="resultsTitle" data-i18n="progress.complete">Complete</div>
                     <div class="results-stats" id="resultsStats"></div>
-                    <div class="results-path" id="resultsPath" title="Output file path"></div>
+                    <div class="results-path" id="resultsPath" title="Output file path" data-i18n-title="results.output_file_path"></div>
                     <div class="results-actions">
                         <button type="button" class="btn-outline" id="newJobBtn" data-i18n="common.new_job">New Job</button>
                         <button type="button" class="btn-outline btn-retry hidden" id="retryJobBtn" data-i18n="common.retry">Retry</button>
@@ -3900,8 +3900,8 @@
             <section id="cutReviewPanel" class="card hidden">
                 <div class="card-header">
                     <div class="card-title" data-i18n="review.title">Review Cuts</div>
-                    <div class="card-desc" id="cutReviewSummary">0 cuts selected</div>
-                        <button type="button" class="cut-review-close utility-icon-btn modal-close-btn" id="cutReviewClose" aria-label="Close review panel">
+                    <div class="card-desc" id="cutReviewSummary" data-i18n="review.none_selected_summary">0 cuts selected</div>
+                        <button type="button" class="cut-review-close utility-icon-btn modal-close-btn" id="cutReviewClose" aria-label="Close review panel" data-i18n-aria-label="review.close_panel">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
                             </span>
@@ -3920,11 +3920,11 @@
             <div class="content-footer">
             <!-- Job History -->
             <div class="job-history-bar">
-                <button type="button" class="utility-btn footer-toggle-btn" id="jobHistoryToggle" title="Toggle activity" aria-expanded="false" aria-controls="jobHistory">
+                <button type="button" class="utility-btn footer-toggle-btn" id="jobHistoryToggle" title="Toggle activity" aria-expanded="false" aria-controls="jobHistory" data-i18n-title="activity.toggle_title">
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 5.25h7.5"/><path d="M4.25 8.75H9.5"/><path d="M4.25 12.25h4"/><circle cx="14.25" cy="12.25" r="2.75"/><path d="M14.25 10.75v1.7l1.05.6"/></svg>
                     </span>
-                    <span class="toggle-label">Activity</span>
+                    <span class="toggle-label" data-i18n="activity.label">Activity</span>
                     <span class="toggle-count">(0)</span>
                 </button>
             </div>
@@ -3934,23 +3934,23 @@
             <div class="job-queue-bar hidden" id="jobQueueBar">
                 <div class="queue-info">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-                    <span id="queueStatusText">Queue: 0 jobs</span>
+                    <span id="queueStatusText" data-i18n="queue.status_zero">Queue: 0 jobs</span>
                 </div>
-                <button type="button" class="btn-sm" id="clearQueueBtn">Clear</button>
+                <button type="button" class="btn-sm" id="clearQueueBtn" data-i18n="common.clear">Clear</button>
             </div>
 
             <!-- Output Browser -->
             <div class="output-browser hidden" id="outputBrowser">
                 <div class="output-browser-header">
-                    <span>Recent Outputs</span>
+                    <span data-i18n="outputs.recent_title">Recent Outputs</span>
                     <div class="btn-row gap-xs">
-                        <button type="button" class="btn-sm btn-secondary utility-btn is-refresh" id="refreshOutputsBtn" title="Refresh outputs">
+                        <button type="button" class="btn-sm btn-secondary utility-btn is-refresh" id="refreshOutputsBtn" title="Refresh outputs" data-i18n-title="outputs.refresh_title">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label">Refresh</span>
+                            <span class="btn-label" data-i18n="common.refresh">Refresh</span>
                         </button>
-                        <button type="button" class="output-browser-close utility-icon-btn modal-close-btn" id="outputBrowserClose" aria-label="Close outputs">
+                        <button type="button" class="output-browser-close utility-icon-btn modal-close-btn" id="outputBrowserClose" aria-label="Close outputs" data-i18n-aria-label="outputs.close_aria">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
                             </span>
@@ -3960,11 +3960,11 @@
                 <div class="output-browser-list" id="outputBrowserList"></div>
             </div>
             <div class="output-toggle-bar">
-                <button type="button" class="utility-btn footer-toggle-btn" id="outputBrowserToggle" title="Toggle output browser" aria-expanded="false" aria-controls="outputBrowser">
+                <button type="button" class="utility-btn footer-toggle-btn" id="outputBrowserToggle" title="Toggle output browser" aria-expanded="false" aria-controls="outputBrowser" data-i18n-title="outputs.toggle_title">
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h13v8.25a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2z"/><path d="M6.5 3.5h7"/><path d="M10 8v3.5"/><path d="M8.25 10.5 10 12.25l1.75-1.75"/></svg>
                     </span>
-                    <span class="toggle-label">Outputs</span>
+                    <span class="toggle-label" data-i18n="outputs.label">Outputs</span>
                     <span class="toggle-count">(0)</span>
                 </button>
             </div>
@@ -3972,7 +3972,7 @@
             </div>
 
             <!-- System Status Bar -->
-            <div class="status-bar" id="statusBar" data-state="offline" role="status" aria-label="Server status">
+            <div class="status-bar" id="statusBar" data-state="offline" role="status" aria-label="Server status" data-i18n-aria-label="status.server_status">
                 <span class="status-dot" id="statusDot" aria-hidden="true"></span>
                 <span class="status-text" id="statusText" data-i18n="status.connecting">Connecting…</span>
                 <span class="status-separator" aria-hidden="true">|</span>
@@ -3985,28 +3985,28 @@
 
 
         <!-- Command Palette -->
-        <div class="command-palette-overlay hidden" id="commandPaletteOverlay" role="dialog" aria-modal="true" aria-label="Command Palette">
+        <div class="command-palette-overlay hidden" id="commandPaletteOverlay" role="dialog" aria-modal="true" aria-label="Command Palette" data-i18n-aria-label="palette.title">
             <div class="command-palette">
                 <div class="command-palette-header">
-                    <div class="command-palette-kicker">Launcher</div>
+                    <div class="command-palette-kicker" data-i18n="palette.launcher">Launcher</div>
                     <div class="command-palette-title-row">
-                        <div class="command-palette-title">Command Palette</div>
+                        <div class="command-palette-title" data-i18n="palette.title">Command Palette</div>
                         <div class="command-palette-shortcut">Ctrl+K</div>
                     </div>
-                    <div class="command-palette-subtitle">Jump to recent actions, favorites, and tools across the full studio workflow.</div>
+                    <div class="command-palette-subtitle" data-i18n="palette.subtitle">Jump to recent actions, favorites, and tools across the full studio workflow.</div>
                 </div>
-                <input type="text" id="commandPaletteInput" placeholder="Search operations… (e.g. denoise, reframe, captions)" autocomplete="off" spellcheck="false" aria-label="Search operations" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="commandPaletteResults" aria-describedby="commandPaletteStatus commandPaletteHint">
+                <input type="text" id="commandPaletteInput" placeholder="Search operations… (e.g. denoise, reframe, captions)" autocomplete="off" spellcheck="false" aria-label="Search operations" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="commandPaletteResults" aria-describedby="commandPaletteStatus commandPaletteHint" data-i18n-placeholder="palette.search_placeholder" data-i18n-aria-label="palette.search_aria">
                 <div class="command-palette-status" id="commandPaletteStatus" role="status" aria-live="polite"></div>
-                <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Matching operations"></div>
-                <div class="command-palette-hint" id="commandPaletteHint">Use arrow keys to move, Enter to open, and Esc to close.</div>
+                <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Matching operations" data-i18n-aria-label="palette.matching_operations_aria"></div>
+                <div class="command-palette-hint" id="commandPaletteHint" data-i18n="palette.keyboard_hint">Use arrow keys to move, Enter to open, and Esc to close.</div>
             </div>
         </div>
 
         <!-- Side-by-Side Preview Modal -->
         <div class="preview-modal hidden is-single" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
             <div class="preview-modal-header">
-                <span class="preview-modal-title" id="previewModalTitle">Frame Preview</span>
-                    <button type="button" class="preview-modal-close utility-icon-btn modal-close-btn" id="previewModalClose" aria-label="Close preview">
+                <span class="preview-modal-title" id="previewModalTitle" data-i18n="preview.frame_title">Frame Preview</span>
+                    <button type="button" class="preview-modal-close utility-icon-btn modal-close-btn" id="previewModalClose" aria-label="Close preview" data-i18n-aria-label="preview.close_aria">
                         <span class="btn-icon" aria-hidden="true">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
                         </span>
@@ -4014,13 +4014,13 @@
             </div>
             <div class="preview-modal-body">
                 <div class="preview-pane">
-                    <div class="preview-label" id="previewOriginalLabel">Selected Frame</div>
-                    <img id="previewOriginal" class="preview-img" alt="Original">
+                    <div class="preview-label" id="previewOriginalLabel" data-i18n="preview.selected_frame">Selected Frame</div>
+                    <img id="previewOriginal" class="preview-img" alt="Original" data-i18n-alt="preview.original_alt">
                 </div>
                 <div class="preview-divider" id="previewDivider" aria-hidden="true"></div>
                 <div class="preview-pane preview-pane-secondary" id="previewProcessedPane" aria-hidden="true">
-                    <div class="preview-label" id="previewProcessedLabel">Processed Preview</div>
-                    <img id="previewProcessed" class="preview-img" alt="Preview">
+                    <div class="preview-label" id="previewProcessedLabel" data-i18n="preview.processed">Processed Preview</div>
+                    <img id="previewProcessed" class="preview-img" alt="Preview" data-i18n-alt="preview.processed_alt">
                 </div>
             </div>
             <div class="preview-modal-footer">
@@ -4028,18 +4028,18 @@
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                     </span>
-                    <span class="btn-label">Refresh Frame</span>
+                    <span class="btn-label" data-i18n="preview.refresh_frame">Refresh Frame</span>
                 </button>
-                <span class="preview-timestamp-label">Timestamp:</span>
-                <input type="text" id="previewTimestamp" name="preview_timestamp" class="text-input dim-input" value="00:00:01" aria-label="Preview timestamp" inputmode="numeric" pattern="[0-9:.]*" autocomplete="off" spellcheck="false">
+                <span class="preview-timestamp-label" data-i18n="preview.timestamp_label">Timestamp:</span>
+                <input type="text" id="previewTimestamp" name="preview_timestamp" class="text-input dim-input" value="00:00:01" aria-label="Preview timestamp" inputmode="numeric" pattern="[0-9:.]*" autocomplete="off" spellcheck="false" data-i18n-aria-label="preview.timestamp_aria">
             </div>
         </div>
 
         <!-- Audio Preview Player (floating) -->
         <div class="audio-preview hidden" id="audioPreview" role="dialog" aria-labelledby="audioPreviewTitle">
             <div class="audio-preview-header">
-                <span id="audioPreviewTitle">Audio Preview</span>
-                <button type="button" class="audio-preview-close utility-icon-btn modal-close-btn" id="audioPreviewClose" aria-label="Close audio preview">
+                <span id="audioPreviewTitle" data-i18n="audio_preview.title">Audio Preview</span>
+                <button type="button" class="audio-preview-close utility-icon-btn modal-close-btn" id="audioPreviewClose" aria-label="Close audio preview" data-i18n-aria-label="audio_preview.close_aria">
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
                     </span>
@@ -4049,15 +4049,15 @@
         </div>
 
         <!-- Right-Click Context Menu -->
-        <div class="context-menu hidden" id="contextMenu" role="menu" aria-label="Clip actions">
-            <button type="button" class="context-menu-item" role="menuitem" data-action="silence">Remove Silences</button>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="transcribe">Transcribe</button>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="denoise">Denoise Audio</button>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="normalize">Normalize Audio</button>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="stabilize">Stabilize Video</button>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="export">Export Preset</button>
+        <div class="context-menu hidden" id="contextMenu" role="menu" aria-label="Clip actions" data-i18n-aria-label="context.clip_actions">
+            <button type="button" class="context-menu-item" role="menuitem" data-action="silence" data-i18n="context.remove_silences">Remove Silences</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="transcribe" data-i18n="context.transcribe">Transcribe</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="denoise" data-i18n="context.denoise_audio">Denoise Audio</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="normalize" data-i18n="context.normalize_audio">Normalize Audio</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="stabilize" data-i18n="context.stabilize_video">Stabilize Video</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="export" data-i18n="context.export_preset">Export Preset</button>
             <div class="context-menu-sep"></div>
-            <button type="button" class="context-menu-item" role="menuitem" data-action="favorite">Add to Favorites</button>
+            <button type="button" class="context-menu-item" role="menuitem" data-action="favorite" data-i18n="context.add_to_favorites">Add to Favorites</button>
         </div>
 
         <!-- First-Run Wizard Overlay -->
@@ -4065,28 +4065,28 @@
             <div class="wizard-card" tabindex="-1">
                 <div class="wizard-hero">
                     <div class="wizard-kicker-row">
-                        <span class="wizard-kicker">Guided Setup</span>
-                        <span class="wizard-chip">Ctrl+K Launcher</span>
+                        <span class="wizard-kicker" data-i18n="wizard.guided_setup">Guided Setup</span>
+                        <span class="wizard-chip" data-i18n="wizard.ctrl_k_launcher">Ctrl+K Launcher</span>
                     </div>
                     <div class="wizard-header">
-                        <img class="wizard-logo" width="32" height="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=" alt="OpenCut">
+                        <img class="wizard-logo" width="32" height="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=" alt="OpenCut" data-i18n-alt="wizard.logo_alt">
                         <div class="wizard-header-copy">
-                            <h2 id="wizardTitle">Welcome to OpenCut Studio</h2>
-                            <p class="wizard-subtitle" id="wizardSubtitle">A calmer way to clean dialogue, generate captions, repair shots, and publish edits without leaving Premiere Pro.</p>
+                            <h2 id="wizardTitle" data-i18n="wizard.title">Welcome to OpenCut Studio</h2>
+                            <p class="wizard-subtitle" id="wizardSubtitle" data-i18n="wizard.subtitle">A calmer way to clean dialogue, generate captions, repair shots, and publish edits without leaving Premiere Pro.</p>
                         </div>
                     </div>
-                    <div class="wizard-highlights" role="list" aria-label="OpenCut highlights">
+                    <div class="wizard-highlights" role="list" aria-label="OpenCut highlights" data-i18n-aria-label="wizard.highlights_aria">
                         <div class="wizard-highlight" role="listitem">
-                            <strong>In-Panel Workflow</strong>
-                            <span>Stay inside Premiere with one focused workspace instead of bouncing between tools.</span>
+                            <strong data-i18n="wizard.highlight_workflow_title">In-Panel Workflow</strong>
+                            <span data-i18n="wizard.highlight_workflow_body">Stay inside Premiere with one focused workspace instead of bouncing between tools.</span>
                         </div>
                         <div class="wizard-highlight" role="listitem">
-                            <strong>Fast Navigation</strong>
-                            <span>Jump to recent actions, favorites, and toolsets with the launcher and sidebar.</span>
+                            <strong data-i18n="wizard.highlight_navigation_title">Fast Navigation</strong>
+                            <span data-i18n="wizard.highlight_navigation_body">Jump to recent actions, favorites, and toolsets with the launcher and sidebar.</span>
                         </div>
                         <div class="wizard-highlight" role="listitem">
-                            <strong>Results In Context</strong>
-                            <span>Run the job, review the output, and send finished assets right back into the edit.</span>
+                            <strong data-i18n="wizard.highlight_results_title">Results In Context</strong>
+                            <span data-i18n="wizard.highlight_results_body">Run the job, review the output, and send finished assets right back into the edit.</span>
                         </div>
                     </div>
                 </div>
@@ -4094,32 +4094,32 @@
                     <div class="wizard-step active" data-step="1" role="listitem">
                         <div class="wizard-step-num">1</div>
                         <div class="wizard-step-copy">
-                            <h3>Select the Footage</h3>
-                            <p>Pick a clip from your project bin, use your timeline selection, or drag a file directly onto the panel.</p>
+                            <h3 data-i18n="wizard.step_footage_title">Select the Footage</h3>
+                            <p data-i18n="wizard.step_footage_body">Pick a clip from your project bin, use your timeline selection, or drag a file directly onto the panel.</p>
                         </div>
                     </div>
                     <div class="wizard-step" data-step="2" role="listitem">
                         <div class="wizard-step-num">2</div>
                         <div class="wizard-step-copy">
-                            <h3>Choose the Toolset</h3>
-                            <p>Move between Cut, Captions, Audio, Video, Export, Timeline, Search, and Settings from one consistent surface.</p>
+                            <h3 data-i18n="wizard.step_toolset_title">Choose the Toolset</h3>
+                            <p data-i18n="wizard.step_toolset_body">Move between Cut, Captions, Audio, Video, Export, Timeline, Search, and Settings from one consistent surface.</p>
                         </div>
                     </div>
                     <div class="wizard-step" data-step="3" role="listitem">
                         <div class="wizard-step-num">3</div>
                         <div class="wizard-step-copy">
-                            <h3>Run, Review, Auto-Import</h3>
-                            <p>Configure the action, let OpenCut process the media, and bring the result back into the current Premiere project.</p>
+                            <h3 data-i18n="wizard.step_run_title">Run, Review, Auto-Import</h3>
+                            <p data-i18n="wizard.step_run_body">Configure the action, let OpenCut process the media, and bring the result back into the current Premiere project.</p>
                         </div>
                     </div>
                 </div>
                 <div class="wizard-support">
-                    <span class="wizard-support-label">Quick Tip</span>
-                    <p>Press Ctrl+K any time to open the command palette and jump to recent actions, pinned tools, and the current workspace.</p>
+                    <span class="wizard-support-label" data-i18n="wizard.quick_tip">Quick Tip</span>
+                    <p data-i18n="wizard.quick_tip_body">Press Ctrl+K any time to open the command palette and jump to recent actions, pinned tools, and the current workspace.</p>
                 </div>
                 <div class="wizard-footer">
-                    <label class="checkbox-row"><input type="checkbox" id="wizardDontShow"> Don't show again</label>
-                    <button type="button" class="btn-primary" id="wizardCloseBtn">Open Workspace</button>
+                    <label class="checkbox-row"><input type="checkbox" id="wizardDontShow"> <span data-i18n="wizard.dont_show_again">Don't show again</span></label>
+                    <button type="button" class="btn-primary" id="wizardCloseBtn" data-i18n="wizard.open_workspace">Open Workspace</button>
                 </div>
             </div>
         </div>
