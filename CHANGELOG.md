@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Video Runtime i18n
+
+- Routed Video tab core runtime feedback through locale keys, including Color Match, Auto Zoom, and Multicam progress, success, status, and error messages.
+- Added Video-runtime guard coverage so the localized Color Match, Auto Zoom, and Multicam feedback cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Audio Runtime i18n
 
 - Routed Audio tab runtime feedback through locale keys, including denoise, normalization, loudness-match, and beat-marker progress, success, status, and error messages.
