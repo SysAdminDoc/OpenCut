@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Settings Locale
+
+- Expanded the partial Spanish UXP locale pack into backend-offline guide copy and the Settings shell, including Engine Routing, Live Updates Bridge, Migration Risk, Keyboard, About, and common Settings status strings.
+- Added guard coverage so the Spanish pack continues to include the backend-offline guide and high-visibility Settings labels while remaining partial and falling back to English for uncovered feature areas.
+
 ### Added - UXP Partial Locale Packaging
 
 - Added a partial Spanish UXP locale pack for first-viewport chrome, tab labels, workspace summaries, connection state, and shared runtime essentials.
