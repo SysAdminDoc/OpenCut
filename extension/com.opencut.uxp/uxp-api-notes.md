@@ -56,6 +56,7 @@ access:
 | `network.domains` | `127.0.0.1:5679`, `localhost:5679` | Backend HTTP calls |
 | `localFileSystem` | `fullAccess` | File/folder browse dialogs |
 | `clipboard` | `readAndWrite` | Generated-output copy button writes text to the system clipboard |
+| `launchProcess.schemes` | `https` | OAuth authorization pages opened in the system browser |
 | `ipc.enablePluginCommunication` | `true` | Inter-plugin messaging |
 
 ## Manifest Schema
@@ -80,6 +81,16 @@ manifest and dormant WebView scaffold because the output copy button writes text
 to the system clipboard. `copyTextToClipboard()` centralizes the runtime path and
 falls back to a manual-copy warning when clipboard access is unsupported or
 permission is denied. `tests/test_uxp_clipboard_permission.py` guards this.
+
+## External Launch Permission
+
+OpenCut only opens external URLs for social-account OAuth authorization. The
+live manifest and dormant WebView scaffold declare
+`requiredPermissions.launchProcess.schemes: ["https"]` with an empty extension
+allowlist. `openHttpsExternalUrl()` rejects non-HTTPS auth URLs before calling
+`shell.openExternal(...)`, and the fallback shows the validated HTTPS URL for
+manual browser entry if UXP denies the launch. `tests/test_uxp_external_launch_permission.py`
+guards the manifest, helper, WebView scaffold, and no-`openPath()` contract.
 
 ## Confirmation Policy
 

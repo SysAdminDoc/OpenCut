@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP External Launch Permission
+
+- Closed RA-13 by declaring HTTPS-only `launchProcess` permissions in the live UXP manifest and dormant WebView scaffold, normalizing OAuth authorization URLs before browser launch, and adding static guards against broad schemes or file launches.
+
 ### Changed - Magic Clips Output Bundle Handoff
 
 - Closed RA-56 by writing `magic_clips_manifest.json` plus CSV bundle handoff files, grouping multi-platform outputs under one candidate, returning bundle paths/payloads from `/video/shorts-pipeline`, and rendering completed bundle contents in CEP and UXP review boards.

@@ -13,6 +13,10 @@ Both the live manifest and this scaffold declare clipboard `readAndWrite`
 permission because the panel writes generated output text to the system
 clipboard and handles denied access with a manual-copy fallback.
 
+Both manifest surfaces also declare the external-launch contract as HTTPS-only:
+`launchProcess.schemes` is `["https"]`, `launchProcess.extensions` is empty,
+and WebView `openURL()` rejects non-HTTPS URLs before calling the UXP shell.
+
 The scaffold follows the current Bolt UXP WebView split:
 
 - `uxp.config.ts` is the least-privilege manifest/config template.

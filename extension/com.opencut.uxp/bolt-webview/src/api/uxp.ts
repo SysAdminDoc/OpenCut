@@ -58,10 +58,22 @@ export async function getColorScheme(): Promise<HostColorScheme> {
 
 export async function openURL(url: string): Promise<PlainObject> {
   const trimmed = String(url || "").trim();
-  if (!/^https?:\/\//.test(trimmed)) {
-    return { ok: false, reason: "Only http(s) URLs can be opened from UXP." };
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return { ok: false, reason: "Only https URLs can be opened from UXP." };
+  }
+  if (parsed.protocol !== "https:") {
+    return { ok: false, reason: "Only https URLs can be opened from UXP." };
   }
   const uxpGlobal = (globalThis as any).uxp;
-  await uxpGlobal?.shell?.openExternal?.(trimmed, "");
+  const result = await uxpGlobal?.shell?.openExternal?.(
+    parsed.href,
+    "Opening a secure web page in your browser",
+  );
+  if (typeof result === "string" && result.trim()) {
+    return { ok: false, reason: result };
+  }
   return { ok: true };
 }
