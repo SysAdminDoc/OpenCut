@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Final Dead-Key Cleanup
+
+- Advanced E15 to batch 164 by removing the final 14 unused CEP locale keys after the drift scanner confirmed they had no live static consumers, then tightening the dead-key baseline to zero. The live drift report now shows 2,320 keys, 2,320 consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Audio/Shorts/Timeline Shell
 
 - Advanced E15 to batch 163 by wiring audio enhancement, loudness target, shorts export, and timeline marker export labels through existing locale keys. The live drift report now shows 2,334 keys, 2,320 consumers, 14 dead keys, and 0 missing keys.

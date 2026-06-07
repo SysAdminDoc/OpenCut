@@ -9,8 +9,7 @@ linter exposes both directions of drift:
 
 This test:
   - confirms the live tree's missing-key count is zero (hard gate);
-  - confirms the live tree's dead-key count stays at or below
-    ``DEAD_KEY_BASELINE`` (soft gate; reduce over time);
+  - confirms the dead-key baseline and live dead-key count stay at zero;
   - exercises the linter's HTML and JS extraction regexes against
     synthetic inputs.
 """
@@ -62,15 +61,20 @@ class TestI18nDrift(unittest.TestCase):
             f"Missing i18n keys (consumed but not in en.json): {e['missing_keys']}",
         )
 
-    def test_dead_keys_under_baseline_in_live_tree(self):
+    def test_dead_key_baseline_is_zero(self):
         e = self.mod.evaluate()
-        self.assertLessEqual(
-            e["dead_count"], e["baseline"],
-            (
-                f"Dead-key count {e['dead_count']} exceeds baseline "
-                f"{e['baseline']}. Either reduce dead keys or update "
-                "DEAD_KEY_BASELINE in scripts/i18n_lint.py."
-            ),
+        self.assertEqual(
+            e["baseline"],
+            0,
+            "DEAD_KEY_BASELINE should remain zero now that the live locale file has no dead keys.",
+        )
+
+    def test_no_dead_keys_in_live_tree(self):
+        e = self.mod.evaluate()
+        self.assertEqual(
+            e["dead_keys"],
+            [],
+            f"Dead i18n keys (in en.json but never consumed): {e['dead_keys']}",
         )
 
     def test_live_locale_file_has_unique_keys(self):

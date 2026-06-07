@@ -18,10 +18,9 @@ This linter:
        - dead keys (in en.json, no consumer)
        - missing keys (consumed but not in en.json)
 
-Tolerance is intentionally generous on dead keys (under a configurable
-threshold = 150 by default) — the goal is preventing *growth*, not
-forcing one massive cleanup. Missing keys always fail at zero
-tolerance.
+Dead keys and missing keys both fail at zero tolerance. The historic
+dead-key cleanup is complete, so new unused locale keys should be
+removed or wired before they land.
 
 Usage:
     python scripts/i18n_lint.py            # report
@@ -41,10 +40,9 @@ LOCALES = ROOT / "extension" / "com.opencut.panel" / "client" / "locales"
 INDEX_HTML = ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 MAIN_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
 
-# Allow a baseline of pre-existing dead keys. This is the floor — additional
-# dead keys (above the floor) fail CI. Reduce this number over time as
-# real keys are cleaned up.
-DEAD_KEY_BASELINE = 150
+# The historic dead-key cleanup is complete. Keep the floor at zero so new
+# unused locale keys fail the gate immediately.
+DEAD_KEY_BASELINE = 0
 
 # data-i18n="…" / data-i18n-title="…" / data-i18n-label="…" /
 # data-i18n-placeholder="…" / data-i18n-aria-label="…"
