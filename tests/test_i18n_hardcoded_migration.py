@@ -1219,6 +1219,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("gpu.quality", "data-i18n"),
     ("gpu.device", "data-i18n"),
     ("gpu.apply_recommendations", "data-i18n"),
+    # One-hundred-sixtieth batch (Settings shortcut reference and About shell HTML).
+    ("shortcuts.command_palette", "data-i18n"),
+    ("shortcuts.silence", "data-i18n"),
+    ("shortcuts.captions", "data-i18n"),
+    ("shortcuts.normalize", "data-i18n"),
+    ("shortcuts.denoise", "data-i18n"),
+    ("shortcuts.export", "data-i18n"),
+    ("shortcuts.workflow", "data-i18n"),
+    ("shortcuts.cancel", "data-i18n"),
+    ("shortcuts.tabs", "data-i18n"),
+    ("shortcuts.enter", "data-i18n"),
+    ("settings.version", "data-i18n"),
+    ("settings.github", "data-i18n"),
+    ("settings.report_bug", "data-i18n"),
+    ("settings.wiki", "data-i18n"),
 )
 
 
