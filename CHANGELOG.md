@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Review Boards
+
+- Closed RA-54 by adding CEP and UXP Magic Clips review boards with dry-run plan preview, approve/reject candidate controls, approved-only render handoff, preset/caption/LLM payload parity, and visible Plan/Analyze/Render states.
+
 ### Changed - Magic Clips Platform Presets
 
 - Closed RA-53 by deriving approved Magic Clips render targets from export preset IDs, rendering one output per approved platform target, enforcing preset duration and dimension constraints, and returning preset/dimension metadata for generated shorts.

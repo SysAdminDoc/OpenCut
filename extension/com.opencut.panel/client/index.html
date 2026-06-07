@@ -3107,9 +3107,9 @@
                             <label for="shortsPlatform">Platform</label>
                             <select id="shortsPlatform">
                                 <option value="tiktok" selected>TikTok (1080x1920)</option>
-                                <option value="shorts">YouTube Shorts (1080x1920)</option>
-                                <option value="reels">Instagram Reels (1080x1920)</option>
-                                <option value="square">Square (1080x1080)</option>
+                                <option value="youtube_shorts">YouTube Shorts (1080x1920)</option>
+                                <option value="instagram_reels">Instagram Reels (1080x1920)</option>
+                                <option value="instagram_feed">Square Feed (1080x1080)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -3118,6 +3118,17 @@
                                 <input type="range" id="shortsMaxClips" min="1" max="20" value="5" step="1">
                                 <span class="slider-val" id="shortsMaxClipsVal">5</span>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="shortsCaptionStyle">Caption Style</label>
+                            <select id="shortsCaptionStyle">
+                                <option value="default" selected>Default</option>
+                                <option value="bold_yellow">Bold Yellow</option>
+                                <option value="boxed_dark">Boxed Dark</option>
+                                <option value="neon_cyan">Neon Cyan</option>
+                                <option value="cinematic_serif">Cinematic Serif</option>
+                                <option value="top_center">Top Center</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="shortsMinDur">Clip Duration (sec)</label>
@@ -3129,7 +3140,15 @@
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="shortsFaceTrack" checked>Face Tracking</label>
                         <label class="checkbox-row"><input type="checkbox" id="shortsCaptions" checked>Burn-in Captions</label>
-                        <button type="button" class="btn-primary" id="runShortsBtn" disabled data-i18n="export.generate_shorts">Generate Shorts</button>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" id="previewShortsPlanBtn" disabled>Preview Plan</button>
+                            <button type="button" class="btn-primary" id="runShortsBtn" disabled data-i18n="export.generate_shorts">Generate Shorts</button>
+                            <button type="button" class="btn-outline" id="renderShortsApprovedBtn" disabled>Render Approved</button>
+                        </div>
+                        <div class="result-area hidden" id="shortsReviewBoard" data-state="idle" aria-live="polite">
+                            <div id="shortsReviewSummary"></div>
+                            <div class="shorts-review-list" id="shortsReviewList"></div>
+                        </div>
                         <div class="result-area hidden" id="shortsResult">
                             <div id="shortsList"></div>
                         </div>

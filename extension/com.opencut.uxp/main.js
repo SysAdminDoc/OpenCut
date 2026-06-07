@@ -5060,7 +5060,9 @@ function bindEvents() {
   document.getElementById("runStyleTransferBtnUxp")?.addEventListener("click", runStyleTransferUxp);
 
   // ── Shorts Pipeline ──
+  document.getElementById("previewShortsPlanBtnUxp")?.addEventListener("click", previewShortsPlanUxp);
   document.getElementById("runShortsPipelineBtnUxp")?.addEventListener("click", runShortsPipelineUxp);
+  document.getElementById("renderShortsApprovedBtnUxp")?.addEventListener("click", renderApprovedShortsUxp);
 
   // ── Social Media ──
   document.getElementById("socialConnectBtnUxp")?.addEventListener("click", socialConnectUxp);
@@ -5763,20 +5765,186 @@ async function runStyleTransferUxp() {
 // ─────────────────────────────────────────────────────────────
 // Shorts Pipeline
 // ─────────────────────────────────────────────────────────────
-async function runShortsPipelineUxp() {
+let shortsReviewPlanUxp = null;
+
+function getShortsPlatformPresetsUxp() {
+  const preset = document.getElementById("shortsPlatformUxp")?.value?.trim() || "tiktok";
+  return [preset];
+}
+
+function getShortsLlmConfigUxp() {
+  return {
+    provider: document.getElementById("llmProvider")?.value || window._llmSettings?.provider || "ollama",
+    model: document.getElementById("llmModel")?.value || window._llmSettings?.model || "llama3",
+    apiKey: window._llmSettings?.api_key || "",
+    baseUrl: window._llmSettings?.base_url || "",
+  };
+}
+
+function getShortsPayloadUxp() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
   const maxShorts = parseInt(document.getElementById("shortsMaxUxp")?.value ?? "5", 10);
-  const faceTrack = document.getElementById("shortsFaceTrackUxp")?.checked ?? true;
-  const burnCaptions = document.getElementById("shortsCaptionsUxp")?.checked ?? true;
+  const minDuration = parseFloat(document.getElementById("shortsMinUxp")?.value ?? "15");
+  const maxDuration = parseFloat(document.getElementById("shortsMaxDurUxp")?.value ?? "60");
+  const llm = getShortsLlmConfigUxp();
+  return {
+    filepath: clipPath,
+    platform_presets: getShortsPlatformPresetsUxp(),
+    caption_style: document.getElementById("shortsCaptionStyleUxp")?.value || "default",
+    max_candidates: maxShorts,
+    max_shorts: maxShorts,
+    min_duration: minDuration,
+    max_duration: maxDuration,
+    face_track: document.getElementById("shortsFaceTrackUxp")?.checked ?? true,
+    burn_captions: document.getElementById("shortsCaptionsUxp")?.checked ?? true,
+    llm_provider: llm.provider,
+    llm_model: llm.model,
+    llm_api_key: llm.apiKey,
+    llm_base_url: llm.baseUrl,
+  };
+}
+
+function selectedShortsCandidateIdsUxp() {
+  const list = document.getElementById("shortsReviewListUxp");
+  if (!list) return [];
+  return Array.from(list.querySelectorAll("input[data-candidate-id]"))
+    .filter(input => input.checked)
+    .map(input => input.getAttribute("data-candidate-id"))
+    .filter(Boolean);
+}
+
+function updateShortsReviewActionsUxp() {
+  const ids = selectedShortsCandidateIdsUxp();
+  const renderBtn = document.getElementById("renderShortsApprovedBtnUxp");
+  if (renderBtn) renderBtn.disabled = !shortsReviewPlanUxp || ids.length === 0;
+  const board = document.getElementById("shortsReviewBoardUxp");
+  if (board) board.dataset.state = ids.length ? "render" : "plan";
+  const summary = document.getElementById("shortsReviewSummaryUxp");
+  if (summary && shortsReviewPlanUxp && !shortsReviewPlanUxp.requires_analysis) {
+    summary.textContent = ids.length
+      ? `Render state: ${ids.length} approved candidate${ids.length === 1 ? "" : "s"} will be sent to /video/shorts-pipeline.`
+      : "Plan state: approve at least one candidate before rendering.";
+  }
+}
+
+function appendShortsReviewTextUxp(parent, className, text) {
+  if (!text) return;
+  const node = document.createElement("span");
+  node.className = className;
+  node.textContent = text;
+  parent.appendChild(node);
+}
+
+function renderShortsReviewBoardUxp(plan) {
+  shortsReviewPlanUxp = plan || null;
+  const board = document.getElementById("shortsReviewBoardUxp");
+  const summary = document.getElementById("shortsReviewSummaryUxp");
+  const list = document.getElementById("shortsReviewListUxp");
+  if (!board || !summary || !list) return;
+  board.classList.remove("hidden");
+  list.textContent = "";
+  const candidates = Array.isArray(plan?.candidates) ? plan.candidates : [];
+  board.dataset.state = plan?.requires_analysis ? "analyze" : "plan";
+  summary.textContent = plan?.requires_analysis
+    ? "Analyze state: cached transcript or highlight data is required before review."
+    : `Plan state: ${candidates.length} candidate${candidates.length === 1 ? "" : "s"} ready for approval.`;
+  if (!candidates.length) {
+    const empty = document.createElement("div");
+    empty.className = "shorts-review-card";
+    const steps = (plan?.steps || []).map(step => `${step.step_type}: ${step.status}`).join(", ");
+    empty.textContent = steps || "No candidate windows are available yet.";
+    list.appendChild(empty);
+    updateShortsReviewActionsUxp();
+    return;
+  }
+  candidates.forEach((candidate, index) => {
+    const card = document.createElement("div");
+    card.className = "shorts-review-card";
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = true;
+    checkbox.setAttribute("data-candidate-id", candidate.candidate_id || "");
+    checkbox.addEventListener("change", () => {
+      card.classList.toggle("is-rejected", !checkbox.checked);
+      updateShortsReviewActionsUxp();
+    });
+    label.appendChild(checkbox);
+
+    const body = document.createElement("span");
+    appendShortsReviewTextUxp(body, "shorts-review-title", `${index + 1}. ${candidate.title || "Candidate"}`);
+    appendShortsReviewTextUxp(body, "shorts-review-meta", `Score ${candidate.score || 0} | ${candidate.start || 0}s-${candidate.end || 0}s`);
+    appendShortsReviewTextUxp(body, "shorts-review-reason", candidate.selection_reason || (candidate.reasons || []).join("; "));
+    appendShortsReviewTextUxp(body, "shorts-review-excerpt", candidate.transcript_excerpt || "");
+    appendShortsReviewTextUxp(
+      body,
+      "shorts-review-platforms",
+      `Targets: ${(candidate.platform_presets || []).map(p => p.preset_id || p).join(", ") || getShortsPlatformPresetsUxp().join(", ")}`,
+    );
+    appendShortsReviewTextUxp(body, "shorts-review-meta", `Caption style: ${candidate.caption_style || document.getElementById("shortsCaptionStyleUxp")?.value || "default"}`);
+    appendShortsReviewTextUxp(body, "shorts-review-meta", `Thumbnail: first frame at ${candidate.start || 0}s`);
+    label.appendChild(body);
+    card.appendChild(label);
+    list.appendChild(card);
+  });
+  updateShortsReviewActionsUxp();
+}
+
+async function previewShortsPlanUxp() {
+  const payload = getShortsPayloadUxp();
+  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  UIController.setButtonLoading("previewShortsPlanBtnUxp", true);
+  const board = document.getElementById("shortsReviewBoardUxp");
+  const summary = document.getElementById("shortsReviewSummaryUxp");
+  if (board && summary) {
+    board.classList.remove("hidden");
+    board.dataset.state = "plan";
+    summary.textContent = "Plan state: building candidate review board.";
+  }
+  const r = await BackendClient.post("/video/magic-clips/plan", payload);
+  UIController.setButtonLoading("previewShortsPlanBtnUxp", false);
+  if (!r.ok) {
+    UIController.showToast(r.error || r.data?.error || "Magic Clips plan failed.", "error");
+    return;
+  }
+  renderShortsReviewBoardUxp(r.data);
+}
+
+async function renderApprovedShortsUxp() {
+  const ids = selectedShortsCandidateIdsUxp();
+  if (!shortsReviewPlanUxp || !ids.length) {
+    UIController.showToast("Approve at least one Magic Clips candidate first.", "warning");
+    return;
+  }
+  const payload = getShortsPayloadUxp();
+  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  payload.magic_clips_plan = shortsReviewPlanUxp;
+  payload.plan_id = shortsReviewPlanUxp.plan_id || "";
+  payload.candidate_ids = ids;
+  payload.approved_candidate_ids = ids;
+
+  UIController.setButtonLoading("renderShortsApprovedBtnUxp", true);
+  const r = await BackendClient.post("/video/shorts-pipeline", payload);
+  UIController.setButtonLoading("renderShortsApprovedBtnUxp", false);
+  if (r.ok && r.data?.job_id) {
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
+      const count = result?.total_clips || result?.clips?.length || 0;
+      UIController.showToast(`Rendered ${count} approved short-form clips.`, "success");
+    } catch (e) {
+      UIController.showToast(`Approved render failed: ${e.message}`, "error");
+    }
+  } else {
+    UIController.showToast(r.data?.error || r.error || "Approved render failed.", "error");
+  }
+}
+
+async function runShortsPipelineUxp() {
+  const payload = getShortsPayloadUxp();
+  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
 
   UIController.setButtonLoading("runShortsPipelineBtnUxp", true);
-  const r = await BackendClient.post("/video/shorts-pipeline", {
-    filepath: clipPath,
-    max_shorts: maxShorts,
-    face_track: faceTrack,
-    burn_captions: burnCaptions,
-  });
+  const r = await BackendClient.post("/video/shorts-pipeline", payload);
   UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
 
   if (r.ok && r.data?.job_id) {
