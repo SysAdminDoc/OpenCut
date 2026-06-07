@@ -4193,29 +4193,33 @@ async function runColorMatch() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
   const refPath  = document.getElementById("colorRefPath")?.value?.trim();
   if (!clipPath || !refPath) {
-    UIController.showToast("Please select both input and reference clips.", "warning");
+    UIController.showToast(
+      t("uxp.video.runtime.select_input_reference", "Please select both input and reference clips."),
+      "warning"
+    );
     return;
   }
 
   const strength = parseInt(document.getElementById("colorMatchStrength")?.value ?? 80) / 100;
 
   UIController.setButtonLoading("runColorMatchBtn", true);
-  UIController.showProcessing("Matching color grading…");
+  UIController.showProcessing(t("uxp.video.runtime.matching_color_grading", "Matching color grading..."));
 
   await JobPoller.start(
     "/video/color-match",
     { source: clipPath, reference: refPath, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Grading…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.grading", "Grading...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runColorMatchBtn", false);
-      UIController.showToast(`Color match complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
-      UIController.setStatus("Color match complete.");
+      const output = result.output ?? result.output_path ?? t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.video.runtime.color_match_complete_output", "Color match complete. Output: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.video.runtime.color_match_complete_status", "Color match complete."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runColorMatchBtn", false);
-      UIController.showToast(`Color match error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.color_match_error", "Color match error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4223,28 +4227,29 @@ async function runColorMatch() {
 /** ── AUTO ZOOM ── */
 async function runAutoZoom() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const aspect    = document.getElementById("zoomAspect")?.value ?? "9:16";
   const maxZoom   = parseFloat(document.getElementById("zoomFactor")?.value ?? 1.4);
 
   UIController.setButtonLoading("runAutoZoomBtn", true);
-  UIController.showProcessing("Applying auto zoom / reframe…");
+  UIController.showProcessing(t("uxp.video.runtime.applying_auto_zoom_reframe", "Applying auto zoom / reframe..."));
 
   await JobPoller.start(
     "/video/auto-zoom",
     { filepath: clipPath, zoom_amount: maxZoom, easing: "ease_in_out" },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Reframing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.reframing", "Reframing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAutoZoomBtn", false);
-      UIController.showToast(`Auto zoom complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
-      UIController.setStatus("Auto zoom complete.");
+      const output = result.output ?? result.output_path ?? t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.video.runtime.auto_zoom_complete_output", "Auto zoom complete. Output: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.video.runtime.auto_zoom_complete_status", "Auto zoom complete."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAutoZoomBtn", false);
-      UIController.showToast(`Auto zoom error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.auto_zoom_error", "Auto zoom error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4254,14 +4259,14 @@ async function runMulticamCuts() {
   const cam1Path = document.getElementById("clipPathVideo")?.value?.trim();
   const cam2Path = document.getElementById("cam2Path")?.value?.trim();
   if (!cam1Path || !cam2Path) {
-    UIController.showToast("Please select both camera files.", "warning");
+    UIController.showToast(t("uxp.video.runtime.select_both_camera_files", "Please select both camera files."), "warning");
     return;
   }
 
   const strategy = document.getElementById("multicamStrategy")?.value ?? "activity";
 
   UIController.setButtonLoading("runMulticamBtn", true);
-  UIController.showProcessing("Generating multicam cuts…");
+  UIController.showProcessing(t("uxp.video.runtime.generating_multicam_cuts", "Generating multicam cuts..."));
 
   // Backend /video/multicam-cuts wants either ``segments`` (inline list),
   // ``diarization_file`` (a JSON file with diarization data), or a single
@@ -4274,21 +4279,30 @@ async function runMulticamCuts() {
   await JobPoller.start(
     "/video/multicam-cuts",
     { filepath: cam1Path, min_cut_duration: 1.0 },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing cameras…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.analyzing_cameras", "Analyzing cameras...")); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runMulticamBtn", false);
       const cuts = result.cuts ?? [];
-      rememberTimelineCuts(cuts, { source: "Multicam Cut Pass", clipPath: cam1Path });
-      UIController.showToast(`Generated ${cuts.length} multicam cut point(s).`, "success");
-      UIController.setStatus(`Multicam cuts ready — ${cuts.length} cuts.`);
+      rememberTimelineCuts(cuts, { source: t("uxp.video.runtime.multicam_cut_pass", "Multicam Cut Pass"), clipPath: cam1Path });
+      UIController.showToast(
+        formatI18n("uxp.video.runtime.multicam_cuts_generated", "Generated {count} multicam cut point(s).", {
+          count: cuts.length,
+        }),
+        "success"
+      );
+      UIController.setStatus(
+        formatI18n("uxp.video.runtime.multicam_cuts_ready_status", "Multicam cuts ready - {count} cuts.", {
+          count: cuts.length,
+        })
+      );
       // Attempt to apply directly to timeline
       await applyTimelineCuts(cuts);
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runMulticamBtn", false);
-      UIController.showToast(`Multicam error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.multicam_error", "Multicam error: {error}", { error: err }), "error");
     }
   );
 }
