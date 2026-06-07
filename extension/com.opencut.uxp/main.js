@@ -4956,21 +4956,33 @@ async function runFullReport() {
 // ─────────────────────────────────────────────────────────────
 async function runBrollGenerate() {
   const prompt = document.getElementById("brollGenPromptUxp")?.value?.trim();
-  if (!prompt) { UIController.showToast("Enter a B-roll description.", "warning"); return; }
+  if (!prompt) {
+    UIController.showToast(t("uxp.video.runtime.enter_broll_description", "Enter a B-roll description."), "warning");
+    return;
+  }
   const backend = document.getElementById("brollGenBackendUxp")?.value ?? "auto";
   const seedEl = document.getElementById("brollGenSeedUxp");
   const payload = { prompt, backend };
   if (seedEl?.value) payload.seed = parseInt(seedEl.value);
   UIController.setButtonLoading("runBrollGenBtnUxp", true);
-  UIController.showProcessing("Generating AI B-roll…");
-  const r = await BackendClient.post("/video/broll-generate", payload);
-  if (r.ok && r.data?.job_id) {
-    const result = await JobPoller.poll(r.data.job_id);
-    if (result?.output_path) {
-      UIController.showToast(`B-roll generated: ${result.output_path.split(/[/\\]/).pop()}`, "success");
+  UIController.showProcessing(t("uxp.video.runtime.generating_ai_broll", "Generating AI B-roll..."));
+  try {
+    const r = await BackendClient.post("/video/broll-generate", payload);
+    if (r.ok && r.data?.job_id) {
+      const result = await JobPoller.poll(r.data.job_id);
+      const output = result?.output_path?.split(/[/\\]/).pop() || t("uxp.video.runtime.done", "done");
+      UIController.showToast(
+        formatI18n("uxp.video.runtime.broll_generated_output", "B-roll generated: {output}", { output }),
+        "success",
+      );
+      UIController.setStatus(formatI18n("uxp.video.runtime.broll_generated_status", "B-roll generation complete: {output}", { output }));
+    } else {
+      const error = r.error || r.data?.error || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.broll_generation_failed", "B-roll generation failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(`B-roll generation failed: ${r.error}`, "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.broll_generation_failed", "B-roll generation failed: {error}", { error }), "error");
   }
   UIController.hideProcessing();
   UIController.setButtonLoading("runBrollGenBtnUxp", false);
@@ -4981,22 +4993,36 @@ async function runBrollGenerate() {
 // ─────────────────────────────────────────────────────────────
 async function runMultimodalDiarize() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Select a video clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   const numSpeakers = document.getElementById("mmDiarizeNumSpeakersUxp")?.value || "";
   const payload = { filepath: clipPath, sample_fps: 2.0, min_face_confidence: 0.5 };
   if (numSpeakers) payload.num_speakers = parseInt(numSpeakers);
   UIController.setButtonLoading("runMmDiarizeBtnUxp", true);
-  UIController.showProcessing("Running multimodal diarization…");
-  const r = await BackendClient.post("/video/multimodal-diarize", payload);
-  if (r.ok && r.data?.job_id) {
-    const result = await JobPoller.poll(r.data.job_id);
-    if (result) {
-      const msg = `${result.num_speakers ?? 0} speakers, ${result.num_faces ?? 0} faces, ${(result.mappings ?? []).length} mapped`;
-      UIController.showToast(`Diarization complete: ${msg}`, "success");
-      UIController.setStatus(msg);
+  UIController.showProcessing(t("uxp.video.runtime.running_multimodal_diarization", "Running multimodal diarization..."));
+  try {
+    const r = await BackendClient.post("/video/multimodal-diarize", payload);
+    if (r.ok && r.data?.job_id) {
+      const result = await JobPoller.poll(r.data.job_id);
+      if (result) {
+        const summary = formatI18n(
+          "uxp.video.runtime.diarization_summary",
+          "{speakers} speakers, {faces} faces, {mapped} mapped",
+          {
+            speakers: result.num_speakers ?? 0,
+            faces: result.num_faces ?? 0,
+            mapped: (result.mappings ?? []).length,
+          },
+        );
+        UIController.showToast(formatI18n("uxp.video.runtime.diarization_complete_summary", "Diarization complete: {summary}", { summary }), "success");
+        UIController.setStatus(summary);
+      }
+    } else {
+      const error = r.error || r.data?.error || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.diarization_failed", "Diarization failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(`Diarization failed: ${r.error}`, "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.diarization_failed", "Diarization failed: {error}", { error }), "error");
   }
   UIController.hideProcessing();
   UIController.setButtonLoading("runMmDiarizeBtnUxp", false);
@@ -5007,25 +5033,26 @@ async function runMultimodalDiarize() {
 // ─────────────────────────────────────────────────────────────
 async function runSocialUpload() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Select a video to upload.", "warning"); return; }
+  if (!clipPath) { UIController.showToast(t("uxp.video.runtime.select_video_to_upload", "Select a video to upload."), "warning"); return; }
   const platform = document.getElementById("socialPlatformUxp")?.value ?? "youtube";
   const title = document.getElementById("socialTitleUxp")?.value ?? "";
   const description = document.getElementById("socialDescriptionUxp")?.value ?? "";
   const privacy = document.getElementById("socialPrivacyUxp")?.value ?? "private";
   UIController.setButtonLoading("socialUploadBtnUxp", true);
-  UIController.showProcessing(`Uploading to ${platform}…`);
+  UIController.showProcessing(formatI18n("uxp.video.runtime.uploading_to_platform", "Uploading to {platform}...", { platform }));
   const r = await BackendClient.post("/social/upload", {
     filepath: clipPath, platform, title, description, privacy,
   });
   if (r.ok && r.data?.job_id) {
     const result = await JobPoller.poll(r.data.job_id);
     if (result?.url) {
-      UIController.showToast(`Uploaded! View at: ${result.url}`, "success");
+      UIController.showToast(formatI18n("uxp.video.runtime.uploaded_view_url", "Uploaded. View at: {url}", { url: result.url }), "success");
     } else if (result) {
-      UIController.showToast(`Uploaded to ${platform}!`, "success");
+      UIController.showToast(formatI18n("uxp.video.runtime.uploaded_to_platform", "Uploaded to {platform}.", { platform }), "success");
     }
   } else {
-    UIController.showToast(`Upload failed: ${r.error}`, "error");
+    const error = r.error || r.data?.error || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.upload_failed", "Upload failed: {error}", { error }), "error");
   }
   UIController.hideProcessing();
   UIController.setButtonLoading("socialUploadBtnUxp", false);
@@ -5037,13 +5064,13 @@ async function socialConnectUxp() {
   if (r.ok && r.data?.auth_url) {
     const opened = await openHttpsExternalUrl(
       r.data.auth_url,
-      `Opening ${platform} authorization page in your browser`,
+      formatI18n("uxp.video.runtime.opening_platform_authorization", "Opening {platform} authorization page in your browser", { platform }),
     );
     if (opened) {
-      UIController.showToast(`Opening ${platform} authorization page in your browser.`, "info");
+      UIController.showToast(formatI18n("uxp.video.runtime.opening_platform_authorization_done", "Opening {platform} authorization page in your browser.", { platform }), "info");
     }
   } else {
-    UIController.showToast(`OAuth not configured for ${platform}. Set API credentials.`, "warning");
+    UIController.showToast(formatI18n("uxp.video.runtime.oauth_not_configured_platform", "OAuth not configured for {platform}. Set API credentials.", { platform }), "warning");
   }
 }
 
@@ -5606,18 +5633,21 @@ async function runDepthEffect() {
   UIController.setButtonLoading("runDepthBtnUxp", true);
   const r = await BackendClient.post(endpoint, payload);
   if (r.ok && r.data?.job_id) {
-  UIController.showProcessing("Running depth effect…");
+    UIController.showProcessing(t("uxp.video.runtime.running_depth_effect", "Running depth effect..."));
     try {
       const result = await JobPoller.poll(r.data.job_id);
-      UIController.showToast(`Depth effect complete: ${result?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
+      const output = result?.output_path?.split(/[/\\]/).pop() || t("uxp.video.runtime.done", "done");
+      UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_complete", "Depth effect complete: {output}", { output }), "success");
     } catch (e) {
-      UIController.showToast(`Depth effect failed: ${e.message || "unknown"}`, "error");
+      const error = e.message || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_failed", "Depth effect failed: {error}", { error }), "error");
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runDepthBtnUxp", false);
   } else {
     UIController.setButtonLoading("runDepthBtnUxp", false);
-    UIController.showToast(`Error: ${r.error || "Failed to start depth effect"}`, "error");
+    const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_depth_effect", "Failed to start depth effect");
+    UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_start_error", "Error: {error}", { error }), "error");
   }
 }
 
@@ -5631,19 +5661,24 @@ async function runEmotionHighlights() {
   UIController.setButtonLoading("runEmotionBtnUxp", true);
   const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-  UIController.showProcessing("Analyzing emotions…");
+    UIController.showProcessing(t("uxp.video.runtime.analyzing_emotions", "Analyzing emotions..."));
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const peaks = result?.peaks?.length ?? 0;
-      UIController.showToast(`Emotion analysis complete: ${peaks} emotional peaks found.`, "success");
+      UIController.showToast(
+        formatI18n("uxp.video.runtime.emotion_analysis_complete", "Emotion analysis complete: {count} emotional peak(s) found.", { count: peaks }),
+        "success",
+      );
     } catch (e) {
-      UIController.showToast(`Emotion analysis failed: ${e.message || "unknown"}`, "error");
+      const error = e.message || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.emotion_analysis_failed", "Emotion analysis failed: {error}", { error }), "error");
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runEmotionBtnUxp", false);
   } else {
     UIController.setButtonLoading("runEmotionBtnUxp", false);
-    UIController.showToast(`Error: ${r.error || "Failed to start emotion analysis"}`, "error");
+    const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_emotion_analysis", "Failed to start emotion analysis");
+    UIController.showToast(formatI18n("uxp.video.runtime.emotion_analysis_start_error", "Error: {error}", { error }), "error");
   }
 }
 
@@ -5657,19 +5692,24 @@ async function runBrollAnalysis() {
   UIController.setButtonLoading("runBrollPlanBtnUxp", true);
   const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-  UIController.showProcessing("Analyzing B-roll points…");
+    UIController.showProcessing(t("uxp.video.runtime.analyzing_broll_points", "Analyzing B-roll points..."));
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const windows = result?.windows?.length ?? 0;
-      UIController.showToast(`B-roll analysis complete: ${windows} insertion points found.`, "success");
+      UIController.showToast(
+        formatI18n("uxp.video.runtime.broll_analysis_complete", "B-roll analysis complete: {count} insertion point(s) found.", { count: windows }),
+        "success",
+      );
     } catch (e) {
-      UIController.showToast(`B-roll analysis failed: ${e.message || "unknown"}`, "error");
+      const error = e.message || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.broll_analysis_failed", "B-roll analysis failed: {error}", { error }), "error");
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
   } else {
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
-    UIController.showToast(`Error: ${r.error || "Failed to start B-roll analysis"}`, "error");
+    const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_broll_analysis", "Failed to start B-roll analysis");
+    UIController.showToast(formatI18n("uxp.video.runtime.broll_analysis_start_error", "Error: {error}", { error }), "error");
   }
 }
 
@@ -6253,19 +6293,23 @@ async function runUpscaleUxp() {
   const model = document.getElementById("upscaleModelUxp")?.value ?? "realesrgan-x4plus";
 
   UIController.setButtonLoading("runUpscaleBtnUxp", true);
-  const r = await BackendClient.post("/video/ai/upscale", { filepath: clipPath, scale, model });
-  UIController.setButtonLoading("runUpscaleBtnUxp", false);
-
-  if (r.ok && r.data?.job_id) {
-    try {
+  UIController.showProcessing(t("uxp.video.runtime.upscaling_video", "Upscaling video..."));
+  try {
+    const r = await BackendClient.post("/video/ai/upscale", { filepath: clipPath, scale, model });
+    if (r.ok && r.data?.job_id) {
       const result = await JobPoller.poll(r.data.job_id);
-      UIController.showToast(`Upscaled: ${result?.output_path || "done"}`, "success");
-    } catch (e) {
-      UIController.showToast(`Upscale failed: ${e.message}`, "error");
+      const output = result?.output_path || t("uxp.video.runtime.done", "done");
+      UIController.showToast(formatI18n("uxp.video.runtime.upscaled_output", "Upscaled: {output}", { output }), "success");
+    } else {
+      const error = r.data?.error || r.error || t("uxp.video.runtime.upscale_failed_default", "Upscale failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.upscale_failed", "Upscale failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(r.data?.error || "Upscale failed.", "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.upscale_failed", "Upscale failed: {error}", { error }), "error");
   }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runUpscaleBtnUxp", false);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -6278,20 +6322,23 @@ async function runSceneDetectUxp() {
   const threshold = parseFloat(document.getElementById("sceneThresholdUxp")?.value ?? "0.3");
 
   UIController.setButtonLoading("runSceneDetectBtnUxp", true);
-  const r = await BackendClient.post("/video/scenes", { filepath: clipPath, method, threshold });
-  UIController.setButtonLoading("runSceneDetectBtnUxp", false);
-
-  if (r.ok && r.data?.job_id) {
-    try {
+  UIController.showProcessing(t("uxp.video.runtime.detecting_scenes", "Detecting scenes..."));
+  try {
+    const r = await BackendClient.post("/video/scenes", { filepath: clipPath, method, threshold });
+    if (r.ok && r.data?.job_id) {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.scenes?.length || result?.total_scenes || 0;
-      UIController.showToast(`Found ${count} scene boundaries.`, "success");
-    } catch (e) {
-      UIController.showToast(`Scene detection failed: ${e.message}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.scene_boundaries_found", "Found {count} scene boundaries.", { count }), "success");
+    } else {
+      const error = r.data?.error || r.error || t("uxp.video.runtime.scene_detection_failed_default", "Scene detection failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.scene_detection_failed", "Scene detection failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(r.data?.error || "Scene detection failed.", "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.scene_detection_failed", "Scene detection failed: {error}", { error }), "error");
   }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runSceneDetectBtnUxp", false);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -6304,19 +6351,23 @@ async function runStyleTransferUxp() {
   const intensity = (parseInt(document.getElementById("styleIntensityUxp")?.value ?? "100", 10)) / 100;
 
   UIController.setButtonLoading("runStyleTransferBtnUxp", true);
-  const r = await BackendClient.post("/video/style/apply", { filepath: clipPath, style, intensity });
-  UIController.setButtonLoading("runStyleTransferBtnUxp", false);
-
-  if (r.ok && r.data?.job_id) {
-    try {
+  UIController.showProcessing(t("uxp.video.runtime.applying_style_transfer", "Applying style transfer..."));
+  try {
+    const r = await BackendClient.post("/video/style/apply", { filepath: clipPath, style, intensity });
+    if (r.ok && r.data?.job_id) {
       const result = await JobPoller.poll(r.data.job_id);
-      UIController.showToast(`Style applied: ${result?.output_path || "done"}`, "success");
-    } catch (e) {
-      UIController.showToast(`Style transfer failed: ${e.message}`, "error");
+      const output = result?.output_path || t("uxp.video.runtime.done", "done");
+      UIController.showToast(formatI18n("uxp.video.runtime.style_applied_output", "Style applied: {output}", { output }), "success");
+    } else {
+      const error = r.data?.error || r.error || t("uxp.video.runtime.style_transfer_failed_default", "Style transfer failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.style_transfer_failed", "Style transfer failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(r.data?.error || "Style transfer failed.", "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.style_transfer_failed", "Style transfer failed: {error}", { error }), "error");
   }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runStyleTransferBtnUxp", false);
 }
 
 // ─────────────────────────────────────────────────────────────

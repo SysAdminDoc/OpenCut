@@ -253,6 +253,14 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.video.runtime.color_match_complete_output",
         "uxp.video.runtime.auto_zoom_complete_output",
         "uxp.video.runtime.multicam_cuts_generated",
+        "uxp.video.runtime.generating_ai_broll",
+        "uxp.video.runtime.diarization_complete_summary",
+        "uxp.video.runtime.uploading_to_platform",
+        "uxp.video.runtime.depth_effect_complete",
+        "uxp.video.runtime.broll_analysis_complete",
+        "uxp.video.runtime.upscaled_output",
+        "uxp.video.runtime.scene_boundaries_found",
+        "uxp.video.runtime.style_applied_output",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -343,6 +351,52 @@ def test_uxp_video_core_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showProcessing("Generating multicam cuts' not in video_js
     assert "Generated ${cuts.length} multicam cut point" not in video_js
     assert "Multicam cuts ready" in _locale()["uxp.video.runtime.multicam_cuts_ready_status"]
+
+
+def test_uxp_video_ai_effects_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    broll_diarize_js = js[
+        js.index("// AI B-Roll Generation")
+        : js.index("// Helpers")
+    ]
+    effects_js = js[
+        js.index("// Depth Effects")
+        : js.index("// Shorts Pipeline")
+    ]
+    combined = broll_diarize_js + effects_js
+
+    assert 'UIController.showToast("Enter a B-roll description.' not in combined
+    assert 'UIController.showProcessing("Generating AI B-roll' not in combined
+    assert "UIController.showToast(`B-roll generated:" not in combined
+    assert "UIController.showToast(`B-roll generation failed:" not in combined
+    assert 'UIController.showToast("Select a video clip first.' not in combined
+    assert 'UIController.showProcessing("Running multimodal diarization' not in combined
+    assert "UIController.showToast(`Diarization complete:" not in combined
+    assert "UIController.showToast(`Diarization failed:" not in combined
+    assert 'UIController.showToast("Select a video to upload.' not in combined
+    assert "UIController.showProcessing(`Uploading to" not in combined
+    assert "UIController.showToast(`Uploaded! View at:" not in combined
+    assert "UIController.showToast(`Uploaded to" not in combined
+    assert "UIController.showToast(`Upload failed:" not in combined
+    assert "UIController.showToast(`Opening ${platform} authorization" not in combined
+    assert "UIController.showToast(`OAuth not configured" not in combined
+    assert 'UIController.showProcessing("Running depth effect' not in combined
+    assert "UIController.showToast(`Depth effect complete:" not in combined
+    assert "UIController.showToast(`Depth effect failed:" not in combined
+    assert 'UIController.showProcessing("Analyzing emotions' not in combined
+    assert "UIController.showToast(`Emotion analysis complete:" not in combined
+    assert "UIController.showToast(`Emotion analysis failed:" not in combined
+    assert 'UIController.showProcessing("Analyzing B-roll points' not in combined
+    assert "UIController.showToast(`B-roll analysis complete:" not in combined
+    assert "UIController.showToast(`B-roll analysis failed:" not in combined
+    assert "UIController.showToast(`Upscaled:" not in combined
+    assert "UIController.showToast(`Upscale failed:" not in combined
+    assert "UIController.showToast(`Found ${count} scene boundaries." not in combined
+    assert "UIController.showToast(`Scene detection failed:" not in combined
+    assert "UIController.showToast(`Style applied:" not in combined
+    assert "UIController.showToast(`Style transfer failed:" not in combined
+    assert "B-roll analysis complete" in _locale()["uxp.video.runtime.broll_analysis_complete"]
+    assert "Style applied" in _locale()["uxp.video.runtime.style_applied_output"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():
