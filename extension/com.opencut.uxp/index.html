@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenCut UXP</title>
+  <title data-i18n="uxp.document_title">OpenCut UXP</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <a class="oc-skip-link" href="#mainContent">Skip to workspace</a>
+  <a class="oc-skip-link" href="#mainContent" data-i18n="common.skip_to_main">Skip to workspace</a>
   <div id="app">
 
     <!-- ===== HEADER ===== -->
@@ -20,11 +20,11 @@
         <span class="oc-version" id="uxpHeaderVersion">v1.32.0</span>
       </div>
       <div class="oc-header-right">
-        <div class="oc-connection" id="connectionStatus" title="Backend connection status">
-          <span class="oc-conn-dot" id="connDot"></span>
-          <span class="oc-conn-label" id="connLabel">Offline</span>
+        <div class="oc-connection" id="connectionStatus" title="Backend connection status" data-i18n-title="conn.backend_status">
+          <span class="oc-conn-dot" id="connDot" aria-label="Backend offline" data-i18n-aria-label="conn.dot_disconnected"></span>
+          <span class="oc-conn-label" id="connLabel" data-i18n="conn.offline">Offline</span>
         </div>
-        <button type="button" class="oc-icon-btn" id="refreshBtn" title="Refresh connection" aria-label="Refresh connection">
+        <button type="button" class="oc-icon-btn" id="refreshBtn" title="Refresh connection" aria-label="Refresh connection" data-i18n-title="conn.refresh_connection" data-i18n-aria-label="conn.refresh_connection">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
         </button>
       </div>
@@ -34,89 +34,89 @@
     <div class="oc-processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
       <div class="oc-processing-left">
         <div class="oc-spinner"></div>
-        <span class="oc-processing-msg" id="processingMsg">Processing…</span>
+        <span class="oc-processing-msg" id="processingMsg" data-i18n="processing.processing">Processing…</span>
       </div>
       <div class="oc-processing-right">
         <span class="oc-elapsed" id="processingElapsed">0s</span>
-        <button type="button" class="oc-cancel-btn" id="cancelBtn">Cancel</button>
+        <button type="button" class="oc-cancel-btn" id="cancelBtn" title="Cancel active run" aria-label="Cancel active run" data-i18n="common.cancel" data-i18n-title="processing.cancel_active_run" data-i18n-aria-label="processing.cancel_active_run">Cancel</button>
       </div>
-      <div class="oc-progress-track"><div class="oc-progress-fill" id="progressFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Processing progress"></div></div>
+      <div class="oc-progress-track"><div class="oc-progress-fill" id="progressFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Processing progress" data-i18n-aria-label="processing.progress"></div></div>
     </div>
 
     <!-- ===== TAB NAVIGATION ===== -->
-    <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav">
-      <button type="button" class="oc-tab active" data-tab="cut" role="tab" aria-selected="true" aria-controls="tab-cut" id="tabBtnCut">
+    <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav" data-i18n-aria-label="nav.feature_tabs">
+      <button type="button" class="oc-tab active" data-tab="cut" role="tab" aria-selected="true" aria-controls="tab-cut" id="tabBtnCut" title="Cut" aria-label="Cut" data-i18n-title="uxp.tabs.cut" data-i18n-aria-label="uxp.tabs.cut">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5z"/></svg>
-        <span>Cut</span>
+        <span data-i18n="uxp.tabs.cut">Cut</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="captions" role="tab" aria-selected="false" aria-controls="tab-captions" id="tabBtnCaptions">
+      <button type="button" class="oc-tab" data-tab="captions" role="tab" aria-selected="false" aria-controls="tab-captions" id="tabBtnCaptions" title="Captions" aria-label="Captions" data-i18n-title="uxp.tabs.captions" data-i18n-aria-label="uxp.tabs.captions">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
-        <span>Captions</span>
+        <span data-i18n="uxp.tabs.captions">Captions</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="audio" role="tab" aria-selected="false" aria-controls="tab-audio" id="tabBtnAudio">
+      <button type="button" class="oc-tab" data-tab="audio" role="tab" aria-selected="false" aria-controls="tab-audio" id="tabBtnAudio" title="Audio" aria-label="Audio" data-i18n-title="uxp.tabs.audio" data-i18n-aria-label="uxp.tabs.audio">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
-        <span>Audio</span>
+        <span data-i18n="uxp.tabs.audio">Audio</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="video" role="tab" aria-selected="false" aria-controls="tab-video" id="tabBtnVideo">
+      <button type="button" class="oc-tab" data-tab="video" role="tab" aria-selected="false" aria-controls="tab-video" id="tabBtnVideo" title="Video" aria-label="Video" data-i18n-title="uxp.tabs.video" data-i18n-aria-label="uxp.tabs.video">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
-        <span>Video</span>
+        <span data-i18n="uxp.tabs.video">Video</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline" id="tabBtnTimeline">
+      <button type="button" class="oc-tab" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline" id="tabBtnTimeline" title="Timeline" aria-label="Timeline" data-i18n-title="uxp.tabs.timeline" data-i18n-aria-label="uxp.tabs.timeline">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3A1.5 1.5 0 0115 10.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
-        <span>Timeline</span>
+        <span data-i18n="uxp.tabs.timeline">Timeline</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="search" role="tab" aria-selected="false" aria-controls="tab-search" id="tabBtnSearch">
+      <button type="button" class="oc-tab" data-tab="search" role="tab" aria-selected="false" aria-controls="tab-search" id="tabBtnSearch" title="Search" aria-label="Search" data-i18n-title="uxp.tabs.search" data-i18n-aria-label="uxp.tabs.search">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.099zm-5.242 1.156a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>
-        <span>Search</span>
+        <span data-i18n="uxp.tabs.search">Search</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="deliverables" role="tab" aria-selected="false" aria-controls="tab-deliverables" id="tabBtnDeliverables">
+      <button type="button" class="oc-tab" data-tab="deliverables" role="tab" aria-selected="false" aria-controls="tab-deliverables" id="tabBtnDeliverables" title="Deliverables" aria-label="Deliverables" data-i18n-title="uxp.tabs.deliverables" data-i18n-aria-label="uxp.tabs.deliverables">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M9.293.879A1 1 0 0110 1.586V4h2.5A1.5 1.5 0 0114 5.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5v-13A1.5 1.5 0 013.5 0H9a1 1 0 01.293.293L9.293.879zM9 1.586L3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-9H10a1 1 0 01-1-1V1.586zM5 7.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5A.5.5 0 015 10zm0 2.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>
-        <span>Deliverables</span>
+        <span data-i18n="uxp.tabs.deliverables">Deliverables</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="agent" role="tab" aria-selected="false" aria-controls="tab-agent" id="tabBtnAgent">
+      <button type="button" class="oc-tab" data-tab="agent" role="tab" aria-selected="false" aria-controls="tab-agent" id="tabBtnAgent" title="Agent" aria-label="Agent" data-i18n-title="uxp.tabs.agent" data-i18n-aria-label="uxp.tabs.agent">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zM6 5.5a.5.5 0 011 0v3a.5.5 0 01-1 0v-3zm3 0a.5.5 0 011 0v3a.5.5 0 01-1 0v-3zM5.5 11a2.5 2.5 0 005 0 .5.5 0 011 0 3.5 3.5 0 11-7 0 .5.5 0 011 0z"/></svg>
-        <span>Agent</span>
+        <span data-i18n="uxp.tabs.agent">Agent</span>
       </button>
-      <button type="button" class="oc-tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings" id="tabBtnSettings">
+      <button type="button" class="oc-tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings" id="tabBtnSettings" title="Settings" aria-label="Settings" data-i18n-title="uxp.tabs.settings" data-i18n-aria-label="uxp.tabs.settings">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
-        <span>Settings</span>
+        <span data-i18n="uxp.tabs.settings">Settings</span>
       </button>
     </nav>
 
     <!-- ===== MAIN CONTENT ===== -->
     <main class="oc-content" id="mainContent">
-      <section class="oc-workspace-overview" aria-labelledby="workspaceOverviewTitle">
+      <section class="oc-workspace-overview" aria-labelledby="workspaceOverviewTitle" aria-label="Workspace overview" data-i18n-aria-label="uxp.workspace.overview_region">
         <div class="oc-workspace-copy">
-          <div class="oc-workspace-kicker" translate="no">OpenCut Studio</div>
-          <h1 class="oc-workspace-title" id="workspaceOverviewTitle">Cut &amp; Clean</h1>
-          <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
-          <div class="oc-workspace-actions" role="group" aria-label="Workspace shortcuts">
-            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn">Choose Media</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSearchBtn">Search Library</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceTimelineBtn">Timeline Tools</button>
+          <div class="oc-workspace-kicker" data-i18n="uxp.workspace.studio">OpenCut Studio</div>
+          <h1 class="oc-workspace-title" id="workspaceOverviewTitle" data-i18n="uxp.workspace.cut_title">Cut &amp; Clean</h1>
+          <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle" data-i18n="uxp.workspace.cut_subtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
+          <div class="oc-workspace-actions" role="group" aria-label="Workspace shortcuts" data-i18n-aria-label="uxp.workspace.shortcuts">
+            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn" data-i18n="uxp.workspace.choose_media">Choose Media</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSearchBtn" data-i18n="uxp.workspace.search_library">Search Library</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceTimelineBtn" data-i18n="uxp.workspace.timeline_tools">Timeline Tools</button>
           </div>
         </div>
-        <div class="oc-workspace-meta" role="list" aria-label="Current workspace context">
+        <div class="oc-workspace-meta" role="list" aria-label="Current workspace context" data-i18n-aria-label="uxp.workspace.current_context">
           <div class="oc-workspace-meta-item" role="listitem">
-            <span class="oc-workspace-meta-label">Active Shot</span>
-            <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite">No source selected</span>
+            <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_source">Active Shot</span>
+            <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite" data-i18n="uxp.workspace.no_source_selected">No source selected</span>
           </div>
           <div class="oc-workspace-meta-item" role="listitem">
-            <span class="oc-workspace-meta-label">Backend</span>
-            <span class="oc-workspace-meta-value" id="workspaceBackendValue" aria-live="polite">Offline</span>
+            <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_backend">Backend</span>
+            <span class="oc-workspace-meta-value" id="workspaceBackendValue" aria-live="polite" data-i18n="conn.offline">Offline</span>
           </div>
           <div class="oc-workspace-meta-item" role="listitem">
-            <span class="oc-workspace-meta-label">Media Library</span>
-            <span class="oc-workspace-meta-value" id="workspaceLibraryValue" aria-live="polite">0 clips</span>
+            <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_library">Media Library</span>
+            <span class="oc-workspace-meta-value" id="workspaceLibraryValue" aria-live="polite" data-i18n="uxp.workspace.library_zero">0 clips</span>
           </div>
         </div>
         <div class="oc-workspace-guide" id="workspaceGuide" aria-live="polite">
           <div class="oc-workspace-guide-copy">
-            <span class="oc-workspace-guide-kicker" id="workspaceGuideKicker">Choose media</span>
-            <h2 class="oc-workspace-guide-title" id="workspaceGuideTitle">Choose an active shot to start this workspace.</h2>
-            <p class="oc-workspace-guide-text" id="workspaceGuideText">OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.</p>
+            <span class="oc-workspace-guide-kicker" id="workspaceGuideKicker" data-i18n="uxp.guide.choose_media_kicker">Choose media</span>
+            <h2 class="oc-workspace-guide-title" id="workspaceGuideTitle" data-i18n="uxp.guide.choose_media_title">Choose an active shot to start this workspace.</h2>
+            <p class="oc-workspace-guide-text" id="workspaceGuideText" data-i18n="uxp.guide.choose_media_text">OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.</p>
           </div>
-          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="workspaceGuideAction" data-action="choose-clip">Choose Media</button>
+          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="workspaceGuideAction" data-action="choose-clip" data-i18n="uxp.workspace.choose_media">Choose Media</button>
         </div>
       </section>
 

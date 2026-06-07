@@ -28,7 +28,7 @@ production-grade with deep test coverage. The tiered stub system
 across Waves A-M without shipping broken functionality.
 
 **Highest-value improvement direction:** Harden the security boundary (3 code
-execution risks found), close UXP parity gaps (zero i18n, missing empty
+execution risks found), close UXP parity gaps (broad i18n parity, missing empty
 states), and improve the expression/scripting sandbox before the Chat Conductor
 agent (F143) makes these surfaces more exposed.
 
@@ -37,7 +37,7 @@ agent (F143) makes these surfaces more exposed.
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
-4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
+4. **P1 -- UXP panel i18n parity** -- foundation loader and first shell slice shipped; broad parity remains open vs CEP's 1,190 attributes
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- closed 2026-06-07
@@ -331,12 +331,12 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P2
 
 ### EI-04: UXP Panel i18n Parity
-- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP panel has zero `data-i18n` attributes -- all strings are hardcoded English.
-- **Problem:** UXP is "the future" (CLAUDE.md design principle #6), but it lacks the i18n infrastructure the CEP panel has been painstakingly migrated to over 153 batches. When CEP EOL happens (~September 2026), UXP becomes the only panel, and it has no localization.
+- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP now has a local locale loader plus first-viewport shell attributes, but most panel strings remain hardcoded English.
+- **Problem:** UXP is "the future" (CLAUDE.md design principle #6), but its i18n coverage still trails the CEP panel's painstakingly migrated surface. When CEP EOL happens (~September 2026), UXP becomes the only panel, so broad localization parity remains urgent.
 - **Recommended change:** Port the i18n loading system (`loadLocale`, `t()`, `applyI18nToDOM`) from CEP `main.js` to UXP `main.js`. Add `data-i18n` attributes to all UXP HTML strings. Share the same `locales/en.json` keys.
 - **Code locations:** `extension/com.opencut.uxp/main.js`, `index.html`; reference `extension/com.opencut.panel/client/main.js` i18n module
 - **Backward compatibility:** Additive -- English behavior unchanged
-- **Verification:** Verify `data-i18n` attribute count in UXP matches CEP. Run existing i18n drift tests against UXP.
+- **Verification:** Verify `data-i18n` attribute count in UXP matches CEP. Run the UXP i18n static guard and expand it toward the existing CEP drift depth.
 - **Complexity:** L (9 tabs, many sub-panels, all strings)
 - **Priority:** P1
 
@@ -439,12 +439,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 - **aria-live regions:** Processing banners, status, toasts all use `aria-live`
 - **Focus styles:** 187 `:focus`/`:focus-visible` rules in CEP CSS, 43 in UXP
 - **Reduced motion:** 4 `prefers-reduced-motion` queries in CEP, 3 in UXP
-- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test
+- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP foundation shell loader and static guard shipped in Cycle 94
 - **a11y regression tests:** `test_panel_a11y_invariants.py` guards toast a11y
 
 ### Gaps
 
-1. **UXP has zero i18n** -- all strings hardcoded English (covered in EI-04)
+1. **UXP i18n is only a foundation slice** -- most strings remain hardcoded English (covered in EI-04)
 2. **Only English locale shipped** -- i18n plumbed but `locales/en.json` is the only file
 3. **CEP lacks structured empty-state components** -- closed 2026-06-07 with shared CEP empty-state classes and Favorites empty copy
 4. **No structured error-recovery UI** -- errors surface via toasts only (covered in NF-04)
@@ -549,11 +549,11 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 ### Phase 3: UXP Parity (P1-P2)
 
 - [ ] P1 - **UXP panel i18n infrastructure**
-  - Why: CEP EOL ~September 2026; UXP has zero i18n and becomes the only panel
-  - Evidence: CEP has 1,190 `data-i18n` attributes; UXP has 0; 153 i18n migration batches invested in CEP
-  - Touches: `extension/com.opencut.uxp/main.js`, `index.html`
+  - Why: CEP EOL ~September 2026; UXP needs full i18n parity before it becomes the only panel
+  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader, first shell slice, and static guard; broad UXP parity remains below the >500 acceptance target
+  - Touches: `extension/com.opencut.uxp/main.js`, `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py`
   - Acceptance: UXP loads `locales/en.json`, `data-i18n` count > 500
-  - Verify: i18n drift test passes against UXP panel
+  - Verify: UXP i18n guard passes, then expand toward full drift parity against the UXP panel
 
 - [x] P2 - **CEP empty-state components**
   - Why: UXP has 10+ structured empty states; CEP originally relied on plain hints or hidden empty containers
