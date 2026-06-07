@@ -100,7 +100,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-10 | Magic clips macro | L | Closed 2026-06-06: RA-51 through RA-56 shipped dry-run plan graphs, approved-candidate render handoff, explainable scoring, platform preset rendering, CEP/UXP review-board parity, checkpointed resumable runs, and output bundle handoff manifests |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
-| RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
+| RA-13 | UXP external launch perms | M | Closed 2026-06-06: live and WebView manifests declare HTTPS-only `launchProcess`, OAuth launches validate HTTPS URLs, and static tests block file-launch APIs |
 | RA-14 | WebView permission split | M | Dev vs release permissions |
 | RA-15 | [all] advisory decision | M | Closed 2026-06-06: `opencut[all]` is the release-audited convenience lane; Torch/Transformers-backed packages are explicit via `torch-stack` and named feature extras |
 | RA-16 | Adobe dist-tag tracking | S | release-* tags untracked |
@@ -536,6 +536,7 @@ declare `manifestVersion`; it also still grants `localFileSystem: "fullAccess"`.
 | RA-17 manifest schema guard | Closed 2026-06-06: live `extension/com.opencut.uxp/manifest.json` now declares `manifestVersion: 5`; `tests/test_uxp_manifest_schema.py` guards required live keys and the dormant WebView scaffold's separate v6 template. | Keep the live-vs-scaffold schema split documented until F252 WebView cutover changes the active entrypoint. | Done |
 | RA-11 least-privilege filesystem | `localFileSystem: "fullAccess"` in UXP manifest | Split development/full-access needs from release needs; document any required full-access paths and test the narrowed manifest once WebView cutover is validated. | P1 |
 | RA-19 clipboard permission | Closed 2026-06-06: live and WebView manifests declare `clipboard: "readAndWrite"`, and UXP output copy routes through `copyTextToClipboard()`. | Keep the shared helper and manifest permission in sync while copy actions remain in the UXP surface. | Done |
+| RA-13 launchProcess permission | Closed 2026-06-06: live and WebView manifests declare HTTPS-only `launchProcess` schemes with no file extensions, and `tests/test_uxp_external_launch_permission.py` guards the OAuth launch helper plus no-`openPath()` contract. | Keep external launch limited to OAuth browser handoff unless a new workflow earns a separate permission review. | Done |
 | F252 WebView cutover | Adobe WebView UI guidance; `bolt-webview` scaffold exists | Keep cutover blocked until live UDT capture validates the 14 direct-UXP host actions and the manifest entrypoint switch. | P0 external |
 
 **External sources:** Adobe Premiere UXP API docs
@@ -617,6 +618,7 @@ research-only pass.
 | RA-17 manifest-version guard | Closed 2026-06-06: live `manifest.json` declares `manifestVersion: 5`, while dormant `bolt-webview/uxp.config.ts` remains a separate v6 cutover template with explicit docs and tests. | Reopen only if Adobe changes Premiere's supported manifest schema or the F252 WebView entrypoint becomes live. | Done |
 | RA-11 filesystem permission split | Live and scaffold configs use `localFileSystem: "fullAccess"` | Make a release manifest profile that requests only required file operations after the UDT capture proves which host paths need direct access. | P1 |
 | RA-19 clipboard permission | Closed 2026-06-06: the live manifest and WebView scaffold declare `clipboard: "readAndWrite"`, and `tests/test_uxp_clipboard_permission.py` guards the helper/manifest contract. | Revisit only if copy flows are removed or Adobe changes the Premiere UXP clipboard permission contract. | Done |
+| RA-13 launchProcess permission | Closed 2026-06-06: live and scaffold configs declare only HTTPS external-launch schemes, social OAuth launch uses a normalizing helper, and static tests reject file-launch APIs until a dedicated extension review exists. | Revisit only if OpenCut adds a non-OAuth external launch workflow. | Done |
 | RA-20 confirmation guard | Closed 2026-06-06: UXP source no longer calls raw browser dialogs; `tests/test_uxp_confirmation_guard.py` blocks `window.alert`, `window.prompt`, `window.confirm`, and bare dialog calls. | Keep destructive UXP actions on panel-native confirmation flows unless the manifest explicitly opts into beta alerts with live evidence. | Done |
 
 ### Cycle 9: Docker/runtime parity audit
@@ -1294,6 +1296,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 60 | Magic Clips review-board parity | CEP and UXP panel HTML/JS/CSS, `tests/test_magic_clips_panel_ui.py` | CEP still went straight to render and UXP lacked duration/platform/caption controls plus approved-candidate review, so users could not preview the dry-run plan or render only approved clips from both panel surfaces. | Closed RA-54 by adding CEP and UXP Magic Clips review boards, dry-run plan buttons, approved-only render actions, preset/caption/LLM payload parity, Plan/Analyze/Render status text, and static route/payload tests. |
 | 2026-06-06 | Cycle 61 | Magic Clips checkpointed resume | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `tests/test_magic_clips.py`, `tests/test_job_resume.py` | Reviewed Magic Clips renders still relied on temp intermediates and generic job resume metadata, so an interrupted run could not preserve transcript/highlight/render state or skip already-completed clips. | Closed RA-55 by writing a versioned run manifest, keeping reviewed intermediates under a run directory, marking the shorts route resumable, storing manifest paths in job metadata and responses, resuming only when source/config hashes match, and testing cancel-after-transcribe, cancel-after-first-render, and config mismatch paths. |
 | 2026-06-06 | Cycle 62 | Magic Clips output bundle handoff | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, CEP/UXP Magic Clips panel code, `tests/test_magic_clips.py`, `tests/test_magic_clips_panel_ui.py` | Magic Clips reviewed renders produced files and run checkpoints, but downstream tools still had to rediscover exports and could not consume a grouped candidate/variant bundle. | Closed RA-56 by writing `magic_clips_manifest.json` plus CSV handoff files, grouping multi-platform variants under one candidate, surfacing bundle paths/payloads through the route and clip results, and rendering completed bundle contents in CEP and UXP review boards. |
+| 2026-06-06 | Cycle 63 | UXP external launch permission | `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, `docs/UXP_MIGRATION.md`, `tests/test_uxp_external_launch_permission.py` | The UXP social OAuth flow called `shell.openExternal()` but the manifests did not declare `launchProcess`, and the WebView scaffold allowed generic http(s) URL launches without an explicit no-file-launch contract. | Closed RA-13 by declaring HTTPS-only launch schemes with an empty extension allowlist, routing OAuth browser handoff through HTTPS normalization and manual fallback, aligning the WebView wrapper, and adding static guards against broad schemes or `openPath()` usage. |
 
 ### Research queries to run later
 
@@ -1314,23 +1317,23 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 63: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-2. Cycle 64: Continue E15 or another remaining release-trust gap after batch 154.
-3. Cycle 65: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 66: Inspect marker metadata workflows for remaining reusable host locator needs.
-5. Cycle 67: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+1. Cycle 64: Continue UXP trust work around RA-11/RA-14 after RA-13 launch permissions.
+2. Cycle 65: Continue E15 or another remaining release-trust gap after batch 154.
+3. Cycle 66: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 67: Inspect marker metadata workflows for remaining reusable host locator needs.
+5. Cycle 68: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 62: Magic Clips output bundle handoff.
+Cycle 63: UXP external launch permission.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
-RA-01, RA-02, RA-03, RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
+RA-01, RA-02, RA-03, RA-04, RA-13, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
 RA-45, RA-54, RA-55, and RA-56 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
@@ -1341,7 +1344,8 @@ keeps the shipped UXP manifest on Premiere-supported schema version 5 while the
 WebView scaffold's version 6 template remains dormant. RA-18 keeps deprecated
 Clipboard APIs, object-form clipboard writes, and legacy `uxpvideo*` events out
 of UXP/WebView sources. RA-19 declares the clipboard permission and routes copy
-behavior through a shared fallback helper. RA-20 keeps UXP destructive
+behavior through a shared fallback helper. RA-13 keeps external launch limited
+to HTTPS OAuth browser handoff with no file-extension launches. RA-20 keeps UXP destructive
 confirmation on a panel-native second-click flow rather than beta browser
 dialogs. RA-25/RA-29/RA-30 keep Docker installs on the tracked requirements
 surface, fail closed on dependency install errors, and exclude local
@@ -1524,7 +1528,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+1. Revisit UXP trust work around RA-11/RA-14 after RA-13 launch permissions.
 2. Continue E15 rolling CEP i18n migration.
 3. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
 

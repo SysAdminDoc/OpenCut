@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the Magic Clips output bundle handoff pass.
+Last synced: 2026-06-06 during the UXP external launch permission pass.
 
 ## Execution Order
 
@@ -51,7 +51,7 @@ Last synced: 2026-06-06 during the Magic Clips output bundle handoff pass.
 - [x] **RA-10 magic clips macro** - RA-51 through RA-56 are shipped, including output bundle manifests for downstream handoff.
 - [ ] **RA-11 UXP least-privilege filesystem** - tighten UXP filesystem permission posture.
 - [ ] **RA-12 hybrid plugin validator** - validate hybrid CEP/UXP plugin packaging.
-- [ ] **RA-13 UXP external launch permissions** - document and validate external launch permission behavior.
+- [x] **RA-13 UXP external launch permissions** - live and WebView manifests now allow HTTPS-only launches, OAuth launch calls validate HTTPS URLs, and static tests block file launches.
 - [ ] **RA-14 WebView permission split** - split WebView permission handling into clearer runtime checks.
 
 ## Blocked External Items
