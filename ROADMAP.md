@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (164/~160+) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.276 / batch 164. |
+| E15 | CEP i18n migration | Rolling batches (165/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.277 / batch 165. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -586,16 +586,16 @@ Descript Underlord `https://www.descript.com/underlord`; CapCut Desktop AI
 
 `python scripts/i18n_lint.py --json` passed with 2,273 locale keys, 1,077 HTML
 consumers, 1,161 JS consumers, 2,218 unique consumers, 55 dead keys, 0 missing
-keys, and 0 dead keys over the 150-key baseline. This means the E15 queue is no
-longer primarily about broad missing-key drift; it is now a finish-line cleanup
-around the remaining dead keys and any still-bare user-visible strings not
-covered by the static scanner.
+keys, and 0 dead keys over the 150-key baseline. Cycle 76 later closed the
+dead-key cleanup and moved the baseline to zero; Cycle 77 added JS metadata-key
+consumer coverage. Remaining E15 work should target still-bare user-visible
+strings and dynamic-rendering scanner gaps.
 
 | Candidate | Evidence | Recommendation | Priority |
 |---|---|---|---|
-| E15 dead-key cleanup | `scripts/i18n_lint.py --json` reports 55 dead keys | Group dead keys by UI domain, then either rewire genuinely reusable strings or delete obsolete keys with focused migrated-key tests. | P2 |
-| E15 scanner coverage | `scripts/i18n_lint.py` only scans `data-i18n*` and `t(...)` calls | Add targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
-| E15 roadmap status | `TODO.md` says batch 153; `PROJECT_CONTEXT.md` logs through pass 264 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
+| E15 dead-key cleanup | `scripts/i18n_lint.py --json` now reports 0 dead keys and a 0-key baseline | Keep the baseline at zero and remove or wire any future dead key in the same batch that introduces it. | P2 |
+| E15 scanner coverage | `scripts/i18n_lint.py` scans `data-i18n*`, direct `t(...)` calls, and supported JS key-field metadata | Continue targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
+| E15 roadmap status | `TODO.md` now tracks v4.277 / batch 165 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
 
 ### Cycle 8: UXP/WebView cutover audit
 
@@ -1312,6 +1312,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 74 | CEP i18n settings/form cleanup | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Settings Preferences and Whisper CPU-mode labels still had bare-English shell copy, and the locale file still carried unused generic form labels after related controls moved to more specific keys. | Advanced E15 to batch 162 by wiring six settings labels through existing locale keys and removing nine unused generic form locale keys; the drift gate now reports 2,334 keys, 2,313 consumers, 21 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 75 | CEP i18n audio/shorts/timeline shell | CEP `index.html`, `tests/test_i18n_hardcoded_migration.py` | Audio enhancement, loudness match, Shorts options, and timeline marker export controls still had bare-English labels even though matching locale keys already existed. | Advanced E15 to batch 163 by wiring those controls through existing locale keys; the drift gate now reports 2,334 keys, 2,320 consumers, 14 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 76 | CEP i18n final dead-key cleanup | CEP `en.json`, `scripts/i18n_lint.py`, `tests/test_i18n_drift.py` | The locale file still carried 14 unused keys after the latest shell migration, even though every static consumer had a matching locale entry. | Advanced E15 to batch 164 by removing the final unused locale keys and tightening the dead-key baseline to zero; the drift gate now reports 2,320 keys, 2,320 consumers, 0 dead keys, and 0 missing keys. |
+| 2026-06-06 | Cycle 77 | CEP i18n JS metadata scanner coverage | `scripts/i18n_lint.py`, `tests/test_i18n_drift.py` | The drift scanner still only counted HTML locale attributes and direct `t(...)` calls, leaving structured JS locale-key metadata invisible to the consumer ledger. | Advanced E15 to batch 165 by counting supported JS key-field metadata such as `labelKey`; the drift gate now reports 2,320 keys, 2,320 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1332,17 +1333,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 77: Continue E15 scanner coverage or another remaining panel-i18n cleanup.
-2. Cycle 78: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 79: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 80: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 81: Audit the next release-trust or UX debt item that live tests can close locally.
+1. Cycle 78: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 79: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 80: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 81: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 82: Audit the next release-trust or UX debt item that live tests can close locally.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 76: CEP i18n final dead-key cleanup.
+Cycle 77: CEP i18n JS metadata scanner coverage.
 
 #### Current focus
 
@@ -1399,14 +1400,15 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 164: the final unused CEP locale keys have been
-removed, the dead-key baseline is now zero, and audio enhancement, loudness
+E15 is advanced through batch 165: the final unused CEP locale keys have been
+removed, the dead-key baseline is now zero, the scanner counts supported JS
+metadata locale keys such as `labelKey`, and audio enhancement, loudness
 match, Shorts options, timeline marker export, Settings Preferences, Whisper CPU mode,
 Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
 diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,320 keys, 2,320 consumers, 0 dead
+the drift gate reports 2,320 keys, 2,320 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1434,8 +1436,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - The Adobe tracker, label seeder, Release Full permissions, UXP manifest, and
   Dockerfile all have concrete local evidence for the active RA queue.
 - E15's live i18n linter passes with 0 dead keys and 0 missing keys; remaining
-  work should target new hardcoded shell strings and scanner coverage, not broad
-  missing-key repair.
+  work should target new hardcoded shell strings and additional scanner coverage,
+  not broad missing-key repair.
 - The repo `.venv` can launch but lacks pytest/dev tooling; `bootstrap_check.py
   --metadata-only --dev` now catches that state, while `py -3.12` passes the
   same dev check in this workspace.
@@ -1483,6 +1485,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batch 164 removed the final 14 dead CEP locale keys after the scanner
   confirmed they had no static consumers, then set the dead-key baseline to
   zero so regressions fail immediately.
+- E15 batch 165 expanded the drift scanner to count supported JS locale-key
+  metadata fields and now reports 16 metadata consumers without changing the
+  zero-dead/zero-missing live state.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1564,7 +1569,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue E15 rolling CEP i18n migration with scanner coverage or a new hardcoded-shell audit; dead-key cleanup should remain at zero.
+1. Continue E15 rolling CEP i18n migration with another scanner-coverage pass or a new hardcoded-shell audit; dead-key cleanup should remain at zero.
 2. Audit the next release-trust or UX debt item that live tests can close locally.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
