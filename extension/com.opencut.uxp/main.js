@@ -3096,16 +3096,21 @@ function updateDeliverablesSummary() {
     );
     setDeliverablesButtonsDisabled(false);
   } else {
-    setStatusPill("seqInfoStatePill", "Not Loaded", "empty", "Load the active Premiere sequence before generating deliverables.");
+    setStatusPill(
+      "seqInfoStatePill",
+      t("uxp.deliverables.not_loaded", "Not Loaded"),
+      "empty",
+      t("uxp.deliverables.sequence_summary_placeholder", "Load the active Premiere sequence before generating handoff docs.")
+    );
     setTextAndTitle(
       "seqInfoSummary",
-      "Load the active Premiere sequence before generating handoff docs.",
-      "Load the active Premiere sequence before generating handoff docs."
+      t("uxp.deliverables.sequence_summary_placeholder", "Load the active Premiere sequence before generating handoff docs."),
+      t("uxp.deliverables.sequence_summary_placeholder", "Load the active Premiere sequence before generating handoff docs.")
     );
     setTextAndTitle(
       "deliverablesSequenceValue",
-      "Load sequence info",
-      "Load sequence info before generating handoff docs."
+      t("uxp.deliverables.load_sequence_info_value", "Load sequence info"),
+      t("uxp.deliverables.load_sequence_info_before_docs", "Load sequence info before generating handoff docs.")
     );
     setDeliverablesButtonsDisabled(true);
   }
@@ -3125,24 +3130,28 @@ function updateDeliverablesSummary() {
       activity.output || `${label} at ${formatLocaleTime(activity.time)}`
     );
   } else {
-    setTextAndTitle("deliverablesLastExportValue", "No exports yet", "No deliverables have been generated in this session.");
+    setTextAndTitle(
+      "deliverablesLastExportValue",
+      t("uxp.deliverables.no_exports_yet", "No exports yet"),
+      t("uxp.deliverables.no_deliverables_generated", "No deliverables have been generated in this session.")
+    );
   }
 
   if (!backendOnline) {
-    setDeliverablesStatus("Reconnect the local backend before generating handoff documents or report packages.", "error");
+    setDeliverablesStatus(t("uxp.deliverables.status_backend_offline", "Reconnect the local backend before generating handoff documents or report packages."), "error");
   } else if (!_lastSequenceInfo) {
-    setDeliverablesStatus("Load sequence info, choose a destination if needed, then generate the handoff docs you need.", "idle");
+    setDeliverablesStatus(t("uxp.deliverables.status_line", "Load sequence info, choose a destination if needed, then generate the handoff docs you need."), "idle");
   } else if (!selectedTypes.length) {
-    setDeliverablesStatus("Sequence info is ready. Select at least one handoff document below, or generate a single sheet above for this pass.", "warning");
+    setDeliverablesStatus(t("uxp.deliverables.status_select_handoff_document", "Sequence info is ready. Select at least one handoff document below, or generate a single sheet above for this pass."), "warning");
   } else if (!_lastDeliverableActivity && !hasOutputDestination) {
-    setDeliverablesStatus("Sequence ready. Choose an output folder if you want handoff docs saved somewhere more durable than the session temp folder.", "warning", output.title);
+    setDeliverablesStatus(t("uxp.deliverables.status_choose_output_folder", "Sequence ready. Choose an output folder if you want handoff docs saved somewhere more durable than the session temp folder."), "warning", output.title);
   } else if (_lastDeliverableActivity) {
     const lastLabel = _lastDeliverableActivity.count
       ? `${_lastDeliverableActivity.label} finished`
       : `${_lastDeliverableActivity.label} ready`;
     setDeliverablesStatus(`${lastLabel}. Generate another document or refresh the sequence info before the next handoff pass.`, "success", _lastDeliverableActivity.output);
   } else {
-    setDeliverablesStatus("Sequence info is ready. Generate a single document or run the full report when the handoff package is ready.", "ready");
+    setDeliverablesStatus(t("uxp.deliverables.status_ready_run_report", "Sequence info is ready. Generate a single document or run the full report when the handoff package is ready."), "ready");
   }
 }
 
