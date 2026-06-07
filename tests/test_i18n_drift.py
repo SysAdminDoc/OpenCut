@@ -10,8 +10,8 @@ linter exposes both directions of drift:
 This test:
   - confirms the live tree's missing-key count is zero (hard gate);
   - confirms the dead-key baseline and live dead-key count stay at zero;
-  - exercises the linter's HTML and JS extraction regexes against
-    synthetic inputs.
+  - exercises the linter's HTML, JS call, and JS key-field extraction
+    regexes against synthetic inputs.
 """
 from __future__ import annotations
 
@@ -115,6 +115,33 @@ class TestI18nDrift(unittest.TestCase):
         self.assertIn("audio.duck", found)
         self.assertIn("video.title_tip", found)
         self.assertNotIn("not_an_i18n_key", found)
+
+    def test_js_key_field_regex_captures_supported_locale_metadata(self):
+        js = """
+        var shortcut = { labelKey: "shortcuts.command_palette" };
+        var quoted = { "placeholderKey": "forms.search_placeholder" };
+        var title = { titleKey: "workspace.choose_clip_title" };
+        var external = { apiKey: "provider.secret" };
+        var loose = { key: "not.locale.metadata" };
+        """
+        found = self.mod._scan_js_metadata_consumers(js)
+        self.assertEqual(found, {
+            "shortcuts.command_palette",
+            "forms.search_placeholder",
+            "workspace.choose_clip_title",
+        })
+        self.assertNotIn("provider.secret", found)
+        self.assertNotIn("not.locale.metadata", found)
+
+    def test_js_consumer_union_includes_key_field_metadata(self):
+        js = """
+        var direct = t("audio.duck");
+        var shortcut = { labelKey: "shortcuts.command_palette" };
+        """
+        self.assertEqual(self.mod._scan_js_consumers_from_source(js), {
+            "audio.duck",
+            "shortcuts.command_palette",
+        })
 
 
 if __name__ == "__main__":
