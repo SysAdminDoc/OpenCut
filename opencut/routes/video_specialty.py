@@ -24,8 +24,6 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     safe_bool,
     safe_float,
@@ -255,153 +253,149 @@ def _magic_clip_platform_presets(data, candidates):
 @video_specialty_bp.route("/video/shorts-pipeline", methods=["POST"])
 @require_csrf
 @workflow_step("Running shorts pipeline")
-@async_job("shorts_pipeline", resumable=True)
+@async_job("shorts_pipeline", resumable=True, rate_limit_key="ai_gpu")
 def video_shorts_pipeline(job_id, filepath, data):
     """Generate short-form clips from a long video (transcribe + highlight + reframe + captions)."""
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A ai_gpu operation is already running. Please wait.")
-    try:
-        from opencut.core.llm import LLMConfig
-        from opencut.core.shorts_pipeline import (
-            ShortsPipelineConfig,
-            build_magic_clips_downstream_handoff,
-            generate_shorts,
-            magic_clips_run_manifest_path,
-        )
+    from opencut.core.llm import LLMConfig
+    from opencut.core.shorts_pipeline import (
+        ShortsPipelineConfig,
+        build_magic_clips_downstream_handoff,
+        generate_shorts,
+        magic_clips_run_manifest_path,
+    )
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        _shorts_provider = data.get("llm_provider", "ollama")
-        if _shorts_provider not in ("ollama", "openai", "anthropic", "gemini"):
-            _shorts_provider = "ollama"
-        llm_config = LLMConfig(
-            provider=_shorts_provider,
-            model=data.get("llm_model", ""),
-            api_key=data.get("llm_api_key", ""),
-            base_url=data.get("llm_base_url", ""),
-        )
+    _shorts_provider = data.get("llm_provider", "ollama")
+    if _shorts_provider not in ("ollama", "openai", "anthropic", "gemini"):
+        _shorts_provider = "ollama"
+    llm_config = LLMConfig(
+        provider=_shorts_provider,
+        model=data.get("llm_model", ""),
+        api_key=data.get("llm_api_key", ""),
+        base_url=data.get("llm_base_url", ""),
+    )
 
-        _shorts_whisper = data.get("whisper_model", "base")
-        if _shorts_whisper not in VALID_WHISPER_MODELS:
-            _shorts_whisper = "base"
-        approved_candidates = _approved_magic_clip_candidates(data)
-        checkpoint_manifest_path = str(
-            data.get("checkpoint_manifest_path")
-            or data.get("partial_output_path")
-            or ""
-        ).strip()
-        if checkpoint_manifest_path:
-            checkpoint_manifest_path = validate_path(checkpoint_manifest_path)
-        config = ShortsPipelineConfig(
-            whisper_model=_shorts_whisper,
-            max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
-            min_duration=safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0),
-            max_duration=safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0),
-            target_w=safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680),
-            target_h=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
-            face_track=safe_bool(data.get("face_track", True), True),
-            burn_captions=safe_bool(data.get("burn_captions", True), True),
-            caption_style=data.get("caption_style", "default") if data.get("caption_style", "default") in ("default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center") else "default",
-            llm_provider=llm_config.provider,
-            llm_model=llm_config.model,
-            llm_api_key=llm_config.api_key,
-            llm_base_url=llm_config.base_url,
-            approved_plan_id=_magic_clip_plan_id(data),
-            approved_candidates=approved_candidates,
-            platform_presets=_magic_clip_platform_presets(data, approved_candidates),
-            transcript_segments=data.get("transcript_segments") if isinstance(data.get("transcript_segments"), list) else None,
-            checkpoint_manifest_path=checkpoint_manifest_path,
-            resume=safe_bool(data.get("resume", True), True),
-        )
-        if not config.checkpoint_manifest_path and (config.approved_plan_id or config.approved_candidates):
-            config.checkpoint_manifest_path = magic_clips_run_manifest_path(
-                filepath,
-                config=config,
-                output_dir=output_dir,
-            )
-        if config.checkpoint_manifest_path:
-            _update_job(job_id, partial_output_path=config.checkpoint_manifest_path)
-
-        clips = generate_shorts(
+    _shorts_whisper = data.get("whisper_model", "base")
+    if _shorts_whisper not in VALID_WHISPER_MODELS:
+        _shorts_whisper = "base"
+    approved_candidates = _approved_magic_clip_candidates(data)
+    checkpoint_manifest_path = str(
+        data.get("checkpoint_manifest_path")
+        or data.get("partial_output_path")
+        or ""
+    ).strip()
+    if checkpoint_manifest_path:
+        checkpoint_manifest_path = validate_path(checkpoint_manifest_path)
+    config = ShortsPipelineConfig(
+        whisper_model=_shorts_whisper,
+        max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
+        min_duration=safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0),
+        max_duration=safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0),
+        target_w=safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680),
+        target_h=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
+        face_track=safe_bool(data.get("face_track", True), True),
+        burn_captions=safe_bool(data.get("burn_captions", True), True),
+        caption_style=data.get("caption_style", "default")
+        if data.get("caption_style", "default")
+        in ("default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center")
+        else "default",
+        llm_provider=llm_config.provider,
+        llm_model=llm_config.model,
+        llm_api_key=llm_config.api_key,
+        llm_base_url=llm_config.base_url,
+        approved_plan_id=_magic_clip_plan_id(data),
+        approved_candidates=approved_candidates,
+        platform_presets=_magic_clip_platform_presets(data, approved_candidates),
+        transcript_segments=data.get("transcript_segments") if isinstance(data.get("transcript_segments"), list) else None,
+        checkpoint_manifest_path=checkpoint_manifest_path,
+        resume=safe_bool(data.get("resume", True), True),
+    )
+    if not config.checkpoint_manifest_path and (config.approved_plan_id or config.approved_candidates):
+        config.checkpoint_manifest_path = magic_clips_run_manifest_path(
             filepath,
             config=config,
             output_dir=output_dir,
-            on_progress=_on_progress,
         )
-        manifest_path = next(
-            (getattr(c, "manifest_path", "") for c in clips if getattr(c, "manifest_path", "")),
-            config.checkpoint_manifest_path,
-        )
-        bundle_manifest_path = next(
-            (getattr(c, "bundle_manifest_path", "") for c in clips if getattr(c, "bundle_manifest_path", "")),
-            "",
-        )
-        bundle_csv_path = next(
-            (getattr(c, "bundle_csv_path", "") for c in clips if getattr(c, "bundle_csv_path", "")),
-            "",
-        )
-        bundle_payload = {}
-        if bundle_manifest_path:
-            try:
-                with open(bundle_manifest_path, encoding="utf-8") as handle:
-                    loaded_bundle = json.load(handle)
-                if isinstance(loaded_bundle, dict):
-                    bundle_payload = loaded_bundle
-            except OSError:
-                bundle_payload = {}
-        handoff_payload = {}
-        if bundle_manifest_path:
-            try:
-                handoff_payload = build_magic_clips_downstream_handoff(bundle_manifest_path)
-            except (OSError, ValueError) as exc:
-                handoff_payload = {
-                    "schema_version": "opencut.magic_clips.downstream.v1",
-                    "bundle_manifest_path": bundle_manifest_path,
-                    "timeline_imports": [],
-                    "social_uploads": [],
-                    "warnings": [{"type": "handoff_unavailable", "message": str(exc)}],
-                }
+    if config.checkpoint_manifest_path:
+        _update_job(job_id, partial_output_path=config.checkpoint_manifest_path)
 
-        return {
-            "clips": [
-                {
-                    "index": c.index,
-                    "output_path": c.output_path,
-                    "start": c.start,
-                    "end": c.end,
-                    "duration": c.duration,
-                    "title": c.title,
-                    "score": round(c.score, 3) if c.score else 0,
-                    "platform_preset": getattr(c, "platform_preset", ""),
-                    "width": getattr(c, "width", 0),
-                    "height": getattr(c, "height", 0),
-                    "manifest_path": getattr(c, "manifest_path", ""),
-                    "bundle_manifest_path": getattr(c, "bundle_manifest_path", ""),
-                    "bundle_csv_path": getattr(c, "bundle_csv_path", ""),
-                    "engagement": {
-                        "hook_strength": getattr(c.engagement, "hook_strength", 0),
-                        "emotional_peak": getattr(c.engagement, "emotional_peak", 0),
-                        "pacing": getattr(c.engagement, "pacing", 0),
-                        "quotability": getattr(c.engagement, "quotability", 0),
-                        "overall": getattr(c.engagement, "overall", 0),
-                    } if getattr(c, "engagement", None) else None,
-                }
-                for c in clips
-            ],
-            "total_clips": len(clips),
-            "magic_clips_manifest": manifest_path,
-            "magic_clips_bundle_manifest": bundle_manifest_path,
-            "magic_clips_bundle_csv": bundle_csv_path,
-            "magic_clips_bundle": bundle_payload,
-            "magic_clips_downstream_handoff": handoff_payload,
-        }
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    clips = generate_shorts(
+        filepath,
+        config=config,
+        output_dir=output_dir,
+        on_progress=_on_progress,
+    )
+    manifest_path = next(
+        (getattr(c, "manifest_path", "") for c in clips if getattr(c, "manifest_path", "")),
+        config.checkpoint_manifest_path,
+    )
+    bundle_manifest_path = next(
+        (getattr(c, "bundle_manifest_path", "") for c in clips if getattr(c, "bundle_manifest_path", "")),
+        "",
+    )
+    bundle_csv_path = next(
+        (getattr(c, "bundle_csv_path", "") for c in clips if getattr(c, "bundle_csv_path", "")),
+        "",
+    )
+    bundle_payload = {}
+    if bundle_manifest_path:
+        try:
+            with open(bundle_manifest_path, encoding="utf-8") as handle:
+                loaded_bundle = json.load(handle)
+            if isinstance(loaded_bundle, dict):
+                bundle_payload = loaded_bundle
+        except OSError:
+            bundle_payload = {}
+    handoff_payload = {}
+    if bundle_manifest_path:
+        try:
+            handoff_payload = build_magic_clips_downstream_handoff(bundle_manifest_path)
+        except (OSError, ValueError) as exc:
+            handoff_payload = {
+                "schema_version": "opencut.magic_clips.downstream.v1",
+                "bundle_manifest_path": bundle_manifest_path,
+                "timeline_imports": [],
+                "social_uploads": [],
+                "warnings": [{"type": "handoff_unavailable", "message": str(exc)}],
+            }
+
+    return {
+        "clips": [
+            {
+                "index": c.index,
+                "output_path": c.output_path,
+                "start": c.start,
+                "end": c.end,
+                "duration": c.duration,
+                "title": c.title,
+                "score": round(c.score, 3) if c.score else 0,
+                "platform_preset": getattr(c, "platform_preset", ""),
+                "width": getattr(c, "width", 0),
+                "height": getattr(c, "height", 0),
+                "manifest_path": getattr(c, "manifest_path", ""),
+                "bundle_manifest_path": getattr(c, "bundle_manifest_path", ""),
+                "bundle_csv_path": getattr(c, "bundle_csv_path", ""),
+                "engagement": {
+                    "hook_strength": getattr(c.engagement, "hook_strength", 0),
+                    "emotional_peak": getattr(c.engagement, "emotional_peak", 0),
+                    "pacing": getattr(c.engagement, "pacing", 0),
+                    "quotability": getattr(c.engagement, "quotability", 0),
+                    "overall": getattr(c.engagement, "overall", 0),
+                } if getattr(c, "engagement", None) else None,
+            }
+            for c in clips
+        ],
+        "total_clips": len(clips),
+        "magic_clips_manifest": manifest_path,
+        "magic_clips_bundle_manifest": bundle_manifest_path,
+        "magic_clips_bundle_csv": bundle_csv_path,
+        "magic_clips_bundle": bundle_payload,
+        "magic_clips_downstream_handoff": handoff_payload,
+    }
 
 
 @video_specialty_bp.route("/video/magic-clips/plan", methods=["POST"])
@@ -431,7 +425,7 @@ def video_magic_clips_plan():
 # ---------------------------------------------------------------------------
 @video_specialty_bp.route("/video/depth/map", methods=["POST"])
 @require_csrf
-@async_job("depth_map")
+@async_job("depth_map", rate_limit_key="ai_gpu")
 def video_depth_map(job_id, filepath, data):
     """Generate a depth map video using Depth Anything V2."""
     output_dir = data.get("output_dir", "")
@@ -441,28 +435,21 @@ def video_depth_map(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A gpu_job operation is already running. Please wait.")
-    try:
-        from opencut.core.depth_effects import estimate_depth_map
+    from opencut.core.depth_effects import estimate_depth_map
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = estimate_depth_map(filepath, output_dir=effective_dir, model_size=model_size, on_progress=_on_progress)
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = estimate_depth_map(filepath, output_dir=effective_dir, model_size=model_size, on_progress=_on_progress)
+    return {"output_path": out}
 
 
 @video_specialty_bp.route("/video/depth/bokeh", methods=["POST"])
 @require_csrf
-@async_job("depth_bokeh")
+@async_job("depth_bokeh", rate_limit_key="ai_gpu")
 def video_depth_bokeh(job_id, filepath, data):
     """Apply depth-of-field (bokeh) simulation using depth estimation."""
     output_dir = data.get("output_dir", "")
@@ -474,32 +461,25 @@ def video_depth_bokeh(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A gpu_job operation is already running. Please wait.")
-    try:
-        from opencut.core.depth_effects import apply_bokeh_effect
+    from opencut.core.depth_effects import apply_bokeh_effect
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = apply_bokeh_effect(
-            filepath, output_dir=effective_dir,
-            focus_point=focus_point, blur_strength=blur_strength,
-            model_size=model_size, on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = apply_bokeh_effect(
+        filepath, output_dir=effective_dir,
+        focus_point=focus_point, blur_strength=blur_strength,
+        model_size=model_size, on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 @video_specialty_bp.route("/video/depth/parallax", methods=["POST"])
 @require_csrf
-@async_job("depth_parallax")
+@async_job("depth_parallax", rate_limit_key="ai_gpu")
 def video_depth_parallax(job_id, filepath, data):
     """Apply 3D parallax zoom (Ken Burns) effect using depth estimation."""
     output_dir = data.get("output_dir", "")
@@ -510,27 +490,20 @@ def video_depth_parallax(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A gpu_job operation is already running. Please wait.")
-    try:
-        from opencut.core.depth_effects import apply_parallax_zoom
+    from opencut.core.depth_effects import apply_parallax_zoom
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = apply_parallax_zoom(
-            filepath, output_dir=effective_dir,
-            zoom_amount=zoom_amount, model_size=model_size,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = apply_parallax_zoom(
+        filepath, output_dir=effective_dir,
+        zoom_amount=zoom_amount, model_size=model_size,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 # ---------------------------------------------------------------------------

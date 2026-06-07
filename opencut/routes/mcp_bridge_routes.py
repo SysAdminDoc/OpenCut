@@ -16,7 +16,7 @@ Three routes:
   POST /mcp/call      — invoke a tool: {tool, arguments} → {result}.
                         Wraps ``opencut.mcp_server.handle_tool_call``;
                         rate-limited per-tool via the existing
-                        ``rate_limit`` machinery so the bridge can't
+                        ``rate_limit_slot`` helper so the bridge can't
                         be used to bypass per-key throttles.
   GET  /mcp/info      — capability report (count, extended-enabled,
                         version, base-url).
@@ -40,7 +40,7 @@ import time
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.security import rate_limit, rate_limit_release, require_csrf, safe_bool
+from opencut.security import RateLimitExceeded, rate_limit_slot, require_csrf, safe_bool
 
 logger = logging.getLogger("opencut")
 mcp_bridge_bp = Blueprint("mcp_bridge", __name__)
@@ -86,7 +86,6 @@ def route_mcp_call():
       tool        str   required, must be in the bridge allowlist
       arguments   dict  required (use ``{}`` for no-arg tools)
     """
-    acquired_key: str | None = None
     try:
         from opencut import mcp_server
 
@@ -110,33 +109,26 @@ def route_mcp_call():
         # Uses a deterministic key per tool name so concurrent identical
         # calls queue (rather than fan out and overload the backend).
         rl_key = f"mcp_bridge::{tool}"
-        if not rate_limit(rl_key):
-            return jsonify({
-                "error": "rate limit exceeded for tool",
-                "tool": tool,
-                "retry_after_seconds": 1,
-            }), 429
-        acquired_key = rl_key
-
-        start = time.perf_counter()
-        result = mcp_server.handle_tool_call(tool, arguments)
-        duration_ms = int((time.perf_counter() - start) * 1000)
+        with rate_limit_slot(rl_key):
+            start = time.perf_counter()
+            result = mcp_server.handle_tool_call(tool, arguments)
+            duration_ms = int((time.perf_counter() - start) * 1000)
 
         return jsonify({
             "tool": tool,
             "result": result,
             "duration_ms": duration_ms,
         })
+    except RateLimitExceeded:
+        return jsonify({
+            "error": "rate limit exceeded for tool",
+            "tool": tool,
+            "retry_after_seconds": 1,
+        }), 429
     except (ValueError, TypeError) as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:  # pragma: no cover
         return safe_error(exc, "mcp_bridge_call")
-    finally:
-        if acquired_key:
-            try:
-                rate_limit_release(acquired_key)
-            except Exception:  # pragma: no cover
-                pass
 
 
 @mcp_bridge_bp.route("/mcp/info", methods=["GET"])

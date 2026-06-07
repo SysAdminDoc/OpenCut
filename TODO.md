@@ -4,12 +4,12 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the WCAG contrast release gate.
+Last synced: 2026-06-07 during the async rate-limit migration.
 
 ## Execution Order
 
 - [ ] **E15 i18n migration rolling batches** - current detailed state: batch 172 with a zero-dead-key baseline, JS metadata-key scanner coverage, and `data-i18n-alt` scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
-- [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, cleanup-thread lazy initialization, and the WCAG contrast audit are closed; continue with remaining release-trust findings and external evidence gates.
+- [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, cleanup-thread lazy initialization, WCAG contrast audit, and async route rate-limit migration are closed; continue with remaining release-trust findings and external evidence gates.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [x] **Magic Clips downstream bundle reuse** - `magic_clips_manifest.json` now feeds shared timeline import records, `/social/upload` dry-run payloads, `/video/shorts-pipeline` handoff results, and `/timeline/magic-clips-import-plan`.
@@ -25,6 +25,7 @@ Last synced: 2026-06-07 during the WCAG contrast release gate.
 - [x] **RA-20 UXP confirmation guard** - search-index clearing now uses an inline second-click panel confirmation and static tests block raw UXP alert/prompt/confirm calls.
 - [x] **RA-21 Python 3.13 classifier proof** - retracted the untested Python 3.13 classifier until a CI workflow lane proves it, with a metadata guard in pytest-fast.
 - [x] **WCAG contrast audit in CI** - `opencut.tools.contrast_audit` now audits 72 committed CEP/UXP design-token foreground/background pairs, release smoke runs the `contrast-audit` step, and pytest-fast carries low-contrast fixture coverage.
+- [x] **Async route rate-limit migration** - GPU-heavy/model-install async routes now use `async_job(rate_limit_key=...)`, the MCP bridge uses `rate_limit_slot()` for dynamic per-tool keys, and release-smoke blocks direct route-level rate-limit primitive calls.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [x] **RA-23 GitHub Actions SHA pins** - workflow action references now use full-length SHAs with adjacent version comments and a static release-smoke guard rejects mutable action refs.
 - [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.

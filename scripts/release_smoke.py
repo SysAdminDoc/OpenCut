@@ -842,6 +842,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_docker_distribution_docs.py",
     "tests/test_telemetry_aptabase.py",
     "tests/test_fuzz_harness_targets.py",
+    "tests/test_async_job_rate_limit.py",
     "tests/test_job_cancellation_race.py",
     "tests/test_helpers_cleanup.py",
     "tests/test_launcher_scripts.py",

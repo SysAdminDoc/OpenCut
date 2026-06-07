@@ -35,8 +35,6 @@ from opencut.jobs import (
 from opencut.security import (
     VALID_WHISPER_MODELS,
     get_json_dict,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     safe_bool,
     safe_float,
@@ -869,34 +867,26 @@ def audio_pro_deepfilter(job_id, filepath, data):
 
 @audio_bp.route("/audio/pro/install", methods=["POST"])
 @require_csrf
-@async_job("install", filepath_required=False)
+@async_job("install", filepath_required=False, rate_limit_key="model_install")
 def audio_pro_install(job_id, filepath, data):
     """Install audio pro dependencies."""
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("Another model_install operation is already running. Please wait.")
+    component = data.get("component", "pedalboard")
 
-    try:
-        component = data.get("component", "pedalboard")
+    packages = {
+        "pedalboard": ["pedalboard"],
+        "deepfilter": ["deepfilternet"],
+    }
 
-        packages = {
-            "pedalboard": ["pedalboard"],
-            "deepfilter": ["deepfilternet"],
-        }
+    pkgs = packages.get(component, [])
+    if not pkgs:
+        raise ValueError(f"Unknown component: {component}")
 
-        pkgs = packages.get(component, [])
-        if not pkgs:
-            raise ValueError(f"Unknown component: {component}")
+    for i, pkg in enumerate(pkgs):
+        pct = int((i / len(pkgs)) * 90)
+        _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+        safe_pip_install(pkg, timeout=600)
 
-        for i, pkg in enumerate(pkgs):
-            pct = int((i / len(pkgs)) * 90)
-            _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-            safe_pip_install(pkg, timeout=600)
-
-        return {"component": component}
-    finally:
-        if acquired:
-            rate_limit_release("model_install")
+    return {"component": component}
 
 
 # ---------------------------------------------------------------------------
@@ -1032,32 +1022,24 @@ def tts_subtitled(job_id, filepath, data):
 
 @audio_bp.route("/audio/tts/install", methods=["POST"])
 @require_csrf
-@async_job("install", filepath_required=False)
+@async_job("install", filepath_required=False, rate_limit_key="model_install")
 def tts_install(job_id, filepath, data):
     """Install TTS engine dependencies."""
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("Another model_install operation is already running. Please wait.")
+    component = data.get("component", "edge_tts")
 
-    try:
-        component = data.get("component", "edge_tts")
+    packages = {
+        "edge_tts": ["edge-tts"],
+        "kokoro": ["kokoro>=0.3", "soundfile"],
+    }
+    pkgs = packages.get(component, [])
+    if not pkgs:
+        raise ValueError(f"Unknown component: {component}")
 
-        packages = {
-            "edge_tts": ["edge-tts"],
-            "kokoro": ["kokoro>=0.3", "soundfile"],
-        }
-        pkgs = packages.get(component, [])
-        if not pkgs:
-            raise ValueError(f"Unknown component: {component}")
+    for pkg in pkgs:
+        _update_job(job_id, progress=30, message=f"Installing {pkg}...")
+        safe_pip_install(pkg, timeout=600)
 
-        for pkg in pkgs:
-            _update_job(job_id, progress=30, message=f"Installing {pkg}...")
-            safe_pip_install(pkg, timeout=600)
-
-        return {"component": component}
-    finally:
-        if acquired:
-            rate_limit_release("model_install")
+    return {"component": component}
 
 make_install_route(audio_bp, "/audio/crisper-whisper/install", "crisper_whisper",
                    ["torch", "transformers"],
@@ -1316,7 +1298,7 @@ def music_ai_capabilities():
 
 @audio_bp.route("/audio/music-ai/generate", methods=["POST"])
 @require_csrf
-@async_job("musicgen", filepath_required=False)
+@async_job("musicgen", filepath_required=False, rate_limit_key="ai_gpu")
 def music_ai_generate(job_id, filepath, data):
     """Generate music from text prompt via MusicGen."""
     from opencut.core.music_ai import generate_music
@@ -1327,37 +1309,29 @@ def music_ai_generate(job_id, filepath, data):
     if len(prompt) > 2000:
         raise ValueError("Prompt too long (max 2000 chars)")
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    d = data.get("output_dir", "")
+    if d:
+        d = validate_path(d)
+    else:
+        d = tempfile.gettempdir()
+    _mg_model = data.get("model", "small")
+    if _mg_model not in ("small", "medium", "large"):
+        _mg_model = "small"
+    out = generate_music(prompt, output_dir=d,
+                          duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
+                          model_size=_mg_model,
+                          temperature=safe_float(data.get("temperature", 1.0), 1.0, min_val=0.1, max_val=2.0),
+                          on_progress=_p)
 
-        d = data.get("output_dir", "")
-        if d:
-            d = validate_path(d)
-        else:
-            d = tempfile.gettempdir()
-        _mg_model = data.get("model", "small")
-        if _mg_model not in ("small", "medium", "large"):
-            _mg_model = "small"
-        out = generate_music(prompt, output_dir=d,
-                              duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
-                              model_size=_mg_model,
-                              temperature=safe_float(data.get("temperature", 1.0), 1.0, min_val=0.1, max_val=2.0),
-                              on_progress=_p)
-
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {"output_path": out}
 
 
 @audio_bp.route("/audio/music-ai/ace-step", methods=["POST"])
 @require_csrf
-@async_job("ace-step", filepath_required=False)
+@async_job("ace-step", filepath_required=False, rate_limit_key="ai_gpu")
 def music_ai_ace_step(job_id, filepath, data):
     """Generate music with vocals + lyrics using ACE-Step 1.5."""
     from opencut.core.music_ai import generate_music_ace_step
@@ -1371,34 +1345,26 @@ def music_ai_ace_step(job_id, filepath, data):
     if len(lyrics) > 10000:
         raise ValueError("Lyrics too long (max 10000 chars)")
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    d = data.get("output_dir", "")
+    if d:
+        d = validate_path(d)
+    else:
+        d = tempfile.gettempdir()
+    out = generate_music_ace_step(
+        prompt, lyrics=lyrics, output_dir=d,
+        duration=safe_float(data.get("duration", 30), 30.0, min_val=10.0, max_val=600.0),
+        on_progress=_p,
+    )
 
-        d = data.get("output_dir", "")
-        if d:
-            d = validate_path(d)
-        else:
-            d = tempfile.gettempdir()
-        out = generate_music_ace_step(
-            prompt, lyrics=lyrics, output_dir=d,
-            duration=safe_float(data.get("duration", 30), 30.0, min_val=10.0, max_val=600.0),
-            on_progress=_p,
-        )
-
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {"output_path": out}
 
 
 @audio_bp.route("/audio/music-ai/stable-audio", methods=["POST"])
 @require_csrf
-@async_job("stable-audio", filepath_required=False)
+@async_job("stable-audio", filepath_required=False, rate_limit_key="ai_gpu")
 def music_ai_stable_audio(job_id, filepath, data):
     """Generate music using Stable Audio Open (Stability AI)."""
     from opencut.core.music_ai import generate_music_stable_audio
@@ -1409,34 +1375,26 @@ def music_ai_stable_audio(job_id, filepath, data):
     if len(prompt) > 2000:
         raise ValueError("Prompt too long (max 2000 chars)")
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    d = data.get("output_dir", "")
+    if d:
+        d = validate_path(d)
+    else:
+        d = tempfile.gettempdir()
+    result = generate_music_stable_audio(
+        prompt, output_dir=d,
+        duration=safe_float(data.get("duration", 30), 30.0, min_val=1.0, max_val=47.0),
+        on_progress=_p,
+    )
 
-        d = data.get("output_dir", "")
-        if d:
-            d = validate_path(d)
-        else:
-            d = tempfile.gettempdir()
-        result = generate_music_stable_audio(
-            prompt, output_dir=d,
-            duration=safe_float(data.get("duration", 30), 30.0, min_val=1.0, max_val=47.0),
-            on_progress=_p,
-        )
-
-        return {"output_path": result["output"], "duration": result["duration"], "backend": result["backend"]}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {"output_path": result["output"], "duration": result["duration"], "backend": result["backend"]}
 
 
 @audio_bp.route("/audio/music-ai/melody", methods=["POST"])
 @require_csrf
-@async_job("musicgen-melody", filepath_param="melody_path")
+@async_job("musicgen-melody", filepath_param="melody_path", rate_limit_key="ai_gpu")
 def music_ai_melody(job_id, filepath, data):
     """Generate music with melody conditioning."""
     from opencut.core.music_ai import generate_music_with_melody
@@ -1448,27 +1406,19 @@ def music_ai_melody(job_id, filepath, data):
     if len(prompt) > 2000:
         raise ValueError("Prompt too long (max 2000 chars)")
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    d = data.get("output_dir", "")
+    if d:
+        d = validate_path(d)
+    else:
+        d = tempfile.gettempdir()
+    out = generate_music_with_melody(prompt, melody, output_dir=d,
+                                      duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
+                                      on_progress=_p)
 
-        d = data.get("output_dir", "")
-        if d:
-            d = validate_path(d)
-        else:
-            d = tempfile.gettempdir()
-        out = generate_music_with_melody(prompt, melody, output_dir=d,
-                                          duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
-                                          on_progress=_p)
-
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {"output_path": out}
 
 
 # ---------------------------------------------------------------------------

@@ -43,7 +43,7 @@ agent (F143) makes these surfaces more exposed.
 7. **P1 -- Security audit logging** -- closed 2026-06-07
 8. **P2 -- CEP structured empty-state components** -- UXP has 10+, CEP has ~1
 9. **P2 -- Multi-language locale files** -- i18n plumbed but only English shipped
-10. **P2 -- Rate-limit decorator adoption** -- 25+ manual acquire/release sites vs 2 using decorator
+10. **P2 -- Rate-limit decorator adoption** -- closed 2026-06-07
 
 ---
 
@@ -311,12 +311,12 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P1
 
 ### EI-02: Rate-Limit Decorator Adoption
-- **Current behavior:** `require_rate_limit` decorator exists in `security.py:617` and is used in 2 places. The other 25+ call sites use manual `rate_limit()/rate_limit_release()` with try/finally blocks.
-- **Problem:** Manual pattern is error-prone -- forgetting the `finally` block leaks a rate limit slot. The existing decorator centralizes this correctly.
-- **Recommended change:** Migrate all 25+ manual `rate_limit`/`rate_limit_release` patterns to use `@require_rate_limit(key)` decorator. This also simplifies route code.
-- **Code locations:** `opencut/routes/audio.py`, `video_ai.py`, `video_specialty.py`, `system.py` (25+ sites)
+- **Current behavior:** Closed 2026-06-07. Async route locks now use worker-lifetime `async_job(rate_limit_key=...)`; the MCP bridge uses `rate_limit_slot()` for dynamic per-tool throttling; route modules no longer call the primitives directly.
+- **Problem:** Manual pattern was error-prone -- forgetting the `finally` block could leak a rate-limit slot, and async routes needed the slot held until the worker finished rather than only while the Flask handler returned a `job_id`.
+- **Recommended change:** Shipped in Cycle 91 with shared async-job rate-limit keys, dynamic slot context management, and a route primitive regression gate.
+- **Code locations:** `opencut/jobs.py`, `opencut/security.py`, `opencut/routes/audio.py`, `video_ai.py`, `video_specialty.py`, `system.py`, `mcp_bridge_routes.py`
 - **Backward compatibility:** No API change -- refactor only
-- **Verification:** Grep for remaining manual `rate_limit(` calls -- should be zero. Run existing rate-limit tests.
+- **Verification:** `rg -n "\brate_limit\(|\brate_limit_release\(" opencut/routes` returns no matches; `tests/test_async_job_rate_limit.py` covers wrapper rejection/release behavior and route static drift.
 - **Complexity:** M (high file count, mechanical changes)
 - **Priority:** P2
 
@@ -471,7 +471,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ### Code Duplication
 
-- **Rate-limit pattern** repeated 25+ times vs 2 uses of the `require_rate_limit` decorator (covered in EI-02)
+- **Rate-limit pattern** repeated 25+ times vs 2 uses of the `require_rate_limit` decorator -- closed 2026-06-07 with worker-lifetime `async_job(rate_limit_key=...)`, dynamic `rate_limit_slot()`, and a route primitive regression gate
 - **Filepath validation + 400 response** pattern repeated in every non-`@async_job` route. The `@async_job` decorator centralizes this well, but synchronous routes duplicate it.
 
 ### Test Gaps
@@ -571,12 +571,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ### Phase 4: Developer Experience & Polish (P2-P3)
 
-- [ ] P2 - **Rate-limit decorator migration**
-  - Why: 25+ manual acquire/release patterns vs 2 using decorator; error-prone
-  - Evidence: `security.py:617` has `require_rate_limit` decorator used in 2 places; 25+ manual patterns across route files
-  - Touches: `opencut/routes/audio.py`, `video_ai.py`, `video_specialty.py`, `system.py` + others
-  - Acceptance: Zero manual `rate_limit(`/`rate_limit_release(` calls remain
-  - Verify: `grep -rn "rate_limit(" opencut/routes/ | grep -v "require_rate_limit" | grep -v "rate_limit_release"`
+- [x] P2 - **Rate-limit decorator migration**
+  - Why: Previously 25+ manual acquire/release patterns vs 2 using decorator; error-prone
+  - Evidence: closed 2026-06-07 with worker-lifetime `async_job(rate_limit_key=...)`, dynamic `rate_limit_slot()`, and a release-smoke regression that scans route modules
+  - Touches: `opencut/jobs.py`, `opencut/security.py`, async route modules, `tests/test_async_job_rate_limit.py`
+  - Acceptance: Zero manual `rate_limit(`/`rate_limit_release(` calls remain in `opencut/routes`
+  - Verify: `rg -n "\brate_limit\(|\brate_limit_release\(" opencut/routes` returns no matches
 
 - [ ] P2 - **Caption style gallery/preview**
   - Why: Submagic charges $12-40/mo for animated captions; OpenCut has the backend but no style discovery UX
@@ -625,7 +625,8 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 4 | Fix `send_file()` path confinement | Shipped 2026-06-07 | Closed file-serve bypass with temp/`~/.opencut` confinement and 403 regression coverage |
 | 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |
 | 6 | Defer cleanup thread start | Shipped 2026-06-07 | Cleaner test/CLI imports |
-| 7 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |
+| 7 | Rate-limit decorator migration | Shipped 2026-06-07 | Route-level primitive calls are gone and async locks now fail fast before job creation |
+| 8 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |
 
 ---
 
@@ -635,7 +636,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 |---|------|--------|--------|
 | 1 | UXP panel i18n parity | L | Essential for CEP EOL transition |
 | 2 | Expression engine thread elimination | Shipped | Performance for timeline expressions |
-| 3 | Rate-limit decorator migration | M | Code quality across 25+ sites |
+| 3 | Rate-limit decorator migration | Shipped 2026-06-07 | Worker-lifetime async locks plus route primitive regression coverage |
 | 4 | Security audit event log | M | Incident investigation capability |
 | 5 | Caption style gallery | M | Monetization parity with Submagic ($12-40/mo) |
 | 6 | Take review mode | M | Monetization parity with Gling ($10-50/mo) |

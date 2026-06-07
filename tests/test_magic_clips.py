@@ -673,9 +673,7 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
         ],
     }
 
-    with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
-            patch("opencut.routes.video_specialty.rate_limit_release"), \
-            patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
+    with patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
         resp = client.post(
             "/video/shorts-pipeline",
             data=json.dumps({
@@ -758,9 +756,7 @@ def test_shorts_pipeline_route_returns_magic_bundle_manifest(client, csrf_token,
         ],
     }
 
-    with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
-            patch("opencut.routes.video_specialty.rate_limit_release"), \
-            patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
+    with patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
         resp = client.post(
             "/video/shorts-pipeline",
             data=json.dumps({
@@ -800,9 +796,7 @@ def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csr
         ],
     }
 
-    with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
-            patch("opencut.routes.video_specialty.rate_limit_release"), \
-            patch("opencut.core.shorts_pipeline.generate_shorts"):
+    with patch("opencut.core.shorts_pipeline.generate_shorts"):
         resp = client.post(
             "/video/shorts-pipeline",
             data=json.dumps({

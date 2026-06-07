@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple, Union
 
 from opencut.config import OpenCutConfig
 
@@ -675,7 +675,9 @@ def async_job(job_type: str, *, filepath_required: bool = True,
               disk_operation: Optional[str] = None,
               disk_required_mb: Optional[int] = None,
               resumable: bool = False,
-              partial_output_param: str = "partial_output_path"):
+              partial_output_param: str = "partial_output_path",
+              rate_limit_key: Optional[Union[str, Callable[[dict], Optional[str]]]] = None,
+              rate_limit_max_concurrent: int = 1):
     """
     Decorator that wraps a route handler in the standard async job pattern.
 
@@ -688,6 +690,7 @@ def async_job(job_type: str, *, filepath_required: bool = True,
       async job that errors out 200ms later)
     - ``TooManyJobsError`` → HTTP 429
     - Background thread via ``WorkerPool``
+    - Optional worker-lifetime rate-limit acquisition
     - Cancellation check before marking complete
     - Job-ID log correlation on the worker thread
 
@@ -714,6 +717,13 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             persisted payload metadata when a server restart interrupts them.
         partial_output_param: Optional JSON field that stores checkpoint or
             partial-output state used by the resume route.
+        rate_limit_key: Optional static key, or callable ``(data) -> key``.
+            When set, the wrapper acquires the slot before creating the job,
+            returns HTTP 429 if saturated, and releases the slot when the
+            worker exits. Callable keys may return ``None`` or ``""`` to skip
+            limiting for a specific request.
+        rate_limit_max_concurrent: Maximum concurrent jobs allowed for
+            ``rate_limit_key``. Defaults to 1.
 
     Usage::
 
@@ -732,9 +742,10 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             safe_pip_install("transformers", timeout=600)
             return {"component": "depth_effects"}
 
-    For edge cases (GPU rate limiting, pre-validation, multi-file),
-    handle them inside the handler body — raise ``ValueError`` for
-    validation failures (recorded as job error).
+    For edge cases (pre-validation, multi-file), handle them inside the
+    handler body — raise ``ValueError`` for validation failures (recorded
+    as job error). Use ``rate_limit_key`` for GPU or install slots that
+    should be held for the whole worker lifetime.
     """
     import functools
 
@@ -861,6 +872,28 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                 or ""
             ).strip()
             resume_attempt = _coerce_nonnegative_int(data.get("resume_attempt"), 0)
+            acquired_rate_limit_key = ""
+            if rate_limit_key is not None:
+                try:
+                    resolved_key = rate_limit_key(data) if callable(rate_limit_key) else rate_limit_key
+                except Exception as exc:  # noqa: BLE001
+                    return jsonify({
+                        "error": f"Rate-limit key resolution failed: {exc}",
+                        "code": "INVALID_INPUT",
+                        "suggestion": "Check the request body against the route's documented schema.",
+                    }), 400
+                resolved_key = str(resolved_key or "").strip()
+                if resolved_key:
+                    from opencut.security import rate_limit, rate_limit_release
+
+                    if not rate_limit(resolved_key, rate_limit_max_concurrent):
+                        return jsonify({
+                            "error": f"Another {resolved_key} operation is already running. Please wait.",
+                            "code": "RATE_LIMITED",
+                            "suggestion": "Wait for the current operation to finish, then retry.",
+                        }), 429
+                    acquired_rate_limit_key = resolved_key
+
             try:
                 job_id = _new_job(
                     job_type,
@@ -871,6 +904,10 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     resume_attempt=resume_attempt,
                 )
             except TooManyJobsError as e:
+                if acquired_rate_limit_key:
+                    from opencut.security import rate_limit_release
+
+                    rate_limit_release(acquired_rate_limit_key)
                 return jsonify({
                     "error": str(e),
                     "code": "TOO_MANY_JOBS",
@@ -987,9 +1024,27 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         _log_thread_local.job_id = ""
                     except ImportError:
                         pass
+                    if acquired_rate_limit_key:
+                        try:
+                            from opencut.security import rate_limit_release
+
+                            rate_limit_release(acquired_rate_limit_key)
+                        except Exception:  # noqa: BLE001
+                            logger.exception(
+                                "Failed to release rate-limit key %s for job %s",
+                                acquired_rate_limit_key,
+                                job_id,
+                            )
 
             from opencut.workers import get_pool
-            future = get_pool().submit(job_id, _process)
+            try:
+                future = get_pool().submit(job_id, _process)
+            except Exception:
+                if acquired_rate_limit_key:
+                    from opencut.security import rate_limit_release
+
+                    rate_limit_release(acquired_rate_limit_key)
+                raise
             # Store future immediately (before returning) so cancel can find it
             with job_lock:
                 if job_id in jobs:
@@ -1011,11 +1066,8 @@ def make_install_route(blueprint, url_path, component_name, packages,
     generated route:
 
     * ``POST url_path`` with CSRF
-    * Rate-limits under ``"model_install"`` — returns **429 synchronously** when
-      another install is already running (the caller must wait). Previously the
-      rate limit check happened inside the async body which meant clients got
-      an initial 200 + job_id and only discovered the failure by polling the
-      job status.
+    * Rate-limits under ``"model_install"`` for the worker lifetime and returns
+      **429 synchronously** when another install is already running.
     * Iterates *packages* with progress updates
     * Returns ``{"component": component_name}``
 
@@ -1026,34 +1078,25 @@ def make_install_route(blueprint, url_path, component_name, packages,
         packages:  List of pip package specifiers.
         doc:       Optional docstring override.
     """
-    from flask import jsonify
-
-    from opencut.security import rate_limit as _rl
-    from opencut.security import rate_limit_release as _rlr
     from opencut.security import require_csrf as _csrf
     from opencut.security import safe_pip_install as _spi
 
     # Inner function that actually performs the install. Runs in a worker thread
-    # via @async_job. The outer Flask handler below acquires the rate-limit slot
-    # before spawning the job, so `rate_limit` is already held when _install_body
-    # starts — we just need to release it in the `finally`.
-    @async_job("install", filepath_required=False)
+    # via @async_job while the wrapper holds the model-install slot.
+    @async_job("install", filepath_required=False, rate_limit_key="model_install")
     def _install_body(job_id, filepath, data):
+        for i, pkg in enumerate(packages):
+            pct = int((i / len(packages)) * 90)
+            _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+            _spi(pkg, timeout=600)
+        # Invalidate the capabilities cache so the next health check
+        # reflects the newly installed package.
         try:
-            for i, pkg in enumerate(packages):
-                pct = int((i / len(packages)) * 90)
-                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-                _spi(pkg, timeout=600)
-            # Invalidate the capabilities cache so the next health check
-            # reflects the newly installed package.
-            try:
-                from opencut.routes.system import invalidate_caps_cache
-                invalidate_caps_cache()
-            except ImportError:
-                pass
-            return {"component": component_name}
-        finally:
-            _rlr("model_install")
+            from opencut.routes.system import invalidate_caps_cache
+            invalidate_caps_cache()
+        except ImportError:
+            pass
+        return {"component": component_name}
 
     @blueprint.route(url_path, methods=["POST"])
     @_csrf
@@ -1061,38 +1104,7 @@ def make_install_route(blueprint, url_path, component_name, packages,
         if should_skip_install_in_testing("install"):
             return testing_install_response(component_name)
 
-        if not _rl("model_install"):
-            return jsonify({
-                "error": "A model_install operation is already running. Please wait.",
-                "code": "RATE_LIMITED",
-                "suggestion": "Wait for the current install to finish, then retry.",
-            }), 429
-        # `_install_body` is the @async_job wrapper. On the happy path it
-        # returns ``jsonify({"job_id": ...})`` (200) and the worker thread's
-        # ``finally`` releases the slot. On the unhappy path it returns a
-        # tuple like ``(jsonify({...}), 429)`` (TooManyJobsError, JSON body
-        # validation, etc.) WITHOUT raising — the worker thread never starts
-        # so its ``finally`` never runs. Detect non-2xx returns here and
-        # release the slot so the next caller isn't permanently locked out.
-        try:
-            response = _install_body()
-        except Exception:
-            _rlr("model_install")
-            raise
-        status = 200
-        if isinstance(response, tuple) and len(response) >= 2:
-            try:
-                status = int(response[1])
-            except (TypeError, ValueError):
-                status = 200
-        else:
-            try:
-                status = int(getattr(response, "status_code", 200))
-            except (TypeError, ValueError):
-                status = 200
-        if status >= 400:
-            _rlr("model_install")
-        return response
+        return _install_body()
 
     _install_handler.__name__ = f"install_{component_name}"
     _install_handler.__qualname__ = f"install_{component_name}"
