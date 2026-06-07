@@ -6430,8 +6430,12 @@ function updateShortsReviewActionsUxp() {
   const summary = document.getElementById("shortsReviewSummaryUxp");
   if (summary && shortsReviewPlanUxp && !shortsReviewPlanUxp.requires_analysis) {
     summary.textContent = ids.length
-      ? `Render state: ${ids.length} approved candidate${ids.length === 1 ? "" : "s"} will be sent to /video/shorts-pipeline.`
-      : "Plan state: approve at least one candidate before rendering.";
+      ? formatI18n(
+          "uxp.video.runtime.shorts_render_state_candidates",
+          "Render state: {count} approved candidate(s) will be sent to /video/shorts-pipeline.",
+          { count: ids.length },
+        )
+      : t("uxp.video.runtime.shorts_plan_state_approve_one", "Plan state: approve at least one candidate before rendering.");
   }
 }
 
@@ -6454,13 +6458,17 @@ function renderShortsReviewBoardUxp(plan) {
   const candidates = Array.isArray(plan?.candidates) ? plan.candidates : [];
   board.dataset.state = plan?.requires_analysis ? "analyze" : "plan";
   summary.textContent = plan?.requires_analysis
-    ? "Analyze state: cached transcript or highlight data is required before review."
-    : `Plan state: ${candidates.length} candidate${candidates.length === 1 ? "" : "s"} ready for approval.`;
+    ? t("uxp.video.runtime.shorts_analyze_state_requires_data", "Analyze state: cached transcript or highlight data is required before review.")
+    : formatI18n(
+        "uxp.video.runtime.shorts_plan_state_candidates",
+        "Plan state: {count} candidate(s) ready for approval.",
+        { count: candidates.length },
+      );
   if (!candidates.length) {
     const empty = document.createElement("div");
     empty.className = "shorts-review-card";
     const steps = (plan?.steps || []).map(step => `${step.step_type}: ${step.status}`).join(", ");
-    empty.textContent = steps || "No candidate windows are available yet.";
+    empty.textContent = steps || t("uxp.video.runtime.shorts_no_candidate_windows", "No candidate windows are available yet.");
     list.appendChild(empty);
     updateShortsReviewActionsUxp();
     return;
@@ -6480,17 +6488,37 @@ function renderShortsReviewBoardUxp(plan) {
     label.appendChild(checkbox);
 
     const body = document.createElement("span");
-    appendShortsReviewTextUxp(body, "shorts-review-title", `${index + 1}. ${candidate.title || "Candidate"}`);
-    appendShortsReviewTextUxp(body, "shorts-review-meta", `Score ${candidate.score || 0} | ${candidate.start || 0}s-${candidate.end || 0}s`);
+    appendShortsReviewTextUxp(body, "shorts-review-title", `${index + 1}. ${candidate.title || t("uxp.video.runtime.shorts_candidate_default", "Candidate")}`);
+    appendShortsReviewTextUxp(
+      body,
+      "shorts-review-meta",
+      formatI18n("uxp.video.runtime.shorts_score_range", "Score {score} | {start}s-{end}s", {
+        score: candidate.score || 0,
+        start: candidate.start || 0,
+        end: candidate.end || 0,
+      }),
+    );
     appendShortsReviewTextUxp(body, "shorts-review-reason", candidate.selection_reason || (candidate.reasons || []).join("; "));
     appendShortsReviewTextUxp(body, "shorts-review-excerpt", candidate.transcript_excerpt || "");
     appendShortsReviewTextUxp(
       body,
       "shorts-review-platforms",
-      `Targets: ${(candidate.platform_presets || []).map(p => p.preset_id || p).join(", ") || getShortsPlatformPresetsUxp().join(", ")}`,
+      formatI18n("uxp.video.runtime.shorts_targets", "Targets: {targets}", {
+        targets: (candidate.platform_presets || []).map(p => p.preset_id || p).join(", ") || getShortsPlatformPresetsUxp().join(", "),
+      }),
     );
-    appendShortsReviewTextUxp(body, "shorts-review-meta", `Caption style: ${candidate.caption_style || document.getElementById("shortsCaptionStyleUxp")?.value || "default"}`);
-    appendShortsReviewTextUxp(body, "shorts-review-meta", `Thumbnail: first frame at ${candidate.start || 0}s`);
+    appendShortsReviewTextUxp(
+      body,
+      "shorts-review-meta",
+      formatI18n("uxp.video.runtime.shorts_caption_style", "Caption style: {style}", {
+        style: candidate.caption_style || document.getElementById("shortsCaptionStyleUxp")?.value || t("uxp.video.runtime.default_value", "default"),
+      }),
+    );
+    appendShortsReviewTextUxp(
+      body,
+      "shorts-review-meta",
+      formatI18n("uxp.video.runtime.shorts_thumbnail_first_frame", "Thumbnail: first frame at {start}s", { start: candidate.start || 0 }),
+    );
     label.appendChild(body);
     card.appendChild(label);
     list.appendChild(card);
@@ -6507,15 +6535,22 @@ async function previewShortsPlanUxp() {
   if (board && summary) {
     board.classList.remove("hidden");
     board.dataset.state = "plan";
-    summary.textContent = "Plan state: building candidate review board.";
+    summary.textContent = t("uxp.video.runtime.shorts_plan_building_board", "Plan state: building candidate review board.");
   }
-  const r = await BackendClient.post("/video/magic-clips/plan", payload);
-  UIController.setButtonLoading("previewShortsPlanBtnUxp", false);
-  if (!r.ok) {
-    UIController.showToast(r.error || r.data?.error || "Magic Clips plan failed.", "error");
-    return;
+  try {
+    const r = await BackendClient.post("/video/magic-clips/plan", payload);
+    if (!r.ok) {
+      const error = r.error || r.data?.error || t("uxp.video.runtime.magic_clips_plan_failed_default", "Magic Clips plan failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.magic_clips_plan_failed", "Magic Clips plan failed: {error}", { error }), "error");
+      return;
+    }
+    renderShortsReviewBoardUxp(r.data);
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.magic_clips_plan_failed", "Magic Clips plan failed: {error}", { error }), "error");
+  } finally {
+    UIController.setButtonLoading("previewShortsPlanBtnUxp", false);
   }
-  renderShortsReviewBoardUxp(r.data);
 }
 
 function shortsBundleFileNameUxp(path) {
@@ -6532,19 +6567,34 @@ function renderShortsBundleSummaryUxp(result) {
   board.classList.remove("hidden");
   board.dataset.state = "complete";
   const outputCount = bundle.output_count || 0;
-  summary.textContent = `Bundle state: ${outputCount} output${outputCount === 1 ? "" : "s"} saved with ${shortsBundleFileNameUxp(result.magic_clips_bundle_manifest)}.`;
+  summary.textContent = formatI18n(
+    "uxp.video.runtime.shorts_bundle_state_outputs",
+    "Bundle state: {count} output(s) saved with {manifest}.",
+    { count: outputCount, manifest: shortsBundleFileNameUxp(result.magic_clips_bundle_manifest) },
+  );
   list.innerHTML = "";
   candidates.forEach((candidate, index) => {
     const card = document.createElement("div");
     card.className = "shorts-review-card";
-    appendShortsReviewTextUxp(card, "shorts-review-title", `${index + 1}. ${candidate.title || "Candidate"}`);
-    appendShortsReviewTextUxp(card, "shorts-review-meta", `Score ${candidate.score || 0} | ${candidate.start || 0}s-${candidate.end || 0}s`);
+    appendShortsReviewTextUxp(card, "shorts-review-title", `${index + 1}. ${candidate.title || t("uxp.video.runtime.shorts_candidate_default", "Candidate")}`);
+    appendShortsReviewTextUxp(
+      card,
+      "shorts-review-meta",
+      formatI18n("uxp.video.runtime.shorts_score_range", "Score {score} | {start}s-{end}s", {
+        score: candidate.score || 0,
+        start: candidate.start || 0,
+        end: candidate.end || 0,
+      }),
+    );
     appendShortsReviewTextUxp(card, "shorts-review-excerpt", candidate.transcript_excerpt || "");
     (candidate.outputs || []).forEach(output => {
       appendShortsReviewTextUxp(
         card,
         "shorts-review-platforms",
-        `${output.platform_preset || "default"}: ${shortsBundleFileNameUxp(output.export_path)}`,
+        formatI18n("uxp.video.runtime.shorts_platform_output", "{platform}: {output}", {
+          platform: output.platform_preset || t("uxp.video.runtime.default_value", "default"),
+          output: shortsBundleFileNameUxp(output.export_path),
+        }),
       );
     });
     list.appendChild(card);
@@ -6554,7 +6604,7 @@ function renderShortsBundleSummaryUxp(result) {
 async function renderApprovedShortsUxp() {
   const ids = selectedShortsCandidateIdsUxp();
   if (!shortsReviewPlanUxp || !ids.length) {
-    UIController.showToast("Approve at least one Magic Clips candidate first.", "warning");
+    UIController.showToast(t("uxp.video.runtime.shorts_approve_candidate_first", "Approve at least one Magic Clips candidate first."), "warning");
     return;
   }
   const payload = getShortsPayloadUxp();
@@ -6565,19 +6615,24 @@ async function renderApprovedShortsUxp() {
   payload.approved_candidate_ids = ids;
 
   UIController.setButtonLoading("renderShortsApprovedBtnUxp", true);
-  const r = await BackendClient.post("/video/shorts-pipeline", payload);
-  UIController.setButtonLoading("renderShortsApprovedBtnUxp", false);
-  if (r.ok && r.data?.job_id) {
-    try {
+  UIController.showProcessing(t("uxp.video.runtime.rendering_approved_shorts", "Rendering approved short-form clips..."));
+  try {
+    const r = await BackendClient.post("/video/shorts-pipeline", payload);
+    if (r.ok && r.data?.job_id) {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.total_clips || result?.clips?.length || 0;
       renderShortsBundleSummaryUxp(result);
-      UIController.showToast(`Rendered ${count} approved short-form clips.`, "success");
-    } catch (e) {
-      UIController.showToast(`Approved render failed: ${e.message}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.rendered_approved_shorts", "Rendered {count} approved short-form clip(s).", { count }), "success");
+    } else {
+      const error = r.data?.error || r.error || t("uxp.video.runtime.approved_render_failed_default", "Approved render failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.approved_render_failed", "Approved render failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(r.data?.error || r.error || "Approved render failed.", "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.approved_render_failed", "Approved render failed: {error}", { error }), "error");
+  } finally {
+    UIController.hideProcessing();
+    UIController.setButtonLoading("renderShortsApprovedBtnUxp", false);
   }
 }
 
@@ -6586,20 +6641,24 @@ async function runShortsPipelineUxp() {
   if (!payload.filepath) { showSelectClipWarning(); return; }
 
   UIController.setButtonLoading("runShortsPipelineBtnUxp", true);
-  const r = await BackendClient.post("/video/shorts-pipeline", payload);
-  UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
-
-  if (r.ok && r.data?.job_id) {
-    try {
+  UIController.showProcessing(t("uxp.video.runtime.generating_short_form_clips", "Generating short-form clips..."));
+  try {
+    const r = await BackendClient.post("/video/shorts-pipeline", payload);
+    if (r.ok && r.data?.job_id) {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.total_clips || result?.clips?.length || 0;
       renderShortsBundleSummaryUxp(result);
-      UIController.showToast(`Generated ${count} short-form clips.`, "success");
-    } catch (e) {
-      UIController.showToast(`Shorts pipeline failed: ${e.message}`, "error");
+      UIController.showToast(formatI18n("uxp.video.runtime.generated_short_form_clips", "Generated {count} short-form clip(s).", { count }), "success");
+    } else {
+      const error = r.data?.error || r.error || t("uxp.video.runtime.shorts_pipeline_failed_default", "Shorts pipeline failed.");
+      UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Shorts pipeline failed: {error}", { error }), "error");
     }
-  } else {
-    UIController.showToast(r.data?.error || "Shorts pipeline failed.", "error");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
+    UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Shorts pipeline failed: {error}", { error }), "error");
+  } finally {
+    UIController.hideProcessing();
+    UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
   }
 }
 

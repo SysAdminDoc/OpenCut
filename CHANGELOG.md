@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
+### Changed - UXP Video Shorts Runtime i18n
+
+- Routed Video tab Shorts Pipeline runtime feedback through locale keys, including review-board plan/render/bundle states, candidate metadata, Magic Clips plan errors, approved-render feedback, and full pipeline progress, success, and error messages.
+- Added Shorts-runtime guard coverage so those review-board and pipeline messages cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Video AI Effects Runtime i18n
 
-- Routed Video tab AI/effects runtime feedback through locale keys, including B-roll generation, multimodal diarization, depth effects, emotion highlights, B-roll analysis, AI upscale, scene detection, and style-transfer progress, success, status, and error messages.
+- Routed Video tab AI/effects runtime feedback through locale keys, including B-roll generation, multimodal diarization, social upload/auth, depth effects, emotion highlights, B-roll analysis, AI upscale, scene detection, and style-transfer progress, success, status, and error messages.
 - Added Video AI/effects guard coverage so those runtime messages cannot regress to direct hardcoded strings.
 
 ### Changed - UXP Video Runtime i18n

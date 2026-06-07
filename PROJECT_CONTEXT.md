@@ -1,10 +1,14 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (362 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-362 are recorded below.
+**Last consolidated:** 2026-06-07 (363 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-363 are recorded below.
+
+**Pass 363 update (no standalone research file):**
+- Extended UXP i18n into Video tab Shorts Pipeline runtime feedback: review-board plan/render/bundle states, candidate metadata, Magic Clips plan errors, approved-render feedback, and full pipeline progress, success, status, and error strings now use UXP locale keys.
+- Added guard coverage for the Shorts runtime slice so direct hardcoded review-board and pipeline feedback strings cannot return.
 
 **Pass 362 update (no standalone research file):**
-- Extended UXP i18n into Video tab AI/effects runtime feedback: B-roll generation, multimodal diarization, depth effects, emotion highlights, B-roll analysis, AI upscale, scene detection, and style-transfer progress, success, status, and error strings now use UXP locale keys.
+- Extended UXP i18n into Video tab AI/effects runtime feedback: B-roll generation, multimodal diarization, social upload/auth, depth effects, emotion highlights, B-roll analysis, AI upscale, scene detection, and style-transfer progress, success, status, and error strings now use UXP locale keys.
 - Added guard coverage for the Video AI/effects runtime slice so direct hardcoded feedback strings cannot return.
 
 **Pass 361 update (no standalone research file):**
