@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Settings Preferences Shell
+
+- Advanced E15 to batch 173 by wiring the remaining Settings preferences shell labels, output-location options, theme options, GPU checking label, backend log button label, and UI language choices through locale hooks.
+- The live drift report now shows 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP Structured Empty States
 
 - Promoted CEP empty-state helper output to the shared `oc-empty-state` component classes used across the panel.
