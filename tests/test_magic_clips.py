@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 
 def _segments():
     return [
@@ -318,7 +320,7 @@ def test_shorts_pipeline_renders_only_approved_magic_candidates(tmp_path, monkey
     assert conform_calls == []
     assert [clip.title for clip in clips] == ["First hook", "Second turn"]
     assert [clip.score for clip in clips] == [88.0, 74.0]
-    assert sorted(path.name for path in output_dir.iterdir()) == [
+    assert sorted(path.name for path in output_dir.glob("*.mp4")) == [
         "source_short_1_First_hook.mp4",
         "source_short_2_Second_turn.mp4",
     ]
@@ -383,12 +385,169 @@ def test_shorts_pipeline_platform_presets_render_variants_and_clamp_duration(tmp
         (1080, 1920),
         (1080, 1080),
     ]
-    assert sorted(path.name for path in output_dir.iterdir()) == [
+    assert sorted(path.name for path in output_dir.glob("*.mp4")) == [
         "source_short_1_instagram_feed_Long_hook.mp4",
         "source_short_1_instagram_reels_Long_hook.mp4",
         "source_short_1_tiktok_Long_hook.mp4",
         "source_short_1_youtube_shorts_Long_hook.mp4",
     ]
+
+
+def test_shorts_pipeline_manifest_survives_cancel_after_transcribe(tmp_path, monkeypatch):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+    output_dir = tmp_path / "out"
+    calls = {"transcribe": 0, "highlight": 0}
+
+    def fake_transcribe(_input_path, config):
+        calls["transcribe"] += 1
+        return {"segments": _segments()}
+
+    def fail_after_transcribe(**_kwargs):
+        calls["highlight"] += 1
+        raise RuntimeError("cancel after transcribe")
+
+    monkeypatch.setattr("opencut.core.captions.transcribe", fake_transcribe)
+    monkeypatch.setattr("opencut.core.highlights.extract_highlights", fail_after_transcribe)
+
+    config = ShortsPipelineConfig(
+        face_track=False,
+        burn_captions=False,
+        checkpoint_manifest_path=str(
+            output_dir / "magic_clips_runs" / "cancel-after-transcribe" / "magic_clips_run_manifest.json"
+        ),
+    )
+    with pytest.raises(RuntimeError, match="cancel after transcribe"):
+        generate_shorts(str(media), config=config, output_dir=str(output_dir))
+
+    manifest_path = Path(config.checkpoint_manifest_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert calls == {"transcribe": 1, "highlight": 1}
+    assert manifest["status"] == "interrupted"
+    assert manifest["next_step"] == "highlight"
+    assert manifest["transcript_cache_id"]
+    assert len(manifest["transcript_segments"]) == len(_segments())
+    assert Path(manifest["intermediates_dir"]).is_dir()
+
+
+def test_shorts_pipeline_resume_skips_completed_render_outputs(tmp_path, monkeypatch):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+    output_dir = tmp_path / "out"
+    trim_calls = []
+    copy_calls = {"count": 0}
+
+    def fake_trim(_input_path, start, end, output_path):
+        trim_calls.append((start, end, Path(output_path).name))
+        Path(output_path).write_bytes(b"clip")
+
+    def fail_after_first_copy(input_path, output_path):
+        copy_calls["count"] += 1
+        if copy_calls["count"] == 2:
+            raise RuntimeError("cancel after first render")
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
+    monkeypatch.setattr("opencut.core.shorts_pipeline._trim_clip", fake_trim)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._probe_duration", lambda _path: 0.0)
+    monkeypatch.setattr("opencut.core.shorts_pipeline.shutil.copy2", fail_after_first_copy)
+
+    config = ShortsPipelineConfig(
+        max_shorts=2,
+        face_track=False,
+        burn_captions=False,
+        approved_candidates=[
+            {"candidate_id": "mcc:first", "start": 10.0, "end": 25.0, "title": "First hook", "score": 88.0},
+            {"candidate_id": "mcc:second", "start": 40.0, "end": 52.5, "title": "Second turn", "score": 74.0},
+        ],
+    )
+    with pytest.raises(RuntimeError, match="cancel after first render"):
+        generate_shorts(str(media), config=config, output_dir=str(output_dir))
+
+    manifest_path = Path(config.checkpoint_manifest_path)
+    first_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert first_manifest["status"] == "interrupted"
+    assert len(first_manifest["final_exports"]) == 1
+    assert Path(first_manifest["final_exports"][0]["output_path"]).is_file()
+
+    def copy_ok(input_path, output_path):
+        copy_calls["count"] += 1
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
+    trim_calls.clear()
+    copy_calls["count"] = 0
+    monkeypatch.setattr("opencut.core.shorts_pipeline.shutil.copy2", copy_ok)
+    resume_config = ShortsPipelineConfig(
+        max_shorts=2,
+        face_track=False,
+        burn_captions=False,
+        checkpoint_manifest_path=str(manifest_path),
+        approved_candidates=[
+            {"candidate_id": "mcc:first", "start": 10.0, "end": 25.0, "title": "First hook", "score": 88.0},
+            {"candidate_id": "mcc:second", "start": 40.0, "end": 52.5, "title": "Second turn", "score": 74.0},
+        ],
+    )
+
+    clips = generate_shorts(str(media), config=resume_config, output_dir=str(output_dir))
+    final_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert len(clips) == 2
+    assert trim_calls == []
+    assert copy_calls["count"] == 1
+    assert final_manifest["status"] == "complete"
+    assert final_manifest["next_step"] == "complete"
+    assert len(final_manifest["final_exports"]) == 2
+
+
+def test_shorts_pipeline_resume_restarts_on_config_mismatch(tmp_path, monkeypatch):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+    output_dir = tmp_path / "out"
+    trim_calls = []
+
+    def fake_trim(_input_path, start, end, output_path):
+        trim_calls.append((start, end, Path(output_path).name))
+        Path(output_path).write_bytes(b"clip")
+
+    def fake_copy(input_path, output_path):
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
+    monkeypatch.setattr("opencut.core.shorts_pipeline._trim_clip", fake_trim)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._probe_duration", lambda _path: 0.0)
+    monkeypatch.setattr("opencut.core.shorts_pipeline.shutil.copy2", fake_copy)
+
+    base_candidates = [
+        {"candidate_id": "mcc:first", "start": 10.0, "end": 25.0, "title": "First hook", "score": 88.0},
+    ]
+    config = ShortsPipelineConfig(
+        face_track=False,
+        burn_captions=False,
+        caption_style="default",
+        approved_candidates=base_candidates,
+    )
+    generate_shorts(str(media), config=config, output_dir=str(output_dir))
+    manifest_path = Path(config.checkpoint_manifest_path)
+
+    trim_calls.clear()
+    changed = ShortsPipelineConfig(
+        face_track=False,
+        burn_captions=False,
+        caption_style="bold_yellow",
+        checkpoint_manifest_path=str(manifest_path),
+        approved_candidates=base_candidates,
+    )
+    generate_shorts(str(media), config=changed, output_dir=str(output_dir))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert trim_calls == [(10.0, 25.0, "trim_1.mp4")]
+    assert manifest["resume"]["accepted"] is False
+    assert manifest["resume"]["mismatch"] == "config"
+    assert manifest["status"] == "complete"
 
 
 def test_shorts_pipeline_rejects_unknown_platform_preset(tmp_path):
@@ -427,6 +586,8 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
         captured["approved_plan_id"] = config.approved_plan_id
         captured["approved_candidates"] = config.approved_candidates
         captured["platform_presets"] = config.platform_presets
+        captured["checkpoint_manifest_path"] = config.checkpoint_manifest_path
+        captured["resume"] = config.resume
         captured["output_dir"] = output_dir
         on_progress(100, "done")
         return []
@@ -469,6 +630,9 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
     assert captured["approved_plan_id"] == "mcplan:abc"
     assert captured["approved_candidates"] == [plan["candidates"][0]]
     assert captured["platform_presets"] == ["youtube_shorts", "instagram_feed"]
+    assert captured["checkpoint_manifest_path"].endswith("magic_clips_run_manifest.json")
+    assert captured["resume"] is True
+    assert job["result"]["magic_clips_manifest"] == captured["checkpoint_manifest_path"]
 
 
 def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csrf_token, tmp_path):
