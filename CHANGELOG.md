@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Security - Scripting Console Resource Limit
+
+- Added a 100 KiB (102,400-byte) source limit to the scripting console, enforced in the core sandbox API plus `/api/scripting/execute` and `/api/workflow/scripting/execute` before compile/exec.
+
 ### Security - CLIP Cache Deserialization
 
 - Hardened semantic video search caching by replacing raw pickle CLIP embedding caches with compressed `.npz` files that store JSON metadata and load arrays with `allow_pickle=False`.

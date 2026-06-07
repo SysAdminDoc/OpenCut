@@ -1319,6 +1319,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 80 | CEP i18n Footage Search shell and PyTorch hardening | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `opencut/core/model_quantization.py`, `pyproject.toml`, dependency tests | Footage Search still had bare-English shell strings, model quantization forced unsafe PyTorch pickle loading, and Torch-backed optional extras admitted vulnerable pre-2.6 Torch versions. | Advanced E15 to batch 168 and closed the PyTorch hardening P0 by wiring Footage Search through locale hooks, switching quantization loads to `weights_only=True`, raising the Torch/TorchVision floor, and adding regression coverage. |
 | 2026-06-07 | Cycle 81 | `open-path` allowlist hardening | `opencut/routes/system.py`, `tests/test_hardening.py`, `tests/test_new_features.py` | `/system/open-path` direct-open mode used an executable-extension blocklist that missed Windows control/shell payloads such as `.msc`, `.cpl`, `.settingcontent-ms`, and `.url`. | Replaced the blocklist with a safe media/document extension allowlist for direct open mode while preserving reveal mode for validated files; regression coverage rejects the missed dangerous extensions. |
 | 2026-06-07 | Cycle 82 | CLIP cache safe deserialization | `opencut/core/semantic_video_search.py`, `tests/test_object_intel.py` | Semantic video search loaded predictable `~/.opencut/clip_cache/clip_*.pkl` files with raw `pickle.load()`, creating a cache-poisoning execution path if an attacker could write to the cache directory. | Replaced raw pickle caches with compressed `.npz` files that store JSON metadata and load arrays via `numpy.load(..., allow_pickle=False)`; regression coverage verifies both the safe-load option and a no-pickle cache round trip. |
+| 2026-06-07 | Cycle 83 | Scripting-console resource limit | `opencut/core/scripting_console.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/workflow_dev_routes.py`, `tests/test_dev_scripting.py`, `tests/test_workflow_dev.py` | The scripting console had output and timeout caps but no source-size cap, allowing oversized code payloads to consume avoidable compile/exec resources. | Added a 100 KiB (102,400-byte) `MAX_CODE_LENGTH_BYTES` cap, enforced it in the core sandbox and both scripting HTTP routes before compile/exec, and covered direct core rejection plus HTTP 400 `CODE_TOO_LARGE` responses for 200 KiB submitted scripts. |
 
 ### Research queries to run later
 
@@ -1339,17 +1340,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 83: Continue the security hardening queue with scripting-console resource limits.
-2. Cycle 84: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-3. Cycle 85: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 86: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 87: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 84: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 85: Audit the remaining release-trust findings that can close with local evidence.
+3. Cycle 86: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 87: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 88: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 82: CLIP cache safe deserialization.
+Cycle 83: Scripting-console resource limit.
 
 #### Current focus
 
@@ -1515,6 +1516,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - CLIP cache deserialization hardening is closed: semantic video search now
   writes compressed `.npz` caches with JSON metadata and loads embedding arrays
   with `allow_pickle=False` instead of raw pickle caches.
+- Scripting-console resource-limit hardening is closed: oversized source payloads
+  are rejected before compile/exec in both the core sandbox and HTTP route.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1596,8 +1599,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue the security hardening queue with scripting-console resource limits.
-2. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
+1. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
+2. Audit the remaining release-trust findings that can close with local evidence.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads

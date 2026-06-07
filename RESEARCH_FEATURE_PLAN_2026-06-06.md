@@ -39,7 +39,7 @@ agent (F143) makes these surfaces more exposed.
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
 5. **P1 -- Expression engine per-frame thread elimination** -- 300 threads/10s of video
-6. **P1 -- Scripting console code length limit** -- no cap on exec'd code size
+6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- no structured trail for CSRF/path traversal failures
 8. **P2 -- CEP structured empty-state components** -- UXP has 10+, CEP has ~1
 9. **P2 -- Multi-language locale files** -- i18n plumbed but only English shipped
@@ -524,12 +524,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: `evaluate_timeline()` creates at most 1 worker thread
   - Verify: Benchmark 30-second clip before/after; verify thread count stays constant
 
-- [ ] P1 - **Scripting console: add code length limit**
+- [x] P1 - **Scripting console: add code length limit**
   - Why: No cap on exec'd code size allows resource exhaustion
-  - Evidence: `opencut/core/scripting_console.py`; expression engine has `_MAX_EXPRESSION_LENGTH` but console does not
-  - Touches: `opencut/core/scripting_console.py`
-  - Acceptance: Code >100KB rejected with 400
-  - Verify: Submit 200KB code string, verify rejection
+  - Evidence: `opencut/core/scripting_console.py`; expression engine has `_MAX_EXPRESSION_LENGTH` and the console now has `MAX_CODE_LENGTH_BYTES`
+  - Touches: `opencut/core/scripting_console.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/workflow_dev_routes.py`, `tests/test_dev_scripting.py`, `tests/test_workflow_dev.py`
+  - Acceptance: Code over 100 KiB rejected before compile/exec; scripting HTTP routes return 400 `CODE_TOO_LARGE`
+  - Verify: Oversized core and route tests reject 200 KiB submitted scripts larger than `MAX_CODE_LENGTH_BYTES`
 
 - [ ] P1 - **Security audit event log**
   - Why: No structured trail for CSRF failures, path traversal attempts, auth failures
@@ -619,7 +619,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | # | Item | Effort | Impact |
 |---|------|--------|--------|
 | 1 | Fix `torch.load(weights_only=False)` | Shipped 2026-06-07 | Closed by safe quantization loads plus Torch/TorchVision advisory floors |
-| 2 | Add code length limit to scripting console | S (5 lines) | Prevents resource exhaustion |
+| 2 | Add code length limit to scripting console | Shipped 2026-06-07 | Prevents resource exhaustion |
 | 3 | Switch `os.startfile()` to allowlist | Shipped 2026-06-07 | Closed extension-bypass vector |
 | 4 | Fix `send_file()` path confinement | S (add `is_path_within_any()` check) | Closes file-serve bypass |
 | 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |

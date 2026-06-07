@@ -488,7 +488,11 @@ def scripting_execute():
     ``/api/scripting/execute`` surface owned by ``dev_scripting_routes`` so
     endpoint ownership stays deterministic.
     """
-    from opencut.core.scripting_console import execute_script
+    from opencut.core.scripting_console import (
+        MAX_CODE_LENGTH_BYTES,
+        execute_script,
+        validate_code_length,
+    )
 
     data, error = _json_object_or_400()
     if error:
@@ -496,8 +500,18 @@ def scripting_execute():
 
     try:
         code = _clean_string(data.get("code", ""), "code", allow_empty=False)
+        validate_code_length(code)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        is_too_large = "too large" in str(exc)
+        return jsonify({
+            "error": str(exc),
+            "code": "CODE_TOO_LARGE" if is_too_large else "INVALID_INPUT",
+            "suggestion": (
+                f"Keep scripting-console code at or below {MAX_CODE_LENGTH_BYTES} bytes."
+                if is_too_large
+                else "Send a non-empty code string."
+            ),
+        }), 400
     context = data.get("context", {})
 
     if context is None:

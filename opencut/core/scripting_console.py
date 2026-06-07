@@ -67,6 +67,9 @@ _BLOCKED_PATTERNS = (
 # Maximum output length (characters)
 MAX_OUTPUT_LENGTH = 50_000
 
+# Maximum source length accepted by the sandbox (bytes)
+MAX_CODE_LENGTH_BYTES = 100 * 1024
+
 # Maximum execution time (seconds)
 DEFAULT_TIMEOUT = 30
 
@@ -316,6 +319,21 @@ def create_sandbox(
 # Script execution
 # ---------------------------------------------------------------------------
 
+def code_size_bytes(code: str) -> int:
+    """Return the UTF-8 byte size of a script."""
+    return len(code.encode("utf-8"))
+
+
+def validate_code_length(code: str) -> None:
+    """Reject scripts large enough to create avoidable compile/exec pressure."""
+    size = code_size_bytes(code)
+    if size > MAX_CODE_LENGTH_BYTES:
+        raise ValueError(
+            f"Script code is too large ({size} bytes). "
+            f"Maximum length is {MAX_CODE_LENGTH_BYTES} bytes."
+        )
+
+
 def execute_script(
     code: str,
     context: Optional[Dict[str, Any]] = None,
@@ -338,6 +356,11 @@ def execute_script(
 
     if not code or not code.strip():
         return ScriptResult(output="", success=True)
+
+    try:
+        validate_code_length(code)
+    except ValueError as exc:
+        return ScriptResult(output="", success=False, error=str(exc))
 
     # Basic security check on raw source
     code_lower = code.lower()
