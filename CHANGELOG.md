@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Sequence Index Host Locators
+
+- Added stable `locator_id` and `host_locators` metadata to Sequence Index rows so repeated uses of the same media path can carry distinct per-timeline-instance ratings and tags.
+- Sequence Index filtering and route round-trips now preserve locator metadata and can query or sort by the generated locator ID.
+- Sequence Index build responses now propagate sequence GUIDs, return normalized marker payloads with marker host locators, and accept CEP `video_tracks`/`audio_tracks` payloads alongside camel-case inputs.
+
 ### Changed - Caption Metadata-Loss Regression Fixtures
 
 - Closed RA-50 and RA-09 by adding regression fixtures for SRT-only metadata loss, sidecar-backed import/diff preservation, split/merge/insert/delete classifications, stale sidecar warnings, and no-sidecar degraded diff mode.

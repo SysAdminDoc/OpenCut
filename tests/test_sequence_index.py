@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 SAMPLE_SEQ = {
     "name": "Sequence 01",
+    "guid": "seq-guid-001",
     "duration": 60.0,
     "fps": 24.0,
     "width": 1920,
@@ -31,7 +32,7 @@ SAMPLE_SEQ = {
             "index": 0,
             "clips": [
                 {"name": "B-roll-intro.mp4", "path": "/media/intro.mp4",
-                 "start": 0.0, "end": 5.0, "effects": ["Gaussian Blur"]},
+                 "start": 0.0, "end": 5.0, "effects": ["Gaussian Blur"], "nodeId": "clip-node-001"},
                 {"name": "interview-take-3.mp4", "path": "/media/take3.mp4",
                  "start": 5.0, "end": 30.0, "effects": []},
             ],
@@ -48,7 +49,7 @@ SAMPLE_SEQ = {
         ]},
     ],
     "markers": [
-        {"time": 4.2, "name": "intro", "type": "comment", "color": 0},
+        {"time": 4.2, "name": "intro", "type": "comment", "color": 0, "comments": "cold open"},
         {"time": 30.5, "name": "outro", "type": "comment", "color": 1},
     ],
 }
@@ -101,6 +102,7 @@ class TestBuildIndex(unittest.TestCase):
         from opencut.core.sequence_index import build_index
         result = build_index(SAMPLE_SEQ)
         self.assertEqual(result.sequence_name, "Sequence 01")
+        self.assertEqual(result.sequence_guid, "seq-guid-001")
         self.assertEqual(result.fps, 24.0)
         self.assertEqual(result.width, 1920)
         self.assertEqual(result.height, 1080)
@@ -137,6 +139,75 @@ class TestBuildIndex(unittest.TestCase):
         take3 = next(r for r in result.rows if r.name == "interview-take-3.mp4")
         self.assertEqual(take3.rating, 5)
         self.assertEqual(take3.tags, ["hero", "approved"])
+
+    def test_locator_keys_distinguish_reused_media_path(self):
+        from opencut.core.sequence_index import build_index
+
+        seq = {
+            "name": "Repeated Media",
+            "fps": 24.0,
+            "videoTracks": [
+                {"index": 0, "clips": [
+                    {"name": "reused-a.mp4", "path": "/media/reused.mp4", "start": 0.0, "end": 4.0},
+                    {"name": "reused-b.mp4", "path": "/media/reused.mp4", "start": 8.0, "end": 12.0},
+                ]},
+            ],
+        }
+        initial = build_index(seq)
+        first_id = initial.rows[0].locator_id
+        second_id = initial.rows[1].locator_id
+
+        self.assertTrue(first_id.startswith("seqidx:"))
+        self.assertNotEqual(first_id, second_id)
+
+        result = build_index(
+            seq,
+            ratings={first_id: 5, "/media/reused.mp4": 2},
+            tags={first_id: ["hero"], "/media/reused.mp4": ["generic"]},
+        )
+        self.assertEqual(result.rows[0].rating, 5)
+        self.assertEqual(result.rows[0].tags, ["hero"])
+        self.assertEqual(result.rows[1].rating, 2)
+        self.assertEqual(result.rows[1].tags, ["generic"])
+
+    def test_rows_include_host_locator_contract(self):
+        from opencut.core.sequence_index import build_index
+
+        row = build_index(SAMPLE_SEQ).rows[0]
+        self.assertTrue(row.locator_id.startswith("seqidx:"))
+        self.assertEqual(row.host_locators["schema"], "opencut.sequence_index_locator")
+        self.assertEqual(row.host_locators["sequence_guid"], "seq-guid-001")
+        self.assertEqual(row.host_locators["sequence_name"], "Sequence 01")
+        self.assertEqual(row.host_locators["track_type"], "video")
+        self.assertEqual(row.host_locators["track_index"], 0)
+        self.assertEqual(row.host_locators["clip_index"], 0)
+        self.assertEqual(row.host_locators["track_item_id"], "clip-node-001")
+
+    def test_cep_snake_case_tracks_are_accepted(self):
+        from opencut.core.sequence_index import build_index
+
+        payload = {
+            "name": "CEP Sequence",
+            "fps": 30,
+            "video_tracks": [{"index": 2, "clips": [{"name": "v", "path": "v.mov", "start": 1, "end": 3}]}],
+            "audio_tracks": [{"index": 1, "clips": [{"name": "a", "path": "a.wav", "start": 0, "end": 4}]}],
+        }
+        result = build_index(payload)
+        self.assertEqual(result.total_rows, 2)
+        self.assertEqual(result.rows[0].track_type, "video")
+        self.assertEqual(result.rows[0].track_index, 2)
+        self.assertEqual(result.rows[1].track_type, "audio")
+
+    def test_markers_are_returned_with_host_locators(self):
+        from opencut.core.sequence_index import build_index
+
+        result = build_index(SAMPLE_SEQ)
+        self.assertEqual(result.marker_count, 2)
+        self.assertEqual(result.markers[0]["comment"], "cold open")
+        self.assertEqual(result.markers[0]["host_locators"]["schema"], "opencut.sequence_marker_locator")
+        self.assertEqual(result.markers[0]["host_locators"]["sequence_guid"], "seq-guid-001")
+        self.assertEqual(result.markers[0]["host_locators"]["marker_index"], 0)
+        self.assertEqual(result.markers[0]["host_locators"]["marker_time_s"], 4.2)
 
     def test_partial_payload_tolerated(self):
         from opencut.core.sequence_index import build_index
@@ -206,8 +277,11 @@ class TestJsonifyProtocol(unittest.TestCase):
         from opencut.core.sequence_index import build_index
         result = build_index(SAMPLE_SEQ)
         self.assertEqual(result["sequence_name"], "Sequence 01")
+        self.assertEqual(result["sequence_guid"], "seq-guid-001")
         self.assertIsInstance(result["rows"], list)
+        self.assertIsInstance(result["markers"], list)
         self.assertEqual(len(result["rows"]), 4)
+        self.assertEqual(len(result["markers"]), 2)
         self.assertIn("sequence_name", result.keys())
 
 
@@ -225,6 +299,9 @@ class TestRoutes(unittest.TestCase):
         body = json.loads(resp.data.decode("utf-8"))
         self.assertTrue(body["available"])
         self.assertIn("start_s", body["sort_keys"])
+        self.assertIn("sequence_guid", body["host_locator_fields"])
+        self.assertIn("project_item_id", body["host_locator_fields"])
+        self.assertIn("marker_time_s", body["host_locator_fields"])
 
     def test_build_endpoint_returns_rows(self):
         resp = self.client.post(
@@ -236,6 +313,12 @@ class TestRoutes(unittest.TestCase):
         body = json.loads(resp.data.decode("utf-8"))
         self.assertEqual(body["total_rows"], 4)
         self.assertEqual(body["marker_count"], 2)
+        self.assertEqual(body["sequence_guid"], "seq-guid-001")
+        self.assertEqual(body["markers"][0]["host_locators"]["marker_index"], 0)
+        first = body["rows"][0]
+        self.assertTrue(first["locator_id"].startswith("seqidx:"))
+        self.assertEqual(first["host_locators"]["sequence_guid"], "seq-guid-001")
+        self.assertEqual(first["host_locators"]["sequence_name"], "Sequence 01")
 
     def test_build_rejects_missing_sequence(self):
         resp = self.client.post(
@@ -263,6 +346,8 @@ class TestRoutes(unittest.TestCase):
         self.assertEqual(body["sort_key"], "duration_s")
         # All returned rows must be video.
         self.assertTrue(all(r["track_type"] == "video" for r in body["rows"]))
+        self.assertTrue(all(r["locator_id"].startswith("seqidx:") for r in body["rows"]))
+        self.assertTrue(all(r["host_locators"]["track_type"] == "video" for r in body["rows"]))
         durations = [r["duration_s"] for r in body["rows"]]
         self.assertEqual(durations, sorted(durations, reverse=True))
 
