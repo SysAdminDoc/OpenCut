@@ -3160,39 +3160,39 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.deliverables">Deliverables</div></div>
                         <p class="card-desc" data-i18n="export.deliverables_desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
-                        <div class="oc-inline-summary-grid" aria-label="Deliverables readiness">
+                        <div class="oc-inline-summary-grid" aria-label="Deliverables readiness" data-i18n-aria-label="deliverables.readiness_aria">
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Sequence</span>
-                                <span class="oc-status-pill" id="deliverablesSeqPill" data-state="empty">Not loaded</span>
+                                <span class="oc-inline-label" data-i18n="deliverables.sequence_label">Sequence</span>
+                                <span class="oc-status-pill" id="deliverablesSeqPill" data-state="empty" data-i18n="deliverables.seq_not_loaded">Not loaded</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Summary</span>
-                                <span class="oc-inline-value" id="deliverablesSeqSummary">Load the active sequence before generating handoff docs.</span>
+                                <span class="oc-inline-label" data-i18n="deliverables.summary_label">Summary</span>
+                                <span class="oc-inline-value" id="deliverablesSeqSummary" data-i18n="deliverables.seq_load_summary">Load the active sequence before generating handoff docs.</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Destination</span>
-                                <span class="oc-inline-value" id="deliverablesOutputSummary">Project folder</span>
+                                <span class="oc-inline-label" data-i18n="deliverables.destination_label">Destination</span>
+                                <span class="oc-inline-value" id="deliverablesOutputSummary" data-i18n="deliverables.project_folder_label">Project folder</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Last export</span>
-                                <span class="oc-inline-value" id="deliverablesLastExport">No exports yet</span>
+                                <span class="oc-inline-label" data-i18n="deliverables.last_export_label">Last export</span>
+                                <span class="oc-inline-value" id="deliverablesLastExport" data-i18n="deliverables.no_exports_yet">No exports yet</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-outline btn-sm mt-xs" id="loadSeqInfoBtn">Load Sequence Info</button>
+                        <button type="button" class="btn-outline btn-sm mt-xs" id="loadSeqInfoBtn" data-i18n="export.load_seq_info">Load Sequence Info</button>
                         <div class="hint hidden mt-xs" id="seqInfoStatus"></div>
                         <div class="form-group mt-sm">
-                            <label for="deliverablesOutputDir">Output Directory</label>
+                            <label for="deliverablesOutputDir" data-i18n="forms.output_dir">Output Directory</label>
                             <div class="input-row">
-                                <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank" autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir">Browse</button>
+                                <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank" data-i18n-placeholder="deliverables.output_dir_placeholder" autocomplete="off" spellcheck="false">
+                                <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir" data-i18n="common.browse_folder">Browse</button>
                             </div>
                         </div>
-                        <div class="oc-status-line mt-xs" id="deliverablesStatus" data-state="idle" role="status" aria-live="polite">Load sequence info, choose a destination if needed, then generate the docs you need.</div>
+                        <div class="oc-status-line mt-xs" id="deliverablesStatus" data-state="idle" role="status" aria-live="polite" data-i18n="deliverables.status_load_prompt">Load sequence info, choose a destination if needed, then generate the docs you need.</div>
                         <div class="btn-row gap-xs flex-wrap mt-xs">
-                            <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled>VFX Sheet (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled>ADR List (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled>Music Cue Sheet (CSV)</button>
-                            <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled>Asset List (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled data-i18n="deliverables.vfx_sheet_csv">VFX Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled data-i18n="deliverables.adr_list_csv">ADR List (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled data-i18n="deliverables.music_cue_sheet_csv">Music Cue Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled data-i18n="deliverables.asset_list_csv">Asset List (CSV)</button>
                         </div>
                         <div class="result-area hidden mt-sm" id="deliverablesResult">
                             <div class="hint" id="deliverablesFilePath"></div>
@@ -3200,7 +3200,7 @@
                                 <span class="btn-icon" aria-hidden="true">
                                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 6.25a2 2 0 0 1 2-2H8l1.5 1.5h5.75a2 2 0 0 1 2 2v5.5a2 2 0 0 1-2 2H4.75a2 2 0 0 1-2-2z"/><path d="M10 9.25v4"/><path d="M8.25 11.5 10 13.25l1.75-1.75"/></svg>
                                 </span>
-                                <span class="btn-label">Open Folder</span>
+                                <span class="btn-label" data-i18n="deliverables.open_folder">Open Folder</span>
                             </button>
                         </div>
                     </section>
@@ -3630,11 +3630,11 @@
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.llm_config">LLM Configuration</div>
-                        <button type="button" class="btn-outline btn-sm" id="testLLMBtn">Test Connection</button>
+                        <button type="button" class="btn-outline btn-sm" id="testLLMBtn" data-i18n="settings.llm_test_connection">Test Connection</button>
                     </div>
-                    <p class="card-desc">Connect a local or hosted LLM for chapters, summaries, search prompts, and higher-level editorial assistance.</p>
+                    <p class="card-desc" data-i18n="settings.llm_desc">Connect a local or hosted LLM for chapters, summaries, search prompts, and higher-level editorial assistance.</p>
                     <div class="form-group">
-                        <label for="llmProvider">Provider</label>
+                        <label for="llmProvider" data-i18n="forms.provider">Provider</label>
                         <select id="llmProvider" class="form-select">
                             <option value="ollama" selected>Ollama (Local)</option>
                             <option value="openai">OpenAI</option>
@@ -3642,36 +3642,36 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="llmModel">Model</label>
+                        <label for="llmModel" data-i18n="forms.model">Model</label>
                         <input type="text" id="llmModel" name="llm_model" class="text-input" placeholder="llama3.1" autocomplete="off" spellcheck="false">
                     </div>
                     <div class="form-group hidden" id="llmApiKeyGroup">
-                        <label for="llmApiKey">API Key</label>
+                        <label for="llmApiKey" data-i18n="forms.api_key">API Key</label>
                         <input type="password" id="llmApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
                     </div>
                     <div class="form-group">
-                        <label for="llmBaseUrl">Base URL</label>
+                        <label for="llmBaseUrl" data-i18n="forms.base_url">Base URL</label>
                         <input type="url" id="llmBaseUrl" name="llm_base_url" class="text-input" placeholder="http://localhost:11434" inputmode="url" autocomplete="url" spellcheck="false">
                     </div>
-                    <div class="oc-status-line mt-xs" id="llmStatus" data-state="idle" role="status" aria-live="polite">Test the provider before using chapters, summaries, or highlight suggestions.</div>
+                    <div class="oc-status-line mt-xs" id="llmStatus" data-state="idle" role="status" aria-live="polite" data-i18n="settings.llm_status_idle">Test the provider before using chapters, summaries, or highlight suggestions.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.presets">Presets</div>
                     </div>
-                    <p class="card-desc">Capture a known-good setup so repeat jobs start from the same editorial baseline every time.</p>
+                    <p class="card-desc" data-i18n="settings.presets_desc">Capture a known-good setup so repeat jobs start from the same editorial baseline every time.</p>
                     <div class="form-group">
                         <label for="presetNameInput" data-i18n="settings.save_preset">Save Current Settings</label>
                         <div class="preset-save-row">
-                            <input type="text" id="presetNameInput" class="text-input" placeholder="My Preset Name">
+                            <input type="text" id="presetNameInput" class="text-input" placeholder="My Preset Name" data-i18n-placeholder="settings.preset_name_placeholder">
                             <button type="button" class="btn-sm" id="savePresetBtn" data-i18n="common.save">Save</button>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="presetSelect" data-i18n="settings.load_preset">Load Preset</label>
                         <select id="presetSelect">
-                            <option value="" disabled selected>No saved presets yet</option>
+                            <option value="" disabled selected data-i18n="settings.no_saved_presets_yet">No saved presets yet</option>
                         </select>
                     </div>
                     <div class="btn-row gap-xs">
@@ -3689,13 +3689,13 @@
                             <button type="button" class="btn-outline btn-sm" id="exportSettingsBtn" data-i18n="settings.export_all">Export All Settings</button>
                             <button type="button" class="btn-outline btn-sm" id="importSettingsBtn" data-i18n="settings.import_settings">Import Settings</button>
                         </div>
-                        <input type="file" id="importSettingsFile" accept=".json" class="hidden" aria-label="Import settings file">
+                        <input type="file" id="importSettingsFile" accept=".json" class="hidden" aria-label="Import settings file" data-i18n-aria-label="settings.import_settings_file_aria">
                     </div>
                     <div class="border-t">
                         <label class="param-label mb-xs" data-i18n="settings.diagnostics">Diagnostics</label>
                         <div class="btn-row gap-xs">
-                            <button type="button" class="btn-outline btn-sm" id="exportLogsBtn">Export Crash Log</button>
-                            <button type="button" class="btn-outline btn-sm" id="clearLogsBtn">Clear Log</button>
+                            <button type="button" class="btn-outline btn-sm" id="exportLogsBtn" data-i18n="settings.export_crash_log">Export Crash Log</button>
+                            <button type="button" class="btn-outline btn-sm" id="clearLogsBtn" data-i18n="settings.clear_log">Clear Log</button>
                         </div>
                     </div>
                 </section>
