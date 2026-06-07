@@ -1163,108 +1163,108 @@
       <!-- ==================== SEARCH TAB ==================== -->
       <div class="oc-tab-panel" id="tab-search" role="tabpanel" aria-labelledby="tabBtnSearch">
 
-        <div class="oc-section-title">Library Index</div>
+        <div class="oc-section-title" data-i18n="uxp.search.library_index">Library Index</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="indexLibBody">
-            <span>Index Media Library</span>
+            <span data-i18n="uxp.search.index_media_library">Index Media Library</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="indexLibBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="indexFolder">Media Folder</label>
+              <label class="oc-label" for="indexFolder" data-i18n="uxp.search.media_folder">Media Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseIndexFolder">Browse</button>
+                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index..." data-i18n-placeholder="uxp.search.index_folder_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseIndexFolder" data-i18n="common.browse">Browse</button>
               </div>
             </div>
             <div class="oc-checkbox-row">
               <label class="oc-checkbox-label">
-                <input type="checkbox" id="indexTranscripts" checked> Transcribe audio for text search
+                <input type="checkbox" id="indexTranscripts" checked> <span data-i18n="uxp.search.transcribe_audio_for_text_search">Transcribe audio for text search</span>
               </label>
               <label class="oc-checkbox-label">
-                <input type="checkbox" id="indexFrames"> Index key frames
+                <input type="checkbox" id="indexFrames"> <span data-i18n="uxp.search.index_key_frames">Index key frames</span>
               </label>
             </div>
-            <div class="oc-inline-summary-grid" aria-label="Library index status">
+            <div class="oc-inline-summary-grid" aria-label="Library index status" data-i18n-aria-label="uxp.search.library_index_status">
               <div class="oc-field-row oc-inline-stat">
-                <span class="oc-label">Index</span>
-                <span id="indexStatePill" class="oc-inline-value oc-status-pill" data-state="idle">Ready</span>
+                <span class="oc-label" data-i18n="uxp.search.index">Index</span>
+                <span id="indexStatePill" class="oc-inline-value oc-status-pill" data-state="idle" data-i18n="uxp.search.ready">Ready</span>
               </div>
               <div class="oc-field-row oc-inline-stat">
-                <span class="oc-label">Indexed</span>
-                <span id="indexStatsValue" class="oc-inline-value">0 files indexed</span>
+                <span class="oc-label" data-i18n="uxp.search.indexed">Indexed</span>
+                <span id="indexStatsValue" class="oc-inline-value" data-i18n="uxp.search.zero_files_indexed">0 files indexed</span>
               </div>
             </div>
             <div class="oc-btn-row">
-              <button type="button" class="oc-btn oc-btn-primary" id="runIndexLibBtn">Index Library</button>
-              <button type="button" class="oc-btn oc-btn-secondary" id="clearIndexBtn">Clear Index</button>
+              <button type="button" class="oc-btn oc-btn-primary" id="runIndexLibBtn" data-i18n="uxp.search.index_library">Index Library</button>
+              <button type="button" class="oc-btn oc-btn-secondary" id="clearIndexBtn" data-i18n="uxp.search.clear_index">Clear Index</button>
             </div>
-            <div class="oc-status-line" id="indexStatus" role="status" aria-live="polite">Ready to build a searchable library.</div>
+            <div class="oc-status-line" id="indexStatus" role="status" aria-live="polite" data-i18n="uxp.search.ready_to_build_library">Ready to build a searchable library.</div>
           </div>
         </div>
 
-        <div class="oc-section-title">Search Footage</div>
+        <div class="oc-section-title" data-i18n="uxp.search.search_footage">Search Footage</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="searchFootageBody">
-            <span>Semantic Search</span>
+            <span data-i18n="uxp.search.semantic_search">Semantic Search</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="searchFootageBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="searchQuery">Query</label>
-              <input type="text" class="oc-input" id="searchQuery" placeholder='e.g. "person laughing outdoors"'>
+              <label class="oc-label" for="searchQuery" data-i18n="uxp.search.query">Query</label>
+              <input type="text" class="oc-input" id="searchQuery" placeholder='e.g. "person laughing outdoors"' data-i18n-placeholder="uxp.search.query_placeholder">
             </div>
-            <div class="oc-chip-group" role="group" aria-label="Suggested search prompts">
-              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="person laughing outdoors">Laughing outdoors</button>
-              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="close-up interview in studio lighting">Studio interview</button>
-              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="wide city street b-roll at dusk">City b-roll</button>
+            <div class="oc-chip-group" role="group" aria-label="Suggested search prompts" data-i18n-aria-label="uxp.search.suggested_search_prompts">
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="person laughing outdoors" data-i18n="uxp.search.laughing_outdoors">Laughing outdoors</button>
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="close-up interview in studio lighting" data-i18n="uxp.search.studio_interview">Studio interview</button>
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="wide city street b-roll at dusk" data-i18n="uxp.search.city_broll">City b-roll</button>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="searchResultCount">Results</label>
+              <label class="oc-label" for="searchResultCount" data-i18n="uxp.search.results">Results</label>
               <input type="number" class="oc-input oc-input-sm" id="searchResultCount" value="10" min="1" max="100">
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn">Search Footage</button>
-            <div class="oc-status-line" id="searchStatus" role="status" aria-live="polite">Choose a descriptive query, then load the best match back into the workspace.</div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn" data-i18n="uxp.search.search_footage">Search Footage</button>
+            <div class="oc-status-line" id="searchStatus" role="status" aria-live="polite" data-i18n="uxp.search.choose_query_status">Choose a descriptive query, then load the best match back into the workspace.</div>
             <div class="oc-result-list" id="searchResultList">
               <div class="oc-empty-state oc-empty-state-inline">
-                <div class="oc-empty-state-kicker">Search the library</div>
-                <p>Index a folder, then search with descriptive phrases to pull the right shot back into the workspace.</p>
+                <div class="oc-empty-state-kicker" data-i18n="uxp.search.search_the_library">Search the library</div>
+                <p data-i18n="uxp.search.empty_search_hint">Index a folder, then search with descriptive phrases to pull the right shot back into the workspace.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="oc-section-title">NLP Command</div>
+        <div class="oc-section-title" data-i18n="uxp.search.nlp_command">NLP Command</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="nlpBody">
-            <span>Natural Language Edit Commands</span>
+            <span data-i18n="uxp.search.natural_language_edit_commands">Natural Language Edit Commands</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="nlpBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="nlpCommand">Command</label>
-              <input type="text" class="oc-input" id="nlpCommand" placeholder='e.g. "remove all silences longer than 1 second"'>
+              <label class="oc-label" for="nlpCommand" data-i18n="uxp.search.command">Command</label>
+              <input type="text" class="oc-input" id="nlpCommand" placeholder='e.g. "remove all silences longer than 1 second"' data-i18n-placeholder="uxp.search.command_placeholder">
             </div>
-            <div class="oc-chip-group" role="group" aria-label="Suggested edit commands">
-              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="remove all silences longer than 0.8 seconds">Tighten pauses</button>
-              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="add markers on every beat drop in this clip">Mark beat drops</button>
-              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="create chapter markers around each topic change">Create chapters</button>
+            <div class="oc-chip-group" role="group" aria-label="Suggested edit commands" data-i18n-aria-label="uxp.search.suggested_edit_commands">
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="remove all silences longer than 0.8 seconds" data-i18n="uxp.search.tighten_pauses">Tighten pauses</button>
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="add markers on every beat drop in this clip" data-i18n="uxp.search.mark_beat_drops">Mark beat drops</button>
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="create chapter markers around each topic change" data-i18n="uxp.search.create_chapters">Create chapters</button>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="nlpLlmProvider">LLM</label>
+              <label class="oc-label" for="nlpLlmProvider" data-i18n="uxp.search.llm">LLM</label>
               <select class="oc-select" id="nlpLlmProvider">
-                <option value="ollama">Ollama (local)</option>
-                <option value="openai">OpenAI</option>
+                <option value="ollama" data-i18n="uxp.search.ollama_local">Ollama (local)</option>
+                <option value="openai" data-i18n="uxp.search.openai">OpenAI</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runNlpBtn">Execute Command</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runNlpBtn" data-i18n="uxp.search.execute_command">Execute Command</button>
             <div class="oc-result-area oc-hidden" id="nlpResultArea" tabindex="-1" aria-live="polite">
               <div class="oc-result-header-row">
-                <div class="oc-result-header">Parsed Action</div>
-                <div class="oc-result-summary" id="nlpResultSummary">Review before applying</div>
+                <div class="oc-result-header" data-i18n="uxp.search.parsed_action">Parsed Action</div>
+                <div class="oc-result-summary" id="nlpResultSummary" data-i18n="uxp.search.review_before_applying">Review before applying</div>
               </div>
               <pre class="oc-code-block" id="nlpResultBody"></pre>
-              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyNlpBtn">Apply to Timeline</button>
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyNlpBtn" data-i18n="uxp.search.apply_to_timeline">Apply to Timeline</button>
             </div>
           </div>
         </div>
