@@ -306,7 +306,11 @@ function isTimeoutError(err) {
   return err?.name === "AbortError" || /timed out|abort/i.test(message);
 }
 
-async function copyTextToClipboard(text, { successLabel = "Output" } = {}) {
+function showSelectClipWarning() {
+  UIController.showToast(t("uxp.runtime.select_clip_first", "Select a clip first."), "warning");
+}
+
+async function copyTextToClipboard(text, { successLabel = t("uxp.runtime.output", "Output") } = {}) {
   const value = String(text || "");
   if (!value) return false;
 
@@ -315,16 +319,16 @@ async function copyTextToClipboard(text, { successLabel = "Output" } = {}) {
     !navigator.clipboard ||
     typeof navigator.clipboard.writeText !== "function"
   ) {
-    UIController.showToast("Clipboard is unavailable in this UXP environment. Copy the output manually.", "warning");
+    UIController.showToast(t("uxp.runtime.clipboard_unavailable", "Clipboard is unavailable in this UXP environment. Copy the output manually."), "warning");
     return false;
   }
 
   try {
     await navigator.clipboard.writeText(value);
-    UIController.showToast(`${successLabel} copied to clipboard.`, "success");
+    UIController.showToast(formatI18n("uxp.runtime.copied_to_clipboard", "{label} copied to clipboard.", { label: successLabel }), "success");
     return true;
   } catch (err) {
-    UIController.showToast("Clipboard permission is unavailable or denied. Copy the output manually.", "warning");
+    UIController.showToast(t("uxp.runtime.clipboard_permission_denied", "Clipboard permission is unavailable or denied. Copy the output manually."), "warning");
     return false;
   }
 }
@@ -344,7 +348,7 @@ function normalizeHttpsExternalUrl(value) {
 async function openHttpsExternalUrl(value, developerText) {
   const url = normalizeHttpsExternalUrl(value);
   if (!url) {
-    UIController.showToast("Invalid HTTPS authorization URL received from server.", "warning");
+    UIController.showToast(t("uxp.runtime.invalid_https_authorization_url", "Invalid HTTPS authorization URL received from server."), "warning");
     return false;
   }
 
@@ -352,15 +356,15 @@ async function openHttpsExternalUrl(value, developerText) {
     const shell = require("uxp").shell;
     const result = await shell.openExternal(
       url,
-      developerText || "Opening a secure authorization page in your browser",
+      developerText || t("uxp.runtime.opening_secure_authorization", "Opening a secure authorization page in your browser"),
     );
     if (typeof result === "string" && result.trim()) {
-      UIController.showToast("Open this URL in your browser: " + url, "info", 10000);
+      UIController.showToast(formatI18n("uxp.runtime.open_url_in_browser", "Open this URL in your browser: {url}", { url }), "info", 10000);
       return false;
     }
     return true;
   } catch (_) {
-    UIController.showToast("Open this URL in your browser: " + url, "info", 10000);
+    UIController.showToast(formatI18n("uxp.runtime.open_url_in_browser", "Open this URL in your browser: {url}", { url }), "info", 10000);
     return false;
   }
 }
@@ -2179,7 +2183,7 @@ async function browseFile(inputId, options = {}) {
   } catch (e) {
     // In non-UXP environments or if unsupported, fall back silently
     console.warn("[browseFile]", e.message);
-    UIController.showToast("File browser not available in this environment.", "warning");
+    UIController.showToast(t("uxp.runtime.file_browser_unavailable", "File browser not available in this environment."), "warning");
   }
   return null;
 }
@@ -2198,7 +2202,7 @@ async function browseFolder(inputId) {
     }
   } catch (e) {
     console.warn("[browseFolder]", e.message);
-    UIController.showToast("Folder browser not available in this environment.", "warning");
+    UIController.showToast(t("uxp.runtime.folder_browser_unavailable", "Folder browser not available in this environment."), "warning");
   }
   return null;
 }
@@ -5180,7 +5184,7 @@ function bindEvents() {
   document.getElementById("exportOtioBtn")?.addEventListener("click", async () => {
     const clipPath = document.getElementById("clipPathCut")?.value?.trim()
                   ?? document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-    if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+    if (!clipPath) { showSelectClipWarning(); return; }
     const mode = document.getElementById("otioExportMode")?.value ?? "cuts";
     const payload = { filepath: clipPath, mode };
     if (mode === "cuts") {
@@ -5331,7 +5335,7 @@ function bindSliders() {
 // ─────────────────────────────────────────────────────────────
 async function runDepthEffect() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   const effect = document.getElementById("depthEffectUxp")?.value ?? "depth_map";
   const modelSize = document.getElementById("depthModelSizeUxp")?.value ?? "small";
 
@@ -5366,7 +5370,7 @@ async function runDepthEffect() {
 // ─────────────────────────────────────────────────────────────
 async function runEmotionHighlights() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   UIController.setButtonLoading("runEmotionBtnUxp", true);
   const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
@@ -5392,7 +5396,7 @@ async function runEmotionHighlights() {
 // ─────────────────────────────────────────────────────────────
 async function runBrollAnalysis() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   UIController.setButtonLoading("runBrollPlanBtnUxp", true);
   const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
@@ -5430,7 +5434,7 @@ async function sendChatMessage() {
   if (history) {
     const userDiv = document.createElement("div");
     userDiv.className = "oc-chat-user";
-    userDiv.textContent = "You: " + message;
+    userDiv.textContent = formatI18n("uxp.runtime.chat_user_prefix", "You: {message}", { message });
     history.appendChild(userDiv);
     history.scrollTop = history.scrollHeight;
   }
@@ -5445,24 +5449,24 @@ async function sendChatMessage() {
   });
 
   if (r.ok && r.data) {
-    const reply = r.data.response || "No response.";
+    const reply = r.data.response || t("uxp.runtime.no_response", "No response.");
     if (history) {
       const replyDiv = document.createElement("div");
       replyDiv.className = "oc-chat-assistant";
-      replyDiv.textContent = "OpenCut: " + reply;
+      replyDiv.textContent = formatI18n("uxp.runtime.chat_opencut_prefix", "OpenCut: {reply}", { reply });
       history.appendChild(replyDiv);
       history.scrollTop = history.scrollHeight;
     }
     // Auto-execute actions if present
     const actions = r.data.actions || [];
     if (actions.length > 0) {
-UIController.showToast(`Executing ${actions.length} action(s)…`, "info");
+      UIController.showToast(formatI18n("uxp.runtime.executing_actions", "Executing {count} action(s)...", { count: actions.length }), "info");
     }
   } else {
     if (history) {
       const errDiv = document.createElement("div");
       errDiv.className = "oc-chat-error";
-      errDiv.textContent = "Error: " + (r.error || "Failed");
+      errDiv.textContent = formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: r.error || t("uxp.runtime.failed", "Failed") });
       history.appendChild(errDiv);
     }
   }
@@ -5988,7 +5992,7 @@ async function loadLlmSettings() {
 // ─────────────────────────────────────────────────────────────
 async function runUpscaleUxp() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   const scale = parseInt(document.getElementById("upscaleScaleUxp")?.value ?? "2", 10);
   const model = document.getElementById("upscaleModelUxp")?.value ?? "realesrgan-x4plus";
 
@@ -6013,7 +6017,7 @@ async function runUpscaleUxp() {
 // ─────────────────────────────────────────────────────────────
 async function runSceneDetectUxp() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   const method = document.getElementById("sceneMethodUxp")?.value ?? "ffmpeg";
   const threshold = parseFloat(document.getElementById("sceneThresholdUxp")?.value ?? "0.3");
 
@@ -6039,7 +6043,7 @@ async function runSceneDetectUxp() {
 // ─────────────────────────────────────────────────────────────
 async function runStyleTransferUxp() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
-  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
   const style = document.getElementById("styleNameUxp")?.value ?? "candy";
   const intensity = (parseInt(document.getElementById("styleIntensityUxp")?.value ?? "100", 10)) / 100;
 
@@ -6189,7 +6193,7 @@ function renderShortsReviewBoardUxp(plan) {
 
 async function previewShortsPlanUxp() {
   const payload = getShortsPayloadUxp();
-  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!payload.filepath) { showSelectClipWarning(); return; }
   UIController.setButtonLoading("previewShortsPlanBtnUxp", true);
   const board = document.getElementById("shortsReviewBoardUxp");
   const summary = document.getElementById("shortsReviewSummaryUxp");
@@ -6247,7 +6251,7 @@ async function renderApprovedShortsUxp() {
     return;
   }
   const payload = getShortsPayloadUxp();
-  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!payload.filepath) { showSelectClipWarning(); return; }
   payload.magic_clips_plan = shortsReviewPlanUxp;
   payload.plan_id = shortsReviewPlanUxp.plan_id || "";
   payload.candidate_ids = ids;
@@ -6272,7 +6276,7 @@ async function renderApprovedShortsUxp() {
 
 async function runShortsPipelineUxp() {
   const payload = getShortsPayloadUxp();
-  if (!payload.filepath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  if (!payload.filepath) { showSelectClipWarning(); return; }
 
   UIController.setButtonLoading("runShortsPipelineBtnUxp", true);
   const r = await BackendClient.post("/video/shorts-pipeline", payload);
@@ -6307,7 +6311,7 @@ async function initApp() {
   // Init UXP Premiere Pro bridge (non-blocking)
   PProBridge.init().then(() => {
     if (PProBridge.available()) {
-      UIController.showToast("UXP Premiere Pro API available.", "success");
+      UIController.showToast(t("uxp.runtime.premiere_api_available", "UXP Premiere Pro API available."), "success");
       const notice = document.getElementById("uxpTimelineNotice");
       if (notice) notice.style.display = "none";
     }

@@ -220,10 +220,28 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.settings.bridge_unavailable",
         "uxp.settings.engine_availability_failed",
         "uxp.settings.migration_dashboard_unavailable_status",
+        "uxp.runtime.select_clip_first",
+        "uxp.runtime.clipboard_unavailable",
+        "uxp.runtime.copied_to_clipboard",
+        "uxp.runtime.file_browser_unavailable",
+        "uxp.runtime.folder_browser_unavailable",
+        "uxp.runtime.executing_actions",
+        "uxp.runtime.premiere_api_available",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
     assert missing == []
+
+
+def test_uxp_runtime_toasts_use_locale_helpers():
+    js = _js()
+
+    assert "function showSelectClipWarning()" in js
+    assert 'UIController.showToast("Select a clip first."' not in js
+    assert 'UIController.showToast("Clipboard is unavailable' not in js
+    assert 'UIController.showToast("File browser not available' not in js
+    assert 'UIController.showToast("Folder browser not available' not in js
+    assert 'UIController.showToast("UXP Premiere Pro API available.' not in js
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():

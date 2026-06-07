@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast guards while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1343,6 +1343,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 104 | UXP Deliverables tab i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Deliverables tab still had bare-English sequence readiness, document export controls, deliverable cards, project report options, placeholders, ARIA labels, status text, and action buttons. | Localized the Deliverables tab static shell, then raised the UXP i18n static guard to a 560+ attribute floor with representative Deliverables keys and verified the rendered Deliverables tab in the in-app browser. |
 | 2026-06-07 | Cycle 105 | UXP Agent tab i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Agent tab still had bare-English Chat Conductor, One-Click Enhance, Shorts A/B Variants, Sequence Index, and MCP Bridge labels, placeholders, ARIA labels, hints, select options, status text, and action buttons. | Localized the Agent tab static shell, then raised the UXP i18n static guard to a 605+ attribute floor with representative Agent keys and verified the rendered Agent tab in the in-app browser. |
 | 2026-06-07 | Cycle 106 | UXP Settings tab i18n shell | UXP `index.html`, `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Settings tab still had bare-English Engine Routing, Live Updates Bridge, Migration Risk, Keyboard, and About shell copy, and generated Settings status strings could overwrite localized DOM text after load. | Localized the Settings tab static and generated shell, added `formatI18n()` dynamic-key coverage, then raised the UXP i18n static guard to a 660+ attribute floor with representative Settings keys. |
+| 2026-06-07 | Cycle 107 | UXP runtime toast i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | Shared UXP runtime feedback still had hardcoded clipboard, external URL, picker fallback, no-clip, chat, action-count, and Premiere API availability strings outside the locale layer. | Routed those shared runtime messages through `t()` / `formatI18n()`, added a shared no-clip helper, and expanded the UXP i18n guard so those direct `showToast(...)` strings cannot return. |
 
 ### Research queries to run later
 
@@ -1363,17 +1364,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 107: Continue UXP dynamic status localization and formatter-key coverage beyond the Settings tab, or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 108: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 109: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 110: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 111: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
+1. Cycle 108: Continue UXP dynamic status localization beyond shared runtime toasts, especially feature-specific success/failure summaries, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 109: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 110: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 111: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 112: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 106: UXP Settings tab i18n shell.
+Cycle 107: UXP runtime toast i18n.
 
 #### Current focus
 
@@ -1505,6 +1506,11 @@ and About labels, ARIA labels, status text, empty states, button labels,
 bridge/engine/migration runtime statuses, and generated formatter strings now
 use locale keys, and the static guard requires at least 660 UXP i18n
 attributes.
+Cycle 107 extended the UXP i18n coverage into shared runtime feedback:
+clipboard fallbacks, external URL guidance, picker fallbacks, repeated no-clip
+warnings, chat prefixes/defaults, action-count toasts, and Premiere API
+availability now use locale keys, with static guard coverage preventing the old
+direct no-clip and picker `showToast(...)` strings from returning.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1558,7 +1564,7 @@ controls, LUT path placeholders, NLP command shell, and LLM settings
 placeholders now use locale hooks, and the CEP drift gate reports
 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys. UXP i18n has a first shell plus Cut/Captions/FCC
-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell foundation and a 660+ static locale-coverage
+display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell foundation, shared runtime-toast coverage, and a 660+ static locale-coverage
 guard, but full UXP parity remains open.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
