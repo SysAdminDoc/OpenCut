@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Candidate Scoring
+
+- Closed RA-52 by adding deterministic Magic Clips candidate scoring with score breakdowns, selection reasons, fallback mode labels, and rejected-candidate diagnostics for malformed, too-short, overlapping, or cutoff windows.
+
 ### Changed - Magic Clips Plan Graph
 
 - Closed RA-51 by adding a dry-run Magic Clips plan graph with stable plan/candidate/step IDs, source and config hashes, estimated platform outputs, and analysis-required fallback steps.
