@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the UXP external launch permission pass.
+Last synced: 2026-06-06 during the UXP filesystem permission pass.
 
 ## Execution Order
 
@@ -49,7 +49,7 @@ Last synced: 2026-06-06 during the UXP external launch permission pass.
 - [x] **RA-02 requirements/pyproject alignment** - `requirements.txt` core/standard bounds now match `pyproject.toml`, with a guard for overlap drift.
 - [x] **RA-09 timeline-native captions** - RA-46 sidecars, RA-47 diff/apply, RA-48 UXP caption snapshots, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures are shipped.
 - [x] **RA-10 magic clips macro** - RA-51 through RA-56 are shipped, including output bundle manifests for downstream handoff.
-- [ ] **RA-11 UXP least-privilege filesystem** - tighten UXP filesystem permission posture.
+- [x] **RA-11 UXP least-privilege filesystem** - live and WebView manifests now use picker-scoped `localFileSystem: "request"` with static guards against direct file APIs.
 - [ ] **RA-12 hybrid plugin validator** - validate hybrid CEP/UXP plugin packaging.
 - [x] **RA-13 UXP external launch permissions** - live and WebView manifests now allow HTTPS-only launches, OAuth launch calls validate HTTPS URLs, and static tests block file launches.
 - [ ] **RA-14 WebView permission split** - split WebView permission handling into clearer runtime checks.

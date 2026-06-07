@@ -34,7 +34,7 @@ type OpenCutManifest = {
       domains: DomainList;
       enableMessageBridge: "localAndRemote";
     };
-    localFileSystem: "fullAccess";
+    localFileSystem: "request";
     clipboard: "readAndWrite";
     launchProcess: {
       schemes: ["https"];
@@ -101,7 +101,7 @@ export const manifest: OpenCutManifest = {
       domains: DEV_WEBVIEW_DOMAINS,
       enableMessageBridge: "localAndRemote",
     },
-    localFileSystem: "fullAccess",
+    localFileSystem: "request",
     clipboard: "readAndWrite",
     launchProcess: {
       schemes: ["https"],
