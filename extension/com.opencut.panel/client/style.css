@@ -4199,6 +4199,55 @@ input[type="range"][title] {
 }
 .result-area.hidden { display: none; }
 
+#sub-exp-shorts .form-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+}
+
+#sub-exp-shorts .form-actions button {
+    flex: 1 1 120px;
+}
+
+.shorts-review-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.shorts-review-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px;
+    background: var(--bg-card);
+}
+
+.shorts-review-card.is-rejected {
+    opacity: 0.62;
+}
+
+.shorts-review-card label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text-primary);
+}
+
+.shorts-review-meta,
+.shorts-review-reason,
+.shorts-review-platforms,
+.shorts-review-excerpt {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+}
+
+.shorts-review-title {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
 /* ================================================================
    Waveform Audio Preview Button
    ================================================================ */
