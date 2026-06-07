@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: Cycle 61 Magic Clips checkpointed resume is shipped; RA-55 is closed under RA-10. RA-56, E15 rolling work, and UXP permission-split work remain open.
 - Shipped this cycle: reviewed Magic Clips/shorts runs now write a versioned run manifest, preserve intermediates under a run directory, mark `/video/shorts-pipeline` resumable, expose manifest paths through job metadata and route results, skip completed clips when source/config hashes match, and restart safely on config/source mismatch.
-- Verification: focused Magic Clips plus job-resume pytest passed (25 tests), focused Ruff passed for the changed core, route, and tests, badge sync passed, doc-size checks passed within tolerance, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast` passed (100 gate tests).
+- Verification: focused Magic Clips/job-resume/panel pytest passed (35 tests plus 27 UI subtests), roadmap mirror/lint pytest passed (15 tests), doc-size checks passed within tolerance, README badge sync passed, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (825 tests).
 
 ## Next Work
 
