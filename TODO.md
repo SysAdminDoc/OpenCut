@@ -4,11 +4,11 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the UXP Cut runtime i18n pass.
+Last synced: 2026-06-07 during the UXP Captions runtime i18n pass.
 
 ## Execution Order
 
-- [ ] **E15 i18n migration rolling batches** - current detailed state: CEP batch 173 with a zero-dead-key baseline plus a UXP i18n foundation slice covering the shell loader, tab/workspace/Cut/Captions/FCC-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell attributes, generated Settings status strings, shared runtime toasts, Cut runtime feedback, and static UXP locale guard. Continue removing high-impact bare-English CEP panel strings, then expand UXP coverage toward the full parity target.
+- [ ] **E15 i18n migration rolling batches** - current detailed state: CEP batch 173 with a zero-dead-key baseline plus a UXP i18n foundation slice covering the shell loader, tab/workspace/Cut/Captions/FCC-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell attributes, generated Settings status strings, shared runtime toasts, Cut and Captions runtime feedback, and static UXP locale guard. Continue removing high-impact bare-English CEP panel strings, then expand UXP coverage toward the full parity target.
 - [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, cleanup-thread lazy initialization, WCAG contrast audit, and async route rate-limit migration are closed; continue with remaining release-trust findings and external evidence gates.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
@@ -27,7 +27,7 @@ Last synced: 2026-06-07 during the UXP Cut runtime i18n pass.
 - [x] **WCAG contrast audit in CI** - `opencut.tools.contrast_audit` now audits 72 committed CEP/UXP design-token foreground/background pairs, release smoke runs the `contrast-audit` step, and pytest-fast carries low-contrast fixture coverage.
 - [x] **Async route rate-limit migration** - GPU-heavy/model-install async routes now use `async_job(rate_limit_key=...)`, the MCP bridge uses `rate_limit_slot()` for dynamic per-tool keys, and release-smoke blocks direct route-level rate-limit primitive calls.
 - [x] **CEP structured empty-state components** - shared CEP empty hints now carry `oc-empty-state` component classes, Favorites renders a localized empty state, and static coverage guards job history, batch files, workflow steps, footage search, and favorites.
-- [x] **UXP i18n foundation slice** - UXP now loads a local `locales/en.json`, applies text/title/placeholder/aria locale attributes, localizes 661 shell/workspace/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings hooks, covers generated Settings formatter keys plus shared runtime toast and Cut runtime-feedback keys, and carries a release-smoke static guard for UXP locale coverage.
+- [x] **UXP i18n foundation slice** - UXP now loads a local `locales/en.json`, applies text/title/placeholder/aria locale attributes, localizes 661 shell/workspace/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings hooks, covers generated Settings formatter keys plus shared runtime toast, Cut runtime-feedback, and Captions runtime-feedback keys, and carries a release-smoke static guard for UXP locale coverage.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [x] **RA-23 GitHub Actions SHA pins** - workflow action references now use full-length SHAs with adjacent version comments and a static release-smoke guard rejects mutable action refs.
 - [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.
