@@ -121,6 +121,11 @@ UXP Architecture (target):
 - [x] RA-14 WebView permission split: the dormant WebView config now exports
       separate development and release manifest profiles so hot reload/Vite
       domains stay dev-only and release WebView messaging is `localOnly`.
+- [x] RA-12 Hybrid Plugin package validator:
+      `python -m opencut.tools.validate_uxp_hybrid_package`
+      checks unpacked `.uxpaddon` bundles for manifest v6+, `addon.name`,
+      `requiredPermissions.enableAddon`, production host shape, and
+      mac arm64/mac x64/win x64 architecture coverage before release claims.
 - [x] RA-20 confirmation guard: UXP search-index clearing uses an inline
       second-click panel confirmation instead of beta `window.confirm`, and
       static tests block raw UXP alert/prompt/confirm calls.
@@ -168,6 +173,9 @@ UXP Architecture (target):
 - `tests/test_uxp_udt_harness.py` — Static guardrails for the F267 generator, bundled JSON, panel runner, and release-smoke wiring
 - `opencut/core/uxp_udt_results.py` and `opencut/tools/validate_uxp_udt_results.py` — F252.3 capture-template and strict result validator for WebView cutover readiness
 - `tests/test_uxp_udt_results.py` — Static guardrails for the F252.3 capture validator and release-smoke wiring
+- `docs/UXP_HYBRID_PACKAGE.md` — RA-12 operator notes for validating future UXP Hybrid `.uxpaddon` bundles before UDT packaging
+- `opencut/core/uxp_hybrid_package.py` and `opencut/tools/validate_uxp_hybrid_package.py` — RA-12 static validator for UXP Hybrid `.uxpaddon` manifest and architecture package layout
+- `tests/test_uxp_hybrid_package.py` — Static guardrails for the RA-12 validator and release-smoke wiring
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)
