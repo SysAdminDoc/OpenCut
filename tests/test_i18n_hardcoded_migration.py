@@ -87,6 +87,12 @@ WORKSPACE_METADATA_CALLS = (
 )
 
 
+CAPTIONS_QUICK_ACTION_LABEL_HOOKS = (
+    ("quickAutoSubtitle", "captions.auto_subtitle", "Auto Subtitle"),
+    ("quickTranslate", "captions.translate", "Translate"),
+)
+
+
 HTML_STATIC_SHELL_CALLS = (
     # Ninety-fifth batch (first-viewport workspace shell HTML).
     ("common.skip_to_main", "data-i18n"),
@@ -1463,6 +1469,42 @@ HTML_STATIC_SHELL_CALLS = (
     ("wizard.quick_tip_body", "data-i18n"),
     ("wizard.dont_show_again", "data-i18n"),
     ("wizard.open_workspace", "data-i18n"),
+    # One-hundred-seventy-second batch (caption quick actions, SRT import,
+    # beat-marker, audio form placeholders, NLP command, and LLM settings shell).
+    ("captions.srt_file", "data-i18n"),
+    ("captions.srt_path_placeholder", "data-i18n-placeholder"),
+    ("captions.srt_browse", "data-i18n"),
+    ("llm.model_placeholder", "data-i18n-placeholder"),
+    ("llm.api_key_placeholder", "data-i18n-placeholder"),
+    ("audio.beat_sensitivity", "data-i18n"),
+    ("audio.beat_sensitivity_title", "data-i18n-title"),
+    ("audio.beat_sensitivity_hint", "data-i18n"),
+    ("audio.bpm_label", "data-i18n"),
+    ("audio.beats_label", "data-i18n"),
+    ("audio.beat_confidence_label", "data-i18n"),
+    ("audio.duck_music_path_placeholder", "data-i18n-placeholder"),
+    ("forms.prompt", "data-i18n"),
+    ("audio.music_prompt_placeholder", "data-i18n-placeholder"),
+    ("audio.music_model_small", "data-i18n"),
+    ("audio.music_model_medium", "data-i18n"),
+    ("audio.music_model_large", "data-i18n"),
+    ("forms.duration", "data-i18n"),
+    ("forms.temperature", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
+    ("audio.loudmatch_output_dir", "data-i18n"),
+    ("audio.loudmatch_output_placeholder", "data-i18n-placeholder"),
+    ("audio.loudmatch_browse", "data-i18n"),
+    ("video.lut_file_path_placeholder", "data-i18n-placeholder"),
+    ("nlp.command_title", "data-i18n"),
+    ("nlp.command_desc", "data-i18n"),
+    ("nlp.command_label", "data-i18n"),
+    ("nlp.command_placeholder", "data-i18n-placeholder"),
+    ("forms.llm_provider", "data-i18n"),
+    ("llm.provider_ollama_local", "data-i18n"),
+    ("llm.provider_openai", "data-i18n"),
+    ("llm.provider_anthropic", "data-i18n"),
+    ("nlp.run_command", "data-i18n"),
+    ("llm.base_url_placeholder", "data-i18n-placeholder"),
 )
 
 
@@ -9087,6 +9129,20 @@ class TestI18nHardcodedMigration(unittest.TestCase):
                     self.html,
                     re.compile(rf'{re.escape(attribute)}="{re.escape(key)}"'),
                     f"index.html does not wire {attribute} to {key!r}",
+                )
+
+    def test_captions_quick_action_labels_use_i18n_attributes(self):
+        for button_id, key, fallback in CAPTIONS_QUICK_ACTION_LABEL_HOOKS:
+            with self.subTest(button_id=button_id, key=key):
+                self.assertIn(key, self.en, f"en.json missing migrated key {key!r}")
+                self.assertRegex(
+                    self.html,
+                    re.compile(
+                        rf'id="{re.escape(button_id)}"[\s\S]*?'
+                        rf'<span class="btn-label" data-i18n="{re.escape(key)}">'
+                        rf'{re.escape(fallback)}</span>'
+                    ),
+                    f"Captions quick action {button_id!r} label is not wired to {key!r}",
                 )
 
     def test_dom_i18n_applies_translatable_attributes(self):

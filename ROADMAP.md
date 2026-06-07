@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (171/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at batch 171. |
+| E15 | CEP i18n migration | Rolling batches (172/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at batch 172. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -596,7 +596,7 @@ strings and dynamic-rendering scanner gaps.
 |---|---|---|---|
 | E15 dead-key cleanup | `scripts/i18n_lint.py --json` now reports 0 dead keys and a 0-key baseline | Keep the baseline at zero and remove or wire any future dead key in the same batch that introduces it. | P2 |
 | E15 scanner coverage | `scripts/i18n_lint.py` scans `data-i18n*`, direct `t(...)` calls, and supported JS key-field metadata | Continue targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
-| E15 roadmap status | `TODO.md` now tracks batch 171 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
+| E15 roadmap status | `TODO.md` now tracks batch 172 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
 
 ### Cycle 8: UXP/WebView cutover audit
 
@@ -1325,6 +1325,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 86 | Expression-engine thread churn and CEP i18n footer/wizard shell | `opencut/core/expression_engine.py`, `tests/test_motion_design.py`, CEP `index.html`, `main.js`, `en.json`, `scripts/i18n_lint.py`, `tests/test_i18n_drift.py`, `tests/test_i18n_hardcoded_migration.py` | `evaluate_expression()` spawned a fresh daemon `threading.Thread` for every eval as the timeout mechanism, so `evaluate_timeline()` created one worker per frame; the CEP progress/results/footer, command palette, preview modals, context menu, and first-run wizard still had bare-English shell attributes and copy outside locale hooks. | Replaced per-eval worker spawning with inline trace-deadline evaluation that restores any prior trace hook, added a 30-second timeline regression proving `evaluate_timeline()` creates no raw worker threads, and advanced E15 to batch 171 by localizing those CEP shells plus adding `data-i18n-alt` scanner support. The timeline benchmark held the thread count at 2 before and after while evaluating 900 frames with no errors; the drift gate now reports 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 87 | Security rejection audit logging | `opencut/security_audit.py`, `opencut/security.py`, `opencut/server.py`, `opencut/routes/system.py`, `tests/test_security_audit.py` | CSRF failures, path-validation rejections, remote auth denials, and rate-limit rejections returned 4xx responses without a structured trail for incident review, and token/path evidence needed to avoid leaking secrets. | Added a best-effort schema-tagged `security_audit.jsonl` writer, hooked CSRF rejection, `validate_path()` rejection branches, rate-limit denials, and remote auth-token denials into it, preserved request context and request IDs when available, redacted CSRF/auth token values, recorded rejected path evidence as a short preview plus SHA-256 hash, and exposed capped recent reads via `/system/audit-log`. Test apps disable the default sink unless `OPENCUT_SECURITY_AUDIT_LOG` is set. |
 | 2026-06-07 | Cycle 88 | Cleanup-thread lazy initialization | `opencut/helpers.py`, `tests/test_helpers_cleanup.py`, `scripts/release_smoke.py` | Importing `opencut.helpers` started the `opencut-temp-cleanup` daemon as a utility-module side effect, affecting CLI tools and tests that only needed helper constants or path utilities. | Deferred the cleanup daemon behind `_ensure_cleanup_thread_started()` so it starts only after `_schedule_temp_cleanup()` queues the first file; fresh-interpreter tests prove import stays thread-clean and the worker appears on first scheduled cleanup, and pytest-fast now carries the guard. |
+| 2026-06-07 | Cycle 89 | CEP i18n captions/audio/NLP utility shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `tests/test_i18n_drift.py` | Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders, MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders still had nested or attribute-level bare English outside explicit locale hooks. | Advanced E15 to batch 172 by wiring those shells through locale keys and adding focused guard coverage; the drift gate now reports 2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1345,17 +1346,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 89: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 90: Start the WCAG contrast audit gate or another remaining local release-trust finding.
-3. Cycle 91: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 92: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 93: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 90: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 91: Start the WCAG contrast audit gate or another remaining local release-trust finding.
+3. Cycle 92: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 93: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 94: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 88: Cleanup-thread lazy initialization.
+Cycle 89: CEP i18n captions/audio/NLP utility shell.
 
 #### Current focus
 
@@ -1397,6 +1398,10 @@ hashed path evidence, and capped recent reads through `/system/audit-log`.
 Cycle 88 closed cleanup-thread lazy initialization by deferring
 `opencut-temp-cleanup` until `_schedule_temp_cleanup()` first queues work, with
 subprocess tests covering import and first schedule behavior.
+Cycle 89 advanced E15 to batch 172 by localizing Captions quick-action labels,
+SRT import controls, beat-marker stats, audio form placeholders and MusicGen
+controls, LUT path placeholders, NLP command shell, and LLM settings
+placeholders.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1427,7 +1432,7 @@ return 403 before Flask can serve them.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 171: progress/results/footer chrome, command
+E15 is advanced through batch 172: progress/results/footer chrome, command
 palette shell, preview/audio preview modals, clip context menu, first-run wizard,
 `data-i18n-alt` scanner coverage, Settings Operation Journal, Whisper
 readiness/default-model shell, Timeline write-back, OTIO, beat-marker,
@@ -1443,8 +1448,11 @@ Preferences, Whisper CPU mode,
 Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
-diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead
+diagnostics, Workflow Presets static shell strings, Captions quick-action labels,
+SRT import controls, beat-marker stats, audio form placeholders and MusicGen
+controls, LUT path placeholders, NLP command shell, and LLM settings
+placeholders now use locale hooks, and the drift gate reports
+2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1542,6 +1550,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batch 171 localized progress/results/footer chrome, command palette shell,
   preview/audio preview modals, clip context menu, and first-run wizard copy,
   while adding `data-i18n-alt` scanner/runtime coverage.
+- E15 batch 172 localized Captions quick-action labels, SRT import controls,
+  beat-marker stats, audio form placeholders and MusicGen controls, LUT path
+  placeholders, NLP command shell, and LLM settings placeholders.
 - PyTorch deserialization hardening is closed: quantization loads now use
   `weights_only=True`, unsafe pickle checkpoints produce a clear error, and
   Torch-backed optional extras require `torch>=2.6` / `torchvision>=0.21`.
