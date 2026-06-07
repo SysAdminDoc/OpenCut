@@ -328,6 +328,12 @@ class TestScriptingConsoleCore:
         result = execute_script("")
         assert result["success"] is True
 
+    def test_execute_rejects_oversized_code(self):
+        from opencut.core.scripting_console import MAX_CODE_LENGTH_BYTES, execute_script
+        result = execute_script("print(1)\n" + ("#" * (MAX_CODE_LENGTH_BYTES * 2)))
+        assert result["success"] is False
+        assert "Maximum length" in result["error"]
+
     def test_execute_syntax_error(self):
         from opencut.core.scripting_console import execute_script
         result = execute_script("def bad(")
@@ -943,6 +949,28 @@ class TestScriptingRoutes:
             "code": "",
         }), headers=csrf_headers(csrf_token))
         assert resp.status_code == 400
+
+    def test_execute_rejects_oversized_code(self, client, csrf_token):
+        from opencut.core.scripting_console import MAX_CODE_LENGTH_BYTES
+
+        resp = client.post("/api/scripting/execute", data=json.dumps({
+            "code": "print(1)\n" + ("#" * (MAX_CODE_LENGTH_BYTES * 2)),
+        }), headers=csrf_headers(csrf_token))
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert data["code"] == "CODE_TOO_LARGE"
+        assert "Maximum length" in data["error"]
+
+    def test_workflow_execute_rejects_oversized_code(self, client, csrf_token):
+        from opencut.core.scripting_console import MAX_CODE_LENGTH_BYTES
+
+        resp = client.post("/api/workflow/scripting/execute", data=json.dumps({
+            "code": "print(1)\n" + ("#" * (MAX_CODE_LENGTH_BYTES * 2)),
+        }), headers=csrf_headers(csrf_token))
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert data["code"] == "CODE_TOO_LARGE"
+        assert "Maximum length" in data["error"]
 
     def test_execute_rejects_non_object_json(self, client, csrf_token):
         resp = client.post("/api/scripting/execute", data=json.dumps(["print(1)"]),
