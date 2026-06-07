@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (371 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-371 are recorded below.
+**Last consolidated:** 2026-06-07 (372 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-372 are recorded below.
+
+**Pass 372 update (no standalone research file):**
+- Expanded the partial Spanish UXP locale pack across all FCC caption display-settings keys: token labels, compliance notice copy, preview controls, live-preview feedback, and schema/error statuses now have Spanish keys.
+- Added a Spanish-pack guard requiring all `uxp.fcc.*` keys alongside the existing Cut and Audio coverage, and verified the Spanish FCC render in the in-app Browser.
 
 **Pass 371 update (no standalone research file):**
 - Expanded the partial Spanish UXP locale pack across the full Audio workspace: denoise, normalization, loudness-match, beat-marker controls, and Audio runtime feedback now have Spanish keys.
