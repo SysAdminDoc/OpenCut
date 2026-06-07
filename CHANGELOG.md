@@ -2,10 +2,10 @@
 
 ## [Unreleased]
 
-### Changed - UXP Settings Runtime i18n
+### Changed - UXP Shared and Settings Runtime i18n
 
-- Routed remaining UXP Settings generated/runtime feedback through locale keys, including backend reconnect/cancel toasts, live-update listener counts and titles, engine option labels, and migration-risk row/tag summaries.
-- Added Settings runtime guard coverage so those generated labels, statuses, and shared Settings-adjacent runtime toasts cannot regress to direct hardcoded strings.
+- Routed remaining UXP shared/Settings generated runtime feedback through locale keys, including backend reconnect/cancel toasts, relative-time fallbacks, live-update listener counts and titles, engine option labels, migration-risk row/tag summaries, the update-available toast, the Timeline batch-export no-clip guard, and Depth Anything install feedback.
+- Added shared/Settings runtime guard coverage so those generated labels, statuses, update/depth toasts, and Settings-adjacent runtime strings cannot regress to direct hardcoded strings.
 
 ### Changed - UXP Agent Runtime i18n
 
