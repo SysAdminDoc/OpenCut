@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Audio Runtime i18n
+
+- Routed Audio tab runtime feedback through locale keys, including denoise, normalization, loudness-match, and beat-marker progress, success, status, and error messages.
+- Added Audio-runtime guard coverage so the localized audio feedback cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Captions Runtime i18n
 
 - Routed Captions tab runtime feedback through locale keys, including transcript, chapter, repeat-review, result-card, copy/import, SRT handoff, and workflow readiness messages.

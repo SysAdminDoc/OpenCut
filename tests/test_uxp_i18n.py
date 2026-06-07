@@ -245,6 +245,10 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.captions.runtime.generated_chapters",
         "uxp.captions.runtime.detected_repeats",
         "uxp.captions.runtime.timeline_import_needs_srt",
+        "uxp.audio.runtime.applying_noise_reduction",
+        "uxp.audio.runtime.denoise_complete_output",
+        "uxp.audio.runtime.normalization_complete_output",
+        "uxp.audio.runtime.beats_detected_add_markers",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -302,6 +306,20 @@ def test_uxp_captions_runtime_feedback_uses_locale_helpers():
     assert "UIController.setStatus(`Repeat detection done" not in captions_jobs_js
     assert "Repeat review is ready" in _locale()["uxp.captions.runtime.repeat_review_ready_status"]
     assert "Transcription complete" in _locale()["uxp.captions.runtime.transcription_complete"]
+
+
+def test_uxp_audio_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    audio_js = js[js.index("/** ── DENOISE ──") : js.index("/** ── COLOR MATCH ──")]
+
+    assert 'UIController.showToast("Please select a clip first."' not in audio_js
+    assert 'UIController.showProcessing("Applying noise reduction' not in audio_js
+    assert 'UIController.showProcessing("Normalizing audio' not in audio_js
+    assert 'UIController.showToast("Please select both input and reference clips.' not in audio_js
+    assert 'UIController.showProcessing("Matching loudness to reference' not in audio_js
+    assert 'UIController.showToast("Please select an audio/music file.' not in audio_js
+    assert "Detected ${beats.length} beats" not in audio_js
+    assert "Denoise complete" in _locale()["uxp.audio.runtime.denoise_complete_status"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():

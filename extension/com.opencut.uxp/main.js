@@ -4067,28 +4067,29 @@ async function runRepeatDetection() {
 /** ── DENOISE ── */
 async function runDenoise() {
   const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const method   = document.getElementById("denoiseMethod")?.value ?? "noisereduce";
   const strength = parseInt(document.getElementById("denoiseStrength")?.value ?? 75) / 100;
 
   UIController.setButtonLoading("runDenoiseBtn", true);
-  UIController.showProcessing("Applying noise reduction…");
+  UIController.showProcessing(t("uxp.audio.runtime.applying_noise_reduction", "Applying noise reduction..."));
 
   await JobPoller.start(
     "/audio/denoise",
     { filepath: clipPath, method, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Processing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
-      UIController.showToast(`Denoise complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
-      UIController.setStatus("Denoise complete.");
+      const output = result.output ?? result.output_path ?? t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.audio.runtime.denoise_complete_output", "Denoise complete. Output: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.audio.runtime.denoise_complete_status", "Denoise complete."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
-      UIController.showToast(`Denoise error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.audio.runtime.denoise_error", "Denoise error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4096,28 +4097,29 @@ async function runDenoise() {
 /** ── NORMALIZE ── */
 async function runNormalize() {
   const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const targetLufs = parseFloat(document.getElementById("targetLufs")?.value ?? -14);
   const truePeak   = document.getElementById("normalizeTruePeak")?.checked ?? true;
 
   UIController.setButtonLoading("runNormalizeBtn", true);
-  UIController.showProcessing("Normalizing audio…");
+  UIController.showProcessing(t("uxp.audio.runtime.normalizing_audio", "Normalizing audio..."));
 
   await JobPoller.start(
     "/audio/normalize",
     { filepath: clipPath, target_lufs: targetLufs, true_peak: truePeak ? -1.0 : null },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Normalizing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.normalizing", "Normalizing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNormalizeBtn", false);
-      UIController.showToast(`Normalization complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
-      UIController.setStatus("Normalization complete.");
+      const output = result.output ?? result.output_path ?? t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.audio.runtime.normalization_complete_output", "Normalization complete. Output: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.audio.runtime.normalization_complete_status", "Normalization complete."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNormalizeBtn", false);
-      UIController.showToast(`Normalization error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.audio.runtime.normalization_error", "Normalization error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4127,27 +4129,27 @@ async function runLoudnessMatch() {
   const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
   const refPath  = document.getElementById("refClipLoudness")?.value?.trim();
   if (!clipPath || !refPath) {
-    UIController.showToast("Please select both input and reference clips.", "warning");
+    UIController.showToast(t("uxp.audio.runtime.select_input_reference", "Please select both input and reference clips."), "warning");
     return;
   }
 
   UIController.setButtonLoading("runLoudnessBtn", true);
-  UIController.showProcessing("Matching loudness to reference…");
+  UIController.showProcessing(t("uxp.audio.runtime.matching_loudness_reference", "Matching loudness to reference..."));
 
   await JobPoller.start(
     "/audio/loudness-match",
     { files: [clipPath, refPath], target_lufs: -14.0 },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Matching…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.matching", "Matching...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
-      UIController.showToast("Loudness match complete.", "success");
-      UIController.setStatus("Loudness match done.");
+      UIController.showToast(t("uxp.audio.runtime.loudness_match_complete", "Loudness match complete."), "success");
+      UIController.setStatus(t("uxp.audio.runtime.loudness_match_done", "Loudness match done."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
-      UIController.showToast(`Error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4155,25 +4157,25 @@ async function runLoudnessMatch() {
 /** ── BEAT MARKERS ── */
 async function runBeatMarkers() {
   const trackPath = document.getElementById("beatTrackPath")?.value?.trim();
-  if (!trackPath) { UIController.showToast("Please select an audio/music file.", "warning"); return; }
+  if (!trackPath) { UIController.showToast(t("uxp.audio.runtime.select_audio_file", "Please select an audio/music file."), "warning"); return; }
 
   const sensitivity = parseInt(document.getElementById("beatSensitivity")?.value ?? 60) / 100;
 
   UIController.setButtonLoading("runBeatMarkersBtn", true);
-  UIController.showProcessing("Detecting beats…");
+  UIController.showProcessing(t("uxp.audio.runtime.detecting_beats", "Detecting beats..."));
 
   await JobPoller.start(
     "/audio/beat-markers",
     { filepath: trackPath, subdivisions: Math.max(1, Math.round(sensitivity * 4)) },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing tempo…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.analyzing_tempo", "Analyzing tempo...")); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBeatMarkersBtn", false);
 
       const beats = result.beats ?? result.markers ?? [];
-      rememberTimelineMarkers(beats, { source: "Beat Detection", clipPath: trackPath });
-      UIController.showToast(`Detected ${beats.length} beats. Adding markers to timeline…`, "success");
-      UIController.setStatus(`Beat detection done — ${beats.length} beats.`);
+      rememberTimelineMarkers(beats, { source: t("uxp.audio.beat_detection", "Beat Detection"), clipPath: trackPath });
+      UIController.showToast(formatI18n("uxp.audio.runtime.beats_detected_add_markers", "Detected {count} beats. Adding markers to timeline...", { count: beats.length }), "success");
+      UIController.setStatus(formatI18n("uxp.audio.runtime.beat_detection_done", "Beat detection done - {count} beats.", { count: beats.length }));
 
       // Attempt direct UXP marker insertion
       await addSequenceMarkers(beats, "green");
@@ -4181,7 +4183,7 @@ async function runBeatMarkers() {
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBeatMarkersBtn", false);
-      UIController.showToast(`Beat detection error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.audio.runtime.beat_detection_error", "Beat detection error: {error}", { error: err }), "error");
     }
   );
 }
