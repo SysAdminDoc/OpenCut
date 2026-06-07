@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added - UXP Partial Locale Packaging
+
+- Added a partial Spanish UXP locale pack for first-viewport chrome, tab labels, workspace summaries, connection state, and shared runtime essentials.
+- Updated the UXP locale loader to select query/browser locale candidates, merge partial locale packs over English fallback strings, and guard packaged partial locales in static i18n tests.
+
 ### Changed - UXP Shared and Settings Runtime i18n
 
 - Routed remaining UXP shared/Settings generated runtime feedback through locale keys, including backend reconnect/cancel toasts, relative-time fallbacks, live-update listener counts and titles, engine option labels, migration-risk row/tag summaries, the update-available toast, the Timeline batch-export no-clip guard, and Depth Anything install feedback.
