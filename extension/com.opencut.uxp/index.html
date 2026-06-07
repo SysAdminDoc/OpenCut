@@ -557,123 +557,123 @@
       <div class="oc-tab-panel" id="tab-video" role="tabpanel" aria-labelledby="tabBtnVideo">
 
         <div class="oc-field-row oc-mb-sm">
-          <label class="oc-label" for="clipPathVideo">Clip Path</label>
+          <label class="oc-label" for="clipPathVideo" data-i18n="uxp.video.clip_path">Clip Path</label>
           <div class="oc-input-group">
-            <input type="text" class="oc-input" id="clipPathVideo" placeholder="Select clip…">
-            <button type="button" class="oc-btn oc-btn-secondary" id="browseClipVideo">Browse</button>
+            <input type="text" class="oc-input" id="clipPathVideo" placeholder="Select clip…" data-i18n-placeholder="uxp.video.select_clip_placeholder">
+            <button type="button" class="oc-btn oc-btn-secondary" id="browseClipVideo" data-i18n="common.browse">Browse</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Color Match</div>
+        <div class="oc-section-title" data-i18n="uxp.video.color_match">Color Match</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="colorMatchBody">
-            <span>Color Grading Match</span>
+            <span data-i18n="uxp.video.color_grading_match">Color Grading Match</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="colorMatchBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="colorRefPath">Reference Clip</label>
+              <label class="oc-label" for="colorRefPath" data-i18n="uxp.video.reference_clip">Reference Clip</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="colorRefPath" placeholder="Reference video file…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseColorRef">Browse</button>
+                <input type="text" class="oc-input" id="colorRefPath" placeholder="Reference video file…" data-i18n-placeholder="uxp.video.reference_video_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseColorRef" data-i18n="common.browse">Browse</button>
               </div>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="colorMatchStrength">Match Strength</label>
+              <label class="oc-label" for="colorMatchStrength" data-i18n="uxp.video.match_strength">Match Strength</label>
               <input type="range" class="oc-slider" id="colorMatchStrength" min="0" max="100" value="80" step="1">
               <span class="oc-slider-val" id="colorMatchStrengthVal">80%</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runColorMatchBtn">Match Color</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runColorMatchBtn" data-i18n="uxp.video.match_color">Match Color</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Auto Zoom</div>
+        <div class="oc-section-title" data-i18n="uxp.video.auto_zoom">Auto Zoom</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="autoZoomBody">
-            <span>AI Auto-Reframe / Zoom</span>
+            <span data-i18n="uxp.video.ai_auto_reframe_zoom">AI Auto-Reframe / Zoom</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="autoZoomBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="zoomAspect">Target Aspect</label>
+              <label class="oc-label" for="zoomAspect" data-i18n="uxp.video.target_aspect">Target Aspect</label>
               <select class="oc-select" id="zoomAspect">
-                <option value="9:16">9:16 (Shorts / TikTok)</option>
-                <option value="1:1">1:1 (Square)</option>
-                <option value="4:5">4:5 (Instagram)</option>
-                <option value="16:9" selected>16:9 (Widescreen)</option>
+                <option value="9:16" data-i18n="uxp.video.aspect_shorts_tiktok">9:16 (Shorts / TikTok)</option>
+                <option value="1:1" data-i18n="uxp.video.aspect_square">1:1 (Square)</option>
+                <option value="4:5" data-i18n="uxp.video.aspect_instagram">4:5 (Instagram)</option>
+                <option value="16:9" selected data-i18n="uxp.video.aspect_widescreen">16:9 (Widescreen)</option>
               </select>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="zoomFactor">Max Zoom</label>
+              <label class="oc-label" for="zoomFactor" data-i18n="uxp.video.max_zoom">Max Zoom</label>
               <input type="range" class="oc-slider" id="zoomFactor" min="1.0" max="2.5" value="1.4" step="0.05">
               <span class="oc-slider-val" id="zoomFactorVal">1.40x</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runAutoZoomBtn">Apply Auto Zoom</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runAutoZoomBtn" data-i18n="uxp.video.apply_auto_zoom">Apply Auto Zoom</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Multicam Switch</div>
+        <div class="oc-section-title" data-i18n="uxp.video.multicam_switch">Multicam Switch</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="multicamBody">
-            <span>Multicam Cut Detection</span>
+            <span data-i18n="uxp.video.multicam_cut_detection">Multicam Cut Detection</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="multicamBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="cam2Path">Camera 2</label>
+              <label class="oc-label" for="cam2Path" data-i18n="uxp.video.camera_2">Camera 2</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="cam2Path" placeholder="Second camera file…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseCam2">Browse</button>
+                <input type="text" class="oc-input" id="cam2Path" placeholder="Second camera file…" data-i18n-placeholder="uxp.video.second_camera_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseCam2" data-i18n="common.browse">Browse</button>
               </div>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="multicamStrategy">Cut Strategy</label>
+              <label class="oc-label" for="multicamStrategy" data-i18n="uxp.video.cut_strategy">Cut Strategy</label>
               <select class="oc-select" id="multicamStrategy">
-                <option value="activity">Activity-Based</option>
-                <option value="scene">Scene Detection</option>
-                <option value="audio">Audio Energy</option>
+                <option value="activity" data-i18n="uxp.video.strategy_activity">Activity-Based</option>
+                <option value="scene" data-i18n="uxp.video.strategy_scene">Scene Detection</option>
+                <option value="audio" data-i18n="uxp.video.strategy_audio">Audio Energy</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runMulticamBtn">Generate Multicam Cuts</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runMulticamBtn" data-i18n="uxp.video.generate_multicam_cuts">Generate Multicam Cuts</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Multimodal Diarization</div>
+        <div class="oc-section-title" data-i18n="uxp.video.multimodal_diarization">Multimodal Diarization</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="mmDiarizeBody">
-            <span>Audio + Face Speaker Mapping</span>
+            <span data-i18n="uxp.video.audio_face_speaker_mapping">Audio + Face Speaker Mapping</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="mmDiarizeBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="mmDiarizeNumSpeakersUxp">Speakers</label>
-              <select id="mmDiarizeNumSpeakersUxp" class="oc-select" aria-label="Number of speakers">
-                <option value="" selected>Auto</option>
+              <label class="oc-label" for="mmDiarizeNumSpeakersUxp" data-i18n="uxp.video.speakers">Speakers</label>
+              <select id="mmDiarizeNumSpeakersUxp" class="oc-select" aria-label="Number of speakers" data-i18n-aria-label="uxp.video.number_of_speakers">
+                <option value="" selected data-i18n="uxp.video.auto">Auto</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
                 <option value="4">4</option>
                 <option value="5">5</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runMmDiarizeBtnUxp">Run Multimodal Diarize</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runMmDiarizeBtnUxp" data-i18n="uxp.video.run_multimodal_diarize">Run Multimodal Diarize</button>
           </div>
         </div>
 
-        <div class="oc-section-title">AI B-Roll Generation</div>
+        <div class="oc-section-title" data-i18n="uxp.video.ai_broll_generation">AI B-Roll Generation</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="brollGenBody">
-            <span>Generate B-Roll from Text</span>
+            <span data-i18n="uxp.video.generate_broll_from_text">Generate B-Roll from Text</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="brollGenBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="brollGenPromptUxp">Description</label>
-              <textarea id="brollGenPromptUxp" class="oc-textarea" rows="2" placeholder="e.g. aerial cityscape at sunset" aria-label="B-roll description"></textarea>
+              <label class="oc-label" for="brollGenPromptUxp" data-i18n="uxp.video.description">Description</label>
+              <textarea id="brollGenPromptUxp" class="oc-textarea" rows="2" placeholder="e.g. aerial cityscape at sunset" aria-label="B-roll description" data-i18n-placeholder="uxp.video.broll_description_placeholder" data-i18n-aria-label="uxp.video.broll_description"></textarea>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="brollGenBackendUxp">Backend</label>
-              <select id="brollGenBackendUxp" class="oc-select" aria-label="Video generation backend">
-                <option value="auto" selected>Auto</option>
+              <label class="oc-label" for="brollGenBackendUxp" data-i18n="uxp.video.backend">Backend</label>
+              <select id="brollGenBackendUxp" class="oc-select" aria-label="Video generation backend" data-i18n-aria-label="uxp.video.generation_backend">
+                <option value="auto" selected data-i18n="uxp.video.auto">Auto</option>
                 <option value="cogvideox">CogVideoX</option>
                 <option value="wan">Wan 2.2</option>
                 <option value="hunyuan">HunyuanVideo</option>
@@ -681,38 +681,38 @@
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="brollGenSeedUxp">Seed</label>
-              <input type="number" id="brollGenSeedUxp" class="oc-input" placeholder="Random" min="0" aria-label="Random seed">
+              <label class="oc-label" for="brollGenSeedUxp" data-i18n="uxp.video.seed">Seed</label>
+              <input type="number" id="brollGenSeedUxp" class="oc-input" placeholder="Random" min="0" aria-label="Random seed" data-i18n-placeholder="uxp.video.random_placeholder" data-i18n-aria-label="uxp.video.random_seed">
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBrollGenBtnUxp">Generate B-Roll</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBrollGenBtnUxp" data-i18n="uxp.video.generate_broll">Generate B-Roll</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Depth Effects</div>
+        <div class="oc-section-title" data-i18n="uxp.video.depth_effects">Depth Effects</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="depthBody">
-            <span>Depth Map / Bokeh / Parallax</span>
+            <span data-i18n="uxp.video.depth_map_bokeh_parallax">Depth Map / Bokeh / Parallax</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="depthBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="depthEffectUxp">Effect</label>
+              <label class="oc-label" for="depthEffectUxp" data-i18n="uxp.video.effect">Effect</label>
               <select id="depthEffectUxp" class="oc-select">
-                <option value="depth_map" selected>Depth Map</option>
-                <option value="bokeh">Bokeh (Depth-of-Field)</option>
-                <option value="parallax">Parallax Zoom</option>
+                <option value="depth_map" selected data-i18n="uxp.video.depth_map">Depth Map</option>
+                <option value="bokeh" data-i18n="uxp.video.bokeh_depth_of_field">Bokeh (Depth-of-Field)</option>
+                <option value="parallax" data-i18n="uxp.video.parallax_zoom">Parallax Zoom</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="depthModelSizeUxp">Model</label>
+              <label class="oc-label" for="depthModelSizeUxp" data-i18n="uxp.video.model">Model</label>
               <select id="depthModelSizeUxp" class="oc-select">
-                <option value="small" selected>Small (fast)</option>
-                <option value="base">Base</option>
-                <option value="large">Large (best)</option>
+                <option value="small" selected data-i18n="uxp.video.model_small_fast">Small (fast)</option>
+                <option value="base" data-i18n="uxp.video.model_base">Base</option>
+                <option value="large" data-i18n="uxp.video.model_large_best">Large (best)</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runDepthBtnUxp">Apply Depth Effect</button>
-            <div class="oc-hint oc-hidden" id="depthHintUxp">Depth Anything V2 not installed. <button type="button" class="oc-btn oc-btn-sm" id="installDepthBtnUxp">Install</button></div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runDepthBtnUxp" data-i18n="uxp.video.apply_depth_effect">Apply Depth Effect</button>
+            <div class="oc-hint oc-hidden" id="depthHintUxp"><span data-i18n="uxp.video.depth_not_installed">Depth Anything V2 not installed.</span> <button type="button" class="oc-btn oc-btn-sm" id="installDepthBtnUxp" data-i18n="uxp.video.install">Install</button></div>
           </div>
         </div>
 
