@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish FCC Display Locale
+
+- Expanded the partial Spanish UXP locale pack across all FCC caption display-settings keys, including token labels, compliance notice copy, preview controls, live-preview feedback, and schema/error statuses.
+- Added guard coverage requiring every `uxp.fcc.*` key to be present in the Spanish pack while keeping deeper Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Audio Locale
 
 - Expanded the partial Spanish UXP locale pack across the full Audio workspace, including denoise, normalization, loudness-match, beat-marker controls, and Audio runtime feedback.
