@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (340 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-340 are recorded below.
+**Last consolidated:** 2026-06-07 (341 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-341 are recorded below.
+
+**Pass 341 update (no standalone research file):**
+- Closed the June 6 rate-limit migration finding by adding worker-lifetime `async_job(rate_limit_key=...)` support for static and request-derived keys, including synchronous 429 rejection before job creation and release paths for worker completion, job-creation failure, and worker submit failure.
+- Migrated model-install and GPU-heavy async routes away from direct route-local `rate_limit()` / `rate_limit_release()` pairs, preserved conditional BasicVSR denoise locking, converted the MCP bridge to `rate_limit_slot()` for dynamic per-tool keys, and wired `tests/test_async_job_rate_limit.py` into release-smoke so route modules cannot reintroduce direct primitive calls.
 
 **Pass 340 update (no standalone research file):**
 - Closed the June 6 WCAG contrast audit finding by adding `opencut.tools.contrast_audit`, a stdlib static gate that parses committed CEP/UXP `:root` design-token blocks and audits curated foreground/background pairs against WCAG AA 4.5:1 normal-text and 3.0:1 large-text/non-text floors.
@@ -257,7 +261,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **602** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **251 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **252 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - Async Rate Limit Migration
+
+- Added worker-lifetime `async_job(rate_limit_key=...)` support so GPU and model-install routes reject saturated work before creating a job, then release the slot when the worker exits or setup fails.
+- Migrated async model-install and GPU-heavy route handlers away from direct `rate_limit()` / `rate_limit_release()` pairs, including conditional BasicVSR denoise locking.
+- Converted the MCP bridge to `rate_limit_slot()` for dynamic per-tool throttles and added a release-smoke regression that blocks direct route-level rate-limit primitive calls.
+
 ### Added - WCAG Contrast Release Gate
 
 - Added `opencut.tools.contrast_audit`, a stdlib static WCAG AA contrast audit for committed CEP and UXP design-token pairs.
