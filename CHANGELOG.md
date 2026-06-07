@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Captions Locale
+
+- Expanded the partial Spanish UXP locale pack across all Captions workspace keys, including transcription setup, model/language/style selectors, chapter generation, repeat detection, result review, and Captions runtime feedback states.
+- Added guard coverage requiring every `uxp.captions.*` key to be present in the Spanish pack while keeping Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Timeline Locale
 
 - Expanded the partial Spanish UXP locale pack across all Timeline workspace keys, including sequence write-back, OTIO export, beat-marker, batch-export, batch-rename, smart-bin, SRT prep, and generated readiness-summary states.
