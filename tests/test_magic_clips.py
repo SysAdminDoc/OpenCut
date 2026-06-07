@@ -550,6 +550,70 @@ def test_shorts_pipeline_resume_restarts_on_config_mismatch(tmp_path, monkeypatc
     assert manifest["status"] == "complete"
 
 
+def test_shorts_pipeline_writes_grouped_magic_bundle_manifest(tmp_path, monkeypatch):
+    from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"fake-media")
+    output_dir = tmp_path / "out"
+
+    def fake_trim(_input_path, _start, _end, output_path):
+        Path(output_path).write_bytes(b"clip")
+
+    def fake_conform(input_path, _width, _height, output_path):
+        Path(output_path).write_bytes(Path(input_path).read_bytes())
+
+    monkeypatch.setattr("opencut.core.shorts_pipeline._trim_clip", fake_trim)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._conform_clip_dimensions", fake_conform)
+    monkeypatch.setattr("opencut.core.shorts_pipeline._probe_duration", lambda _path: 0.0)
+
+    clips = generate_shorts(
+        str(media),
+        config=ShortsPipelineConfig(
+            max_shorts=1,
+            face_track=False,
+            burn_captions=False,
+            approved_plan_id="mcplan:bundle",
+            approved_candidates=[
+                {
+                    "candidate_id": "mcc:first",
+                    "start": 5.0,
+                    "end": 25.0,
+                    "title": "First hook",
+                    "score": 88.0,
+                    "transcript_excerpt": "This is the hook that explains the result.",
+                    "score_breakdown": {"hook": 0.9, "duration": 0.8},
+                    "hashtags": ["#editing"],
+                },
+            ],
+            platform_presets=["youtube_shorts", "instagram_feed"],
+        ),
+        output_dir=str(output_dir),
+    )
+
+    bundle_path = output_dir / "magic_clips_manifest.json"
+    csv_path = output_dir / "magic_clips_manifest.csv"
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+
+    assert [clip.bundle_manifest_path for clip in clips] == [str(bundle_path), str(bundle_path)]
+    assert [clip.bundle_csv_path for clip in clips] == [str(csv_path), str(csv_path)]
+    assert bundle["schema_version"] == "opencut.magic_clips.bundle.v1"
+    assert bundle["candidate_count"] == 1
+    assert bundle["output_count"] == 2
+    assert bundle["plan_id"] == "mcplan:bundle"
+    assert bundle["candidates"][0]["candidate_id"] == "mcc:first"
+    assert bundle["candidates"][0]["score_breakdown"] == {"duration": 0.8, "hook": 0.9}
+    assert bundle["candidates"][0]["transcript_excerpt"] == "This is the hook that explains the result."
+    assert {output["platform_preset"] for output in bundle["candidates"][0]["outputs"]} == {
+        "youtube_shorts",
+        "instagram_feed",
+    }
+    assert all(Path(output["export_path"]).is_file() for output in bundle["candidates"][0]["outputs"])
+    csv_text = csv_path.read_text(encoding="utf-8")
+    assert "candidate_id,platform_preset,start,end,duration,title,score,export_path" in csv_text
+    assert csv_text.count("mcc:first") == 2
+
+
 def test_shorts_pipeline_rejects_unknown_platform_preset(tmp_path):
     from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
 
@@ -616,6 +680,7 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
             "/video/shorts-pipeline",
             data=json.dumps({
                 "filepath": str(media),
+                "output_dir": str(tmp_path / "out"),
                 "magic_clips_plan": plan,
                 "candidate_ids": ["mcc:keep"],
                 "face_track": "false",
@@ -633,6 +698,84 @@ def test_shorts_pipeline_route_filters_magic_plan_candidate_ids(client, csrf_tok
     assert captured["checkpoint_manifest_path"].endswith("magic_clips_run_manifest.json")
     assert captured["resume"] is True
     assert job["result"]["magic_clips_manifest"] == captured["checkpoint_manifest_path"]
+
+
+def test_shorts_pipeline_route_returns_magic_bundle_manifest(client, csrf_token, tmp_path):
+    from types import SimpleNamespace
+
+    from tests.conftest import csrf_headers
+
+    media = tmp_path / "route.mp4"
+    media.write_bytes(b"fake")
+    bundle_path = tmp_path / "out" / "magic_clips_manifest.json"
+    csv_path = tmp_path / "out" / "magic_clips_manifest.csv"
+    bundle_payload = {
+        "schema_version": "opencut.magic_clips.bundle.v1",
+        "candidate_count": 1,
+        "output_count": 1,
+        "candidates": [
+            {
+                "candidate_id": "mcc:keep",
+                "title": "Keep",
+                "outputs": [{"platform_preset": "youtube_shorts", "export_path": str(tmp_path / "out.mp4")}],
+            },
+        ],
+    }
+
+    def fake_generate(_filepath, config, output_dir, on_progress):
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        bundle_path.parent.mkdir(parents=True, exist_ok=True)
+        bundle_path.write_text(json.dumps(bundle_payload), encoding="utf-8")
+        csv_path.write_text("candidate_id,platform_preset\nmcc:keep,youtube_shorts\n", encoding="utf-8")
+        on_progress(100, "done")
+        return [
+            SimpleNamespace(
+                index=1,
+                output_path=str(tmp_path / "out.mp4"),
+                start=5.0,
+                end=20.0,
+                duration=15.0,
+                title="Keep",
+                score=90.0,
+                engagement=None,
+                platform_preset="youtube_shorts",
+                width=1080,
+                height=1920,
+                manifest_path=config.checkpoint_manifest_path,
+                bundle_manifest_path=str(bundle_path),
+                bundle_csv_path=str(csv_path),
+            ),
+        ]
+
+    plan = {
+        "plan_id": "mcplan:abc",
+        "candidates": [
+            {"candidate_id": "mcc:keep", "start": 5.0, "end": 20.0, "title": "Keep"},
+        ],
+    }
+
+    with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
+            patch("opencut.routes.video_specialty.rate_limit_release"), \
+            patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
+        resp = client.post(
+            "/video/shorts-pipeline",
+            data=json.dumps({
+                "filepath": str(media),
+                "magic_clips_plan": plan,
+                "candidate_ids": ["mcc:keep"],
+                "face_track": "false",
+                "burn_captions": "false",
+            }),
+            headers=csrf_headers(csrf_token),
+        )
+        job = _poll_job(client, resp.get_json()["job_id"])
+
+    result = job["result"]
+    assert resp.status_code == 200
+    assert result["magic_clips_bundle_manifest"] == str(bundle_path)
+    assert result["magic_clips_bundle_csv"] == str(csv_path)
+    assert result["magic_clips_bundle"] == bundle_payload
+    assert result["clips"][0]["bundle_manifest_path"] == str(bundle_path)
 
 
 def test_shorts_pipeline_route_rejects_unmatched_magic_candidate_ids(client, csrf_token, tmp_path):

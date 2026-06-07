@@ -5,6 +5,7 @@ Depth effects, B-roll, titles, object removal, shorts pipeline,
 install endpoints.
 """
 
+import json
 import logging
 import tempfile
 
@@ -334,6 +335,23 @@ def video_shorts_pipeline(job_id, filepath, data):
             (getattr(c, "manifest_path", "") for c in clips if getattr(c, "manifest_path", "")),
             config.checkpoint_manifest_path,
         )
+        bundle_manifest_path = next(
+            (getattr(c, "bundle_manifest_path", "") for c in clips if getattr(c, "bundle_manifest_path", "")),
+            "",
+        )
+        bundle_csv_path = next(
+            (getattr(c, "bundle_csv_path", "") for c in clips if getattr(c, "bundle_csv_path", "")),
+            "",
+        )
+        bundle_payload = {}
+        if bundle_manifest_path:
+            try:
+                with open(bundle_manifest_path, encoding="utf-8") as handle:
+                    loaded_bundle = json.load(handle)
+                if isinstance(loaded_bundle, dict):
+                    bundle_payload = loaded_bundle
+            except OSError:
+                bundle_payload = {}
 
         return {
             "clips": [
@@ -349,6 +367,8 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "width": getattr(c, "width", 0),
                     "height": getattr(c, "height", 0),
                     "manifest_path": getattr(c, "manifest_path", ""),
+                    "bundle_manifest_path": getattr(c, "bundle_manifest_path", ""),
+                    "bundle_csv_path": getattr(c, "bundle_csv_path", ""),
                     "engagement": {
                         "hook_strength": getattr(c.engagement, "hook_strength", 0),
                         "emotional_peak": getattr(c.engagement, "emotional_peak", 0),
@@ -361,6 +381,9 @@ def video_shorts_pipeline(job_id, filepath, data):
             ],
             "total_clips": len(clips),
             "magic_clips_manifest": manifest_path,
+            "magic_clips_bundle_manifest": bundle_manifest_path,
+            "magic_clips_bundle_csv": bundle_csv_path,
+            "magic_clips_bundle": bundle_payload,
         }
     finally:
         if acquired:
