@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (374 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-374 are recorded below.
+**Last consolidated:** 2026-06-07 (375 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-375 are recorded below.
+
+**Pass 375 update (no standalone research file):**
+- Expanded the partial Spanish UXP locale pack across all Agent, Deliverables, and feature-tab navigation keys, including conductor/variant/runtime states plus deliverables package/status/destination copy.
+- Added a Spanish-pack guard requiring every `uxp.agent.*` and `uxp.deliverables.*` key plus `nav.feature_tabs` alongside the existing Settings, workspace, FCC, Audio, and Cut coverage.
 
 **Pass 374 update (no standalone research file):**
 - Expanded the partial Spanish UXP locale pack across the remaining Settings generated/status keys: engine-routing summaries, live-update bridge states, migration-dashboard empties/errors, keyboard actions, and pinned-engine counts now have Spanish keys.

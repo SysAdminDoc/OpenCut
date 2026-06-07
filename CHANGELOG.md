@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Agent and Deliverables Locale
+
+- Expanded the partial Spanish UXP locale pack across all Agent, Deliverables, and feature-tab navigation keys, including conductor/variant/runtime states plus deliverables package/status/destination copy.
+- Added guard coverage requiring every `uxp.agent.*` and `uxp.deliverables.*` key plus `nav.feature_tabs` to be present in the Spanish pack while keeping deeper Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Settings Generated Locale
 
 - Expanded the partial Spanish UXP locale pack across the remaining Settings generated/status keys, including engine-routing summaries, live-update bridge states, migration-dashboard empties/errors, keyboard actions, and pinned-engine counts.

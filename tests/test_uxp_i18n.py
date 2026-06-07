@@ -110,7 +110,7 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 410 <= len(spanish) < len(english)
+    assert 610 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
@@ -146,6 +146,17 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.settings.engine_routing_auto_healthy"].startswith("El enrutamiento de motores esta saludable.")
     assert spanish["uxp.settings.generate_captions"] == "Generar subtitulos"
     assert spanish["uxp.settings.pinned_title_one"] == "{count} dominio tiene una preferencia de motor fijada."
+    assert sorted(key for key in english if key.startswith("uxp.agent.") and key not in spanish) == []
+    assert spanish["uxp.agent.chat_conductor_f143"] == "Conductor de chat (F143)"
+    assert spanish["uxp.agent.runtime.plan_ready"] == "Plan: {count} paso(s) via {source}. Sesion {session}."
+    assert spanish["uxp.agent.runtime.sequence_index_built"].startswith("Indice creado:")
+    assert spanish["nav.feature_tabs"] == "Pestanas de funciones"
+    assert sorted(key for key in english if key.startswith("uxp.deliverables.") and key not in spanish) == []
+    assert spanish["uxp.deliverables.generate_deliverable_documents"] == "Generar documentos de entrega"
+    assert spanish["uxp.deliverables.session_temp_folder"] == "Carpeta temporal de sesion"
+    assert spanish["uxp.deliverables.session_temp_folder_title"].startswith("Los entregables se guardaran")
+    assert spanish["uxp.deliverables.runtime.generated_csv_handoff_many"] == "Se generaron {count} documentos de entrega CSV."
+    assert spanish["uxp.deliverables.status_line"] == "Carga informacion de secuencia, elige un destino si hace falta y genera los documentos de entrega que necesitas."
     assert english["uxp.video.clip_path"] == "Clip Path"
     assert "uxp.video.clip_path" not in spanish
 
@@ -518,6 +529,8 @@ def test_uxp_deliverables_runtime_feedback_uses_locale_helpers():
     combined = deliverables_state_js + deliverables_jobs_js
 
     assert 'label: "No documents selected"' not in combined
+    assert 'label: "Session temp folder"' not in combined
+    assert 'title: "Deliverables will be saved to the session temp folder' not in combined
     assert 'title: "Select at least one handoff document' not in combined
     assert 'reportBtn.textContent = "Select Documents First"' not in combined
     assert 'const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : "Unknown size";' not in combined
