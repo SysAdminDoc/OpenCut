@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Workspace Guide Locale
+
+- Expanded the partial Spanish UXP locale pack across all workspace guide, workspace meta, shared runtime, and UXP status keys.
+- Added guard coverage requiring every `uxp.guide.*`, `uxp.workspace.*`, `uxp.runtime.*`, and `uxp.status.*` key to be present in the Spanish pack while keeping deeper Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish FCC Display Locale
 
 - Expanded the partial Spanish UXP locale pack across all FCC caption display-settings keys, including token labels, compliance notice copy, preview controls, live-preview feedback, and schema/error statuses.

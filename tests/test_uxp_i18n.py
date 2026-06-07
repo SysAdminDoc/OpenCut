@@ -110,7 +110,7 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 315 <= len(spanish) < len(english)
+    assert 360 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
@@ -127,6 +127,16 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.fcc.caption_display_settings"] == "Ajustes de visualizacion de subtitulos (FCC)"
     assert spanish["uxp.fcc.preview"] == "Vista previa"
     assert spanish["uxp.fcc.schema_unavailable"] == "No se pudo cargar el esquema de tokens FCC. La tarjeta quedara vacia."
+    shared_prefixes = ("uxp.guide.", "uxp.runtime.", "uxp.status.", "uxp.workspace.")
+    assert sorted(
+        key
+        for key in english
+        if key.startswith(shared_prefixes) and key not in spanish
+    ) == []
+    assert spanish["uxp.guide.timeline_title"] == "Envia cambios aprobados de vuelta a Premiere con menos friccion."
+    assert spanish["uxp.runtime.invalid_https_authorization_url"] == "El servidor envio una URL de autorizacion HTTPS no valida."
+    assert spanish["uxp.status.workspace"] == "Espacio {workspace}"
+    assert spanish["uxp.workspace.choose_source_title"] == "Elige un clip o pega una ruta para empezar"
     assert spanish["uxp.runtime.select_clip_first"] == "Selecciona primero un clip."
     assert spanish["uxp.guide.backend_offline_title"] == "Reconecta el backend local de OpenCut antes de ejecutar trabajos."
     assert spanish["uxp.settings.engine_routing"] == "Enrutamiento de motores"
