@@ -58,6 +58,12 @@ def _js_i18n_keys() -> set[str]:
         )
     )
     keys.update(re.findall(r'formatI18n\(\s*"([^"]+)"', js))
+    for one_key, many_key in re.findall(
+        r'formatCountI18n\(\s*[^,]+,\s*"([^"]+)"\s*,\s*"[^"]*"\s*,\s*"([^"]+)"',
+        js,
+        re.DOTALL,
+    ):
+        keys.update((one_key, many_key))
     return keys
 
 
@@ -255,6 +261,17 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.timeline.runtime.exported_segments",
         "uxp.timeline.runtime.srt_validated_segments",
         "uxp.timeline.runtime.otio_exported_output",
+        "uxp.search.runtime.kind_visual",
+        "uxp.search.runtime.indexing_media_library",
+        "uxp.search.runtime.library_indexed_toast_many",
+        "uxp.search.runtime.loaded_match_toast",
+        "uxp.search.runtime.search_ready_many",
+        "uxp.search.runtime.searching_for_query",
+        "uxp.deliverables.runtime.no_documents_selected",
+        "uxp.deliverables.runtime.sequence_ready_status",
+        "uxp.deliverables.runtime.deliverable_ready_output",
+        "uxp.deliverables.runtime.generated_csv_with_gaps",
+        "uxp.deliverables.runtime.package_ready_status_many",
         "uxp.video.runtime.matching_color_grading",
         "uxp.video.runtime.color_match_complete_output",
         "uxp.video.runtime.auto_zoom_complete_output",
@@ -382,6 +399,61 @@ def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
     assert "UIController.showToast(`OTIO export failed:" not in combined
     assert "SRT ready" in _locale()["uxp.timeline.runtime.srt_ready_status"]
     assert "OTIO exported" in _locale()["uxp.timeline.runtime.otio_exported_output"]
+
+
+def test_uxp_search_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    search_helpers_js = js[
+        js.index("function getSearchResultPath")
+        : js.index("function getDeliverablesSelectionSummary")
+    ]
+    search_jobs_js = js[
+        js.index("/** ── INDEX LIBRARY")
+        : js.index("/** ── DELIVERABLES")
+    ]
+    combined = search_helpers_js + search_jobs_js
+
+    assert 'return "Visual";' not in combined
+    assert "return `${pct}% match`;" not in combined
+    assert "Result ${index + 1}" not in combined
+    assert 'UIController.showToast("Please select a media folder to index.' not in combined
+    assert 'UIController.showProcessing("Indexing media library' not in combined
+    assert "UIController.showToast(`Index error:" not in combined
+    assert 'UIController.showToast("Please enter a search query.' not in combined
+    assert 'UIController.showProcessing("Searching footage' not in combined
+    assert "UIController.showToast(`Search error:" not in combined
+    assert 'UIController.showToast("No NLP result to apply.' not in combined
+    assert 'UIController.showToast("Unknown NLP action type.' not in combined
+    assert "Searching for" in _locale()["uxp.search.runtime.searching_for_query"]
+    assert "Loaded" in _locale()["uxp.search.runtime.loaded_match_toast"]
+
+
+def test_uxp_deliverables_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    deliverables_state_js = js[
+        js.index("function getDeliverablesSelectionSummary")
+        : js.index("/** ── INDEX LIBRARY")
+    ]
+    deliverables_jobs_js = js[
+        js.index("/** ── DELIVERABLES")
+        : js.index("function bindEvents")
+    ]
+    combined = deliverables_state_js + deliverables_jobs_js
+
+    assert 'label: "No documents selected"' not in combined
+    assert 'title: "Select at least one handoff document' not in combined
+    assert 'reportBtn.textContent = "Select Documents First"' not in combined
+    assert 'const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : "Unknown size";' not in combined
+    assert 'info.name || "Active Sequence"' not in combined
+    assert 'UIController.showProcessing("Loading sequence info' not in combined
+    assert 'UIController.showToast("No active sequence loaded.' not in combined
+    assert "UIController.showProcessing(`Generating ${label}" not in combined
+    assert "UIController.showToast(`Deliverable error:" not in combined
+    assert 'UIController.showToast("Load sequence info before generating' not in combined
+    assert 'UIController.showToast("Select at least one handoff document' not in combined
+    assert "UIController.showToast(`Generated ${generated} CSV" not in combined
+    assert "Sequence ready" in _locale()["uxp.deliverables.runtime.sequence_ready_status"]
+    assert "Generated" in _locale()["uxp.deliverables.runtime.generated_csv_with_gaps"]
 
 
 def test_uxp_video_core_runtime_feedback_uses_locale_helpers():
