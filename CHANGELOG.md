@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Timeline Runtime i18n
+
+- Routed UXP Timeline runtime feedback through locale keys, including sequence cut/marker write-back, batch export, rename/smart-bin CEP handoff, SRT validation, and OTIO export messages.
+- Added Timeline-runtime guard coverage so those status, toast, note, and error messages cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Video Shorts Runtime i18n
 
 - Routed Video tab Shorts Pipeline runtime feedback through locale keys, including review-board plan/render/bundle states, candidate metadata, Magic Clips plan errors, approved-render feedback, and full pipeline progress, success, and error messages.
