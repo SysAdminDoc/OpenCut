@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Search Tab Shell
+
+- Expanded the UXP i18n foundation into the Search tab shell, including library indexing, semantic search, suggested prompts, empty states, NLP command controls, placeholders, ARIA labels, status text, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 510+ attribute baseline and representative Search-tab locale keys.
+
 ### Changed - UXP i18n Timeline Tab Shell
 
 - Expanded the UXP i18n foundation into the Timeline tab shell, including the preview notice, readiness summaries, sequence write-back, OTIO export, beat markers, batch export, batch rename, smart bins, and SRT prep labels, options, placeholders, ARIA labels, status text, and action buttons.

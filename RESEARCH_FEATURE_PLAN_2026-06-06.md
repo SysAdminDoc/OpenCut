@@ -439,7 +439,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 - **aria-live regions:** Processing banners, status, toasts all use `aria-live`
 - **Focus styles:** 187 `:focus`/`:focus-visible` rules in CEP CSS, 43 in UXP
 - **Reduced motion:** 4 `prefers-reduced-motion` queries in CEP, 3 in UXP
-- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94, Cut-tab static coverage shipped in Cycle 95, Captions-tab static coverage shipped in Cycle 96, FCC display-settings static/dynamic coverage shipped in Cycle 97, Audio-tab static coverage shipped in Cycle 98, top/core Video-tab static coverage through Depth Effects shipped in Cycle 99, Video effects coverage through Style Transfer shipped in Cycle 100, remaining Shorts/Social Video coverage shipped in Cycle 101, and Timeline-tab coverage shipped in Cycle 102
+- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94, Cut-tab static coverage shipped in Cycle 95, Captions-tab static coverage shipped in Cycle 96, FCC display-settings static/dynamic coverage shipped in Cycle 97, Audio-tab static coverage shipped in Cycle 98, top/core Video-tab static coverage through Depth Effects shipped in Cycle 99, Video effects coverage through Style Transfer shipped in Cycle 100, remaining Shorts/Social Video coverage shipped in Cycle 101, Timeline-tab coverage shipped in Cycle 102, and Search-tab coverage shipped in Cycle 103
 - **a11y regression tests:** `test_panel_a11y_invariants.py` guards toast a11y
 
 ### Gaps
@@ -550,7 +550,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 - [ ] P1 - **UXP panel i18n infrastructure**
   - Why: CEP EOL ~September 2026; UXP needs full i18n parity before it becomes the only panel
-  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, Cycle 96 added Captions-tab coverage, Cycle 97 added FCC display-settings coverage, Cycle 98 added Audio-tab coverage, Cycle 99 added top/core Video-tab coverage through Depth Effects, Cycle 100 added Video effects coverage through Style Transfer, Cycle 101 completed the remaining Video Shorts/Social static shell, Cycle 102 added Timeline-tab static-shell coverage, and broad UXP parity remains below the >500 acceptance target
+  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, Cycle 96 added Captions-tab coverage, Cycle 97 added FCC display-settings coverage, Cycle 98 added Audio-tab coverage, Cycle 99 added top/core Video-tab coverage through Depth Effects, Cycle 100 added Video effects coverage through Style Transfer, Cycle 101 completed the remaining Video Shorts/Social static shell, Cycle 102 added Timeline-tab static-shell coverage, Cycle 103 added Search-tab static-shell coverage, and broad UXP parity has crossed the >500 static-attribute target while remaining short of full tab parity
   - Touches: `extension/com.opencut.uxp/main.js`, `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py`
   - Acceptance: UXP loads `locales/en.json`, `data-i18n` count > 500
   - Verify: UXP i18n guard passes, then expand toward full drift parity against the UXP panel
