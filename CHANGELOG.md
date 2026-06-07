@@ -8,6 +8,7 @@
 
 ### Changed - CEP i18n Settings and Deliverables
 
+- Advanced E15 to batch 157 by localizing the Settings Project Templates and AI Models static shell, reusing existing template/form/refresh keys where possible. The live drift report now shows 2,324 keys, 2,279 consumers, 45 dead keys, and 0 missing keys.
 - Advanced E15 through batches 155 and 156 by adding locale hooks for the Export Deliverables shell, LLM settings, preset diagnostics controls, and guarded migration coverage. The live drift report now shows 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys.
 
 ### Changed - UXP WebView Permission Profiles

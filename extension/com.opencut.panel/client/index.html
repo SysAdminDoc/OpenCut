@@ -3704,11 +3704,11 @@
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.templates">Project Templates</div>
                     </div>
-                    <p class="card-desc">Apply pre-configured settings for common output formats.</p>
+                    <p class="card-desc" data-i18n="settings.templates_desc">Apply pre-configured settings for common output formats.</p>
                     <div class="form-group">
-                        <label for="templateSelect">Template</label>
+                        <label for="templateSelect" data-i18n="forms.template">Template</label>
                         <select id="templateSelect">
-                            <option value="" disabled selected>Select a template…</option>
+                            <option value="" disabled selected data-i18n="templates.select">Select a template…</option>
                         </select>
                     </div>
                     <div class="hint" id="templateDesc"></div>
@@ -3716,9 +3716,9 @@
                         <button type="button" class="btn-primary btn-sm" id="applyTemplateBtn" data-i18n="templates.apply">Apply Template</button>
                     </div>
                     <div class="border-t">
-                        <label class="param-label mb-xs">Save Custom Template</label>
+                        <label class="param-label mb-xs" data-i18n="templates.save_custom">Save Custom Template</label>
                         <div class="preset-save-row">
-                            <input type="text" id="templateCustomName" class="text-input" placeholder="My Template Name" aria-label="Custom template name" autocomplete="off" spellcheck="false">
+                            <input type="text" id="templateCustomName" class="text-input" placeholder="My Template Name" data-i18n-placeholder="templates.custom_name_placeholder" aria-label="Custom template name" data-i18n-aria-label="templates.custom_name_aria" autocomplete="off" spellcheck="false">
                             <button type="button" class="btn-sm" id="saveCustomTemplateBtn" data-i18n="common.save">Save</button>
                         </div>
                     </div>
@@ -3727,22 +3727,22 @@
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ai_models">AI Models</div>
-                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshModelsBtn" title="Refresh model list">
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshModelsBtn" title="Refresh model list" data-i18n-title="settings.refresh_model_list_title">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label">Refresh</span>
+                            <span class="btn-label" data-i18n="common.refresh">Refresh</span>
                         </button>
                     </div>
-                    <p class="card-desc">Review the local checkpoints and model assets OpenCut can access on this machine.</p>
-                    <div class="model-list" id="modelList" aria-live="polite" aria-label="Installed AI models">
-                        <div class="hint">Press Refresh above to detect installed AI models.</div>
+                    <p class="card-desc" data-i18n="settings.ai_models_desc">Review the local checkpoints and model assets OpenCut can access on this machine.</p>
+                    <div class="model-list" id="modelList" aria-live="polite" aria-label="Installed AI models" data-i18n-aria-label="models.installed_aria">
+                        <div class="hint" data-i18n="models.refresh_hint">Press Refresh above to detect installed AI models.</div>
                     </div>
                     <div class="settings-row mt-sm">
-                        <span class="settings-label">Total Size</span>
+                        <span class="settings-label" data-i18n="models.total_size">Total Size</span>
                         <span class="settings-value" id="modelsTotalSize">--</span>
                     </div>
-                    <div class="oc-status-line mt-xs" id="modelsStatusLine" data-state="idle" role="status" aria-live="polite">Refresh the model inventory to review local storage usage and available checkpoints.</div>
+                    <div class="oc-status-line mt-xs" id="modelsStatusLine" data-state="idle" role="status" aria-live="polite" data-i18n="models.status_idle">Refresh the model inventory to review local storage usage and available checkpoints.</div>
                 </section>
 
                 <section class="card">
