@@ -249,6 +249,12 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.audio.runtime.denoise_complete_output",
         "uxp.audio.runtime.normalization_complete_output",
         "uxp.audio.runtime.beats_detected_add_markers",
+        "uxp.timeline.runtime.no_cuts_to_apply",
+        "uxp.timeline.runtime.applied_cuts_sequence",
+        "uxp.timeline.runtime.added_markers_sequence",
+        "uxp.timeline.runtime.exported_segments",
+        "uxp.timeline.runtime.srt_validated_segments",
+        "uxp.timeline.runtime.otio_exported_output",
         "uxp.video.runtime.matching_color_grading",
         "uxp.video.runtime.color_match_complete_output",
         "uxp.video.runtime.auto_zoom_complete_output",
@@ -336,6 +342,46 @@ def test_uxp_audio_runtime_feedback_uses_locale_helpers():
     assert 'UIController.showToast("Please select an audio/music file.' not in audio_js
     assert "Detected ${beats.length} beats" not in audio_js
     assert "Denoise complete" in _locale()["uxp.audio.runtime.denoise_complete_status"]
+
+
+def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    timeline_jobs_js = js[
+        js.index("/** ── APPLY TIMELINE CUTS")
+        : js.index("/** ── INDEX LIBRARY")
+    ]
+    otio_js = js[
+        js.index("// ── OTIO Export ──")
+        : js.index("// ── Search ──")
+    ]
+    combined = timeline_jobs_js + otio_js
+
+    assert 'UIController.showToast("No cuts to apply.' not in combined
+    assert 'UIController.setStatus("Applying cuts to timeline' not in combined
+    assert "UIController.showToast(`Applied ${result.applied} cut" not in combined
+    assert "UIController.setStatus(`Applied ${result.applied} cut" not in combined
+    assert 'UIController.setStatus("Timeline write failed' not in combined
+    assert 'UIController.setStatus("UXP timeline API unavailable' not in combined
+    assert 'UIController.showToast("No markers to add.' not in combined
+    assert 'UIController.setStatus("Adding markers to sequence' not in combined
+    assert "UIController.showToast(`Added ${result.count} marker" not in combined
+    assert 'UIController.showToast("Please select an output folder.' not in combined
+    assert 'UIController.showToast("No markers or cuts to export.' not in combined
+    assert 'UIController.showProcessing("Starting batch export' not in combined
+    assert "UIController.showToast(`Exported ${count} segment" not in combined
+    assert "UIController.showToast(`Export error:" not in combined
+    assert 'UIController.showToast("Batch rename still runs' not in combined
+    assert 'UIController.showToast("Smart bins still execute' not in combined
+    assert 'UIController.showToast("Please select an SRT file.' not in combined
+    assert 'UIController.showProcessing("Validating SRT' not in combined
+    assert "UIController.showToast(`Validated ${count} caption" not in combined
+    assert "UIController.showToast(`SRT validation error:" not in combined
+    assert 'UIController.showToast("No cuts available.' not in combined
+    assert 'UIController.showToast("No markers available.' not in combined
+    assert "UIController.showToast(`OTIO exported:" not in combined
+    assert "UIController.showToast(`OTIO export failed:" not in combined
+    assert "SRT ready" in _locale()["uxp.timeline.runtime.srt_ready_status"]
+    assert "OTIO exported" in _locale()["uxp.timeline.runtime.otio_exported_output"]
 
 
 def test_uxp_video_core_runtime_feedback_uses_locale_helpers():

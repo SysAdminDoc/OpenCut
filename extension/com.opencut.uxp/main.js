@@ -4311,53 +4311,53 @@ async function runMulticamCuts() {
 async function applyTimelineCuts(cuts) {
   const cutsToApply = cuts ?? lastCuts;
   if (!cutsToApply || cutsToApply.length === 0) {
-    UIController.showToast("No cuts to apply. Run silence removal or filler detection first.", "warning");
+    UIController.showToast(t("uxp.timeline.runtime.no_cuts_to_apply", "No cuts to apply. Run silence removal or filler detection first."), "warning");
     noteTimelineAction(
-      "Cuts unavailable",
+      t("uxp.timeline.runtime.cuts_unavailable_title", "Cuts unavailable"),
       "warning",
-      "No cuts are staged for sequence write-back yet. Run silence, filler, or multicam cleanup first.",
-      "No cuts are staged for sequence write-back yet."
+      t("uxp.timeline.runtime.no_cuts_staged_detail", "No cuts are staged for sequence write-back yet. Run silence, filler, or multicam cleanup first."),
+      t("uxp.timeline.runtime.no_cuts_staged_short", "No cuts are staged for sequence write-back yet.")
     );
     return;
   }
 
   if (PProBridge.available()) {
-  UIController.setStatus("Applying cuts to timeline via UXP…");
+  UIController.setStatus(t("uxp.timeline.runtime.applying_cuts_uxp", "Applying cuts to timeline via UXP..."));
     const result = await PProBridge.applyCuts(cutsToApply);
     if (result.ok) {
-      UIController.showToast(`Applied ${result.applied} cut(s) to active sequence.`, "success");
-      UIController.setStatus(`Applied ${result.applied} cut(s).`);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.applied_cuts_sequence", "Applied {count} cut(s) to active sequence.", { count: result.applied }), "success");
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.applied_cuts_status", "Applied {count} cut(s).", { count: result.applied }));
       noteTimelineAction(
-        "Cuts applied",
+        t("uxp.timeline.runtime.cuts_applied_title", "Cuts applied"),
         "success",
-        `Applied ${result.applied} cut${result.applied === 1 ? "" : "s"} to the active sequence.`,
-        `Applied ${result.applied} cut${result.applied === 1 ? "" : "s"} to the active sequence.`,
-        `${result.applied} cut${result.applied === 1 ? "" : "s"} applied`
+        formatI18n("uxp.timeline.runtime.applied_cuts_detail", "Applied {count} cut(s) to the active sequence.", { count: result.applied }),
+        formatI18n("uxp.timeline.runtime.applied_cuts_detail", "Applied {count} cut(s) to the active sequence.", { count: result.applied }),
+        formatI18n("uxp.timeline.runtime.cuts_applied_short", "{count} cut(s) applied", { count: result.applied })
       );
     } else {
       UIController.showToast(
-        `UXP timeline write failed: ${result.reason}. Use CEP panel for Premiere < 25.6.`,
+        formatI18n("uxp.timeline.runtime.timeline_write_failed", "UXP timeline write failed: {reason}. Use CEP panel for Premiere < 25.6.", { reason: result.reason || t("common.unknown", "unknown") }),
         "warning"
       );
-      UIController.setStatus("Timeline write failed — see CEP panel.");
+      UIController.setStatus(t("uxp.timeline.runtime.timeline_write_failed_status", "Timeline write failed - see CEP panel."));
       noteTimelineAction(
-        "CEP fallback needed",
+        t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
         "warning",
-        `Direct UXP write-back failed. ${result.reason}. Use the CEP panel for this sequence pass.`,
-        result.reason || "Direct UXP write-back failed."
+        formatI18n("uxp.timeline.runtime.direct_write_failed_detail", "Direct UXP write-back failed. {reason}. Use the CEP panel for this sequence pass.", { reason: result.reason || t("common.unknown", "unknown") }),
+        result.reason || t("uxp.timeline.runtime.direct_write_failed_short", "Direct UXP write-back failed.")
       );
     }
   } else {
     UIController.showToast(
-      "Connect via CEP panel for timeline operations (UXP timeline API in preview).",
+      t("uxp.timeline.runtime.timeline_api_preview_toast", "Connect via CEP panel for timeline operations (UXP timeline API in preview)."),
       "info"
     );
-    UIController.setStatus("UXP timeline API unavailable — use CEP panel.");
+    UIController.setStatus(t("uxp.timeline.runtime.timeline_api_unavailable_status", "UXP timeline API unavailable - use CEP panel."));
     noteTimelineAction(
-      "CEP fallback needed",
+      t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
       "warning",
-      "Direct sequence write-back is not available in this UXP session. Use the CEP panel for timeline operations.",
-      "Direct sequence write-back is not available in this UXP session."
+      t("uxp.timeline.runtime.direct_write_unavailable_detail", "Direct sequence write-back is not available in this UXP session. Use the CEP panel for timeline operations."),
+      t("uxp.timeline.runtime.direct_write_unavailable_short", "Direct sequence write-back is not available in this UXP session.")
     );
   }
 }
@@ -4366,12 +4366,12 @@ async function applyTimelineCuts(cuts) {
 async function addSequenceMarkers(markers, color) {
   const markersToAdd = markers ?? lastMarkers;
   if (!markersToAdd || markersToAdd.length === 0) {
-    UIController.showToast("No markers to add. Run beat detection first.", "warning");
+    UIController.showToast(t("uxp.timeline.runtime.no_markers_to_add", "No markers to add. Run beat detection first."), "warning");
     noteTimelineAction(
-      "Markers unavailable",
+      t("uxp.timeline.runtime.markers_unavailable_title", "Markers unavailable"),
       "warning",
-      "No markers are staged for sequence write-back yet. Run beat detection first.",
-      "No markers are staged for sequence write-back yet."
+      t("uxp.timeline.runtime.no_markers_staged_detail", "No markers are staged for sequence write-back yet. Run beat detection first."),
+      t("uxp.timeline.runtime.no_markers_staged_short", "No markers are staged for sequence write-back yet.")
     );
     return;
   }
@@ -4379,45 +4379,45 @@ async function addSequenceMarkers(markers, color) {
   const markerColor = color ?? document.getElementById("beatMarkerColor")?.value ?? "green";
   const formatted = markersToAdd.map(m => ({
     time:  typeof m === "number" ? m : (m.time ?? m.t ?? 0),
-    label: m.label ?? "Beat",
+    label: m.label ?? t("uxp.timeline.runtime.beat_marker_label", "Beat"),
     color: markerColor,
   }));
 
   if (PProBridge.available()) {
-  UIController.setStatus("Adding markers to sequence via UXP…");
+  UIController.setStatus(t("uxp.timeline.runtime.adding_markers_uxp", "Adding markers to sequence via UXP..."));
     const result = await PProBridge.addMarkers(formatted);
     if (result.ok) {
-      UIController.showToast(`Added ${result.count} marker(s) to active sequence.`, "success");
-      UIController.setStatus(`Added ${result.count} marker(s).`);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.added_markers_sequence", "Added {count} marker(s) to active sequence.", { count: result.count }), "success");
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.added_markers_status", "Added {count} marker(s).", { count: result.count }));
       noteTimelineAction(
-        "Markers added",
+        t("uxp.timeline.runtime.markers_added_title", "Markers added"),
         "success",
-        `Added ${result.count} marker${result.count === 1 ? "" : "s"} to the active sequence.`,
-        `Added ${result.count} marker${result.count === 1 ? "" : "s"} to the active sequence.`,
-        `${result.count} marker${result.count === 1 ? "" : "s"} added`
+        formatI18n("uxp.timeline.runtime.added_markers_detail", "Added {count} marker(s) to the active sequence.", { count: result.count }),
+        formatI18n("uxp.timeline.runtime.added_markers_detail", "Added {count} marker(s) to the active sequence.", { count: result.count }),
+        formatI18n("uxp.timeline.runtime.markers_added_short", "{count} marker(s) added", { count: result.count })
       );
     } else {
       UIController.showToast(
-        `UXP marker insertion failed: ${result.reason}. Use CEP panel as fallback.`,
+        formatI18n("uxp.timeline.runtime.marker_insertion_failed", "UXP marker insertion failed: {reason}. Use CEP panel as fallback.", { reason: result.reason || t("common.unknown", "unknown") }),
         "warning"
       );
       noteTimelineAction(
-        "CEP fallback needed",
+        t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
         "warning",
-        `Marker insertion failed in UXP. ${result.reason}. Use the CEP panel as fallback.`,
-        result.reason || "Marker insertion failed in UXP."
+        formatI18n("uxp.timeline.runtime.marker_insertion_failed_detail", "Marker insertion failed in UXP. {reason}. Use the CEP panel as fallback.", { reason: result.reason || t("common.unknown", "unknown") }),
+        result.reason || t("uxp.timeline.runtime.marker_insertion_failed_short", "Marker insertion failed in UXP.")
       );
     }
   } else {
     UIController.showToast(
-      "Connect via CEP panel for timeline operations (UXP timeline API in preview).",
+      t("uxp.timeline.runtime.timeline_api_preview_toast", "Connect via CEP panel for timeline operations (UXP timeline API in preview)."),
       "info"
     );
     noteTimelineAction(
-      "CEP fallback needed",
+      t("uxp.timeline.runtime.cep_fallback_needed_title", "CEP fallback needed"),
       "warning",
-      "Marker insertion is not available in this UXP session. Use the CEP panel for timeline operations.",
-      "Marker insertion is not available in this UXP session."
+      t("uxp.timeline.runtime.marker_write_unavailable_detail", "Marker insertion is not available in this UXP session. Use the CEP panel for timeline operations."),
+      t("uxp.timeline.runtime.marker_write_unavailable_short", "Marker insertion is not available in this UXP session.")
     );
   }
 }
@@ -4426,39 +4426,47 @@ async function addSequenceMarkers(markers, color) {
 async function runBatchExport() {
   const preset    = document.getElementById("exportPreset")?.value ?? "youtube";
   const outputDir = document.getElementById("exportDir")?.value?.trim();
-  if (!outputDir) { UIController.showToast("Please select an output folder.", "warning"); return; }
+  if (!outputDir) { UIController.showToast(t("uxp.timeline.runtime.select_output_folder", "Please select an output folder."), "warning"); return; }
 
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
   const markersToExport = buildExportWindows();
   if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
-  if (markersToExport.length === 0) { UIController.showToast("No markers or cuts to export. Run beat detection or silence removal first.", "warning"); return; }
+  if (markersToExport.length === 0) {
+    UIController.showToast(t("uxp.timeline.runtime.no_markers_or_cuts_to_export", "No markers or cuts to export. Run beat detection or silence removal first."), "warning");
+    return;
+  }
 
   UIController.setButtonLoading("runBatchExportBtn", true);
-  UIController.showProcessing("Starting batch export from markers…");
+  UIController.showProcessing(t("uxp.timeline.runtime.starting_batch_export", "Starting batch export from markers..."));
 
   await JobPoller.start(
     "/timeline/export-from-markers",
     { input_file: clipPath, markers: markersToExport, output_dir: outputDir, format: preset },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBatchExportBtn", false);
       const count = result.exported ?? result.count ?? 0;
-      UIController.showToast(`Exported ${count} segment(s).`, "success");
-      UIController.setStatus(`Batch export done — ${count} files.`);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.exported_segments", "Exported {count} segment(s).", { count }), "success");
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.batch_export_done_status", "Batch export done - {count} files.", { count }));
       noteTimelineAction(
-        "Batch export complete",
+        t("uxp.timeline.runtime.batch_export_complete_title", "Batch export complete"),
         "success",
-        `Marker-based export finished with ${count} segment${count === 1 ? "" : "s"} in ${outputDir}.`,
+        formatI18n("uxp.timeline.runtime.marker_export_complete_detail", "Marker-based export finished with {count} segment(s) in {outputDir}.", { count, outputDir }),
         outputDir,
-        `${count} export${count === 1 ? "" : "s"} ready`
+        formatI18n("uxp.timeline.runtime.exports_ready_short", "{count} export(s) ready", { count })
       );
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBatchExportBtn", false);
-      UIController.showToast(`Export error: ${err}`, "error");
-      noteTimelineAction("Batch export error", "error", `Marker-based export failed. ${err}`, err);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.export_error", "Export error: {error}", { error: err }), "error");
+      noteTimelineAction(
+        t("uxp.timeline.runtime.batch_export_error_title", "Batch export error"),
+        "error",
+        formatI18n("uxp.timeline.runtime.marker_export_failed_detail", "Marker-based export failed. {error}", { error: err }),
+        err
+      );
     }
   );
 }
@@ -4466,26 +4474,26 @@ async function runBatchExport() {
 /** ── BATCH RENAME ── */
 async function runBatchRename() {
   const pattern = document.getElementById("renamePattern")?.value?.trim() ?? "{name}_{index:03d}";
-  UIController.showToast("Batch rename still runs through the CEP panel in this build.", "info");
+  UIController.showToast(t("uxp.timeline.runtime.batch_rename_cep", "Batch rename still runs through the CEP panel in this build."), "info");
   noteTimelineAction(
-    "Rename via CEP",
+    t("uxp.timeline.runtime.rename_via_cep_title", "Rename via CEP"),
     "warning",
-    "Batch rename is planned from this workspace, but execution still lives in the CEP panel today.",
+    t("uxp.timeline.runtime.rename_via_cep_detail", "Batch rename is planned from this workspace, but execution still lives in the CEP panel today."),
     pattern,
-    "Rename handoff"
+    t("uxp.timeline.runtime.rename_handoff", "Rename handoff")
   );
 }
 
 /** ── SMART BINS ── */
 async function runSmartBins() {
   const strategy = getSelectLabel("binStrategy", "File Type");
-  UIController.showToast("Smart bins still execute through the CEP panel in this build.", "info");
+  UIController.showToast(t("uxp.timeline.runtime.smart_bins_cep", "Smart bins still execute through the CEP panel in this build."), "info");
   noteTimelineAction(
-    "Smart bins via CEP",
+    t("uxp.timeline.runtime.smart_bins_via_cep_title", "Smart bins via CEP"),
     "warning",
-    "Smart bin rules can be planned here, but execution still lives in the CEP panel today.",
+    t("uxp.timeline.runtime.smart_bins_via_cep_detail", "Smart bin rules can be planned here, but execution still lives in the CEP panel today."),
     strategy,
-    "Smart bin handoff"
+    t("uxp.timeline.runtime.smart_bin_handoff", "Smart bin handoff")
   );
 }
 
@@ -4493,34 +4501,39 @@ async function runSmartBins() {
 async function runSrtImport() {
   const srtPath    = document.getElementById("srtFilePath")?.value?.trim();
   const trackIndex = parseInt(document.getElementById("srtTrackIndex")?.value ?? 1);
-  if (!srtPath) { UIController.showToast("Please select an SRT file.", "warning"); return; }
+  if (!srtPath) { UIController.showToast(t("uxp.timeline.runtime.select_srt_file", "Please select an SRT file."), "warning"); return; }
 
   UIController.setButtonLoading("runSrtImportBtn", true);
-  UIController.showProcessing("Validating SRT for timeline import…");
+  UIController.showProcessing(t("uxp.timeline.runtime.validating_srt_import", "Validating SRT for timeline import..."));
 
   await JobPoller.start(
     "/timeline/srt-to-captions",
     { srt_path: srtPath, track_index: trackIndex },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Validating…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.validating", "Validating...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSrtImportBtn", false);
       const count = result.segments?.length ?? result.captions_imported ?? result.count ?? 0;
-      UIController.showToast(`Validated ${count} caption segment(s).`, "success");
-      UIController.setStatus(`SRT ready — ${count} caption segments parsed.`);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.srt_validated_segments", "Validated {count} caption segment(s).", { count }), "success");
+      UIController.setStatus(formatI18n("uxp.timeline.runtime.srt_ready_status", "SRT ready - {count} caption segments parsed.", { count }));
       noteTimelineAction(
-        "SRT validated",
+        t("uxp.timeline.runtime.srt_validated_title", "SRT validated"),
         "success",
-        `SRT validation is ready. Use the CEP ocAddNativeCaptionTrack bridge action to place ${count} caption segment${count === 1 ? "" : "s"} on track ${trackIndex}.`,
+        formatI18n("uxp.timeline.runtime.srt_validation_ready_detail", "SRT validation is ready. Use the CEP ocAddNativeCaptionTrack bridge action to place {count} caption segment(s) on track {trackIndex}.", { count, trackIndex }),
         srtPath,
-        `${count} caption segment${count === 1 ? "" : "s"} parsed`
+        formatI18n("uxp.timeline.runtime.caption_segments_parsed", "{count} caption segment(s) parsed", { count })
       );
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSrtImportBtn", false);
-      UIController.showToast(`SRT validation error: ${err}`, "error");
-      noteTimelineAction("SRT validation error", "error", `SRT validation failed. ${err}`, err);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.srt_validation_error", "SRT validation error: {error}", { error: err }), "error");
+      noteTimelineAction(
+        t("uxp.timeline.runtime.srt_validation_error_title", "SRT validation error"),
+        "error",
+        formatI18n("uxp.timeline.runtime.srt_validation_failed_detail", "SRT validation failed. {error}", { error: err }),
+        err
+      );
     }
   );
 }
@@ -5472,34 +5485,41 @@ function bindEvents() {
     const payload = { filepath: clipPath, mode };
     if (mode === "cuts") {
       if (!lastCuts || lastCuts.length === 0) {
-        UIController.showToast("No cuts available. Run silence removal first.", "warning");
+        UIController.showToast(t("uxp.timeline.runtime.no_cuts_available", "No cuts available. Run silence removal first."), "warning");
         return;
       }
       payload.cuts = lastCuts;
     } else if (mode === "markers") {
       if (!lastMarkers || lastMarkers.length === 0) {
-        UIController.showToast("No markers available. Run beat detection first.", "warning");
+        UIController.showToast(t("uxp.timeline.runtime.no_markers_available", "No markers available. Run beat detection first."), "warning");
         return;
       }
       payload.markers = lastMarkers.map(m => ({
         time: typeof m === "number" ? m : (m.time ?? m.t ?? 0),
-        name: m.label ?? "Marker",
+        name: m.label ?? t("uxp.timeline.runtime.marker_label", "Marker"),
       }));
     }
     UIController.setButtonLoading("exportOtioBtn", true);
     const r = await BackendClient.post("/timeline/export-otio", payload);
     UIController.setButtonLoading("exportOtioBtn", false);
     if (r.ok) {
-      UIController.showToast(`OTIO exported: ${r.data?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
+      const output = r.data?.output_path?.split(/[/\\]/).pop() || t("uxp.video.runtime.done", "done");
+      UIController.showToast(formatI18n("uxp.timeline.runtime.otio_exported_output", "OTIO exported: {output}", { output }), "success");
       noteTimelineAction(
-        "OTIO exported",
+        t("uxp.timeline.runtime.otio_exported_title", "OTIO exported"),
         "success",
-        "OTIO export is ready for Resolve, Final Cut, Avid, or any OTIO-compatible tool.",
-        r.data?.output_path || "OTIO export"
+        t("uxp.timeline.runtime.otio_export_ready_detail", "OTIO export is ready for Resolve, Final Cut, Avid, or any OTIO-compatible tool."),
+        r.data?.output_path || t("uxp.timeline.runtime.otio_export_default", "OTIO export")
       );
     } else {
-      UIController.showToast(`OTIO export failed: ${r.error}`, "error");
-      noteTimelineAction("OTIO export error", "error", `OTIO export failed. ${r.error}`, r.error);
+      const error = r.error || r.data?.error || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.timeline.runtime.otio_export_failed", "OTIO export failed: {error}", { error }), "error");
+      noteTimelineAction(
+        t("uxp.timeline.runtime.otio_export_error_title", "OTIO export error"),
+        "error",
+        formatI18n("uxp.timeline.runtime.otio_export_failed_detail", "OTIO export failed. {error}", { error }),
+        error
+      );
     }
   });
 
