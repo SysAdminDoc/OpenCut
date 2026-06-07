@@ -39,6 +39,15 @@ def _format_placeholders(value: str) -> list[str]:
     return sorted(set(re.findall(r"\{[A-Za-z0-9_]+\}", value)))
 
 
+def _js_locale_string_keys() -> set[str]:
+    return set(
+        re.findall(
+            r"""["']((?:common|conn|nav|processing|uxp)\.[a-z0-9_.-]+)["']""",
+            _js(),
+        )
+    )
+
+
 def _html_i18n_keys() -> set[str]:
     html = _html()
     keys: set[str] = set()
@@ -50,6 +59,7 @@ def _html_i18n_keys() -> set[str]:
 def _js_i18n_keys() -> set[str]:
     js = _js()
     keys = set(re.findall(r'(?<![A-Za-z0-9_$])t\(\s*"([^"]+)"', js))
+    keys.update(_js_locale_string_keys())
     keys.update(
         re.findall(
             r'(?<![A-Za-z0-9_$])setStatus\(\s*"([a-z0-9_.-]+\.[a-z0-9_.-]+)"',
@@ -381,14 +391,17 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.deliverables.runtime.deliverable_ready_output",
         "uxp.deliverables.runtime.generated_csv_with_gaps",
         "uxp.deliverables.runtime.package_ready_status_many",
+        "uxp.deliverables.vfx_sheet",
         "uxp.agent.runtime.plan_ready",
         "uxp.agent.runtime.reviewed_status",
         "uxp.agent.runtime.enhance_plan_ready",
         "uxp.agent.runtime.sequence_index_built",
         "uxp.agent.runtime.mcp_bridge_info",
+        "uxp.settings.engine_ready_count_many",
         "uxp.settings.listener_count_many",
         "uxp.settings.engine_option_label",
         "uxp.settings.migration_row_summary",
+        "uxp.settings.pinned_title_one",
         "uxp.status.server_reconnected",
         "uxp.video.runtime.matching_color_grading",
         "uxp.video.runtime.color_match_complete_output",

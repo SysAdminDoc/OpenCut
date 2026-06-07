@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP JS Locale Key Guard
+
+- Broadened the UXP i18n static guard to scan locale-shaped JavaScript string literals, covering object-map keys such as deliverable labels and Settings plural summary strings.
+
 ### Changed - UXP Spanish Placeholder Guard
 
 - Added a static Spanish locale guard that compares format placeholders against `locales/en.json` so translated runtime strings cannot drop tokens such as `{count}`, `{error}`, `{platform}`, or `{output}`.
