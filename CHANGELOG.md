@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n FCC Caption Display Shell
+
+- Expanded the UXP i18n foundation into the F236 caption display-settings card, including field labels, compliance notice copy, source link, preview controls, live preview labels, and dynamic status feedback.
+- Preserved the FCC source link when backend token metadata updates the compliance date, and raised the UXP i18n static guard to require the expanded 190+ attribute baseline.
+
 ### Changed - UXP i18n Captions Tab Shell
 
 - Expanded the UXP i18n foundation into the Captions tab shell, including transcription setup, chapter generation, repeat detection, result metadata, placeholders, select options, checkbox labels, and accessible names.
