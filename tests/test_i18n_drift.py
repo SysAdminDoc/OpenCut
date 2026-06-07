@@ -17,12 +17,15 @@ This test:
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "i18n_lint.py"
+LOCALE = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "locales" / "en.json"
 
 
 def _load_module():
@@ -34,6 +37,18 @@ def _load_module():
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def _duplicate_json_keys(raw: str) -> list[str]:
+    duplicates: list[str] = []
+
+    def collect_pairs(pairs):
+        counts = Counter(key for key, _value in pairs)
+        duplicates.extend(key for key, count in counts.items() if count > 1)
+        return dict(pairs)
+
+    json.loads(raw, object_pairs_hook=collect_pairs)
+    return sorted(set(duplicates))
 
 
 class TestI18nDrift(unittest.TestCase):
@@ -56,6 +71,14 @@ class TestI18nDrift(unittest.TestCase):
                 f"{e['baseline']}. Either reduce dead keys or update "
                 "DEAD_KEY_BASELINE in scripts/i18n_lint.py."
             ),
+        )
+
+    def test_live_locale_file_has_unique_keys(self):
+        duplicate_keys = _duplicate_json_keys(LOCALE.read_text(encoding="utf-8"))
+        self.assertEqual(
+            duplicate_keys,
+            [],
+            f"Duplicate locale keys in en.json: {duplicate_keys}",
         )
 
     def test_html_regex_captures_all_data_i18n_variants(self):
