@@ -37,7 +37,7 @@ agent (F143) makes these surfaces more exposed.
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
-4. **P1 -- UXP panel i18n parity** -- foundation loader plus Cut/Captions/FCC display/Audio/Video-core shell slices shipped; broad parity remains open vs CEP's 1,190 attributes
+4. **P1 -- UXP panel i18n parity** -- foundation loader plus Cut/Captions/FCC display/Audio/Video-through-Style-Transfer shell slices shipped; broad parity remains open vs CEP's 1,190 attributes
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- closed 2026-06-07
@@ -331,7 +331,7 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P2
 
 ### EI-04: UXP Panel i18n Parity
-- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP now has a local locale loader plus first-viewport, Cut-tab, Captions-tab, FCC display-settings, Audio-tab, and top/core Video-tab shell attributes, but most panel strings remain hardcoded English.
+- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP now has a local locale loader plus first-viewport, Cut-tab, Captions-tab, FCC display-settings, Audio-tab, and Video-tab shell attributes through Style Transfer, but most panel strings remain hardcoded English.
 - **Problem:** UXP is "the future" (CLAUDE.md design principle #6), but its i18n coverage still trails the CEP panel's painstakingly migrated surface. When CEP EOL happens (~September 2026), UXP becomes the only panel, so broad localization parity remains urgent.
 - **Recommended change:** Port the i18n loading system (`loadLocale`, `t()`, `applyI18nToDOM`) from CEP `main.js` to UXP `main.js`. Add `data-i18n` attributes to all UXP HTML strings. Share the same `locales/en.json` keys.
 - **Code locations:** `extension/com.opencut.uxp/main.js`, `index.html`; reference `extension/com.opencut.panel/client/main.js` i18n module
@@ -439,7 +439,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 - **aria-live regions:** Processing banners, status, toasts all use `aria-live`
 - **Focus styles:** 187 `:focus`/`:focus-visible` rules in CEP CSS, 43 in UXP
 - **Reduced motion:** 4 `prefers-reduced-motion` queries in CEP, 3 in UXP
-- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94, Cut-tab static coverage shipped in Cycle 95, Captions-tab static coverage shipped in Cycle 96, FCC display-settings static/dynamic coverage shipped in Cycle 97, Audio-tab static coverage shipped in Cycle 98, and top/core Video-tab static coverage shipped in Cycle 99
+- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94, Cut-tab static coverage shipped in Cycle 95, Captions-tab static coverage shipped in Cycle 96, FCC display-settings static/dynamic coverage shipped in Cycle 97, Audio-tab static coverage shipped in Cycle 98, top/core Video-tab static coverage through Depth Effects shipped in Cycle 99, and Video effects coverage through Style Transfer shipped in Cycle 100
 - **a11y regression tests:** `test_panel_a11y_invariants.py` guards toast a11y
 
 ### Gaps
@@ -550,7 +550,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 - [ ] P1 - **UXP panel i18n infrastructure**
   - Why: CEP EOL ~September 2026; UXP needs full i18n parity before it becomes the only panel
-  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, Cycle 96 added Captions-tab coverage, Cycle 97 added FCC display-settings coverage, Cycle 98 added Audio-tab coverage, Cycle 99 added top/core Video-tab coverage, and broad UXP parity remains below the >500 acceptance target
+  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, Cycle 96 added Captions-tab coverage, Cycle 97 added FCC display-settings coverage, Cycle 98 added Audio-tab coverage, Cycle 99 added top/core Video-tab coverage through Depth Effects, Cycle 100 added Video effects coverage through Style Transfer, and broad UXP parity remains below the >500 acceptance target
   - Touches: `extension/com.opencut.uxp/main.js`, `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py`
   - Acceptance: UXP loads `locales/en.json`, `data-i18n` count > 500
   - Verify: UXP i18n guard passes, then expand toward full drift parity against the UXP panel
