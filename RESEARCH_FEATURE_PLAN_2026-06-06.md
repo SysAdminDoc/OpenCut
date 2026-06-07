@@ -35,7 +35,7 @@ agent (F143) makes these surfaces more exposed.
 ### Top 10 Opportunities (priority order)
 
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
-2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139`
+2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
 5. **P1 -- Expression engine per-frame thread elimination** -- 300 threads/10s of video
@@ -380,6 +380,10 @@ model = torch.load(model_path, map_location="cpu", weights_only=False)
 
 ### HIGH: Pickle Deserialization of Untrusted Cache Files
 
+**Status:** Closed 2026-06-07 by replacing raw pickle CLIP caches with
+compressed `.npz` files that store JSON metadata and load arrays with
+`allow_pickle=False`.
+
 **File:** `opencut/core/semantic_video_search.py:139`
 ```python
 return pickle.load(f)  # CLIP embedding cache
@@ -497,12 +501,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: All `torch.load` calls use `weights_only=True`; Torch-backed extras require `torch>=2.6` / `torchvision>=0.21`
   - Verify: `rg -n "weights_only=False|torch>=2\\.0|torchvision>=0\\.15" opencut pyproject.toml tests` returns no matches
 
-- [ ] P0 - **Replace `pickle.load()` with safe deserialization**
+- [x] P0 - **Replace `pickle.load()` with safe deserialization**
   - Why: Cache poisoning leads to code execution
   - Evidence: `opencut/core/semantic_video_search.py:139,151`
-  - Touches: `opencut/core/semantic_video_search.py`
-  - Acceptance: CLIP cache uses `numpy.savez`/`numpy.load` or `RestrictedUnpickler`
-  - Verify: `grep -rn "pickle.load" opencut/`
+  - Touches: `opencut/core/semantic_video_search.py`, `tests/test_object_intel.py`
+  - Acceptance: CLIP cache uses `numpy.savez_compressed`/`numpy.load(..., allow_pickle=False)` with JSON metadata
+  - Verify: `rg -n "pickle\.load|pickle\.dump" opencut`
 
 - [x] P0 - **Switch `os.startfile()` from blocklist to allowlist**
   - Why: Blocklist misses dangerous Windows file types (.msc, .cpl, .settingcontent-ms, etc.)
@@ -618,7 +622,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 2 | Add code length limit to scripting console | S (5 lines) | Prevents resource exhaustion |
 | 3 | Switch `os.startfile()` to allowlist | Shipped 2026-06-07 | Closed extension-bypass vector |
 | 4 | Fix `send_file()` path confinement | S (add `is_path_within_any()` check) | Closes file-serve bypass |
-| 5 | Replace `pickle.load` with numpy | S-M (rewrite cache layer) | Closes cache-poisoning RCE |
+| 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |
 | 6 | Defer cleanup thread start | S (threading.Event guard) | Cleaner test/CLI imports |
 | 7 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |
 
