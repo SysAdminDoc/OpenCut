@@ -337,6 +337,39 @@ def timeline_srt_to_captions():
         return safe_error(exc, "timeline_srt_to_captions")
 
 
+@timeline_bp.route("/timeline/magic-clips-import-plan", methods=["POST"])
+@require_csrf
+def timeline_magic_clips_import_plan():
+    """Build timeline import records from a saved Magic Clips bundle manifest."""
+    try:
+        data = get_json_dict()
+        manifest_path = str(
+            data.get("magic_clips_bundle_manifest")
+            or data.get("bundle_manifest_path")
+            or data.get("manifest_path")
+            or ""
+        ).strip()
+        if not manifest_path:
+            return jsonify({"error": "bundle_manifest_path is required", "code": "INVALID_INPUT"}), 400
+        manifest_path = validate_filepath(manifest_path)
+
+        from opencut.core.shorts_pipeline import build_magic_clips_downstream_handoff
+
+        handoff = build_magic_clips_downstream_handoff(manifest_path)
+        return jsonify({
+            "schema_version": handoff["schema_version"],
+            "bundle_manifest_path": handoff["bundle_manifest_path"],
+            "plan_id": handoff["plan_id"],
+            "candidate_count": handoff["candidate_count"],
+            "output_count": handoff["output_count"],
+            "timeline_import_count": handoff["timeline_import_count"],
+            "timeline_imports": handoff["timeline_imports"],
+            "warnings": handoff["warnings"],
+        })
+    except Exception as exc:
+        return safe_error(exc, "timeline_magic_clips_import_plan")
+
+
 def _parse_srt(path: str) -> list:
     """Parse an SRT subtitle file into a list of segment dicts."""
     _max_srt_bytes = 16 * 1024 * 1024  # 16 MB

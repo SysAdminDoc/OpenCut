@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-07T00:11:14Z",
-  "total_routes": 1537,
+  "generated_at": "2026-06-07T02:42:20Z",
+  "total_routes": 1538,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
     "GET": 387,
     "PATCH": 1,
-    "POST": 1135,
+    "POST": 1136,
     "PUT": 2
   },
   "blueprints": {
@@ -896,10 +896,10 @@
       ]
     },
     "timeline": {
-      "route_count": 11,
+      "route_count": 12,
       "method_counts": {
         "GET": 1,
-        "POST": 10
+        "POST": 11
       },
       "sample_rules": [
         "/timeline/batch-rename",
@@ -10841,6 +10841,14 @@
         "GET"
       ],
       "endpoint": "timeline.timeline_index_status",
+      "blueprint": "timeline"
+    },
+    {
+      "rule": "/timeline/magic-clips-import-plan",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_magic_clips_import_plan",
       "blueprint": "timeline"
     },
     {

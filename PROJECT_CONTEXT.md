@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-06 (318 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-318 are recorded below.
+**Last consolidated:** 2026-06-06 (319 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-319 are recorded below.
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
@@ -164,6 +164,9 @@
 **Pass 318 update (no standalone research file):**
 - Advanced E15 to batch 157 by wiring the Settings Project Templates and AI Models static shell through locale hooks for card descriptions, template labels/placeholders, custom-template ARIA, refresh title/label, model-list ARIA, model refresh hint, total-size label, and idle inventory status. The live i18n drift report now shows 2,324 keys, 2,279 consumers, 45 dead keys, and 0 missing keys.
 
+**Pass 319 update (no standalone research file):**
+- Added a shared Magic Clips downstream handoff builder that reads `magic_clips_manifest.json`, validates bundle schema and output-root containment, and emits timeline import records plus social upload payloads. `/video/shorts-pipeline` now returns the handoff beside bundle data, `/social/upload` dry-runs Magic Clips bundle uploads through the shared builder, and `/timeline/magic-clips-import-plan` exposes bundle-derived import records for timeline consumers.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -180,7 +183,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 
 | Surface | Count | Source of truth |
 |---|---|---|
-| API routes | **1,537** | `opencut/_generated/route_manifest.json` (F099) |
+| API routes | **1,538** | `opencut/_generated/route_manifest.json` (F099) |
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **601** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
