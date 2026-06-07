@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -49,6 +49,8 @@ PLATFORM_LIMITS = {
         "max_description_length": 2200,
     },
 }
+
+MAGIC_CLIPS_SOCIAL_UPLOAD_SCHEMA = "opencut.magic_clips.social_upload_plan.v1"
 
 
 @dataclass
@@ -193,6 +195,80 @@ def _validate_upload(filepath: str, platform: str) -> Optional[str]:
         return f"Unsupported format for {platform}: .{ext} (supported: {limits['supported_formats']})"
 
     return None
+
+
+def _normalise_candidate_filter(value: Any) -> set[str]:
+    if isinstance(value, str):
+        return {value.strip()} if value.strip() else set()
+    if not isinstance(value, list):
+        return set()
+    return {str(item or "").strip() for item in value if str(item or "").strip()}
+
+
+def build_magic_clips_social_upload_plan(
+    manifest_path: str,
+    *,
+    platform: str = "",
+    candidate_ids: Any = None,
+    privacy: str = "private",
+) -> dict[str, Any]:
+    """Build dry-run social upload records from a Magic Clips bundle manifest."""
+    platform_filter = platform.lower().strip()
+    if platform_filter and platform_filter not in PLATFORM_LIMITS:
+        raise ValueError(
+            f"Unsupported social upload platform: {platform_filter}. "
+            f"Use one of: {', '.join(sorted(PLATFORM_LIMITS))}"
+        )
+    candidate_filter = _normalise_candidate_filter(candidate_ids)
+    manifest_path = os.path.abspath(manifest_path)
+    from opencut.core.shorts_pipeline import build_magic_clips_downstream_handoff
+
+    handoff = build_magic_clips_downstream_handoff(manifest_path)
+    uploads: list[dict[str, Any]] = []
+    for item in handoff.get("social_uploads") or []:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id") or "").strip()
+        if candidate_filter and candidate_id not in candidate_filter:
+            continue
+        resolved_platform = str(item.get("platform") or "").strip()
+        if platform_filter and resolved_platform != platform_filter:
+            continue
+        payload = item.get("upload_payload") if isinstance(item.get("upload_payload"), dict) else {}
+        export_path = str(payload.get("filepath") or item.get("output_path") or "").strip()
+        warnings: list[str] = []
+        if not item.get("exists"):
+            warnings.append("export_path_missing")
+        uploads.append({
+            "candidate_id": candidate_id,
+            "platform": resolved_platform,
+            "platform_preset": str(item.get("platform_preset") or ""),
+            "filepath": export_path,
+            "title": str(payload.get("title") or item.get("title") or ""),
+            "description": str(payload.get("description") or item.get("caption") or ""),
+            "tags": list(item.get("hashtags") or payload.get("tags") or []),
+            "privacy": privacy,
+            "caption_path": "",
+            "thumbnail_path": str(item.get("thumbnail_path") or ""),
+            "start": item.get("start", 0.0),
+            "end": item.get("end", 0.0),
+            "duration": item.get("duration", 0.0),
+            "ready": not warnings,
+            "warnings": warnings,
+        })
+
+    return {
+        "schema_version": MAGIC_CLIPS_SOCIAL_UPLOAD_SCHEMA,
+        "source_manifest": manifest_path,
+        "plan_id": str(handoff.get("plan_id") or ""),
+        "candidate_count": int(handoff.get("candidate_count") or 0),
+        "timeline_import_count": int(handoff.get("timeline_import_count") or 0),
+        "upload_count": len(uploads),
+        "platforms": sorted({item["platform"] for item in uploads if item.get("platform")}),
+        "uploads": uploads,
+        "timeline_imports": handoff.get("timeline_imports") if isinstance(handoff.get("timeline_imports"), list) else [],
+        "warnings": handoff.get("warnings") if isinstance(handoff.get("warnings"), list) else [],
+    }
 
 
 # ---------------------------------------------------------------------------

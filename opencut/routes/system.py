@@ -2551,6 +2551,32 @@ def video_broll_backends():
 # ---------------------------------------------------------------------------
 # Social Media Direct Posting
 # ---------------------------------------------------------------------------
+_VALID_SOCIAL_UPLOAD_PLATFORMS = {"youtube", "tiktok", "instagram", "twitter", "linkedin", "snapchat", "facebook", "pinterest"}
+
+
+def _magic_clips_bundle_manifest_path(data):
+    return str(
+        data.get("magic_clips_bundle_manifest")
+        or data.get("bundle_manifest_path")
+        or ""
+    ).strip()
+
+
+def _validate_social_upload(data):
+    if _magic_clips_bundle_manifest_path(data):
+        if not safe_bool(data.get("dry_run", False), False):
+            return "Magic Clips bundle uploads require dry_run=true"
+        return None
+    platform = str(data.get("platform") or "").strip().lower()
+    if not platform:
+        return "No platform specified"
+    if platform not in _VALID_SOCIAL_UPLOAD_PLATFORMS:
+        return f"Invalid platform. Use one of: {', '.join(sorted(_VALID_SOCIAL_UPLOAD_PLATFORMS))}"
+    if not str(data.get("filepath") or "").strip():
+        return "No file path provided"
+    return None
+
+
 @system_bp.route("/social/platforms", methods=["GET"])
 def social_platforms():
     """List connected social media platforms."""
@@ -2633,16 +2659,28 @@ def social_disconnect():
 
 @system_bp.route("/social/upload", methods=["POST"])
 @require_csrf
-@async_job("social-upload")
+@async_job("social-upload", filepath_required=False, pre_validate=_validate_social_upload)
 def social_upload(job_id, filepath, data):
     """Upload a video to a social media platform."""
-    platform = data.get("platform", "").strip().lower()
-    _valid_platforms = {"youtube", "tiktok", "instagram", "twitter", "linkedin", "snapchat", "facebook", "pinterest"}
-    if platform and platform not in _valid_platforms:
-        raise ValueError(f"Invalid platform. Use one of: {', '.join(sorted(_valid_platforms))}")
+    bundle_manifest_path = _magic_clips_bundle_manifest_path(data)
+    if bundle_manifest_path:
+        bundle_manifest_path = validate_filepath(bundle_manifest_path)
+        platform_filter = str(data.get("platform") or "").strip().lower()
+        privacy = str(data.get("privacy") or "private").strip() or "private"
+        from opencut.core.social_post import build_magic_clips_social_upload_plan
 
-    if not platform:
-        raise ValueError("No platform specified")
+        _update_job(job_id, progress=20, message="Reading Magic Clips bundle manifest...")
+        plan = build_magic_clips_social_upload_plan(
+            bundle_manifest_path,
+            platform=platform_filter,
+            candidate_ids=data.get("candidate_ids", data.get("candidate_id")),
+            privacy=privacy,
+        )
+        _update_job(job_id, progress=100, message=f"Prepared {plan['upload_count']} social upload item(s).")
+        plan["dry_run"] = True
+        return plan
+
+    platform = data.get("platform", "").strip().lower()
 
     title = data.get("title", "")[:100]
     description = data.get("description", "")[:5000]

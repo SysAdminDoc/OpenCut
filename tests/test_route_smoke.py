@@ -1783,6 +1783,7 @@ class TestCSRFEnforcement:
         "/search/footage",
         "/nlp/command",
         "/deliverables/vfx-sheet",
+        "/timeline/magic-clips-import-plan",
         "/timeline/batch-rename",
         "/presets/save",
         "/queue/add",

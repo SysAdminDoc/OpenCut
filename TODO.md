@@ -4,13 +4,14 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-06 during the CEP Settings templates/model inventory i18n pass.
+Last synced: 2026-06-06 during the Magic Clips downstream handoff pass.
 
 ## Execution Order
 
 - [ ] **E15 i18n migration rolling batches** - current detailed state: v4.269 / batch 157. Continue removing high-impact bare-English CEP panel strings in guarded batches.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
+- [x] **Magic Clips downstream bundle reuse** - `magic_clips_manifest.json` now feeds shared timeline import records, `/social/upload` dry-run payloads, `/video/shorts-pipeline` handoff results, and `/timeline/magic-clips-import-plan`.
 - [x] **RA-15 optional `[all]` advisory decision** - `opencut[all]` is now the release-audited convenience lane; Torch/Transformers-backed packages remain in explicit feature extras and `torch-stack` until their advisory posture is clean.
 - [x] **RA-34 lockfile advisory coverage** - restored `requirements-lock.txt` to release/audit coverage and refreshed the vulnerable `idna` lock pin.
 - [x] **RA-16 Adobe release-channel dist-tags** - tracked stable Adobe `release-*` dist-tags in F251 alongside `latest` and `beta`.

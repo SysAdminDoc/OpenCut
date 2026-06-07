@@ -267,6 +267,7 @@ def video_shorts_pipeline(job_id, filepath, data):
         from opencut.core.llm import LLMConfig
         from opencut.core.shorts_pipeline import (
             ShortsPipelineConfig,
+            build_magic_clips_downstream_handoff,
             generate_shorts,
             magic_clips_run_manifest_path,
         )
@@ -352,6 +353,18 @@ def video_shorts_pipeline(job_id, filepath, data):
                     bundle_payload = loaded_bundle
             except OSError:
                 bundle_payload = {}
+        handoff_payload = {}
+        if bundle_manifest_path:
+            try:
+                handoff_payload = build_magic_clips_downstream_handoff(bundle_manifest_path)
+            except (OSError, ValueError) as exc:
+                handoff_payload = {
+                    "schema_version": "opencut.magic_clips.downstream.v1",
+                    "bundle_manifest_path": bundle_manifest_path,
+                    "timeline_imports": [],
+                    "social_uploads": [],
+                    "warnings": [{"type": "handoff_unavailable", "message": str(exc)}],
+                }
 
         return {
             "clips": [
@@ -384,6 +397,7 @@ def video_shorts_pipeline(job_id, filepath, data):
             "magic_clips_bundle_manifest": bundle_manifest_path,
             "magic_clips_bundle_csv": bundle_csv_path,
             "magic_clips_bundle": bundle_payload,
+            "magic_clips_downstream_handoff": handoff_payload,
         }
     finally:
         if acquired:

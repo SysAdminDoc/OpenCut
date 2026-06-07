@@ -1304,6 +1304,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 66 | CEP i18n deliverables and settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | E15 had the Export Workflow Presets shell localized, but Export Deliverables, LLM settings, preset diagnostics, and related controls still carried static English shell copy. | Advanced E15 through batches 155 and 156 by wiring those controls through `data-i18n*` hooks and locale keys; the drift gate now reports 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 67 | UXP Hybrid package validator | Adobe UXP Hybrid packaging docs, `opencut/core/uxp_hybrid_package.py`, `opencut/tools/validate_uxp_hybrid_package.py`, `tests/test_uxp_hybrid_package.py` | Adobe's Hybrid plugin rules require manifest v6+, `addon.name`, `requiredPermissions.enableAddon`, and strict `.uxpaddon` placement for mac arm64, mac x64, and win x64; OpenCut had no repository-side validator before adding native addons. | Closed RA-12 by adding a static validator and CLI for unpacked UXP bundles, keeping the live UXP manifest valid as non-hybrid, allowing independent partial-architecture warnings, failing Marketplace layout gaps, and wiring the guard into release-smoke pytest-fast. |
 | 2026-06-06 | Cycle 68 | CEP i18n templates and model inventory shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | The Settings Project Templates and AI Models cards still had static English descriptions, labels, placeholders, ARIA/title attributes, and idle model-inventory status copy despite dynamic template/model feedback already being localized. | Advanced E15 to batch 157 by wiring those static strings through `data-i18n*` hooks, reusing existing template/form/refresh keys where possible; the drift gate now reports 2,324 keys, 2,279 consumers, 45 dead keys, and 0 missing keys. |
+| 2026-06-06 | Cycle 69 | Magic Clips downstream bundle reuse | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `opencut/routes/timeline.py`, `opencut/routes/system.py`, `tests/test_magic_clips.py` | Magic Clips bundle manifests existed, but timeline and social consumers still needed a canonical way to consume grouped candidate/output metadata without rediscovering files. | Added a bundle-root-checked downstream handoff with timeline import records and social upload payloads, returned it from `/video/shorts-pipeline`, exposed `/timeline/magic-clips-import-plan`, and added `/social/upload` dry-run bundle planning. |
 
 ### Research queries to run later
 
@@ -1324,17 +1325,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
-2. Cycle 70: Continue E15 batch 158 or another remaining panel-i18n cleanup.
-3. Cycle 71: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 72: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 73: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 70: Continue E15 batch 158 or another remaining panel-i18n cleanup.
+2. Cycle 71: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 72: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 73: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 74: Audit the next release-trust or UX debt item that live tests can close locally.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 68: CEP i18n templates and model inventory shell.
+Cycle 69: Magic Clips downstream bundle reuse.
 
 #### Current focus
 
@@ -1545,8 +1546,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
-2. Continue E15 rolling CEP i18n migration with batch 158.
+1. Continue E15 rolling CEP i18n migration with batch 158.
+2. Audit the next release-trust or UX debt item that live tests can close locally.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
