@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Performance - Expression Engine Timeline Evaluation
+
+- Removed per-eval worker-thread spawning from `evaluate_expression()` by using the existing trace-deadline timeout path inline and restoring the prior trace hook afterward.
+- Added a 30-second timeline regression proving `evaluate_timeline()` does not create raw worker threads for per-frame expression evaluation.
+
+### Changed - CEP i18n Footer, Palette, Preview, and Wizard Shell
+
+- Advanced E15 to batch 171 by localizing progress/results/footer chrome, command palette shell, preview/audio preview modals, clip context menu, and first-run wizard copy.
+- Extended the i18n scanner and runtime updater to recognize `data-i18n-alt`; the live drift report now shows 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Security - Gaussian Splat Preview Confinement
 
 - Confined `/gaussian-splat/preview-frame` renderer outputs to existing files under system temp or `~/.opencut` before serving them, returning 403 for unconfined renderer paths.

@@ -38,7 +38,7 @@ agent (F143) makes these surfaces more exposed.
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
-5. **P1 -- Expression engine per-frame thread elimination** -- 300 threads/10s of video
+5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- no structured trail for CSRF/path traversal failures
 8. **P2 -- CEP structured empty-state components** -- UXP has 10+, CEP has ~1
@@ -189,8 +189,8 @@ agent (F143) makes these surfaces more exposed.
 - **User value:** Keyframe expressions and scripted automation
 - **Entry point:** Used internally by timeline tools
 - **Code:** `opencut/core/expression_engine.py` (~700 lines)
-- **Maturity:** Functional but performance-constrained (see Performance section)
-- **Improvement:** NEW finding -- per-frame thread creation is a bottleneck (not in ROADMAP.md)
+- **Maturity:** Functional; per-frame thread churn closed 2026-06-07
+- **Improvement:** Per-frame thread creation was closed by Cycle 86 with inline trace-deadline evaluation
 
 ### Plugin System
 - **User value:** Extensibility for third-party developers
@@ -301,12 +301,12 @@ agent (F143) makes these surfaces more exposed.
 ## Existing Feature Improvements
 
 ### EI-01: Expression Engine -- Eliminate Per-Frame Thread Creation
-- **Current behavior:** `expression_engine.py:700-704` spawns a new `threading.Thread` for every `eval()` call as a timeout mechanism. `evaluate_timeline()` calls this per-frame, creating 300 threads for 10 seconds of 30fps video.
-- **Problem:** Thread creation on Windows is ~10ms each, adding ~3 seconds overhead per 10-second timeline. Thread object churn stresses the GC.
-- **Recommended change:** Use a reusable worker thread with a queue, or evaluate directly on the calling thread using only `sys.settrace()` for timeout (the trace callback already provides timeout enforcement).
+- **Current behavior:** Closed 2026-06-07. `evaluate_expression()` now evaluates inline with trace-based deadline checks and restores any prior trace hook, so `evaluate_timeline()` no longer creates one worker thread per frame.
+- **Problem:** Thread creation on Windows was ~10ms each, adding ~3 seconds overhead per 10-second timeline. Thread object churn stressed the GC.
+- **Recommended change:** Shipped in Cycle 86 with inline caller-thread evaluation and deadline tracing.
 - **Code locations:** `opencut/core/expression_engine.py` lines 670-710
 - **Backward compatibility:** No API change -- internal optimization only
-- **Verification:** Benchmark `evaluate_timeline()` before/after on a 30-second clip
+- **Verification:** `tests/test_motion_design.py::TestExpressionEngine::test_evaluate_timeline_does_not_spawn_per_frame_threads`; 30-second local benchmark evaluated 900 frames with no errors and held `threading.enumerate()` at 2 before and after
 - **Complexity:** S
 - **Priority:** P1
 
@@ -517,12 +517,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ### Phase 2: Performance & Sandbox Hardening (P1)
 
-- [ ] P1 - **Expression engine: eliminate per-frame thread creation**
+- [x] P1 - **Expression engine: eliminate per-frame thread creation**
   - Why: 300 threads/10s of video, ~3s overhead on Windows
-  - Evidence: `opencut/core/expression_engine.py:700-704`; each `eval()` spawns a thread
+  - Evidence: closed 2026-06-07 in `opencut/core/expression_engine.py`; `evaluate_expression()` now uses inline trace-deadline evaluation instead of per-eval `threading.Thread`
   - Touches: `opencut/core/expression_engine.py`
   - Acceptance: `evaluate_timeline()` creates at most 1 worker thread
-  - Verify: Benchmark 30-second clip before/after; verify thread count stays constant
+  - Verify: 30-second clip benchmark kept thread count constant at 2 before and after while evaluating 900 frames with no errors
 
 - [x] P1 - **Scripting console: add code length limit**
   - Why: No cap on exec'd code size allows resource exhaustion
@@ -633,7 +633,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | # | Item | Effort | Impact |
 |---|------|--------|--------|
 | 1 | UXP panel i18n parity | L | Essential for CEP EOL transition |
-| 2 | Expression engine thread elimination | S-M | Performance for timeline expressions |
+| 2 | Expression engine thread elimination | Shipped | Performance for timeline expressions |
 | 3 | Rate-limit decorator migration | M | Code quality across 25+ sites |
 | 4 | Security audit event log | M | Incident investigation capability |
 | 5 | Caption style gallery | M | Monetization parity with Submagic ($12-40/mo) |

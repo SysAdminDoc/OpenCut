@@ -674,10 +674,10 @@ def evaluate_expression(expr_string: str,
 
     globs = context.to_globals()
 
-    # Evaluate with timeout using threading
-    result_box = [None]
-    error_box = [None]
+    # Evaluate inline with trace-based deadline checks. Spawning a worker thread
+    # for every frame makes timeline expressions expensive on Windows.
     deadline = time.monotonic() + (timeout_ms / 1000.0)
+    previous_trace = sys.gettrace()
 
     def _deadline_trace(frame, event, arg):
         if time.monotonic() >= deadline:
@@ -686,34 +686,19 @@ def evaluate_expression(expr_string: str,
             )
         return _deadline_trace
 
-    def _eval():
-        try:
-            _evaluation_state.deadline = deadline
-            _evaluation_state.timeout_ms = timeout_ms
-            sys.settrace(_deadline_trace)
-            result_box[0] = eval(code, globs)  # noqa: S307
-        except Exception as e:
-            error_box[0] = e
-        finally:
-            sys.settrace(None)
-            _evaluation_state.deadline = None
-            _evaluation_state.timeout_ms = None
-
-    thread = threading.Thread(target=_eval, daemon=True)
-    thread.start()
-    thread.join(timeout=timeout_ms / 1000.0)
-
-    if thread.is_alive():
-        raise TimeoutError(
-            f"Expression evaluation timed out after {timeout_ms}ms"
-        )
-
-    if error_box[0] is not None:
-        if isinstance(error_box[0], TimeoutError):
-            raise error_box[0]
-        raise ExpressionError(f"Evaluation error: {error_box[0]}")
-
-    result = result_box[0]
+    try:
+        _evaluation_state.deadline = deadline
+        _evaluation_state.timeout_ms = timeout_ms
+        sys.settrace(_deadline_trace)
+        result = eval(code, globs)  # noqa: S307
+    except TimeoutError:
+        raise
+    except Exception as e:
+        raise ExpressionError(f"Evaluation error: {e}") from e
+    finally:
+        sys.settrace(previous_trace)
+        _evaluation_state.deadline = None
+        _evaluation_state.timeout_ms = None
 
     # Convert to float — only allow primitive types to prevent
     # __float__/__int__ dunder calls on arbitrary objects
