@@ -118,6 +118,9 @@ UXP Architecture (target):
 - [x] RA-11 filesystem permission guard: the live manifest and dormant WebView
       scaffold declare `localFileSystem: "request"` because current file access
       is picker-scoped through `getFileForOpening()` and `getFolder()`.
+- [x] RA-14 WebView permission split: the dormant WebView config now exports
+      separate development and release manifest profiles so hot reload/Vite
+      domains stay dev-only and release WebView messaging is `localOnly`.
 - [x] RA-20 confirmation guard: UXP search-index clearing uses an inline
       second-click panel confirmation instead of beta `window.confirm`, and
       static tests block raw UXP alert/prompt/confirm calls.

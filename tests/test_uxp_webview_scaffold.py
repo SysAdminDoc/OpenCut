@@ -39,7 +39,7 @@ def test_f252_config_is_webview_enabled_and_not_live_entrypoint():
     assert "webviewUi: true" in config
     assert 'allow: "yes"' in config
     assert 'allowLocalRendering: "yes"' in config
-    assert 'enableMessageBridge: "localAndRemote"' in config
+    assert '"localAndRemote"' in config
     assert 'domains: "all"' not in config
     assert 'import liveManifest from "../manifest.json"' in config
     assert 'app: "PPRO"' in config
@@ -52,7 +52,7 @@ def test_f252_config_preserves_loopback_allowlist():
     assert "const port = 5679 + index" in config
     assert "`http://127.0.0.1:${port}`" in config
     assert "http://localhost:5679" in config
-    assert "ws://127.0.0.1:${config.hotReloadPort}" in config
+    assert "ws://127.0.0.1:${HOT_RELOAD_PORT}" in config
     assert "http://127.0.0.1:5173" in config
     assert "http://localhost:5173" in config
 
