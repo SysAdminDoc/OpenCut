@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP WebView Permission Profiles
+
+- Closed RA-14 by splitting the dormant WebView scaffold into explicit development and release manifest profiles, keeping Vite/hot-reload domains dev-only while release WebView content uses local-only messaging.
+
 ### Changed - UXP Filesystem Permission
 
 - Closed RA-11 by narrowing the live UXP manifest and dormant WebView scaffold to picker-scoped `localFileSystem: "request"` permissions and adding static guards against direct file APIs that would require broad access.

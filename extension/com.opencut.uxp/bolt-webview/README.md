@@ -21,6 +21,14 @@ Both manifest surfaces also declare the external-launch contract as HTTPS-only:
 `launchProcess.schemes` is `["https"]`, `launchProcess.extensions` is empty,
 and WebView `openURL()` rejects non-HTTPS URLs before calling the UXP shell.
 
+The WebView scaffold exports separate permission profiles:
+
+- `developmentManifest` keeps Vite preview domains, hot-reload WebSocket
+  domains, and `enableMessageBridge: "localAndRemote"` for local iteration.
+- `releaseManifest` keeps backend loopback domains only, clears remote WebView
+  domains, and uses `enableMessageBridge: "localOnly"` for locally rendered
+  WebView content.
+
 The scaffold follows the current Bolt UXP WebView split:
 
 - `uxp.config.ts` is the least-privilege manifest/config template.
