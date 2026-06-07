@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Placeholder Guard
+
+- Added a static Spanish locale guard that compares format placeholders against `locales/en.json` so translated runtime strings cannot drop tokens such as `{count}`, `{error}`, `{platform}`, or `{output}`.
+
 ### Changed - UXP Spanish Video Locale
 
 - Expanded the Spanish UXP locale pack across all Video workspace keys, including color match, auto-zoom, multicam, B-roll, depth, emotion, upscale, scenes, style transfer, Shorts, social upload, and Video runtime feedback states.

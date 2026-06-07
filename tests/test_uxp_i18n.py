@@ -35,6 +35,10 @@ def _locale(path: Path = UXP_LOCALE) -> dict[str, str]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _format_placeholders(value: str) -> list[str]:
+    return sorted(set(re.findall(r"\{[A-Za-z0-9_]+\}", value)))
+
+
 def _html_i18n_keys() -> set[str]:
     html = _html()
     keys: set[str] = set()
@@ -181,6 +185,17 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.video.color_match"] == "Igualar color"
     assert spanish["uxp.video.runtime.generated_short_form_clips"] == "Se generaron {count} clip(s) cortos."
     assert spanish["uxp.video.runtime.shorts_score_range"] == "Puntuacion {score} | {start}s-{end}s"
+
+
+def test_uxp_spanish_locale_pack_preserves_format_placeholders():
+    english = _locale()
+    spanish = _locale(UXP_ES_LOCALE)
+
+    assert {
+        key: (_format_placeholders(english[key]), _format_placeholders(spanish[key]))
+        for key in english.keys() & spanish.keys()
+        if _format_placeholders(english[key]) != _format_placeholders(spanish[key])
+    } == {}
 
 
 def test_uxp_shell_i18n_attributes_are_present_and_covered():

@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline/Search/Deliverables/Agent/Settings runtime feedback + update/depth-install toasts + full current Spanish UXP locale packaging with placeholder parity) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, Timeline/Search/Deliverables/Agent/Settings runtime-feedback, update/depth-install guards, and full current Spanish UXP catalogue coverage while broader non-English parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline/Search/Deliverables/Agent/Settings runtime feedback + update/depth-install toasts + full current Spanish UXP locale packaging with key and placeholder parity) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, Timeline/Search/Deliverables/Agent/Settings runtime-feedback, update/depth-install guards, and full current Spanish UXP catalogue coverage while broader non-English parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1366,6 +1366,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 127 | UXP Spanish Timeline locale expansion | UXP `main.js`, `locales/en.json`, `locales/es.json`, `tests/test_uxp_i18n.py` | The Timeline workspace still fell back to English after Search, Agent, and Deliverables Spanish coverage shipped, including generated readiness summaries from `main.js`. | Added Spanish coverage for every `uxp.timeline.*` key, including sequence write-back, OTIO export, beat markers, batch export, batch rename, smart bins, SRT prep, and generated readiness summaries, while preserving Captions/Video keys as explicit fallback samples. |
 | 2026-06-07 | Cycle 128 | UXP Spanish Captions locale expansion | UXP `locales/es.json`, `tests/test_uxp_i18n.py` | The Captions workspace still fell back to English after Timeline, Search, Agent, and Deliverables Spanish coverage shipped. | Added Spanish coverage for every `uxp.captions.*` key, including transcription setup, model/language/style selectors, chapter generation, repeat detection, result review, and Captions runtime feedback, while preserving Video keys as the explicit fallback sample. |
 | 2026-06-07 | Cycle 129 | UXP Spanish Video locale expansion | UXP `locales/es.json`, `tests/test_uxp_i18n.py` | The Video workspace was the last explicit Spanish fallback sample after Captions coverage shipped. | Added Spanish coverage for every `uxp.video.*` key, including color match, auto-zoom, multicam, B-roll, depth, emotion, upscale, scene detection, style transfer, Shorts, social upload, and runtime feedback, and tightened the Spanish guard to full current English-catalogue parity. |
+| 2026-06-07 | Cycle 130 | UXP Spanish placeholder parity guard | UXP `tests/test_uxp_i18n.py` | The full Spanish pack had key parity, but placeholder parity was only verified by an ad hoc JSON probe. | Added a static guard comparing Spanish and English format placeholders for every shared key so translated runtime strings cannot drop tokens such as `{count}`, `{error}`, `{platform}`, or `{output}`. |
 
 ### Research queries to run later
 
@@ -1386,17 +1387,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 130: Re-audit remaining UXP locale drift against generated DOM/status surfaces, broaden non-English locale packs beyond Spanish, or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 131: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 132: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 133: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 134: Re-check external F202/F252 evidence once secrets or UDT capture are available.
+1. Cycle 131: Re-audit remaining UXP locale drift against generated DOM/status surfaces, broaden non-English locale packs beyond Spanish, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 132: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 133: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 134: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 135: Re-check external F202/F252 evidence once secrets or UDT capture are available.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 129: UXP Spanish Video locale expansion.
+Cycle 130: UXP Spanish placeholder parity guard.
 
 #### Current focus
 
