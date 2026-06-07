@@ -936,226 +936,226 @@
 
         <div class="oc-uxp-notice" id="uxpTimelineNotice">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-          <span>Direct UXP sequence write-back is still in preview. Some timeline tasks hand off to the CEP panel for dependable execution.</span>
+          <span data-i18n="uxp.timeline.preview_notice">Direct UXP sequence write-back is still in preview. Some timeline tasks hand off to the CEP panel for dependable execution.</span>
         </div>
-        <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline" aria-label="Timeline workspace readiness">
+        <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline" aria-label="Timeline workspace readiness" data-i18n-aria-label="uxp.timeline.workspace_readiness">
           <div class="oc-inline-stat">
-            <span class="oc-label">Bridge</span>
-            <span class="oc-status-pill" id="timelineBridgePill" data-state="working">Checking bridge</span>
+            <span class="oc-label" data-i18n="uxp.timeline.bridge">Bridge</span>
+            <span class="oc-status-pill" id="timelineBridgePill" data-state="working" data-i18n="uxp.timeline.checking_bridge">Checking bridge</span>
           </div>
           <div class="oc-inline-stat">
-            <span class="oc-label">Cuts Ready</span>
-            <span class="oc-inline-value" id="timelineCutsValue">No cuts ready</span>
+            <span class="oc-label" data-i18n="uxp.timeline.cuts_ready">Cuts Ready</span>
+            <span class="oc-inline-value" id="timelineCutsValue" data-i18n="uxp.timeline.no_cuts_ready">No cuts ready</span>
           </div>
           <div class="oc-inline-stat">
-            <span class="oc-label">Markers Ready</span>
-            <span class="oc-inline-value" id="timelineMarkersValue">No markers ready</span>
+            <span class="oc-label" data-i18n="uxp.timeline.markers_ready">Markers Ready</span>
+            <span class="oc-inline-value" id="timelineMarkersValue" data-i18n="uxp.timeline.no_markers_ready">No markers ready</span>
           </div>
           <div class="oc-inline-stat">
-            <span class="oc-label">Last Action</span>
-            <span class="oc-inline-value" id="timelineLastActionValue">No write-back activity</span>
+            <span class="oc-label" data-i18n="uxp.timeline.last_action">Last Action</span>
+            <span class="oc-inline-value" id="timelineLastActionValue" data-i18n="uxp.timeline.no_write_back_activity">No write-back activity</span>
           </div>
         </div>
-        <div class="oc-status-line" id="timelineStatusLine" role="status" aria-live="polite">Generate cuts or beat markers first, then return here to write back, export OTIO, or validate captions for sequence import.</div>
+        <div class="oc-status-line" id="timelineStatusLine" role="status" aria-live="polite" data-i18n="uxp.timeline.status_line">Generate cuts or beat markers first, then return here to write back, export OTIO, or validate captions for sequence import.</div>
 
-        <div class="oc-section-title">Sequence Write-Back</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.sequence_write_back">Sequence Write-Back</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="applyCutsBody">
-            <span>Apply Cuts to Sequence</span>
+            <span data-i18n="uxp.timeline.apply_cuts_to_sequence">Apply Cuts to Sequence</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="applyCutsBody">
-            <p class="oc-hint">Use the latest cut pass from Cut or Video and send it into the active Premiere sequence when the edit is ready.</p>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Apply cuts readiness">
+            <p class="oc-hint" data-i18n="uxp.timeline.apply_cuts_hint">Use the latest cut pass from Cut or Video and send it into the active Premiere sequence when the edit is ready.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Apply cuts readiness" data-i18n-aria-label="uxp.timeline.apply_cuts_readiness">
               <div class="oc-inline-stat">
-                <span class="oc-label">Latest Cuts</span>
-                <span class="oc-inline-value" id="timelineCutsSourceValue">Run a cut pass first</span>
+                <span class="oc-label" data-i18n="uxp.timeline.latest_cuts">Latest Cuts</span>
+                <span class="oc-inline-value" id="timelineCutsSourceValue" data-i18n="uxp.timeline.run_cut_pass_first">Run a cut pass first</span>
               </div>
               <div class="oc-inline-stat">
-                <span class="oc-label">Sequence Bridge</span>
-                <span class="oc-inline-value" id="timelineSequenceValue">Checking UXP bridge</span>
+                <span class="oc-label" data-i18n="uxp.timeline.sequence_bridge">Sequence Bridge</span>
+                <span class="oc-inline-value" id="timelineSequenceValue" data-i18n="uxp.timeline.checking_uxp_bridge">Checking UXP bridge</span>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn">Apply Latest Cuts</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn" data-i18n="uxp.timeline.apply_latest_cuts">Apply Latest Cuts</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Export as OTIO (Universal)</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.export_otio_universal">Export as OTIO (Universal)</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="otioExportBody">
-            <span>OpenTimelineIO Export</span>
+            <span data-i18n="uxp.timeline.opentimelineio_export">OpenTimelineIO Export</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="otioExportBody">
-            <p class="oc-hint">Export cuts or markers as .otio for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
+            <p class="oc-hint" data-i18n="uxp.timeline.otio_export_hint">Export cuts or markers as .otio for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
             <div class="oc-field-row">
-              <label class="oc-label" for="otioExportMode">Mode</label>
+              <label class="oc-label" for="otioExportMode" data-i18n="uxp.timeline.mode">Mode</label>
               <select class="oc-select" id="otioExportMode">
-                <option value="cuts" selected>Cuts (remove regions)</option>
-                <option value="markers">Markers (beats/chapters)</option>
+                <option value="cuts" selected data-i18n="uxp.timeline.mode_cuts">Cuts (remove regions)</option>
+                <option value="markers" data-i18n="uxp.timeline.mode_markers">Markers (beats/chapters)</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="exportOtioBtn" aria-label="Export OpenTimelineIO file">Export .otio File</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="exportOtioBtn" aria-label="Export OpenTimelineIO file" data-i18n="uxp.timeline.export_otio_file" data-i18n-aria-label="uxp.timeline.export_opentimelineio_file">Export .otio File</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Beat Markers to Sequence</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.beat_markers_to_sequence">Beat Markers to Sequence</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="beatSeqBody">
-            <span>Add Beat Markers</span>
+            <span data-i18n="uxp.timeline.add_beat_markers">Add Beat Markers</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="beatSeqBody">
-            <p class="oc-hint">Adds beat markers from the last Beat Detection run to the active sequence timeline.</p>
+            <p class="oc-hint" data-i18n="uxp.timeline.beat_markers_hint">Adds beat markers from the last Beat Detection run to the active sequence timeline.</p>
             <div class="oc-field-row">
-              <label class="oc-label" for="beatMarkerColor">Marker Color</label>
+              <label class="oc-label" for="beatMarkerColor" data-i18n="uxp.timeline.marker_color">Marker Color</label>
               <select class="oc-select" id="beatMarkerColor">
-                <option value="green">Green</option>
-                <option value="red">Red</option>
-                <option value="blue">Blue</option>
-                <option value="yellow">Yellow</option>
-                <option value="purple">Purple</option>
+                <option value="green" data-i18n="uxp.timeline.color_green">Green</option>
+                <option value="red" data-i18n="uxp.timeline.color_red">Red</option>
+                <option value="blue" data-i18n="uxp.timeline.color_blue">Blue</option>
+                <option value="yellow" data-i18n="uxp.timeline.color_yellow">Yellow</option>
+                <option value="purple" data-i18n="uxp.timeline.color_purple">Purple</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="addBeatMarkersBtn">Add Beat Markers</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="addBeatMarkersBtn" data-i18n="uxp.timeline.add_beat_markers">Add Beat Markers</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Batch Export from Markers</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.batch_export_from_markers">Batch Export from Markers</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="batchExportBody">
-            <span>Marker-Based Export</span>
+            <span data-i18n="uxp.timeline.marker_based_export">Marker-Based Export</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="batchExportBody">
-            <p class="oc-hint">Export beat-marked or cut-defined segments from the current clip once the output folder is set.</p>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch export readiness">
+            <p class="oc-hint" data-i18n="uxp.timeline.batch_export_hint">Export beat-marked or cut-defined segments from the current clip once the output folder is set.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch export readiness" data-i18n-aria-label="uxp.timeline.batch_export_readiness">
               <div class="oc-inline-stat">
-                <span class="oc-label">Source Windows</span>
-                <span class="oc-inline-value" id="timelineExportSourceValue">Awaiting cuts or markers</span>
+                <span class="oc-label" data-i18n="uxp.timeline.source_windows">Source Windows</span>
+                <span class="oc-inline-value" id="timelineExportSourceValue" data-i18n="uxp.timeline.awaiting_cuts_or_markers">Awaiting cuts or markers</span>
               </div>
               <div class="oc-inline-stat">
-                <span class="oc-label">Destination</span>
-                <span class="oc-inline-value" id="timelineExportOutputValue">Choose output folder</span>
+                <span class="oc-label" data-i18n="uxp.timeline.destination">Destination</span>
+                <span class="oc-inline-value" id="timelineExportOutputValue" data-i18n="uxp.timeline.choose_output_folder">Choose output folder</span>
               </div>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="exportPreset">Export Preset</label>
+              <label class="oc-label" for="exportPreset" data-i18n="uxp.timeline.export_preset">Export Preset</label>
               <select class="oc-select" id="exportPreset">
-                <option value="youtube">YouTube H.264</option>
-                <option value="tiktok">TikTok</option>
-                <option value="instagram">Instagram</option>
-                <option value="prores">ProRes 422</option>
-                <option value="h265">H.265 HQ</option>
+                <option value="youtube" data-i18n="uxp.timeline.preset_youtube_h264">YouTube H.264</option>
+                <option value="tiktok" data-i18n="uxp.timeline.preset_tiktok">TikTok</option>
+                <option value="instagram" data-i18n="uxp.timeline.preset_instagram">Instagram</option>
+                <option value="prores" data-i18n="uxp.timeline.preset_prores_422">ProRes 422</option>
+                <option value="h265" data-i18n="uxp.timeline.preset_h265_hq">H.265 HQ</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="exportDir">Output Folder</label>
+              <label class="oc-label" for="exportDir" data-i18n="uxp.timeline.output_folder">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseExportDir">Browse</button>
+                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination..." data-i18n-placeholder="uxp.timeline.export_destination_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseExportDir" data-i18n="common.browse">Browse</button>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBatchExportBtn">Batch Export</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBatchExportBtn" data-i18n="uxp.timeline.batch_export">Batch Export</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Batch Rename</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.batch_rename">Batch Rename</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="batchRenameBody">
-            <span>Rename Project Items</span>
+            <span data-i18n="uxp.timeline.rename_project_items">Rename Project Items</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="batchRenameBody">
-            <p class="oc-hint">Project-wide rename still runs through the CEP panel today. Keep the pattern here as a reference, then switch panels to execute safely.</p>
+            <p class="oc-hint" data-i18n="uxp.timeline.batch_rename_hint">Project-wide rename still runs through the CEP panel today. Keep the pattern here as a reference, then switch panels to execute safely.</p>
             <div class="oc-field-row">
-              <label class="oc-label" for="renamePattern">Pattern</label>
-              <input type="text" class="oc-input" id="renamePattern" placeholder="{name}_{index:03d}" value="{name}_{index:03d}">
+              <label class="oc-label" for="renamePattern" data-i18n="uxp.timeline.pattern">Pattern</label>
+              <input type="text" class="oc-input" id="renamePattern" placeholder="{name}_{index:03d}" value="{name}_{index:03d}" data-i18n-placeholder="uxp.timeline.rename_pattern_placeholder">
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="renameScope">Scope</label>
+              <label class="oc-label" for="renameScope" data-i18n="uxp.timeline.scope">Scope</label>
               <select class="oc-select" id="renameScope">
-                <option value="selected">Selected Items</option>
-                <option value="bin">Current Bin</option>
-                <option value="project">Whole Project</option>
+                <option value="selected" data-i18n="uxp.timeline.scope_selected_items">Selected Items</option>
+                <option value="bin" data-i18n="uxp.timeline.scope_current_bin">Current Bin</option>
+                <option value="project" data-i18n="uxp.timeline.scope_whole_project">Whole Project</option>
               </select>
             </div>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch rename availability">
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch rename availability" data-i18n-aria-label="uxp.timeline.batch_rename_availability">
               <div class="oc-inline-stat">
-                <span class="oc-label">Availability</span>
-                <span class="oc-status-pill" id="timelineRenamePill" data-state="warning">CEP panel required</span>
+                <span class="oc-label" data-i18n="uxp.timeline.availability">Availability</span>
+                <span class="oc-status-pill" id="timelineRenamePill" data-state="warning" data-i18n="uxp.timeline.cep_panel_required">CEP panel required</span>
               </div>
               <div class="oc-inline-stat">
-                <span class="oc-label">Pattern</span>
+                <span class="oc-label" data-i18n="uxp.timeline.pattern">Pattern</span>
                 <span class="oc-inline-value" id="timelineRenamePatternValue">{name}_{index:03d}</span>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runBatchRenameBtn" disabled>Available in CEP Panel</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runBatchRenameBtn" disabled data-i18n="uxp.timeline.available_in_cep_panel">Available in CEP Panel</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Smart Bins</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.smart_bins">Smart Bins</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="smartBinsBody">
-            <span>Auto-Organize Bins</span>
+            <span data-i18n="uxp.timeline.auto_organize_bins">Auto-Organize Bins</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="smartBinsBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="binStrategy">Organize By</label>
+              <label class="oc-label" for="binStrategy" data-i18n="uxp.timeline.organize_by">Organize By</label>
               <select class="oc-select" id="binStrategy">
-                <option value="type">File Type</option>
-                <option value="date">Date</option>
-                <option value="camera">Camera/Source</option>
-                <option value="scene">Scene (AI)</option>
-                <option value="speaker">Speaker</option>
+                <option value="type" data-i18n="uxp.timeline.organize_file_type">File Type</option>
+                <option value="date" data-i18n="uxp.timeline.organize_date">Date</option>
+                <option value="camera" data-i18n="uxp.timeline.organize_camera_source">Camera/Source</option>
+                <option value="scene" data-i18n="uxp.timeline.organize_scene_ai">Scene (AI)</option>
+                <option value="speaker" data-i18n="uxp.timeline.organize_speaker">Speaker</option>
               </select>
             </div>
-            <p class="oc-hint">Smart bin execution also still lives in the CEP panel. Use this strategy picker as a planning reference before switching panels.</p>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Smart bins availability">
+            <p class="oc-hint" data-i18n="uxp.timeline.smart_bins_hint">Smart bin execution also still lives in the CEP panel. Use this strategy picker as a planning reference before switching panels.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Smart bins availability" data-i18n-aria-label="uxp.timeline.smart_bins_availability">
               <div class="oc-inline-stat">
-                <span class="oc-label">Availability</span>
-                <span class="oc-status-pill" id="timelineSmartBinsPill" data-state="warning">CEP panel required</span>
+                <span class="oc-label" data-i18n="uxp.timeline.availability">Availability</span>
+                <span class="oc-status-pill" id="timelineSmartBinsPill" data-state="warning" data-i18n="uxp.timeline.cep_panel_required">CEP panel required</span>
               </div>
               <div class="oc-inline-stat">
-                <span class="oc-label">Strategy</span>
-                <span class="oc-inline-value" id="timelineSmartBinsValue">File Type</span>
+                <span class="oc-label" data-i18n="uxp.timeline.strategy">Strategy</span>
+                <span class="oc-inline-value" id="timelineSmartBinsValue" data-i18n="uxp.timeline.organize_file_type">File Type</span>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runSmartBinsBtn" disabled>Available in CEP Panel</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runSmartBinsBtn" disabled data-i18n="uxp.timeline.available_in_cep_panel">Available in CEP Panel</button>
           </div>
         </div>
 
-        <div class="oc-section-title">SRT Prep</div>
+        <div class="oc-section-title" data-i18n="uxp.timeline.srt_prep">SRT Prep</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="srtImportBody">
-            <span>Validate SRT for Timeline Import</span>
+            <span data-i18n="uxp.timeline.validate_srt_for_timeline_import">Validate SRT for Timeline Import</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="srtImportBody">
-            <p class="oc-hint">Check the file and count caption segments here, then place them through the CEP ocAddNativeCaptionTrack bridge action until UXP caption writes are live-tested.</p>
+            <p class="oc-hint" data-i18n="uxp.timeline.srt_prep_hint">Check the file and count caption segments here, then place them through the CEP ocAddNativeCaptionTrack bridge action until UXP caption writes are live-tested.</p>
             <div class="oc-field-row">
-              <label class="oc-label" for="srtFilePath">SRT File</label>
+              <label class="oc-label" for="srtFilePath" data-i18n="uxp.timeline.srt_file">SRT File</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseSrtFile">Browse</button>
+                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file..." data-i18n-placeholder="uxp.timeline.srt_file_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseSrtFile" data-i18n="common.browse">Browse</button>
               </div>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="srtTrackIndex">Target Track</label>
+              <label class="oc-label" for="srtTrackIndex" data-i18n="uxp.timeline.target_track">Target Track</label>
               <input type="number" class="oc-input oc-input-sm" id="srtTrackIndex" value="1" min="1" max="99">
             </div>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="SRT validation summary">
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="SRT validation summary" data-i18n-aria-label="uxp.timeline.srt_validation_summary">
               <div class="oc-inline-stat">
-                <span class="oc-label">File</span>
-                <span class="oc-inline-value" id="timelineSrtValue">Choose .srt file</span>
+                <span class="oc-label" data-i18n="uxp.timeline.file">File</span>
+                <span class="oc-inline-value" id="timelineSrtValue" data-i18n="uxp.timeline.choose_srt_file">Choose .srt file</span>
               </div>
               <div class="oc-inline-stat">
-                <span class="oc-label">Target</span>
-                <span class="oc-inline-value" id="timelineSrtTrackValue">Track 1</span>
+                <span class="oc-label" data-i18n="uxp.timeline.target">Target</span>
+                <span class="oc-inline-value" id="timelineSrtTrackValue" data-i18n="uxp.timeline.track_1">Track 1</span>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn">Validate SRT File</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn" data-i18n="uxp.timeline.validate_srt_file">Validate SRT File</button>
           </div>
         </div>
       </div>

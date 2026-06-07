@@ -90,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 370
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 465
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -146,6 +146,15 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.video.video_title_placeholder",
         "uxp.video.privacy_level",
         "uxp.video.connect_account",
+        "uxp.timeline.preview_notice",
+        "uxp.timeline.workspace_readiness",
+        "uxp.timeline.apply_cuts_to_sequence",
+        "uxp.timeline.export_otio_file",
+        "uxp.timeline.batch_export_readiness",
+        "uxp.timeline.cep_panel_required",
+        "uxp.timeline.smart_bins",
+        "uxp.timeline.srt_file_placeholder",
+        "uxp.timeline.validate_srt_file",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
