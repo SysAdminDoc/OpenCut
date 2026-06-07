@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (337 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-337 are recorded below.
+**Last consolidated:** 2026-06-07 (338 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-338 are recorded below.
+
+**Pass 338 update (no standalone research file):**
+- Closed the cleanup-thread lazy initialization finding by deferring the `opencut-temp-cleanup` daemon in `opencut.helpers` until the first `_schedule_temp_cleanup()` call. Importing `opencut.helpers` no longer starts a background thread, while scheduled cleanup still uses the shared daemon worker once work exists.
+- Added fresh-interpreter regression coverage in `tests/test_helpers_cleanup.py` proving helper import remains thread-clean and the worker starts after the first scheduled temp-file cleanup, then wired that guard into the pytest-fast release-smoke list.
 
 **Pass 337 update (no standalone research file):**
 - Closed the June 6 security audit logging finding by adding `opencut/security_audit.py`, a best-effort schema-tagged JSONL writer for security rejections. `validate_csrf_request()` now records CSRF rejections without token values, `validate_path()` records rejected path inputs with a short preview plus SHA-256 evidence, rate-limit denials record the saturated key/counter, and non-loopback auth-token denials record request context without token values. `/system/audit-log` exposes capped recent reads. Test apps keep the default sink disabled unless `OPENCUT_SECURITY_AUDIT_LOG` is explicitly set.
@@ -245,7 +249,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **602** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **249 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **250 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
@@ -279,7 +283,7 @@ Hold both in your head. When a new piece of work arrives, ask: "is this a model 
 ```
 Premiere CEP panel ─┐
 Premiere UXP panel ─┼─► HTTP localhost:5679  ─► Flask app (create_app() factory)
-DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (107 blueprints) ─► core/* (601 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
+DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (107 blueprints) ─► core/* (602 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
 MCP client     ─────┘   MCP HTTP :5681            ├─ jobs.py (@async_job decorator, SQLite persistence, GPU rate limit)
                                                   ├─ security.py (CSRF, path-traversal, SSRF guards, safe_pip_install)
                                                   ├─ auth.py (loopback bypass + 256-bit token for non-loopback)

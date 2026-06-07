@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Lazy Deferred Cleanup Worker
+
+- Deferred the `opencut-temp-cleanup` daemon until the first scheduled temp-file cleanup so importing `opencut.helpers` no longer starts a background thread.
+- Added a fresh-interpreter regression proving helper import stays thread-clean and the worker starts when `_schedule_temp_cleanup()` is called.
+
 ### Security - Security Rejection Audit Logging
 
 - Added a best-effort `security_audit.jsonl` trail for security rejections, configurable with `OPENCUT_SECURITY_AUDIT_LOG`.
