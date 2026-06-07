@@ -716,124 +716,124 @@
           </div>
         </div>
 
-        <div class="oc-section-title">Emotion Highlights</div>
+        <div class="oc-section-title" data-i18n="uxp.video.emotion_highlights">Emotion Highlights</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="emotionBody">
-            <span>Emotion-Based Highlight Detection</span>
+            <span data-i18n="uxp.video.emotion_based_highlight_detection">Emotion-Based Highlight Detection</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="emotionBody">
-            <p class="oc-hint">Detect emotional peaks in video (happy, surprise, etc.) for automatic highlight extraction.</p>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runEmotionBtnUxp">Detect Emotion Peaks</button>
+            <p class="oc-hint" data-i18n="uxp.video.emotion_hint">Detect emotional peaks in video (happy, surprise, etc.) for automatic highlight extraction.</p>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runEmotionBtnUxp" data-i18n="uxp.video.detect_emotion_peaks">Detect Emotion Peaks</button>
           </div>
         </div>
 
-        <div class="oc-section-title">B-Roll Analysis</div>
+        <div class="oc-section-title" data-i18n="uxp.video.broll_analysis">B-Roll Analysis</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="brollPlanBody">
-            <span>Find B-Roll Insertion Points</span>
+            <span data-i18n="uxp.video.find_broll_insertion_points">Find B-Roll Insertion Points</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="brollPlanBody">
-            <p class="oc-hint">Analyze transcript to find natural B-roll insertion windows and keywords.</p>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBrollPlanBtnUxp">Analyze B-Roll Points</button>
+            <p class="oc-hint" data-i18n="uxp.video.broll_analysis_hint">Analyze transcript to find natural B-roll insertion windows and keywords.</p>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBrollPlanBtnUxp" data-i18n="uxp.video.analyze_broll_points">Analyze B-Roll Points</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Chat Editor</div>
+        <div class="oc-section-title" data-i18n="uxp.video.chat_editor">Chat Editor</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="chatEditorBody">
-            <span>AI Editing Assistant</span>
+            <span data-i18n="uxp.video.editing_assistant">AI Editing Assistant</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="chatEditorBody">
             <div class="oc-chat-area oc-chat-history" id="chatHistory">
-              <p class="oc-hint">Chat with OpenCut's AI to edit your video using natural language.</p>
+              <p class="oc-hint" data-i18n="uxp.video.chat_hint">Chat with OpenCut's AI to edit your video using natural language.</p>
             </div>
             <div class="oc-field-row">
-              <input type="text" id="chatInputUxp" class="oc-input" placeholder='e.g. "Remove all silences and normalize audio"' aria-label="Chat message">
-              <button type="button" class="oc-btn oc-btn-primary" id="chatSendBtnUxp">Send</button>
+              <input type="text" id="chatInputUxp" class="oc-input" placeholder='e.g. "Remove all silences and normalize audio"' aria-label="Chat message" data-i18n-placeholder="uxp.video.chat_placeholder" data-i18n-aria-label="uxp.video.chat_message">
+              <button type="button" class="oc-btn oc-btn-primary" id="chatSendBtnUxp" data-i18n="uxp.video.send">Send</button>
             </div>
           </div>
         </div>
 
-        <div class="oc-section-title">AI Upscale</div>
+        <div class="oc-section-title" data-i18n="uxp.video.ai_upscale">AI Upscale</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="upscaleBody">
-            <span>Real-ESRGAN Video Upscale</span>
+            <span data-i18n="uxp.video.realesrgan_video_upscale">Real-ESRGAN Video Upscale</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="upscaleBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="upscaleScaleUxp">Scale Factor</label>
+              <label class="oc-label" for="upscaleScaleUxp" data-i18n="uxp.video.scale_factor">Scale Factor</label>
               <select class="oc-select" id="upscaleScaleUxp">
-                <option value="2" selected>2x</option>
-                <option value="3">3x</option>
-                <option value="4">4x</option>
+                <option value="2" selected data-i18n="uxp.video.scale_2x">2x</option>
+                <option value="3" data-i18n="uxp.video.scale_3x">3x</option>
+                <option value="4" data-i18n="uxp.video.scale_4x">4x</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="upscaleModelUxp">Model</label>
+              <label class="oc-label" for="upscaleModelUxp" data-i18n="uxp.video.model">Model</label>
               <select class="oc-select" id="upscaleModelUxp">
-                <option value="realesrgan-x4plus" selected>RealESRGAN x4plus</option>
-                <option value="realesrgan-x4plus-anime">Anime</option>
-                <option value="realesrgan-x2plus">RealESRGAN x2plus</option>
+                <option value="realesrgan-x4plus" selected data-i18n="uxp.video.realesrgan_x4plus">RealESRGAN x4plus</option>
+                <option value="realesrgan-x4plus-anime" data-i18n="uxp.video.anime">Anime</option>
+                <option value="realesrgan-x2plus" data-i18n="uxp.video.realesrgan_x2plus">RealESRGAN x2plus</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runUpscaleBtnUxp">Upscale Video</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runUpscaleBtnUxp" data-i18n="uxp.video.upscale_video">Upscale Video</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Scene Detection</div>
+        <div class="oc-section-title" data-i18n="uxp.video.scene_detection">Scene Detection</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="sceneDetectBody">
-            <span>Detect Scene Boundaries</span>
+            <span data-i18n="uxp.video.detect_scene_boundaries">Detect Scene Boundaries</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="sceneDetectBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="sceneMethodUxp">Method</label>
+              <label class="oc-label" for="sceneMethodUxp" data-i18n="uxp.video.method">Method</label>
               <select class="oc-select" id="sceneMethodUxp">
-                <option value="ffmpeg" selected>FFmpeg Threshold</option>
-                <option value="ml">TransNetV2 (ML)</option>
-                <option value="pyscenedetect">PySceneDetect</option>
+                <option value="ffmpeg" selected data-i18n="uxp.video.ffmpeg_threshold">FFmpeg Threshold</option>
+                <option value="ml" data-i18n="uxp.video.transnetv2_ml">TransNetV2 (ML)</option>
+                <option value="pyscenedetect" data-i18n="uxp.video.pyscenedetect">PySceneDetect</option>
               </select>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="sceneThresholdUxp">Sensitivity</label>
+              <label class="oc-label" for="sceneThresholdUxp" data-i18n="uxp.video.sensitivity">Sensitivity</label>
               <input type="range" class="oc-slider" id="sceneThresholdUxp" min="0.1" max="0.9" value="0.3" step="0.05">
               <span class="oc-slider-val" id="sceneThresholdValUxp">0.30</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSceneDetectBtnUxp">Detect Scenes</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSceneDetectBtnUxp" data-i18n="uxp.video.detect_scenes">Detect Scenes</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Style Transfer</div>
+        <div class="oc-section-title" data-i18n="uxp.video.style_transfer">Style Transfer</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="styleTransferBody">
-            <span>AI Style Transfer</span>
+            <span data-i18n="uxp.video.ai_style_transfer">AI Style Transfer</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="styleTransferBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="styleNameUxp">Style</label>
+              <label class="oc-label" for="styleNameUxp" data-i18n="uxp.video.style">Style</label>
               <select class="oc-select" id="styleNameUxp">
-                <option value="candy" selected>Candy</option>
-                <option value="mosaic">Mosaic</option>
-                <option value="starry_night">Starry Night</option>
-                <option value="la_muse">La Muse</option>
-                <option value="udnie">Udnie</option>
-                <option value="rain_princess">Rain Princess</option>
-                <option value="the_scream">The Scream</option>
-                <option value="pointilism">Pointilism</option>
+                <option value="candy" selected data-i18n="uxp.video.style_candy">Candy</option>
+                <option value="mosaic" data-i18n="uxp.video.style_mosaic">Mosaic</option>
+                <option value="starry_night" data-i18n="uxp.video.style_starry_night">Starry Night</option>
+                <option value="la_muse" data-i18n="uxp.video.style_la_muse">La Muse</option>
+                <option value="udnie" data-i18n="uxp.video.style_udnie">Udnie</option>
+                <option value="rain_princess" data-i18n="uxp.video.style_rain_princess">Rain Princess</option>
+                <option value="the_scream" data-i18n="uxp.video.style_the_scream">The Scream</option>
+                <option value="pointilism" data-i18n="uxp.video.style_pointilism">Pointilism</option>
               </select>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="styleIntensityUxp">Intensity</label>
+              <label class="oc-label" for="styleIntensityUxp" data-i18n="uxp.video.intensity">Intensity</label>
               <input type="range" class="oc-slider" id="styleIntensityUxp" min="0" max="100" value="100" step="5">
               <span class="oc-slider-val" id="styleIntensityValUxp">100%</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runStyleTransferBtnUxp">Apply Style</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runStyleTransferBtnUxp" data-i18n="uxp.video.apply_style">Apply Style</button>
           </div>
         </div>
 
