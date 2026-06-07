@@ -11,6 +11,7 @@ UXP_ROOT = REPO_ROOT / "extension" / "com.opencut.uxp"
 UXP_HTML = UXP_ROOT / "index.html"
 UXP_JS = UXP_ROOT / "main.js"
 UXP_LOCALE = UXP_ROOT / "locales" / "en.json"
+UXP_ES_LOCALE = UXP_ROOT / "locales" / "es.json"
 
 I18N_ATTRIBUTES = (
     "data-i18n",
@@ -30,8 +31,8 @@ def _js() -> str:
     return UXP_JS.read_text(encoding="utf-8")
 
 
-def _locale() -> dict[str, str]:
-    return json.loads(UXP_LOCALE.read_text(encoding="utf-8"))
+def _locale(path: Path = UXP_LOCALE) -> dict[str, str]:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _html_i18n_keys() -> set[str]:
@@ -71,7 +72,9 @@ def test_uxp_locale_file_is_valid_and_local_to_panel():
     locale = _locale()
 
     assert UXP_LOCALE.exists()
-    assert "UXP_LOCALE_PATH  = \"locales/en.json\";" in _js()
+    assert 'const UXP_DEFAULT_LOCALE = "en";' in _js()
+    assert 'const UXP_LOCALE_DIR   = "locales";' in _js()
+    assert "UXP_LOCALE_PATH  = `${UXP_LOCALE_DIR}/${UXP_DEFAULT_LOCALE}.json`;" in _js()
     assert locale["uxp.document_title"] == "OpenCut UXP"
 
 
@@ -80,7 +83,16 @@ def test_uxp_i18n_loader_supports_dom_text_and_attributes():
 
     assert "function t(key, fallback)" in js
     assert "function applyI18nToDOM(root = document)" in js
-    assert "async function loadLocale(lang = \"en\")" in js
+    assert "function normalizeLocaleTag(lang = UXP_DEFAULT_LOCALE)" in js
+    assert "function getLocaleOverride()" in js
+    assert "function getPreferredLocale()" in js
+    assert "function getLocaleCandidates(lang)" in js
+    assert "async function fetchLocaleJson(path)" in js
+    assert "async function loadLocale(lang = getPreferredLocale())" in js
+    assert 'new URLSearchParams(window.location.search).get("lang")' in js
+    assert "navigator.languages" in js
+    assert "const baseLocale = await fetchLocaleJson(UXP_LOCALE_PATH) || {};" in js
+    assert "_i18n = { ...baseLocale, ...activeLocale };" in js
     for data_attribute, dom_attribute in (
         ("data-i18n-title", "title"),
         ("data-i18n-label", "label"),
@@ -91,6 +103,20 @@ def test_uxp_i18n_loader_supports_dom_text_and_attributes():
         assert f'["{data_attribute}", "{dom_attribute}"]' in js
 
     assert js.index("await loadLocale();") < js.index("bindEvents();")
+
+
+def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
+    english = _locale()
+    spanish = _locale(UXP_ES_LOCALE)
+
+    assert UXP_ES_LOCALE.exists()
+    assert 40 <= len(spanish) < len(english)
+    assert sorted(key for key in spanish if key not in english) == []
+    assert spanish["conn.online"] == "En linea"
+    assert spanish["uxp.tabs.cut"] == "Corte"
+    assert spanish["uxp.runtime.select_clip_first"] == "Selecciona primero un clip."
+    assert english["uxp.settings.engine_routing"] == "Engine Routing"
+    assert "uxp.settings.engine_routing" not in spanish
 
 
 def test_uxp_shell_i18n_attributes_are_present_and_covered():
