@@ -4,11 +4,11 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the UXP Video runtime i18n pass.
+Last synced: 2026-06-07 during the UXP Video AI/effects runtime i18n pass.
 
 ## Execution Order
 
-- [ ] **E15 i18n migration rolling batches** - current detailed state: CEP batch 173 with a zero-dead-key baseline plus a UXP i18n foundation slice covering the shell loader, tab/workspace/Cut/Captions/FCC-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell attributes, generated Settings status strings, shared runtime toasts, Cut/Captions/Audio/Video runtime feedback, and static UXP locale guard. Continue removing high-impact bare-English CEP panel strings, then expand UXP coverage toward the full parity target.
+- [ ] **E15 i18n migration rolling batches** - current detailed state: CEP batch 173 with a zero-dead-key baseline plus a UXP i18n foundation slice covering the shell loader, tab/workspace/Cut/Captions/FCC-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell attributes, generated Settings status strings, shared runtime toasts, Cut/Captions/Audio runtime feedback, Video core/AI-effects runtime feedback, and static UXP locale guard. Continue removing high-impact bare-English CEP panel strings, then expand UXP coverage toward the full parity target.
 - [ ] **Security hardening queue** - PyTorch deserialization, `open-path` allowlist hardening, CLIP cache safe deserialization, scripting-console source-size limits, Gaussian splat preview send-file confinement, expression-engine thread-churn reduction, security rejection audit logging, cleanup-thread lazy initialization, WCAG contrast audit, and async route rate-limit migration are closed; continue with remaining release-trust findings and external evidence gates.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
