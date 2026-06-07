@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the async rate-limit migration.
+Last synced: 2026-06-07 during the CEP structured empty-state pass.
 
 ## Execution Order
 
@@ -26,6 +26,7 @@ Last synced: 2026-06-07 during the async rate-limit migration.
 - [x] **RA-21 Python 3.13 classifier proof** - retracted the untested Python 3.13 classifier until a CI workflow lane proves it, with a metadata guard in pytest-fast.
 - [x] **WCAG contrast audit in CI** - `opencut.tools.contrast_audit` now audits 72 committed CEP/UXP design-token foreground/background pairs, release smoke runs the `contrast-audit` step, and pytest-fast carries low-contrast fixture coverage.
 - [x] **Async route rate-limit migration** - GPU-heavy/model-install async routes now use `async_job(rate_limit_key=...)`, the MCP bridge uses `rate_limit_slot()` for dynamic per-tool keys, and release-smoke blocks direct route-level rate-limit primitive calls.
+- [x] **CEP structured empty-state components** - shared CEP empty hints now carry `oc-empty-state` component classes, Favorites renders a localized empty state, and static coverage guards job history, batch files, workflow steps, footage search, and favorites.
 - [x] **RA-22 Release Full Node pin** - Release Full now sets up Node 22 before Linux CEP panel npm gates, matching PR Fast, with a workflow regression test.
 - [x] **RA-23 GitHub Actions SHA pins** - workflow action references now use full-length SHAs with adjacent version comments and a static release-smoke guard rejects mutable action refs.
 - [x] **RA-24 Release Full token permissions** - Release Full build/test/package legs now run with read-only contents permission, and tag-only release upload runs in a dedicated write-scoped job.

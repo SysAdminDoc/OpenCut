@@ -11366,6 +11366,13 @@ input[type="range"]::-moz-range-thumb {
     margin: 0;
 }
 
+.favorites-items .oc-empty-state-inline {
+    flex: 1 1 240px;
+    min-height: 64px;
+    margin: 0;
+    padding: 10px 12px;
+}
+
 .hint.is-info {
     border-color: rgba(216, 184, 135, 0.16);
     background:

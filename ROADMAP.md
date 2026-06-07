@@ -1328,6 +1328,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 89 | CEP i18n captions/audio/NLP utility shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `tests/test_i18n_drift.py` | Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders, MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders still had nested or attribute-level bare English outside explicit locale hooks. | Advanced E15 to batch 172 by wiring those shells through locale keys and adding focused guard coverage; the drift gate now reports 2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 90 | WCAG contrast release gate | `opencut/tools/contrast_audit.py`, `scripts/release_smoke.py`, `tests/test_contrast_audit.py`, CEP/UXP panel CSS | The June 6 research plan identified no automated WCAG/contrast audit in CI, so panel token regressions could ship despite extensive static ARIA coverage. | Added a stdlib static contrast audit over committed CEP/UXP `:root` design-token blocks, wired it into release smoke and pytest-fast as `contrast-audit`, proved a deliberately low-contrast fixture fails, and raised CEP `--text-muted` to `#707090` so muted chrome clears 3.15:1 on `--bg-elevated`. The gate audits 72 token pairs with 0 failures. |
 | 2026-06-07 | Cycle 91 | Async rate-limit migration | `opencut/jobs.py`, `opencut/security.py`, async route modules, `tests/test_async_job_rate_limit.py`, `scripts/release_smoke.py` | The June 6 research plan found 25+ manual route-level `rate_limit()` / `rate_limit_release()` pairs, which made async worker-lifetime locks easy to leak and inconsistent with the decorator pattern. | Added `async_job(rate_limit_key=...)` with synchronous 429 rejection before job creation and release paths for worker completion/setup failures, migrated model-install and GPU-heavy async routes to that wrapper, preserved conditional BasicVSR denoise locking, converted MCP bridge per-tool throttling to `rate_limit_slot()`, and added a release-smoke guard proving no route module calls the primitives directly. |
+| 2026-06-07 | Cycle 92 | CEP structured empty states | CEP `index.html`, `main.js`, `style.css`, `locales/en.json`, `tests/test_i18n_hardcoded_migration.py` | The June 6 UX audit found CEP still used plain hints or hidden empty containers where UXP had structured `oc-empty-state` components, especially for zero-result lists and Favorites. | Promoted `buildEmptyHintMarkup()` to emit shared `oc-empty-state` classes while preserving hint/tone semantics, rendered a localized Favorites empty state instead of hiding the bar, and added static coverage for job history, batch files, workflow steps, footage search, and favorites empty-state surfaces. |
 
 ### Research queries to run later
 
@@ -1348,17 +1349,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 92: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 93: Audit CEP empty-state components or another UX gap from the June 6 plan.
-3. Cycle 94: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 95: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 96: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 93: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 94: Audit UXP i18n parity or another UX gap from the June 6 plan.
+3. Cycle 95: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 96: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 97: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 91: Async rate-limit migration.
+Cycle 92: CEP structured empty states.
 
 #### Current focus
 
@@ -1414,6 +1415,15 @@ and GPU-heavy route locks into worker-lifetime `async_job(rate_limit_key=...)`
 handling, keeping conditional BasicVSR denoise locking, using
 `rate_limit_slot()` for MCP bridge per-tool keys, and adding release-smoke
 coverage that blocks direct route-level rate-limit primitive calls.
+Cycle 92 closed the CEP empty-state parity finding by routing the shared CEP
+empty hint helper through `oc-empty-state` classes, adding localized Favorites
+empty-state copy, and guarding job history, batch files, workflow steps,
+footage search, and favorites with static migration coverage. Browser
+validation loaded the CEP shell from a local static server and verified the
+footage-search empty-state DOM/classes rendered on a nonblank page; runtime
+Favorites interaction was covered statically because the raw CEP classic-script
+shell is not the intended normal-browser runtime. Panel Vitest, ESLint, and
+build verification covered the local frontend surface.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1661,7 +1671,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 #### Next best actions
 
 1. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
-2. Audit CEP empty-state components or another remaining UX gap from the June 6 plan.
+2. Audit UXP i18n parity or another remaining UX gap from the June 6 plan.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
