@@ -30,7 +30,9 @@ const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.32.0";
-const UXP_LOCALE_PATH  = "locales/en.json";
+const UXP_DEFAULT_LOCALE = "en";
+const UXP_LOCALE_DIR   = "locales";
+const UXP_LOCALE_PATH  = `${UXP_LOCALE_DIR}/${UXP_DEFAULT_LOCALE}.json`;
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const CONNECTION_LABEL_KEYS = {
@@ -226,7 +228,7 @@ const WORKSPACE_GUIDES = {
 // ─────────────────────────────────────────────────────────────
 // i18n / Localization
 // ─────────────────────────────────────────────────────────────
-let _currentLang = "en";
+let _currentLang = UXP_DEFAULT_LOCALE;
 let _i18n = {};
 
 function t(key, fallback) {
@@ -288,18 +290,79 @@ function applyI18nToDOM(root = document) {
   });
 }
 
-async function loadLocale(lang = "en") {
-  const nextLang = String(lang || "en").trim() || "en";
+function normalizeLocaleTag(lang = UXP_DEFAULT_LOCALE) {
+  return String(lang || UXP_DEFAULT_LOCALE).trim().toLowerCase().replace(/_/g, "-") || UXP_DEFAULT_LOCALE;
+}
+
+function getLocaleOverride() {
   try {
-    const response = await fetch(UXP_LOCALE_PATH);
-    if (response && (response.ok || response.status === 0)) {
-      _i18n = await response.json();
-      _currentLang = nextLang;
+    if (typeof window !== "undefined" && window.location) {
+      const override = new URLSearchParams(window.location.search).get("lang");
+      return override ? normalizeLocaleTag(override) : "";
     }
   } catch (err) {
-    console.warn("[OpenCut UXP] Locale file unavailable; using inline English fallbacks.", err);
-    _i18n = {};
-    _currentLang = "en";
+    console.debug("[OpenCut UXP] Locale override unavailable.", err);
+  }
+  return "";
+}
+
+function getPreferredLocale() {
+  const override = getLocaleOverride();
+  if (override) return override;
+  if (typeof navigator !== "undefined") {
+    const languages = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    const first = languages.find(Boolean);
+    if (first) return normalizeLocaleTag(first);
+  }
+  return UXP_DEFAULT_LOCALE;
+}
+
+function getLocaleCandidates(lang) {
+  const normalized = normalizeLocaleTag(lang);
+  const base = normalized.split("-")[0];
+  const candidates = [normalized];
+  if (base && base !== normalized) candidates.push(base);
+  if (UXP_DEFAULT_LOCALE !== normalized && UXP_DEFAULT_LOCALE !== base) candidates.push(UXP_DEFAULT_LOCALE);
+  return candidates;
+}
+
+async function fetchLocaleJson(path) {
+  try {
+    const response = await fetch(path);
+    if (response && (response.ok || response.status === 0)) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.warn(`[OpenCut UXP] Locale file unavailable: ${path}`, err);
+  }
+  return null;
+}
+
+async function loadLocale(lang = getPreferredLocale()) {
+  const requestedLang = normalizeLocaleTag(lang);
+  const baseLocale = await fetchLocaleJson(UXP_LOCALE_PATH) || {};
+  let activeLang = UXP_DEFAULT_LOCALE;
+  let activeLocale = {};
+
+  for (const candidate of getLocaleCandidates(requestedLang)) {
+    if (candidate === UXP_DEFAULT_LOCALE) {
+      activeLocale = baseLocale;
+      activeLang = UXP_DEFAULT_LOCALE;
+      break;
+    }
+    const locale = await fetchLocaleJson(`${UXP_LOCALE_DIR}/${candidate}.json`);
+    if (locale) {
+      activeLocale = locale;
+      activeLang = candidate;
+      break;
+    }
+  }
+  _i18n = { ...baseLocale, ...activeLocale };
+  _currentLang = Object.keys(_i18n).length ? activeLang : UXP_DEFAULT_LOCALE;
+  if (!Object.keys(_i18n).length) {
+    console.warn("[OpenCut UXP] Locale files unavailable; using inline English fallbacks.");
   }
   document.documentElement.lang = _currentLang;
   applyI18nToDOM();
