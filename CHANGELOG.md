@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Search Locale
+
+- Expanded the partial Spanish UXP locale pack across all Search workspace keys, including library indexing, semantic search, NLP command, result-card, and index-clear runtime states.
+- Added guard coverage requiring every `uxp.search.*` key to be present in the Spanish pack while keeping deeper Timeline keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Agent and Deliverables Locale
 
 - Expanded the partial Spanish UXP locale pack across all Agent, Deliverables, and feature-tab navigation keys, including conductor/variant/runtime states plus deliverables package/status/destination copy.
