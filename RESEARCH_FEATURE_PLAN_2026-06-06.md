@@ -37,7 +37,7 @@ agent (F143) makes these surfaces more exposed.
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
-4. **P1 -- UXP panel i18n parity** -- foundation loader plus Cut/Captions/FCC display/Audio/Video/Timeline static-shell slices shipped; broad parity remains open vs CEP's 1,190 attributes
+4. **P1 -- UXP panel i18n parity** -- foundation loader plus all-tab static shell, shared runtime, Cut/Captions/Audio/Video/Timeline/Search/Deliverables/Agent/Settings runtime, and update/depth-install toast slices shipped; non-English packaging and full parity remain open
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- closed 2026-06-07
