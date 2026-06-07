@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 - Branch: `main`
 - Cycle result: Cycle 60 Magic Clips review-board parity is shipped; RA-54 is closed under RA-10. RA-55/RA-56, E15 rolling work, and UXP permission-split work remain open.
 - Shipped this cycle: CEP and UXP now expose Magic Clips review boards with dry-run plan preview, approve/reject candidate controls, approved-only render handoff to `/video/shorts-pipeline`, platform preset IDs, caption style, LLM payload parity, and visible Plan/Analyze/Render states.
-- Verification: Magic Clips panel/backend focused pytest passed (26 tests plus 27 UI subtests), CEP i18n hardcoded-migration tests passed (6 tests plus 3,672 subtests), CEP and UXP `node --check` passed, doc-size checks passed within tolerance, roadmap mirror/lint tests passed, `rtk git diff --check` passed, roadmap source lint exited 0 with existing appendix warnings, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast --json` passed (822 tests).
+- Verification: focused Magic Clips/UI/backend-client pytest passed (45 tests plus 27 UI subtests), focused Ruff passed, CEP and UXP `node --check` passed, Browser rendered the UXP Shorts controls and Plan-state board through a localhost static panel with only the expected non-Premiere `premierepro` warning and a static-origin CORS limit on the live API call, doc-size checks passed within tolerance, README badge sync passed, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast` passed (100 gate tests).
 
 ## Next Work
 
