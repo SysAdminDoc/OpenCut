@@ -3467,7 +3467,7 @@ async function scanProjectClips() {
 /** ── SILENCE REMOVAL ── */
 async function runSilenceRemoval() {
   const clipPath = document.getElementById("clipPathCut")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const threshold = parseFloat(document.getElementById("silenceThreshold")?.value ?? -35);
   const minSilence = parseFloat(document.getElementById("minSilence")?.value ?? 0.5);
@@ -3476,15 +3476,15 @@ async function runSilenceRemoval() {
   const detectMethod = document.getElementById("silenceDetectMethod")?.value ?? "auto";
 
   UIController.setButtonLoading("runSilenceBtn", true);
-  UIController.showProcessing("Detecting silences…");
-  UIController.setStatus("Running silence removal…");
+  UIController.showProcessing(t("uxp.cut.runtime.detecting_silences", "Detecting silences..."));
+  UIController.setStatus(t("uxp.cut.runtime.running_silence_removal", "Running silence removal..."));
 
   await JobPoller.start(
     "/silence",
     { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode, method: detectMethod },
     (pct, msg) => {
       UIController.setProgress(pct);
-      UIController.setProcessingMsg(msg || "Processing…");
+      UIController.setProcessingMsg(msg || t("processing.processing", "Processing..."));
     },
     (result) => {
       UIController.hideProcessing();
@@ -3501,22 +3501,22 @@ async function runSilenceRemoval() {
       if (cuts.length > 0) {
         rememberTimelineCuts(cuts, { source: "Silence Removal", clipPath });
         showCutResult({ ...result, cuts });
-        UIController.showToast(`Removed ${cuts.length} silence region(s).`, "success");
-        UIController.setStatus(`Done — ${cuts.length} cuts`);
+        UIController.showToast(formatI18n("uxp.cut.runtime.silences_removed", "Removed {count} silence region(s).", { count: cuts.length }), "success");
+        UIController.setStatus(formatI18n("uxp.cut.runtime.silence_done_status", "Done - {count} cuts", { count: cuts.length }));
       } else if (result.xml_path || result.output_path) {
         const out = result.xml_path || result.output_path;
-        UIController.showToast(`Output: ${out}`, "success");
-        UIController.setStatus("Silence removal complete.");
+        UIController.showToast(formatI18n("uxp.runtime.output_path", "Output: {path}", { path: out }), "success");
+        UIController.setStatus(t("uxp.cut.runtime.silence_complete", "Silence removal complete."));
       } else {
-        UIController.showToast("No silences found with current settings.", "info");
-        UIController.setStatus("No silences detected.");
+        UIController.showToast(t("uxp.cut.runtime.no_silences_found", "No silences found with current settings."), "info");
+        UIController.setStatus(t("uxp.cut.runtime.no_silences_status", "No silences detected."));
       }
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSilenceBtn", false);
-      UIController.showToast(`Error: ${err}`, "error");
-      UIController.setStatus("Error during silence removal.");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
+      UIController.setStatus(t("uxp.cut.runtime.silence_error_status", "Error during silence removal."));
     }
   );
 }
@@ -3532,28 +3532,40 @@ function showCutResult(result) {
   const totalRemoved = cuts.reduce((sum, cut) => sum + Math.max(0, Number(cut.end) - Number(cut.start)), 0);
   const longestCut = cuts.reduce((max, cut) => Math.max(max, Math.max(0, Number(cut.end) - Number(cut.start))), 0);
   if (summary) {
+    const longestSuffix = longestCut
+      ? formatI18n("uxp.cut.runtime.longest_cut_suffix", " - longest {duration}", { duration: formatCompactDuration(longestCut) })
+      : "";
     summary.textContent = cuts.length
-      ? `${cuts.length} cut window${cuts.length === 1 ? "" : "s"} • ${formatCompactDuration(totalRemoved)} removed${longestCut ? ` • longest ${formatCompactDuration(longestCut)}` : ""}`
-      : "No cuts detected";
+      ? formatI18n("uxp.cut.runtime.cut_windows_summary", "{count} cut window{plural} - {removed} removed{longest}", {
+          count: cuts.length,
+          plural: cuts.length === 1 ? "" : "s",
+          removed: formatCompactDuration(totalRemoved),
+          longest: longestSuffix,
+        })
+      : t("uxp.cut.runtime.no_cuts_detected", "No cuts detected");
   }
   setTextAndTitle(
     "cutResultSourceValue",
-    clipPath ? formatWorkspaceSource(clipPath) : "Awaiting reviewed pass",
-    clipPath || "Choose a clip and run a cleanup pass to stage cut windows."
+    clipPath ? formatWorkspaceSource(clipPath) : t("uxp.cut.runtime.awaiting_reviewed_pass", "Awaiting reviewed pass"),
+    clipPath || t("uxp.cut.runtime.choose_clip_cleanup_title", "Choose a clip and run a cleanup pass to stage cut windows.")
   );
   setTextAndTitle(
     "cutResultRemovedValue",
-    cuts.length ? `${formatCompactDuration(totalRemoved)} total` : "0 s",
+    cuts.length ? formatI18n("uxp.cut.runtime.removed_total", "{duration} total", { duration: formatCompactDuration(totalRemoved) }) : "0 s",
     cuts.length
-      ? `${formatCompactDuration(totalRemoved)} total removed across ${cuts.length} cut window${cuts.length === 1 ? "" : "s"}.`
-      : "No cut windows are staged yet."
+      ? formatI18n("uxp.cut.runtime.removed_total_title", "{duration} total removed across {count} cut window{plural}.", {
+          duration: formatCompactDuration(totalRemoved),
+          count: cuts.length,
+          plural: cuts.length === 1 ? "" : "s",
+        })
+      : t("uxp.cut.runtime.no_cut_windows_staged", "No cut windows are staged yet.")
   );
   setTextAndTitle(
     "cutResultNextValue",
-    cuts.length ? "Apply latest cuts to timeline" : "Adjust settings and rerun",
+    cuts.length ? t("uxp.cut.runtime.apply_latest_cuts", "Apply latest cuts to timeline") : t("uxp.cut.runtime.adjust_settings_rerun", "Adjust settings and rerun"),
     cuts.length
-      ? "Review the suggested windows, then apply the pass to the active sequence."
-      : "Refine the thresholds or switch cleanup mode, then run another pass."
+      ? t("uxp.cut.runtime.apply_latest_cuts_title", "Review the suggested windows, then apply the pass to the active sequence.")
+      : t("uxp.cut.runtime.adjust_settings_rerun_title", "Refine the thresholds or switch cleanup mode, then run another pass.")
   );
   body.innerHTML = cuts.length
     ? cuts.map((cut, index) => {
@@ -3562,17 +3574,17 @@ function showCutResult(result) {
         const duration = Math.max(0, end - start);
         return `
           <div class="oc-result-row">
-            <span class="oc-result-chip">Cut ${index + 1}</span>
+            <span class="oc-result-chip">${UIController.escapeHtml(formatI18n("uxp.cut.runtime.cut_index", "Cut {index}", { index: index + 1 }))}</span>
             <div class="oc-result-copy">
               <strong>${formatTimecode(start)} to ${formatTimecode(end)}</strong>
-              <span>${formatCompactDuration(duration)} removed</span>
+              <span>${UIController.escapeHtml(formatI18n("uxp.cut.runtime.duration_removed", "{duration} removed", { duration: formatCompactDuration(duration) }))}</span>
             </div>
           </div>`;
       }).join("")
     : `
       <div class="oc-empty-state oc-empty-state-inline">
-        <div class="oc-empty-state-kicker">No changes yet</div>
-        <p>Run silence detection or filler cleanup to generate timeline-ready cuts here.</p>
+        <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.cut.runtime.no_changes_yet", "No changes yet"))}</div>
+        <p>${UIController.escapeHtml(t("uxp.cut.runtime.no_changes_hint", "Run silence detection or filler cleanup to generate timeline-ready cuts here."))}</p>
       </div>`;
   area.focus();
 }
@@ -3580,19 +3592,23 @@ function showCutResult(result) {
 /** ── FILLER WORD DETECTION ── */
 async function runFillerDetection() {
   const clipPath = document.getElementById("clipPathCut")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const words   = document.getElementById("fillerWords")?.value ?? "um,uh,like";
   const padding = parseInt(document.getElementById("fillerPadding")?.value ?? 50);
   const fillerBackend = document.getElementById("fillerBackend")?.value ?? "whisper";
 
   UIController.setButtonLoading("runFillerBtn", true);
-  UIController.showProcessing(fillerBackend === "crisper" ? "Detecting fillers with CrisperWhisper…" : "Detecting filler words…");
+  UIController.showProcessing(
+    fillerBackend === "crisper"
+      ? t("uxp.cut.runtime.detecting_fillers_crisper", "Detecting fillers with CrisperWhisper...")
+      : t("uxp.cut.runtime.detecting_filler_words", "Detecting filler words...")
+  );
 
   await JobPoller.start(
     "/fillers",
     { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()), filler_backend: fillerBackend },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
@@ -3605,14 +3621,14 @@ async function runFillerDetection() {
         : (result.segments_data || []);
       if (cuts.length) rememberTimelineCuts(cuts, { source: "Filler Detection", clipPath });
       const count = result.count ?? cuts.length ?? 0;
-      UIController.showToast(`Detected ${count} filler word(s).`, "success");
-      UIController.setStatus(`Filler detection done — ${count} removed.`);
+      UIController.showToast(formatI18n("uxp.cut.runtime.filler_detected", "Detected {count} filler word(s).", { count }), "success");
+      UIController.setStatus(formatI18n("uxp.cut.runtime.filler_done_status", "Filler detection done - {count} removed.", { count }));
       if (cuts.length) showCutResult({ ...result, cuts });
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
-      UIController.showToast(`Error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
     }
   );
 }

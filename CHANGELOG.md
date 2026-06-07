@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Cut Runtime i18n
+
+- Routed Cut tab silence-removal, filler-detection, and cut-result runtime feedback through locale keys, including progress text, success/error toasts, status summaries, result-card labels, and empty states.
+- Added Cut-runtime guard coverage so the localized silence/filler feedback cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Runtime Toast i18n
 
 - Routed shared UXP runtime toasts and chat feedback through locale keys, including clipboard fallbacks, external URL guidance, picker fallbacks, no-clip warnings, chat prefixes/defaults, and Premiere API availability.

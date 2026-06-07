@@ -227,6 +227,11 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.runtime.folder_browser_unavailable",
         "uxp.runtime.executing_actions",
         "uxp.runtime.premiere_api_available",
+        "uxp.cut.runtime.detecting_silences",
+        "uxp.cut.runtime.silences_removed",
+        "uxp.cut.runtime.no_silences_found",
+        "uxp.cut.runtime.filler_detected",
+        "uxp.cut.runtime.no_changes_yet",
     }.issubset(js_keys)
 
     missing = sorted(key for key in js_keys if key not in locale)
@@ -242,6 +247,20 @@ def test_uxp_runtime_toasts_use_locale_helpers():
     assert 'UIController.showToast("File browser not available' not in js
     assert 'UIController.showToast("Folder browser not available' not in js
     assert 'UIController.showToast("UXP Premiere Pro API available.' not in js
+
+
+def test_uxp_cut_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    cut_js = js[js.index("async function runSilenceRemoval") : js.index("async function runTranscribe")]
+
+    assert 'UIController.showToast("Please select a clip first."' not in cut_js
+    assert 'UIController.showProcessing("Detecting silences' not in cut_js
+    assert 'UIController.setStatus("Running silence removal' not in cut_js
+    assert "Removed ${cuts.length} silence region" not in cut_js
+    assert 'UIController.showToast("No silences found with current settings.' not in cut_js
+    assert 'UIController.showProcessing("Detecting filler words' not in cut_js
+    assert "Detected ${count} filler word" not in cut_js
+    assert "Filler detection done" in _locale()["uxp.cut.runtime.filler_done_status"]
 
 
 def test_uxp_connection_state_does_not_depend_on_visible_english_label():

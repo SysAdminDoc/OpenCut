@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (357 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-357 are recorded below.
+**Last consolidated:** 2026-06-07 (358 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-358 are recorded below.
+
+**Pass 358 update (no standalone research file):**
+- Extended UXP i18n into Cut tab runtime feedback: silence-removal, filler-detection, cut-result summaries, result-card labels, and empty-state strings now use UXP locale keys.
+- Added guard coverage for the Cut runtime feedback slice so direct hardcoded silence/filler progress, status, and result strings cannot return.
 
 **Pass 357 update (no standalone research file):**
 - Extended the UXP i18n foundation into shared runtime feedback: clipboard fallbacks, external URL guidance, picker fallbacks, repeated no-clip warnings, chat prefixes/defaults, action-count toasts, and Premiere API availability now use UXP locale keys.
