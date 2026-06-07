@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-06 (320 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-320 are recorded below.
+**Last consolidated:** 2026-06-06 (321 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-321 are recorded below.
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
@@ -170,6 +170,9 @@
 **Pass 320 update (no standalone research file):**
 - Advanced E15 to batch 158 by wiring the Settings Engine Routing and Live Updates Bridge static shell through locale hooks for refresh titles/labels, card descriptions, empty hints, idle status copy, bridge/listener labels, listener count, and bridge action buttons. The live i18n drift report now shows 2,333 keys, 2,288 consumers, 45 dead keys, and 0 missing keys.
 
+**Pass 321 update (no standalone research file):**
+- Advanced E15 to batch 159 by wiring the Settings Audio & Zoom Defaults and GPU Recommendation static shell through locale hooks for default loudness, zoom amount, zoom easing options, recommendation labels, and recommendation action buttons. The live i18n drift report now shows 2,345 keys, 2,300 consumers, 45 dead keys, and 0 missing keys.
+
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -199,7 +202,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | MCP curated tools | **39** | `opencut/mcp_server.py` (F195) |
 | MCP extended route tools | **1,480 opt-in** | `opencut/_generated/mcp_extended_tools.json` (F194) |
 | CEP JSX host functions | **18 total; 2 CEP-only** | `opencut/_generated/cep_uxp_parity.json` (F198) |
-| CEP locale keys (English) | **2,333** | `extension/com.opencut.panel/client/locales/en.json` |
+| CEP locale keys (English) | **2,345** | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
 
 The README route badge is regenerated from the route manifest. **The manifest is the source of truth.** Never quote a hand-edited number in CI or docs that bypasses the manifest.

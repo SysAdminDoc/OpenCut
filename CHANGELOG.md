@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 159
+
+- Advanced E15 to batch 159 by localizing the Settings Audio & Zoom Defaults and GPU Recommendation static shell. The live drift report now shows 2,345 keys, 2,300 consumers, 45 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Migration Batch 158
 
 - Advanced E15 to batch 158 by localizing the Settings Engine Routing and Live Updates Bridge static shell, reusing existing engine/WebSocket locale keys where possible. The live drift report now shows 2,333 keys, 2,288 consumers, 45 dead keys, and 0 missing keys.
