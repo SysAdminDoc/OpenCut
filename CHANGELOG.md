@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Audio Tab Shell
+
+- Expanded the UXP i18n foundation into the Audio tab shell, including clip input, denoise method controls, normalization controls, loudness-match fields, beat-marker inputs, placeholders, option labels, checkbox text, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 220+ attribute baseline and representative Audio-tab locale keys.
+
 ### Changed - UXP i18n FCC Caption Display Shell
 
 - Expanded the UXP i18n foundation into the F236 caption display-settings card, including field labels, compliance notice copy, source link, preview controls, live preview labels, and dynamic status feedback.
