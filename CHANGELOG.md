@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Runtime Toast i18n
+
+- Routed shared UXP runtime toasts and chat feedback through locale keys, including clipboard fallbacks, external URL guidance, picker fallbacks, no-clip warnings, chat prefixes/defaults, and Premiere API availability.
+- Added runtime-toast guard coverage so repeated no-clip and picker fallback messages cannot return as direct hardcoded `showToast(...)` strings.
+
 ### Changed - UXP i18n Settings Tab Shell
 
 - Expanded the UXP i18n foundation into the Settings tab shell, including Engine Routing, Live Updates Bridge, Migration Risk, Keyboard, and About labels, ARIA labels, status text, empty states, button labels, and generated Settings status strings.
