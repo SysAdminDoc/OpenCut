@@ -79,6 +79,7 @@ When this file and the live code disagree, **the code wins**.
 | Item | Severity | Detail |
 |---|---|---|
 | PyTorch CVE-2025-32434 | CVSS 9.3 | Closed 2026-06-07: model quantization now uses `weights_only=True`, unsafe pickle checkpoints return a clear error, and Torch-backed extras require `torch>=2.6` / `torchvision>=0.21`. |
+| CLIP cache deserialization | High | Closed 2026-06-07: semantic video search caches now use compressed `.npz` files with JSON metadata and `numpy.load(..., allow_pickle=False)` instead of raw pickle caches. |
 | Flask CVE-2026-27205 | Info Disclosure | Session Vary: Cookie header missing in <=3.1.2 |
 | Pillow CVE-2026-25990 | High | Out-of-bounds write |
 | OpenEXR CVE-2026-39886/40244/40250 | High | HTJ2K/DWA decoder overflow |
@@ -1317,6 +1318,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 79 | CEP i18n tab panels and Audio Normalize shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Captions, Audio, Video, Export, Timeline, and Search/NLP tab panels still had bare-English `aria-label` region names, and Audio Normalize still had bare preset options, meter labels, and preview control copy. | Advanced E15 to batch 167 by wiring those surfaces through locale hooks; the drift gate now reports 2,372 keys, 2,372 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 80 | CEP i18n Footage Search shell and PyTorch hardening | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `opencut/core/model_quantization.py`, `pyproject.toml`, dependency tests | Footage Search still had bare-English shell strings, model quantization forced unsafe PyTorch pickle loading, and Torch-backed optional extras admitted vulnerable pre-2.6 Torch versions. | Advanced E15 to batch 168 and closed the PyTorch hardening P0 by wiring Footage Search through locale hooks, switching quantization loads to `weights_only=True`, raising the Torch/TorchVision floor, and adding regression coverage. |
 | 2026-06-07 | Cycle 81 | `open-path` allowlist hardening | `opencut/routes/system.py`, `tests/test_hardening.py`, `tests/test_new_features.py` | `/system/open-path` direct-open mode used an executable-extension blocklist that missed Windows control/shell payloads such as `.msc`, `.cpl`, `.settingcontent-ms`, and `.url`. | Replaced the blocklist with a safe media/document extension allowlist for direct open mode while preserving reveal mode for validated files; regression coverage rejects the missed dangerous extensions. |
+| 2026-06-07 | Cycle 82 | CLIP cache safe deserialization | `opencut/core/semantic_video_search.py`, `tests/test_object_intel.py` | Semantic video search loaded predictable `~/.opencut/clip_cache/clip_*.pkl` files with raw `pickle.load()`, creating a cache-poisoning execution path if an attacker could write to the cache directory. | Replaced raw pickle caches with compressed `.npz` files that store JSON metadata and load arrays via `numpy.load(..., allow_pickle=False)`; regression coverage verifies both the safe-load option and a no-pickle cache round trip. |
 
 ### Research queries to run later
 
@@ -1337,17 +1339,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 82: Continue the security hardening queue with safe CLIP cache deserialization or scripting-console resource limits.
-2. Cycle 83: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-3. Cycle 84: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 85: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 86: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 83: Continue the security hardening queue with scripting-console resource limits.
+2. Cycle 84: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+3. Cycle 85: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 86: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 87: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 81: `open-path` allowlist hardening.
+Cycle 82: CLIP cache safe deserialization.
 
 #### Current focus
 
@@ -1510,6 +1512,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - `open-path` allowlist hardening is closed: direct open mode now accepts only
   safe media/document extensions, while reveal mode still selects validated
   files in the OS file manager.
+- CLIP cache deserialization hardening is closed: semantic video search now
+  writes compressed `.npz` caches with JSON metadata and loads embedding arrays
+  with `allow_pickle=False` instead of raw pickle caches.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1591,7 +1596,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue the security hardening queue with safe CLIP cache deserialization or scripting-console resource limits.
+1. Continue the security hardening queue with scripting-console resource limits.
 2. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
