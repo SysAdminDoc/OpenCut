@@ -13,7 +13,8 @@ This linter:
   2. Walks ``index.html`` for
      ``data-i18n[-title|-label|-placeholder|-aria-label]=…``
      attributes.
-  3. Walks ``main.js`` for ``t("…")`` / ``t('…')`` calls.
+  3. Walks ``main.js`` for ``t("…")`` / ``t('…')`` calls and structured
+     locale metadata fields such as ``labelKey: "…"``.
   4. Reports:
        - dead keys (in en.json, no consumer)
        - missing keys (consumed but not in en.json)
@@ -55,6 +56,12 @@ JS_I18N_RE = re.compile(
     r"""\bt\s*\(\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]"""
 )
 
+# Structured JS metadata such as labelKey/titleKey/placeholderKey. Keep this
+# intentionally narrow so unrelated fields like api_key are not counted.
+JS_KEY_FIELD_RE = re.compile(
+    r"""(?:\b|['"])(?:label|title|description|desc|aria|ariaLabel|placeholder|tooltip|section|group|meta|status|copy|hint)Key(?:\b|['"])\s*:\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]"""
+)
+
 
 def _load_en_keys() -> set[str]:
     en = json.loads((LOCALES / "en.json").read_text(encoding="utf-8"))
@@ -67,16 +74,39 @@ def _scan_html_consumers() -> set[str]:
     return set(HTML_I18N_RE.findall(INDEX_HTML.read_text(encoding="utf-8")))
 
 
-def _scan_js_consumers() -> set[str]:
+def _read_main_js() -> str:
     if not MAIN_JS.exists():
-        return set()
-    return set(JS_I18N_RE.findall(MAIN_JS.read_text(encoding="utf-8")))
+        return ""
+    return MAIN_JS.read_text(encoding="utf-8")
+
+
+def _scan_js_call_consumers(source: str | None = None) -> set[str]:
+    if source is None:
+        source = _read_main_js()
+    return set(JS_I18N_RE.findall(source))
+
+
+def _scan_js_metadata_consumers(source: str | None = None) -> set[str]:
+    if source is None:
+        source = _read_main_js()
+    return set(JS_KEY_FIELD_RE.findall(source))
+
+
+def _scan_js_consumers_from_source(source: str) -> set[str]:
+    return _scan_js_call_consumers(source) | _scan_js_metadata_consumers(source)
+
+
+def _scan_js_consumers() -> set[str]:
+    return _scan_js_consumers_from_source(_read_main_js())
 
 
 def evaluate() -> dict:
     keys = _load_en_keys()
     html_consumers = _scan_html_consumers()
-    js_consumers = _scan_js_consumers()
+    js_source = _read_main_js()
+    js_call_consumers = _scan_js_call_consumers(js_source)
+    js_metadata_consumers = _scan_js_metadata_consumers(js_source)
+    js_consumers = js_call_consumers | js_metadata_consumers
     consumers = html_consumers | js_consumers
     dead = sorted(keys - consumers)
     missing = sorted(consumers - keys)
@@ -84,6 +114,8 @@ def evaluate() -> dict:
         "total_keys": len(keys),
         "html_consumers": len(html_consumers),
         "js_consumers": len(js_consumers),
+        "js_call_consumers": len(js_call_consumers),
+        "js_metadata_consumers": len(js_metadata_consumers),
         "unique_consumers": len(consumers),
         "dead_count": len(dead),
         "dead_keys": dead,
@@ -99,7 +131,8 @@ def cmd_report(check: bool) -> int:
     print(
         f"i18n keys: {e['total_keys']} total | "
         f"{e['unique_consumers']} consumers "
-        f"({e['html_consumers']} HTML + {e['js_consumers']} JS)"
+        f"({e['html_consumers']} HTML + {e['js_consumers']} JS; "
+        f"{e['js_call_consumers']} t-calls + {e['js_metadata_consumers']} metadata keys)"
     )
     print(f"  dead keys: {e['dead_count']} (baseline allowed: {e['baseline']})")
     print(f"  missing keys: {e['missing_count']}")
@@ -122,7 +155,7 @@ def cmd_report(check: bool) -> int:
             print(
                 f"\nFAIL: {e['dead_count']} dead keys exceeds baseline "
                 f"({e['baseline']}). Either remove the new dead key or "
-                "wire it to a `data-i18n` attribute / `t(...)` call.",
+                "wire it to a `data-i18n` attribute, `t(...)` call, or supported JS key field.",
                 file=sys.stderr,
             )
             fail = True

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n JS Metadata Scanner
+
+- Advanced E15 to batch 165 by counting supported JS locale-key metadata fields such as `labelKey` as drift-scan consumers while preserving the zero-dead-key baseline. The live drift report now shows 2,320 keys, 2,320 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Final Dead-Key Cleanup
 
 - Advanced E15 to batch 164 by removing the final 14 unused CEP locale keys after the drift scanner confirmed they had no live static consumers, then tightening the dead-key baseline to zero. The live drift report now shows 2,320 keys, 2,320 consumers, 0 dead keys, and 0 missing keys.
