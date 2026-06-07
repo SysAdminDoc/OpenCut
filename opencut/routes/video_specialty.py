@@ -8,7 +8,7 @@ install endpoints.
 import logging
 import tempfile
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from opencut.core.workflow import workflow_step
 from opencut.errors import safe_error
@@ -29,6 +29,7 @@ from opencut.security import (
     safe_bool,
     safe_float,
     safe_int,
+    validate_filepath,
     validate_path,
 )
 
@@ -178,6 +179,57 @@ def title_overlay(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # One-Click Shorts Pipeline
 # ---------------------------------------------------------------------------
+def _magic_clip_plan_payload(data):
+    plan = data.get("magic_clips_plan", data.get("plan"))
+    return plan if isinstance(plan, dict) else {}
+
+
+def _approved_magic_clip_candidates(data):
+    plan = _magic_clip_plan_payload(data)
+    handoff_requested = any(
+        key in data for key in (
+            "approved_candidates",
+            "approved_candidate_ids",
+            "approved_plan_id",
+            "candidate_ids",
+            "magic_clip_candidates",
+            "magic_clips_plan",
+            "plan",
+            "plan_id",
+        )
+    )
+    raw_candidates = data.get("approved_candidates", data.get("magic_clip_candidates"))
+    if raw_candidates is None:
+        raw_candidates = plan.get("candidates", [])
+    if raw_candidates in (None, ""):
+        raw_candidates = []
+    if not isinstance(raw_candidates, list):
+        raise ValueError("approved_candidates must be a list")
+
+    raw_ids = data.get("approved_candidate_ids", data.get("candidate_ids"))
+    if raw_ids in (None, ""):
+        selected_ids = set()
+    elif isinstance(raw_ids, list):
+        selected_ids = {str(item).strip() for item in raw_ids if str(item).strip()}
+    else:
+        selected_ids = {str(raw_ids).strip()}
+
+    candidates = [item for item in raw_candidates if isinstance(item, dict)]
+    if selected_ids:
+        candidates = [
+            item for item in candidates
+            if str(item.get("candidate_id") or item.get("id") or "").strip() in selected_ids
+        ]
+    if handoff_requested and not candidates:
+        raise ValueError("approved Magic Clips handoff requires candidate windows")
+    return candidates
+
+
+def _magic_clip_plan_id(data):
+    plan = _magic_clip_plan_payload(data)
+    return str(data.get("approved_plan_id") or data.get("plan_id") or plan.get("plan_id") or "")
+
+
 @video_specialty_bp.route("/video/shorts-pipeline", methods=["POST"])
 @require_csrf
 @workflow_step("Running shorts pipeline")
@@ -223,6 +275,9 @@ def video_shorts_pipeline(job_id, filepath, data):
             llm_model=llm_config.model,
             llm_api_key=llm_config.api_key,
             llm_base_url=llm_config.base_url,
+            approved_plan_id=_magic_clip_plan_id(data),
+            approved_candidates=_approved_magic_clip_candidates(data),
+            transcript_segments=data.get("transcript_segments") if isinstance(data.get("transcript_segments"), list) else None,
         )
 
         clips = generate_shorts(
@@ -257,6 +312,28 @@ def video_shorts_pipeline(job_id, filepath, data):
     finally:
         if acquired:
             rate_limit_release("ai_gpu")
+
+
+@video_specialty_bp.route("/video/magic-clips/plan", methods=["POST"])
+@require_csrf
+def video_magic_clips_plan():
+    """Return a dry-run Magic Clips plan without media analysis or rendering."""
+    try:
+        from opencut.core.magic_clips import build_magic_clips_plan
+
+        data = request.get_json(silent=True) or {}
+        raw_path = str(data.get("filepath") or "").strip()
+        if not raw_path:
+            raise ValueError("filepath is required")
+        filepath = validate_filepath(raw_path)
+        plan = build_magic_clips_plan(filepath, data)
+        return jsonify({key: plan[key] for key in plan.keys()})
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:  # pragma: no cover
+        return safe_error(exc, "magic_clips_plan")
 
 
 # ---------------------------------------------------------------------------

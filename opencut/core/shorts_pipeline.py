@@ -13,7 +13,8 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from types import SimpleNamespace
+from typing import Any, Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
@@ -44,6 +45,11 @@ class ShortsPipelineConfig:
     llm_model: str = "llama3"
     llm_api_key: str = ""
     llm_base_url: str = "http://localhost:11434"
+    # Optional reviewed Magic Clips handoff. When supplied, the pipeline
+    # renders only these windows instead of selecting highlights again.
+    approved_plan_id: str = ""
+    approved_candidates: Optional[List[dict[str, Any]]] = None
+    transcript_segments: Optional[List[dict[str, Any]]] = None
 
 
 @dataclass
@@ -113,6 +119,69 @@ def _trim_clip(input_path: str, start: float, end: float, output_path: str):
             )
 
 
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number != number or number in (float("inf"), float("-inf")):
+        return default
+    return number
+
+
+def _normalise_transcript_segments(raw_segments: Any) -> List[dict[str, Any]]:
+    if raw_segments in (None, ""):
+        return []
+    if not isinstance(raw_segments, list):
+        raise ValueError("transcript_segments must be a list")
+
+    transcript_segments: List[dict[str, Any]] = []
+    for raw in raw_segments:
+        if not isinstance(raw, dict):
+            continue
+        start = _safe_float(raw.get("start", raw.get("start_s")), 0.0)
+        end = _safe_float(raw.get("end", raw.get("end_s")), start)
+        if start < 0 or end <= start:
+            continue
+        transcript_segments.append({
+            "start": start,
+            "end": end,
+            "text": str(raw.get("text") or raw.get("transcript") or ""),
+        })
+    return sorted(transcript_segments, key=lambda item: (item["start"], item["end"]))
+
+
+def _approved_candidate_highlights(config: ShortsPipelineConfig) -> List[SimpleNamespace]:
+    raw_candidates = config.approved_candidates or []
+    if not raw_candidates:
+        return []
+    if not isinstance(raw_candidates, list):
+        raise ValueError("approved_candidates must be a list")
+
+    highlights: List[SimpleNamespace] = []
+    for index, raw in enumerate(raw_candidates):
+        if not isinstance(raw, dict):
+            raise ValueError("approved_candidates must contain objects")
+        start = _safe_float(raw.get("start", raw.get("start_s")), -1.0)
+        end = _safe_float(raw.get("end", raw.get("end_s")), start)
+        if start < 0 or end <= start:
+            raise ValueError("approved_candidates require valid start/end windows")
+        title = str(raw.get("title") or raw.get("name") or f"short_{index + 1}").strip()
+        score = max(0.0, min(100.0, _safe_float(raw.get("score"), 0.0)))
+        highlights.append(SimpleNamespace(
+            start=start,
+            end=end,
+            duration=end - start,
+            title=title or f"short_{index + 1}",
+            score=score,
+            engagement=None,
+            candidate_id=str(raw.get("candidate_id") or raw.get("id") or ""),
+        ))
+        if len(highlights) >= config.max_shorts:
+            break
+    return highlights
+
+
 def generate_shorts(
     input_path: str,
     config: Optional[ShortsPipelineConfig] = None,
@@ -158,82 +227,89 @@ def generate_shorts(
     results = []
 
     try:
-        # Step 1: Transcribe
-        if on_progress:
-            on_progress(5, "Transcribing video...")
+        approved_highlights = _approved_candidate_highlights(config)
+        if approved_highlights:
+            transcript_segments = _normalise_transcript_segments(config.transcript_segments)
+            highlights = approved_highlights
+            if on_progress:
+                on_progress(40, f"Using {len(highlights)} approved candidate clips")
+        else:
+            # Step 1: Transcribe
+            if on_progress:
+                on_progress(5, "Transcribing video...")
 
-        try:
-            from opencut.core.captions import transcribe
-        except ImportError:
-            raise RuntimeError(
-                "Transcription module not available. "
-                "Install faster-whisper: pip install faster-whisper"
+            try:
+                from opencut.core.captions import transcribe
+            except ImportError:
+                raise RuntimeError(
+                    "Transcription module not available. "
+                    "Install faster-whisper: pip install faster-whisper"
+                )
+
+            from opencut.utils.config import CaptionConfig as _CapCfg
+            _cap_cfg = _CapCfg(
+                model=config.whisper_model,
+                language=config.language or None,
+            )
+            transcript_result = transcribe(input_path, config=_cap_cfg)
+
+            # Extract segments list from transcription result
+            if hasattr(transcript_result, "segments"):
+                segments = transcript_result.segments
+            elif isinstance(transcript_result, dict):
+                segments = transcript_result.get("segments", [])
+            else:
+                segments = []
+
+            # Normalize segments to list of dicts
+            transcript_segments = []
+            for seg in segments:
+                if isinstance(seg, dict):
+                    transcript_segments.append(seg)
+                elif hasattr(seg, "start"):
+                    transcript_segments.append({
+                        "start": seg.start,
+                        "end": seg.end,
+                        "text": getattr(seg, "text", ""),
+                    })
+
+            if not transcript_segments:
+                logger.warning("No transcript segments found")
+                if on_progress:
+                    on_progress(100, "No speech detected in video")
+                return []
+
+            if on_progress:
+                on_progress(20, f"Transcribed {len(transcript_segments)} segments")
+
+            # Step 2: Extract highlights via LLM
+            if on_progress:
+                on_progress(25, "Analyzing for highlights...")
+
+            from opencut.core.highlights import extract_highlights
+            from opencut.core.llm import LLMConfig
+
+            llm_config = LLMConfig(
+                provider=config.llm_provider,
+                model=config.llm_model,
+                api_key=config.llm_api_key,
+                base_url=config.llm_base_url,
             )
 
-        from opencut.utils.config import CaptionConfig as _CapCfg
-        _cap_cfg = _CapCfg(
-            model=config.whisper_model,
-            language=config.language or None,
-        )
-        transcript_result = transcribe(input_path, config=_cap_cfg)
+            highlight_result = extract_highlights(
+                transcript_segments=transcript_segments,
+                max_highlights=config.max_shorts,
+                min_duration=config.min_duration,
+                max_duration=config.max_duration,
+                llm_config=llm_config,
+            )
 
-        # Extract segments list from transcription result
-        if hasattr(transcript_result, "segments"):
-            segments = transcript_result.segments
-        elif isinstance(transcript_result, dict):
-            segments = transcript_result.get("segments", [])
-        else:
-            segments = []
-
-        # Normalize segments to list of dicts
-        transcript_segments = []
-        for seg in segments:
-            if isinstance(seg, dict):
-                transcript_segments.append(seg)
-            elif hasattr(seg, "start"):
-                transcript_segments.append({
-                    "start": seg.start,
-                    "end": seg.end,
-                    "text": getattr(seg, "text", ""),
-                })
-
-        if not transcript_segments:
-            logger.warning("No transcript segments found")
-            if on_progress:
-                on_progress(100, "No speech detected in video")
-            return []
-
-        if on_progress:
-            on_progress(20, f"Transcribed {len(transcript_segments)} segments")
-
-        # Step 2: Extract highlights via LLM
-        if on_progress:
-            on_progress(25, "Analyzing for highlights...")
-
-        from opencut.core.highlights import extract_highlights
-        from opencut.core.llm import LLMConfig
-
-        llm_config = LLMConfig(
-            provider=config.llm_provider,
-            model=config.llm_model,
-            api_key=config.llm_api_key,
-            base_url=config.llm_base_url,
-        )
-
-        highlight_result = extract_highlights(
-            transcript_segments=transcript_segments,
-            max_highlights=config.max_shorts,
-            min_duration=config.min_duration,
-            max_duration=config.max_duration,
-            llm_config=llm_config,
-        )
-
-        highlights = highlight_result.highlights
-        if not highlights:
-            logger.warning("No highlights found by LLM")
-            if on_progress:
-                on_progress(100, "No interesting segments found")
-            return []
+            highlights = highlight_result.highlights
+            if not highlights:
+                logger.warning("No highlights found by LLM")
+                if on_progress:
+                    on_progress(100, "No interesting segments found")
+                return []
 
         # Clamp highlight bounds to valid duration range
         total_dur = _probe_duration(input_path)
@@ -241,6 +317,10 @@ def generate_shorts(
             for hl in highlights:
                 hl.start = max(0.0, min(total_dur - 0.1, hl.start))
                 hl.end = max(hl.start + 0.1, min(total_dur, hl.end))
+                try:
+                    hl.duration = hl.end - hl.start
+                except Exception:
+                    pass
 
         if on_progress:
             on_progress(40, f"Found {len(highlights)} highlights")

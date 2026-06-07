@@ -816,6 +816,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
     "tests/test_caption_display_settings.py",
+    "tests/test_magic_clips.py",
     "tests/test_loudness_standards.py",
     "tests/test_delivery_standards.py",
     "tests/test_local_auth.py",

@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "generated_at": "2026-06-06T23:11:49Z",
-  "total_routes": 1536,
+  "generated_at": "2026-06-07T00:11:14Z",
+  "total_routes": 1537,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
     "GET": 387,
     "PATCH": 1,
-    "POST": 1134,
+    "POST": 1135,
     "PUT": 2
   },
   "blueprints": {
@@ -1060,10 +1060,10 @@
       ]
     },
     "video_specialty": {
-      "route_count": 14,
+      "route_count": 15,
       "method_counts": {
         "GET": 2,
-        "POST": 12
+        "POST": 13
       },
       "sample_rules": [
         "/video/remove/capabilities",
@@ -12397,6 +12397,14 @@
       ],
       "endpoint": "video_fx.lut_list",
       "blueprint": "video_fx"
+    },
+    {
+      "rule": "/video/magic-clips/plan",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_specialty.video_magic_clips_plan",
+      "blueprint": "video_specialty"
     },
     {
       "rule": "/video/matte/birefnet",
