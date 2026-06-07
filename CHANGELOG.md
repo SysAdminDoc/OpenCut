@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Timeline Tab Shell
+
+- Expanded the UXP i18n foundation into the Timeline tab shell, including the preview notice, readiness summaries, sequence write-back, OTIO export, beat markers, batch export, batch rename, smart bins, and SRT prep labels, options, placeholders, ARIA labels, status text, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 465+ attribute baseline and representative Timeline-tab locale keys.
+
 ### Changed - UXP i18n Video Shorts and Social Shell
 
 - Expanded the UXP i18n foundation through the remaining Video tab Shorts Pipeline and Social Media Upload shell, including visible labels, select options, checkbox text, placeholders, ARIA labels, and action buttons.
