@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Security - Security Rejection Audit Logging
+
+- Added a best-effort `security_audit.jsonl` trail for security rejections, configurable with `OPENCUT_SECURITY_AUDIT_LOG`.
+- CSRF failures, path-validation rejections, rate-limit denials, and remote auth-token denials now emit schema-tagged JSON records with request context, request IDs when available, and hashed path evidence without logging CSRF or auth token values.
+- Added `GET /system/audit-log` for capped recent audit-event reads.
+
 ### Performance - Expression Engine Timeline Evaluation
 
 - Removed per-eval worker-thread spawning from `evaluate_expression()` by using the existing trace-deadline timeout path inline and restoring the prior trace hook afterward.

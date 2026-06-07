@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-07
-**Baseline**: v1.32.0 -- 1,538 routes, 107 blueprints, 602 core modules, 9,900+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,539 routes, 107 blueprints, 602 core modules, 9,900+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -1323,6 +1323,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 84 | CEP i18n Timeline and Settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness copy still had bare-English shell strings after the prior Footage Search batch. | Advanced E15 to batch 169 by wiring those surfaces through locale hooks; the drift gate now reports 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 85 | CEP i18n Journal/Whisper shell and splat preview confinement | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `opencut/routes/generative_routes.py`, `tests/test_generative_routes_security.py` | Settings Operation Journal and Whisper readiness/default-model shell copy still had bare-English strings, and `/gaussian-splat/preview-frame` trusted the renderer-returned `frame_path` before calling `send_file()`. | Advanced E15 to batch 170 by wiring those CEP shells through locale hooks, and added a fail-closed preview-frame path validator that only serves existing renderer outputs under system temp or `~/.opencut`; the drift gate now reports 2,457 keys, 2,457 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 86 | Expression-engine thread churn and CEP i18n footer/wizard shell | `opencut/core/expression_engine.py`, `tests/test_motion_design.py`, CEP `index.html`, `main.js`, `en.json`, `scripts/i18n_lint.py`, `tests/test_i18n_drift.py`, `tests/test_i18n_hardcoded_migration.py` | `evaluate_expression()` spawned a fresh daemon `threading.Thread` for every eval as the timeout mechanism, so `evaluate_timeline()` created one worker per frame; the CEP progress/results/footer, command palette, preview modals, context menu, and first-run wizard still had bare-English shell attributes and copy outside locale hooks. | Replaced per-eval worker spawning with inline trace-deadline evaluation that restores any prior trace hook, added a 30-second timeline regression proving `evaluate_timeline()` creates no raw worker threads, and advanced E15 to batch 171 by localizing those CEP shells plus adding `data-i18n-alt` scanner support. The timeline benchmark held the thread count at 2 before and after while evaluating 900 frames with no errors; the drift gate now reports 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
+| 2026-06-07 | Cycle 87 | Security rejection audit logging | `opencut/security_audit.py`, `opencut/security.py`, `opencut/server.py`, `opencut/routes/system.py`, `tests/test_security_audit.py` | CSRF failures, path-validation rejections, remote auth denials, and rate-limit rejections returned 4xx responses without a structured trail for incident review, and token/path evidence needed to avoid leaking secrets. | Added a best-effort schema-tagged `security_audit.jsonl` writer, hooked CSRF rejection, `validate_path()` rejection branches, rate-limit denials, and remote auth-token denials into it, preserved request context and request IDs when available, redacted CSRF/auth token values, recorded rejected path evidence as a short preview plus SHA-256 hash, and exposed capped recent reads via `/system/audit-log`. Test apps disable the default sink unless `OPENCUT_SECURITY_AUDIT_LOG` is set. |
 
 ### Research queries to run later
 
@@ -1343,17 +1344,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 87: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 88: Audit the remaining release-trust findings that can close with local evidence, especially security audit logging.
-3. Cycle 89: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 90: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 91: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 88: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 89: Close cleanup-thread lazy initialization or another remaining local release-trust finding.
+3. Cycle 90: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 91: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 92: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 86: Expression-engine timeline thread-churn reduction and CEP i18n footer/wizard shell.
+Cycle 87: Security rejection audit logging.
 
 #### Current focus
 
@@ -1388,6 +1389,10 @@ Cycle 86 closed expression-engine per-frame thread churn with inline
 trace-deadline evaluation and a constant-thread-count timeline regression, and
 advanced E15 to batch 171 with progress/results/footer, command palette,
 preview, context-menu, first-run wizard, and `data-i18n-alt` scanner coverage.
+Cycle 87 closed the security audit logging gap with a best-effort
+`security_audit.jsonl` writer for CSRF, path-validation, rate-limit, and remote
+auth-token rejections, including request IDs when available, token redaction,
+hashed path evidence, and capped recent reads through `/system/audit-log`.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1629,7 +1634,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 #### Next best actions
 
 1. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
-2. Audit the remaining release-trust findings that can close with local evidence, especially security audit logging.
+2. Close cleanup-thread lazy initialization from the remaining local release-trust findings.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads

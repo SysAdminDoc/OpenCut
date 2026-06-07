@@ -40,7 +40,7 @@ agent (F143) makes these surfaces more exposed.
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
-7. **P1 -- Security audit logging** -- no structured trail for CSRF/path traversal failures
+7. **P1 -- Security audit logging** -- closed 2026-06-07
 8. **P2 -- CEP structured empty-state components** -- UXP has 10+, CEP has ~1
 9. **P2 -- Multi-language locale files** -- i18n plumbed but only English shipped
 10. **P2 -- Rate-limit decorator adoption** -- 25+ manual acquire/release sites vs 2 using decorator
@@ -287,12 +287,12 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P2
 
 ### NF-05: Security Audit Event Log
-- **User problem:** No structured trail for security-relevant events -- CSRF failures, path traversal attempts, auth failures, rate limit rejections are not logged in a queryable format
-- **Evidence:** Security audit confirmed no audit logging exists; `security.py` has comprehensive validation but failures are silently rejected with HTTP errors; crash.log captures 500s but not 4xx security rejections
-- **Proposed behavior:** New `audit_log.py` module that appends security events to `~/.opencut/audit.log` in structured JSON format. Events: CSRF validation failure, path traversal rejection, auth token failure, rate limit rejection, plugin sandbox violation. Queryable via `/system/audit-log` (admin only).
-- **Implementation:** New `opencut/core/audit_log.py`; hook into `security.py` validation functions; new route in `system.py`
-- **Risks:** Log file growth without rotation; privacy implications of logging request details
-- **Verification:** Trigger CSRF failure, path traversal attempt; verify events appear in audit log
+- **User problem:** Closed 2026-06-07. Security-relevant events now have a structured local trail for CSRF failures, path validation rejections, auth failures, and rate-limit rejections.
+- **Evidence:** `opencut/security_audit.py` writes schema-tagged JSONL records, `security.py` records CSRF/path/rate-limit denials, `server.py` records remote auth-token denials, and `/system/audit-log` returns capped recent events.
+- **Proposed behavior:** Shipped as `security_audit.jsonl`, configurable with `OPENCUT_SECURITY_AUDIT_LOG`; test apps keep the default sink disabled unless explicitly configured.
+- **Implementation:** `opencut/security_audit.py`, hooks in `opencut/security.py` and `opencut/server.py`, read route in `opencut/routes/system.py`.
+- **Risks:** Log file growth without rotation remains a follow-up if audit volume becomes high.
+- **Verification:** `tests/test_security_audit.py` covers CSRF token redaction, path-traversal evidence, rate-limit denial records, remote auth denial records, and `/system/audit-log` reads.
 - **Complexity:** M
 - **Priority:** P1
 
@@ -531,12 +531,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: Code over 100 KiB rejected before compile/exec; scripting HTTP routes return 400 `CODE_TOO_LARGE`
   - Verify: Oversized core and route tests reject 200 KiB submitted scripts larger than `MAX_CODE_LENGTH_BYTES`
 
-- [ ] P1 - **Security audit event log**
+- [x] P1 - **Security audit event log**
   - Why: No structured trail for CSRF failures, path traversal attempts, auth failures
-  - Evidence: `security.py` validates but failures are silently rejected; `crash.log` only captures 500s
-  - Touches: New `opencut/core/audit_log.py`; hooks in `security.py`
-  - Acceptance: Security rejections logged to `~/.opencut/audit.log` in structured JSON
-  - Verify: Trigger CSRF failure, verify event in audit log
+  - Evidence: closed 2026-06-07 with `opencut/security_audit.py`, security/server hooks, and `/system/audit-log`
+  - Touches: `opencut/security_audit.py`, `opencut/security.py`, `opencut/server.py`, `opencut/routes/system.py`, `tests/test_security_audit.py`
+  - Acceptance: Security rejections are logged to `security_audit.jsonl` in structured JSON without token values
+  - Verify: focused tests trigger CSRF, path traversal, rate-limit, and remote auth denials, then read the audit log
 
 - [x] P1 - **`send_file()` path confinement in generative_routes** -- closed 2026-06-07
   - Why: Serves arbitrary paths without confinement check
