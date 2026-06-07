@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 160
+
+- Advanced E15 to batch 160 by localizing the Settings keyboard shortcut reference and About labels. The live drift report now shows 2,349 keys, 2,307 consumers, 42 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Migration Batch 159
 
 - Advanced E15 to batch 159 by localizing the Settings Audio & Zoom Defaults and GPU Recommendation static shell. The live drift report now shows 2,345 keys, 2,300 consumers, 45 dead keys, and 0 missing keys.
