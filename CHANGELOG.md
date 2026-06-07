@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added - WCAG Contrast Release Gate
+
+- Added `opencut.tools.contrast_audit`, a stdlib static WCAG AA contrast audit for committed CEP and UXP design-token pairs.
+- Wired the `contrast-audit` step into release smoke and pytest-fast so PR Fast fails on low-contrast panel token regressions through the existing smoke command.
+- Raised the CEP primary theme `--text-muted` token from `#686888` to `#707090`, lifting muted chrome on `--bg-elevated` from 2.8:1 to 3.15:1 against the AA large-text/non-text floor.
+
 ### Changed - CEP i18n Captions, Audio, and NLP Utility Shell
 
 - Advanced E15 to batch 172 by localizing Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders and MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders.

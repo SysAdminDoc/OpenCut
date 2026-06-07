@@ -448,7 +448,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 2. **Only English locale shipped** -- i18n plumbed but `locales/en.json` is the only file
 3. **CEP lacks structured empty-state components** -- UXP has 10+, CEP has ~1 (covered in EI-03)
 4. **No structured error-recovery UI** -- errors surface via toasts only (covered in NF-04)
-5. **No automated WCAG/contrast audit** in CI -- no axe-core, Lighthouse, or contrast checking
+5. **No automated WCAG/contrast audit** in CI -- closed 2026-06-07 with a static CEP/UXP token-pair contrast audit wired into release smoke and PR Fast
 6. **No system color scheme auto-detection in UXP** -- CEP has inline script for `prefers-color-scheme`, UXP does not
 7. **Tab structure diverges** -- CEP has 8 tabs, UXP has 9 (Export vs Deliverables+Agent split). Tracked by `test_panel_tab_parity.py` but still a user-facing inconsistency.
 8. **Onboarding is minimal** -- simple state flag, no guided tour (covered in NF-03)
@@ -606,12 +606,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: Thread only starts on first `_schedule_temp_cleanup()` call
   - Verify: `tests/test_helpers_cleanup.py` covers fresh-interpreter import and first-schedule startup
 
-- [ ] P2 - **WCAG contrast audit in CI**
+- [x] P2 - **WCAG contrast audit in CI**
   - Why: No automated accessibility contrast checking; 195 ARIA attributes but no validation they're correct
-  - Evidence: No axe-core, Lighthouse, or contrast tools in any CI workflow
-  - Touches: `.github/workflows/pr-fast.yml`; possibly add pa11y or axe-core
-  - Acceptance: PR gate fails on WCAG AA contrast violations
-  - Verify: Introduce a low-contrast element, verify CI catches it
+  - Evidence: closed 2026-06-07 with `opencut.tools.contrast_audit` plus release-smoke `contrast-audit`
+  - Touches: `opencut/tools/contrast_audit.py`, `scripts/release_smoke.py`, `tests/test_contrast_audit.py`, CEP/UXP panel token CSS
+  - Acceptance: PR Fast runs release smoke without skipping `contrast-audit`, so WCAG AA token violations fail the PR gate
+  - Verify: `tests/test_contrast_audit.py` includes a deliberately low-contrast fixture and current CEP/UXP token audit; `python -m opencut.tools.contrast_audit --json` audits 72 pairs with 0 failures
 
 ---
 
@@ -640,7 +640,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 5 | Caption style gallery | M | Monetization parity with Submagic ($12-40/mo) |
 | 6 | Take review mode | M | Monetization parity with Gling ($10-50/mo) |
 | 7 | Context-aware onboarding tour | M | First-use experience transformation |
-| 8 | WCAG contrast CI gate | M | Automated accessibility enforcement |
+| 8 | WCAG contrast CI gate | Shipped 2026-06-07 | Automated accessibility enforcement |
 
 ---
 

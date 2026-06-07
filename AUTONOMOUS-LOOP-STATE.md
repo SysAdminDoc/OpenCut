@@ -6,13 +6,13 @@ Last updated: 2026-06-07
 
 - Project: `C:\Users\--\repos\OpenCut`
 - Branch: `main`
-- Cycle result: Cycle 89 E15 captions/audio/NLP utility shell localization is shipped. External F202 notarization and F252 WebView cutover evidence remain open.
-- Shipped this cycle: Advanced E15 to batch 172 by adding explicit locale hooks to Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders and MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders. The drift gate reports 2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
-- Verification: `py -3.12 scripts\i18n_lint.py --json`; `py -3.12 -m pytest -q tests\test_i18n_hardcoded_migration.py tests\test_i18n_drift.py` (15 passed, 4156 subtests passed); `py -3.12 -m ruff check tests\test_i18n_hardcoded_migration.py scripts\i18n_lint.py`; `py -3.12 -m pytest -q tests\test_roadmap_mirror.py tests\test_roadmap_lint.py` (15 passed); `py -3.12 scripts\sync_badges.py --check`; `py -3.12 scripts\check_doc_sizes.py --check`; `git diff --check`; `py -3.12 scripts\release_smoke.py --only ruff --json`; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (102 gate tests / 842 passed).
+- Cycle result: Cycle 90 WCAG contrast release gate is shipped. External F202 notarization and F252 WebView cutover evidence remain open.
+- Shipped this cycle: Added `opencut.tools.contrast_audit`, wired release smoke and pytest-fast to run `contrast-audit`, added low-contrast fixture coverage, and raised CEP `--text-muted` to `#707090` so muted chrome clears the 3.0:1 floor on `--bg-elevated`. The gate audits 72 CEP/UXP token pairs with 0 failures.
+- Verification: `py -3.12 -m opencut.tools.contrast_audit --json` (72 pairs, 0 failures); `py -3.12 scripts\release_smoke.py --only contrast-audit --json`; `py -3.12 -m pytest -q tests\test_contrast_audit.py tests\test_release_smoke.py tests\test_ci_workflow_split.py tests\test_roadmap_mirror.py tests\test_roadmap_lint.py` (38 passed); `py -3.12 -m ruff check opencut\tools\contrast_audit.py tests\test_contrast_audit.py scripts\release_smoke.py`; `py -3.12 scripts\check_doc_sizes.py --check`; `git diff --check`; `py -3.12 scripts\release_smoke.py --only ruff --json`; `py -3.12 scripts\release_smoke.py --only pytest-fast --json` (103 gate tests / 848 passed).
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue E15 hardcoded-shell/scanner cleanup or start the WCAG contrast audit gate.
-- The next open queue items include E15 hardcoded-shell/scanner cleanup, WCAG contrast audit in CI, and the external F202/F252 evidence gates.
+- Next cycle focus: continue E15 hardcoded-shell/scanner cleanup or audit another local release-trust/UX gap from the June 6 plan.
+- The next open queue items include E15 hardcoded-shell/scanner cleanup, remaining local release-trust/UX findings, and the external F202/F252 evidence gates.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.
