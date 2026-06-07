@@ -91,6 +91,7 @@ class TestI18nDrift(unittest.TestCase):
             '<input data-i18n-placeholder="audio.placeholder">'
             '<div data-i18n-title="video.title_tip"></div>'
             '<optgroup data-i18n-label="video.option_group"></optgroup>'
+            '<img data-i18n-alt="preview.frame_alt">'
             '<a data-i18n-aria-label="video.aria_close"></a>'
         )
         found = set(self.mod.HTML_I18N_RE.findall(html))
@@ -99,6 +100,7 @@ class TestI18nDrift(unittest.TestCase):
             "audio.placeholder",
             "video.title_tip",
             "video.option_group",
+            "preview.frame_alt",
             "video.aria_close",
         })
 

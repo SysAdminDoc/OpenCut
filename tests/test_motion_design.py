@@ -14,6 +14,7 @@ import math
 import os
 import sys
 import tempfile
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -755,6 +756,16 @@ class TestExpressionEngine:
         # division by zero on frame 0
         result = evaluate_timeline("1 / frame", fps=5, duration=1.0)
         assert len(result.errors) > 0
+
+    def test_evaluate_timeline_does_not_spawn_per_frame_threads(self):
+        from opencut.core.expression_engine import evaluate_timeline
+
+        with patch("opencut.core.expression_engine.threading.Thread") as thread_cls:
+            result = evaluate_timeline("frame + 1", fps=30, duration=30.0)
+
+        assert len(result.values) == 900
+        assert result.errors == []
+        thread_cls.assert_not_called()
 
     def test_expression_result_to_dict(self):
         from opencut.core.expression_engine import ExpressionResult

@@ -2,7 +2,7 @@
 
 **Version**: 5.0
 **Updated**: 2026-06-07
-**Baseline**: v1.32.0 -- 1,538 routes, 107 blueprints, 602 core modules, 9,600+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
+**Baseline**: v1.32.0 -- 1,538 routes, 107 blueprints, 602 core modules, 9,900+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
 
@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (170/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.282 / batch 170. |
+| E15 | CEP i18n migration | Rolling batches (171/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at batch 171. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -596,7 +596,7 @@ strings and dynamic-rendering scanner gaps.
 |---|---|---|---|
 | E15 dead-key cleanup | `scripts/i18n_lint.py --json` now reports 0 dead keys and a 0-key baseline | Keep the baseline at zero and remove or wire any future dead key in the same batch that introduces it. | P2 |
 | E15 scanner coverage | `scripts/i18n_lint.py` scans `data-i18n*`, direct `t(...)` calls, and supported JS key-field metadata | Continue targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
-| E15 roadmap status | `TODO.md` now tracks v4.282 / batch 170 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
+| E15 roadmap status | `TODO.md` now tracks batch 171 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
 
 ### Cycle 8: UXP/WebView cutover audit
 
@@ -1322,6 +1322,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 83 | Scripting-console resource limit | `opencut/core/scripting_console.py`, `opencut/routes/dev_scripting_routes.py`, `opencut/routes/workflow_dev_routes.py`, `tests/test_dev_scripting.py`, `tests/test_workflow_dev.py` | The scripting console had output and timeout caps but no source-size cap, allowing oversized code payloads to consume avoidable compile/exec resources. | Added a 100 KiB (102,400-byte) `MAX_CODE_LENGTH_BYTES` cap, enforced it in the core sandbox and both scripting HTTP routes before compile/exec, and covered direct core rejection plus HTTP 400 `CODE_TOO_LARGE` responses for 200 KiB submitted scripts. |
 | 2026-06-07 | Cycle 84 | CEP i18n Timeline and Settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness copy still had bare-English shell strings after the prior Footage Search batch. | Advanced E15 to batch 169 by wiring those surfaces through locale hooks; the drift gate now reports 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 85 | CEP i18n Journal/Whisper shell and splat preview confinement | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `opencut/routes/generative_routes.py`, `tests/test_generative_routes_security.py` | Settings Operation Journal and Whisper readiness/default-model shell copy still had bare-English strings, and `/gaussian-splat/preview-frame` trusted the renderer-returned `frame_path` before calling `send_file()`. | Advanced E15 to batch 170 by wiring those CEP shells through locale hooks, and added a fail-closed preview-frame path validator that only serves existing renderer outputs under system temp or `~/.opencut`; the drift gate now reports 2,457 keys, 2,457 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
+| 2026-06-07 | Cycle 86 | Expression-engine thread churn and CEP i18n footer/wizard shell | `opencut/core/expression_engine.py`, `tests/test_motion_design.py`, CEP `index.html`, `main.js`, `en.json`, `scripts/i18n_lint.py`, `tests/test_i18n_drift.py`, `tests/test_i18n_hardcoded_migration.py` | `evaluate_expression()` spawned a fresh daemon `threading.Thread` for every eval as the timeout mechanism, so `evaluate_timeline()` created one worker per frame; the CEP progress/results/footer, command palette, preview modals, context menu, and first-run wizard still had bare-English shell attributes and copy outside locale hooks. | Replaced per-eval worker spawning with inline trace-deadline evaluation that restores any prior trace hook, added a 30-second timeline regression proving `evaluate_timeline()` creates no raw worker threads, and advanced E15 to batch 171 by localizing those CEP shells plus adding `data-i18n-alt` scanner support. The timeline benchmark held the thread count at 2 before and after while evaluating 900 frames with no errors; the drift gate now reports 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1342,17 +1343,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 86: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 87: Audit the remaining release-trust findings that can close with local evidence.
-3. Cycle 88: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 89: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 90: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 87: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+2. Cycle 88: Audit the remaining release-trust findings that can close with local evidence, especially security audit logging.
+3. Cycle 89: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 90: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 91: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 85: CEP i18n Journal/Whisper shell and Gaussian splat preview send-file confinement.
+Cycle 86: Expression-engine timeline thread-churn reduction and CEP i18n footer/wizard shell.
 
 #### Current focus
 
@@ -1383,6 +1384,10 @@ sidecars to custom opt-in services. Continue with the remaining release-trust
 and product workflow specs. RA-22 keeps Release Full's Linux panel npm gates on
 the same explicit Node 22 runtime as PR Fast before treating panel advisory,
 unit, and build evidence as release proof.
+Cycle 86 closed expression-engine per-frame thread churn with inline
+trace-deadline evaluation and a constant-thread-count timeline regression, and
+advanced E15 to batch 171 with progress/results/footer, command palette,
+preview, context-menu, first-run wizard, and `data-i18n-alt` scanner coverage.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1413,7 +1418,9 @@ return 403 before Flask can serve them.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 170: Settings Operation Journal, Whisper
+E15 is advanced through batch 171: progress/results/footer chrome, command
+palette shell, preview/audio preview modals, clip context menu, first-run wizard,
+`data-i18n-alt` scanner coverage, Settings Operation Journal, Whisper
 readiness/default-model shell, Timeline write-back, OTIO, beat-marker,
 multicam, marker-export, rename/smart-bin controls, Settings system,
 dependency-health, Footage Search shell copy, tab panel
@@ -1428,7 +1435,7 @@ Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
 diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,457 keys, 2,457 consumers, 16 JS metadata consumers, 0 dead
+the drift gate reports 2,515 keys, 2,515 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1523,6 +1530,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batch 170 localized Settings Operation Journal and Whisper
   readiness/default-model shell copy while preserving the zero-dead/zero-missing
   drift posture.
+- E15 batch 171 localized progress/results/footer chrome, command palette shell,
+  preview/audio preview modals, clip context menu, and first-run wizard copy,
+  while adding `data-i18n-alt` scanner/runtime coverage.
 - PyTorch deserialization hardening is closed: quantization loads now use
   `weights_only=True`, unsafe pickle checkpoints produce a clear error, and
   Torch-backed optional extras require `torch>=2.6` / `torchvision>=0.21`.
@@ -1619,7 +1629,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 #### Next best actions
 
 1. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
-2. Audit the remaining release-trust findings that can close with local evidence, especially expression-engine thread churn and security audit logging.
+2. Audit the remaining release-trust findings that can close with local evidence, especially security audit logging.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
