@@ -6,13 +6,13 @@ Last updated: 2026-06-06
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: Cycle 65 UXP WebView permission profiles are shipped; RA-14 is closed. E15 rolling work and external F252 WebView cutover evidence remain open.
-- Shipped this cycle: the dormant WebView config now exports development and release manifest profiles, keeps Vite/hot-reload domains in the development profile, removes remote WebView domains from the release profile, and uses `localOnly` messaging for locally rendered release WebView content.
-- Verification: focused UXP WebView/permission/schema pytest passed (24 tests), focused Ruff passed for the UXP WebView permission test slice, UXP `node --check` passed, badge sync passed, doc-size checks passed within tolerance, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast` passed (100 gate tests).
+- Cycle result: Cycle 66 CEP i18n deliverables and settings shell is shipped; E15 is advanced through batch 156. RA-12 hybrid packaging validation and external F252 WebView cutover evidence remain open.
+- Shipped this cycle: Export Deliverables, LLM settings, preset diagnostics, and related CEP static shell controls now use `data-i18n*` locale hooks with guarded English keys. The live i18n drift report now shows 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys.
+- Verification: `py -3.12 scripts\i18n_lint.py --json`, `py -3.12 -m pytest -q tests\test_i18n_hardcoded_migration.py` (6 tests and 3,704 subtests), `node -e "JSON.parse(...en.json...)"`, focused Ruff, badge sync, doc-size check, roadmap-source lint (existing appendix warnings only), `rtk git diff --check`, release-smoke Ruff JSON, and release-smoke pytest-fast (100 gate tests) passed.
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue E15 batch 155 or another remaining release-trust item after the UXP permission bundle.
-- The next open queue items include E15 batch 155 plus the external F202/F252 evidence gates.
+- Next cycle focus: validate RA-12 hybrid CEP/UXP packaging, then continue E15 batch 157 or another remaining release-trust item.
+- The next open queue items include RA-12 hybrid plugin validation, E15 batch 157, and the external F202/F252 evidence gates.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.
