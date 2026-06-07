@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Settings Runtime i18n
+
+- Routed remaining UXP Settings generated/runtime feedback through locale keys, including backend reconnect/cancel toasts, live-update listener counts and titles, engine option labels, and migration-risk row/tag summaries.
+- Added Settings runtime guard coverage so those generated labels, statuses, and shared Settings-adjacent runtime toasts cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Agent Runtime i18n
 
 - Routed UXP Agent runtime feedback through locale keys, including conductor plan/review status, one-click enhance, variants, sequence-index, and MCP bridge status/error messages.
