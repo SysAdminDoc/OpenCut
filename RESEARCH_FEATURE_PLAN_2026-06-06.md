@@ -37,7 +37,7 @@ agent (F143) makes these surfaces more exposed.
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139` -- closed 2026-06-07
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
-4. **P1 -- UXP panel i18n parity** -- foundation loader plus Cut-tab shell slice shipped; broad parity remains open vs CEP's 1,190 attributes
+4. **P1 -- UXP panel i18n parity** -- foundation loader plus Cut/Captions shell slices shipped; broad parity remains open vs CEP's 1,190 attributes
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- closed 2026-06-07
@@ -331,7 +331,7 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P2
 
 ### EI-04: UXP Panel i18n Parity
-- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP now has a local locale loader plus first-viewport and Cut-tab shell attributes, but most panel strings remain hardcoded English.
+- **Current behavior:** CEP panel has 1,190 `data-i18n` attributes and a drift-lint test. UXP now has a local locale loader plus first-viewport, Cut-tab, and Captions-tab shell attributes, but most panel strings remain hardcoded English.
 - **Problem:** UXP is "the future" (CLAUDE.md design principle #6), but its i18n coverage still trails the CEP panel's painstakingly migrated surface. When CEP EOL happens (~September 2026), UXP becomes the only panel, so broad localization parity remains urgent.
 - **Recommended change:** Port the i18n loading system (`loadLocale`, `t()`, `applyI18nToDOM`) from CEP `main.js` to UXP `main.js`. Add `data-i18n` attributes to all UXP HTML strings. Share the same `locales/en.json` keys.
 - **Code locations:** `extension/com.opencut.uxp/main.js`, `index.html`; reference `extension/com.opencut.panel/client/main.js` i18n module
@@ -439,7 +439,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 - **aria-live regions:** Processing banners, status, toasts all use `aria-live`
 - **Focus styles:** 187 `:focus`/`:focus-visible` rules in CEP CSS, 43 in UXP
 - **Reduced motion:** 4 `prefers-reduced-motion` queries in CEP, 3 in UXP
-- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94 and Cut-tab static coverage shipped in Cycle 95
+- **i18n infrastructure:** 1,190 `data-i18n` attributes in CEP, drift-lint test; UXP shell loader shipped in Cycle 94, Cut-tab static coverage shipped in Cycle 95, and Captions-tab static coverage shipped in Cycle 96
 - **a11y regression tests:** `test_panel_a11y_invariants.py` guards toast a11y
 
 ### Gaps
@@ -550,7 +550,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 - [ ] P1 - **UXP panel i18n infrastructure**
   - Why: CEP EOL ~September 2026; UXP needs full i18n parity before it becomes the only panel
-  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, and broad UXP parity remains below the >500 acceptance target
+  - Evidence: CEP has 1,190 `data-i18n` attributes; Cycle 94 added the UXP locale loader and first shell slice, Cycle 95 added Cut-tab coverage, Cycle 96 added Captions-tab coverage, and broad UXP parity remains below the >500 acceptance target
   - Touches: `extension/com.opencut.uxp/main.js`, `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py`
   - Acceptance: UXP loads `locales/en.json`, `data-i18n` count > 500
   - Verify: UXP i18n guard passes, then expand toward full drift parity against the UXP panel
@@ -661,7 +661,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ## Open Questions
 
-1. **UXP i18n priority vs CEP i18n completion:** E15 is at batch 172/~160+ for CEP. Should UXP i18n (EI-04) start in parallel, or wait until E15 completes? The CEP EOL deadline (~September 2026) suggests parallel work is warranted.
+1. **UXP i18n priority vs CEP i18n completion:** E15 is at batch 173/~160+ for CEP. Should UXP i18n (EI-04) start in parallel, or wait until E15 completes? The CEP EOL deadline (~September 2026) suggests parallel work is warranted.
 
 2. **Expression engine scope:** Is `evaluate_timeline()` actually used in production, or is it a planned capability? If unused, the per-frame thread fix (EI-01) can be deprioritized. Verify with `grep -rn "evaluate_timeline" opencut/`.
 

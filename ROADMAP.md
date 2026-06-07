@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut tab slice) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has a shell/Cut-tab locale loader guard while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions slices) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions locale guards while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1332,6 +1332,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 93 | CEP Settings preferences i18n shell | CEP `index.html`, `locales/en.json`, `tests/test_i18n_hardcoded_migration.py` | The Settings preferences card still had hardcoded shell copy for the preferences description, output-location choices, appearance/theme choices, UI language choices, and the GPU/backend log control labels. | Advanced E15 to batch 173 by wiring those labels and options through locale hooks while preserving the current native UI-language labels; the drift gate now reports 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 94 | UXP i18n foundation shell | UXP `index.html`, `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py`, `scripts/release_smoke.py` | The UXP panel had no locale loader or guarded first-viewport i18n surface, and dynamic connection/workspace labels still depended on visible English state text. | Added UXP-local locale loading with `t()` and `applyI18nToDOM()`, wired the shell/tab/workspace/processing surfaces through locale hooks, changed connection checks to use state instead of the visible label, and added a release-smoke static guard for UXP HTML and JS locale coverage. |
 | 2026-06-07 | Cycle 95 | UXP Cut tab i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | After the foundation slice, the Cut & Clean tab still had bare-English labels, placeholders, select options, result labels, and accessible names immediately below the localized workspace header. | Localized Cut-tab clip input, silence detection, filler cleanup, result-summary labels, placeholders, select options, and ARIA labels, then raised the UXP i18n static guard to a 90+ attribute floor with representative Cut-tab keys. |
+| 2026-06-07 | Cycle 96 | UXP Captions tab i18n shell | UXP `index.html`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Captions tab still had bare-English shell copy for transcription setup, model/language/style options, chapter generation, repeat detection, result metadata, placeholders, and accessible names. | Localized the Captions tab static shell across transcription, chapters, repeat detection, and result review, then raised the UXP i18n static guard to a 170+ attribute floor with representative Captions-tab keys. |
 
 ### Research queries to run later
 
@@ -1352,17 +1353,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 96: Continue UXP i18n coverage into the Captions tab or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 97: Continue E15 scanner coverage or another release-trust gap from the June 6 plan.
-3. Cycle 98: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 99: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 100: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 97: Continue UXP i18n coverage into the FCC caption display card, Audio tab, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 98: Continue E15 scanner coverage or another release-trust gap from the June 6 plan.
+3. Cycle 99: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 100: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 101: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 95: UXP Cut tab i18n shell.
+Cycle 96: UXP Captions tab i18n shell.
 
 #### Current focus
 
@@ -1441,6 +1442,10 @@ Cycle 95 extended that UXP i18n coverage into the Cut & Clean tab: clip input,
 silence detection, filler cleanup, result-summary labels, placeholders, select
 options, and accessible names now use locale keys, and the static guard requires
 at least 90 UXP i18n attributes.
+Cycle 96 extended that UXP i18n coverage into the Captions tab: transcription
+setup, chapter generation, repeat detection, result metadata, placeholders,
+select options, checkbox labels, and accessible names now use locale keys, and
+the static guard requires at least 170 UXP i18n attributes.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1493,8 +1498,9 @@ SRT import controls, beat-marker stats, audio form placeholders and MusicGen
 controls, LUT path placeholders, NLP command shell, and LLM settings
 placeholders now use locale hooks, and the CEP drift gate reports
 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead
-keys, and 0 missing keys. UXP i18n has a first shell plus Cut-tab foundation and
-static locale-coverage guard, but full UXP parity remains open.
+keys, and 0 missing keys. UXP i18n has a first shell plus Cut/Captions
+foundation and a 170+ static locale-coverage guard, but full UXP parity remains
+open.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
 RA-47 is closed under RA-09: caption round-trip diff/apply APIs now support
