@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline runtime feedback) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, and Timeline runtime-feedback guards while full parity remains open. |
+| E15 | CEP i18n migration / UXP i18n expansion | Rolling batches (CEP 173/~160+; UXP foundation + Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell slices + shared runtime toasts + Cut/Captions/Audio runtime feedback + Video core/AI-effects/Shorts runtime feedback + Timeline/Search/Deliverables runtime feedback) | Removing bare-English strings from the CEP panel and expanding scanner coverage; UXP now has shell/Cut/Captions/FCC display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings locale guards plus shared runtime-toast, Cut runtime-feedback, Captions runtime-feedback, Audio runtime-feedback, Video core/AI-effects/Shorts runtime-feedback, and Timeline/Search/Deliverables runtime-feedback guards while full parity remains open. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1351,6 +1351,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 112 | UXP Video AI/effects runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Video tab AI/effects actions still had hardcoded B-roll, multimodal diarization, social upload/auth, depth, emotion, upscale, scene, and style runtime feedback outside the locale layer. | Routed those Video AI/effects runtime states through locale keys and added a guard so direct progress, success, and error strings cannot return. |
 | 2026-06-07 | Cycle 113 | UXP Video Shorts runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Video tab Shorts Pipeline still had hardcoded Magic Clips review-board, candidate, bundle, approved-render, and short-form generation feedback outside the locale layer. | Routed those Shorts runtime states through locale keys and added a guard so direct plan, render, bundle, and pipeline strings cannot return. |
 | 2026-06-07 | Cycle 114 | UXP Timeline runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Timeline tab still had hardcoded sequence cut/marker write-back, batch export, CEP handoff, SRT validation, and OTIO export runtime feedback outside the locale layer. | Routed those Timeline runtime states through locale keys and added a guard so direct status, toast, note, and error strings cannot return. |
+| 2026-06-07 | Cycle 115 | UXP Search/Deliverables runtime feedback i18n | UXP `main.js`, `locales/en.json`, `tests/test_uxp_i18n.py` | The Search and Deliverables tabs still had hardcoded search result metadata, indexing/search/NLP state, sequence readiness, deliverable selection, document-generation, and package feedback outside the locale layer. | Routed those Search/Deliverables runtime states through locale keys and added guards so direct dynamic labels, statuses, toasts, and errors cannot return. |
 
 ### Research queries to run later
 
@@ -1371,17 +1372,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 115: Continue UXP dynamic status localization into Search/Deliverables runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
-2. Cycle 116: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 117: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 118: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 119: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
+1. Cycle 116: Continue UXP dynamic status localization into remaining Agent/Settings generated runtime feedback, or resume CEP E15 hardcoded-shell cleanup.
+2. Cycle 117: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 118: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 119: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 120: Re-audit remaining UXP locale drift against generated DOM/status surfaces.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 114: UXP Timeline runtime feedback i18n.
+Cycle 115: UXP Search/Deliverables runtime feedback i18n.
 
 #### Current focus
 
@@ -1551,6 +1552,12 @@ cut/marker write-back, batch export, rename/smart-bin CEP handoffs, SRT
 validation, and OTIO export status/toast/action-note/error strings now use
 locale keys, with static guard coverage preventing direct Timeline runtime
 feedback strings from returning.
+Cycle 115 extended UXP i18n coverage into Search and Deliverables runtime
+feedback: search result metadata, indexing/search/NLP state, sequence
+readiness, deliverable selection summaries, document generation, and package
+status/error strings now use locale keys, with static guard coverage preventing
+direct Search/Deliverables dynamic labels, statuses, toasts, and errors from
+returning.
 The package Ruff release-smoke gate is clean again after mechanical import
 ordering, with route-manifest and route-collision checks re-run after the
 blueprint import-block cleanup.
@@ -1604,7 +1611,7 @@ controls, LUT path placeholders, NLP command shell, and LLM settings
 placeholders now use locale hooks, and the CEP drift gate reports
 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys. UXP i18n has a first shell plus Cut/Captions/FCC
-display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell foundation, shared runtime-toast coverage, Cut/Captions/Audio runtime-feedback coverage, Video core/AI-effects/Shorts runtime-feedback coverage, Timeline runtime-feedback coverage, and a 660+ static locale-coverage
+display/Audio/Video/Timeline/Search/Deliverables/Agent/Settings static-shell foundation, shared runtime-toast coverage, Cut/Captions/Audio runtime-feedback coverage, Video core/AI-effects/Shorts runtime-feedback coverage, Timeline/Search/Deliverables runtime-feedback coverage, and a 660+ static locale-coverage
 guard, but full UXP parity remains open.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.

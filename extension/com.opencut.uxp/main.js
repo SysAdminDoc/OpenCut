@@ -44,6 +44,12 @@ const DELIVERABLE_LABELS = {
   music_cue_sheet: "Music Cue Sheet",
   asset_list: "Asset List",
 };
+const DELIVERABLE_LABEL_KEYS = {
+  vfx_sheet: "uxp.deliverables.vfx_sheet",
+  adr_list: "uxp.deliverables.adr_list",
+  music_cue_sheet: "uxp.deliverables.music_cue_sheet",
+  asset_list: "uxp.deliverables.asset_list",
+};
 const DELIVERABLE_BUTTON_IDS = {
   vfx_sheet: "delivVfxSheetBtn",
   adr_list: "delivAdrListBtn",
@@ -233,6 +239,18 @@ function formatI18n(key, fallback, values = {}) {
     text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(values[name]));
   });
   return text;
+}
+
+function formatCountI18n(count, oneKey, oneFallback, manyKey, manyFallback, values = {}) {
+  return formatI18n(
+    count === 1 ? oneKey : manyKey,
+    count === 1 ? oneFallback : manyFallback,
+    { count, ...values }
+  );
+}
+
+function getDeliverableLabel(type) {
+  return t(DELIVERABLE_LABEL_KEYS[type], DELIVERABLE_LABELS[type] || humanizeDomain(type));
 }
 
 function applyI18nToDOM(root = document) {
@@ -2268,13 +2286,13 @@ function getSearchResultPath(item) {
 
 function getSearchResultKindLabel(item) {
   const raw = String(item?.kind ?? item?.type ?? item?.modality ?? item?.match_type ?? "").toLowerCase();
-  if (/frame|image|visual/.test(raw)) return "Visual";
-  if (/audio|speech|voice/.test(raw)) return "Audio";
-  if (/text|transcript|caption|subtitle|segment/.test(raw)) return "Transcript";
+  if (/frame|image|visual/.test(raw)) return t("uxp.search.runtime.kind_visual", "Visual");
+  if (/audio|speech|voice/.test(raw)) return t("uxp.search.runtime.kind_audio", "Audio");
+  if (/text|transcript|caption|subtitle|segment/.test(raw)) return t("uxp.search.runtime.kind_transcript", "Transcript");
   if (typeof item?.text === "string" || typeof item?.transcript === "string" || typeof item?.snippet === "string") {
-    return "Transcript";
+    return t("uxp.search.runtime.kind_transcript", "Transcript");
   }
-  return "Library";
+  return t("uxp.search.runtime.kind_library", "Library");
 }
 
 function getSearchResultTimeLabel(item) {
@@ -2293,9 +2311,14 @@ function getSearchResultTimeLabel(item) {
     ?? item?.timestamp_end
   );
   if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
-    return `${formatTimecode(start)} to ${formatTimecode(end)}`;
+    return formatI18n("uxp.search.runtime.time_range", "{start} to {end}", {
+      start: formatTimecode(start),
+      end: formatTimecode(end),
+    });
   }
-  if (Number.isFinite(start)) return `From ${formatTimecode(start)}`;
+  if (Number.isFinite(start)) {
+    return formatI18n("uxp.search.runtime.time_from", "From {start}", { start: formatTimecode(start) });
+  }
   return "";
 }
 
@@ -2319,9 +2342,11 @@ function getSearchResultScoreLabel(item, index) {
   const raw = Number(item?.score ?? item?.confidence ?? item?.similarity);
   if (Number.isFinite(raw)) {
     const pct = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
-    return `${pct}% match`;
+    return formatI18n("uxp.search.runtime.match_percent", "{percent}% match", { percent: pct });
   }
-  return index === 0 ? "Top match" : `Match ${index + 1}`;
+  return index === 0
+    ? t("uxp.search.runtime.top_match", "Top match")
+    : formatI18n("uxp.search.runtime.match_number", "Match {index}", { index: index + 1 });
 }
 
 function buildSearchResultCard(item, index) {
@@ -2329,7 +2354,9 @@ function buildSearchResultCard(item, index) {
   return {
     index,
     path,
-    label: formatWorkspaceSource(path || `Result ${index + 1}`),
+    label: path
+      ? formatWorkspaceSource(path)
+      : formatI18n("uxp.search.runtime.result_number", "Result {index}", { index: index + 1 }),
     kindLabel: getSearchResultKindLabel(item),
     timeLabel: getSearchResultTimeLabel(item),
     preview: getSearchResultPreview(item),
@@ -3079,35 +3106,35 @@ function getSelectedReportTypes() {
 function getDeliverablesSelectionSummary(selectedTypes) {
   if (!selectedTypes.length) {
     return {
-      label: "No documents selected",
-      title: "Select at least one handoff document before generating a package.",
+      label: t("uxp.deliverables.runtime.no_documents_selected", "No documents selected"),
+      title: t("uxp.deliverables.runtime.select_document_before_package", "Select at least one handoff document before generating a package."),
     };
   }
   if (selectedTypes.length === 4) {
     return {
-      label: "All four handoff sheets",
-      title: "VFX Sheet, ADR List, Music Cue Sheet, and Asset List will be generated in this package.",
+      label: t("uxp.deliverables.all_four_handoff_sheets", "All four handoff sheets"),
+      title: t("uxp.deliverables.runtime.all_documents_package_title", "VFX Sheet, ADR List, Music Cue Sheet, and Asset List will be generated in this package."),
     };
   }
   if (selectedTypes.length === 1) {
-    const label = DELIVERABLE_LABELS[selectedTypes[0]] || humanizeDomain(selectedTypes[0]);
+    const label = getDeliverableLabel(selectedTypes[0]);
     return {
       label,
-      title: `${label} is the only document selected for this package.`,
+      title: formatI18n("uxp.deliverables.runtime.single_document_selected_title", "{label} is the only document selected for this package.", { label }),
     };
   }
-  const labels = selectedTypes.map((type) => DELIVERABLE_LABELS[type] || humanizeDomain(type));
+  const labels = selectedTypes.map((type) => getDeliverableLabel(type));
   return {
-    label: `${selectedTypes.length} documents selected`,
-    title: labels.join(" • "),
+    label: formatI18n("uxp.deliverables.runtime.documents_selected", "{count} documents selected", { count: selectedTypes.length }),
+    title: labels.join(" | "),
   };
 }
 
 function getDeliverablesFormatSummary() {
   return {
     value: "csv",
-    label: "CSV handoff sheets",
-    title: "The UXP deliverables workflow currently exports CSV handoff sheets.",
+    label: t("uxp.deliverables.csv_handoff_sheets", "CSV handoff sheets"),
+    title: t("uxp.deliverables.runtime.csv_handoff_sheets_title", "The UXP deliverables workflow currently exports CSV handoff sheets."),
   };
 }
 
@@ -3132,34 +3159,37 @@ function updateDeliverablesPlanSummary(outputSummary = getDeliverablesOutputSumm
   Object.entries(DELIVERABLE_BUTTON_IDS).forEach(([type, id]) => {
     const btn = document.getElementById(id);
     if (!btn || btn.classList.contains("loading")) return;
-    const label = DELIVERABLE_LABELS[type] || humanizeDomain(type);
+    const label = getDeliverableLabel(type);
     btn.disabled = !canGenerate;
     btn.title = !backendOnline
-      ? `Reconnect the backend before generating ${label}.`
+      ? formatI18n("uxp.deliverables.runtime.reconnect_before_generating_label", "Reconnect the backend before generating {label}.", { label })
       : (hasSequence
-          ? `Generate ${label} as a CSV handoff sheet.`
-          : `Load sequence info before generating ${label}.`);
+          ? formatI18n("uxp.deliverables.runtime.generate_label_csv_title", "Generate {label} as a CSV handoff sheet.", { label })
+          : formatI18n("uxp.deliverables.runtime.load_sequence_before_generating_label", "Load sequence info before generating {label}.", { label }));
   });
 
   const reportBtn = document.getElementById("runFullReportBtn");
   if (reportBtn && !reportBtn.classList.contains("loading")) {
     if (!selectedTypes.length) {
-      reportBtn.textContent = "Select Documents First";
+      reportBtn.textContent = t("uxp.deliverables.runtime.select_documents_first", "Select Documents First");
     } else if (selectedTypes.length === 1) {
-      reportBtn.textContent = `Generate ${DELIVERABLE_LABELS[selectedTypes[0]] || "Selected Report"}`;
+      reportBtn.textContent = formatI18n("uxp.deliverables.runtime.generate_label", "Generate {label}", { label: getDeliverableLabel(selectedTypes[0]) });
     } else if (selectedTypes.length === 4) {
-      reportBtn.textContent = "Generate Full Report";
+      reportBtn.textContent = t("uxp.deliverables.generate_full_report", "Generate Full Report");
     } else {
-      reportBtn.textContent = `Generate ${selectedTypes.length}-Doc Package`;
+      reportBtn.textContent = formatI18n("uxp.deliverables.runtime.generate_doc_package", "Generate {count}-Doc Package", { count: selectedTypes.length });
     }
     reportBtn.disabled = !canGenerate || selectedTypes.length === 0;
     reportBtn.title = !selectedTypes.length
-      ? "Select at least one handoff document before generating a package."
+      ? t("uxp.deliverables.runtime.select_document_before_package", "Select at least one handoff document before generating a package.")
       : (!backendOnline
-          ? "Reconnect the backend before generating the selected handoff package."
+          ? t("uxp.deliverables.runtime.reconnect_before_selected_package", "Reconnect the backend before generating the selected handoff package.")
           : (!hasSequence
-          ? "Load sequence info before generating the selected handoff package."
-          : `${selectionSummary.title} ${formatSummary.title}`));
+          ? t("uxp.deliverables.runtime.load_sequence_before_selected_package", "Load sequence info before generating the selected handoff package.")
+          : formatI18n("uxp.deliverables.runtime.package_title_with_format", "{selectionTitle} {formatTitle}", {
+              selectionTitle: selectionSummary.title,
+              formatTitle: formatSummary.title,
+            })));
   }
 }
 
@@ -3194,18 +3224,24 @@ function updateDeliverablesSummary() {
   const backendOnline = isBackendConnected();
 
   if (info) {
-    const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : "Unknown size";
-    const duration = typeof info.duration === "number" ? formatTimecode(info.duration) : "Unknown duration";
-    setStatusPill("seqInfoStatePill", "Loaded", "success", "Sequence info is ready for deliverables.");
+    const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : t("uxp.deliverables.runtime.unknown_size", "Unknown size");
+    const duration = typeof info.duration === "number" ? formatTimecode(info.duration) : t("uxp.deliverables.runtime.unknown_duration", "Unknown duration");
+    const sequenceName = info.name || t("uxp.deliverables.runtime.active_sequence", "Active Sequence");
+    setStatusPill(
+      "seqInfoStatePill",
+      t("uxp.deliverables.runtime.loaded", "Loaded"),
+      "success",
+      t("uxp.deliverables.runtime.sequence_info_ready", "Sequence info is ready for deliverables.")
+    );
     setTextAndTitle(
       "seqInfoSummary",
-      `${info.name || "Active Sequence"} • ${resolution} • ${duration}`,
-      `${info.name || "Active Sequence"} | ${resolution} | ${duration}`
+      formatI18n("uxp.deliverables.runtime.sequence_summary", "{name} | {resolution} | {duration}", { name: sequenceName, resolution, duration }),
+      formatI18n("uxp.deliverables.runtime.sequence_summary", "{name} | {resolution} | {duration}", { name: sequenceName, resolution, duration })
     );
     setTextAndTitle(
       "deliverablesSequenceValue",
-      info.name || "Active Sequence",
-      info.name || "Active Sequence"
+      sequenceName,
+      sequenceName
     );
     setDeliverablesButtonsDisabled(false);
   } else {
@@ -3234,13 +3270,20 @@ function updateDeliverablesSummary() {
   if (_lastDeliverableActivity) {
     const activity = _lastDeliverableActivity;
     const label = activity.count
-      ? `${activity.label} • ${activity.count} ${activity.count === 1 ? "doc" : "docs"}`
+      ? formatCountI18n(
+          activity.count,
+          "uxp.deliverables.runtime.activity_docs_one",
+          "{label} | {count} doc",
+          "uxp.deliverables.runtime.activity_docs_many",
+          "{label} | {count} docs",
+          { label: activity.label }
+        )
       : activity.label;
     const relative = formatRelativeTime(activity.time);
     setTextAndTitle(
       "deliverablesLastExportValue",
-      `${label} (${relative})`,
-      activity.output || `${label} at ${formatLocaleTime(activity.time)}`
+      formatI18n("uxp.deliverables.runtime.activity_with_time", "{label} ({relative})", { label, relative }),
+      activity.output || formatI18n("uxp.deliverables.runtime.activity_at_time", "{label} at {time}", { label, time: formatLocaleTime(activity.time) })
     );
   } else {
     setTextAndTitle(
@@ -3260,9 +3303,13 @@ function updateDeliverablesSummary() {
     setDeliverablesStatus(t("uxp.deliverables.status_choose_output_folder", "Sequence ready. Choose an output folder if you want handoff docs saved somewhere more durable than the session temp folder."), "warning", output.title);
   } else if (_lastDeliverableActivity) {
     const lastLabel = _lastDeliverableActivity.count
-      ? `${_lastDeliverableActivity.label} finished`
-      : `${_lastDeliverableActivity.label} ready`;
-    setDeliverablesStatus(`${lastLabel}. Generate another document or refresh the sequence info before the next handoff pass.`, "success", _lastDeliverableActivity.output);
+      ? formatI18n("uxp.deliverables.runtime.last_activity_finished", "{label} finished", { label: _lastDeliverableActivity.label })
+      : formatI18n("uxp.deliverables.runtime.last_activity_ready", "{label} ready", { label: _lastDeliverableActivity.label });
+    setDeliverablesStatus(
+      formatI18n("uxp.deliverables.runtime.last_activity_next_handoff", "{label}. Generate another document or refresh the sequence info before the next handoff pass.", { label: lastLabel }),
+      "success",
+      _lastDeliverableActivity.output
+    );
   } else {
     setDeliverablesStatus(t("uxp.deliverables.status_ready_run_report", "Sequence info is ready. Generate a single document or run the full report when the handoff package is ready."), "ready");
   }
@@ -3284,7 +3331,7 @@ function resetClearIndexConfirmation({ resync = true } = {}) {
   }
   const clearBtn = document.getElementById("clearIndexBtn");
   if (clearBtn && !clearBtn.classList.contains("loading")) {
-    clearBtn.textContent = "Clear Index";
+    clearBtn.textContent = t("uxp.search.clear_index", "Clear Index");
   }
   if (resync) syncSearchPanelState();
 }
@@ -3301,11 +3348,11 @@ function requireClearIndexConfirmation() {
   _clearIndexConfirmTimer = setTimeout(() => resetClearIndexConfirmation(), INLINE_CONFIRM_MS);
   const clearBtn = document.getElementById("clearIndexBtn");
   if (clearBtn && !clearBtn.classList.contains("loading")) {
-    clearBtn.textContent = "Confirm Clear";
-    clearBtn.title = "Click again within 8 seconds to clear the current search index.";
+    clearBtn.textContent = t("uxp.search.runtime.confirm_clear", "Confirm Clear");
+    clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the current search index.");
   }
-  setIndexStatus("Click Confirm Clear again to remove the current search index.", "warning");
-  UIController.showToast("Click Confirm Clear again to remove the current search index.", "warning");
+  setIndexStatus(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to remove the current search index."), "warning");
+  UIController.showToast(t("uxp.search.runtime.confirm_clear_status", "Click Confirm Clear again to remove the current search index."), "warning");
   return false;
 }
 
@@ -3321,10 +3368,10 @@ function syncSearchPanelState() {
   if (runIndexBtn && !runIndexBtn.classList.contains("loading")) {
     runIndexBtn.disabled = !backendOnline || !folder;
     runIndexBtn.title = !backendOnline
-      ? "Reconnect the backend before indexing the library."
+      ? t("uxp.search.runtime.reconnect_before_indexing", "Reconnect the backend before indexing the library.")
       : (folder
-          ? "Build a searchable library from the selected media folder."
-          : "Choose a media folder before indexing the library.");
+          ? t("uxp.search.runtime.build_searchable_library_title", "Build a searchable library from the selected media folder.")
+          : t("uxp.search.runtime.choose_folder_before_indexing", "Choose a media folder before indexing the library."));
   }
 
   const clearBtn = document.getElementById("clearIndexBtn");
@@ -3334,15 +3381,15 @@ function syncSearchPanelState() {
     }
     clearBtn.disabled = !backendOnline || !hasIndex;
     if (_clearIndexConfirmUntil > Date.now() && backendOnline && hasIndex) {
-      clearBtn.textContent = "Confirm Clear";
-      clearBtn.title = "Click again within 8 seconds to clear the current search index.";
+      clearBtn.textContent = t("uxp.search.runtime.confirm_clear", "Confirm Clear");
+      clearBtn.title = t("uxp.search.runtime.confirm_clear_title", "Click again within 8 seconds to clear the current search index.");
     } else {
-      clearBtn.textContent = "Clear Index";
+      clearBtn.textContent = t("uxp.search.clear_index", "Clear Index");
       clearBtn.title = !backendOnline
-        ? "Reconnect the backend before clearing the search index."
+        ? t("uxp.search.runtime.reconnect_before_clearing_index", "Reconnect the backend before clearing the search index.")
         : (hasIndex
-            ? "Clear the current search index. You can rebuild it any time."
-            : "Build an index before clearing it.");
+            ? t("uxp.search.runtime.clear_current_index_title", "Clear the current search index. You can rebuild it any time.")
+            : t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."));
     }
   }
 
@@ -3350,22 +3397,22 @@ function syncSearchPanelState() {
   if (searchBtn && !searchBtn.classList.contains("loading")) {
     searchBtn.disabled = !backendOnline || !hasIndex || !query;
     searchBtn.title = !backendOnline
-      ? "Reconnect the backend before searching the library."
+      ? t("uxp.search.runtime.reconnect_before_searching", "Reconnect the backend before searching the library.")
       : (!hasIndex
-          ? "Index a folder before searching the library."
+          ? t("uxp.search.runtime.index_folder_before_searching", "Index a folder before searching the library.")
           : (query
-              ? "Search the indexed library and load the best shot back into the workspace."
-              : "Enter a descriptive query before searching the library."));
+              ? t("uxp.search.runtime.search_indexed_library_title", "Search the indexed library and load the best shot back into the workspace.")
+              : t("uxp.search.runtime.enter_query_before_searching", "Enter a descriptive query before searching the library.")));
   }
 
   const nlpBtn = document.getElementById("runNlpBtn");
   if (nlpBtn && !nlpBtn.classList.contains("loading")) {
     nlpBtn.disabled = !backendOnline || !nlpCommand;
     nlpBtn.title = !backendOnline
-      ? "Reconnect the backend before running natural-language commands."
+      ? t("uxp.search.runtime.reconnect_before_nlp", "Reconnect the backend before running natural-language commands.")
       : (nlpCommand
-          ? "Parse the current edit instruction and review the result before applying it."
-          : "Enter a natural-language edit instruction before running it.");
+          ? t("uxp.search.runtime.parse_instruction_title", "Parse the current edit instruction and review the result before applying it.")
+          : t("uxp.search.runtime.enter_instruction_before_nlp", "Enter a natural-language edit instruction before running it."));
   }
 }
 
@@ -3384,9 +3431,18 @@ async function refreshFootageIndexStats(options = {}) {
   if (!r.ok) {
     if (!options.silent) {
       _lastIndexStats = { total_files: 0, total_segments: 0, index_size_bytes: 0 };
-      setStatusPill("indexStatePill", "Unavailable", "warning", "The panel could not read the search index status.");
-      setTextAndTitle("indexStatsValue", "Index status unavailable", "The panel could not read the search index status.");
-      setIndexStatus("Could not read the current library index. Reconnect the backend, then refresh or re-index the folder.", "warning");
+      setStatusPill(
+        "indexStatePill",
+        t("uxp.search.runtime.unavailable", "Unavailable"),
+        "warning",
+        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the search index status.")
+      );
+      setTextAndTitle(
+        "indexStatsValue",
+        t("uxp.search.runtime.index_status_unavailable", "Index status unavailable"),
+        t("uxp.search.runtime.index_status_unavailable_title", "The panel could not read the search index status.")
+      );
+      setIndexStatus(t("uxp.search.runtime.index_status_read_failed", "Could not read the current library index. Reconnect the backend, then refresh or re-index the folder."), "warning");
     }
     syncSearchPanelState();
     return null;
@@ -3400,21 +3456,41 @@ async function refreshFootageIndexStats(options = {}) {
   _lastIndexStats = stats;
 
   const statsLabel = stats.total_files
-    ? `${stats.total_files} ${stats.total_files === 1 ? "file" : "files"} indexed`
-    : "0 files indexed";
+    ? formatCountI18n(
+        stats.total_files,
+        "uxp.search.runtime.files_indexed_one",
+        "{count} file indexed",
+        "uxp.search.runtime.files_indexed_many",
+        "{count} files indexed"
+      )
+    : t("uxp.search.zero_files_indexed", "0 files indexed");
   const statsTitle = stats.total_files
-    ? `${stats.total_files} files indexed, ${stats.total_segments} transcript segments, ${formatBytes(stats.index_size_bytes)} on disk.`
-    : "No footage index has been built yet.";
+    ? formatI18n("uxp.search.runtime.index_stats_title", "{files} files indexed, {segments} transcript segments, {size} on disk.", {
+        files: stats.total_files,
+        segments: stats.total_segments,
+        size: formatBytes(stats.index_size_bytes),
+      })
+    : t("uxp.search.runtime.no_footage_index_yet", "No footage index has been built yet.");
 
   setTextAndTitle("indexStatsValue", statsLabel, statsTitle);
 
   if (!options.preserveMessage) {
     if (stats.total_files > 0) {
-      setStatusPill("indexStatePill", "Ready", "success", statsTitle);
-      setIndexStatus(`Library ready. ${stats.total_files} indexed ${stats.total_files === 1 ? "file" : "files"} can be searched right away.`, "success", statsTitle);
+      setStatusPill("indexStatePill", t("uxp.search.ready", "Ready"), "success", statsTitle);
+      setIndexStatus(
+        formatCountI18n(
+          stats.total_files,
+          "uxp.search.runtime.library_ready_one",
+          "Library ready. {count} indexed file can be searched right away.",
+          "uxp.search.runtime.library_ready_many",
+          "Library ready. {count} indexed files can be searched right away."
+        ),
+        "success",
+        statsTitle
+      );
     } else {
-      setStatusPill("indexStatePill", "Empty", "empty", statsTitle);
-      setIndexStatus("Index a folder to make descriptive search results available in this workspace.", "idle");
+      setStatusPill("indexStatePill", t("uxp.search.runtime.empty", "Empty"), "empty", statsTitle);
+      setIndexStatus(t("uxp.search.runtime.index_folder_for_results", "Index a folder to make descriptive search results available in this workspace."), "idle");
     }
   }
 
@@ -3425,8 +3501,8 @@ async function refreshFootageIndexStats(options = {}) {
 async function clearFootageIndex() {
   if (!(Number(_lastIndexStats?.total_files || 0) > 0)) {
     resetClearIndexConfirmation();
-    setIndexStatus("Build an index before clearing it.", "warning");
-    UIController.showToast("Build an index before clearing it.", "warning");
+    setIndexStatus(t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."), "warning");
+    UIController.showToast(t("uxp.search.runtime.build_index_before_clearing", "Build an index before clearing it."), "warning");
     syncSearchPanelState();
     return;
   }
@@ -3436,27 +3512,40 @@ async function clearFootageIndex() {
   }
 
   UIController.setButtonLoading("clearIndexBtn", true);
-  setStatusPill("indexStatePill", "Clearing", "working", "Clearing the current search index.");
-  setIndexStatus("Clearing the current search index…", "working");
+  setStatusPill(
+    "indexStatePill",
+    t("uxp.search.runtime.clearing", "Clearing"),
+    "working",
+    t("uxp.search.runtime.clearing_index_title", "Clearing the current search index.")
+  );
+  setIndexStatus(t("uxp.search.runtime.clearing_index", "Clearing the current search index..."), "working");
 
   const r = await BackendClient.del("/search/index");
 
   UIController.setButtonLoading("clearIndexBtn", false);
 
   if (!r.ok) {
-    setStatusPill("indexStatePill", "Error", "error", r.error || "Failed to clear the search index.");
-    setIndexStatus(r.error || "Failed to clear the search index.", "error");
-    UIController.showToast(r.error || "Failed to clear the search index.", "error");
+    const error = r.error || t("uxp.search.runtime.clear_index_failed", "Failed to clear the search index.");
+    setStatusPill("indexStatePill", t("uxp.search.runtime.error", "Error"), "error", error);
+    setIndexStatus(error, "error");
+    UIController.showToast(error, "error");
     return;
   }
 
-  resetSearchResults("Search the library", "Index a folder again to bring searchable media back into this workspace.");
-  setTextAndTitle("searchStatus", "The search index has been cleared. Re-index a folder to search footage again.", "The search index has been cleared. Re-index a folder to search footage again.");
+  resetSearchResults(
+    t("uxp.search.search_the_library", "Search the library"),
+    t("uxp.search.runtime.reindex_after_clear", "Index a folder again to bring searchable media back into this workspace.")
+  );
+  setTextAndTitle(
+    "searchStatus",
+    t("uxp.search.runtime.index_cleared_status", "The search index has been cleared. Re-index a folder to search footage again."),
+    t("uxp.search.runtime.index_cleared_status", "The search index has been cleared. Re-index a folder to search footage again.")
+  );
   await refreshFootageIndexStats({ preserveMessage: true, silent: true });
-  setStatusPill("indexStatePill", "Empty", "empty", "The search index is empty until you index a folder again.");
-  setTextAndTitle("indexStatsValue", "0 files indexed", "The search index is empty until you index a folder again.");
-  setIndexStatus("Search index cleared. Re-index a folder to make library results available again.", "success");
-  UIController.showToast("Search index cleared.", "success");
+  setStatusPill("indexStatePill", t("uxp.search.runtime.empty", "Empty"), "empty", t("uxp.search.runtime.index_empty_until_reindex", "The search index is empty until you index a folder again."));
+  setTextAndTitle("indexStatsValue", t("uxp.search.zero_files_indexed", "0 files indexed"), t("uxp.search.runtime.index_empty_until_reindex", "The search index is empty until you index a folder again."));
+  setIndexStatus(t("uxp.search.runtime.search_index_cleared", "Search index cleared. Re-index a folder to make library results available again."), "success");
+  UIController.showToast(t("uxp.search.runtime.search_index_cleared_toast", "Search index cleared."), "success");
   resetClearIndexConfirmation();
   syncSearchPanelState();
 }
@@ -3473,8 +3562,8 @@ async function ensureSequenceInfo(options = {}) {
   updateDeliverablesSummary();
 
   if (!_lastSequenceInfo && !options.silent) {
-    UIController.showToast("Open an active Premiere sequence, then load sequence info before generating deliverables.", "warning");
-    UIController.setStatus("Load sequence info before generating deliverables.", "error");
+    UIController.showToast(t("uxp.deliverables.runtime.open_sequence_before_docs", "Open an active Premiere sequence, then load sequence info before generating deliverables."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.load_sequence_before_docs_status", "Load sequence info before generating deliverables."), "error");
   }
 
   return _lastSequenceInfo;
@@ -4542,27 +4631,33 @@ async function runSrtImport() {
 async function runIndexLibrary() {
   const folder       = document.getElementById("indexFolder")?.value?.trim();
   if (!folder) {
-    setStatusPill("indexStatePill", "Needs Folder", "warning", "Choose a media folder before building the search index.");
-    setIndexStatus("Choose a media folder before building the search index.", "warning");
-    UIController.showToast("Please select a media folder to index.", "warning");
+    setStatusPill(
+      "indexStatePill",
+      t("uxp.search.runtime.needs_folder", "Needs Folder"),
+      "warning",
+      t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the search index.")
+    );
+    setIndexStatus(t("uxp.search.runtime.choose_folder_before_building", "Choose a media folder before building the search index."), "warning");
+    UIController.showToast(t("uxp.search.runtime.select_folder_to_index", "Please select a media folder to index."), "warning");
     syncSearchPanelState();
     return;
   }
 
   const statusLine = document.getElementById("indexStatus");
   UIController.setButtonLoading("runIndexLibBtn", true);
-  UIController.showProcessing("Indexing media library…");
-  setStatusPill("indexStatePill", "Indexing", "working", folder);
-  setIndexStatus("Indexing the media library…", "working", folder);
-  if (statusLine) statusLine.textContent = "Indexing the media library…";
+  UIController.showProcessing(t("uxp.search.runtime.indexing_media_library", "Indexing media library..."));
+  setStatusPill("indexStatePill", t("uxp.search.runtime.indexing", "Indexing"), "working", folder);
+  setIndexStatus(t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library..."), "working", folder);
+  if (statusLine) statusLine.textContent = t("uxp.search.runtime.indexing_media_library_status", "Indexing the media library...");
 
   await JobPoller.start(
     "/search/index",
     { folder, model: "base" },
     (pct, msg) => {
       UIController.setProgress(pct);
-      UIController.setProcessingMsg(msg || "Scanning…");
-      if (statusLine) statusLine.textContent = msg || "Scanning…";
+      const progressMsg = msg || t("uxp.search.runtime.scanning", "Scanning...");
+      UIController.setProcessingMsg(progressMsg);
+      if (statusLine) statusLine.textContent = progressMsg;
     },
     async (result) => {
       UIController.hideProcessing();
@@ -4570,37 +4665,59 @@ async function runIndexLibrary() {
       const count = result.indexed ?? result.files ?? 0;
       const errorCount = Array.isArray(result.errors) ? result.errors.length : 0;
       const pillState = errorCount ? "warning" : (count > 0 ? "success" : "empty");
-      const pillLabel = errorCount ? "Needs Review" : (count > 0 ? "Ready" : "Empty");
+      const pillLabel = errorCount
+        ? t("uxp.search.runtime.needs_review", "Needs Review")
+        : (count > 0 ? t("uxp.search.ready", "Ready") : t("uxp.search.runtime.empty", "Empty"));
       await refreshFootageIndexStats({ preserveMessage: true, silent: true });
       setStatusPill(
         "indexStatePill",
         pillLabel,
         pillState,
-        `${count} ${count === 1 ? "file" : "files"} indexed.`
+        formatCountI18n(
+          count,
+          "uxp.search.runtime.files_indexed_sentence_one",
+          "{count} file indexed.",
+          "uxp.search.runtime.files_indexed_sentence_many",
+          "{count} files indexed."
+        )
       );
       setIndexStatus(
         errorCount
-          ? `Library indexed with a few skips. ${count} ${count === 1 ? "file is" : "files are"} ready to search, and ${errorCount} ${errorCount === 1 ? "item needs" : "items need"} attention.`
-          : `Library indexed. ${count} ${count === 1 ? "file is" : "files are"} ready to search.`,
+          ? formatI18n("uxp.search.runtime.library_indexed_with_skips", "Library indexed with a few skips. {count} file(s) are ready to search, and {errorCount} item(s) need attention.", { count, errorCount })
+          : formatCountI18n(
+              count,
+              "uxp.search.runtime.library_indexed_one",
+              "Library indexed. {count} file is ready to search.",
+              "uxp.search.runtime.library_indexed_many",
+              "Library indexed. {count} files are ready to search."
+            ),
         errorCount ? "warning" : "success"
       );
-      UIController.showToast(`Library indexed — ${count} files.`, "success");
-      UIController.setStatus(`Library indexed — ${count} files.`, "success");
+      const indexedToast = formatCountI18n(
+        count,
+        "uxp.search.runtime.library_indexed_toast_one",
+        "Library indexed - {count} file.",
+        "uxp.search.runtime.library_indexed_toast_many",
+        "Library indexed - {count} files."
+      );
+      UIController.showToast(indexedToast, "success");
+      UIController.setStatus(indexedToast, "success");
       setTextAndTitle(
         "searchStatus",
         count > 0
-          ? "The library is ready. Search with descriptive phrases, then load the best match into the workspace."
-          : "Index another folder or broaden the source media to make search more useful.",
+          ? t("uxp.search.runtime.library_ready_search_prompt", "The library is ready. Search with descriptive phrases, then load the best match into the workspace.")
+          : t("uxp.search.runtime.index_another_folder_prompt", "Index another folder or broaden the source media to make search more useful."),
         folder
       );
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runIndexLibBtn", false);
-      setStatusPill("indexStatePill", "Error", "error", err);
-      setIndexStatus(`Could not index the library. ${err}`, "error");
-      if (statusLine) statusLine.textContent = `Could not index the library. ${err}`;
-      UIController.showToast(`Index error: ${err}`, "error");
+      setStatusPill("indexStatePill", t("uxp.search.runtime.error", "Error"), "error", err);
+      const errorText = formatI18n("uxp.search.runtime.index_library_failed", "Could not index the library. {error}", { error: err });
+      setIndexStatus(errorText, "error");
+      if (statusLine) statusLine.textContent = errorText;
+      UIController.showToast(formatI18n("uxp.search.runtime.index_error", "Index error: {error}", { error: err }), "error");
       syncSearchPanelState();
     }
   );
@@ -4613,36 +4730,56 @@ async function runFootageSearch() {
   const backendOnline = isBackendConnected();
   const indexedFiles = Number(_lastIndexStats?.total_files || 0);
   if (!backendOnline) {
-    setTextAndTitle("searchStatus", "Reconnect the backend before searching the library.", "Reconnect the backend before searching the library.");
-    UIController.showToast("Reconnect the backend before searching the library.", "warning");
+    setTextAndTitle(
+      "searchStatus",
+      t("uxp.search.runtime.reconnect_before_searching", "Reconnect the backend before searching the library."),
+      t("uxp.search.runtime.reconnect_before_searching", "Reconnect the backend before searching the library.")
+    );
+    UIController.showToast(t("uxp.search.runtime.reconnect_before_searching", "Reconnect the backend before searching the library."), "warning");
     syncSearchPanelState();
     return;
   }
   if (indexedFiles <= 0) {
-    setTextAndTitle("searchStatus", "Index a folder before searching the library.", "Index a folder before searching the library.");
-    UIController.showToast("Index a folder before searching the library.", "warning");
+    setTextAndTitle(
+      "searchStatus",
+      t("uxp.search.runtime.index_folder_before_searching", "Index a folder before searching the library."),
+      t("uxp.search.runtime.index_folder_before_searching", "Index a folder before searching the library.")
+    );
+    UIController.showToast(t("uxp.search.runtime.index_folder_before_searching", "Index a folder before searching the library."), "warning");
     syncSearchPanelState();
     return;
   }
   if (!query) {
-    setTextAndTitle("searchStatus", "Enter a descriptive query to search the indexed library.", "Enter a descriptive query to search the indexed library.");
-    UIController.showToast("Please enter a search query.", "warning");
+    setTextAndTitle(
+      "searchStatus",
+      t("uxp.search.runtime.enter_descriptive_query", "Enter a descriptive query to search the indexed library."),
+      t("uxp.search.runtime.enter_descriptive_query", "Enter a descriptive query to search the indexed library.")
+    );
+    UIController.showToast(t("uxp.search.runtime.enter_search_query", "Please enter a search query."), "warning");
     syncSearchPanelState();
     return;
   }
 
   UIController.setButtonLoading("runFootageSearchBtn", true);
-  UIController.setStatus("Searching footage…", "working");
-  setTextAndTitle("searchStatus", `Searching for "${query}"…`, `Searching for "${query}"…`);
+  UIController.setStatus(t("uxp.search.runtime.searching_footage", "Searching footage..."), "working");
+  setTextAndTitle(
+    "searchStatus",
+    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"...", { query }),
+    formatI18n("uxp.search.runtime.searching_for_query", "Searching for \"{query}\"...", { query })
+  );
 
   const r = await BackendClient.post("/search/footage", { query, top_k: limit });
 
   UIController.setButtonLoading("runFootageSearchBtn", false);
 
   if (!r.ok) {
-    setTextAndTitle("searchStatus", `Could not search the library. ${r.error}`, r.error);
-    UIController.showToast(`Search error: ${r.error}`, "error");
-    UIController.setStatus("Search failed. Review the query or reconnect the backend.", "error");
+    setTextAndTitle(
+      "searchStatus",
+      formatI18n("uxp.search.runtime.search_failed_detail", "Could not search the library. {error}", { error: r.error }),
+      r.error
+    );
+    UIController.showToast(formatI18n("uxp.search.runtime.search_error", "Search error: {error}", { error: r.error }), "error");
+    UIController.setStatus(t("uxp.search.runtime.search_failed_status", "Search failed. Review the query or reconnect the backend."), "error");
     syncSearchPanelState();
     return;
   }
@@ -4655,8 +4792,8 @@ async function runFootageSearch() {
     if (cards.length === 0) {
       list.innerHTML = `
         <div class="oc-empty-state oc-empty-state-inline">
-          <div class="oc-empty-state-kicker">No matches yet</div>
-          <p>Try more descriptive language, quote a spoken phrase, or index a broader folder to widen the search space.</p>
+          <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.search.runtime.no_matches_yet", "No matches yet"))}</div>
+          <p>${UIController.escapeHtml(t("uxp.search.runtime.no_matches_detail", "Try more descriptive language, quote a spoken phrase, or index a broader folder to widen the search space."))}</p>
         </div>`;
     } else {
       cards.forEach((card, index) => {
@@ -4670,7 +4807,7 @@ async function runFootageSearch() {
               <span class="oc-result-list-item-badge">${UIController.escapeHtml(card.kindLabel)}</span>
               ${card.timeLabel ? `<span class="oc-result-list-item-badge">${UIController.escapeHtml(card.timeLabel)}</span>` : ""}
             </span>
-            <span class="oc-result-list-item-path">${UIController.escapeHtml(card.path || "Path unavailable for this result")}</span>
+            <span class="oc-result-list-item-path">${UIController.escapeHtml(card.path || t("uxp.search.runtime.path_unavailable", "Path unavailable for this result"))}</span>
             ${card.preview ? `<span class="oc-result-list-item-excerpt">${UIController.escapeHtml(card.preview)}</span>` : ""}
           </span>
           <span class="oc-result-list-item-meta">${UIController.escapeHtml(card.scoreLabel)}</span>`;
@@ -4679,10 +4816,10 @@ async function runFootageSearch() {
           if (!card.path) {
             setTextAndTitle(
               "searchStatus",
-              "This match does not include a loadable file path yet. Refine the query or index a folder with source media.",
+              t("uxp.search.runtime.match_missing_path_detail", "This match does not include a loadable file path yet. Refine the query or index a folder with source media."),
               card.label
             );
-            UIController.showToast("This result does not include a loadable file path yet.", "warning");
+            UIController.showToast(t("uxp.search.runtime.match_missing_path_toast", "This result does not include a loadable file path yet."), "warning");
             return;
           }
           list.querySelectorAll(".oc-result-list-item").forEach((node) => {
@@ -4694,11 +4831,11 @@ async function runFootageSearch() {
           setWorkspaceClip(card.path, { tabId: "search" });
           setTextAndTitle(
             "searchStatus",
-            `Loaded ${card.label} into the workspace. Search results stay visible while you compare alternate shots.`,
+            formatI18n("uxp.search.runtime.loaded_match_detail", "Loaded {label} into the workspace. Search results stay visible while you compare alternate shots.", { label: card.label }),
             card.path
           );
-          UIController.showToast(`Loaded ${card.label} into the workspace.`, "success");
-          UIController.setStatus(`Search match loaded — ${card.label}.`, "success");
+          UIController.showToast(formatI18n("uxp.search.runtime.loaded_match_toast", "Loaded {label} into the workspace.", { label: card.label }), "success");
+          UIController.setStatus(formatI18n("uxp.search.runtime.loaded_match_status", "Search match loaded - {label}.", { label: card.label }), "success");
         });
         el.setAttribute("aria-pressed", "false");
         list.appendChild(el);
@@ -4709,14 +4846,27 @@ async function runFootageSearch() {
   setTextAndTitle(
     "searchStatus",
     cards.length
-      ? `${cards.length} ${cards.length === 1 ? "match is" : "matches are"} ready. Start with ${cards[0].label}, or compare results before loading a shot back into the workspace.`
-      : "No matches yet. Try more descriptive language, or index a broader folder.",
+      ? formatCountI18n(
+          cards.length,
+          "uxp.search.runtime.matches_ready_one",
+          "{count} match is ready. Start with {label}, or compare results before loading a shot back into the workspace.",
+          "uxp.search.runtime.matches_ready_many",
+          "{count} matches are ready. Start with {label}, or compare results before loading a shot back into the workspace.",
+          { label: cards[0].label }
+        )
+      : t("uxp.search.runtime.no_matches_retry", "No matches yet. Try more descriptive language, or index a broader folder."),
     query
   );
   UIController.setStatus(
     cards.length
-      ? `Search ready — ${cards.length} result${cards.length === 1 ? "" : "s"}.`
-      : "Search returned no matches."
+      ? formatCountI18n(
+          cards.length,
+          "uxp.search.runtime.search_ready_one",
+          "Search ready - {count} result.",
+          "uxp.search.runtime.search_ready_many",
+          "Search ready - {count} results."
+        )
+      : t("uxp.search.runtime.search_no_matches_status", "Search returned no matches.")
   );
   syncSearchPanelState();
 }
@@ -4728,30 +4878,30 @@ async function runNlpCommand() {
   const provider = document.getElementById("nlpLlmProvider")?.value ?? llmProvider;
   const backendOnline = isBackendConnected();
   if (!backendOnline) {
-    UIController.showToast("Reconnect the backend before running natural-language commands.", "warning");
+    UIController.showToast(t("uxp.search.runtime.reconnect_before_nlp", "Reconnect the backend before running natural-language commands."), "warning");
     syncSearchPanelState();
     return;
   }
-  if (!command) { UIController.showToast("Please enter a natural language command.", "warning"); return; }
+  if (!command) { UIController.showToast(t("uxp.search.runtime.enter_natural_language_command", "Please enter a natural language command."), "warning"); return; }
 
   UIController.setButtonLoading("runNlpBtn", true);
-  UIController.showProcessing("Parsing command with AI…");
+  UIController.showProcessing(t("uxp.search.runtime.parsing_command", "Parsing command..."));
 
   await JobPoller.start(
     "/nlp/command",
     { command, llm_provider: provider },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Thinking…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.search.runtime.thinking", "Thinking...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNlpBtn", false);
       showNlpResult(result);
-      UIController.showToast("NLP command parsed.", "success");
-      UIController.setStatus("NLP command parsed — review and apply.");
+      UIController.showToast(t("uxp.search.runtime.nlp_command_parsed", "NLP command parsed."), "success");
+      UIController.setStatus(t("uxp.search.runtime.nlp_command_parsed_status", "NLP command parsed - review and apply."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNlpBtn", false);
-      UIController.showToast(`NLP error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.search.runtime.nlp_error", "NLP error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4766,11 +4916,23 @@ function showNlpResult(result) {
   body.textContent = JSON.stringify(action, null, 2);
   if (summary) {
     if (Array.isArray(action?.cuts) && action.cuts.length) {
-      summary.textContent = `${action.cuts.length} cut${action.cuts.length === 1 ? "" : "s"} ready`;
+      summary.textContent = formatCountI18n(
+        action.cuts.length,
+        "uxp.search.runtime.cuts_ready_one",
+        "{count} cut ready",
+        "uxp.search.runtime.cuts_ready_many",
+        "{count} cuts ready"
+      );
     } else if (Array.isArray(action?.markers) && action.markers.length) {
-      summary.textContent = `${action.markers.length} marker${action.markers.length === 1 ? "" : "s"} ready`;
+      summary.textContent = formatCountI18n(
+        action.markers.length,
+        "uxp.search.runtime.markers_ready_one",
+        "{count} marker ready",
+        "uxp.search.runtime.markers_ready_many",
+        "{count} markers ready"
+      );
     } else {
-      summary.textContent = "Review before applying";
+      summary.textContent = t("uxp.search.review_before_applying", "Review before applying");
     }
   }
   area.focus();
@@ -4779,7 +4941,7 @@ function showNlpResult(result) {
 /** ── LOAD SEQUENCE INFO ── */
 async function loadSequenceInfo() {
   UIController.setButtonLoading("loadSeqInfoBtn", true);
-  UIController.setStatus("Loading sequence info…", "working");
+  UIController.setStatus(t("uxp.deliverables.runtime.loading_sequence_info", "Loading sequence info..."), "working");
 
   const info = await ensureSequenceInfo({ force: true, silent: true });
 
@@ -4791,67 +4953,70 @@ async function loadSequenceInfo() {
   if (!info) {
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
-        <div class="oc-empty-state-kicker">No active sequence</div>
-        <p>Open a sequence in Premiere, then reload sequence info here before generating deliverables.</p>
+        <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.deliverables.runtime.no_active_sequence", "No active sequence"))}</div>
+        <p>${UIController.escapeHtml(t("uxp.deliverables.runtime.open_sequence_reload_info", "Open a sequence in Premiere, then reload sequence info here before generating deliverables."))}</p>
       </div>`;
-    setDeliverablesStatus("No active sequence loaded. Open a Premiere sequence, then refresh this card before generating deliverables.", "warning");
-    UIController.setStatus("No active sequence.");
+    setDeliverablesStatus(t("uxp.deliverables.runtime.no_active_sequence_loaded", "No active sequence loaded. Open a Premiere sequence, then refresh this card before generating deliverables."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.no_active_sequence_status", "No active sequence."));
     return;
   }
 
   const rows = [
-    ["Name",        info.name],
-    ["Duration",    typeof info.duration === "number" ? formatTimecode(info.duration) : (info.duration ?? "—")],
-    ["Frame Rate",  info.framerate],
-    ["Resolution",  `${info.width} × ${info.height}`],
-    ["Video Tracks",info.videoTracks],
-    ["Audio Tracks",info.audioTracks],
+    [t("uxp.deliverables.runtime.sequence_name", "Name"), info.name],
+    [t("uxp.deliverables.runtime.duration", "Duration"), typeof info.duration === "number" ? formatTimecode(info.duration) : (info.duration ?? t("uxp.deliverables.runtime.not_available", "-"))],
+    [t("uxp.deliverables.runtime.frame_rate", "Frame Rate"), info.framerate],
+    [t("uxp.deliverables.runtime.resolution", "Resolution"), `${info.width} × ${info.height}`],
+    [t("uxp.deliverables.runtime.video_tracks", "Video Tracks"), info.videoTracks],
+    [t("uxp.deliverables.runtime.audio_tracks", "Audio Tracks"), info.audioTracks],
   ];
 
   grid.innerHTML = rows.map(([k, v]) =>
     `<div class="oc-info-pair">` +
       `<span class="oc-info-key">${UIController.escapeHtml(k)}</span>` +
-      `<span class="oc-info-val">${UIController.escapeHtml(String(v ?? "—"))}</span>` +
+      `<span class="oc-info-val">${UIController.escapeHtml(String(v ?? t("uxp.deliverables.runtime.not_available", "-")))}</span>` +
     `</div>`
   ).join("");
 
   updateDeliverablesSummary();
-  UIController.setStatus(`Sequence ready — ${info.name ?? "Active sequence"}`, "success");
+  UIController.setStatus(
+    formatI18n("uxp.deliverables.runtime.sequence_ready_status", "Sequence ready - {name}", { name: info.name ?? t("uxp.deliverables.runtime.active_sequence_lower", "Active sequence") }),
+    "success"
+  );
 }
 
 /** ── DELIVERABLES ── */
 async function runDeliverables(type) {
-  const deliverableLabel = DELIVERABLE_LABELS[type] || humanizeDomain(type);
+  const deliverableLabel = getDeliverableLabel(type);
   const backendOnline = isBackendConnected();
   if (!backendOnline) {
-    setDeliverablesStatus(`Reconnect the backend before generating ${deliverableLabel}.`, "error");
-    UIController.showToast("Reconnect the backend before generating deliverables.", "warning");
-    UIController.setStatus("Reconnect the backend before generating deliverables.", "error");
+    setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.reconnect_before_generating_label", "Reconnect the backend before generating {label}.", { label: deliverableLabel }), "error");
+    UIController.showToast(t("uxp.deliverables.runtime.reconnect_before_generating_docs", "Reconnect the backend before generating deliverables."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.reconnect_before_generating_docs", "Reconnect the backend before generating deliverables."), "error");
     return;
   }
   const seqData = await ensureSequenceInfo({ silent: true });
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
   if (!seqData) {
-    setDeliverablesStatus(`Load the active Premiere sequence before generating ${deliverableLabel}.`, "warning");
-    UIController.showToast("Load sequence info before generating deliverables.", "warning");
-    UIController.setStatus("Load sequence info before generating deliverables.", "error");
+    setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.load_active_sequence_before_label", "Load the active Premiere sequence before generating {label}.", { label: deliverableLabel }), "warning");
+    UIController.showToast(t("uxp.deliverables.runtime.load_sequence_before_docs_status", "Load sequence info before generating deliverables."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.load_sequence_before_docs_status", "Load sequence info before generating deliverables."), "error");
     return;
   }
 
   const btnId = DELIVERABLE_BUTTON_IDS[type];
   if (btnId) UIController.setButtonLoading(btnId, true);
-  setDeliverablesStatus(`Generating ${deliverableLabel}…`, "working");
-  UIController.showProcessing(`Generating ${deliverableLabel}…`);
+  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: deliverableLabel }), "working");
+  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: deliverableLabel }));
 
   await JobPoller.start(
     `/deliverables/${type.replace(/_/g, "-")}`,
     { sequence_data: seqData, output_dir: outputDir || null },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.deliverables.runtime.generating", "Generating...")); },
     (result) => {
       UIController.hideProcessing();
       if (btnId) UIController.setButtonLoading(btnId, false);
       const outputPath = result.output ?? result.output_path ?? "";
-      const outputLabel = outputPath ? formatWorkspaceSource(outputPath) : "saved";
+      const outputLabel = outputPath ? formatWorkspaceSource(outputPath) : t("uxp.deliverables.runtime.saved", "saved");
       const documentCount = Math.max(
         1,
         Number(
@@ -4870,18 +5035,22 @@ async function runDeliverables(type) {
         count: documentCount,
       };
       updateDeliverablesSummary();
-      setDeliverablesStatus(`${deliverableLabel} is ready. Review the file and continue building the handoff package.`, "success", outputPath || deliverableLabel);
+      setDeliverablesStatus(
+        formatI18n("uxp.deliverables.runtime.deliverable_ready_detail", "{label} is ready. Review the file and continue building the handoff package.", { label: deliverableLabel }),
+        "success",
+        outputPath || deliverableLabel
+      );
       UIController.showToast(
-        `${deliverableLabel} ready: ${outputLabel}`,
+        formatI18n("uxp.deliverables.runtime.deliverable_ready_output", "{label} ready: {output}", { label: deliverableLabel, output: outputLabel }),
         "success"
       );
-      UIController.setStatus(`${deliverableLabel} generated.`, "success");
+      UIController.setStatus(formatI18n("uxp.deliverables.runtime.deliverable_generated_status", "{label} generated.", { label: deliverableLabel }), "success");
     },
     (err) => {
       UIController.hideProcessing();
       if (btnId) UIController.setButtonLoading(btnId, false);
-      setDeliverablesStatus(`Could not generate ${deliverableLabel}. ${err}`, "error");
-      UIController.showToast(`Deliverable error: ${err}`, "error");
+      setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.deliverable_failed_detail", "Could not generate {label}. {error}", { label: deliverableLabel, error: err }), "error");
+      UIController.showToast(formatI18n("uxp.deliverables.runtime.deliverable_error", "Deliverable error: {error}", { error: err }), "error");
     }
   );
 }
@@ -4890,9 +5059,9 @@ async function runDeliverables(type) {
 async function runFullReport() {
   const backendOnline = isBackendConnected();
   if (!backendOnline) {
-    setDeliverablesStatus("Reconnect the backend before generating the report package.", "error");
-    UIController.showToast("Reconnect the backend before generating the report package.", "warning");
-    UIController.setStatus("Reconnect the backend before generating the report package.", "error");
+    setDeliverablesStatus(t("uxp.deliverables.runtime.reconnect_before_report_package", "Reconnect the backend before generating the report package."), "error");
+    UIController.showToast(t("uxp.deliverables.runtime.reconnect_before_report_package", "Reconnect the backend before generating the report package."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.reconnect_before_report_package", "Reconnect the backend before generating the report package."), "error");
     return;
   }
   const seqData = await ensureSequenceInfo({ silent: true });
@@ -4901,27 +5070,29 @@ async function runFullReport() {
   const packageSummary = getDeliverablesSelectionSummary(selectedTypes);
   const formatSummary = getDeliverablesFormatSummary();
   if (!seqData) {
-    setDeliverablesStatus("Load the active Premiere sequence before generating the full report.", "warning");
-    UIController.showToast("Load sequence info before generating the full report.", "warning");
-    UIController.setStatus("Load sequence info before generating the full report.", "error");
+    setDeliverablesStatus(t("uxp.deliverables.runtime.load_sequence_before_full_report", "Load the active Premiere sequence before generating the full report."), "warning");
+    UIController.showToast(t("uxp.deliverables.runtime.load_sequence_before_full_report_toast", "Load sequence info before generating the full report."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.load_sequence_before_full_report_toast", "Load sequence info before generating the full report."), "error");
     return;
   }
   if (!selectedTypes.length) {
-    setDeliverablesStatus("Select at least one handoff document before generating the report package.", "warning");
-    UIController.showToast("Select at least one handoff document before generating the report package.", "warning");
-    UIController.setStatus("Select documents before generating the report package.", "warning");
+    setDeliverablesStatus(t("uxp.deliverables.runtime.select_document_before_report_package", "Select at least one handoff document before generating the report package."), "warning");
+    UIController.showToast(t("uxp.deliverables.runtime.select_document_before_report_package", "Select at least one handoff document before generating the report package."), "warning");
+    UIController.setStatus(t("uxp.deliverables.runtime.select_documents_before_report_status", "Select documents before generating the report package."), "warning");
     updateDeliverablesSummary();
     return;
   }
 
   const types = selectedTypes.map((type) => type.replace(/_/g, "-"));
   const packageLabel = selectedTypes.length === 1
-    ? (DELIVERABLE_LABELS[selectedTypes[0]] || "Selected Report")
-    : (selectedTypes.length === 4 ? "Full Report" : `${selectedTypes.length}-Doc Package`);
+    ? getDeliverableLabel(selectedTypes[0])
+    : (selectedTypes.length === 4
+        ? t("uxp.deliverables.runtime.full_report", "Full Report")
+        : formatI18n("uxp.deliverables.runtime.doc_package_label", "{count}-Doc Package", { count: selectedTypes.length }));
 
   UIController.setButtonLoading("runFullReportBtn", true);
-  setDeliverablesStatus(`Generating ${packageLabel}…`, "working", packageSummary.title);
-  UIController.showProcessing(`Generating ${packageLabel}…`);
+  setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: packageLabel }), "working", packageSummary.title);
+  UIController.showProcessing(formatI18n("uxp.deliverables.runtime.generating_label", "Generating {label}...", { label: packageLabel }));
   UIController.setProgress(0);
 
   let generated = 0;
@@ -4929,9 +5100,13 @@ async function runFullReport() {
   const outputPaths = [];
   for (let index = 0; index < types.length; index += 1) {
     const type = types[index];
-    const label = DELIVERABLE_LABELS[type.replace(/-/g, "_")] || humanizeDomain(type);
+    const label = getDeliverableLabel(type.replace(/-/g, "_"));
     UIController.setProgress(Math.round((index / types.length) * 100));
-    UIController.setProcessingMsg(`Generating ${label} (${index + 1}/${types.length})…`);
+    UIController.setProcessingMsg(formatI18n("uxp.deliverables.runtime.generating_step", "Generating {label} ({step}/{total})...", {
+      label,
+      step: index + 1,
+      total: types.length,
+    }));
     const r = await BackendClient.post(`/deliverables/${type}`, {
       sequence_data: seqData,
       output_dir: outputDir || null,
@@ -4955,13 +5130,49 @@ async function runFullReport() {
   };
   updateDeliverablesSummary();
   if (errors === 0) {
-    setDeliverablesStatus(`${packageLabel} ready. ${generated} ${generated === 1 ? "document is" : "documents are"} available for review.`, "success", outputPaths[0] || outputDir || packageSummary.title);
-    UIController.showToast(`Generated ${generated} CSV handoff ${generated === 1 ? "document" : "documents"}.`, "success");
+    setDeliverablesStatus(
+      formatCountI18n(
+        generated,
+        "uxp.deliverables.runtime.package_ready_one",
+        "{label} ready. {count} document is available for review.",
+        "uxp.deliverables.runtime.package_ready_many",
+        "{label} ready. {count} documents are available for review.",
+        { label: packageLabel }
+      ),
+      "success",
+      outputPaths[0] || outputDir || packageSummary.title
+    );
+    UIController.showToast(
+      formatCountI18n(
+        generated,
+        "uxp.deliverables.runtime.generated_csv_handoff_one",
+        "Generated {count} CSV handoff document.",
+        "uxp.deliverables.runtime.generated_csv_handoff_many",
+        "Generated {count} CSV handoff documents."
+      ),
+      "success"
+    );
   } else {
-    setDeliverablesStatus(`${packageLabel} generated with a few gaps. ${generated} documents completed and ${errors} ${errors === 1 ? "step needs" : "steps need"} attention.`, "warning", outputPaths[0] || outputDir || packageSummary.title);
-    UIController.showToast(`Generated ${generated} CSV documents; ${errors} ${errors === 1 ? "step needs" : "steps need"} attention.`, "warning");
+    setDeliverablesStatus(
+      formatI18n("uxp.deliverables.runtime.package_generated_with_gaps", "{label} generated with a few gaps. {generated} documents completed and {errors} step(s) need attention.", { label: packageLabel, generated, errors }),
+      "warning",
+      outputPaths[0] || outputDir || packageSummary.title
+    );
+    UIController.showToast(
+      formatI18n("uxp.deliverables.runtime.generated_csv_with_gaps", "Generated {generated} CSV documents; {errors} step(s) need attention.", { generated, errors }),
+      "warning"
+    );
   }
-  UIController.setStatus(`${packageLabel} ready — ${generated} CSV ${generated === 1 ? "document" : "documents"}.`);
+  UIController.setStatus(
+    formatCountI18n(
+      generated,
+      "uxp.deliverables.runtime.package_ready_status_one",
+      "{label} ready - {count} CSV document.",
+      "uxp.deliverables.runtime.package_ready_status_many",
+      "{label} ready - {count} CSV documents.",
+      { label: packageLabel }
+    )
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -5531,14 +5742,17 @@ function bindEvents() {
   document.getElementById("runNlpBtn")?.addEventListener("click",         runNlpCommand);
   document.getElementById("applyNlpBtn")?.addEventListener("click", async () => {
     const bodyEl = document.getElementById("nlpResultBody");
-    if (!bodyEl?.textContent) { UIController.showToast("No NLP result to apply.", "warning"); return; }
+    if (!bodyEl?.textContent) {
+      UIController.showToast(t("uxp.search.runtime.no_nlp_result_to_apply", "No NLP result to apply."), "warning");
+      return;
+    }
     try {
       const action = JSON.parse(bodyEl.textContent);
       if (action.cuts)    await applyTimelineCuts(action.cuts);
       else if (action.markers) await addSequenceMarkers(action.markers, null);
-      else UIController.showToast("Unknown NLP action type. Check result JSON.", "info");
+      else UIController.showToast(t("uxp.search.runtime.unknown_nlp_action", "Unknown NLP action type. Check result JSON."), "info");
     } catch (_) {
-      UIController.showToast("Could not parse NLP result as JSON.", "error");
+      UIController.showToast(t("uxp.search.runtime.nlp_json_parse_failed", "Could not parse NLP result as JSON."), "error");
     }
   });
   document.getElementById("searchQuery")?.addEventListener("keydown", (e) => {

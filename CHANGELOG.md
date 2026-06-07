@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Search and Deliverables Runtime i18n
+
+- Routed UXP Search and Deliverables runtime feedback through locale keys, including search result metadata, indexing/search/NLP state, sequence readiness, deliverable selection summaries, document generation, and package status/error messages.
+- Added Search/Deliverables runtime guard coverage so those dynamic labels, statuses, toasts, and errors cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Timeline Runtime i18n
 
 - Routed UXP Timeline runtime feedback through locale keys, including sequence cut/marker write-back, batch export, rename/smart-bin CEP handoff, SRT validation, and OTIO export messages.
