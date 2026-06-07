@@ -110,7 +110,7 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 950 <= len(spanish) < len(english)
+    assert 1140 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
@@ -169,8 +169,12 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.timeline.runtime.backend_reconnect_timeline_status"].startswith("Reconecta el backend local")
     assert spanish["uxp.timeline.runtime.srt_ready_status"] == "SRT listo - {count} segmentos de subtitulos interpretados."
     assert spanish["uxp.timeline.runtime.otio_exported_output"] == "OTIO exportado: {output}"
-    assert english["uxp.captions.ai_chapters"] == "AI Chapters"
-    assert "uxp.captions.ai_chapters" not in spanish
+    assert sorted(key for key in english if key.startswith("uxp.captions.") and key not in spanish) == []
+    assert spanish["uxp.captions.transcription"] == "Transcripcion"
+    assert spanish["uxp.captions.ai_chapters"] == "Capitulos IA"
+    assert spanish["uxp.captions.runtime.transcription_complete"] == "Transcripcion completa."
+    assert spanish["uxp.captions.runtime.chapter_generation_done_status"] == "Generacion de capitulos completa - {count} capitulos."
+    assert spanish["uxp.captions.runtime.repeat_review_ready_status"].startswith("La revision de repeticiones")
     assert english["uxp.video.clip_path"] == "Clip Path"
     assert "uxp.video.clip_path" not in spanish
 
