@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Deliverables Tab Shell
+
+- Expanded the UXP i18n foundation into the Deliverables tab shell, including sequence readiness, document export controls, deliverable cards, project report options, placeholders, ARIA labels, status text, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 560+ attribute baseline and representative Deliverables-tab locale keys.
+
 ### Changed - UXP i18n Search Tab Shell
 
 - Expanded the UXP i18n foundation into the Search tab shell, including library indexing, semantic search, suggested prompts, empty states, NLP command controls, placeholders, ARIA labels, status text, and action buttons.
