@@ -10,6 +10,10 @@ import liveManifest from "../manifest.json";
 
 type OpenCutHostCode = "PPRO";
 type DomainList = string[];
+type OpenCutManifestProfile = "development" | "release";
+type WebViewMessageBridge = "localAndRemote" | "localOnly" | "no";
+const HOT_RELOAD_PORT = 8080;
+const WEBVIEW_RELOAD_PORT = 8082;
 
 type OpenCutManifest = {
   id: string;
@@ -32,7 +36,7 @@ type OpenCutManifest = {
       allow: "yes";
       allowLocalRendering: "yes";
       domains: DomainList;
-      enableMessageBridge: "localAndRemote";
+      enableMessageBridge: WebViewMessageBridge;
     };
     localFileSystem: "request";
     clipboard: "readAndWrite";
@@ -54,63 +58,78 @@ const DEV_WEBVIEW_DOMAINS = [
   "http://localhost:5173",
 ];
 
+const RELEASE_WEBVIEW_DOMAINS: DomainList = [];
+
+const RELEASE_NETWORK_DOMAINS = [
+  ...BACKEND_DOMAINS,
+  "http://localhost:5679",
+];
+
+const DEV_NETWORK_DOMAINS = [
+  ...RELEASE_NETWORK_DOMAINS,
+  `ws://127.0.0.1:${HOT_RELOAD_PORT}`,
+  `ws://localhost:${HOT_RELOAD_PORT}`,
+  ...DEV_WEBVIEW_DOMAINS,
+];
+
 export const config = {
-  hotReloadPort: 8080,
+  hotReloadPort: HOT_RELOAD_PORT,
   webviewUi: true,
-  webviewReloadPort: 8082,
+  webviewReloadPort: WEBVIEW_RELOAD_PORT,
   copyZipAssets: ["public-zip/*"],
   uniqueIds: true,
 };
 
-export const manifest: OpenCutManifest = {
-  id: liveManifest.id,
-  name: liveManifest.name,
-  version: liveManifest.version,
-  main: "index.html",
-  manifestVersion: 6,
-  host: [
-    {
-      app: "PPRO",
-      minVersion: "25.6",
-      data: { apiVersion: 2 },
+export function buildManifest(profile: OpenCutManifestProfile = "development"): OpenCutManifest {
+  const releaseProfile = profile === "release";
+  return {
+    id: liveManifest.id,
+    name: liveManifest.name,
+    version: liveManifest.version,
+    main: "index.html",
+    manifestVersion: 6,
+    host: [
+      {
+        app: "PPRO",
+        minVersion: "25.6",
+        data: { apiVersion: 2 },
+      },
+    ],
+    entrypoints: [
+      {
+        type: "panel",
+        id: "com.opencut.uxp.panel",
+        label: { default: "OpenCut UXP" },
+        minimumSize: { width: 480, height: 400 },
+        preferredSize: { width: 520, height: 700 },
+        maximumSize: { width: 1200, height: 1600 },
+      },
+    ],
+    requiredPermissions: {
+      network: {
+        domains: [...(releaseProfile ? RELEASE_NETWORK_DOMAINS : DEV_NETWORK_DOMAINS)],
+      },
+      webview: {
+        allow: "yes",
+        allowLocalRendering: "yes",
+        domains: [...(releaseProfile ? RELEASE_WEBVIEW_DOMAINS : DEV_WEBVIEW_DOMAINS)],
+        enableMessageBridge: releaseProfile ? "localOnly" : "localAndRemote",
+      },
+      localFileSystem: "request",
+      clipboard: "readAndWrite",
+      launchProcess: {
+        schemes: ["https"],
+        extensions: [],
+      },
+      ipc: {
+        enablePluginCommunication: true,
+      },
     },
-  ],
-  entrypoints: [
-    {
-      type: "panel",
-      id: "com.opencut.uxp.panel",
-      label: { default: "OpenCut UXP" },
-      minimumSize: { width: 480, height: 400 },
-      preferredSize: { width: 520, height: 700 },
-      maximumSize: { width: 1200, height: 1600 },
-    },
-  ],
-  requiredPermissions: {
-    network: {
-      domains: [
-        ...BACKEND_DOMAINS,
-        "http://localhost:5679",
-        `ws://127.0.0.1:${config.hotReloadPort}`,
-        `ws://localhost:${config.hotReloadPort}`,
-        ...DEV_WEBVIEW_DOMAINS,
-      ],
-    },
-    webview: {
-      allow: "yes",
-      allowLocalRendering: "yes",
-      domains: DEV_WEBVIEW_DOMAINS,
-      enableMessageBridge: "localAndRemote",
-    },
-    localFileSystem: "request",
-    clipboard: "readAndWrite",
-    launchProcess: {
-      schemes: ["https"],
-      extensions: [],
-    },
-    ipc: {
-      enablePluginCommunication: true,
-    },
-  },
-};
+  };
+}
 
-export default { manifest, ...config };
+export const developmentManifest = buildManifest("development");
+export const releaseManifest = buildManifest("release");
+export const manifest = developmentManifest;
+
+export default { manifest, developmentManifest, releaseManifest, ...config };

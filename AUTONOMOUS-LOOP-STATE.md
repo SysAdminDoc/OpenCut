@@ -6,13 +6,13 @@ Last updated: 2026-06-06
 
 - Project: `\\vmware-host\Shared Folders\repos\OpenCut`
 - Branch: `main`
-- Cycle result: Cycle 64 UXP filesystem permission is shipped; RA-11 is closed. RA-14, E15 rolling work, and external F252 WebView cutover evidence remain open.
-- Shipped this cycle: live UXP and dormant WebView manifests now use picker-scoped `localFileSystem: "request"` instead of broad `fullAccess`, the file/folder browse docs describe the picker boundary, and static guards block direct filesystem APIs that would require a new permission review.
-- Verification: focused UXP permission/schema/docs pytest passed (21 tests), focused Ruff passed for the UXP permission test slice, UXP `node --check` passed, badge sync passed, doc-size checks passed within tolerance, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast` passed (100 gate tests; 827 pytest cases executed).
+- Cycle result: Cycle 65 UXP WebView permission profiles are shipped; RA-14 is closed. E15 rolling work and external F252 WebView cutover evidence remain open.
+- Shipped this cycle: the dormant WebView config now exports development and release manifest profiles, keeps Vite/hot-reload domains in the development profile, removes remote WebView domains from the release profile, and uses `localOnly` messaging for locally rendered release WebView content.
+- Verification: focused UXP WebView/permission/schema pytest passed (24 tests), focused Ruff passed for the UXP WebView permission test slice, UXP `node --check` passed, badge sync passed, doc-size checks passed within tolerance, roadmap source lint exited 0 with existing appendix warnings, `rtk git diff --check` passed, `py -3.12 scripts\release_smoke.py --only ruff --json` passed, and `py -3.12 scripts\release_smoke.py --only pytest-fast` passed (100 gate tests).
 
 ## Next Work
 
 - Continue this same project on the next cycle.
-- Next cycle focus: continue UXP trust work around RA-14, then continue the compact queue with E15 batch 155 or another remaining release-trust item.
-- The next open queue items include RA-14 UXP permission-split work and E15 batch 155.
+- Next cycle focus: continue E15 batch 155 or another remaining release-trust item after the UXP permission bundle.
+- The next open queue items include E15 batch 155 plus the external F202/F252 evidence gates.
 - External F202 notarization and F252 UXP WebView cutover remain blocked on external evidence.
