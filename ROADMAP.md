@@ -97,7 +97,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
 | RA-09 | Timeline-native captions | L | Closed 2026-06-06: RA-46 sidecars, RA-47 diff/apply, RA-48 UXP snapshot reads, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures shipped |
-| RA-10 | Magic clips macro | L | RA-51 through RA-53 closed 2026-06-06 with dry-run plan graph, approved-candidate render handoff, explainable scoring, and platform preset rendering; RA-54 through RA-56 remain open |
+| RA-10 | Magic clips macro | L | RA-51 through RA-54 closed 2026-06-06 with dry-run plan graph, approved-candidate render handoff, explainable scoring, platform preset rendering, and CEP/UXP review-board parity; RA-55 and RA-56 remain open |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
 | RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
@@ -1101,12 +1101,12 @@ adopt the new dry-run plan endpoint instead of only posting the render job.
 
 **Acceptance criteria:**
 
-- [ ] Both panels can preview a plan, approve/reject candidates, and render only
+- [x] Both panels can preview a plan, approve/reject candidates, and render only
       approved candidates.
-- [ ] The UI clearly separates "Plan", "Analyze", and "Render" states.
-- [ ] Candidate controls do not require copying raw file paths between the
+- [x] The UI clearly separates "Plan", "Analyze", and "Render" states.
+- [x] Candidate controls do not require copying raw file paths between the
       Magic Clips and A/B variants panels.
-- [ ] Static tests cover route wiring and payload parity for UXP and CEP.
+- [x] Static tests cover route wiring and payload parity for UXP and CEP.
 
 #### RA-55 Checkpointed and resumable Magic Clips jobs
 
@@ -1291,6 +1291,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 57 | Magic Clips plan graph | `opencut/core/magic_clips.py`, `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, generated route/MCP manifests, Magic Clips tests | The shorts pipeline rendered directly from selected highlights, but RA-51 needed a reviewable dry-run graph and a way to render only approved candidates. | Closed RA-51 with stable Magic Clips plan/candidate/step IDs, source/config hashes, estimated platform outputs, analysis-required fallback steps, and approved-candidate render handoff support. |
 | 2026-06-06 | Cycle 58 | Magic Clips candidate scoring | `opencut/core/magic_clips.py`, `tests/test_magic_clips.py` | RA-51 exposed candidates, but the plan lacked explainable ordering, score breakdowns, fallback labels, and rejected-candidate evidence for short, overlapping, or malformed inputs. | Closed RA-52 with deterministic heuristic scoring, per-candidate selection reasons, fallback mode metadata, score breakdowns, rejected-candidate diagnostics, and focused regression tests. |
 | 2026-06-06 | Cycle 59 | Magic Clips platform presets | `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, `tests/test_magic_clips.py` | Magic Clips plans exposed preset IDs, but approved rendering still used ad-hoc width/height settings and produced only one output per candidate. | Closed RA-53 by deriving render targets from `export_presets.py`, passing platform IDs from approved plans into `/video/shorts-pipeline`, clamping output durations, conforming preset dimensions, emitting target dimensions, and testing YouTube Shorts, TikTok, Reels, and square feed outputs. |
+| 2026-06-06 | Cycle 60 | Magic Clips review-board parity | CEP and UXP panel HTML/JS/CSS, `tests/test_magic_clips_panel_ui.py` | CEP still went straight to render and UXP lacked duration/platform/caption controls plus approved-candidate review, so users could not preview the dry-run plan or render only approved clips from both panel surfaces. | Closed RA-54 by adding CEP and UXP Magic Clips review boards, dry-run plan buttons, approved-only render actions, preset/caption/LLM payload parity, Plan/Analyze/Render status text, and static route/payload tests. |
 
 ### Research queries to run later
 
@@ -1311,24 +1312,24 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 60: Continue RA-54 review-board UI parity for UXP and CEP.
-2. Cycle 61: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-3. Cycle 62: Continue E15 or another remaining release-trust gap after batch 154.
-4. Cycle 63: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 64: Inspect marker metadata workflows for remaining reusable host locator needs.
+1. Cycle 61: Continue RA-55 checkpointed and resumable Magic Clips jobs.
+2. Cycle 62: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+3. Cycle 63: Continue E15 or another remaining release-trust gap after batch 154.
+4. Cycle 64: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+5. Cycle 65: Inspect marker metadata workflows for remaining reusable host locator needs.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 59: Magic Clips platform preset rendering.
+Cycle 60: Magic Clips review-board parity.
 
 #### Current focus
 
 Continue from active release-trust, migration hardening, Docker hardening, and
 product workflow specs. RA-05/RA-37, RA-06/RA-40, RA-07/RA-38, RA-08/RA-39,
 RA-01, RA-02, RA-03, RA-04, RA-15, RA-16, RA-17, RA-18, RA-19, RA-20, RA-21, RA-22, RA-23, RA-24, RA-25, RA-26, RA-27, RA-28, RA-29, RA-30, RA-31, RA-32, RA-33, RA-35, RA-36, RA-42, RA-43, RA-44, and
-RA-45 are closed, and the bootstrap dev-check guard is in place. RA-41 is
+RA-45 and RA-54 are closed, and the bootstrap dev-check guard is in place. RA-41 is
 closed: shared dry-run/confirm-token helpers cover the original named
 endpoint list plus adjacent assistant/chat/undo/search/worker-pool clears, and
 journal clear is covered by the local DB dry-run/backup contract. RA-15 keeps
@@ -1521,7 +1522,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue RA-54 review-board UI parity for UXP and CEP.
+1. Continue RA-55 checkpointed and resumable Magic Clips jobs.
 2. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
 3. Continue E15 rolling CEP i18n migration.
 

@@ -1630,11 +1630,17 @@
         el.runExpTranscriptBtn = $("runExpTranscriptBtn");
         el.shortsPlatform = $("shortsPlatform");
         el.shortsMaxClips = $("shortsMaxClips");
+        el.shortsCaptionStyle = $("shortsCaptionStyle");
         el.shortsMinDur = $("shortsMinDur");
         el.shortsMaxDur = $("shortsMaxDur");
         el.shortsFaceTrack = $("shortsFaceTrack");
         el.shortsCaptions = $("shortsCaptions");
         el.runShortsBtn = $("runShortsBtn");
+        el.previewShortsPlanBtn = $("previewShortsPlanBtn");
+        el.renderShortsApprovedBtn = $("renderShortsApprovedBtn");
+        el.shortsReviewBoard = $("shortsReviewBoard");
+        el.shortsReviewSummary = $("shortsReviewSummary");
+        el.shortsReviewList = $("shortsReviewList");
         el.loadSeqInfoBtn = $("loadSeqInfoBtn");
         el.genVfxSheetBtn = $("genVfxSheetBtn");
         el.genAdrListBtn = $("genAdrListBtn");
@@ -3388,7 +3394,7 @@
         "runTitleOverlayBtn", "runReframeBtn", "runUpscaleBtn",
         "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
-        "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
+        "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "previewShortsPlanBtn", "runShortsBtn",
         "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
@@ -13721,29 +13727,157 @@
     }
 
     // --- Shorts Pipeline ---
+    var shortsReviewPlan = null;
+
+    function getShortsPlatformPresets() {
+        var preset = el.shortsPlatform ? String(el.shortsPlatform.value || "tiktok") : "tiktok";
+        return [preset];
+    }
+
+    function buildShortsPayload() {
+        var llm = getLLMConfig();
+        var maxClips = el.shortsMaxClips ? parseInt(el.shortsMaxClips.value, 10) : 5;
+        var minDuration = el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15;
+        var maxDuration = el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60;
+        return {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            platform_presets: getShortsPlatformPresets(),
+            caption_style: el.shortsCaptionStyle ? el.shortsCaptionStyle.value : "default",
+            max_candidates: maxClips,
+            max_shorts: maxClips,
+            min_duration: minDuration,
+            max_duration: maxDuration,
+            face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
+            burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
+            llm_provider: llm.provider,
+            llm_model: llm.model || "",
+            llm_api_key: llm.api_key || "",
+            llm_base_url: llm.base_url || "",
+        };
+    }
+
+    function selectedShortsCandidateIds() {
+        if (!shortsReviewPlan || !shortsReviewPlan.candidates) return [];
+        var ids = [];
+        var boxes = el.shortsReviewList ? el.shortsReviewList.querySelectorAll("input[data-candidate-id]") : [];
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i].checked) ids.push(boxes[i].getAttribute("data-candidate-id"));
+        }
+        return ids;
+    }
+
+    function updateShortsReviewActions() {
+        var ids = selectedShortsCandidateIds();
+        if (el.renderShortsApprovedBtn) {
+            el.renderShortsApprovedBtn.disabled = !shortsReviewPlan || ids.length === 0;
+        }
+        if (el.shortsReviewBoard) {
+            el.shortsReviewBoard.setAttribute("data-state", ids.length ? "render" : "plan");
+        }
+        if (el.shortsReviewSummary && shortsReviewPlan && !shortsReviewPlan.requires_analysis) {
+            el.shortsReviewSummary.textContent = ids.length
+                ? "Render state: " + ids.length + " approved candidate" + (ids.length === 1 ? "" : "s") + " will be sent to /video/shorts-pipeline."
+                : "Plan state: approve at least one candidate before rendering.";
+        }
+    }
+
+    function appendShortsText(parent, className, text) {
+        if (!text) return null;
+        var node = document.createElement("span");
+        node.className = className;
+        node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function renderShortsReviewBoard(plan) {
+        shortsReviewPlan = plan || null;
+        if (!el.shortsReviewBoard || !el.shortsReviewList || !el.shortsReviewSummary) return;
+        el.shortsReviewBoard.classList.remove("hidden");
+        el.shortsReviewList.innerHTML = "";
+        var candidates = (plan && plan.candidates) || [];
+        var state = plan && plan.requires_analysis ? "analyze" : "plan";
+        el.shortsReviewBoard.setAttribute("data-state", state);
+        el.shortsReviewSummary.textContent = plan && plan.requires_analysis
+            ? "Analyze state: cached transcript or highlight data is required before review."
+            : "Plan state: " + candidates.length + " candidate" + (candidates.length === 1 ? "" : "s") + " ready for approval.";
+        if (!candidates.length) {
+            var empty = document.createElement("div");
+            empty.className = "shorts-review-card";
+            var steps = (plan && plan.steps || []).map(function (step) { return step.step_type + ": " + step.status; }).join(", ");
+            empty.textContent = steps || "No candidate windows are available yet.";
+            el.shortsReviewList.appendChild(empty);
+            updateShortsReviewActions();
+            return;
+        }
+        candidates.forEach(function (candidate, index) {
+            var card = document.createElement("div");
+            card.className = "shorts-review-card";
+            var label = document.createElement("label");
+            var checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.setAttribute("data-candidate-id", candidate.candidate_id || "");
+            checkbox.addEventListener("change", function () {
+                card.classList.toggle("is-rejected", !checkbox.checked);
+                updateShortsReviewActions();
+            });
+            label.appendChild(checkbox);
+            var body = document.createElement("span");
+            appendShortsText(body, "shorts-review-title", (index + 1) + ". " + (candidate.title || "Candidate"));
+            appendShortsText(body, "shorts-review-meta", "Score " + (candidate.score || 0) + " | " + (candidate.start || 0) + "s-" + (candidate.end || 0) + "s");
+            appendShortsText(body, "shorts-review-reason", candidate.selection_reason || (candidate.reasons || []).join("; "));
+            appendShortsText(body, "shorts-review-excerpt", candidate.transcript_excerpt || "");
+            appendShortsText(body, "shorts-review-platforms", "Targets: " + ((candidate.platform_presets || []).map(function (p) { return p.preset_id || p; }).join(", ") || getShortsPlatformPresets().join(", ")));
+            appendShortsText(body, "shorts-review-meta", "Caption style: " + (candidate.caption_style || (el.shortsCaptionStyle ? el.shortsCaptionStyle.value : "default")));
+            appendShortsText(body, "shorts-review-meta", "Thumbnail: first frame at " + (candidate.start || 0) + "s");
+            label.appendChild(body);
+            card.appendChild(label);
+            el.shortsReviewList.appendChild(card);
+        });
+        updateShortsReviewActions();
+    }
+
+    function previewShortsPlan() {
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
+        var payload = buildShortsPayload();
+        if (el.previewShortsPlanBtn) el.previewShortsPlanBtn.disabled = true;
+        if (el.shortsReviewBoard && el.shortsReviewSummary) {
+            el.shortsReviewBoard.classList.remove("hidden");
+            el.shortsReviewBoard.setAttribute("data-state", "plan");
+            el.shortsReviewSummary.textContent = "Plan state: building candidate review board.";
+        }
+        api("POST", "/video/magic-clips/plan", payload, function (err, data) {
+            if (el.previewShortsPlanBtn) el.previewShortsPlanBtn.disabled = false;
+            if (err || !data || data.error) {
+                showAlert((data && data.error) || (err && err.message) || "Magic Clips plan failed.");
+                return;
+            }
+            renderShortsReviewBoard(data);
+        });
+    }
+
+    function renderApprovedShorts() {
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
+        var ids = selectedShortsCandidateIds();
+        if (!shortsReviewPlan || !ids.length) { showAlert("Approve at least one Magic Clips candidate first."); return; }
+        preflightPipeline("shorts-pipeline", selectedPath, projectFolder, function (go) {
+            if (!go) return;
+            var payload = buildShortsPayload();
+            payload.magic_clips_plan = shortsReviewPlan;
+            payload.plan_id = shortsReviewPlan.plan_id || "";
+            payload.candidate_ids = ids;
+            payload.approved_candidate_ids = ids;
+            startJob("/video/shorts-pipeline", payload);
+        });
+    }
+
     function runShorts() {
         if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         preflightPipeline("shorts-pipeline", selectedPath, projectFolder, function (go) {
             if (!go) return;
-            var llm = getLLMConfig();
-            var platform = el.shortsPlatform ? el.shortsPlatform.value : "tiktok";
-            var dims = { tiktok: [1080, 1920], shorts: [1080, 1920], reels: [1080, 1920], square: [1080, 1080] };
-            var d = dims[platform] || [1080, 1920];
-            startJob("/video/shorts-pipeline", {
-                filepath: selectedPath,
-                output_dir: projectFolder,
-                width: d[0],
-                height: d[1],
-                max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
-                min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
-                max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
-                face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
-                burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
-                llm_provider: llm.provider,
-                llm_model: llm.model || "",
-                llm_api_key: llm.api_key || "",
-                llm_base_url: llm.base_url || "",
-            });
+            startJob("/video/shorts-pipeline", buildShortsPayload());
         });
     }
 
@@ -15957,7 +16091,9 @@
         if (refreshEnginesBtn) refreshEnginesBtn.addEventListener("click", loadEngineRegistry);
 
         if (el.runEnhanceBtn) el.runEnhanceBtn.addEventListener("click", runEnhance);
+        if (el.previewShortsPlanBtn) el.previewShortsPlanBtn.addEventListener("click", previewShortsPlan);
         if (el.runShortsBtn) el.runShortsBtn.addEventListener("click", runShorts);
+        if (el.renderShortsApprovedBtn) el.renderShortsApprovedBtn.addEventListener("click", renderApprovedShorts);
         if (el.summarizeTranscriptBtn) el.summarizeTranscriptBtn.addEventListener("click", runSummarize);
         if (el.generateLutBtn) el.generateLutBtn.addEventListener("click", runGenerateLut);
         if (el.testLLMBtn) el.testLLMBtn.addEventListener("click", testLLM);
