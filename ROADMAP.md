@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (172/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at batch 172. |
+| E15 | CEP i18n migration | Rolling batches (173/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at batch 173. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1329,6 +1329,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-07 | Cycle 90 | WCAG contrast release gate | `opencut/tools/contrast_audit.py`, `scripts/release_smoke.py`, `tests/test_contrast_audit.py`, CEP/UXP panel CSS | The June 6 research plan identified no automated WCAG/contrast audit in CI, so panel token regressions could ship despite extensive static ARIA coverage. | Added a stdlib static contrast audit over committed CEP/UXP `:root` design-token blocks, wired it into release smoke and pytest-fast as `contrast-audit`, proved a deliberately low-contrast fixture fails, and raised CEP `--text-muted` to `#707090` so muted chrome clears 3.15:1 on `--bg-elevated`. The gate audits 72 token pairs with 0 failures. |
 | 2026-06-07 | Cycle 91 | Async rate-limit migration | `opencut/jobs.py`, `opencut/security.py`, async route modules, `tests/test_async_job_rate_limit.py`, `scripts/release_smoke.py` | The June 6 research plan found 25+ manual route-level `rate_limit()` / `rate_limit_release()` pairs, which made async worker-lifetime locks easy to leak and inconsistent with the decorator pattern. | Added `async_job(rate_limit_key=...)` with synchronous 429 rejection before job creation and release paths for worker completion/setup failures, migrated model-install and GPU-heavy async routes to that wrapper, preserved conditional BasicVSR denoise locking, converted MCP bridge per-tool throttling to `rate_limit_slot()`, and added a release-smoke guard proving no route module calls the primitives directly. |
 | 2026-06-07 | Cycle 92 | CEP structured empty states | CEP `index.html`, `main.js`, `style.css`, `locales/en.json`, `tests/test_i18n_hardcoded_migration.py` | The June 6 UX audit found CEP still used plain hints or hidden empty containers where UXP had structured `oc-empty-state` components, especially for zero-result lists and Favorites. | Promoted `buildEmptyHintMarkup()` to emit shared `oc-empty-state` classes while preserving hint/tone semantics, rendered a localized Favorites empty state instead of hiding the bar, and added static coverage for job history, batch files, workflow steps, footage search, and favorites empty-state surfaces. |
+| 2026-06-07 | Cycle 93 | CEP Settings preferences i18n shell | CEP `index.html`, `locales/en.json`, `tests/test_i18n_hardcoded_migration.py` | The Settings preferences card still had hardcoded shell copy for the preferences description, output-location choices, appearance/theme choices, UI language choices, and the GPU/backend log control labels. | Advanced E15 to batch 173 by wiring those labels and options through locale hooks while preserving the current native UI-language labels; the drift gate now reports 2,564 keys, 2,564 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1349,17 +1350,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 93: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 94: Audit UXP i18n parity or another UX gap from the June 6 plan.
-3. Cycle 95: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 96: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 97: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 94: Inspect and either integrate or separate the preserved `extension/com.opencut.uxp/main.js` i18n parity diff.
+2. Cycle 95: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+3. Cycle 96: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 97: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 98: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 92: CEP structured empty states.
+Cycle 93: CEP Settings preferences i18n shell.
 
 #### Current focus
 
@@ -1454,13 +1455,14 @@ return 403 before Flask can serve them.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 172: progress/results/footer chrome, command
+E15 is advanced through batch 173: progress/results/footer chrome, command
 palette shell, preview/audio preview modals, clip context menu, first-run wizard,
 `data-i18n-alt` scanner coverage, Settings Operation Journal, Whisper
 readiness/default-model shell, Timeline write-back, OTIO, beat-marker,
 multicam, marker-export, rename/smart-bin controls, Settings system,
 dependency-health, Footage Search shell copy, tab panel
 region labels, Audio Normalize shell controls, Auto Shorts form labels/options/buttons,
+and Settings preferences shell controls,
 Magic Clips review-board status/detail copy, the approved-render alert, and the
 Settings studio-readiness overview shell now use locale hooks, the final unused
 CEP locale keys have been removed, the dead-key baseline is zero, the scanner counts supported JS metadata locale keys
@@ -1575,6 +1577,10 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batch 172 localized Captions quick-action labels, SRT import controls,
   beat-marker stats, audio form placeholders and MusicGen controls, LUT path
   placeholders, NLP command shell, and LLM settings placeholders.
+- E15 batch 173 localized the remaining Settings preferences shell labels,
+  output-location options, theme options, GPU checking label, backend log button
+  label, and UI language choices while keeping the dead/missing-key baseline at
+  zero.
 - PyTorch deserialization hardening is closed: quantization loads now use
   `weights_only=True`, unsafe pickle checkpoints produce a clear error, and
   Torch-backed optional extras require `torch>=2.6` / `torchvision>=0.21`.
