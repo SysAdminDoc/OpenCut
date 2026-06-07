@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (345 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-345 are recorded below.
+**Last consolidated:** 2026-06-07 (346 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-346 are recorded below.
+
+**Pass 346 update (no standalone research file):**
+- Extended the UXP i18n foundation into the Captions tab shell: transcription setup, chapter generation, repeat detection, result metadata, placeholders, select options, checkbox labels, and accessible names now use UXP locale keys.
+- Raised `tests/test_uxp_i18n.py` to require at least 170 static i18n attributes plus representative Captions-tab keys, keeping the UXP locale coverage guard moving toward full panel parity.
 
 **Pass 345 update (no standalone research file):**
 - Extended the UXP i18n foundation into the Cut & Clean tab shell: clip input, silence detection, filler cleanup, result-summary labels, placeholders, select options, and accessible names now use UXP locale keys.
@@ -9,7 +13,7 @@
 
 **Pass 344 update (no standalone research file):**
 - Opened the UXP i18n parity track with a foundation slice: the UXP panel now has a local `locales/en.json`, `loadLocale()`, `t()`, and `applyI18nToDOM()` support for text plus title/label/alt/placeholder/aria attributes.
-- Wired 96 UXP shell, tab bar, processing banner, connection label, workspace overview, dynamic workspace guide, and Cut-tab control labels through locale keys. `tests/test_uxp_i18n.py` guards HTML and JS locale coverage, blocks visible-English connection-state checks, and is included in release smoke.
+- Wired the UXP shell, tab bar, processing banner, connection label, workspace overview, and dynamic workspace guide through locale keys. `tests/test_uxp_i18n.py` guards HTML and JS locale coverage, blocks visible-English connection-state checks, and is included in release smoke.
 
 **Pass 343 update (no standalone research file):**
 - Advanced E15 to batch 173 by wiring the remaining CEP Settings preferences shell through locale hooks: GPU checking text, backend log button label, preferences description, output-location options, theme label/options, and UI language choices.
