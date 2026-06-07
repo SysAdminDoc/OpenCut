@@ -43,6 +43,8 @@ def _dict_to_row(d: dict):
         rating=int(d.get("rating", 0) or 0),
         tags=list(d.get("tags") or []),
         transcript_excerpt=str(d.get("transcript_excerpt") or ""),
+        locator_id=str(d.get("locator_id") or ""),
+        host_locators=dict(d.get("host_locators") or {}),
     )
 
 
@@ -54,8 +56,8 @@ def route_build_sequence_index():
     Body params:
       sequence              dict   the JSON returned by ocGetSequenceInfo (required)
       transcript_segments   list   optional [{start,end,text}]
-      ratings               dict   optional {clip_path: int} 0..5
-      tags                  dict   optional {clip_path: [str]}
+      ratings               dict   optional {locator_id|clip_path: int} 0..5
+      tags                  dict   optional {locator_id|clip_path: [str]}
       excerpt_chars         int    cap on transcript_excerpt length (default 240)
     """
     try:
@@ -162,6 +164,18 @@ def route_sequence_index_info():
         return jsonify({
             "available": sequence_index.check_sequence_index_available(),
             "sort_keys": sorted(sequence_index.SORT_KEYS),
+            "host_locator_fields": [
+                "sequence_guid",
+                "sequence_name",
+                "track_type",
+                "track_index",
+                "clip_index",
+                "track_item_id",
+                "project_item_id",
+                "marker_index",
+                "marker_id",
+                "marker_time_s",
+            ],
             "install_hint": sequence_index.INSTALL_HINT,
         })
     except Exception as exc:  # pragma: no cover

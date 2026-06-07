@@ -33,6 +33,7 @@ transcript excerpt overlapping the clip's window.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
@@ -59,6 +60,8 @@ class IndexRow:
     rating: int = 0               # 0..5 (panel-side; 0 = unrated)
     tags: List[str] = field(default_factory=list)
     transcript_excerpt: str = ""  # joined text of overlapping transcript segments
+    locator_id: str = ""          # stable timeline-instance key for ratings/tags
+    host_locators: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -76,17 +79,21 @@ class IndexRow:
             "rating": int(self.rating),
             "tags": list(self.tags),
             "transcript_excerpt": self.transcript_excerpt,
+            "locator_id": self.locator_id,
+            "host_locators": dict(self.host_locators),
         }
 
 
 @dataclass
 class SequenceIndexResult:
     sequence_name: str = ""
+    sequence_guid: str = ""
     fps: float = 24.0
     duration_s: float = 0.0
     width: int = 0
     height: int = 0
     rows: List[IndexRow] = field(default_factory=list)
+    markers: List[dict[str, Any]] = field(default_factory=list)
     marker_count: int = 0
     total_rows: int = 0
 
@@ -94,12 +101,14 @@ class SequenceIndexResult:
     def __getitem__(self, key: str) -> Any:
         if key == "rows":
             return [r.to_dict() for r in self.rows]
+        if key == "markers":
+            return [dict(marker) for marker in self.markers]
         return getattr(self, key)
 
     def keys(self):
         return (
-            "sequence_name", "fps", "duration_s", "width", "height",
-            "rows", "marker_count", "total_rows",
+            "sequence_name", "sequence_guid", "fps", "duration_s", "width", "height",
+            "rows", "markers", "marker_count", "total_rows",
         )
 
     def __contains__(self, key: str) -> bool:
@@ -144,14 +153,27 @@ def _coerce_seq(payload: Any) -> dict:
     """
     if not isinstance(payload, dict):
         payload = {}
+    video_tracks = payload.get("videoTracks")
+    if not isinstance(video_tracks, list):
+        video_tracks = payload.get("video_tracks")
+    audio_tracks = payload.get("audioTracks")
+    if not isinstance(audio_tracks, list):
+        audio_tracks = payload.get("audio_tracks")
     return {
         "name": str(payload.get("name") or ""),
+        "sequence_guid": str(
+            payload.get("sequence_guid")
+            or payload.get("sequenceGuid")
+            or payload.get("guid")
+            or payload.get("id")
+            or ""
+        ),
         "duration": _safe_float(payload.get("duration"), 0.0),
-        "fps": _safe_float(payload.get("fps"), 24.0),
+        "fps": _safe_float(payload.get("fps", payload.get("framerate")), 24.0),
         "width": _safe_int(payload.get("width"), 0),
         "height": _safe_int(payload.get("height"), 0),
-        "videoTracks": payload.get("videoTracks") if isinstance(payload.get("videoTracks"), list) else [],
-        "audioTracks": payload.get("audioTracks") if isinstance(payload.get("audioTracks"), list) else [],
+        "videoTracks": video_tracks if isinstance(video_tracks, list) else [],
+        "audioTracks": audio_tracks if isinstance(audio_tracks, list) else [],
         "markers": payload.get("markers") if isinstance(payload.get("markers"), list) else [],
     }
 
@@ -197,6 +219,96 @@ def _transcript_excerpt_for(
     return joined
 
 
+def _host_locators(
+    *,
+    sequence_name: str,
+    sequence_guid: str,
+    track_type: str,
+    track_index: int,
+    clip_index: int,
+    name: str,
+    path: str,
+    start_s: float,
+    end_s: float,
+    track_item_id: str = "",
+    project_item_id: str = "",
+) -> dict[str, Any]:
+    return {
+        "schema": "opencut.sequence_index_locator",
+        "sequence_guid": sequence_guid,
+        "sequence_name": sequence_name,
+        "track_type": track_type,
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "name": name,
+        "path": path,
+        "start_s": start_s,
+        "end_s": end_s,
+        "track_item_id": track_item_id,
+        "project_item_id": project_item_id,
+    }
+
+
+def _locator_id(locators: dict[str, Any]) -> str:
+    parts = [
+        str(locators.get("sequence_guid", "")),
+        str(locators.get("sequence_name", "")),
+        str(locators.get("track_type", "")),
+        str(locators.get("track_index", 0)),
+        str(locators.get("clip_index", 0)),
+        f"{float(locators.get('start_s', 0.0) or 0.0):.3f}",
+        f"{float(locators.get('end_s', 0.0) or 0.0):.3f}",
+        str(locators.get("path", "")),
+        str(locators.get("name", "")),
+    ]
+    digest = hashlib.blake2b("|".join(parts).encode("utf-8"), digest_size=8).hexdigest()
+    return f"seqidx:{digest}"
+
+
+def _metadata_value(mapping: dict, locator_id: str, path: str, default: Any) -> Any:
+    if locator_id and locator_id in mapping:
+        return mapping[locator_id]
+    if path and path in mapping:
+        return mapping[path]
+    return default
+
+
+def _marker_host_locators(seq: dict[str, Any], marker: dict[str, Any], index: int, time_s: float) -> dict[str, Any]:
+    locators = dict(marker.get("host_locators") or {}) if isinstance(marker.get("host_locators"), dict) else {}
+    marker_id = marker.get("marker_id") or marker.get("id") or marker.get("guid") or marker.get("nodeId")
+    marker_type = str(marker.get("type") or marker.get("marker_type") or "")
+    locators.update({
+        "schema": "opencut.sequence_marker_locator",
+        "sequence_guid": seq["sequence_guid"],
+        "sequence_name": seq["name"],
+        "marker_index": index,
+        "marker_id": str(marker_id or ""),
+        "marker_time_s": time_s,
+        "marker_name": str(marker.get("name") or marker.get("label") or ""),
+        "marker_type": marker_type,
+    })
+    return locators
+
+
+def _normalise_markers(seq: dict[str, Any]) -> list[dict[str, Any]]:
+    markers: list[dict[str, Any]] = []
+    for index, marker in enumerate(seq["markers"]):
+        if not isinstance(marker, dict):
+            continue
+        time_s = _safe_float(marker.get("time", marker.get("start", marker.get("start_s"))), 0.0)
+        markers.append({
+            "time": time_s,
+            "name": str(marker.get("name") or marker.get("label") or ""),
+            "type": str(marker.get("type") or marker.get("marker_type") or ""),
+            "color": marker.get("color", marker.get("colorIndex")),
+            "duration": _safe_float(marker.get("duration", marker.get("duration_s")), 0.0),
+            "comment": str(marker.get("comment") or marker.get("comments") or ""),
+            "ticks": marker.get("ticks"),
+            "host_locators": _marker_host_locators(seq, marker, index, time_s),
+        })
+    return markers
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -215,9 +327,9 @@ def build_index(
         transcript_segments: Optional ``[{start, end, text}, ...]`` covering
             the source-timeline window. Each clip gets a ``transcript_excerpt``
             built from overlapping segments.
-        ratings: Optional ``{clip_path: int}`` — 0..5 star ratings keyed by
-            clip ``path``. Defaults to 0.
-        tags: Optional ``{clip_path: [str, ...]}`` — free-form tags per clip.
+        ratings: Optional ``{locator_id|clip_path: int}`` — 0..5 star ratings
+            keyed by sequence locator first, with clip ``path`` as fallback.
+        tags: Optional ``{locator_id|clip_path: [str, ...]}`` — free-form tags.
         excerpt_chars: Cap transcript excerpt length per clip (0 = no cap).
 
     Returns:
@@ -229,6 +341,7 @@ def build_index(
     tags = tags or {}
 
     rows: List[IndexRow] = []
+    markers = _normalise_markers(seq)
 
     for vt in seq["videoTracks"]:
         if not isinstance(vt, dict):
@@ -240,11 +353,30 @@ def build_index(
             start = _safe_float(clip.get("start"), 0.0)
             end = _safe_float(clip.get("end"), start)
             path = str(clip.get("path") or "")
+            name = str(clip.get("name") or "")
+            track_item_id = str(clip.get("nodeId") or clip.get("node_id") or clip.get("id") or clip.get("guid") or "")
+            project_item_id = str(
+                clip.get("projectItemId") or clip.get("project_item_id") or clip.get("projectNodeId") or ""
+            )
+            locators = _host_locators(
+                sequence_name=seq["name"],
+                sequence_guid=seq["sequence_guid"],
+                track_type="video",
+                track_index=ti,
+                clip_index=ci,
+                name=name,
+                path=path,
+                start_s=start,
+                end_s=end,
+                track_item_id=track_item_id,
+                project_item_id=project_item_id,
+            )
+            locator_id = _locator_id(locators)
             rows.append(IndexRow(
                 track_type="video",
                 track_index=ti,
                 clip_index=ci,
-                name=str(clip.get("name") or ""),
+                name=name,
                 path=path,
                 start_s=start,
                 end_s=end,
@@ -252,9 +384,11 @@ def build_index(
                 timecode_in=_seconds_to_timecode(start, fps),
                 timecode_out=_seconds_to_timecode(end, fps),
                 effects=[str(x) for x in (clip.get("effects") or []) if x],
-                rating=_safe_int(ratings.get(path), 0),
-                tags=list(tags.get(path) or []),
+                rating=_safe_int(_metadata_value(ratings, locator_id, path, 0), 0),
+                tags=list(_metadata_value(tags, locator_id, path, []) or []),
                 transcript_excerpt=_transcript_excerpt_for(start, end, transcript_segments, excerpt_chars),
+                locator_id=locator_id,
+                host_locators=locators,
             ))
 
     for at in seq["audioTracks"]:
@@ -267,11 +401,30 @@ def build_index(
             start = _safe_float(clip.get("start"), 0.0)
             end = _safe_float(clip.get("end"), start)
             path = str(clip.get("path") or "")
+            name = str(clip.get("name") or "")
+            track_item_id = str(clip.get("nodeId") or clip.get("node_id") or clip.get("id") or clip.get("guid") or "")
+            project_item_id = str(
+                clip.get("projectItemId") or clip.get("project_item_id") or clip.get("projectNodeId") or ""
+            )
+            locators = _host_locators(
+                sequence_name=seq["name"],
+                sequence_guid=seq["sequence_guid"],
+                track_type="audio",
+                track_index=ti,
+                clip_index=ci,
+                name=name,
+                path=path,
+                start_s=start,
+                end_s=end,
+                track_item_id=track_item_id,
+                project_item_id=project_item_id,
+            )
+            locator_id = _locator_id(locators)
             rows.append(IndexRow(
                 track_type="audio",
                 track_index=ti,
                 clip_index=ci,
-                name=str(clip.get("name") or ""),
+                name=name,
                 path=path,
                 start_s=start,
                 end_s=end,
@@ -279,19 +432,23 @@ def build_index(
                 timecode_in=_seconds_to_timecode(start, fps),
                 timecode_out=_seconds_to_timecode(end, fps),
                 effects=[],  # audio clips don't ship 'effects' in the JSX payload
-                rating=_safe_int(ratings.get(path), 0),
-                tags=list(tags.get(path) or []),
+                rating=_safe_int(_metadata_value(ratings, locator_id, path, 0), 0),
+                tags=list(_metadata_value(tags, locator_id, path, []) or []),
                 transcript_excerpt=_transcript_excerpt_for(start, end, transcript_segments, excerpt_chars),
+                locator_id=locator_id,
+                host_locators=locators,
             ))
 
     return SequenceIndexResult(
         sequence_name=seq["name"],
+        sequence_guid=seq["sequence_guid"],
         fps=fps,
         duration_s=seq["duration"],
         width=seq["width"],
         height=seq["height"],
         rows=rows,
-        marker_count=len(seq["markers"]),
+        markers=markers,
+        marker_count=len(markers),
         total_rows=len(rows),
     )
 
@@ -299,7 +456,7 @@ def build_index(
 # Sort + filter on top of a built index (so the panel can re-sort without
 # re-walking the sequence).
 SORT_KEYS = frozenset({
-    "track_type", "track_index", "clip_index", "name", "path",
+    "track_type", "track_index", "clip_index", "name", "path", "locator_id",
     "start_s", "end_s", "duration_s", "rating",
 })
 
@@ -346,6 +503,7 @@ def filter_rows(
             haystack = " ".join([
                 r.name.lower(),
                 r.path.lower(),
+                r.locator_id.lower(),
                 r.transcript_excerpt.lower(),
                 " ".join(t.lower() for t in r.tags),
                 " ".join(e.lower() for e in r.effects),

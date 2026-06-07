@@ -1273,6 +1273,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 53 | UXP caption-track snapshot read bridge | `extension/com.opencut.uxp/main.js`, UXP UDT harness manifests, UXP host-action tests | RA-47 could accept UXP caption-track snapshots, but the UXP bridge had no read-only caption-track action and still treated native captions as CEP-only write work. | Closed RA-48 by adding `ocGetCaptionTrackSnapshot`, distinct read failure reasons, diff-compatible snapshot segment payloads, and a safe-by-default UDT scenario while keeping caption creation/import unsupported in UXP. |
 | 2026-06-06 | Cycle 54 | CEP/hybrid caption write contract | `extension/com.opencut.panel/host/index.jsx`, `tests/jsx_mock.js`, UXP SRT Prep copy | Caption sidecars and UXP snapshots were ready, but the CEP caption writer returned only a thin success/count payload and the UXP handoff still described a generic caption flow. | Closed RA-49 by normalizing CEP caption import/write placement results, accepting sidecar-aware payloads, covering native/video/project/manual modes in the JSX mock, and naming the CEP `ocAddNativeCaptionTrack` handoff in UXP. |
 | 2026-06-06 | Cycle 55 | Caption metadata-loss regression fixtures | `tests/test_caption_language_confidence.py`, caption round-trip routes/core | RA-46 through RA-49 shipped the sidecar/diff/snapshot/write pieces, but the regression suite still lacked a consolidated proof that metadata loss and preservation boundaries stay explicit. | Closed RA-50 and RA-09 by adding fixtures for SRT-only metadata loss, sidecar-backed import/diff preservation, split/merge/insert/delete classifications, stale sidecar warnings, and no-sidecar degraded diff mode. |
+| 2026-06-06 | Cycle 56 | Sequence-index host locators | `opencut/core/sequence_index.py`, `opencut/routes/sequence_index_routes.py`, `tests/test_sequence_index.py`, Adobe UXP marker/sequence docs | Sequence Index ratings/tags were keyed by clip path only, CEP sequence info used snake-case track keys, and marker payloads were counted but not returned with reusable locator metadata. | Added stable `locator_id` and `host_locators` fields to Sequence Index rows, preserved them through filter route round-trips, made locator-keyed ratings/tags override path fallbacks, propagated sequence GUIDs, returned normalized marker locator payloads, and accepted CEP `video_tracks`/`audio_tracks`. |
 
 ### Research queries to run later
 
@@ -1293,17 +1294,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 56: Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
-2. Cycle 57: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-3. Cycle 58: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-4. Cycle 59: Continue E15 or another remaining release-trust gap after batch 154.
-5. Cycle 60: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+1. Cycle 57: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+2. Cycle 58: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+3. Cycle 59: Continue E15 or another remaining release-trust gap after batch 154.
+4. Cycle 60: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+5. Cycle 61: Inspect marker metadata workflows for remaining reusable host locator needs.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 55: Caption metadata-loss regression fixtures.
+Cycle 56: Sequence-index host locators.
 
 #### Current focus
 
@@ -1505,7 +1506,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 1. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
 2. Continue E15 rolling CEP i18n migration.
-3. Inspect sequence-index and marker metadata workflows for reusable host locator patterns.
+3. Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
 
 #### Unprocessed leads
 
