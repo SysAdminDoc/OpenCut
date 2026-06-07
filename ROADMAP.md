@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (160/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.272 / batch 160. |
+| E15 | CEP i18n migration | Rolling batches (161/~160+) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.273 / batch 161. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1308,6 +1308,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 70 | CEP i18n engine routing/live updates shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Settings Engine Routing and Live Updates Bridge cards still carried static English descriptions, refresh labels, idle hints, status labels, listener counts, and bridge action buttons despite their dynamic runtime states already using locale keys. | Advanced E15 to batch 158 by wiring those shell strings through `data-i18n*` hooks, reusing existing engine/WebSocket keys where possible; the drift gate now reports 2,333 keys, 2,288 consumers, 45 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 71 | CEP i18n audio/zoom and GPU recommendation shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Settings Audio & Zoom Defaults and GPU Recommendation controls still had bare-English labels, easing options, and action buttons while the surrounding settings shell was localized. | Advanced E15 to batch 159 by wiring those labels/options/buttons through `data-i18n` hooks and locale keys; the drift gate now reports 2,345 keys, 2,300 consumers, 45 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 72 | CEP i18n shortcut/About shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | The Settings keyboard shortcut reference and About links still rendered static English labels, and three shortcut keys were already in the locale file but unused by the static shell. | Advanced E15 to batch 160 by wiring the shortcut reference and About labels through locale hooks, reusing existing shortcut keys and reducing dead locale keys to 42; the drift gate now reports 2,349 keys, 2,307 consumers, 42 dead keys, and 0 missing keys. |
+| 2026-06-06 | Cycle 73 | CEP i18n duplicate dead-key cleanup | CEP `en.json`, `tests/test_i18n_drift.py` | The locale file still carried unused legacy keys for already-localized audio, captions, silence, and shortcut controls, plus repeated duplicate entries for GPU and settings labels. | Advanced E15 to cleanup batch 161 by removing six unused locale keys, pruning duplicate entries, and adding a locale-file duplicate-key guard; the drift gate now reports 2,343 keys, 2,307 consumers, 36 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1328,17 +1329,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 73: Continue E15 batch 161, dead-key cleanup, or another remaining panel-i18n cleanup.
-2. Cycle 74: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 75: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 76: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 77: Audit the next release-trust or UX debt item that live tests can close locally.
+1. Cycle 74: Continue E15 batch 162, dead-key cleanup, or another remaining panel-i18n cleanup.
+2. Cycle 75: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+3. Cycle 76: Revisit UXP cutover only after live UDT evidence is available.
+4. Cycle 77: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+5. Cycle 78: Audit the next release-trust or UX debt item that live tests can close locally.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 72: CEP i18n shortcut/About shell.
+Cycle 73: CEP i18n duplicate dead-key cleanup.
 
 #### Current focus
 
@@ -1395,11 +1396,11 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 160: Settings shortcut/About, Audio & Zoom
+E15 is advanced through cleanup batch 161: Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
 diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,349 keys, 2,307 consumers, 42 dead
+the drift gate reports 2,343 keys, 2,307 consumers, 36 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1426,7 +1427,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
   append-only edits preserve that work.
 - The Adobe tracker, label seeder, Release Full permissions, UXP manifest, and
   Dockerfile all have concrete local evidence for the active RA queue.
-- E15's live i18n linter passes with 42 dead keys and 0 missing keys; remaining
+- E15's live i18n linter passes with 36 dead keys and 0 missing keys; remaining
   work should target dead-key cleanup and scanner coverage, not broad missing-key
   repair.
 - The repo `.venv` can launch but lacks pytest/dev tooling; `bootstrap_check.py
@@ -1467,8 +1468,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - Ruff now treats `tomllib` as Python 3.11 stdlib, so import-order checks can
   surface package files that were clean under the older Python 3.9 parser
   target.
-- E15 batch 160 added Settings shortcut/About static-shell consumers and reduced
-  dead locale keys from 45 to 42 while keeping missing keys at 0.
+- E15 cleanup batch 161 removed unused audio/caption/silence/shortcut locale
+  keys, pruned duplicate entries, and reduced dead locale keys from 42 to 36
+  while keeping missing keys at 0.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1550,7 +1552,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue E15 rolling CEP i18n migration with batch 161 or dead-key cleanup.
+1. Continue E15 rolling CEP i18n migration with batch 162 or dead-key cleanup.
 2. Audit the next release-trust or UX debt item that live tests can close locally.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
