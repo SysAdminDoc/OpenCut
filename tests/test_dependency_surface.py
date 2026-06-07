@@ -131,7 +131,8 @@ def test_optional_dependency_security_floor_pins():
     assert deps["onnxruntime-gpu"] == "onnxruntime-gpu>=1.25,<2"
 
     torch_stack = _dep_names(extras["torch-stack"])
-    assert torch_stack["torch"] == "torch>=2.0"
+    assert torch_stack["torch"] == "torch>=2.6"
+    assert torch_stack["torchvision"] == "torchvision>=0.21"
     assert torch_stack["transformers"] == "transformers>=4.30"
 
 

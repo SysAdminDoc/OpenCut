@@ -4,11 +4,12 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-07 during the CEP i18n tab-panel and Audio Normalize shell pass.
+Last synced: 2026-06-07 during the CEP i18n Footage Search and PyTorch hardening pass.
 
 ## Execution Order
 
-- [ ] **E15 i18n migration rolling batches** - current detailed state: v4.279 / batch 167 with a zero-dead-key baseline and JS metadata-key scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
+- [ ] **Security hardening queue** - PyTorch deserialization hardening is closed; continue with safe CLIP cache deserialization, `os.startfile` allowlisting, or scripting-console resource limits from `RESEARCH_FEATURE_PLAN_2026-06-06.md`.
+- [ ] **E15 i18n migration rolling batches** - current detailed state: v4.280 / batch 168 with a zero-dead-key baseline and JS metadata-key scanner coverage. Continue removing high-impact bare-English CEP panel strings and expanding scanner coverage in guarded batches.
 - [ ] **External F202 macOS notarization live acceptance** - repository wiring exists; first live Apple acceptance needs configured GitHub secrets and a macOS release run.
 - [ ] **External F252 UXP WebView cutover** - repository scaffolding exists; final cutover needs captured in-Premiere UDT evidence.
 - [x] **Magic Clips downstream bundle reuse** - `magic_clips_manifest.json` now feeds shared timeline import records, `/social/upload` dry-run payloads, `/video/shorts-pipeline` handoff results, and `/timeline/magic-clips-import-plan`.

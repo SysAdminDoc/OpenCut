@@ -1303,6 +1303,25 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.loudness_range", "data-i18n"),
     ("audio.preview_10s", "data-i18n"),
     ("audio.normalize_preview_10s_title", "data-i18n-title"),
+    # One-hundred-sixty-eighth batch (Footage Search static shell).
+    ("search.library_title", "data-i18n"),
+    ("search.library_desc", "data-i18n"),
+    ("search.index_status_aria", "data-i18n-aria-label"),
+    ("search.index_label", "data-i18n"),
+    ("search.index_not_ready_pill", "data-i18n"),
+    ("search.indexed_label", "data-i18n"),
+    ("search.zero_files_indexed", "data-i18n"),
+    ("search.index_not_loaded", "data-i18n"),
+    ("search.index_all_project_clips", "data-i18n"),
+    ("search.clear_index", "data-i18n"),
+    ("search.index_empty_status", "data-i18n"),
+    ("search.search_for_label", "data-i18n"),
+    ("search.query_placeholder", "data-i18n-placeholder"),
+    ("search.max_results_label", "data-i18n"),
+    ("tabs.search", "data-i18n"),
+    ("search.results_aria", "data-i18n-aria-label"),
+    ("search.ready_kicker", "data-i18n"),
+    ("search.library_body", "data-i18n"),
 )
 
 
