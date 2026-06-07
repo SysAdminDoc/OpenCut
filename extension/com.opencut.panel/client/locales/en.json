@@ -626,6 +626,8 @@
   "engines.verb_is": "is",
   "favorites.title": "Favorites",
   "favorites.added": "Added to favorites: {name}",
+  "favorites.empty_body": "Pinned tools appear here once you save them.",
+  "favorites.empty_title": "No favorites pinned",
   "favorites.op_denoise": "Denoise Audio",
   "favorites.op_export": "Export Preset",
   "favorites.op_face_blur": "Face Blur",

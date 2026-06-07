@@ -2487,12 +2487,12 @@
                 : resolvedTone === "loading"
                     ? t("hint.tone_checking", "Checking")
                     : t("hint.tone_ready", "Ready when you are");
-        var classes = "hint hint-empty is-" + resolvedTone;
+        var classes = "hint hint-empty oc-empty-state oc-empty-state-inline is-" + resolvedTone;
         var role = resolvedTone === "error" ? "alert" : "status";
         var live = resolvedTone === "error" ? "assertive" : "polite";
         var accessibleText = [toneLabel, title, copy].filter(function (part) { return !!part; }).join(". ");
         var html = '<div class="' + classes + '" role="' + role + '" aria-live="' + live + '" aria-label="' + esc(accessibleText) + '">' +
-            '<span class="hint-kicker">' + esc(toneLabel) + '</span>' +
+            '<span class="hint-kicker oc-empty-state-kicker">' + esc(toneLabel) + '</span>' +
             '<span class="hint-title">' + esc(title || "") + '</span>';
         if (copy) {
             html += '<span class="hint-copy">' + esc(copy) + '</span>';
@@ -11152,8 +11152,12 @@
     function renderFavorites() {
         if (!el.favoritesItems || !el.favoritesBar) return;
         if (_favorites.length === 0) {
-            el.favoritesItems.innerHTML = "";
-            el.favoritesBar.classList.add("hidden");
+            el.favoritesBar.classList.remove("hidden");
+            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
+                t("favorites.empty_title", "No favorites pinned"),
+                t("favorites.empty_body", "Pinned tools appear here once you save them."),
+                "info"
+            );
             return;
         }
         el.favoritesBar.classList.remove("hidden");
@@ -11206,8 +11210,12 @@
             visibleCount++;
         }
         if (!visibleCount) {
-            el.favoritesItems.innerHTML = "";
-            el.favoritesBar.classList.add("hidden");
+            el.favoritesBar.classList.remove("hidden");
+            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
+                t("favorites.empty_title", "No favorites pinned"),
+                t("favorites.empty_body", "Pinned tools appear here once you save them."),
+                "info"
+            );
             return;
         }
         el.favoritesItems.innerHTML = "";

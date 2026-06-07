@@ -9104,6 +9104,37 @@ class TestI18nHardcodedMigration(unittest.TestCase):
                     f"main.js still contains bare-English showToast for {key!r}",
                 )
 
+    def test_cep_empty_state_surfaces_use_shared_component(self):
+        self.assertIn(
+            'var classes = "hint hint-empty oc-empty-state oc-empty-state-inline is-" + resolvedTone;',
+            self.js,
+        )
+        self.assertIn('class="hint-kicker oc-empty-state-kicker"', self.js)
+        self.assertIn('class="hint hint-empty oc-empty-state oc-empty-state-inline is-info"', self.html)
+        self.assertIn('class="hint-kicker oc-empty-state-kicker"', self.html)
+        for key in ("favorites.empty_title", "favorites.empty_body"):
+            with self.subTest(key=key):
+                self.assertIn(key, self.en, f"en.json missing empty-state key {key!r}")
+                self.assertTrue(self.en[key].strip(), f"en.json {key!r} has empty value")
+                self.assertRegex(
+                    self.js,
+                    re.compile(r't\(\s*["\']' + re.escape(key) + r'["\']'),
+                    f"main.js does not invoke t({key!r}, …)",
+                )
+        for target in (
+            "el.jobHistory.innerHTML = buildEmptyHintMarkup(",
+            "el.batchFileList.innerHTML = buildEmptyHintMarkup(",
+            "el.workflowStepList.innerHTML = buildEmptyHintMarkup(",
+            "res.innerHTML = buildEmptyHintMarkup(title, copy, tone || \"info\");",
+        ):
+            with self.subTest(target=target):
+                self.assertIn(target, self.js)
+        self.assertRegex(
+            self.js,
+            re.compile(r'if \(_favorites\.length === 0\) \{[\s\S]{0,260}buildEmptyHintMarkup\('),
+            "Favorites empty state should render shared empty-state markup instead of hiding the bar",
+        )
+
     def test_workspace_metadata_routes_through_t(self):
         for key, banned_re in WORKSPACE_METADATA_CALLS:
             with self.subTest(key=key):
