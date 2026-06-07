@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Timeline Locale
+
+- Expanded the partial Spanish UXP locale pack across all Timeline workspace keys, including sequence write-back, OTIO export, beat-marker, batch-export, batch-rename, smart-bin, SRT prep, and generated readiness-summary states.
+- Added guard coverage requiring every `uxp.timeline.*` key to be present in the Spanish pack while keeping Captions and Video keys as explicit English fallback samples.
+
 ### Changed - UXP Spanish Search Locale
 
 - Expanded the partial Spanish UXP locale pack across all Search workspace keys, including library indexing, semantic search, NLP command, result-card, and index-clear runtime states.
