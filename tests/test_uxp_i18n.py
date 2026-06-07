@@ -272,6 +272,11 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.deliverables.runtime.deliverable_ready_output",
         "uxp.deliverables.runtime.generated_csv_with_gaps",
         "uxp.deliverables.runtime.package_ready_status_many",
+        "uxp.agent.runtime.plan_ready",
+        "uxp.agent.runtime.reviewed_status",
+        "uxp.agent.runtime.enhance_plan_ready",
+        "uxp.agent.runtime.sequence_index_built",
+        "uxp.agent.runtime.mcp_bridge_info",
         "uxp.video.runtime.matching_color_grading",
         "uxp.video.runtime.color_match_complete_output",
         "uxp.video.runtime.auto_zoom_complete_output",
@@ -454,6 +459,43 @@ def test_uxp_deliverables_runtime_feedback_uses_locale_helpers():
     assert "UIController.showToast(`Generated ${generated} CSV" not in combined
     assert "Sequence ready" in _locale()["uxp.deliverables.runtime.sequence_ready_status"]
     assert "Generated" in _locale()["uxp.deliverables.runtime.generated_csv_with_gaps"]
+
+
+def test_uxp_agent_runtime_feedback_uses_locale_helpers():
+    js = _js()
+    agent_js = js[
+        js.index("function initAgentTab")
+        : js.index("// =============================================================\n// F236 FCC")
+    ]
+
+    assert 'li.textContent = "No steps matched' not in agent_js
+    assert 'const matched = review.matched ? "Matched" : "Drift detected";' not in agent_js
+    assert "summary.textContent = `${matched} (drift score" not in agent_js
+    assert "Suggested retry: ${review.suggested_retry.label}" not in agent_js
+    assert 'setStatus("agentChatStatus", "Enter an intent first.' not in agent_js
+    assert 'setStatus("agentChatStatus", "Building plan' not in agent_js
+    assert '"Plan failed: " + (resp?.error' not in agent_js
+    assert "renderPlan(resp.plan)" not in agent_js
+    assert "renderReview(resp)" not in agent_js
+    assert 'setStatus("agentChatStatus", "Run Plan first' not in agent_js
+    assert 'setStatus("agentChatStatus", "Running self-review' not in agent_js
+    assert 'setStatus("agentChatStatus", "Cleared.' not in agent_js
+    assert 'setStatus("enhanceStatus", "Enter a clip path first.' not in agent_js
+    assert 'setStatus("enhanceStatus", "Failed: " + (resp?.error' not in agent_js
+    assert "resp.steps || []" not in agent_js
+    assert 'setStatus("variantsStatus", "End must be greater than start.' not in agent_js
+    assert "Generated ${variants.length} variant" not in agent_js
+    assert 'setStatus("sequenceIndexStatus", "Reading active sequence' not in agent_js
+    assert '"No active sequence: " + (sequence?.error' not in agent_js
+    assert "resp.sequence_name || \"Sequence\"" not in agent_js
+    assert "info?.available" not in agent_js
+    assert "info.version" not in agent_js
+    assert "resp.tools || []" not in agent_js
+    assert "const data = responseData(resp);" in agent_js
+    assert "renderPlan(data.plan)" in agent_js
+    assert "renderReview(data)" in agent_js
+    assert "Plan:" in _locale()["uxp.agent.runtime.plan_ready"]
+    assert "Index built" in _locale()["uxp.agent.runtime.sequence_index_built"]
 
 
 def test_uxp_video_core_runtime_feedback_uses_locale_helpers():
