@@ -456,99 +456,99 @@
       <div class="oc-tab-panel" id="tab-audio" role="tabpanel" aria-labelledby="tabBtnAudio">
 
         <div class="oc-field-row oc-mb-sm">
-          <label class="oc-label" for="clipPathAudio">Clip Path</label>
+          <label class="oc-label" for="clipPathAudio" data-i18n="uxp.audio.clip_path">Clip Path</label>
           <div class="oc-input-group">
-            <input type="text" class="oc-input" id="clipPathAudio" placeholder="Select clip…">
-            <button type="button" class="oc-btn oc-btn-secondary" id="browseClipAudio">Browse</button>
+            <input type="text" class="oc-input" id="clipPathAudio" placeholder="Select clip…" data-i18n-placeholder="uxp.audio.select_clip_placeholder">
+            <button type="button" class="oc-btn oc-btn-secondary" id="browseClipAudio" data-i18n="common.browse">Browse</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Denoise</div>
+        <div class="oc-section-title" data-i18n="uxp.audio.denoise">Denoise</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="denoiseBody">
-            <span>AI Noise Reduction</span>
+            <span data-i18n="uxp.audio.ai_noise_reduction">AI Noise Reduction</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="denoiseBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="denoiseMethod">Method</label>
+              <label class="oc-label" for="denoiseMethod" data-i18n="uxp.audio.method">Method</label>
               <!-- Backend /audio/denoise allowlist is afftdn|highpass|gate.
                    Older options (noisereduce/rnnoise/spectral) were silently
                    coerced to afftdn, so all three did identical work. -->
               <select class="oc-select" id="denoiseMethod">
-                <option value="afftdn">FFT denoise (recommended)</option>
-                <option value="highpass">Highpass + lowpass band-limit</option>
-                <option value="gate">Noise gate</option>
+                <option value="afftdn" data-i18n="uxp.audio.denoise_afftdn">FFT denoise (recommended)</option>
+                <option value="highpass" data-i18n="uxp.audio.denoise_highpass">Highpass + lowpass band-limit</option>
+                <option value="gate" data-i18n="uxp.audio.denoise_gate">Noise gate</option>
               </select>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="denoiseStrength">Strength</label>
+              <label class="oc-label" for="denoiseStrength" data-i18n="uxp.audio.strength">Strength</label>
               <input type="range" class="oc-slider" id="denoiseStrength" min="0" max="100" value="75" step="1">
               <span class="oc-slider-val" id="denoiseStrengthVal">75%</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runDenoiseBtn">Apply Denoise</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runDenoiseBtn" data-i18n="uxp.audio.apply_denoise">Apply Denoise</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Normalize</div>
+        <div class="oc-section-title" data-i18n="uxp.audio.normalize">Normalize</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="normalizeBody">
-            <span>Loudness Normalization</span>
+            <span data-i18n="uxp.audio.loudness_normalization">Loudness Normalization</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="normalizeBody">
             <div class="oc-slider-row">
-              <label class="oc-label" for="targetLufs">Target LUFS</label>
+              <label class="oc-label" for="targetLufs" data-i18n="uxp.audio.target_lufs">Target LUFS</label>
               <input type="range" class="oc-slider" id="targetLufs" min="-23" max="-9" value="-14" step="0.5">
               <span class="oc-slider-val" id="targetLufsVal">-14 LUFS</span>
             </div>
             <div class="oc-checkbox-row">
               <label class="oc-checkbox-label">
-                <input type="checkbox" id="normalizeTruePeak" checked> Limit True Peak (-1 dBTP)
+                <input type="checkbox" id="normalizeTruePeak" checked> <span data-i18n="uxp.audio.limit_true_peak">Limit True Peak (-1 dBTP)</span>
               </label>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runNormalizeBtn">Normalize</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runNormalizeBtn" data-i18n="uxp.audio.normalize">Normalize</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Loudness Match</div>
+        <div class="oc-section-title" data-i18n="uxp.audio.loudness_match">Loudness Match</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="loudnessBody">
-            <span>Match to Reference</span>
+            <span data-i18n="uxp.audio.match_to_reference">Match to Reference</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="loudnessBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="refClipLoudness">Reference Clip</label>
+              <label class="oc-label" for="refClipLoudness" data-i18n="uxp.audio.reference_clip">Reference Clip</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="refClipLoudness" placeholder="Reference audio file…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseRefLoudness">Browse</button>
+                <input type="text" class="oc-input" id="refClipLoudness" placeholder="Reference audio file…" data-i18n-placeholder="uxp.audio.reference_audio_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseRefLoudness" data-i18n="common.browse">Browse</button>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runLoudnessBtn">Match Loudness</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runLoudnessBtn" data-i18n="uxp.audio.match_loudness">Match Loudness</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Beat Markers</div>
+        <div class="oc-section-title" data-i18n="uxp.audio.beat_markers">Beat Markers</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="beatBody">
-            <span>Beat Detection</span>
+            <span data-i18n="uxp.audio.beat_detection">Beat Detection</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="beatBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="beatTrackPath">Audio Track</label>
+              <label class="oc-label" for="beatTrackPath" data-i18n="uxp.audio.audio_track">Audio Track</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="beatTrackPath" placeholder="Music file…">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseBeatTrack">Browse</button>
+                <input type="text" class="oc-input" id="beatTrackPath" placeholder="Music file…" data-i18n-placeholder="uxp.audio.music_file_placeholder">
+                <button type="button" class="oc-btn oc-btn-secondary" id="browseBeatTrack" data-i18n="common.browse">Browse</button>
               </div>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="beatSensitivity">Sensitivity</label>
+              <label class="oc-label" for="beatSensitivity" data-i18n="uxp.audio.sensitivity">Sensitivity</label>
               <input type="range" class="oc-slider" id="beatSensitivity" min="0" max="100" value="60" step="1">
               <span class="oc-slider-val" id="beatSensitivityVal">60%</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBeatMarkersBtn">Detect Beats &amp; Add Markers</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBeatMarkersBtn" data-i18n="uxp.audio.detect_beats_add_markers">Detect Beats &amp; Add Markers</button>
           </div>
         </div>
       </div>
