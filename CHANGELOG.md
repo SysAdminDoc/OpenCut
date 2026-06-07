@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - UXP Filesystem Permission
+
+- Closed RA-11 by narrowing the live UXP manifest and dormant WebView scaffold to picker-scoped `localFileSystem: "request"` permissions and adding static guards against direct file APIs that would require broad access.
+
 ### Changed - UXP External Launch Permission
 
 - Closed RA-13 by declaring HTTPS-only `launchProcess` permissions in the live UXP manifest and dormant WebView scaffold, normalizing OAuth authorization URLs before browser launch, and adding static guards against broad schemes or file launches.
