@@ -36,7 +36,7 @@ agent (F143) makes these surfaces more exposed.
 
 1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139`
-3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784`
+3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784` -- closed 2026-06-07
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
 5. **P1 -- Expression engine per-frame thread elimination** -- 300 threads/10s of video
 6. **P1 -- Scripting console code length limit** -- no cap on exec'd code size
@@ -390,6 +390,9 @@ Cache files at `~/.opencut/clip_cache/clip_*.pkl` use raw `pickle.load()`. If an
 
 ### HIGH: `os.startfile()` Blocklist Incomplete
 
+**Status:** Closed 2026-06-07 by replacing direct-open blocklisting with a safe
+media/document extension allowlist while preserving reveal mode.
+
 **File:** `opencut/routes/system.py:784`
 The `/system/open-path` open mode blocks common executable extensions but misses dangerous Windows file types: `.msc`, `.cpl`, `.application`, `.appref-ms`, `.url`, `.library-ms`, `.settingcontent-ms` (CVE-2018-8414 vector).
 
@@ -501,12 +504,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: CLIP cache uses `numpy.savez`/`numpy.load` or `RestrictedUnpickler`
   - Verify: `grep -rn "pickle.load" opencut/`
 
-- [ ] P0 - **Switch `os.startfile()` from blocklist to allowlist**
+- [x] P0 - **Switch `os.startfile()` from blocklist to allowlist**
   - Why: Blocklist misses dangerous Windows file types (.msc, .cpl, .settingcontent-ms, etc.)
-  - Evidence: `opencut/routes/system.py:784`; CVE-2018-8414 vector via `.settingcontent-ms`
+  - Evidence: `opencut/routes/system.py`; CVE-2018-8414 vector via `.settingcontent-ms`
   - Touches: `opencut/routes/system.py`
   - Acceptance: `/system/open-path` uses allowlist of media/document extensions only
-  - Verify: Attempt to open `.msc` file via API, verify rejection
+  - Verify: focused open-path tests reject `.msc`, `.cpl`, `.settingcontent-ms`, and `.url`
 
 ### Phase 2: Performance & Sandbox Hardening (P1)
 
@@ -613,7 +616,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 |---|------|--------|--------|
 | 1 | Fix `torch.load(weights_only=False)` | Shipped 2026-06-07 | Closed by safe quantization loads plus Torch/TorchVision advisory floors |
 | 2 | Add code length limit to scripting console | S (5 lines) | Prevents resource exhaustion |
-| 3 | Switch `os.startfile()` to allowlist | S (replace blocklist dict) | Closes extension-bypass vector |
+| 3 | Switch `os.startfile()` to allowlist | Shipped 2026-06-07 | Closed extension-bypass vector |
 | 4 | Fix `send_file()` path confinement | S (add `is_path_within_any()` check) | Closes file-serve bypass |
 | 5 | Replace `pickle.load` with numpy | S-M (rewrite cache layer) | Closes cache-poisoning RCE |
 | 6 | Defer cleanup thread start | S (threading.Event guard) | Cleaner test/CLI imports |
