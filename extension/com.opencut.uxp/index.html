@@ -403,50 +403,50 @@
         </div>
 
         <!-- F236 FCC caption display settings (effective 2026-08-17). -->
-        <div class="oc-section-title">Caption Display Settings (FCC)</div>
+        <div class="oc-section-title" data-i18n="uxp.fcc.caption_display_settings">Caption Display Settings (FCC)</div>
         <div class="oc-card" id="captionDisplaySettingsCard">
           <p class="oc-hint" id="fccComplianceNotice">
-            Per FCC 47 CFR § 79.103 (effective 2026-08-17), users must be able to readily access caption display controls. Pick a preset or override individual tokens.
-            <a href="https://www.ecfr.gov/current/title-47/section-79.103" target="_blank" rel="noopener">FCC source</a>
+            <span data-i18n="uxp.fcc.compliance_notice_prefix">Per FCC 47 CFR section 79.103 (effective </span><span id="fccComplianceDate">2026-08-17</span><span data-i18n="uxp.fcc.compliance_notice_suffix">), users must be able to readily access caption display controls. Pick a preset or override individual tokens.</span>
+            <a href="https://www.ecfr.gov/current/title-47/section-79.103" target="_blank" rel="noopener" data-i18n="uxp.fcc.source_link">FCC source</a>
           </p>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispFont">Font</label>
+            <label class="oc-label" for="capDispFont" data-i18n="uxp.fcc.font">Font</label>
             <select class="oc-input" id="capDispFont"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispSize">Size</label>
+            <label class="oc-label" for="capDispSize" data-i18n="uxp.fcc.size">Size</label>
             <select class="oc-input" id="capDispSize"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispTextColor">Text Color</label>
+            <label class="oc-label" for="capDispTextColor" data-i18n="uxp.fcc.text_color">Text Color</label>
             <select class="oc-input" id="capDispTextColor"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispTextOpacity">Text Opacity</label>
+            <label class="oc-label" for="capDispTextOpacity" data-i18n="uxp.fcc.text_opacity">Text Opacity</label>
             <select class="oc-input" id="capDispTextOpacity"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispBgColor">Background Color</label>
+            <label class="oc-label" for="capDispBgColor" data-i18n="uxp.fcc.background_color">Background Color</label>
             <select class="oc-input" id="capDispBgColor"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispBgOpacity">Background Opacity</label>
+            <label class="oc-label" for="capDispBgOpacity" data-i18n="uxp.fcc.background_opacity">Background Opacity</label>
             <select class="oc-input" id="capDispBgOpacity"></select>
           </div>
           <div class="oc-field-row">
-            <label class="oc-label" for="capDispEdge">Edge Style</label>
+            <label class="oc-label" for="capDispEdge" data-i18n="uxp.fcc.edge_style">Edge Style</label>
             <select class="oc-input" id="capDispEdge"></select>
           </div>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-primary" id="capDispPreviewBtn">Preview</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="capDispResetBtn">Reset Defaults</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="capDispPreviewBtn" data-i18n="uxp.fcc.preview">Preview</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="capDispResetBtn" data-i18n="uxp.fcc.reset_defaults">Reset Defaults</button>
           </div>
-          <div class="oc-status-line" id="capDispStatus" role="status" aria-live="polite">Loading tokens…</div>
+          <div class="oc-status-line" id="capDispStatus" role="status" aria-live="polite" data-i18n="uxp.fcc.loading_tokens">Loading tokens...</div>
           <!-- Live preview rendered via the /captions/display-settings/preview payload. -->
           <div class="oc-card oc-card--nested" id="capDispPreviewBox" hidden>
-            <div class="oc-card-header"><span>Live Preview</span></div>
+            <div class="oc-card-header"><span data-i18n="uxp.fcc.live_preview">Live Preview</span></div>
             <div class="oc-caption-preview-area" id="capDispPreviewArea">
-              <span class="oc-caption-preview-sample" id="capDispPreviewSample">Caption preview</span>
+              <span class="oc-caption-preview-sample" id="capDispPreviewSample" data-i18n="uxp.fcc.caption_preview_sample">Caption preview</span>
             </div>
           </div>
         </div>

@@ -66,8 +66,23 @@ class TestCaptionDisplaySettingsHtml(unittest.TestCase):
         # The compliance date must be discoverable. Hard-coded string
         # match here; the JS module will overlay the date from the
         # backend's compliance_date field at runtime if it changes.
+        self.assertIn('id="fccComplianceDate"', self.html)
         self.assertIn("2026-08-17", self.html)
         self.assertIn("FCC", self.html)
+
+    def test_static_shell_uses_i18n_hooks(self):
+        for key in (
+            "uxp.fcc.caption_display_settings",
+            "uxp.fcc.compliance_notice_prefix",
+            "uxp.fcc.source_link",
+            "uxp.fcc.font",
+            "uxp.fcc.text_color",
+            "uxp.fcc.preview",
+            "uxp.fcc.loading_tokens",
+            "uxp.fcc.live_preview",
+        ):
+            with self.subTest(key=key):
+                self.assertIn(key, self.html)
 
 
 class TestCaptionDisplaySettingsJs(unittest.TestCase):
@@ -85,10 +100,22 @@ class TestCaptionDisplaySettingsJs(unittest.TestCase):
         self.assertIn("/captions/display-settings/tokens", self.js)
         self.assertIn("/captions/display-settings/preview", self.js)
 
+    def test_dynamic_status_uses_i18n_keys(self):
+        for key in (
+            "uxp.fcc.rendering_preview",
+            "uxp.fcc.preview_failed",
+            "uxp.fcc.preview_updated",
+            "uxp.fcc.reset_defaults_status",
+            "uxp.fcc.defaults_loaded",
+            "uxp.fcc.token_schema_failed",
+        ):
+            with self.subTest(key=key):
+                self.assertIn(f'setStatus("{key}"', self.js)
+        self.assertIn('document.getElementById("fccComplianceDate")', self.js)
+
     def test_preview_button_handler_wired(self):
         # Look for the addEventListener pair on capDispPreviewBtn /
         # capDispResetBtn within 200 chars.
-        import re
         self.assertRegex(
             self.js,
             r'"capDispPreviewBtn"\)\?\.addEventListener',
@@ -107,7 +134,7 @@ class TestCaptionDisplaySettingsCss(unittest.TestCase):
         cls.css = UXP_CSS.read_text(encoding="utf-8", errors="replace")
 
     def test_braces_balanced(self):
-        opens = cls_open = self.css.count("{")
+        opens = self.css.count("{")
         closes = self.css.count("}")
         self.assertEqual(opens, closes, f"Unbalanced braces in style.css: {opens} vs {closes}")
 
