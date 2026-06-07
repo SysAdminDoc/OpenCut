@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Settings Generated Locale
+
+- Expanded the partial Spanish UXP locale pack across the remaining Settings generated/status keys, including engine-routing summaries, live-update bridge states, migration-dashboard empties/errors, keyboard actions, and pinned-engine counts.
+- Added guard coverage requiring every `uxp.settings.*` key to be present in the Spanish pack while keeping deeper Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Workspace Guide Locale
 
 - Expanded the partial Spanish UXP locale pack across all workspace guide, workspace meta, shared runtime, and UXP status keys.

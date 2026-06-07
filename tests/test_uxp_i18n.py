@@ -110,7 +110,7 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     spanish = _locale(UXP_ES_LOCALE)
 
     assert UXP_ES_LOCALE.exists()
-    assert 360 <= len(spanish) < len(english)
+    assert 410 <= len(spanish) < len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert spanish["conn.online"] == "En linea"
     assert spanish["uxp.tabs.cut"] == "Corte"
@@ -142,6 +142,10 @@ def test_uxp_partial_spanish_locale_pack_uses_english_fallback():
     assert spanish["uxp.settings.engine_routing"] == "Enrutamiento de motores"
     assert spanish["uxp.settings.live_updates_bridge"] == "Puente de actualizaciones en vivo"
     assert spanish["uxp.settings.migration_risk"] == "Riesgo de migracion"
+    assert sorted(key for key in english if key.startswith("uxp.settings.") and key not in spanish) == []
+    assert spanish["uxp.settings.engine_routing_auto_healthy"].startswith("El enrutamiento de motores esta saludable.")
+    assert spanish["uxp.settings.generate_captions"] == "Generar subtitulos"
+    assert spanish["uxp.settings.pinned_title_one"] == "{count} dominio tiene una preferencia de motor fijada."
     assert english["uxp.video.clip_path"] == "Clip Path"
     assert "uxp.video.clip_path" not in spanish
 
