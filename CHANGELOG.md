@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Video Locale
+
+- Expanded the Spanish UXP locale pack across all Video workspace keys, including color match, auto-zoom, multicam, B-roll, depth, emotion, upscale, scenes, style transfer, Shorts, social upload, and Video runtime feedback states.
+- Tightened guard coverage so `locales/es.json` now matches the full current UXP English catalogue with placeholder parity instead of relying on English fallback samples.
+
 ### Changed - UXP Spanish Captions Locale
 
 - Expanded the partial Spanish UXP locale pack across all Captions workspace keys, including transcription setup, model/language/style selectors, chapter generation, repeat detection, result review, and Captions runtime feedback states.
