@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Captions, Audio, and NLP Utility Shell
+
+- Advanced E15 to batch 172 by localizing Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders and MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders.
+- The live drift report now shows 2,543 keys, 2,543 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - Lazy Deferred Cleanup Worker
 
 - Deferred the `opencut-temp-cleanup` daemon until the first scheduled temp-file cleanup so importing `opencut.helpers` no longer starts a background thread.
