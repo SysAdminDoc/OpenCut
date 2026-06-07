@@ -84,12 +84,18 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 45
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 90
     assert {
         "common.skip_to_main",
         "conn.backend_status",
         "nav.feature_tabs",
         "processing.progress",
+        "uxp.cut.clip_input",
+        "uxp.cut.clip_path_placeholder",
+        "uxp.cut.detect_auto",
+        "uxp.cut.filler_detection_backend",
+        "uxp.cut.detect_remove_fillers",
+        "uxp.cut.apply_cuts_to_timeline",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",

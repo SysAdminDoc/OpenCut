@@ -123,107 +123,107 @@
       <!-- ==================== CUT & CLEAN TAB ==================== -->
       <div class="oc-tab-panel active" id="tab-cut" role="tabpanel" aria-labelledby="tabBtnCut">
 
-        <div class="oc-section-title">Clip Input</div>
+        <div class="oc-section-title" data-i18n="uxp.cut.clip_input">Clip Input</div>
         <div class="oc-card">
           <div class="oc-field-row">
-            <label class="oc-label" for="clipPathCut">Clip Path</label>
+            <label class="oc-label" for="clipPathCut" data-i18n="uxp.cut.clip_path">Clip Path</label>
             <div class="oc-input-group">
-              <input type="text" class="oc-input" id="clipPathCut" placeholder="Paste a clip path or browse media…">
-              <button type="button" class="oc-btn oc-btn-secondary" id="browseClipCut">Browse</button>
+              <input type="text" class="oc-input" id="clipPathCut" placeholder="Paste a clip path or browse media…" data-i18n-placeholder="uxp.cut.clip_path_placeholder">
+              <button type="button" class="oc-btn oc-btn-secondary" id="browseClipCut" data-i18n="common.browse">Browse</button>
             </div>
           </div>
         </div>
 
-        <div class="oc-section-title">Silence Removal</div>
+        <div class="oc-section-title" data-i18n="uxp.cut.silence_removal">Silence Removal</div>
         <div class="oc-card" id="silenceCard">
           <div class="oc-card-header collapsible" data-target="silenceBody">
-            <span>Silence Detection</span>
+            <span data-i18n="uxp.cut.silence_detection">Silence Detection</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="silenceBody">
             <div class="oc-slider-row">
-              <label class="oc-label" for="silenceThreshold">Threshold (dB)</label>
+              <label class="oc-label" for="silenceThreshold" data-i18n="uxp.cut.threshold_db">Threshold (dB)</label>
               <input type="range" class="oc-slider" id="silenceThreshold" min="-60" max="-10" value="-35" step="1">
               <span class="oc-slider-val" id="silenceThresholdVal">-35 dB</span>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="minSilence">Min Silence (s)</label>
+              <label class="oc-label" for="minSilence" data-i18n="uxp.cut.min_silence_s">Min Silence (s)</label>
               <input type="range" class="oc-slider" id="minSilence" min="0.1" max="3.0" value="0.5" step="0.05">
               <span class="oc-slider-val" id="minSilenceVal">0.50 s</span>
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="silencePadding">Padding (ms)</label>
+              <label class="oc-label" for="silencePadding" data-i18n="uxp.cut.padding_ms">Padding (ms)</label>
               <input type="range" class="oc-slider" id="silencePadding" min="0" max="500" value="80" step="10">
               <span class="oc-slider-val" id="silencePaddingVal">80 ms</span>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="silenceDetectMethod">Detection</label>
-              <select class="oc-select" id="silenceDetectMethod" aria-label="Silence detection method">
-                <option value="auto" selected>Auto (AI + fallback)</option>
-                <option value="vad">Silero VAD (neural)</option>
-                <option value="energy">Energy threshold</option>
+              <label class="oc-label" for="silenceDetectMethod" data-i18n="uxp.cut.detection">Detection</label>
+              <select class="oc-select" id="silenceDetectMethod" aria-label="Silence detection method" data-i18n-aria-label="uxp.cut.silence_detection_method">
+                <option value="auto" selected data-i18n="uxp.cut.detect_auto">Auto (AI + fallback)</option>
+                <option value="vad" data-i18n="uxp.cut.detect_vad">Silero VAD (neural)</option>
+                <option value="energy" data-i18n="uxp.cut.detect_energy">Energy threshold</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="silenceMode">Output Mode</label>
+              <label class="oc-label" for="silenceMode" data-i18n="uxp.cut.output_mode">Output Mode</label>
               <select class="oc-select" id="silenceMode">
-                <option value="remove">Remove Silences</option>
-                <option value="markers">Generate Markers Only</option>
-                <option value="chapter">Chapter Cuts</option>
+                <option value="remove" data-i18n="uxp.cut.remove_silences">Remove Silences</option>
+                <option value="markers" data-i18n="uxp.cut.markers_only">Generate Markers Only</option>
+                <option value="chapter" data-i18n="uxp.cut.chapter_cuts">Chapter Cuts</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSilenceBtn">Remove Silence</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSilenceBtn" data-i18n="uxp.cut.remove_silence">Remove Silence</button>
           </div>
         </div>
 
-        <div class="oc-section-title">Filler Word Detection</div>
+        <div class="oc-section-title" data-i18n="uxp.cut.filler_word_detection">Filler Word Detection</div>
         <div class="oc-card" id="fillerCard">
           <div class="oc-card-header collapsible" data-target="fillerBody">
-            <span>Filler Words</span>
+            <span data-i18n="uxp.cut.filler_words">Filler Words</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="fillerBody">
             <div class="oc-field-row">
-              <label class="oc-label" for="fillerBackend">Backend</label>
-              <select class="oc-select" id="fillerBackend" aria-label="Filler detection backend">
-                <option value="whisper" selected>Whisper (fast)</option>
-                <option value="crisper">CrisperWhisper (accurate)</option>
+              <label class="oc-label" for="fillerBackend" data-i18n="uxp.cut.filler_backend">Backend</label>
+              <select class="oc-select" id="fillerBackend" aria-label="Filler detection backend" data-i18n-aria-label="uxp.cut.filler_detection_backend">
+                <option value="whisper" selected data-i18n="uxp.cut.backend_whisper">Whisper (fast)</option>
+                <option value="crisper" data-i18n="uxp.cut.backend_crisper">CrisperWhisper (accurate)</option>
               </select>
             </div>
             <div class="oc-field-row">
-              <label class="oc-label" for="fillerWords">Words to remove</label>
+              <label class="oc-label" for="fillerWords" data-i18n="uxp.cut.words_to_remove">Words to remove</label>
               <input type="text" class="oc-input" id="fillerWords" value="um, uh, like, you know, so, actually">
             </div>
             <div class="oc-slider-row">
-              <label class="oc-label" for="fillerPadding">Clip Padding (ms)</label>
+              <label class="oc-label" for="fillerPadding" data-i18n="uxp.cut.clip_padding_ms">Clip Padding (ms)</label>
               <input type="range" class="oc-slider" id="fillerPadding" min="0" max="300" value="50" step="10">
               <span class="oc-slider-val" id="fillerPaddingVal">50 ms</span>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFillerBtn">Detect &amp; Remove Fillers</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFillerBtn" data-i18n="uxp.cut.detect_remove_fillers">Detect &amp; Remove Fillers</button>
           </div>
         </div>
 
         <div class="oc-result-area hidden" id="cutResultArea" tabindex="-1" aria-live="polite">
           <div class="oc-result-header-row">
-            <div class="oc-result-header">Latest Cut Pass</div>
-            <div class="oc-result-summary" id="cutResultSummary">Ready for timeline review</div>
+            <div class="oc-result-header" data-i18n="uxp.cut.latest_cut_pass">Latest Cut Pass</div>
+            <div class="oc-result-summary" id="cutResultSummary" data-i18n="uxp.cut.ready_for_timeline_review">Ready for timeline review</div>
           </div>
-          <div class="oc-result-insight-grid oc-result-insight-grid--compact" aria-label="Cut pass details">
+          <div class="oc-result-insight-grid oc-result-insight-grid--compact" aria-label="Cut pass details" data-i18n-aria-label="uxp.cut.pass_details">
             <div class="oc-result-insight">
-              <span class="oc-result-insight-label">Source</span>
-              <span class="oc-result-insight-value" id="cutResultSourceValue">Awaiting output</span>
+              <span class="oc-result-insight-label" data-i18n="uxp.cut.source">Source</span>
+              <span class="oc-result-insight-value" id="cutResultSourceValue" data-i18n="uxp.cut.awaiting_output">Awaiting output</span>
             </div>
             <div class="oc-result-insight">
-              <span class="oc-result-insight-label">Removed</span>
+              <span class="oc-result-insight-label" data-i18n="uxp.cut.removed">Removed</span>
               <span class="oc-result-insight-value" id="cutResultRemovedValue">0 s</span>
             </div>
             <div class="oc-result-insight">
-              <span class="oc-result-insight-label">Next</span>
-              <span class="oc-result-insight-value" id="cutResultNextValue">Apply latest cuts</span>
+              <span class="oc-result-insight-label" data-i18n="uxp.cut.next">Next</span>
+              <span class="oc-result-insight-value" id="cutResultNextValue" data-i18n="uxp.cut.apply_latest_cuts">Apply latest cuts</span>
             </div>
           </div>
           <div class="oc-result-body" id="cutResultBody"></div>
-          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn">Apply Cuts to Timeline</button>
+          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn" data-i18n="uxp.cut.apply_cuts_to_timeline">Apply Cuts to Timeline</button>
         </div>
       </div>
 
