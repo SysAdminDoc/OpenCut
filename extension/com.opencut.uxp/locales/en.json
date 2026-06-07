@@ -383,6 +383,7 @@
   "uxp.deliverables.sequence_readiness": "Sequence readiness",
   "uxp.deliverables.sequence_summary_placeholder": "Load the active Premiere sequence before generating handoff docs.",
   "uxp.deliverables.session_temp_folder": "Session temp folder",
+  "uxp.deliverables.session_temp_folder_title": "Deliverables will be saved to the session temp folder until you choose an output folder.",
   "uxp.deliverables.status_backend_offline": "Reconnect the local backend before generating handoff documents or report packages.",
   "uxp.deliverables.status_choose_output_folder": "Sequence ready. Choose an output folder if you want handoff docs saved somewhere more durable than the session temp folder.",
   "uxp.deliverables.status_line": "Load sequence info, choose a destination if needed, then generate the handoff docs you need.",
