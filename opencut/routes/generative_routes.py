@@ -7,14 +7,16 @@ Endpoints for AI talking head generation and 3D Gaussian splat rendering:
 """
 
 import logging
+import tempfile
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, send_file
 
 from opencut.errors import safe_error
-from opencut.helpers import _resolve_output_dir
+from opencut.helpers import OPENCUT_DIR, _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     get_json_dict,
+    is_path_within_any,
     require_csrf,
     safe_bool,
     safe_float,
@@ -27,6 +29,18 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 generative_bp = Blueprint("generative", __name__)
+
+
+def _validate_splat_preview_frame_path(frame_path) -> str:
+    """Validate renderer-returned preview frames before serving them."""
+    if not frame_path:
+        raise ValueError("Preview frame path missing")
+
+    resolved = validate_filepath(str(frame_path))
+    allowed_roots = (tempfile.gettempdir(), OPENCUT_DIR)
+    if not is_path_within_any(resolved, allowed_roots):
+        raise PermissionError("Gaussian splat preview frame path is outside allowed roots")
+    return resolved
 
 
 # ===========================================================================
@@ -401,10 +415,12 @@ def gaussian_splat_preview_frame():
             resolution=(res_w, res_h),
         )
 
-        from flask import send_file
+        frame_path = _validate_splat_preview_frame_path(frame_path)
         return send_file(frame_path, mimetype="image/png")
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
+    except PermissionError:
+        return jsonify({"error": "Access denied"}), 403
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:

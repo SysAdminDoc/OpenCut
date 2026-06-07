@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Security - Gaussian Splat Preview Confinement
+
+- Confined `/gaussian-splat/preview-frame` renderer outputs to existing files under system temp or `~/.opencut` before serving them, returning 403 for unconfined renderer paths.
+
+### Changed - CEP i18n Journal and Whisper Shell
+
+- Advanced E15 to batch 170 by localizing Settings Operation Journal and Whisper readiness/default-model shell copy. The live drift report now shows 2,457 keys, 2,457 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Timeline and Settings Shell
 
 - Advanced E15 to batch 169 by localizing Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness shell copy. The live drift report now shows 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.

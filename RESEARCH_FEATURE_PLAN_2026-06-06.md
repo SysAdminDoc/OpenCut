@@ -538,12 +538,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: Security rejections logged to `~/.opencut/audit.log` in structured JSON
   - Verify: Trigger CSRF failure, verify event in audit log
 
-- [ ] P1 - **`send_file()` path confinement in generative_routes**
+- [x] P1 - **`send_file()` path confinement in generative_routes** -- closed 2026-06-07
   - Why: Serves arbitrary paths without confinement check
-  - Evidence: `opencut/routes/generative_routes.py:405`; unlike `/preview` route which validates via `is_path_within_any()`
-  - Touches: `opencut/routes/generative_routes.py`
+  - Evidence: `opencut/routes/generative_routes.py`; unlike `/preview` route which validates via `is_path_within_any()`
+  - Touches: `opencut/routes/generative_routes.py`, `tests/test_generative_routes_security.py`
   - Acceptance: `send_file()` validates path is within tempdir or `~/.opencut`
-  - Verify: Attempt to serve `/etc/passwd` via the endpoint, verify rejection
+  - Verify: Renderer-returned temp preview frames serve successfully; unconfined renderer-returned paths return 403
 
 ### Phase 3: UXP Parity (P1-P2)
 
@@ -621,7 +621,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 1 | Fix `torch.load(weights_only=False)` | Shipped 2026-06-07 | Closed by safe quantization loads plus Torch/TorchVision advisory floors |
 | 2 | Add code length limit to scripting console | Shipped 2026-06-07 | Prevents resource exhaustion |
 | 3 | Switch `os.startfile()` to allowlist | Shipped 2026-06-07 | Closed extension-bypass vector |
-| 4 | Fix `send_file()` path confinement | S (add `is_path_within_any()` check) | Closes file-serve bypass |
+| 4 | Fix `send_file()` path confinement | Shipped 2026-06-07 | Closed file-serve bypass with temp/`~/.opencut` confinement and 403 regression coverage |
 | 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |
 | 6 | Defer cleanup thread start | S (threading.Event guard) | Cleaner test/CLI imports |
 | 7 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |

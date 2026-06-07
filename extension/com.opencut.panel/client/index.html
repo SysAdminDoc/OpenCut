@@ -3468,60 +3468,60 @@
                 <!-- Operation Journal (v1.9.28) -->
                 <section class="card" id="journalCard" aria-labelledby="journalCardTitle">
                     <div class="card-header">
-                        <div class="card-title" id="journalCardTitle">Operation Journal</div>
+                        <div class="card-title" id="journalCardTitle" data-i18n="journal.title">Operation Journal</div>
                         <div class="card-header-actions">
-                            <button type="button" class="icon-btn" id="journalRefreshBtn" title="Refresh" aria-label="Refresh journal">
+                            <button type="button" class="icon-btn" id="journalRefreshBtn" title="Refresh" aria-label="Refresh journal" data-i18n-title="journal.refresh_title" data-i18n-aria-label="journal.refresh_aria">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                             </button>
-                            <button type="button" class="btn btn-ghost btn-sm" id="journalClearBtn" title="Clear all entries">Clear</button>
+                            <button type="button" class="btn btn-ghost btn-sm" id="journalClearBtn" title="Clear all entries" data-i18n="common.clear" data-i18n-title="journal.clear_title">Clear</button>
                         </div>
                     </div>
-                    <p class="card-description">Track every timeline-affecting action in one place, then roll back supported changes before manual edits drift out of sync.</p>
-                    <div class="oc-inline-summary-grid" aria-label="Journal overview">
+                    <p class="card-description" data-i18n="journal.description">Track every timeline-affecting action in one place, then roll back supported changes before manual edits drift out of sync.</p>
+                    <div class="oc-inline-summary-grid" aria-label="Journal overview" data-i18n-aria-label="journal.overview_aria">
                         <div class="oc-inline-stat">
-                            <span class="oc-inline-label">Recent</span>
-                            <span class="oc-inline-value" id="journalCountSummary">Checking recent operations...</span>
+                            <span class="oc-inline-label" data-i18n="journal.recent_label">Recent</span>
+                            <span class="oc-inline-value" id="journalCountSummary" data-i18n="journal.count_checking">Checking recent operations...</span>
                         </div>
                         <div class="oc-inline-stat">
-                            <span class="oc-inline-label">Undo-ready</span>
-                            <span class="oc-inline-value" id="journalRevertSummary">Checking rollback support...</span>
+                            <span class="oc-inline-label" data-i18n="journal.undo_ready_label">Undo-ready</span>
+                            <span class="oc-inline-value" id="journalRevertSummary" data-i18n="journal.rollback_checking">Checking rollback support...</span>
                         </div>
                     </div>
-                    <div class="oc-status-line" id="journalStatusLine" data-state="working" role="status" aria-live="polite">Loading recent timeline operations and rollback availability.</div>
+                    <div class="oc-status-line" id="journalStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="journal.loading_status">Loading recent timeline operations and rollback availability.</div>
                     <div id="journalList" class="journal-list" aria-live="polite">
-                        <div class="journal-empty">Loading recent operations…</div>
+                        <div class="journal-empty" data-i18n="journal.loading_empty">Loading recent operations…</div>
                     </div>
                 </section>
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.whisper_ai">Whisper AI</div></div>
-                    <p class="card-desc">Keep transcription reliable for captions, search, chapters, and transcript-driven cleanup.</p>
+                    <p class="card-desc" data-i18n="settings.whisper_desc">Keep transcription reliable for captions, search, chapters, and transcript-driven cleanup.</p>
                     <div class="settings-row settings-row-inline" id="whisperStatus">
-                        <span class="settings-label">Status</span>
-                        <span class="settings-value settings-status-pill" id="whisperStatusText" data-state="unknown">Checking...</span>
+                        <span class="settings-label" data-i18n="settings.whisper_status_label">Status</span>
+                        <span class="settings-value settings-status-pill" id="whisperStatusText" data-state="unknown" data-i18n="settings.whisper_status_checking">Checking...</span>
                     </div>
                     <div class="settings-row settings-row-inline">
-                        <span class="settings-label">Device</span>
-                        <span class="settings-value settings-inline-value" id="whisperDeviceText" data-state="idle">Checking device...</span>
+                        <span class="settings-label" data-i18n="settings.whisper_device_label">Device</span>
+                        <span class="settings-value settings-inline-value" id="whisperDeviceText" data-state="idle" data-i18n="settings.whisper_device_checking">Checking device...</span>
                     </div>
                     <div class="form-group mt-md">
-                        <label for="settingsDefaultModel">Default Model</label>
+                        <label for="settingsDefaultModel" data-i18n="settings.whisper_default_model">Default Model</label>
                         <select id="settingsDefaultModel">
-                            <option value="tiny">Tiny - Fastest, lower accuracy</option>
-                            <option value="base">Base - Good balance</option>
-                            <option value="small">Small - Better accuracy</option>
-                            <option value="medium">Medium - High accuracy</option>
-                            <option value="turbo" selected>Turbo - Fast + accurate (recommended)</option>
-                            <option value="large-v3">Large v3 - Best accuracy (slowest)</option>
-                            <option value="distil-large-v3.5">Distil v3.5 - Fast + great quality</option>
-                            <option value="distil-large-v3">Distil v3 - Fast + good quality</option>
+                            <option value="tiny" data-i18n="settings.whisper_model_tiny">Tiny - Fastest, lower accuracy</option>
+                            <option value="base" data-i18n="settings.whisper_model_base">Base - Good balance</option>
+                            <option value="small" data-i18n="settings.whisper_model_small">Small - Better accuracy</option>
+                            <option value="medium" data-i18n="settings.whisper_model_medium">Medium - High accuracy</option>
+                            <option value="turbo" selected data-i18n="settings.whisper_model_turbo">Turbo - Fast + accurate (recommended)</option>
+                            <option value="large-v3" data-i18n="settings.whisper_model_large_v3">Large v3 - Best accuracy (slowest)</option>
+                            <option value="distil-large-v3.5" data-i18n="settings.whisper_model_distil_large_v35">Distil v3.5 - Fast + great quality</option>
+                            <option value="distil-large-v3" data-i18n="settings.whisper_model_distil_large_v3">Distil v3 - Fast + good quality</option>
                         </select>
                     </div>
                     <div class="checkbox-row">
                         <input type="checkbox" id="whisperCpuMode">
                         <label for="whisperCpuMode" data-i18n="settings.force_cpu">Force CPU Mode (bypass GPU)</label>
                     </div>
-                    <p class="hint-inline mt-xs mb-sm">Use CPU mode if GPU transcription is unstable or keeps running out of memory.</p>
+                    <p class="hint-inline mt-xs mb-sm" data-i18n="settings.whisper_cpu_hint">Use CPU mode if GPU transcription is unstable or keeps running out of memory.</p>
                     <div class="btn-row gap-xs">
                         <button type="button" class="btn-outline btn-sm" id="settingsInstallWhisperBtn" data-i18n="common.install">Install</button>
                         <button type="button" class="btn-outline btn-sm" id="settingsReinstallWhisperBtn" data-i18n="common.reinstall">Reinstall</button>
