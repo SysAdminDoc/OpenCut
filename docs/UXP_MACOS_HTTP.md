@@ -67,7 +67,7 @@ Without these entries every `fetch` attempt returns
         "localhost:5681"
       ]
     },
-    "localFileSystem": "fullAccess",
+    "localFileSystem": "request",
     "ipc": { "enablePluginCommunication": true }
   }
 }
@@ -290,4 +290,3 @@ F252 (Bolt UXP shell).
   (UXP subagent §5).
 - `.ai/research/2026-05-17/CEP_UXP_PARITY_MATRIX.md`: per-function
   CEP-vs-UXP inventory.
-

@@ -115,6 +115,9 @@ UXP Architecture (target):
       WebView scaffold declare HTTPS-only `launchProcess` schemes, OAuth launch
       calls normalize and reject non-HTTPS URLs, and static tests block file
       launches without an explicit extension review.
+- [x] RA-11 filesystem permission guard: the live manifest and dormant WebView
+      scaffold declare `localFileSystem: "request"` because current file access
+      is picker-scoped through `getFileForOpening()` and `getFolder()`.
 - [x] RA-20 confirmation guard: UXP search-index clearing uses an inline
       second-click panel confirmation instead of beta `window.confirm`, and
       static tests block raw UXP alert/prompt/confirm calls.

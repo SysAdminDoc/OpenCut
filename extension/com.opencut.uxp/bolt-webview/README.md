@@ -13,6 +13,10 @@ Both the live manifest and this scaffold declare clipboard `readAndWrite`
 permission because the panel writes generated output text to the system
 clipboard and handles denied access with a manual-copy fallback.
 
+Both manifest surfaces narrow the `localFileSystem` permission to `request`
+because current UXP file access is picker-scoped through open-file and
+open-folder dialogs, not direct arbitrary path reads or writes.
+
 Both manifest surfaces also declare the external-launch contract as HTTPS-only:
 `launchProcess.schemes` is `["https"]`, `launchProcess.extensions` is empty,
 and WebView `openURL()` rejects non-HTTPS URLs before calling the UXP shell.

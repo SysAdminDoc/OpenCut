@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-06 (313 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-313 are recorded below.
+**Last consolidated:** 2026-06-06 (314 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-314 are recorded below.
 **Pass 265 update (no standalone research file):**
 - Closed RA-16/RA-31/RA-32/RA-33 by extending the Adobe `@adobe/premierepro` tracker to include `release-*` npm dist-tags, refreshing the committed snapshot to schema v2 (`beta=26.3.0-beta.85`, `release-26.2=26.2.1`), hardening the weekly workflow's probe exit-code capture under bash `-e`, seeding and sharing tracker labels (`f251`, `uxp`, `tracking`), and allowing label dry-runs without GitHub CLI. Focused tracker/seeder tests and the Adobe release-smoke step cover the batch.
 
@@ -148,6 +148,9 @@
 
 **Pass 313 update (no standalone research file):**
 - Closed RA-13 by adding HTTPS-only UXP `launchProcess` permissions to the live manifest and dormant WebView scaffold, routing social OAuth browser launches through an HTTPS-normalizing helper with manual fallback, and adding static guards against broad schemes or file-launch APIs.
+
+**Pass 314 update (no standalone research file):**
+- Closed RA-11 by narrowing the live UXP manifest and dormant WebView scaffold to picker-scoped `localFileSystem: "request"`, documenting the open-file/open-folder boundary, and adding static guards against direct file APIs that would require broad filesystem access.
 
 **Live version:** v1.32.0.
 

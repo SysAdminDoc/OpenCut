@@ -54,7 +54,7 @@ access:
 | Permission | Value | Purpose |
 |---|---|---|
 | `network.domains` | `127.0.0.1:5679`, `localhost:5679` | Backend HTTP calls |
-| `localFileSystem` | `fullAccess` | File/folder browse dialogs |
+| `localFileSystem` | `request` | Picker-scoped file/folder browse dialogs |
 | `clipboard` | `readAndWrite` | Generated-output copy button writes text to the system clipboard |
 | `launchProcess.schemes` | `https` | OAuth authorization pages opened in the system browser |
 | `ipc.enablePluginCommunication` | `true` | Inter-plugin messaging |
@@ -81,6 +81,16 @@ manifest and dormant WebView scaffold because the output copy button writes text
 to the system clipboard. `copyTextToClipboard()` centralizes the runtime path and
 falls back to a manual-copy warning when clipboard access is unsupported or
 permission is denied. `tests/test_uxp_clipboard_permission.py` guards this.
+
+## Filesystem Permission
+
+OpenCut's live UXP file access is picker-scoped: `browseFile()` calls
+`localFileSystem.getFileForOpening(...)`, and `browseFolder()` calls
+`localFileSystem.getFolder()`. The live manifest and dormant WebView scaffold
+therefore declare `requiredPermissions.localFileSystem: "request"` instead of
+`"fullAccess"`. `tests/test_uxp_filesystem_permission.py` guards the narrowed
+manifest value and blocks direct file APIs that would require a new permission
+review.
 
 ## External Launch Permission
 
