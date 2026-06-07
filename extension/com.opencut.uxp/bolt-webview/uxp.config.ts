@@ -36,6 +36,10 @@ type OpenCutManifest = {
     };
     localFileSystem: "fullAccess";
     clipboard: "readAndWrite";
+    launchProcess: {
+      schemes: ["https"];
+      extensions: [];
+    };
     ipc: { enablePluginCommunication: true };
   };
 };
@@ -99,6 +103,10 @@ export const manifest: OpenCutManifest = {
     },
     localFileSystem: "fullAccess",
     clipboard: "readAndWrite",
+    launchProcess: {
+      schemes: ["https"],
+      extensions: [],
+    },
     ipc: {
       enablePluginCommunication: true,
     },

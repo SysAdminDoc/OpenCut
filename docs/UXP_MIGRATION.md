@@ -41,7 +41,7 @@ Map each ExtendScript function in `host/index.jsx` to its UXP equivalent.
 | `ocCreateSmartBins()` | Bin creation API | Low priority (CEP ExtendScript works) |
 | `ocAddNativeCaptionTrack()` | No UXP write API yet | CEP-only until Adobe ships `createCaptionTrack()` or F253 Hybrid Plugin adds it |
 | `ocQeReflect()` | No supported UXP API | Retire after CEP EOL; replace individual QE use cases with documented UXP APIs |
-| `startOpenCutBackend()` | UXP `shell.openExternal()` | N/A (backend started externally in UXP) |
+| `startOpenCutBackend()` | N/A | Backend started externally in UXP; `shell.openExternal()` is reserved for HTTPS OAuth launches only |
 
 ## F266 — CEP Residual and Drop-QE Plan
 
@@ -111,6 +111,10 @@ UXP Architecture (target):
 - [x] RA-19 clipboard permission/fallback guard: the live manifest and dormant
       WebView scaffold declare `clipboard: "readAndWrite"`, and UXP copy actions
       route through a shared denied/unavailable fallback helper.
+- [x] RA-13 external launch permission guard: the live manifest and dormant
+      WebView scaffold declare HTTPS-only `launchProcess` schemes, OAuth launch
+      calls normalize and reject non-HTTPS URLs, and static tests block file
+      launches without an explicit extension review.
 - [x] RA-20 confirmation guard: UXP search-index clearing uses an inline
       second-click panel confirmation instead of beta `window.confirm`, and
       static tests block raw UXP alert/prompt/confirm calls.

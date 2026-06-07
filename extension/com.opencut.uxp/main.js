@@ -173,6 +173,42 @@ async function copyTextToClipboard(text, { successLabel = "Output" } = {}) {
   }
 }
 
+function normalizeHttpsExternalUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function openHttpsExternalUrl(value, developerText) {
+  const url = normalizeHttpsExternalUrl(value);
+  if (!url) {
+    UIController.showToast("Invalid HTTPS authorization URL received from server.", "warning");
+    return false;
+  }
+
+  try {
+    const shell = require("uxp").shell;
+    const result = await shell.openExternal(
+      url,
+      developerText || "Opening a secure authorization page in your browser",
+    );
+    if (typeof result === "string" && result.trim()) {
+      UIController.showToast("Open this URL in your browser: " + url, "info", 10000);
+      return false;
+    }
+    return true;
+  } catch (_) {
+    UIController.showToast("Open this URL in your browser: " + url, "info", 10000);
+    return false;
+  }
+}
+
 async function fetchWithTimeout(url, opts = {}, timeoutMs = 120000) {
   const options = { ...opts };
   let timer = null;
@@ -4557,12 +4593,12 @@ async function socialConnectUxp() {
   const platform = document.getElementById("socialPlatformUxp")?.value ?? "youtube";
   const r = await BackendClient.post("/social/auth-url", { platform });
   if (r.ok && r.data?.auth_url) {
-    // Open in system browser
-    try {
-      const shell = require("uxp").shell;
-      await shell.openExternal(r.data.auth_url);
-    } catch (_) {
-      UIController.showToast("Open this URL in your browser: " + r.data.auth_url, "info", 10000);
+    const opened = await openHttpsExternalUrl(
+      r.data.auth_url,
+      `Opening ${platform} authorization page in your browser`,
+    );
+    if (opened) {
+      UIController.showToast(`Opening ${platform} authorization page in your browser.`, "info");
     }
   } else {
     UIController.showToast(`OAuth not configured for ${platform}. Set API credentials.`, "warning");
