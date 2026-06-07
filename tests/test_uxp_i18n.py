@@ -90,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 510
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 560
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -163,6 +163,13 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.search.command_placeholder",
         "uxp.search.suggested_edit_commands",
         "uxp.search.apply_to_timeline",
+        "uxp.deliverables.sequence_info",
+        "uxp.deliverables.sequence_readiness",
+        "uxp.deliverables.output_folder_placeholder",
+        "uxp.deliverables.vfx_sheet_desc",
+        "uxp.deliverables.project_report_summary",
+        "uxp.deliverables.report_format_xlsx_unavailable",
+        "uxp.deliverables.generate_full_report",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
