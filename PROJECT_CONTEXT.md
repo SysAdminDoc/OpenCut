@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (339 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-339 are recorded below.
+**Last consolidated:** 2026-06-07 (340 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-340 are recorded below.
+
+**Pass 340 update (no standalone research file):**
+- Closed the June 6 WCAG contrast audit finding by adding `opencut.tools.contrast_audit`, a stdlib static gate that parses committed CEP/UXP `:root` design-token blocks and audits curated foreground/background pairs against WCAG AA 4.5:1 normal-text and 3.0:1 large-text/non-text floors.
+- Wired release smoke to run a `contrast-audit` step, added the guard to pytest-fast, and added `tests/test_contrast_audit.py` coverage for the current 72-pair token audit plus a deliberately failing low-contrast fixture. The primary CEP `--text-muted` token is now `#707090`, clearing 3.15:1 on `--bg-elevated`.
 
 **Pass 339 update (no standalone research file):**
 - Advanced E15 to batch 172 by localizing Captions quick-action labels, SRT import controls, beat-marker stats, audio form placeholders and MusicGen controls, LUT path placeholders, NLP command shell, and LLM settings placeholders in the CEP panel.
@@ -253,7 +257,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Blueprints | **107** | same |
 | Core processing modules (`opencut/core/`) | **602** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **105** (excluding `__init__.py`) | `ls opencut/routes` |
-| Tests | **250 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **251 test_*.py files** + **2 Vitest panel test files** (9,400+ tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | CI coverage floor | **54%** | `.github/workflows/build.yml` + `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` (F205) |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **236** total; **17** true aliases; **219** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |

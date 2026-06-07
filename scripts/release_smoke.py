@@ -17,12 +17,13 @@ Steps (in order):
 8. ``roadmap-lint`` — roadmap citation sanity check
 9. ``text-shaping`` — FFmpeg/libass HarfBuzz/FriBidi + renderer capability gate
 10. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
-11. ``ruff`` — lint the python package
-12. ``pytest-fast`` — focused test ids covering release gates
-13. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
-14. ``panel-unit`` — CEP/UXP panel Vitest utility tests
-15. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-16. ``panel-source`` — CEP panel source tree smoke
+11. ``contrast-audit`` — WCAG AA contrast check for committed panel tokens
+12. ``ruff`` — lint the python package
+13. ``pytest-fast`` — focused test ids covering release gates
+14. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
+15. ``panel-unit`` — CEP/UXP panel Vitest utility tests
+16. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+17. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -714,6 +715,47 @@ def step_caption_unicode(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_contrast_audit(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.contrast_audit", "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        return StepResult(
+            "contrast-audit",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message=f"contrast audit did not emit parseable JSON: {exc}",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+
+    summary = payload.get("summary", {})
+    status = "ok" if result.returncode == 0 and payload.get("status") == "ok" else "fail"
+    audited_pairs = int(summary.get("audited_pairs") or 0)
+    failure_count = int(summary.get("failures") or 0)
+    message = (
+        f"WCAG AA contrast token pairs passed ({audited_pairs} pairs)"
+        if status == "ok"
+        else f"WCAG AA contrast violations ({failure_count} failures)"
+    )
+    return StepResult(
+        "contrast-audit",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(json.dumps(payload, indent=2)),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_ruff(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     if shutil.which("ruff") is None:
@@ -765,6 +807,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_text_shaping_gate.py",
+    "tests/test_contrast_audit.py",
     "tests/test_caption_line_breaks.py",
     "tests/test_caption_unicode_validation.py",
     "tests/test_srt_encoding.py",
@@ -1104,6 +1147,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),
     StepDefinition("caption-unicode", step_caption_unicode, "Verify RTL/CJK/bidi caption text export preservation"),
+    StepDefinition("contrast-audit", step_contrast_audit, "Check CEP/UXP panel token contrast"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
