@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Platform Presets
+
+- Closed RA-53 by deriving approved Magic Clips render targets from export preset IDs, rendering one output per approved platform target, enforcing preset duration and dimension constraints, and returning preset/dimension metadata for generated shorts.
+
 ### Changed - Magic Clips Candidate Scoring
 
 - Closed RA-52 by adding deterministic Magic Clips candidate scoring with score breakdowns, selection reasons, fallback mode labels, and rejected-candidate diagnostics for malformed, too-short, overlapping, or cutoff windows.
