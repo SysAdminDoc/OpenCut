@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Spanish Audio Locale
+
+- Expanded the partial Spanish UXP locale pack across the full Audio workspace, including denoise, normalization, loudness-match, beat-marker controls, and Audio runtime feedback.
+- Added guard coverage requiring every `uxp.audio.*` key to be present in the Spanish pack while keeping deeper Video keys as the explicit English fallback sample.
+
 ### Changed - UXP Spanish Cut Locale
 
 - Expanded the partial Spanish UXP locale pack across the full Cut workspace, including clip input, silence-removal controls, filler-word controls, cut-pass summaries, and Cut runtime feedback.
