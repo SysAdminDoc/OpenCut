@@ -2365,8 +2365,11 @@ function syncCaptionsActionButtons() {
   if (copyBtn) {
     copyBtn.disabled = !_lastCaptionsResult?.content;
     copyBtn.title = copyBtn.disabled
-      ? "Copy becomes available after a transcript, chapter list, or repeat review has been generated."
-      : (_lastCaptionsResult?.copyLabel || "Copy output");
+      ? t(
+          "uxp.captions.runtime.copy_unavailable_title",
+          "Copy becomes available after a transcript, chapter list, or repeat review has been generated."
+        )
+      : (_lastCaptionsResult?.copyLabel || t("uxp.captions.copy_output", "Copy Output"));
   }
 
   const importBtn = document.getElementById("importSrtBtn");
@@ -2374,19 +2377,36 @@ function syncCaptionsActionButtons() {
     const canImport = !!(_lastCaptionsResult && _lastCaptionsResult.kind === "transcript" && _lastCaptionsResult.hasSrt);
     importBtn.disabled = !canImport;
     importBtn.title = canImport
-      ? "Open the timeline import flow for the current SRT output."
-      : "SRT Prep becomes available after a transcript pass produces subtitle output.";
+      ? t("uxp.captions.runtime.open_srt_import_title", "Open the timeline import flow for the current SRT output.")
+      : t(
+          "uxp.captions.runtime.srt_import_unavailable_title",
+          "SRT Prep becomes available after a transcript pass produces subtitle output."
+        );
   }
 }
 
 function updateCaptionsPlanSummary() {
   setTextAndTitle("captionsPlanModel", getSelectLabel("whisperModel", "turbo"), getSelectLabel("whisperModel", "turbo"));
-  setTextAndTitle("captionsPlanLanguage", getSelectLabel("transcribeLang", "Auto-detect"), getSelectLabel("transcribeLang", "Auto-detect"));
-  setTextAndTitle("captionsPlanStyle", getSelectLabel("captionStyle", "YouTube Bold"), getSelectLabel("captionStyle", "YouTube Bold"));
+  setTextAndTitle(
+    "captionsPlanLanguage",
+    getSelectLabel("transcribeLang", t("uxp.captions.language_auto", "Auto-detect")),
+    getSelectLabel("transcribeLang", t("uxp.captions.language_auto", "Auto-detect"))
+  );
+  setTextAndTitle(
+    "captionsPlanStyle",
+    getSelectLabel("captionStyle", t("uxp.captions.style_youtube_bold", "YouTube Bold")),
+    getSelectLabel("captionStyle", t("uxp.captions.style_youtube_bold", "YouTube Bold"))
+  );
 
   const diarization = document.getElementById("enableDiarization")?.checked;
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
-  const note = `${wordLevel ? "Word timing is on" : "Word timing is off"}. ${diarization ? "Speaker splits are on." : "Speaker splits are off."}`;
+  const wordTiming = wordLevel
+    ? t("uxp.captions.runtime.word_timing_on", "Word timing is on")
+    : t("uxp.captions.runtime.word_timing_off", "Word timing is off");
+  const speakerSplits = diarization
+    ? t("uxp.captions.runtime.speaker_splits_on", "Speaker splits are on.")
+    : t("uxp.captions.runtime.speaker_splits_off", "Speaker splits are off.");
+  const note = `${wordTiming}. ${speakerSplits}`;
   setTextAndTitle("captionsPlanNote", note, note);
 }
 
@@ -2399,51 +2419,71 @@ function updateCaptionsWorkspaceSummary() {
 
   setTextAndTitle(
     "captionsSourceValue",
-    hasSource ? formatWorkspaceSource(sourcePath) : "Choose a clip to start",
-    sourcePath || "Choose a clip to start a captions pass."
+    hasSource ? formatWorkspaceSource(sourcePath) : t("uxp.captions.choose_clip_to_start", "Choose a clip to start"),
+    sourcePath || t("uxp.captions.runtime.choose_clip_title", "Choose a clip to start a captions pass.")
   );
 
   if (!backendOnline) {
     setCaptionsSessionState(
-      "Offline",
+      t("conn.offline", "Offline"),
       "error",
-      "Reconnect the local OpenCut backend before running transcript, chapter, or repeat jobs.",
+      t(
+        "uxp.captions.runtime.reconnect_backend",
+        "Reconnect the local OpenCut backend before running transcript, chapter, or repeat jobs."
+      ),
       "error"
     );
     if (!_lastCaptionsResult) {
-      setTextAndTitle("captionsOutputValue", "Waiting on backend", "Reconnect the local OpenCut backend to generate transcript output.");
+      setTextAndTitle(
+        "captionsOutputValue",
+        t("uxp.captions.runtime.waiting_on_backend", "Waiting on backend"),
+        t("uxp.captions.runtime.waiting_on_backend_title", "Reconnect the local OpenCut backend to generate transcript output.")
+      );
     }
   } else if (!hasSource) {
     setCaptionsSessionState(
-      "Choose media",
+      t("uxp.captions.runtime.choose_media", "Choose media"),
       "empty",
-      "Choose a clip, then transcribe to unlock chapters, repeat review, and subtitle export.",
+      t("uxp.captions.choose_clip_status", "Choose a clip, then transcribe to unlock chapters, repeat review, and subtitle export."),
       "idle"
     );
     if (!_lastCaptionsResult) {
-      setTextAndTitle("captionsOutputValue", "No transcript yet", "Choose a clip and run transcription to generate reviewable output.");
+      setTextAndTitle(
+        "captionsOutputValue",
+        t("uxp.captions.no_transcript_yet", "No transcript yet"),
+        t("uxp.captions.runtime.no_transcript_choose_clip_title", "Choose a clip and run transcription to generate reviewable output.")
+      );
     }
   } else if (_lastCaptionsResult) {
     setCaptionsSessionState(
-      _lastCaptionsResult.sessionLabel || "Result ready",
+      _lastCaptionsResult.sessionLabel || t("uxp.captions.runtime.result_ready", "Result ready"),
       _lastCaptionsResult.sessionState || "success",
-      _lastCaptionsResult.statusMessage || "Output ready for review.",
+      _lastCaptionsResult.statusMessage || t("uxp.captions.runtime.output_ready_review", "Output ready for review."),
       _lastCaptionsResult.statusState || _lastCaptionsResult.sessionState || "success",
       _lastCaptionsResult.statusTitle || _lastCaptionsResult.outputTitle || _lastCaptionsResult.statusMessage
     );
     setTextAndTitle(
       "captionsOutputValue",
-      _lastCaptionsResult.outputLabel || "Result ready",
-      _lastCaptionsResult.outputTitle || _lastCaptionsResult.outputLabel || "Result ready"
+      _lastCaptionsResult.outputLabel || t("uxp.captions.runtime.result_ready", "Result ready"),
+      _lastCaptionsResult.outputTitle
+        || _lastCaptionsResult.outputLabel
+        || t("uxp.captions.runtime.result_ready", "Result ready")
     );
   } else {
     setCaptionsSessionState(
-      "Ready",
+      t("uxp.captions.runtime.ready", "Ready"),
       "success",
-      "Clip ready. Start with transcription, then move into chapters or repeat review when the wording is stable.",
+      t(
+        "uxp.captions.runtime.clip_ready",
+        "Clip ready. Start with transcription, then move into chapters or repeat review when the wording is stable."
+      ),
       "ready"
     );
-    setTextAndTitle("captionsOutputValue", "No transcript yet", "Transcribe the selected clip to generate reviewable output.");
+    setTextAndTitle(
+      "captionsOutputValue",
+      t("uxp.captions.no_transcript_yet", "No transcript yet"),
+      t("uxp.captions.runtime.no_transcript_selected_title", "Transcribe the selected clip to generate reviewable output.")
+    );
   }
 
   syncCaptionsActionButtons();
@@ -2458,10 +2498,12 @@ function renderCaptionsResultView(resultState) {
   const copyBtn = document.getElementById("copySrtBtn");
   const importBtn = document.getElementById("importSrtBtn");
   const typeLabelMap = {
-    transcript: "Transcript",
-    chapters: "Chapter draft",
-    repeat: "Repeat review",
+    transcript: t("uxp.captions.transcript", "Transcript"),
+    chapters: t("uxp.captions.runtime.chapter_draft", "Chapter draft"),
+    repeat: t("uxp.captions.runtime.repeat_review", "Repeat review"),
   };
+  const reviewOutput = t("uxp.captions.runtime.review_output", "Review output");
+  const ready = t("uxp.captions.runtime.ready", "Ready");
 
   if (!area || !body) return;
 
@@ -2469,36 +2511,40 @@ function renderCaptionsResultView(resultState) {
   area.dataset.kind = resultState.kind || "review";
   area.dataset.state = resultState.resultPillState || "success";
   body.value = resultState.content || "";
-  body.title = resultState.contentTitle || resultState.outputTitle || resultState.resultMetaTitle || "Review output";
-  body.setAttribute("aria-label", resultState.header || "Review output");
-  if (summary) summary.textContent = resultState.summary || "Ready to review";
+  body.title = resultState.contentTitle || resultState.outputTitle || resultState.resultMetaTitle || reviewOutput;
+  body.setAttribute("aria-label", resultState.header || reviewOutput);
+  if (summary) summary.textContent = resultState.summary || t("uxp.captions.ready_to_review", "Ready to review");
   if (meta) {
-    meta.textContent = resultState.resultMeta || "Review output is ready.";
-    meta.title = resultState.resultMetaTitle || resultState.resultMeta || "Review output is ready.";
+    meta.textContent = resultState.resultMeta || t("uxp.captions.runtime.review_output_ready", "Review output is ready.");
+    meta.title = resultState.resultMetaTitle || resultState.resultMeta || t("uxp.captions.runtime.review_output_ready", "Review output is ready.");
   }
-  if (header) header.textContent = resultState.header || "Review Output";
+  if (header) header.textContent = resultState.header || t("uxp.captions.runtime.review_output_header", "Review Output");
   setStatusPill(
     "captionsResultPill",
-    resultState.resultPillText || "Ready",
+    resultState.resultPillText || ready,
     resultState.resultPillState || "success",
-    resultState.resultPillTitle || resultState.summary || "Ready"
+    resultState.resultPillTitle || resultState.summary || ready
   );
-  if (copyBtn) copyBtn.textContent = resultState.copyLabel || "Copy Output";
-  if (importBtn) importBtn.textContent = resultState.importLabel || "Open SRT Prep";
+  if (copyBtn) copyBtn.textContent = resultState.copyLabel || t("uxp.captions.copy_output", "Copy Output");
+  if (importBtn) importBtn.textContent = resultState.importLabel || t("uxp.captions.open_srt_prep", "Open SRT Prep");
   setTextAndTitle(
     "captionsResultTypeValue",
-    resultState.insightType || typeLabelMap[resultState.kind] || "Review output",
-    resultState.insightTypeTitle || resultState.resultMetaTitle || resultState.summary || "Review output"
+    resultState.insightType || typeLabelMap[resultState.kind] || reviewOutput,
+    resultState.insightTypeTitle || resultState.resultMetaTitle || resultState.summary || reviewOutput
   );
   setTextAndTitle(
     "captionsResultLengthValue",
-    resultState.insightLength || resultState.outputLabel || resultState.summary || "Ready",
-    resultState.insightLengthTitle || resultState.outputTitle || resultState.summary || "Ready"
+    resultState.insightLength || resultState.outputLabel || resultState.summary || ready,
+    resultState.insightLengthTitle || resultState.outputTitle || resultState.summary || ready
   );
   setTextAndTitle(
     "captionsResultNextValue",
-    resultState.insightNext || (resultState.hasSrt ? "Copy SRT or open SRT Prep" : "Copy notes or continue review"),
-    resultState.insightNextTitle || resultState.statusMessage || resultState.summary || "Next action"
+    resultState.insightNext || (
+      resultState.hasSrt
+        ? t("uxp.captions.runtime.next_copy_srt", "Copy SRT or open SRT Prep")
+        : t("uxp.captions.runtime.next_copy_notes", "Copy notes or continue review")
+    ),
+    resultState.insightNextTitle || resultState.statusMessage || resultState.summary || t("uxp.captions.runtime.next_action", "Next action")
   );
 
   _lastCaptionsResult = resultState;
@@ -2521,52 +2567,89 @@ function showRepeatResult(result) {
           : "";
         const similarityRaw = Number(repeat.similarity ?? repeat.score ?? repeat.confidence);
         const similarity = Number.isFinite(similarityRaw)
-          ? `${Math.round(similarityRaw > 1 ? similarityRaw : similarityRaw * 100)}% similar`
+          ? formatI18n("uxp.captions.runtime.percent_similar", "{percent}% similar", {
+              percent: Math.round(similarityRaw > 1 ? similarityRaw : similarityRaw * 100),
+            })
           : "";
         const preview = String(
           repeat.text ?? repeat.preview ?? repeat.transcript ?? repeat.reference_text ?? repeat.candidate_text ?? ""
         ).trim();
-        const headerParts = [`Repeat ${index + 1}`];
+        const headerParts = [formatI18n("uxp.captions.runtime.repeat_index", "Repeat {index}", { index: index + 1 })];
         if (hasRange) {
-          headerParts.push(`${formatTimecode(Number.isFinite(start) ? start : 0)} → ${formatTimecode(Number.isFinite(end) ? end : 0)}`);
+          headerParts.push(
+            formatI18n("uxp.captions.runtime.time_range", "{start} to {end}", {
+              start: formatTimecode(Number.isFinite(start) ? start : 0),
+              end: formatTimecode(Number.isFinite(end) ? end : 0),
+            })
+          );
         }
         if (duration) headerParts.push(duration);
         if (similarity) headerParts.push(similarity);
-        return preview ? `${headerParts.join(" • ")}\n${preview}` : headerParts.join(" • ");
+        return preview ? `${headerParts.join(" - ")}\n${preview}` : headerParts.join(" - ");
       }).join("\n\n")
-    : "No repeated lines were flagged with the current threshold.";
+    : t("uxp.captions.runtime.no_repeated_lines", "No repeated lines were flagged with the current threshold.");
 
   renderCaptionsResultView({
     kind: "repeat",
-    header: "Repeat Review",
+    header: t("uxp.captions.runtime.repeat_review_header", "Repeat Review"),
     summary: repeats.length
-      ? `${repeats.length} repeat range${repeats.length === 1 ? "" : "s"} flagged`
-      : "No repeated takes flagged",
+      ? formatI18n("uxp.captions.runtime.repeat_ranges_flagged", "{count} repeat range{plural} flagged", {
+          count: repeats.length,
+          plural: repeats.length === 1 ? "" : "s",
+        })
+      : t("uxp.captions.runtime.no_repeated_takes_flagged", "No repeated takes flagged"),
     content,
-    resultPillText: repeats.length ? "Review ready" : "Clean pass",
+    resultPillText: repeats.length
+      ? t("uxp.captions.runtime.review_ready", "Review ready")
+      : t("uxp.captions.runtime.clean_pass", "Clean pass"),
     resultPillState: repeats.length ? "warning" : "success",
-    resultMeta: `${formatWorkspaceSource(clipPath)} • ${Math.round(threshold * 100)}% threshold • ${keepBest ? "Keep best take on" : "Keep best take off"}`,
-    resultMetaTitle: clipPath || "Repeat review",
-    copyLabel: "Copy Notes",
-    importLabel: "Open SRT Prep",
+    resultMeta: formatI18n("uxp.captions.runtime.repeat_result_meta", "{source} - {threshold}% threshold - {keepBest}", {
+      source: formatWorkspaceSource(clipPath),
+      threshold: Math.round(threshold * 100),
+      keepBest: keepBest
+        ? t("uxp.captions.runtime.keep_best_take_on", "Keep best take on")
+        : t("uxp.captions.runtime.keep_best_take_off", "Keep best take off"),
+    }),
+    resultMetaTitle: clipPath || t("uxp.captions.runtime.repeat_review", "Repeat review"),
+    copyLabel: t("uxp.captions.runtime.copy_notes", "Copy Notes"),
+    copySuccessLabel: t("uxp.captions.runtime.notes_label", "Notes"),
+    importLabel: t("uxp.captions.open_srt_prep", "Open SRT Prep"),
     canOpenSrtImport: false,
     hasSrt: false,
-    sessionLabel: repeats.length ? "Review ready" : "Clean pass",
+    sessionLabel: repeats.length
+      ? t("uxp.captions.runtime.review_ready", "Review ready")
+      : t("uxp.captions.runtime.clean_pass", "Clean pass"),
     sessionState: repeats.length ? "warning" : "success",
     statusMessage: repeats.length
-      ? "Repeat review is ready. Tighten the threshold or move the flagged ranges into your next cleanup pass."
-      : "No repeated takes were flagged. The current threshold looks clean for this clip.",
+      ? t(
+          "uxp.captions.runtime.repeat_review_ready_status",
+          "Repeat review is ready. Tighten the threshold or move the flagged ranges into your next cleanup pass."
+        )
+      : t(
+          "uxp.captions.runtime.repeat_review_clean_status",
+          "No repeated takes were flagged. The current threshold looks clean for this clip."
+        ),
     statusState: repeats.length ? "warning" : "success",
-    statusTitle: clipPath || "Repeat review",
+    statusTitle: clipPath || t("uxp.captions.runtime.repeat_review", "Repeat review"),
     outputLabel: repeats.length
-      ? `${repeats.length} repeat ${repeats.length === 1 ? "range" : "ranges"} flagged`
-      : "No repeats flagged",
-    outputTitle: clipPath || "Repeat review",
-    insightType: "Repeat review",
+      ? formatI18n("uxp.captions.runtime.repeat_ranges_flagged", "{count} repeat range{plural} flagged", {
+          count: repeats.length,
+          plural: repeats.length === 1 ? "" : "s",
+        })
+      : t("uxp.captions.runtime.no_repeats_flagged", "No repeats flagged"),
+    outputTitle: clipPath || t("uxp.captions.runtime.repeat_review", "Repeat review"),
+    insightType: t("uxp.captions.runtime.repeat_review", "Repeat review"),
     insightLength: repeats.length
-      ? `${repeats.length} repeat ${repeats.length === 1 ? "range" : "ranges"}`
-      : "Clean pass",
-    insightNext: repeats.length ? "Tighten threshold or continue cleanup" : "Keep current threshold and continue",
+      ? formatI18n("uxp.captions.runtime.repeat_ranges", "{count} repeat {unit}", {
+          count: repeats.length,
+          unit: repeats.length === 1
+            ? t("uxp.captions.runtime.range_singular", "range")
+            : t("uxp.captions.runtime.range_plural", "ranges"),
+        })
+      : t("uxp.captions.runtime.clean_pass", "Clean pass"),
+    insightNext: repeats.length
+      ? t("uxp.captions.runtime.next_tighten_threshold", "Tighten threshold or continue cleanup")
+      : t("uxp.captions.runtime.next_keep_threshold", "Keep current threshold and continue"),
   });
 }
 
@@ -3636,7 +3719,7 @@ async function runFillerDetection() {
 /** ── TRANSCRIBE ── */
 async function runTranscribe() {
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const model    = document.getElementById("whisperModel")?.value ?? "medium";
   const lang     = document.getElementById("transcribeLang")?.value ?? "auto";
@@ -3645,15 +3728,18 @@ async function runTranscribe() {
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
 
   UIController.setButtonLoading("runTranscribeBtn", true);
-  UIController.showProcessing("Transcribing — this may take a while…");
+  UIController.showProcessing(t("uxp.captions.runtime.transcribing_long", "Transcribing - this may take a while..."));
   setCaptionsSessionState(
-    "Working",
+    t("uxp.captions.runtime.working", "Working"),
     "working",
-    "Transcribing the selected clip. OpenCut will keep the last review output visible until this pass finishes.",
+    t(
+      "uxp.captions.runtime.transcribing_status",
+      "Transcribing the selected clip. OpenCut will keep the last review output visible until this pass finishes."
+    ),
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Processing transcript…", clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.processing_transcript", "Processing transcript..."), clipPath);
   syncCaptionsActionButtons();
 
   // The "captionStyle" select offers visual styles (youtube_bold, neon_pop,
@@ -3666,22 +3752,32 @@ async function runTranscribe() {
     "/captions",
     { filepath: clipPath, model, language: lang === "auto" ? null : lang,
       format: "srt", diarize, word_timestamps: wordLevel },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
       showCaptionsResult(result);
-      UIController.showToast("Transcription complete.", "success");
-      UIController.setStatus("Transcription done.");
+      UIController.showToast(t("uxp.captions.runtime.transcription_complete", "Transcription complete."), "success");
+      UIController.setStatus(t("uxp.captions.runtime.transcription_done_status", "Transcription done."));
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
-      UIController.showToast(`Transcription error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.captions.runtime.transcription_error", "Transcription error: {error}", { error: err }), "error");
       if (!_lastCaptionsResult) {
-        setTextAndTitle("captionsOutputValue", "No transcript yet", "Transcription failed. Retry when ready.");
+        setTextAndTitle(
+          "captionsOutputValue",
+          t("uxp.captions.no_transcript_yet", "No transcript yet"),
+          t("uxp.captions.runtime.transcription_failed_retry_title", "Transcription failed. Retry when ready.")
+        );
       }
-      setCaptionsSessionState("Retry needed", "warning", `Transcription failed. ${err}`, "error", clipPath);
+      setCaptionsSessionState(
+        t("uxp.captions.runtime.retry_needed", "Retry needed"),
+        "warning",
+        formatI18n("uxp.captions.runtime.transcription_failed_status", "Transcription failed. {error}", { error: err }),
+        "error",
+        clipPath
+      );
       syncCaptionsActionButtons();
     }
   );
@@ -3691,38 +3787,78 @@ function showCaptionsResult(result) {
   const content = result.srt ?? result.text ?? JSON.stringify(result, null, 2);
   const nonEmptyLines = content.split(/\r?\n/).filter(Boolean).length;
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim() || "";
-  const style = getSelectLabel("captionStyle", "Selected style");
-  const language = getSelectLabel("transcribeLang", "Auto-detect");
+  const style = getSelectLabel("captionStyle", t("uxp.captions.runtime.selected_style", "Selected style"));
+  const language = getSelectLabel("transcribeLang", t("uxp.captions.language_auto", "Auto-detect"));
+  const lineUnit = nonEmptyLines === 1
+    ? t("uxp.captions.runtime.line_singular", "line")
+    : t("uxp.captions.runtime.line_plural", "lines");
+  const captionLineSummary = formatI18n("uxp.captions.runtime.caption_lines_ready", "{count} caption {unit} ready", {
+    count: nonEmptyLines,
+    unit: lineUnit,
+  });
+  const transcriptLineSummary = formatI18n("uxp.captions.runtime.transcript_lines_ready", "{count} transcript {unit} ready", {
+    count: nonEmptyLines,
+    unit: lineUnit,
+  });
+  const captionLineLabel = formatI18n("uxp.captions.runtime.caption_lines", "{count} caption {unit}", {
+    count: nonEmptyLines,
+    unit: lineUnit,
+  });
+  const transcriptLineLabel = formatI18n("uxp.captions.runtime.transcript_lines", "{count} transcript {unit}", {
+    count: nonEmptyLines,
+    unit: lineUnit,
+  });
 
   renderCaptionsResultView({
     kind: "transcript",
-    header: result.srt ? "Transcript & Subtitle Output" : "Transcript Review",
-    summary: result.srt ? `${nonEmptyLines} caption lines ready` : `${nonEmptyLines} transcript lines ready`,
+    header: result.srt
+      ? t("uxp.captions.runtime.transcript_subtitle_output", "Transcript & Subtitle Output")
+      : t("uxp.captions.runtime.transcript_review", "Transcript Review"),
+    summary: result.srt ? captionLineSummary : transcriptLineSummary,
     content,
-    resultPillText: result.srt ? "SRT ready" : "Transcript ready",
+    resultPillText: result.srt
+      ? t("uxp.captions.runtime.srt_ready", "SRT ready")
+      : t("uxp.captions.runtime.transcript_ready", "Transcript ready"),
     resultPillState: "success",
-    resultMeta: `${formatWorkspaceSource(clipPath)} • ${language} • ${style}`,
-    resultMetaTitle: clipPath || "Transcript ready",
-    copyLabel: result.srt ? "Copy SRT" : "Copy Transcript",
-    importLabel: "Open SRT Import",
+    resultMeta: formatI18n("uxp.captions.runtime.transcript_result_meta", "{source} - {language} - {style}", {
+      source: formatWorkspaceSource(clipPath),
+      language,
+      style,
+    }),
+    resultMetaTitle: clipPath || t("uxp.captions.runtime.transcript_ready", "Transcript ready"),
+    copyLabel: result.srt
+      ? t("uxp.captions.runtime.copy_srt", "Copy SRT")
+      : t("uxp.captions.runtime.copy_transcript", "Copy Transcript"),
+    copySuccessLabel: result.srt
+      ? t("uxp.captions.runtime.srt_label", "SRT")
+      : t("uxp.captions.transcript", "Transcript"),
+    importLabel: t("uxp.captions.runtime.open_srt_import", "Open SRT Import"),
     canOpenSrtImport: !!result.srt,
     hasSrt: !!result.srt,
-    sessionLabel: result.srt ? "Transcript ready" : "Review ready",
+    sessionLabel: result.srt
+      ? t("uxp.captions.runtime.transcript_ready", "Transcript ready")
+      : t("uxp.captions.runtime.review_ready", "Review ready"),
     sessionState: "success",
     statusMessage: result.srt
-      ? "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to validate it for the CEP ocAddNativeCaptionTrack handoff."
-      : "Transcript ready. Copy the text, draft chapters, or run a repeat review from the same clip.",
+      ? t(
+          "uxp.captions.runtime.transcript_srt_ready_status",
+          "Transcript ready. Copy the SRT or open Timeline > SRT Prep when you're ready to validate it for the CEP ocAddNativeCaptionTrack handoff."
+        )
+      : t(
+          "uxp.captions.runtime.transcript_text_ready_status",
+          "Transcript ready. Copy the text, draft chapters, or run a repeat review from the same clip."
+        ),
     statusState: "success",
-    statusTitle: clipPath || "Transcript ready",
-    outputLabel: result.srt
-      ? `${nonEmptyLines} caption ${nonEmptyLines === 1 ? "line" : "lines"}`
-      : `${nonEmptyLines} transcript ${nonEmptyLines === 1 ? "line" : "lines"}`,
-    outputTitle: clipPath || "Transcript ready",
-    insightType: result.srt ? "Transcript + SRT" : "Transcript",
-    insightLength: result.srt
-      ? `${nonEmptyLines} caption ${nonEmptyLines === 1 ? "line" : "lines"}`
-      : `${nonEmptyLines} transcript ${nonEmptyLines === 1 ? "line" : "lines"}`,
-    insightNext: result.srt ? "Copy SRT or open SRT Prep" : "Copy transcript or draft chapters",
+    statusTitle: clipPath || t("uxp.captions.runtime.transcript_ready", "Transcript ready"),
+    outputLabel: result.srt ? captionLineLabel : transcriptLineLabel,
+    outputTitle: clipPath || t("uxp.captions.runtime.transcript_ready", "Transcript ready"),
+    insightType: result.srt
+      ? t("uxp.captions.runtime.transcript_plus_srt", "Transcript + SRT")
+      : t("uxp.captions.transcript", "Transcript"),
+    insightLength: result.srt ? captionLineLabel : transcriptLineLabel,
+    insightNext: result.srt
+      ? t("uxp.captions.runtime.next_copy_srt", "Copy SRT or open SRT Prep")
+      : t("uxp.captions.runtime.next_copy_transcript", "Copy transcript or draft chapters"),
   });
 }
 
@@ -3733,72 +3869,136 @@ async function runChapterGeneration() {
   const provider = document.getElementById("llmProvider")?.value ?? llmProvider;
   const model    = document.getElementById("llmModel")?.value ?? llmModel;
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please transcribe a clip first, or select one.", "warning"); return; }
+  if (!clipPath) {
+    UIController.showToast(
+      t("uxp.captions.runtime.transcribe_or_select_clip", "Please transcribe a clip first, or select one."),
+      "warning"
+    );
+    return;
+  }
 
   UIController.setButtonLoading("runChaptersBtn", true);
-  UIController.showProcessing("Generating chapters with AI…");
+  UIController.showProcessing(t("uxp.captions.runtime.generating_chapters", "Generating chapters with AI..."));
   setCaptionsSessionState(
-    "Working",
+    t("uxp.captions.runtime.working", "Working"),
     "working",
-    "Drafting chapter markers from the selected clip. The last review output will stay available until the new pass is ready.",
+    t(
+      "uxp.captions.runtime.drafting_chapters_status",
+      "Drafting chapter markers from the selected clip. The last review output will stay available until the new pass is ready."
+    ),
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Drafting chapters…", clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.drafting_chapters", "Drafting chapters..."), clipPath);
   syncCaptionsActionButtons();
 
   await JobPoller.start(
     "/captions/chapters",
     { filepath: clipPath, llm_provider: provider, llm_model: model },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.generating", "Generating...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runChaptersBtn", false);
       const count = result.chapters?.length ?? 0;
-      UIController.showToast(`Generated ${count} chapter(s).`, "success");
-      UIController.setStatus(`Chapter generation complete — ${count} chapters.`);
-      const clipTitle = clipPath || "Chapter output";
-      const providerLabel = getSelectLabel("llmProvider", "Selected provider");
+      UIController.showToast(
+        formatI18n("uxp.captions.runtime.generated_chapters", "Generated {count} chapter(s).", { count }),
+        "success"
+      );
+      UIController.setStatus(
+        formatI18n("uxp.captions.runtime.chapter_generation_done_status", "Chapter generation complete - {count} chapters.", {
+          count,
+        })
+      );
+      const clipTitle = clipPath || t("uxp.captions.runtime.chapter_output", "Chapter output");
+      const providerLabel = getSelectLabel("llmProvider", t("uxp.captions.runtime.selected_provider", "Selected provider"));
       const chapterContent = count
         ? result.chapters.map((c, i) =>
-            `${formatTimecode(c.seconds ?? c.start ?? 0)} — ${c.title ?? `Chapter ${i + 1}`}`
+            formatI18n("uxp.captions.runtime.chapter_line", "{time} - {title}", {
+              time: formatTimecode(c.seconds ?? c.start ?? 0),
+              title: c.title ?? formatI18n("uxp.captions.runtime.chapter_index", "Chapter {index}", { index: i + 1 }),
+            })
           ).join("\n")
-        : "No chapters were suggested for the current clip with the selected model.";
+        : t(
+            "uxp.captions.runtime.no_chapters_suggested",
+            "No chapters were suggested for the current clip with the selected model."
+          );
       renderCaptionsResultView({
         kind: "chapters",
-        header: "Chapter Draft",
-        summary: count ? `${count} chapter${count === 1 ? "" : "s"} ready` : "No chapters drafted",
+        header: t("uxp.captions.runtime.chapter_draft_header", "Chapter Draft"),
+        summary: count
+          ? formatI18n("uxp.captions.runtime.chapters_ready", "{count} chapter{plural} ready", {
+              count,
+              plural: count === 1 ? "" : "s",
+            })
+          : t("uxp.captions.runtime.no_chapters_drafted", "No chapters drafted"),
         content: chapterContent,
-        resultPillText: count ? "Chapters" : "Needs review",
+        resultPillText: count
+          ? t("uxp.captions.runtime.chapters", "Chapters")
+          : t("uxp.captions.runtime.needs_review", "Needs review"),
         resultPillState: count ? "success" : "warning",
-        resultMeta: `${formatWorkspaceSource(clipPath)} • ${providerLabel} • ${model}`,
+        resultMeta: formatI18n("uxp.captions.runtime.chapter_result_meta", "{source} - {provider} - {model}", {
+          source: formatWorkspaceSource(clipPath),
+          provider: providerLabel,
+          model,
+        }),
         resultMetaTitle: clipTitle,
-        copyLabel: "Copy Chapters",
-        importLabel: "Open SRT Import",
+        copyLabel: t("uxp.captions.runtime.copy_chapters", "Copy Chapters"),
+        copySuccessLabel: t("uxp.captions.runtime.chapters_label", "Chapters"),
+        importLabel: t("uxp.captions.runtime.open_srt_import", "Open SRT Import"),
         canOpenSrtImport: false,
         hasSrt: false,
-        sessionLabel: count ? "Chapters ready" : "Needs review",
+        sessionLabel: count
+          ? t("uxp.captions.runtime.chapters_ready_label", "Chapters ready")
+          : t("uxp.captions.runtime.needs_review", "Needs review"),
         sessionState: count ? "success" : "warning",
         statusMessage: count
-          ? "Chapter draft is ready. Copy the list into publishing notes or rerun with a different model for a tighter structure."
-          : "No chapters were suggested. Try another model or confirm the transcript has enough structure to segment cleanly.",
+          ? t(
+              "uxp.captions.runtime.chapter_draft_ready_status",
+              "Chapter draft is ready. Copy the list into publishing notes or rerun with a different model for a tighter structure."
+            )
+          : t(
+              "uxp.captions.runtime.no_chapters_status",
+              "No chapters were suggested. Try another model or confirm the transcript has enough structure to segment cleanly."
+            ),
         statusState: count ? "success" : "warning",
         statusTitle: clipTitle,
-        outputLabel: count ? `${count} chapter${count === 1 ? "" : "s"}` : "No chapters drafted",
+        outputLabel: count
+          ? formatI18n("uxp.captions.runtime.chapter_count", "{count} chapter{plural}", {
+              count,
+              plural: count === 1 ? "" : "s",
+            })
+          : t("uxp.captions.runtime.no_chapters_drafted", "No chapters drafted"),
         outputTitle: clipTitle,
-        insightType: "Chapter draft",
-        insightLength: count ? `${count} chapter${count === 1 ? "" : "s"}` : "No chapters drafted",
-        insightNext: count ? "Copy into publishing notes" : "Try another model or refine the transcript",
+        insightType: t("uxp.captions.runtime.chapter_draft", "Chapter draft"),
+        insightLength: count
+          ? formatI18n("uxp.captions.runtime.chapter_count", "{count} chapter{plural}", {
+              count,
+              plural: count === 1 ? "" : "s",
+            })
+          : t("uxp.captions.runtime.no_chapters_drafted", "No chapters drafted"),
+        insightNext: count
+          ? t("uxp.captions.runtime.next_copy_chapters", "Copy into publishing notes")
+          : t("uxp.captions.runtime.next_try_model", "Try another model or refine the transcript"),
       });
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runChaptersBtn", false);
-      UIController.showToast(`Chapter generation error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.captions.runtime.chapter_generation_error", "Chapter generation error: {error}", { error: err }), "error");
       if (!_lastCaptionsResult) {
-        setTextAndTitle("captionsOutputValue", "No chapter draft", "Chapter generation failed. Retry when ready.");
+        setTextAndTitle(
+          "captionsOutputValue",
+          t("uxp.captions.runtime.no_chapter_draft", "No chapter draft"),
+          t("uxp.captions.runtime.chapter_generation_failed_retry_title", "Chapter generation failed. Retry when ready.")
+        );
       }
-      setCaptionsSessionState("Retry needed", "warning", `Chapter generation failed. ${err}`, "error", clipPath);
+      setCaptionsSessionState(
+        t("uxp.captions.runtime.retry_needed", "Retry needed"),
+        "warning",
+        formatI18n("uxp.captions.runtime.chapter_generation_failed_status", "Chapter generation failed. {error}", { error: err }),
+        "error",
+        clipPath
+      );
       syncCaptionsActionButtons();
     }
   );
@@ -3807,43 +4007,58 @@ async function runChapterGeneration() {
 /** ── REPEAT DETECTION ── */
 async function runRepeatDetection() {
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
-  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (!clipPath) { showSelectClipWarning(); return; }
 
   const threshold = parseFloat(document.getElementById("repeatSimilarity")?.value ?? 0.85);
   const keepBest  = document.getElementById("keepBestRepeat")?.checked ?? true;
 
   UIController.setButtonLoading("runRepeatBtn", true);
-  UIController.showProcessing("Detecting repeated segments…");
+  UIController.showProcessing(t("uxp.captions.runtime.detecting_repeated_segments", "Detecting repeated segments..."));
   setCaptionsSessionState(
-    "Working",
+    t("uxp.captions.runtime.working", "Working"),
     "working",
-    "Checking the current clip for duplicated spoken lines and alternate takes.",
+    t("uxp.captions.runtime.checking_repeats_status", "Checking the current clip for duplicated spoken lines and alternate takes."),
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Scanning for repeats…", clipPath);
+  setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.scanning_repeats", "Scanning for repeats..."), clipPath);
   syncCaptionsActionButtons();
 
-  await JobPoller.start(
+    await JobPoller.start(
     "/captions/repeat-detect",
     { filepath: clipPath, threshold, keep_best: keepBest },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing…"); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.captions.runtime.analyzing", "Analyzing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runRepeatBtn", false);
       const count = result.repeats?.length ?? result.removed_count ?? 0;
-      UIController.showToast(`Detected ${count} repeat(s).`, "success");
-      UIController.setStatus(`Repeat detection done — ${count} found.`);
+      UIController.showToast(
+        formatI18n("uxp.captions.runtime.detected_repeats", "Detected {count} repeat(s).", { count }),
+        "success"
+      );
+      UIController.setStatus(
+        formatI18n("uxp.captions.runtime.repeat_detection_done_status", "Repeat detection done - {count} found.", { count })
+      );
       showRepeatResult(result);
     },
     (err) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runRepeatBtn", false);
-      UIController.showToast(`Error: ${err}`, "error");
+      UIController.showToast(formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: err }), "error");
       if (!_lastCaptionsResult) {
-        setTextAndTitle("captionsOutputValue", "No repeat review", "Repeat detection failed. Retry when ready.");
+        setTextAndTitle(
+          "captionsOutputValue",
+          t("uxp.captions.runtime.no_repeat_review", "No repeat review"),
+          t("uxp.captions.runtime.repeat_detection_failed_retry_title", "Repeat detection failed. Retry when ready.")
+        );
       }
-      setCaptionsSessionState("Retry needed", "warning", `Repeat detection failed. ${err}`, "error", clipPath);
+      setCaptionsSessionState(
+        t("uxp.captions.runtime.retry_needed", "Retry needed"),
+        "warning",
+        formatI18n("uxp.captions.runtime.repeat_detection_failed_status", "Repeat detection failed. {error}", { error: err }),
+        "error",
+        clipPath
+      );
       syncCaptionsActionButtons();
     }
   );
@@ -5153,19 +5368,28 @@ function bindEvents() {
   document.getElementById("copySrtBtn")?.addEventListener("click", async () => {
     const body = document.getElementById("captionsResultBody");
     if (body?.value) {
-      const copiedLabel = (_lastCaptionsResult?.copyLabel || "Copy Output").replace(/^Copy\s+/, "");
+      const copiedLabel = _lastCaptionsResult?.copySuccessLabel || t("uxp.runtime.output", "Output");
       await copyTextToClipboard(body.value, { successLabel: copiedLabel });
     }
   });
   document.getElementById("importSrtBtn")?.addEventListener("click", async () => {
     if (!(_lastCaptionsResult && _lastCaptionsResult.kind === "transcript" && _lastCaptionsResult.hasSrt)) {
-      UIController.showToast("Timeline import is only available when an SRT transcript is ready.", "info");
+      UIController.showToast(
+        t("uxp.captions.runtime.timeline_import_needs_srt", "Timeline import is only available when an SRT transcript is ready."),
+        "info"
+      );
       return;
     }
     UIController.switchTab("timeline");
     focusControl("srtFilePath");
-    UIController.setStatus("Timeline SRT prep ready.", "working");
-    UIController.showToast("Choose the saved .srt file, then validate it for the CEP ocAddNativeCaptionTrack bridge.", "info");
+    UIController.setStatus(t("uxp.captions.runtime.timeline_srt_prep_ready", "Timeline SRT prep ready."), "working");
+    UIController.showToast(
+      t(
+        "uxp.captions.runtime.choose_saved_srt",
+        "Choose the saved .srt file, then validate it for the CEP ocAddNativeCaptionTrack bridge."
+      ),
+      "info"
+    );
   });
 
   // ── Audio ──

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - UXP Captions Runtime i18n
+
+- Routed Captions tab runtime feedback through locale keys, including transcript, chapter, repeat-review, result-card, copy/import, SRT handoff, and workflow readiness messages.
+- Added Captions-runtime guard coverage so the localized transcript/chapter/repeat feedback cannot regress to direct hardcoded strings.
+
 ### Changed - UXP Cut Runtime i18n
 
 - Routed Cut tab silence-removal, filler-detection, and cut-result runtime feedback through locale keys, including progress text, success/error toasts, status summaries, result-card labels, and empty states.
