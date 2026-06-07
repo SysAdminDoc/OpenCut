@@ -22,8 +22,6 @@ from opencut.jobs import (
 )
 from opencut.security import (
     get_json_dict,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     safe_bool,
     safe_float,
@@ -36,6 +34,10 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 video_ai_bp = Blueprint("video_ai", __name__)
+
+
+def _denoise_rate_limit_key(data):
+    return "ai_gpu" if data.get("method") == "basicvsr" else None
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +56,7 @@ def video_ai_capabilities():
 @video_ai_bp.route("/video/ai/upscale", methods=["POST"])
 @require_csrf
 @workflow_step("Upscaling video")
-@async_job("upscale", disk_operation="video_ai_heavy")
+@async_job("upscale", disk_operation="video_ai_heavy", rate_limit_key="ai_gpu")
 def video_ai_upscale(job_id, filepath, data):
     """AI upscale video using Real-ESRGAN."""
     output_dir = data.get("output_dir", "")
@@ -65,31 +67,24 @@ def video_ai_upscale(job_id, filepath, data):
     if model not in ("realesrgan-x4plus", "realesrgan-x4plus-anime", "realesrgan-x2plus"):
         model = "realesrgan-x4plus"
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A ai_gpu operation is already running. Please wait.")
-    try:
-        from opencut.core.video_ai import upscale_video
+    from opencut.core.video_ai import upscale_video
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = upscale_video(
-            filepath, output_dir=effective_dir,
-            scale=scale, model=model,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = upscale_video(
+        filepath, output_dir=effective_dir,
+        scale=scale, model=model,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 @video_ai_bp.route("/video/ai/rembg", methods=["POST"])
 @require_csrf
 @workflow_step("Removing background")
-@async_job("rembg")
+@async_job("rembg", rate_limit_key="ai_gpu")
 def video_ai_rembg(job_id, filepath, data):
     """AI background removal using rembg."""
     output_dir = data.get("output_dir", "")
@@ -110,33 +105,26 @@ def video_ai_rembg(job_id, filepath, data):
         bg_color = ""
     alpha_only = safe_bool(data.get("alpha_only", False), False)
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A ai_gpu operation is already running. Please wait.")
-    try:
-        from opencut.core.video_ai import remove_background
+    from opencut.core.video_ai import remove_background
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = remove_background(
-            filepath, output_dir=effective_dir,
-            model=model, bg_color=bg_color,
-            alpha_only=alpha_only,
-            backend=backend,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = remove_background(
+        filepath, output_dir=effective_dir,
+        model=model, bg_color=bg_color,
+        alpha_only=alpha_only,
+        backend=backend,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 @video_ai_bp.route("/video/ai/interpolate", methods=["POST"])
 @require_csrf
 @workflow_step("Interpolating frames")
-@async_job("interpolate", disk_operation="video_ai_heavy")
+@async_job("interpolate", disk_operation="video_ai_heavy", rate_limit_key="ai_gpu")
 def video_ai_interpolate(job_id, filepath, data):
     """AI frame interpolation."""
     output_dir = data.get("output_dir", "")
@@ -147,32 +135,25 @@ def video_ai_interpolate(job_id, filepath, data):
     if method not in ("auto", "rife", "minterpolate"):
         method = "auto"
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A ai_gpu operation is already running. Please wait.")
-    try:
-        from opencut.core.video_ai import frame_interpolate
+    from opencut.core.video_ai import frame_interpolate
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = frame_interpolate(
-            filepath, output_dir=effective_dir,
-            multiplier=multiplier,
-            method=method,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = frame_interpolate(
+        filepath, output_dir=effective_dir,
+        multiplier=multiplier,
+        method=method,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 @video_ai_bp.route("/video/ai/denoise", methods=["POST"])
 @require_csrf
 @workflow_step("Denoising video")
-@async_job("denoise", disk_operation="video_ai_heavy")
+@async_job("denoise", disk_operation="video_ai_heavy", rate_limit_key=_denoise_rate_limit_key)
 def video_ai_denoise(job_id, filepath, data):
     """AI video noise reduction."""
     output_dir = data.get("output_dir", "")
@@ -183,33 +164,23 @@ def video_ai_denoise(job_id, filepath, data):
         method = "nlmeans"
     strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    _needs_gpu = method == "basicvsr"
-    _gpu_acquired = False
-    if _needs_gpu:
-        _gpu_acquired = rate_limit("ai_gpu")
-        if not _gpu_acquired:
-            raise ValueError("A ai_gpu operation is already running. Please wait.")
-    try:
-        from opencut.core.video_ai import video_denoise
+    from opencut.core.video_ai import video_denoise
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = video_denoise(
-            filepath, output_dir=effective_dir,
-            method=method, strength=strength,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if _gpu_acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = video_denoise(
+        filepath, output_dir=effective_dir,
+        method=method, strength=strength,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 @video_ai_bp.route("/video/ai/install", methods=["POST"])
 @require_csrf
-@async_job("install", filepath_required=False)
+@async_job("install", filepath_required=False, rate_limit_key="model_install")
 def video_ai_install(job_id, filepath, data):
     """Install AI video dependencies."""
     component = data.get("component", "upscale")
@@ -222,18 +193,11 @@ def video_ai_install(job_id, filepath, data):
     if not pkgs:
         raise ValueError(f"Unknown component: {component}")
 
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("A model_install operation is already running. Please wait.")
-    try:
-        for i, pkg in enumerate(pkgs):
-            pct = int((i / len(pkgs)) * 90)
-            _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-            safe_pip_install(pkg, timeout=600)
-        return {"component": component}
-    finally:
-        if acquired:
-            rate_limit_release("model_install")
+    for i, pkg in enumerate(pkgs):
+        pct = int((i / len(pkgs)) * 90)
+        _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+        safe_pip_install(pkg, timeout=600)
+    return {"component": component}
 
 
 # ---------------------------------------------------------------------------
@@ -326,7 +290,7 @@ def style_list():
 @video_ai_bp.route("/video/style/apply", methods=["POST"])
 @require_csrf
 @workflow_step("Applying style transfer")
-@async_job("style_transfer")
+@async_job("style_transfer", rate_limit_key="ai_gpu")
 def style_apply(job_id, filepath, data):
     """Apply neural style transfer to video."""
     output_dir = data.get("output_dir", "")
@@ -338,33 +302,24 @@ def style_apply(job_id, filepath, data):
         style_name = "candy"
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0)
 
-    # Style transfer loads a torch model; without the shared ai_gpu lock,
-    # concurrent jobs (upscale + style + face_enhance) easily OOM the GPU.
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
-    try:
-        from opencut.core.style_transfer import style_transfer_video
+    from opencut.core.style_transfer import style_transfer_video
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, output_dir)
-        out = style_transfer_video(
-            filepath, style_name=style_name,
-            output_dir=effective_dir,
-            intensity=intensity,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out, "style": style_name}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = style_transfer_video(
+        filepath, style_name=style_name,
+        output_dir=effective_dir,
+        intensity=intensity,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out, "style": style_name}
 
 
 @video_ai_bp.route("/video/style/arbitrary", methods=["POST"])
 @require_csrf
-@async_job("style_arbitrary")
+@async_job("style_arbitrary", rate_limit_key="ai_gpu")
 def style_arbitrary(job_id, filepath, data):
     """Apply arbitrary style transfer using any reference image."""
     style_image = data.get("style_image", "").strip()
@@ -373,26 +328,19 @@ def style_arbitrary(job_id, filepath, data):
         raise ValueError("No style image provided")
     style_image = validate_filepath(style_image)
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
-    try:
-        from opencut.core.style_transfer import arbitrary_style_transfer
+    from opencut.core.style_transfer import arbitrary_style_transfer
 
-        def _on_progress(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-        effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
-        out = arbitrary_style_transfer(
-            filepath, style_image,
-            output_dir=effective_dir,
-            intensity=intensity,
-            on_progress=_on_progress,
-        )
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = arbitrary_style_transfer(
+        filepath, style_image,
+        output_dir=effective_dir,
+        intensity=intensity,
+        on_progress=_on_progress,
+    )
+    return {"output_path": out}
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +358,7 @@ def face_swap_capabilities():
 @video_ai_bp.route("/video/face/enhance", methods=["POST"])
 @require_csrf
 @workflow_step("Enhancing faces")
-@async_job("face_enhance")
+@async_job("face_enhance", rate_limit_key="ai_gpu")
 def face_enhance_route(job_id, filepath, data):
     """Enhance/restore faces in video using GFPGAN or CodeFormer."""
     _enhance_model = data.get("model", "gfpgan")
@@ -418,26 +366,19 @@ def face_enhance_route(job_id, filepath, data):
         _enhance_model = "gfpgan"
     _fidelity = safe_float(data.get("fidelity", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
-    try:
-        from opencut.core.face_swap import enhance_faces
+    from opencut.core.face_swap import enhance_faces
 
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
-        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-        out = enhance_faces(filepath, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = enhance_faces(filepath, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
+    return {"output_path": out}
 
 
 @video_ai_bp.route("/video/face/swap", methods=["POST"])
 @require_csrf
 @workflow_step("Swapping faces")
-@async_job("face_swap")
+@async_job("face_swap", rate_limit_key="ai_gpu")
 def face_swap_route(job_id, filepath, data):
     """Swap faces in video with a reference image."""
     ref = data.get("reference_face", "").strip()
@@ -445,20 +386,13 @@ def face_swap_route(job_id, filepath, data):
         raise ValueError("Reference face not found")
     ref = validate_filepath(ref)
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
-    try:
-        from opencut.core.face_swap import swap_face
+    from opencut.core.face_swap import swap_face
 
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
-        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-        out = swap_face(filepath, ref, output_dir=d, on_progress=_p)
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = swap_face(filepath, ref, output_dir=d, on_progress=_p)
+    return {"output_path": out}
 
 
 # ---------------------------------------------------------------------------
@@ -476,26 +410,19 @@ def upscale_capabilities():
 @video_ai_bp.route("/video/upscale/run", methods=["POST"])
 @require_csrf
 @workflow_step("Upscaling video")
-@async_job("upscale")
+@async_job("upscale", rate_limit_key="ai_gpu")
 def upscale_run(job_id, filepath, data):
     """Upscale video with quality preset."""
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("Another AI GPU operation is already running. Please wait.")
-    try:
-        from opencut.core.upscale_pro import upscale_with_preset
+    from opencut.core.upscale_pro import upscale_with_preset
 
-        def _p(pct, msg=""):
-            _update_job(job_id, progress=pct, message=msg)
-        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-        _valid_presets = {"fast", "balanced", "quality"}
-        _preset = data.get("preset", "fast")
-        if _preset not in _valid_presets:
-            _preset = "fast"
-        out = upscale_with_preset(filepath, preset=_preset,
-                                   scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
-                                   output_dir=d, on_progress=_p)
-        return {"output_path": out}
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    _valid_presets = {"fast", "balanced", "quality"}
+    _preset = data.get("preset", "fast")
+    if _preset not in _valid_presets:
+        _preset = "fast"
+    out = upscale_with_preset(filepath, preset=_preset,
+                               scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
+                               output_dir=d, on_progress=_p)
+    return {"output_path": out}

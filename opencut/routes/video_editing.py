@@ -26,8 +26,6 @@ from opencut.jobs import (
 )
 from opencut.security import (
     get_json_dict,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     safe_bool,
     safe_float,
@@ -719,7 +717,7 @@ def multicam_xml_export():
 # ---------------------------------------------------------------------------
 @video_editing_bp.route("/video/emotion-highlights", methods=["POST"])
 @require_csrf
-@async_job("emotion-highlights")
+@async_job("emotion-highlights", rate_limit_key="ai_gpu")
 def video_emotion_highlights(job_id, filepath, data):
     """Detect emotional peaks in a video for highlight extraction.
 
@@ -730,47 +728,40 @@ def video_emotion_highlights(job_id, filepath, data):
     min_intensity = safe_float(data.get("min_intensity", 0.6), 0.6, min_val=0.1, max_val=1.0)
     min_duration = safe_float(data.get("min_duration", 2.0), 2.0, min_val=0.5, max_val=30.0)
 
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A gpu_job operation is already running. Please wait.")
-    try:
-        from opencut.core.emotion_highlights import (
-            analyze_video_emotions,
-            emotion_peaks_to_highlights,
-        )
+    from opencut.core.emotion_highlights import (
+        analyze_video_emotions,
+        emotion_peaks_to_highlights,
+    )
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        curve = analyze_video_emotions(
-            filepath,
-            sample_interval=sample_interval,
-            min_peak_intensity=min_intensity,
-            min_peak_duration=min_duration,
-            on_progress=_on_progress,
-        )
+    curve = analyze_video_emotions(
+        filepath,
+        sample_interval=sample_interval,
+        min_peak_intensity=min_intensity,
+        min_peak_duration=min_duration,
+        on_progress=_on_progress,
+    )
 
-        highlights = emotion_peaks_to_highlights(curve.peaks)
+    highlights = emotion_peaks_to_highlights(curve.peaks)
 
-        return {
-            "peaks": [
-                {
-                    "time": p.time,
-                    "start": p.start,
-                    "end": p.end,
-                    "duration": p.duration,
-                    "emotion": p.emotion,
-                    "intensity": p.intensity,
-                }
-                for p in curve.peaks
-            ],
-            "highlights": highlights,
-            "avg_intensity": curve.avg_intensity,
-            "dominant_emotion": curve.dominant_emotion,
-            "samples_analyzed": len(curve.samples),
-        }
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {
+        "peaks": [
+            {
+                "time": p.time,
+                "start": p.start,
+                "end": p.end,
+                "duration": p.duration,
+                "emotion": p.emotion,
+                "intensity": p.intensity,
+            }
+            for p in curve.peaks
+        ],
+        "highlights": highlights,
+        "avg_intensity": curve.avg_intensity,
+        "dominant_emotion": curve.dominant_emotion,
+        "samples_analyzed": len(curve.samples),
+    }

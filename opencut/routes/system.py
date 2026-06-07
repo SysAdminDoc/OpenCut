@@ -46,8 +46,6 @@ from opencut.security import (
     get_csrf_token,
     get_json_dict,
     is_path_within_any,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     require_rate_limit,
     safe_bool,
@@ -1305,13 +1303,9 @@ def recent_outputs():
 # ---------------------------------------------------------------------------
 @system_bp.route("/install-whisper", methods=["POST"])
 @require_csrf
-@async_job("install-whisper", filepath_required=False)
+@async_job("install-whisper", filepath_required=False, rate_limit_key="model_install")
 def install_whisper(job_id, filepath, data):
     """Install faster-whisper via pip (on-demand from panel)."""
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("Another model_install operation is already running. Please wait.")
-
     backend = data.get("backend", "faster-whisper")
     allowed = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed:
@@ -1529,8 +1523,6 @@ def install_whisper(job_id, filepath, data):
         logger.error(f"All whisper install strategies failed. Last error: {last_error[:500]}")
         raise RuntimeError(helpful)
     finally:
-        if acquired:
-            rate_limit_release("model_install")
         _unregister_job_process(job_id)
 
 
@@ -1614,13 +1606,9 @@ def whisper_clear_cache():
 
 @system_bp.route("/whisper/reinstall", methods=["POST"])
 @require_csrf
-@async_job("reinstall-whisper", filepath_required=False)
+@async_job("reinstall-whisper", filepath_required=False, rate_limit_key="model_install")
 def whisper_reinstall(job_id, filepath, data):
     """Complete Whisper reinstall: uninstall, clear cache, reinstall fresh."""
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("Another model_install operation is already running. Please wait.")
-
     backend = data.get("backend", "faster-whisper")
     allowed_backends = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed_backends:
@@ -1803,8 +1791,6 @@ def whisper_reinstall(job_id, filepath, data):
             raise RuntimeError(f"Verification failed: {verify.stderr[:200]}")
 
     finally:
-        if acquired:
-            rate_limit_release("model_install")
         _unregister_job_process(job_id)
 
 
@@ -2403,60 +2389,52 @@ def chat_sessions():
 # ---------------------------------------------------------------------------
 @system_bp.route("/video/multimodal-diarize", methods=["POST"])
 @require_csrf
-@async_job("multimodal-diarize")
+@async_job("multimodal-diarize", rate_limit_key="ai_gpu")
 def video_multimodal_diarize(job_id, filepath, data):
     """Run multimodal speaker diarization combining audio and face recognition.
 
     Returns speaker segments enriched with face IDs for accurate multicam switching.
     """
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A GPU-intensive job is already running. Please wait.")
+    num_speakers = data.get("num_speakers")
+    if num_speakers is not None:
+        num_speakers = safe_int(num_speakers, None, min_val=1, max_val=20)
+    sample_fps = safe_float(data.get("sample_fps", 2.0), 2.0, min_val=0.5, max_val=10.0)
+    min_face_confidence = safe_float(data.get("min_face_confidence", 0.5), 0.5, min_val=0.1, max_val=1.0)
 
-    try:
-        num_speakers = data.get("num_speakers")
-        if num_speakers is not None:
-            num_speakers = safe_int(num_speakers, None, min_val=1, max_val=20)
-        sample_fps = safe_float(data.get("sample_fps", 2.0), 2.0, min_val=0.5, max_val=10.0)
-        min_face_confidence = safe_float(data.get("min_face_confidence", 0.5), 0.5, min_val=0.1, max_val=1.0)
+    from opencut.core.multimodal_diarize import multimodal_diarize
 
-        from opencut.core.multimodal_diarize import multimodal_diarize
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    result = multimodal_diarize(
+        filepath,
+        num_speakers=num_speakers,
+        sample_fps=sample_fps,
+        min_face_confidence=min_face_confidence,
+        on_progress=_on_progress,
+    )
 
-        result = multimodal_diarize(
-            filepath,
-            num_speakers=num_speakers,
-            sample_fps=sample_fps,
-            min_face_confidence=min_face_confidence,
-            on_progress=_on_progress,
-        )
+    # Build enriched cuts
+    cuts = result.to_enriched_cuts()
 
-        # Build enriched cuts
-        cuts = result.to_enriched_cuts()
-
-        return {
-            "speaker_segments": result.speaker_segments,
-            "face_segments": [
-                {"face_id": f.face_id, "start": f.start, "end": f.end,
-                 "confidence": f.confidence, "bbox": list(f.bbox)}
-                for f in result.face_segments
-            ],
-            "mappings": [
-                {"speaker": m.speaker, "face_id": m.face_id,
-                 "confidence": m.confidence, "overlap_seconds": m.overlap_seconds}
-                for m in result.mappings
-            ],
-            "cuts": cuts,
-            "num_speakers": result.num_speakers,
-            "num_faces": result.num_faces,
-        }
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {
+        "speaker_segments": result.speaker_segments,
+        "face_segments": [
+            {"face_id": f.face_id, "start": f.start, "end": f.end,
+             "confidence": f.confidence, "bbox": list(f.bbox)}
+            for f in result.face_segments
+        ],
+        "mappings": [
+            {"speaker": m.speaker, "face_id": m.face_id,
+             "confidence": m.confidence, "overlap_seconds": m.overlap_seconds}
+            for m in result.mappings
+        ],
+        "cuts": cuts,
+        "num_speakers": result.num_speakers,
+        "num_faces": result.num_faces,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2473,70 +2451,62 @@ def _validate_broll_prompt(data):
 
 @system_bp.route("/video/broll-generate", methods=["POST"])
 @require_csrf
-@async_job("broll-generate", filepath_required=False, pre_validate=_validate_broll_prompt)
+@async_job("broll-generate", filepath_required=False, pre_validate=_validate_broll_prompt, rate_limit_key="ai_gpu")
 def video_broll_generate(job_id, filepath, data):
     """Generate a B-roll video clip from a text description using AI."""
-    acquired = rate_limit("ai_gpu")
-    if not acquired:
-        raise ValueError("A GPU-intensive job is already running. Please wait.")
+    prompt = data.get("prompt", "").strip()
 
-    try:
-        prompt = data.get("prompt", "").strip()
+    if not prompt:
+        raise ValueError("No prompt provided")
+    if len(prompt) > 500:
+        raise ValueError("Prompt too long (max 500 chars)")
 
-        if not prompt:
-            raise ValueError("No prompt provided")
-        if len(prompt) > 500:
-            raise ValueError("Prompt too long (max 500 chars)")
+    output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
+    backend = data.get("backend", "auto")
+    _valid_backends = {"auto", "stable_diffusion", "dall_e", "replicate"}
+    if backend not in _valid_backends:
+        backend = "auto"
+    seed = data.get("seed")
+    if seed is not None:
+        seed = safe_int(seed, None, min_val=0, max_val=2**31)
+    reference_image = data.get("reference_image", "")
+    if reference_image:
+        reference_image = validate_filepath(reference_image)
 
-        output_dir = data.get("output_dir", "")
-        if output_dir:
-            output_dir = validate_path(output_dir)
-        backend = data.get("backend", "auto")
-        _valid_backends = {"auto", "stable_diffusion", "dall_e", "replicate"}
-        if backend not in _valid_backends:
-            backend = "auto"
-        seed = data.get("seed")
-        if seed is not None:
-            seed = safe_int(seed, None, min_val=0, max_val=2**31)
-        reference_image = data.get("reference_image", "")
-        if reference_image:
-            reference_image = validate_filepath(reference_image)
+    from opencut.core.broll_generate import generate_broll
 
-        from opencut.core.broll_generate import generate_broll
+    def _on_progress(pct, msg=""):
+        if _is_cancelled(job_id):
+            raise InterruptedError("Job cancelled")
+        _update_job(job_id, progress=pct, message=msg)
 
-        def _on_progress(pct, msg=""):
-            if _is_cancelled(job_id):
-                raise InterruptedError("Job cancelled")
-            _update_job(job_id, progress=pct, message=msg)
+    effective_dir = None
+    if output_dir:
+        try:
+            effective_dir = validate_path(output_dir)
+        except ValueError:
+            effective_dir = None
 
-        effective_dir = None
-        if output_dir:
-            try:
-                effective_dir = validate_path(output_dir)
-            except ValueError:
-                effective_dir = None
+    result = generate_broll(
+        prompt=prompt,
+        output_dir=effective_dir,
+        backend=backend,
+        seed=seed,
+        reference_image=reference_image if reference_image else None,
+        on_progress=_on_progress,
+    )
 
-        result = generate_broll(
-            prompt=prompt,
-            output_dir=effective_dir,
-            backend=backend,
-            seed=seed,
-            reference_image=reference_image if reference_image else None,
-            on_progress=_on_progress,
-        )
-
-        return {
-            "output_path": result.output_path,
-            "prompt": result.prompt,
-            "duration": result.duration,
-            "resolution": result.resolution,
-            "backend": result.backend,
-            "generation_time": result.generation_time,
-            "seed": result.seed,
-        }
-    finally:
-        if acquired:
-            rate_limit_release("ai_gpu")
+    return {
+        "output_path": result.output_path,
+        "prompt": result.prompt,
+        "duration": result.duration,
+        "resolution": result.resolution,
+        "backend": result.backend,
+        "generation_time": result.generation_time,
+        "seed": result.seed,
+    }
 
 
 @system_bp.route("/video/broll-backends", methods=["GET"])

@@ -178,9 +178,7 @@ def test_video_shorts_pipeline_string_false_flags_stay_false(client, csrf_token,
         on_progress(100, "done")
         return []
 
-    with patch("opencut.routes.video_specialty.rate_limit", return_value=True), \
-            patch("opencut.routes.video_specialty.rate_limit_release"), \
-            patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
+    with patch("opencut.core.shorts_pipeline.generate_shorts", side_effect=fake_generate):
         resp = client.post(
             "/video/shorts-pipeline",
             data=json.dumps({

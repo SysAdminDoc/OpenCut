@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from typing import Iterable, Optional, Tuple
 
 from flask import Request, jsonify, request
@@ -657,6 +658,14 @@ _rate_limits = {}
 _rate_lock = threading.Lock()
 
 
+class RateLimitExceeded(ValueError):
+    """Raised when a rate-limit slot cannot be acquired."""
+
+    def __init__(self, key: str):
+        self.key = key
+        super().__init__(f"Another {key} operation is already running. Please wait.")
+
+
 def rate_limit(key: str, max_concurrent: int = 1) -> bool:
     """
     Check if an operation identified by *key* is already at its
@@ -689,23 +698,31 @@ def rate_limit_release(key: str):
             _rate_limits[key] = current - 1
 
 
+@contextmanager
+def rate_limit_slot(key: str, max_concurrent: int = 1):
+    """Acquire and release a dynamic rate-limit slot around a code block."""
+    if not rate_limit(key, max_concurrent):
+        raise RateLimitExceeded(key)
+    try:
+        yield
+    finally:
+        rate_limit_release(key)
+
+
 def require_rate_limit(key: str, max_concurrent: int = 1):
     """Decorator that rejects requests when concurrency limit is reached.
 
     Acquires the rate limit slot before calling the wrapped function and
-    releases it when the function returns (or raises).  For async job
-    routes that spawn a background thread, the thread's ``finally``
-    block should call ``rate_limit_release(key)`` itself — in that case
-    use the lower-level ``rate_limit()`` / ``rate_limit_release()``
-    functions directly instead of this decorator.
+    releases it when the function returns (or raises). Async job routes
+    should use ``@async_job(..., rate_limit_key=...)`` instead so the
+    slot is held until the worker exits.
     """
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
             if not rate_limit(key, max_concurrent):
-                return jsonify({
-                    "error": f"Another {key} operation is already running. Please wait."
-                }), 429
+                error = RateLimitExceeded(key)
+                return jsonify({"error": str(error)}), 429
             try:
                 return f(*args, **kwargs)
             finally:

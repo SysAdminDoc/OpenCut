@@ -29,8 +29,6 @@ from opencut.security import (
     build_destructive_plan,
     destructive_confirmation_required_response,
     get_json_dict,
-    rate_limit,
-    rate_limit_release,
     require_csrf,
     safe_bool,
     safe_float,
@@ -1793,34 +1791,27 @@ def captions_convert():
 
 @captions_bp.route("/captions/enhanced/install", methods=["POST"])
 @require_csrf
-@async_job("install", filepath_required=False)
+@async_job("install", filepath_required=False, rate_limit_key="model_install")
 def captions_enhanced_install(job_id, filepath, data):
     """Install enhanced caption dependencies."""
-    acquired = rate_limit("model_install")
-    if not acquired:
-        raise ValueError("Another model_install operation is already running. Please wait.")
+    component = data.get("component", "whisperx")
 
-    try:
-        component = data.get("component", "whisperx")
+    packages = {
+        "whisperx": ["whisperx"],
+        "pysubs2": ["pysubs2"],
+        "nllb": ["ctranslate2", "sentencepiece", "huggingface-hub"],
+    }
 
-        packages = {
-            "whisperx": ["whisperx"],
-            "pysubs2": ["pysubs2"],
-            "nllb": ["ctranslate2", "sentencepiece", "huggingface-hub"],
-        }
+    pkgs = packages.get(component, [])
+    if not pkgs:
+        raise ValueError(f"Unknown component: {component}")
 
-        pkgs = packages.get(component, [])
-        if not pkgs:
-            raise ValueError(f"Unknown component: {component}")
+    for i, pkg in enumerate(pkgs):
+        pct = int((i / len(pkgs)) * 90)
+        _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+        safe_pip_install(pkg)
+    return {"component": component}
 
-        for i, pkg in enumerate(pkgs):
-            pct = int((i / len(pkgs)) * 90)
-            _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-            safe_pip_install(pkg)
-        return {"component": component}
-    finally:
-        if acquired:
-            rate_limit_release("model_install")
 
 
 # ---------------------------------------------------------------------------

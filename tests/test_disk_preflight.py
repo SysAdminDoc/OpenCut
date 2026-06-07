@@ -163,9 +163,9 @@ def test_high_impact_routes_enable_disk_preflight():
             '@async_job("export_preset", disk_operation="video_export", resumable=True)',
         ],
         "opencut/routes/video_ai.py": [
-            '@async_job("upscale", disk_operation="video_ai_heavy")',
-            '@async_job("interpolate", disk_operation="video_ai_heavy")',
-            '@async_job("denoise", disk_operation="video_ai_heavy")',
+            '@async_job("upscale", disk_operation="video_ai_heavy", rate_limit_key="ai_gpu")',
+            '@async_job("interpolate", disk_operation="video_ai_heavy", rate_limit_key="ai_gpu")',
+            '@async_job("denoise", disk_operation="video_ai_heavy", rate_limit_key=_denoise_rate_limit_key)',
         ],
     }
 
