@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed - Magic Clips Plan Graph
+
+- Closed RA-51 by adding a dry-run Magic Clips plan graph with stable plan/candidate/step IDs, source and config hashes, estimated platform outputs, and analysis-required fallback steps.
+- `/video/magic-clips/plan` returns reviewable plans without running ASR, FFmpeg analysis, or rendering, and `/video/shorts-pipeline` can render an approved plan/candidate subset.
+
 ### Changed - Sequence Index Host Locators
 
 - Added stable `locator_id` and `host_locators` metadata to Sequence Index rows so repeated uses of the same media path can carry distinct per-timeline-instance ratings and tags.

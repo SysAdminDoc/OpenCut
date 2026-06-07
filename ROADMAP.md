@@ -97,7 +97,7 @@ When this file and the live code disagree, **the code wins**.
 | RA-07 | Job result_json cap | S | Closed 2026-06-06: oversized job results spill to content-addressed local files |
 | RA-08 | DB compaction diagnostic | S | Closed 2026-06-06: local SQLite diagnostics report page, freelist, WAL, and file-size posture |
 | RA-09 | Timeline-native captions | L | Closed 2026-06-06: RA-46 sidecars, RA-47 diff/apply, RA-48 UXP snapshot reads, RA-49 CEP/hybrid write contracts, and RA-50 metadata-loss fixtures shipped |
-| RA-10 | Magic clips macro | L | Long-to-shorts table-stakes |
+| RA-10 | Magic clips macro | L | RA-51 closed 2026-06-06 with dry-run plan graph and approved-candidate render handoff; RA-52 through RA-56 remain open |
 | RA-11 | UXP least-privilege filesystem | M | fullAccess too broad |
 | RA-12 | Hybrid plugin validator | M | .uxpaddon packaging |
 | RA-13 | UXP external launch perms | M | Missing launchProcess allowlist |
@@ -1013,6 +1013,11 @@ into implementable work.
 
 #### RA-51 Magic Clips plan graph contract
 
+Closed 2026-06-06: `opencut/core/magic_clips.py` and
+`POST /video/magic-clips/plan` now emit a deterministic dry-run plan graph, and
+`/video/shorts-pipeline` accepts approved plan/candidate handoffs for rendering
+only the reviewed subset.
+
 **Priority:** P1. **Effort:** M. **Confidence:** High.
 
 **Recommended implementation:** Add `opencut/core/magic_clips.py` with
@@ -1025,13 +1030,13 @@ FFmpeg work; a separate async "analyze and plan" job can populate the cache.
 
 **Acceptance criteria:**
 
-- [ ] Plan output contains stable IDs, source path hash, config hash, candidate
+- [x] Plan output contains stable IDs, source path hash, config hash, candidate
       windows, step dependencies, estimated outputs, and reasons.
-- [ ] Dry-run never writes rendered media and never runs expensive ASR/FFmpeg
+- [x] Dry-run never writes rendered media and never runs expensive ASR/FFmpeg
       analysis unless an explicit `analyze=1`/async mode is requested.
-- [ ] Existing `/video/shorts-pipeline` can accept a plan ID or candidate IDs and
+- [x] Existing `/video/shorts-pipeline` can accept a plan ID or candidate IDs and
       render exactly that approved subset.
-- [ ] Unit tests compare deterministic JSON snapshots for cached-transcript,
+- [x] Unit tests compare deterministic JSON snapshots for cached-transcript,
       no-cache, and invalid-config scenarios.
 
 #### RA-52 Candidate scoring and explainable selection
@@ -1274,6 +1279,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 54 | CEP/hybrid caption write contract | `extension/com.opencut.panel/host/index.jsx`, `tests/jsx_mock.js`, UXP SRT Prep copy | Caption sidecars and UXP snapshots were ready, but the CEP caption writer returned only a thin success/count payload and the UXP handoff still described a generic caption flow. | Closed RA-49 by normalizing CEP caption import/write placement results, accepting sidecar-aware payloads, covering native/video/project/manual modes in the JSX mock, and naming the CEP `ocAddNativeCaptionTrack` handoff in UXP. |
 | 2026-06-06 | Cycle 55 | Caption metadata-loss regression fixtures | `tests/test_caption_language_confidence.py`, caption round-trip routes/core | RA-46 through RA-49 shipped the sidecar/diff/snapshot/write pieces, but the regression suite still lacked a consolidated proof that metadata loss and preservation boundaries stay explicit. | Closed RA-50 and RA-09 by adding fixtures for SRT-only metadata loss, sidecar-backed import/diff preservation, split/merge/insert/delete classifications, stale sidecar warnings, and no-sidecar degraded diff mode. |
 | 2026-06-06 | Cycle 56 | Sequence-index host locators | `opencut/core/sequence_index.py`, `opencut/routes/sequence_index_routes.py`, `tests/test_sequence_index.py`, Adobe UXP marker/sequence docs | Sequence Index ratings/tags were keyed by clip path only, CEP sequence info used snake-case track keys, and marker payloads were counted but not returned with reusable locator metadata. | Added stable `locator_id` and `host_locators` fields to Sequence Index rows, preserved them through filter route round-trips, made locator-keyed ratings/tags override path fallbacks, propagated sequence GUIDs, returned normalized marker locator payloads, and accepted CEP `video_tracks`/`audio_tracks`. |
+| 2026-06-06 | Cycle 57 | Magic Clips plan graph | `opencut/core/magic_clips.py`, `opencut/core/shorts_pipeline.py`, `opencut/routes/video_specialty.py`, generated route/MCP manifests, Magic Clips tests | The shorts pipeline rendered directly from selected highlights, but RA-51 needed a reviewable dry-run graph and a way to render only approved candidates. | Closed RA-51 with stable Magic Clips plan/candidate/step IDs, source/config hashes, estimated platform outputs, analysis-required fallback steps, and approved-candidate render handoff support. |
 
 ### Research queries to run later
 
@@ -1294,17 +1300,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 57: Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
-2. Cycle 58: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-3. Cycle 59: Continue E15 or another remaining release-trust gap after batch 154.
-4. Cycle 60: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 61: Inspect marker metadata workflows for remaining reusable host locator needs.
+1. Cycle 58: Continue RA-52 candidate scoring and explainable selection.
+2. Cycle 59: Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+3. Cycle 60: Continue E15 or another remaining release-trust gap after batch 154.
+4. Cycle 61: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+5. Cycle 62: Inspect marker metadata workflows for remaining reusable host locator needs.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 56: Sequence-index host locators.
+Cycle 57: Magic Clips plan graph and approved-candidate render handoff.
 
 #### Current focus
 
@@ -1504,9 +1510,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
-2. Continue E15 rolling CEP i18n migration.
-3. Inspect Magic Clips implementation fixtures for RA-51 through RA-56.
+1. Continue RA-52 candidate scoring and explainable Magic Clips selection.
+2. Revisit UXP trust work around RA-11/RA-13/RA-14 after more static cutover evidence.
+3. Continue E15 rolling CEP i18n migration.
 
 #### Unprocessed leads
 
@@ -1515,10 +1521,6 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - WebView permission split specifics after the RA-17 live-manifest guard.
 - Whether future Docker profiles should publish optional WebSocket 5680 or MCP
   5681 sidecars now that the default container posture is HTTP-only.
-- Whether the Magic Clips plan endpoint should be `/video/magic-clips/plan`,
-  `/video/shorts-pipeline/dry-run`, or both with one canonical core planner.
-- Whether RA-51 through RA-56 should be added as separate active TODO rows or
-  nested under the existing RA-10 Magic Clips macro row.
 - Whether future Adobe caption-write APIs should reopen RA-09 or create a new
   focused UXP caption-write item.
 - Whether Adobe ships a documented UXP caption write API after the 2026-06-06
