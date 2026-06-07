@@ -1177,6 +1177,20 @@ HTML_STATIC_SHELL_CALLS = (
     ("settings.import_settings_file_aria", "data-i18n-aria-label"),
     ("settings.export_crash_log", "data-i18n"),
     ("settings.clear_log", "data-i18n"),
+    # One-hundred-fifty-seventh batch (Settings templates and AI models shell HTML).
+    ("settings.templates_desc", "data-i18n"),
+    ("forms.template", "data-i18n"),
+    ("templates.select", "data-i18n"),
+    ("templates.save_custom", "data-i18n"),
+    ("templates.custom_name_placeholder", "data-i18n-placeholder"),
+    ("templates.custom_name_aria", "data-i18n-aria-label"),
+    ("settings.refresh_model_list_title", "data-i18n-title"),
+    ("common.refresh", "data-i18n"),
+    ("settings.ai_models_desc", "data-i18n"),
+    ("models.installed_aria", "data-i18n-aria-label"),
+    ("models.refresh_hint", "data-i18n"),
+    ("models.total_size", "data-i18n"),
+    ("models.status_idle", "data-i18n"),
 )
 
 

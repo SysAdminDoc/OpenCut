@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (156/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.268 / batch 156. |
+| E15 | CEP i18n migration | Rolling batches (157/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.269 / batch 157. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1303,6 +1303,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 65 | UXP WebView permission profiles | `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `extension/com.opencut.uxp/bolt-webview/README.md`, `docs/UXP_MIGRATION.md`, `tests/test_uxp_webview_permission_split.py`, `tests/test_uxp_webview_scaffold.py` | The dormant WebView scaffold carried one dev-shaped permission profile with Vite domains, hot-reload WebSocket domains, and `localAndRemote` messaging, so release packaging had no static boundary for local-only WebView content. | Closed RA-14 by exporting development and release manifest profiles, keeping hot reload/Vite domains dev-only, using `localOnly` release messaging with no remote WebView domains, and adding static guards for the split. |
 | 2026-06-06 | Cycle 66 | CEP i18n deliverables and settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | E15 had the Export Workflow Presets shell localized, but Export Deliverables, LLM settings, preset diagnostics, and related controls still carried static English shell copy. | Advanced E15 through batches 155 and 156 by wiring those controls through `data-i18n*` hooks and locale keys; the drift gate now reports 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 67 | UXP Hybrid package validator | Adobe UXP Hybrid packaging docs, `opencut/core/uxp_hybrid_package.py`, `opencut/tools/validate_uxp_hybrid_package.py`, `tests/test_uxp_hybrid_package.py` | Adobe's Hybrid plugin rules require manifest v6+, `addon.name`, `requiredPermissions.enableAddon`, and strict `.uxpaddon` placement for mac arm64, mac x64, and win x64; OpenCut had no repository-side validator before adding native addons. | Closed RA-12 by adding a static validator and CLI for unpacked UXP bundles, keeping the live UXP manifest valid as non-hybrid, allowing independent partial-architecture warnings, failing Marketplace layout gaps, and wiring the guard into release-smoke pytest-fast. |
+| 2026-06-06 | Cycle 68 | CEP i18n templates and model inventory shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | The Settings Project Templates and AI Models cards still had static English descriptions, labels, placeholders, ARIA/title attributes, and idle model-inventory status copy despite dynamic template/model feedback already being localized. | Advanced E15 to batch 157 by wiring those static strings through `data-i18n*` hooks, reusing existing template/form/refresh keys where possible; the drift gate now reports 2,324 keys, 2,279 consumers, 45 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1323,17 +1324,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 68: Continue E15 batch 157 or another remaining panel-i18n cleanup.
-2. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
-3. Cycle 70: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-4. Cycle 71: Revisit UXP cutover only after live UDT evidence is available.
-5. Cycle 72: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
+1. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+2. Cycle 70: Continue E15 batch 158 or another remaining panel-i18n cleanup.
+3. Cycle 71: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 72: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 73: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 67: UXP Hybrid package validator.
+Cycle 68: CEP i18n templates and model inventory shell.
 
 #### Current focus
 
@@ -1390,9 +1391,10 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 156: Export Deliverables, LLM settings, preset
-diagnostics, and Workflow Presets static shell strings now use locale hooks,
-and the drift gate reports 2,315 keys, 2,267 consumers, 48 dead
+E15 is advanced through batch 157: Settings Project Templates, AI Models,
+Export Deliverables, LLM settings, preset diagnostics, and Workflow Presets
+static shell strings now use locale hooks, and the drift gate reports 2,324
+keys, 2,279 consumers, 45 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1419,7 +1421,7 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
   append-only edits preserve that work.
 - The Adobe tracker, label seeder, Release Full permissions, UXP manifest, and
   Dockerfile all have concrete local evidence for the active RA queue.
-- E15's live i18n linter passes with 55 dead keys and 0 missing keys; remaining
+- E15's live i18n linter passes with 45 dead keys and 0 missing keys; remaining
   work should target dead-key cleanup and scanner coverage, not broad missing-key
   repair.
 - The repo `.venv` can launch but lacks pytest/dev tooling; `bootstrap_check.py
@@ -1460,9 +1462,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - Ruff now treats `tomllib` as Python 3.11 stdlib, so import-order checks can
   surface package files that were clean under the older Python 3.9 parser
   target.
-- E15 batches 155 and 156 reduced dead locale keys from 53 to 48 while adding
-  Export Deliverables, LLM settings, and preset diagnostics static-shell
-  consumers.
+- E15 batch 157 reduced dead locale keys from 48 to 45 while adding Settings
+  Project Templates and AI Models static-shell consumers.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1544,8 +1545,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue E15 rolling CEP i18n migration with batch 157.
-2. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+1. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+2. Continue E15 rolling CEP i18n migration with batch 158.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
