@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP Structured Empty States
+
+- Promoted CEP empty-state helper output to the shared `oc-empty-state` component classes used across the panel.
+- Added a localized Favorites empty state so an empty pin list renders explicit guidance instead of hiding the bar.
+- Added static coverage proving job history, batch files, workflow steps, footage search, and favorites use shared empty-state markup.
+
 ### Changed - Async Rate Limit Migration
 
 - Added worker-lifetime `async_job(rate_limit_key=...)` support so GPU and model-install routes reject saturated work before creating a job, then release the slot when the worker exits or setup fails.

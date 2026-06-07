@@ -41,7 +41,7 @@ agent (F143) makes these surfaces more exposed.
 5. **P1 -- Expression engine per-frame thread elimination** -- closed 2026-06-07
 6. **P1 -- Scripting console code length limit** -- closed 2026-06-07
 7. **P1 -- Security audit logging** -- closed 2026-06-07
-8. **P2 -- CEP structured empty-state components** -- UXP has 10+, CEP has ~1
+8. **P2 -- CEP structured empty-state components** -- closed 2026-06-07
 9. **P2 -- Multi-language locale files** -- i18n plumbed but only English shipped
 10. **P2 -- Rate-limit decorator adoption** -- closed 2026-06-07
 
@@ -321,12 +321,12 @@ agent (F143) makes these surfaces more exposed.
 - **Priority:** P2
 
 ### EI-03: CEP Panel Empty-State Components
-- **Current behavior:** UXP panel has 10+ structured `oc-empty-state` components with contextual messages. CEP panel has ~1 reference to empty states, relying on text-only cues like "Choose media to begin".
-- **Problem:** When lists return zero results (job history, search, favorites), CEP shows a blank area with no guidance. UXP's empty states are a clear UX improvement not ported back.
-- **Recommended change:** Add `empty-state` CSS class and component pattern to CEP panel matching UXP's `oc-empty-state`. Apply to: job history (0 jobs), search results (0 matches), favorites (0 saved), workflow steps (0 configured), batch files (0 selected).
-- **Code locations:** `extension/com.opencut.panel/client/main.js`, `style.css`, `index.html`
+- **Current behavior:** Closed 2026-06-07. CEP empty hints now carry the shared `oc-empty-state` classes and Favorites renders a localized empty state instead of hiding the bar.
+- **Problem:** When lists returned zero results (job history, search, favorites), CEP either used plain hints or removed the surface entirely. UXP's structured empty states were a clear UX improvement not fully ported back.
+- **Recommended change:** Shipped in Cycle 92 with shared helper classes, localized Favorites empty-state copy, and static coverage for job history, search, favorites, workflow steps, and batch files.
+- **Code locations:** `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.panel/client/locales/en.json`, `tests/test_i18n_hardcoded_migration.py`
 - **Backward compatibility:** Additive -- no existing behavior changes
-- **Verification:** Clear job history, verify empty-state message appears. Search for non-existent term, verify empty-state message.
+- **Verification:** `tests/test_i18n_hardcoded_migration.py` verifies the shared helper, localized Favorites keys, and list-renderer usage. Panel Vitest, ESLint, and build verification also passed; rendered Browser/Playwright validation was unavailable in this thread.
 - **Complexity:** S
 - **Priority:** P2
 
@@ -446,7 +446,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 1. **UXP has zero i18n** -- all strings hardcoded English (covered in EI-04)
 2. **Only English locale shipped** -- i18n plumbed but `locales/en.json` is the only file
-3. **CEP lacks structured empty-state components** -- UXP has 10+, CEP has ~1 (covered in EI-03)
+3. **CEP lacks structured empty-state components** -- closed 2026-06-07 with shared CEP empty-state classes and Favorites empty copy
 4. **No structured error-recovery UI** -- errors surface via toasts only (covered in NF-04)
 5. **No automated WCAG/contrast audit** in CI -- closed 2026-06-07 with a static CEP/UXP token-pair contrast audit wired into release smoke and PR Fast
 6. **No system color scheme auto-detection in UXP** -- CEP has inline script for `prefers-color-scheme`, UXP does not
@@ -555,12 +555,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
   - Acceptance: UXP loads `locales/en.json`, `data-i18n` count > 500
   - Verify: i18n drift test passes against UXP panel
 
-- [ ] P2 - **CEP empty-state components**
-  - Why: UXP has 10+ structured empty states; CEP has ~1
-  - Evidence: Grep shows 10+ `oc-empty-state` in UXP vs 1 `empty-state` reference in CEP
-  - Touches: `extension/com.opencut.panel/client/main.js`, `style.css`, `index.html`
-  - Acceptance: Job history, search, favorites, batch files show empty-state messages when empty
-  - Verify: Clear job history, verify message appears
+- [x] P2 - **CEP empty-state components**
+  - Why: UXP has 10+ structured empty states; CEP originally relied on plain hints or hidden empty containers
+  - Evidence: closed 2026-06-07 by routing CEP `buildEmptyHintMarkup()` through shared `oc-empty-state` classes and adding a visible Favorites empty state
+  - Touches: `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.panel/client/locales/en.json`, `tests/test_i18n_hardcoded_migration.py`
+  - Acceptance: Job history, search, favorites, workflow steps, and batch files use shared empty-state markup when empty
+  - Verify: Static migration coverage proves the shared helper and localized Favorites empty-state keys remain wired
 
 - [ ] P2 - **Structured error recovery panel**
   - Why: Errors show only as toasts; no retry, no actionable guidance
@@ -626,7 +626,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 | 5 | Replace `pickle.load` with numpy | Shipped 2026-06-07 | Closed cache-poisoning execution path |
 | 6 | Defer cleanup thread start | Shipped 2026-06-07 | Cleaner test/CLI imports |
 | 7 | Rate-limit decorator migration | Shipped 2026-06-07 | Route-level primitive calls are gone and async locks now fail fast before job creation |
-| 8 | Add CEP empty-state components | S (CSS + 5 DOM insertions) | Better UX for empty lists |
+| 8 | Add CEP empty-state components | Shipped 2026-06-07 | Shared CEP empty-state helper and visible Favorites empty state |
 
 ---
 
