@@ -1,7 +1,11 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-06-07 (380 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-380 are recorded below.
+**Last consolidated:** 2026-06-07 (381 autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 -- see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Passes 77-264 are summarized in the roadmap/history ledgers; Passes 265-381 are recorded below.
+
+**Pass 381 update (no standalone research file):**
+- Broadened the UXP i18n static key extractor to scan locale-shaped JavaScript string literals, so object-map keys such as deliverable labels and Settings plural summary keys are covered by the locale guard.
+- Verified 861 UXP JavaScript locale-key literals with zero missing entries in `locales/en.json`.
 
 **Pass 380 update (no standalone research file):**
 - Added a static Spanish locale placeholder-parity guard comparing `locales/es.json` against `locales/en.json` so runtime format tokens such as `{count}`, `{error}`, `{platform}`, and `{output}` cannot be dropped by translated strings.
