@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Tab Panels and Audio Normalize Shell
+
+- Advanced E15 to batch 167 by localizing the remaining CEP tab panel `aria-label` region names plus the Audio Normalize platform preset, loudness meter, and preview controls. The live drift report now shows 2,372 keys, 2,372 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Changed - CEP i18n Auto Shorts and Settings Shell
 
 - Advanced E15 to batch 166 by localizing Auto Shorts form labels/options/buttons, Magic Clips review-board status/detail copy, the approved-render alert, and the Settings studio-readiness overview shell. The live drift report now shows 2,360 keys, 2,360 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
