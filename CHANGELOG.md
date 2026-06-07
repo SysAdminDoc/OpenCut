@@ -2,10 +2,15 @@
 
 ## [Unreleased]
 
+### Changed - UXP i18n Video Effects Shell
+
+- Expanded the UXP i18n foundation deeper into the Video tab shell, including Emotion Highlights, B-Roll Analysis, Chat Editor, AI Upscale, Scene Detection, and Style Transfer controls, placeholders, select options, ARIA labels, hints, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 325+ attribute baseline and representative Video-tab locale keys.
+
 ### Changed - UXP i18n Video Tab Core Shell
 
-- Expanded the UXP i18n foundation into the top/core Video tab shell, including clip input, Color Match, Auto Zoom, Multicam Switch, Multimodal Diarization, and B-roll Generation controls, placeholders, select options, ARIA labels, and action buttons.
-- Raised the UXP i18n static guard to require the expanded 260+ attribute baseline and representative Video-tab locale keys.
+- Expanded the UXP i18n foundation into the top/core Video tab shell, including clip input, Color Match, Auto Zoom, Multicam Switch, Multimodal Diarization, B-roll Generation, and Depth Effects controls, placeholders, select options, ARIA labels, hints, and action buttons.
+- Raised the UXP i18n static guard to require the expanded 280+ attribute baseline and representative Video-tab locale keys.
 
 ### Changed - UXP i18n Audio Tab Shell
 

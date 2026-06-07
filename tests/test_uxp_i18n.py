@@ -90,7 +90,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
     html_keys = _html_i18n_keys()
     locale = _locale()
 
-    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 280
+    assert len(re.findall(r"\sdata-i18n(?:-[a-z-]+)?=", _html())) >= 325
     assert {
         "common.skip_to_main",
         "conn.backend_status",
@@ -133,6 +133,12 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.video.broll_description_placeholder",
         "uxp.video.depth_not_installed",
         "uxp.video.apply_depth_effect",
+        "uxp.video.emotion_highlights",
+        "uxp.video.chat_placeholder",
+        "uxp.video.realesrgan_video_upscale",
+        "uxp.video.detect_scene_boundaries",
+        "uxp.video.style_transfer",
+        "uxp.video.apply_style",
         "uxp.tabs.cut",
         "uxp.tabs.deliverables",
         "uxp.workspace.current_context",
