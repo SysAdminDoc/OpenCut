@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Timeline and Settings Shell
+
+- Advanced E15 to batch 169 by localizing Timeline write-back, OTIO, beat-marker, multicam, marker-export, rename/smart-bin controls plus Settings system, dependency-health, and Whisper readiness shell copy. The live drift report now shows 2,431 keys, 2,431 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys.
+
 ### Security - Scripting Console Resource Limit
 
 - Added a 100 KiB (102,400-byte) source limit to the scripting console, enforced in the core sandbox API plus `/api/scripting/execute` and `/api/workflow/scripting/execute` before compile/exec.

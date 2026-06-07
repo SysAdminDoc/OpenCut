@@ -3223,21 +3223,21 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="timeline.apply_cuts">Apply Cuts to Timeline</div></div>
                         <p class="card-desc" data-i18n="timeline.apply_cuts_desc">Apply silence removal or repeat detection cuts directly to the active Premiere sequence.</p>
-                        <div class="hint mb-sm" id="tlWritebackStatus">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
+                        <div class="hint mb-sm" id="tlWritebackStatus" data-i18n="timeline.no_cuts_loaded">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
                         <button type="button" class="btn-primary" id="applySeqCutsBtn" data-i18n="timeline.apply_last_cuts">Apply Last Cuts to Timeline</button>
                     </section>
                     <section class="card mt-sm">
                         <div class="card-header"><div class="card-title" data-i18n="timeline.export_otio">Export as OTIO (Universal)</div></div>
                         <p class="card-desc" data-i18n="timeline.export_otio_desc">Export cuts/markers as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
                         <div class="form-group">
-                            <label for="otioExportMode">Export Mode</label>
-                            <select id="otioExportMode" aria-label="OTIO export mode">
-                                <option value="cuts" selected>Cuts (remove regions)</option>
-                                <option value="markers">Markers (chapter/beat points)</option>
+                            <label for="otioExportMode" data-i18n="timeline.export_mode">Export Mode</label>
+                            <select id="otioExportMode" aria-label="OTIO export mode" data-i18n-aria-label="timeline.otio_mode_aria">
+                                <option value="cuts" selected data-i18n="timeline.otio_mode_cuts">Cuts (remove regions)</option>
+                                <option value="markers" data-i18n="timeline.otio_mode_markers">Markers (chapter/beat points)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file">Export .otio File</button>
-                        <div class="hint hidden" id="otioHint">OpenTimelineIO not installed. <button type="button" class="btn-text btn-xs" id="installOtioBtn">Install</button></div>
+                        <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file" data-i18n="timeline.export_otio_file" data-i18n-aria-label="timeline.export_otio_file_aria">Export .otio File</button>
+                        <div class="hint hidden" id="otioHint"><span data-i18n="timeline.otio_missing">OpenTimelineIO not installed.</span> <button type="button" class="btn-text btn-xs" id="installOtioBtn" data-i18n="timeline.install_otio">Install</button></div>
                         <div class="hint hidden mt-xs" id="otioResult"></div>
                     </section>
                 </div>
@@ -3245,21 +3245,21 @@
                 <!-- BEAT MARKERS -->
                 <div class="sub-panel" id="sub-tl-beats">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.beat_markers">Sync Beat Markers</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.sync_beat_markers">Sync Beat Markers</div></div>
                         <p class="card-desc" data-i18n="timeline.beat_markers_desc">Detect beats in an audio track and add them as markers to the active Premiere sequence.</p>
                         <div class="form-group">
-                            <label for="beatMarkerSubs">Subdivisions</label>
+                            <label for="beatMarkerSubs" data-i18n="timeline.subdivisions">Subdivisions</label>
                             <select id="beatMarkerSubs">
-                                <option value="1" selected>1 (every beat)</option>
-                                <option value="2">2 (half beats)</option>
-                                <option value="4">4 (quarter beats)</option>
-                                <option value="8">8 (eighth beats)</option>
+                                <option value="1" selected data-i18n="timeline.subdivision_every_beat">1 (every beat)</option>
+                                <option value="2" data-i18n="timeline.subdivision_half_beats">2 (half beats)</option>
+                                <option value="4" data-i18n="timeline.subdivision_quarter_beats">4 (quarter beats)</option>
+                                <option value="8" data-i18n="timeline.subdivision_eighth_beats">8 (eighth beats)</option>
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled data-i18n="timeline.detect_beats">Detect Beats</button>
                         <div class="result-area hidden" id="beatMarkersResult">
                             <div class="hint" id="beatMarkersSummary"></div>
-                            <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn">Add Markers to Sequence</button>
+                            <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn" data-i18n="timeline.add_markers_to_sequence">Add Markers to Sequence</button>
                         </div>
                     </section>
                 </div>
@@ -3267,24 +3267,24 @@
                 <!-- MULTICAM AUTO-SWITCH -->
                 <div class="sub-panel" id="sub-tl-multicam">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.multicam">Podcast Multicam Switcher</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.multicam_title">Podcast Multicam Switcher</div></div>
                         <p class="card-desc" data-i18n="timeline.multicam_desc">Detect speakers and generate cut decisions for a multicam podcast timeline.</p>
                         <div class="form-group">
-                            <label for="multicamSpeakers">Speakers</label>
+                            <label for="multicamSpeakers" data-i18n="timeline.speakers">Speakers</label>
                             <input type="number" id="multicamSpeakers" value="2" min="2" max="8" class="dim-input">
                         </div>
                         <div class="form-group">
-                            <label for="multicamMinCut">Min Cut Duration (sec)</label>
+                            <label for="multicamMinCut" data-i18n="timeline.min_cut_duration">Min Cut Duration (sec)</label>
                             <input type="number" id="multicamMinCut" value="1.0" min="0.2" max="10" step="0.1" class="dim-input">
                         </div>
                         <div class="form-group">
-                            <label id="multicamTrackMapLabel">Speaker-to-Track Mapping</label>
+                            <label id="multicamTrackMapLabel" data-i18n="timeline.speaker_track_mapping">Speaker-to-Track Mapping</label>
                             <div id="multicamTrackMap" class="mt-xs" role="group" aria-labelledby="multicamTrackMapLabel"></div>
                         </div>
                         <button type="button" class="btn-primary" id="runMulticamBtn" disabled data-i18n="timeline.multicam_generate">Generate Cuts</button>
                         <div class="result-area hidden" id="multicamResult">
                             <div class="hint" id="multicamSummary"></div>
-                            <button type="button" class="btn-sm btn-secondary mt-xs" id="applyMulticamCutsBtn">Apply Cuts to Sequence</button>
+                            <button type="button" class="btn-sm btn-secondary mt-xs" id="applyMulticamCutsBtn" data-i18n="timeline.apply_cuts_to_sequence">Apply Cuts to Sequence</button>
                         </div>
                     </section>
                 </div>
@@ -3292,13 +3292,13 @@
                 <!-- EXPORT CLIPS FROM MARKERS -->
                 <div class="sub-panel" id="sub-tl-export-markers">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.export_clips">Export Clips from Markers</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.export_clips_title">Export Clips from Markers</div></div>
                         <p class="card-desc" data-i18n="timeline.export_clips_desc">Read chapter/range markers from the active sequence and export each as a separate clip.</p>
                         <div class="form-group">
-                            <label for="markerExportDir">Output Directory</label>
+                            <label for="markerExportDir" data-i18n="timeline.output_directory">Output Directory</label>
                             <div class="input-row">
-                                <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder…" autocomplete="off" spellcheck="false">
-                                <button type="button" class="btn-sm btn-browse" data-target="markerExportDir">Browse</button>
+                                <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder…" data-i18n-placeholder="timeline.output_folder_placeholder" autocomplete="off" spellcheck="false">
+                                <button type="button" class="btn-sm btn-browse" data-target="markerExportDir" data-i18n="common.browse_folder">Browse</button>
                             </div>
                         </div>
                         <div class="btn-row gap-xs mt-xs">
@@ -3315,21 +3315,21 @@
                 <!-- BATCH RENAME CLIPS -->
                 <div class="sub-panel" id="sub-tl-rename">
                     <section class="card">
-                        <div class="card-header"><div class="card-title" data-i18n="subtabs.rename">Batch Rename Clips</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.rename_title">Batch Rename Clips</div></div>
                         <p class="card-desc" data-i18n="timeline.rename_desc">Rename project items in bulk with find/replace patterns or individual edits.</p>
-                        <button type="button" class="btn-outline btn-sm" id="loadProjectItemsBtn">Load Project Items</button>
+                        <button type="button" class="btn-outline btn-sm" id="loadProjectItemsBtn" data-i18n="timeline.load_project_items">Load Project Items</button>
                         <div id="renameItemsList" class="scrollable-sm mt-sm"></div>
                         <div class="form-group mt-sm">
-                            <label for="renameFindText">Find</label>
-                            <input type="text" id="renameFindText" class="text-input" placeholder="Find text…" autocomplete="off">
+                            <label for="renameFindText" data-i18n="timeline.find">Find</label>
+                            <input type="text" id="renameFindText" class="text-input" placeholder="Find text…" data-i18n-placeholder="timeline.find_placeholder" autocomplete="off">
                         </div>
                         <div class="form-group">
-                            <label for="renameReplaceText">Replace</label>
-                            <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with…" autocomplete="off">
+                            <label for="renameReplaceText" data-i18n="timeline.replace">Replace</label>
+                            <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with…" data-i18n-placeholder="timeline.replace_placeholder" autocomplete="off">
                         </div>
                         <div class="btn-row gap-xs">
-                            <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled>Apply Pattern</button>
-                            <button type="button" class="btn-primary btn-sm" id="renameAllBtn" disabled>Rename All</button>
+                            <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled data-i18n="timeline.apply_pattern">Apply Pattern</button>
+                            <button type="button" class="btn-primary btn-sm" id="renameAllBtn" disabled data-i18n="timeline.rename_all">Rename All</button>
                         </div>
                     </section>
                 </div>
@@ -3340,8 +3340,8 @@
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.smart_bins">Smart Bins</div></div>
                         <p class="card-desc" data-i18n="timeline.smart_bins_desc">Automatically organise project items into bins based on custom rules.</p>
                         <div id="smartBinRules" class="mb-sm"></div>
-                        <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn">+ Add Rule</button>
-                        <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn">Create Bins</button>
+                        <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn" data-i18n="timeline.add_rule">+ Add Rule</button>
+                        <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn" data-i18n="timeline.create_bins">Create Bins</button>
                     </section>
                 </div>
             </div>
@@ -3527,22 +3527,22 @@
                         <button type="button" class="btn-outline btn-sm" id="settingsReinstallWhisperBtn" data-i18n="common.reinstall">Reinstall</button>
                         <button type="button" class="btn-outline btn-sm" id="settingsClearCacheBtn" data-i18n="settings.clear_cache">Clear Cache</button>
                     </div>
-                    <div class="oc-status-line mt-xs" id="whisperStatusLine" data-state="working" role="status" aria-live="polite">Checking transcription readiness for captions, search, and chapter generation.</div>
+                    <div class="oc-status-line mt-xs" id="whisperStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="whisper.checking_readiness_status">Checking transcription readiness for captions, search, and chapter generation.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.system">System</div></div>
-                    <p class="card-desc">Review local acceleration, backend connectivity, and service health for the current machine.</p>
+                    <p class="card-desc" data-i18n="settings.system_desc">Review local acceleration, backend connectivity, and service health for the current machine.</p>
                     <div class="settings-row">
-                        <span class="settings-label">GPU</span>
+                        <span class="settings-label" data-i18n="settings.system_gpu_label">GPU</span>
                         <span class="settings-value" id="gpuName">Checking…</span>
                     </div>
                     <div class="settings-row">
-                        <span class="settings-label">VRAM</span>
+                        <span class="settings-label" data-i18n="settings.system_vram_label">VRAM</span>
                         <span class="settings-value" id="gpuVram">--</span>
                     </div>
                     <div class="settings-row">
-                        <span class="settings-label">Backend</span>
+                        <span class="settings-label" data-i18n="settings.system_backend_label">Backend</span>
                         <span class="settings-value" id="backendPort">--</span>
                     </div>
                     <div class="btn-row mt-md">
@@ -3559,24 +3559,24 @@
                             <span class="btn-label">View Logs</span>
                         </button>
                     </div>
-                    <div class="oc-status-line mt-xs" id="systemStatusLine" data-state="working" role="status" aria-live="polite">Checking local acceleration and backend details.</div>
+                    <div class="oc-status-line mt-xs" id="systemStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="settings.system_status_checking">Checking local acceleration and backend details.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.dep_health">Dependency Health</div>
-                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshDepsBtn" title="Refresh dependency status">
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshDepsBtn" title="Refresh dependency status" data-i18n-title="settings.deps_refresh_title">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label">Check Status</span>
+                            <span class="btn-label" data-i18n="settings.deps_check_status">Check Status</span>
                         </button>
                     </div>
-                    <p class="card-desc">Verify which local packages are ready before you start a feature-specific run.</p>
+                    <p class="card-desc" data-i18n="settings.dep_health_desc">Verify which local packages are ready before you start a feature-specific run.</p>
                     <div class="dep-grid" id="depGrid">
-                        <div class="hint">Press Check above to see which AI features are available.</div>
+                        <div class="hint" data-i18n="settings.deps_check_hint">Press Check above to see which AI features are available.</div>
                     </div>
-                    <div class="oc-status-line mt-xs" id="depsStatusLine" data-state="idle" role="status" aria-live="polite">Run a dependency check to confirm which local toolchains are available.</div>
+                    <div class="oc-status-line mt-xs" id="depsStatusLine" data-state="idle" role="status" aria-live="polite" data-i18n="settings.deps_status_idle">Run a dependency check to confirm which local toolchains are available.</div>
                 </section>
 
                 <section class="card">
