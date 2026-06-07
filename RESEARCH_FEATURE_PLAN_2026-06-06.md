@@ -34,7 +34,7 @@ agent (F143) makes these surfaces more exposed.
 
 ### Top 10 Opportunities (priority order)
 
-1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371`
+1. **P0 -- Fix `torch.load(weights_only=False)` RCE** in `model_quantization.py:371` -- closed 2026-06-07
 2. **P0 -- Replace `pickle.load()` with safe deserialization** in `semantic_video_search.py:139`
 3. **P0 -- Switch `os.startfile()` from blocklist to allowlist** in `system.py:784`
 4. **P1 -- UXP panel i18n parity** -- zero `data-i18n` attributes vs CEP's 1,190
@@ -366,6 +366,9 @@ agent (F143) makes these surfaces more exposed.
 
 ### CRITICAL: Unsafe `torch.load(weights_only=False)` -- Arbitrary Code Execution
 
+**Status:** Closed 2026-06-07 by switching model quantization to `weights_only=True`
+and raising Torch-backed extras to `torch>=2.6` / `torchvision>=0.21`.
+
 **File:** `opencut/core/model_quantization.py:371`
 ```python
 model = torch.load(model_path, map_location="cpu", weights_only=False)
@@ -484,12 +487,12 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 ### Phase 1: Security Hardening (P0, immediate)
 
-- [ ] P0 - **Fix `torch.load(weights_only=False)` RCE**
+- [x] P0 - **Fix `torch.load(weights_only=False)` RCE**
   - Why: Arbitrary code execution via malicious model file
-  - Evidence: `opencut/core/model_quantization.py:371`; other callsites correctly use `weights_only=True`
-  - Touches: `opencut/core/model_quantization.py`
-  - Acceptance: All `torch.load` calls use `weights_only=True`
-  - Verify: `grep -rn "weights_only=False" opencut/`
+  - Evidence: `opencut/core/model_quantization.py`; other callsites correctly use `weights_only=True`
+  - Touches: `opencut/core/model_quantization.py`, `pyproject.toml`, dependency-surface tests
+  - Acceptance: All `torch.load` calls use `weights_only=True`; Torch-backed extras require `torch>=2.6` / `torchvision>=0.21`
+  - Verify: `rg -n "weights_only=False|torch>=2\\.0|torchvision>=0\\.15" opencut pyproject.toml tests` returns no matches
 
 - [ ] P0 - **Replace `pickle.load()` with safe deserialization**
   - Why: Cache poisoning leads to code execution
@@ -608,7 +611,7 @@ Serves `frame_path` from `render_splat_frame()` without checking path confinemen
 
 | # | Item | Effort | Impact |
 |---|------|--------|--------|
-| 1 | Fix `torch.load(weights_only=False)` | S (one-line change) | Closes critical RCE |
+| 1 | Fix `torch.load(weights_only=False)` | Shipped 2026-06-07 | Closed by safe quantization loads plus Torch/TorchVision advisory floors |
 | 2 | Add code length limit to scripting console | S (5 lines) | Prevents resource exhaustion |
 | 3 | Switch `os.startfile()` to allowlist | S (replace blocklist dict) | Closes extension-bypass vector |
 | 4 | Fix `send_file()` path confinement | S (add `is_path_within_any()` check) | Closes file-serve bypass |

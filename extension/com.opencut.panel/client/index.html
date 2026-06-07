@@ -3356,39 +3356,39 @@
                 <!-- FOOTAGE SEARCH -->
                 <div class="sub-panel active" id="sub-nlp-search">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Search Footage Library</div></div>
-                        <p class="card-desc">Index and semantically search all project clips by transcript content.</p>
-                        <div class="oc-inline-summary-grid" aria-label="Search index status">
+                        <div class="card-header"><div class="card-title" data-i18n="search.library_title">Search Footage Library</div></div>
+                        <p class="card-desc" data-i18n="search.library_desc">Index and semantically search all project clips by transcript content.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Search index status" data-i18n-aria-label="search.index_status_aria">
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Index</span>
-                                <span class="oc-status-pill" id="searchIndexPill" data-state="empty">Not ready</span>
+                                <span class="oc-inline-label" data-i18n="search.index_label">Index</span>
+                                <span class="oc-status-pill" id="searchIndexPill" data-state="empty" data-i18n="search.index_not_ready_pill">Not ready</span>
                             </div>
                             <div class="oc-inline-stat">
-                                <span class="oc-inline-label">Indexed</span>
-                                <span class="oc-inline-value" id="searchIndexCount">0 files indexed</span>
+                                <span class="oc-inline-label" data-i18n="search.indexed_label">Indexed</span>
+                                <span class="oc-inline-value" id="searchIndexCount" data-i18n="search.zero_files_indexed">0 files indexed</span>
                             </div>
                         </div>
-                        <div class="hint mb-sm" id="searchIndexStats">Index not loaded.</div>
+                        <div class="hint mb-sm" id="searchIndexStats" data-i18n="search.index_not_loaded">Index not loaded.</div>
                         <div class="btn-row gap-xs flex-wrap mb-sm">
-                            <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
-                            <button type="button" class="btn-secondary btn-sm" id="clearSearchIndexBtn" disabled>Clear Index</button>
+                            <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn" data-i18n="search.index_all_project_clips">Index All Project Clips</button>
+                            <button type="button" class="btn-secondary btn-sm" id="clearSearchIndexBtn" disabled data-i18n="search.clear_index">Clear Index</button>
                         </div>
-                        <div class="oc-status-line" id="searchStatus" data-state="idle" role="status" aria-live="polite">Index project clips, then search with descriptive phrases to surface the right moment faster.</div>
+                        <div class="oc-status-line" id="searchStatus" data-state="idle" role="status" aria-live="polite" data-i18n="search.index_empty_status">Index project clips, then search with descriptive phrases to surface the right moment faster.</div>
                         <div class="border-t"></div>
                         <div class="form-group">
-                            <label for="footageSearchQuery">Search For…</label>
-                            <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate…">
+                            <label for="footageSearchQuery" data-i18n="search.search_for_label">Search For…</label>
+                            <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate…" data-i18n-placeholder="search.query_placeholder">
                         </div>
                         <div class="form-group">
-                            <label for="footageSearchMax">Max Results</label>
+                            <label for="footageSearchMax" data-i18n="search.max_results_label">Max Results</label>
                             <input type="number" id="footageSearchMax" value="10" min="1" max="50" class="dim-input">
                         </div>
-                        <button type="button" class="btn-primary" id="runFootageSearchBtn">Search</button>
-                        <div id="footageSearchResults" class="scrollable-md mt-sm" aria-live="polite" aria-label="Footage search results">
+                        <button type="button" class="btn-primary" id="runFootageSearchBtn" data-i18n="tabs.search">Search</button>
+                        <div id="footageSearchResults" class="scrollable-md mt-sm" aria-live="polite" aria-label="Footage search results" data-i18n-aria-label="search.results_aria">
                             <div class="hint hint-empty is-info">
-                                <span class="hint-kicker">Ready when you are</span>
-                                <span class="hint-title">Search the footage library</span>
-                                <span class="hint-copy">Index project clips, then use descriptive queries to find the right sound bite or shot.</span>
+                                <span class="hint-kicker" data-i18n="search.ready_kicker">Ready when you are</span>
+                                <span class="hint-title" data-i18n="search.library_title">Search the footage library</span>
+                                <span class="hint-copy" data-i18n="search.library_body">Index project clips, then use descriptive queries to find the right sound bite or shot.</span>
                             </div>
                         </div>
                     </section>

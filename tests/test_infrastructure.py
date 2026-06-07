@@ -15,9 +15,11 @@ External dependencies (torch, nvidia-smi, GitHub API) are mocked.
 
 import json
 import os
+import sys
 import tempfile
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from tests.conftest import csrf_headers
@@ -266,6 +268,42 @@ class TestModelQuantizationCore(unittest.TestCase):
         finally:
             if os.path.isfile(tmp_path):
                 os.unlink(tmp_path)
+
+    def test_quantize_pytorch_loads_weights_only(self):
+        from opencut.core.model_quantization import _quantize_pytorch
+
+        calls = {}
+
+        class FakeTensor:
+            def is_floating_point(self):
+                return True
+
+            def half(self):
+                calls["half"] = True
+                return self
+
+        def fake_load(path, **kwargs):
+            calls["load"] = (path, kwargs)
+            return {"weight": FakeTensor()}
+
+        def fake_save(model, path):
+            calls["save"] = (model, path)
+
+        fake_torch = SimpleNamespace(
+            Tensor=FakeTensor,
+            load=fake_load,
+            nn=SimpleNamespace(Module=type("FakeModule", (), {}), Linear=object, Conv2d=object),
+            qint8=object(),
+            quantization=SimpleNamespace(quantize_dynamic=lambda model, layers, dtype: model),
+            save=fake_save,
+        )
+        with patch.dict(sys.modules, {"torch": fake_torch}):
+            _quantize_pytorch("model.pt", "model_fp16.pt", "fp16")
+
+        self.assertEqual(calls["load"][0], "model.pt")
+        self.assertTrue(calls["load"][1]["weights_only"])
+        self.assertTrue(calls["half"])
+        self.assertEqual(calls["save"][1], "model_fp16.pt")
 
     def test_get_quantized_path_fallback(self):
         from opencut.core.model_quantization import get_quantized_path

@@ -1,7 +1,7 @@
 # OpenCut -- Roadmap
 
 **Version**: 5.0
-**Updated**: 2026-06-06
+**Updated**: 2026-06-07
 **Baseline**: v1.32.0 -- 1,538 routes, 107 blueprints, 602 core modules, 9,600+ tests, CEP + UXP panels, DaVinci Resolve bridge, MCP server
 **License**: MIT
 **Replaces**: ROADMAP.md v4.x (implementation ledger archived in git history)
@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (167/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.279 / batch 167. |
+| E15 | CEP i18n migration | Rolling batches (168/~160+) | Removing bare-English strings from the CEP panel and expanding scanner coverage; `TODO.md` last synced this at v4.280 / batch 168. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -78,7 +78,7 @@ When this file and the live code disagree, **the code wins**.
 
 | Item | Severity | Detail |
 |---|---|---|
-| PyTorch CVE-2025-32434 | CVSS 9.3 | torch.load(weights_only=True) can still execute code |
+| PyTorch CVE-2025-32434 | CVSS 9.3 | Closed 2026-06-07: model quantization now uses `weights_only=True`, unsafe pickle checkpoints return a clear error, and Torch-backed extras require `torch>=2.6` / `torchvision>=0.21`. |
 | Flask CVE-2026-27205 | Info Disclosure | Session Vary: Cookie header missing in <=3.1.2 |
 | Pillow CVE-2026-25990 | High | Out-of-bounds write |
 | OpenEXR CVE-2026-39886/40244/40250 | High | HTJ2K/DWA decoder overflow |
@@ -339,7 +339,7 @@ LosslessCut ships on 7+ platforms (41K stars). Distribution is a competitive wea
 |---|---|---|
 | UX / Panel | Strong | E15 i18n, UXP WebView, drag-drop, workspace layouts |
 | Performance | Good | StreamDiffusion, FlashVSR, GPU semaphore, disk preflight |
-| Security | **Action needed** | 4 CVEs (PyTorch CVSS 9.3, Flask, Pillow, OpenEXR); 36 RA-items |
+| Security | **Action needed** | PyTorch deserialization hardening closed; Flask, Pillow, and OpenEXR advisories still need follow-up; 36 RA-items |
 | Reliability | Good | Job persistence, crash logging, resume, structured errors |
 | Integrations | Strong | OTIO, DaVinci, MCP, OBS planned |
 | Data | Good | SQLite WAL, transcript cache, FTS5, atomic writes |
@@ -595,7 +595,7 @@ strings and dynamic-rendering scanner gaps.
 |---|---|---|---|
 | E15 dead-key cleanup | `scripts/i18n_lint.py --json` now reports 0 dead keys and a 0-key baseline | Keep the baseline at zero and remove or wire any future dead key in the same batch that introduces it. | P2 |
 | E15 scanner coverage | `scripts/i18n_lint.py` scans `data-i18n*`, direct `t(...)` calls, and supported JS key-field metadata | Continue targeted scanner coverage for dynamic `innerHTML`, option-label builders, tooltip/title helpers, and generated command-palette labels where false negatives are likely. | P2 |
-| E15 roadmap status | `TODO.md` now tracks v4.279 / batch 167 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
+| E15 roadmap status | `TODO.md` now tracks v4.280 / batch 168 | Keep `ROADMAP.md` status tied to linter facts, not older dead-key counts. | P1 |
 
 ### Cycle 8: UXP/WebView cutover audit
 
@@ -1315,6 +1315,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 77 | CEP i18n JS metadata scanner coverage | `scripts/i18n_lint.py`, `tests/test_i18n_drift.py` | The drift scanner still only counted HTML locale attributes and direct `t(...)` calls, leaving structured JS locale-key metadata invisible to the consumer ledger. | Advanced E15 to batch 165 by counting supported JS key-field metadata such as `labelKey`; the drift gate now reports 2,320 keys, 2,320 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-06 | Cycle 78 | CEP i18n Auto Shorts and Settings shell | CEP `index.html`, `main.js`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Auto Shorts still had bare form labels/options/buttons, Magic Clips review-board status/detail strings, and the approved-render alert outside locale hooks, and Settings studio-readiness still had bare overview copy. | Advanced E15 to batch 166 by wiring those shells through locale keys; the drift gate now reports 2,360 keys, 2,360 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
 | 2026-06-07 | Cycle 79 | CEP i18n tab panels and Audio Normalize shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | Captions, Audio, Video, Export, Timeline, and Search/NLP tab panels still had bare-English `aria-label` region names, and Audio Normalize still had bare preset options, meter labels, and preview control copy. | Advanced E15 to batch 167 by wiring those surfaces through locale hooks; the drift gate now reports 2,372 keys, 2,372 consumers, 16 JS metadata consumers, 0 dead keys, and 0 missing keys. |
+| 2026-06-07 | Cycle 80 | CEP i18n Footage Search shell and PyTorch hardening | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py`, `opencut/core/model_quantization.py`, `pyproject.toml`, dependency tests | Footage Search still had bare-English shell strings, model quantization forced unsafe PyTorch pickle loading, and Torch-backed optional extras admitted vulnerable pre-2.6 Torch versions. | Advanced E15 to batch 168 and closed the PyTorch hardening P0 by wiring Footage Search through locale hooks, switching quantization loads to `weights_only=True`, raising the Torch/TorchVision floor, and adding regression coverage. |
 
 ### Research queries to run later
 
@@ -1335,17 +1336,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 80: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
-2. Cycle 81: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-3. Cycle 82: Revisit UXP cutover only after live UDT evidence is available.
-4. Cycle 83: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
-5. Cycle 84: Audit the next release-trust or UX debt item that live tests can close locally.
+1. Cycle 81: Continue the security hardening queue with safe CLIP cache deserialization or `os.startfile` allowlisting.
+2. Cycle 82: Continue E15 hardcoded-shell audit or another scanner-coverage pass.
+3. Cycle 83: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+4. Cycle 84: Revisit UXP cutover only after live UDT evidence is available.
+5. Cycle 85: Re-scan Adobe UXP Hybrid packaging docs after the next Premiere UXP SDK release.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 79: CEP i18n tab panels and Audio Normalize shell.
+Cycle 80: CEP i18n Footage Search shell and PyTorch hardening.
 
 #### Current focus
 
@@ -1402,7 +1403,7 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 167: tab panel region labels, Audio Normalize shell controls, Auto Shorts form labels/options/buttons,
+E15 is advanced through batch 168: Footage Search shell copy, tab panel region labels, Audio Normalize shell controls, Auto Shorts form labels/options/buttons,
 Magic Clips review-board status/detail copy, the approved-render alert, and the
 Settings studio-readiness overview shell now use locale hooks, the final unused
 CEP locale keys have been removed, the dead-key baseline is zero, the scanner counts supported JS metadata locale keys
@@ -1413,7 +1414,7 @@ Settings shortcut/About, Audio & Zoom
 Defaults, GPU Recommendation, Settings Engine Routing, Live Updates Bridge,
 Settings Project Templates, AI Models, Export Deliverables, LLM settings, preset
 diagnostics, and Workflow Presets static shell strings now use locale hooks, and
-the drift gate reports 2,372 keys, 2,372 consumers, 16 JS metadata consumers, 0 dead
+the drift gate reports 2,386 keys, 2,386 consumers, 16 JS metadata consumers, 0 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1500,6 +1501,11 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - E15 batch 167 localized the remaining CEP tab panel `aria-label` region names
   plus Audio Normalize preset options, loudness meter labels, and preview control
   copy.
+- E15 batch 168 localized the Footage Search card, index summary, empty state,
+  query controls, search action, and results region label.
+- PyTorch deserialization hardening is closed: quantization loads now use
+  `weights_only=True`, unsafe pickle checkpoints produce a clear error, and
+  Torch-backed optional extras require `torch>=2.6` / `torchvision>=0.21`.
 - RA-12 is closed as a static packaging guard; actual native addon loading
   still needs UDT/native-platform evidence when a `.uxpaddon` is introduced.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
@@ -1581,8 +1587,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
-2. Audit the next release-trust or UX debt item that live tests can close locally.
+1. Continue the security hardening queue with safe CLIP cache deserialization or `os.startfile` allowlisting.
+2. Continue E15 rolling CEP i18n migration with another hardcoded-shell audit or scanner-coverage pass; dead-key cleanup should remain at zero.
 3. Revisit UXP cutover only after live UDT evidence is available.
 
 #### Unprocessed leads
