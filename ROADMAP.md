@@ -70,7 +70,7 @@ When this file and the live code disagree, **the code wins**.
 
 | ID | Item | Status | Detail |
 |---|---|---|---|
-| E15 | CEP i18n migration | Rolling batches (154/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.266 / batch 154. |
+| E15 | CEP i18n migration | Rolling batches (156/~160) | Removing bare-English strings from the CEP panel; `TODO.md` last synced this at v4.268 / batch 156. |
 | F202 | macOS notarization live acceptance | Blocked: needs GitHub secrets | Repository wiring exists. Deadline: **2026-09-01**. |
 | F252 | UXP WebView cutover | Blocked: needs Premiere UDT evidence | Bolt UXP scaffold exists. |
 
@@ -1301,6 +1301,7 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 | 2026-06-06 | Cycle 63 | UXP external launch permission | `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/`, `docs/UXP_MIGRATION.md`, `tests/test_uxp_external_launch_permission.py` | The UXP social OAuth flow called `shell.openExternal()` but the manifests did not declare `launchProcess`, and the WebView scaffold allowed generic http(s) URL launches without an explicit no-file-launch contract. | Closed RA-13 by declaring HTTPS-only launch schemes with an empty extension allowlist, routing OAuth browser handoff through HTTPS normalization and manual fallback, aligning the WebView wrapper, and adding static guards against broad schemes or `openPath()` usage. |
 | 2026-06-06 | Cycle 64 | UXP filesystem permission | `extension/com.opencut.uxp/manifest.json`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `docs/UXP_MIGRATION.md`, `docs/UXP_MACOS_HTTP.md`, `tests/test_uxp_filesystem_permission.py` | UXP file access already went through `getFileForOpening()` and `getFolder()` pickers, but both manifest surfaces still requested broad `localFileSystem: "fullAccess"`. | Closed RA-11 by narrowing both manifest surfaces to `localFileSystem: "request"`, documenting the picker-scoped boundary, and adding static guards that reject direct filesystem APIs until a separate permission review exists. |
 | 2026-06-06 | Cycle 65 | UXP WebView permission profiles | `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`, `extension/com.opencut.uxp/bolt-webview/README.md`, `docs/UXP_MIGRATION.md`, `tests/test_uxp_webview_permission_split.py`, `tests/test_uxp_webview_scaffold.py` | The dormant WebView scaffold carried one dev-shaped permission profile with Vite domains, hot-reload WebSocket domains, and `localAndRemote` messaging, so release packaging had no static boundary for local-only WebView content. | Closed RA-14 by exporting development and release manifest profiles, keeping hot reload/Vite domains dev-only, using `localOnly` release messaging with no remote WebView domains, and adding static guards for the split. |
+| 2026-06-06 | Cycle 66 | CEP i18n deliverables and settings shell | CEP `index.html`, `en.json`, `tests/test_i18n_hardcoded_migration.py` | E15 had the Export Workflow Presets shell localized, but Export Deliverables, LLM settings, preset diagnostics, and related controls still carried static English shell copy. | Advanced E15 through batches 155 and 156 by wiring those controls through `data-i18n*` hooks and locale keys; the drift gate now reports 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys. |
 
 ### Research queries to run later
 
@@ -1321,17 +1322,17 @@ Cycle 14 decomposes this into RA-51 through RA-56.
 
 ### Next research cycles
 
-1. Cycle 66: Continue E15 batch 155 or another remaining release-trust gap after the UXP permission bundle.
-2. Cycle 67: Validate hybrid CEP/UXP plugin packaging around RA-12.
-3. Cycle 68: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
-4. Cycle 69: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
-5. Cycle 70: Revisit UXP cutover only after live UDT evidence is available.
+1. Cycle 67: Validate hybrid CEP/UXP plugin packaging around RA-12.
+2. Cycle 68: Continue E15 batch 157 or another remaining panel-i18n cleanup.
+3. Cycle 69: Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
+4. Cycle 70: Audit caption UX again only if Adobe publishes a documented UXP caption write API.
+5. Cycle 71: Revisit UXP cutover only after live UDT evidence is available.
 
 ### Continuation State
 
 #### Last completed cycle
 
-Cycle 65: UXP WebView permission profiles.
+Cycle 66: CEP i18n deliverables and settings shell.
 
 #### Current focus
 
@@ -1385,8 +1386,9 @@ request ID, method, path, and typed-error context fields.
 RA-01/RA-02 keep Ruff's Python parser target aligned with the package floor and
 keep `requirements.txt` core/standard dependency bounds synchronized with
 `pyproject.toml`.
-E15 is advanced through batch 154: Workflow Presets static shell strings now use
-locale hooks, and the drift gate reports 2,295 keys, 2,242 consumers, 53 dead
+E15 is advanced through batch 156: Export Deliverables, LLM settings, preset
+diagnostics, and Workflow Presets static shell strings now use locale hooks,
+and the drift gate reports 2,315 keys, 2,267 consumers, 48 dead
 keys, and 0 missing keys.
 RA-46 is closed under RA-09: caption exports now write versioned sidecars and
 timeline SRT parsing can preserve metadata when a sidecar is available.
@@ -1454,8 +1456,9 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 - Ruff now treats `tomllib` as Python 3.11 stdlib, so import-order checks can
   surface package files that were clean under the older Python 3.9 parser
   target.
-- E15 batch 154 reduced dead locale keys from 55 to 53 while adding Workflow
-  Presets static-shell consumers.
+- E15 batches 155 and 156 reduced dead locale keys from 53 to 48 while adding
+  Export Deliverables, LLM settings, and preset diagnostics static-shell
+  consumers.
 - SRT remains a lossy text/timing carrier; the new sidecar path is the metadata
   preservation contract for caption timeline round trips until native UXP writes
   or hybrid caption writes are live-tested.
@@ -1535,8 +1538,8 @@ sidecar warnings, and no-sidecar degraded mode. RA-09 is closed.
 
 #### Next best actions
 
-1. Continue E15 rolling CEP i18n migration after the RA-11/RA-13/RA-14 UXP permission bundle.
-2. Validate hybrid CEP/UXP plugin packaging around RA-12.
+1. Validate hybrid CEP/UXP plugin packaging around RA-12.
+2. Continue E15 rolling CEP i18n migration with batch 157.
 3. Audit Magic Clips downstream timeline/social import consumers for bundle-manifest reuse.
 
 #### Unprocessed leads

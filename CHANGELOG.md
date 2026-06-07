@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Settings and Deliverables
+
+- Advanced E15 through batches 155 and 156 by adding locale hooks for the Export Deliverables shell, LLM settings, preset diagnostics controls, and guarded migration coverage. The live drift report now shows 2,315 keys, 2,267 consumers, 48 dead keys, and 0 missing keys.
+
 ### Changed - UXP WebView Permission Profiles
 
 - Closed RA-14 by splitting the dormant WebView scaffold into explicit development and release manifest profiles, keeping Vite/hot-reload domains dev-only while release WebView content uses local-only messaging.
