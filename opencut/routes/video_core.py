@@ -25,6 +25,7 @@ from opencut.helpers import (
     _run_ffmpeg_with_progress,
     _unique_output_path,
     get_ffmpeg_path,
+    write_concat_list,
 )
 from opencut.jobs import (
     MAX_BATCH_FILES,
@@ -567,13 +568,17 @@ def export_video(job_id, filepath, data):
             "-map", "[outa]", "-vn",
         ]
 
-        # Audio codec by format
-        if output_format == "wav":
-            cmd.extend(["-acodec", "pcm_s16le"])
-        elif output_format == "flac":
-            cmd.extend(["-acodec", "flac"])
-        else:
-            cmd.extend(["-acodec", "libmp3lame", "-b:a", "192k"])
+        # Audio codec by container. mp3's libmp3lame is invalid in the ADTS
+        # (.aac) and Ogg muxers, so each format must map to a codec its
+        # container accepts or the encode fails at header write.
+        _AUDIO_CODEC_BY_FORMAT = {
+            "wav": ["-acodec", "pcm_s16le"],
+            "flac": ["-acodec", "flac"],
+            "aac": ["-acodec", "aac", "-b:a", "192k"],
+            "ogg": ["-acodec", "libvorbis", "-q:a", "5"],
+            "mp3": ["-acodec", "libmp3lame", "-b:a", "192k"],
+        }
+        cmd.extend(_AUDIO_CODEC_BY_FORMAT.get(output_format, _AUDIO_CODEC_BY_FORMAT["mp3"]))
 
         cmd.append(output_path)
 
@@ -633,11 +638,35 @@ def export_video(job_id, filepath, data):
 
     _update_job(job_id, progress=20, message="FFmpeg encoding in progress...")
 
-    # Run FFmpeg with progress monitoring
-    # Use separate stderr pipe so error diagnostics aren't lost
+    # Windows caps a process command line at ~32 KB. A long segment list
+    # makes the inline -filter_complex string blow past that (OSError
+    # WinError 206), so spill large graphs to a temp script and switch to
+    # -filter_complex_script. Cleaned up on every exit path below.
+    _filter_script = None
+    if "-filter_complex" in cmd:
+        _fc_idx = cmd.index("-filter_complex")
+        _fc_value = cmd[_fc_idx + 1]
+        if len(_fc_value) > 4000:
+            _fd, _filter_script = tempfile.mkstemp(suffix=".ffscript", prefix="opencut_fc_")
+            with os.fdopen(_fd, "w", encoding="utf-8") as _fsf:
+                _fsf.write(_fc_value)
+            cmd[_fc_idx:_fc_idx + 2] = ["-filter_complex_script", _filter_script]
+
+    def _cleanup_filter_script():
+        if _filter_script:
+            try:
+                os.unlink(_filter_script)
+            except OSError:
+                pass
+
+    # Run FFmpeg with progress monitoring. Use a separate stderr pipe so error
+    # diagnostics aren't lost, and decode as UTF-8 with replacement so a
+    # non-ASCII filename in FFmpeg's output can't raise UnicodeDecodeError in
+    # the drain thread and deadlock the progress loop.
     proc = _sp.Popen(
         cmd + ["-progress", "pipe:1"],
-        stdout=_sp.PIPE, stderr=_sp.PIPE, text=True
+        stdout=_sp.PIPE, stderr=_sp.PIPE, text=True,
+        encoding="utf-8", errors="replace",
     )
     # Drain stderr in background to prevent pipe deadlock
     _stderr_chunks = []
@@ -680,6 +709,7 @@ def export_video(job_id, filepath, data):
         if _is_cancelled(job_id):
             proc.kill()
             _unregister_job_process(job_id)
+            _cleanup_filter_script()
             # Clean up partial file
             if os.path.exists(output_path):
                 try:
@@ -697,6 +727,7 @@ def export_video(job_id, filepath, data):
         proc.wait(timeout=10)
     _stderr_thread.join(timeout=5)
     _unregister_job_process(job_id)
+    _cleanup_filter_script()
 
     if proc.returncode != 0:
         stderr_tail = "".join(_stderr_chunks[-20:]).strip()
@@ -1313,23 +1344,12 @@ def video_merge(job_id, filepath, data):
         # concat demux (stream copy, fast)
         concat_file = os.path.join(tempfile.gettempdir(), f"opencut_concat_{job_id}.txt")
         try:
-            with open(concat_file, "w", encoding="utf-8") as cf:
-                for f in files:
-                    # FFmpeg concat demux escape rules (NOT POSIX shell):
-                    # inside ``file '...'``, a backslash escapes the next
-                    # char and a literal ``'`` must be ``\'``. The previous
-                    # ``'\''`` POSIX close/reopen trick produced
-                    # ``file 'O'\\''Brian.mp4'`` which FFmpeg parses as the
-                    # filename ``O`` followed by garbage and aborts the
-                    # concat. Strip CR/LF first so embedded newlines can't
-                    # inject a second ``file`` directive either.
-                    safe = (
-                        f.replace("\\", "\\\\")
-                         .replace("'", "\\'")
-                         .replace("\n", "")
-                         .replace("\r", "")
-                    )
-                    cf.write(f"file '{safe}'\n")
+            # The concat demuxer parses each line once: inside ``file '...'``
+            # a literal apostrophe must use the POSIX close/reopen idiom
+            # ``'\''`` (verified against ffmpeg; the older ``\'`` form is
+            # rejected). write_concat_list also forces UTF-8 so non-ASCII
+            # filenames survive on Windows. See tests/test_ffmpeg_escaping.py.
+            write_concat_list(files, concat_file)
 
             cmd = [
                 get_ffmpeg_path(), "-f", "concat", "-safe", "0",

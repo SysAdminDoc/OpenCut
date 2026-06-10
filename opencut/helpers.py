@@ -342,6 +342,86 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
 
 
 # ---------------------------------------------------------------------------
+# FFmpeg filtergraph / concat escaping
+#
+# FFmpeg parses filtergraph option values in TWO passes: the filtergraph
+# parser first strips the surrounding quotes and resolves one level of
+# backslash escaping, then each filter's option parser re-splits the result
+# on ``:`` (and ``=``).  A value placed inside single quotes therefore still
+# needs option-level escaping of ``:`` — quoting alone is not enough.  These
+# helpers centralise the (easy-to-get-wrong) escaping so feature modules stop
+# re-implementing it inconsistently.  See tests/test_ffmpeg_escaping.py.
+# ---------------------------------------------------------------------------
+def escape_filter_path(path: str) -> str:
+    """Escape a filesystem path for a SINGLE-QUOTED FFmpeg filter option.
+
+    Intended use::
+
+        vf = f"subtitles='{escape_filter_path(p)}'"
+        vf = f"ass='{escape_filter_path(p)}'"
+
+    Handles the two real-world breakers on Windows: drive-letter colons
+    (``C:/...`` must become ``C\\:/...`` so the option parser doesn't treat
+    the colon as an option separator) and apostrophes in the path.
+    """
+    p = str(path).replace("\\", "/")
+    p = p.replace(":", "\\:")
+    # A literal apostrophe must survive the filtergraph single-quote pass AND
+    # the option-level parser: close the quote, emit an option-escaped quote,
+    # reopen the quote  ->  \'\''
+    p = p.replace("'", "\\'\\''")
+    return p
+
+
+def escape_drawtext(text: str) -> str:
+    """Escape literal text for a SINGLE-QUOTED FFmpeg ``drawtext`` value.
+
+    Intended use — always pair with ``expansion=none`` for literal text::
+
+        vf = f"drawtext=expansion=none:text='{escape_drawtext(s)}':..."
+
+    ``expansion=none`` is required because, under drawtext's default
+    expansion, a literal ``%`` cannot be escaped at all (FFmpeg rejects it
+    with "Stray %"), and leaving expansion on would let caption text
+    containing ``%{...}`` be interpreted as a drawtext expression.  With
+    expansion disabled, ``%`` is literal and only the filtergraph/option
+    layer needs escaping: backslash (escape first), the ``:`` option
+    separator, and the apostrophe (two-level close/reopen, see
+    :func:`escape_filter_path`).
+    """
+    return (str(text)
+            .replace("\\", "\\\\")
+            .replace(":", "\\:")
+            .replace("'", "\\'\\''"))
+
+
+def _concat_quote(path: str) -> str:
+    """Escape one path for an FFmpeg concat-demuxer ``file '...'`` line.
+
+    The concat demuxer parses each line once (single level): inside single
+    quotes everything is literal except ``'`` itself, which is inserted via
+    the POSIX close/reopen idiom ``'\\''``.  CR/LF are stripped because the
+    list is line-based.
+    """
+    cleaned = str(path).replace("\r", "").replace("\n", "")
+    return cleaned.replace("'", "'\\''")
+
+
+def write_concat_list(paths, file_path: str) -> str:
+    """Write a UTF-8 FFmpeg concat-demuxer list and return ``file_path``.
+
+    Centralises two recurring bugs in the feature modules: writing the list
+    with the platform default codec (cp1252 on Windows, which corrupts or
+    rejects non-ASCII filenames the concat demuxer then can't open) and
+    missing single-quote escaping of paths.
+    """
+    with open(file_path, "w", encoding="utf-8") as f:
+        for p in paths:
+            f.write(f"file '{_concat_quote(p)}'\n")
+    return file_path
+
+
+# ---------------------------------------------------------------------------
 # Shared Package Installer
 # ---------------------------------------------------------------------------
 def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:

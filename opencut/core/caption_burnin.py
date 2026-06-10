@@ -17,7 +17,7 @@ import re as _re
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import escape_filter_path, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -59,16 +59,13 @@ def burnin_subtitles(
 
     ext_lower = os.path.splitext(subtitle_path)[1].lower()
 
-    # Escape path for FFmpeg filter (Windows backslashes, single quotes).
-    # Path is wrapped in single quotes below, so do NOT escape colons (would
-    # corrupt Windows drive-letter paths like C:/... → C\:/...).
-    # Apostrophes inside a single-quoted FFmpeg filter value must be escaped
-    # with a single backslash (``\'``). The previous POSIX shell-style
-    # ``'\''`` close/reopen trick is NOT valid FFmpeg filter syntax —
-    # FFmpeg rejected paths like ``O'Brian.srt`` with "Unable to parse
-    # option value" on platforms where the shell didn't pre-collapse the
-    # escape.
-    escaped_sub = subtitle_path.replace("\\", "/").replace("'", "\\'")
+    # Escape path for the FFmpeg subtitles/ass filter. FFmpeg parses filter
+    # option values in two passes (filtergraph then per-filter options), so a
+    # Windows drive-letter colon must be escaped as ``\:`` even inside single
+    # quotes — otherwise the option parser reads ``C`` as the filename and
+    # fails. escape_filter_path() centralises the verified two-level escaping
+    # (drive colons, apostrophes, spaces). See tests/test_ffmpeg_escaping.py.
+    escaped_sub = escape_filter_path(subtitle_path)
 
     if ext_lower == ".ass" or ext_lower == ".ssa":
         # ASS subtitles: use ass filter (respects all ASS styling)
