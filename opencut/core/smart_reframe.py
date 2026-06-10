@@ -41,7 +41,11 @@ def _parse_aspect(aspect: str) -> Tuple[int, int]:
     parts = aspect.split(":")
     if len(parts) == 2:
         try:
-            return int(parts[0]), int(parts[1])
+            w, h = int(parts[0]), int(parts[1])
+            # Reject zero/negative components so callers can't trigger a
+            # ZeroDivisionError downstream (e.g. aspect "16:0").
+            if w > 0 and h > 0:
+                return w, h
         except ValueError:
             pass
     return 9, 16
@@ -54,6 +58,12 @@ def _calc_crop_dims(
 
     Returns (crop_w, crop_h) that fits within source dimensions.
     """
+    # Guard against degenerate inputs (probe failures reporting 0, or a
+    # malformed aspect) that would otherwise raise ZeroDivisionError.
+    if target_h_ratio <= 0:
+        target_h_ratio = 16
+    if src_h <= 0 or src_w <= 0:
+        return 2, 2
     target_ratio = target_w_ratio / target_h_ratio
     src_ratio = src_w / src_h
 

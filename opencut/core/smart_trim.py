@@ -144,8 +144,16 @@ def _detect_silence_regions(
     file_path: str,
     threshold_db: float = -35.0,
     min_duration: float = 0.3,
+    total_duration: float = 0.0,
 ) -> List[Dict]:
-    """Detect silence regions in audio using FFmpeg silencedetect."""
+    """Detect silence regions in audio using FFmpeg silencedetect.
+
+    When the clip *ends* in silence, silencedetect emits a final
+    ``silence_start`` with no matching ``silence_end``. That trailing region
+    is paired with ``total_duration`` so "trim trailing silence" — the main
+    use case — actually sees it. Without this it was silently dropped and the
+    tail was misclassified as speech.
+    """
     cmd = [
         get_ffmpeg_path(), "-i", file_path,
         "-af", f"silencedetect=noise={threshold_db}dB:d={min_duration}",
@@ -159,7 +167,8 @@ def _detect_silence_regions(
         starts = re.findall(r"silence_start:\s*([\d.]+)", stderr)
         ends = re.findall(r"silence_end:\s*([\d.]+)", stderr)
 
-        for i in range(min(len(starts), len(ends))):
+        paired = min(len(starts), len(ends))
+        for i in range(paired):
             start = float(starts[i])
             end = float(ends[i])
             segments.append({
@@ -167,6 +176,16 @@ def _detect_silence_regions(
                 "end": end,
                 "duration": end - start,
             })
+
+        # Unmatched trailing silence_start -> silence runs to end of file.
+        if len(starts) > len(ends) and total_duration > 0:
+            start = float(starts[-1])
+            if total_duration > start:
+                segments.append({
+                    "start": start,
+                    "end": total_duration,
+                    "duration": total_duration - start,
+                })
     except Exception as exc:
         logger.debug("Silence detection failed for %s: %s", file_path, exc)
 
@@ -397,6 +416,7 @@ def smart_trim(
     silence_regions = _detect_silence_regions(
         file_path,
         threshold_db=mode_settings["silence_threshold_db"],
+        total_duration=total_duration,
     )
 
     if on_progress:

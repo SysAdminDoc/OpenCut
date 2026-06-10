@@ -557,16 +557,23 @@ def transcribe(
 
     try:
         if timeout:
-            # Use concurrent.futures for timeout support (works on Windows)
+            # Use concurrent.futures for timeout support (works on Windows).
+            # NOTE: do not use the executor as a context manager — its __exit__
+            # calls shutdown(wait=True), which blocks until the worker finishes
+            # and turns the timeout into a no-op (the caller stays pinned for
+            # the full transcription). Manage it manually and shut down without
+            # waiting on timeout so control returns immediately.
             import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_do_transcribe)
-                try:
-                    result = future.result(timeout=timeout)
-                except concurrent.futures.TimeoutError:
-                    logger.error(f"Transcription timed out after {timeout}s")
-                    raise TimeoutError(f"Transcription timed out after {timeout} seconds. "
-                                     "Try using a smaller model or enabling CPU mode in Settings.")
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(_do_transcribe)
+            try:
+                result = future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                executor.shutdown(wait=False, cancel_futures=True)
+                logger.error(f"Transcription timed out after {timeout}s")
+                raise TimeoutError(f"Transcription timed out after {timeout} seconds. "
+                                 "Try using a smaller model or enabling CPU mode in Settings.")
+            executor.shutdown(wait=False)
         else:
             result = _do_transcribe()
 

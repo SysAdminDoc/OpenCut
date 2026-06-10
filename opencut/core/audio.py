@@ -74,7 +74,8 @@ def extract_audio_wav(filepath: str, output_path: Optional[str] = None, sample_r
     Returns:
         Path to the output WAV file.
     """
-    if output_path is None:
+    auto_output = output_path is None
+    if auto_output:
         fd, output_path = tempfile.mkstemp(suffix=".wav")
         os.close(fd)
 
@@ -93,6 +94,13 @@ def extract_audio_wav(filepath: str, output_path: Optional[str] = None, sample_r
 
     result = subprocess.run(cmd, capture_output=True, timeout=300, check=False)
     if result.returncode != 0:
+        # Don't leak the empty temp file we created when extraction fails
+        # (unsupported codec, no audio stream, etc.).
+        if auto_output:
+            try:
+                os.unlink(output_path)
+            except OSError:
+                pass
         raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     return output_path
