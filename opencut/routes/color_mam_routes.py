@@ -28,6 +28,16 @@ logger = logging.getLogger("opencut")
 color_mam_bp = Blueprint("color_mam", __name__)
 
 
+def _validated_output(data):
+    """Path-validate a user-supplied output_path (None when absent).
+
+    @async_job validates only the primary input filepath; an explicit output
+    target is a separate write sink that must be validated here.
+    """
+    op = data.get("output_path")
+    return validate_output_path(op) if op else None
+
+
 # ===================================================================
 # 1. Color Scopes (13.1)
 # ===================================================================
@@ -49,7 +59,7 @@ def color_scope_waveform():
         output_dir = data.get("output_dir", "")
         if output_dir:
             output_dir = validate_path(output_dir)
-        output = data.get("output_path") or None
+        output = _validated_output(data)
         if output:
             output = validate_output_path(output)
 
@@ -85,7 +95,7 @@ def color_scope_vectorscope():
         result = generate_vectorscope(
             video_path=filepath,
             timestamp=timestamp,
-            output_path=data.get("output_path") or None,
+            output_path=_validated_output(data),
             output_dir=data.get("output_dir", ""),
         )
         return jsonify(result.to_dict())
@@ -113,7 +123,7 @@ def color_scope_rgb_parade():
         result = generate_rgb_parade(
             video_path=filepath,
             timestamp=timestamp,
-            output_path=data.get("output_path") or None,
+            output_path=_validated_output(data),
             output_dir=data.get("output_dir", ""),
         )
         return jsonify(result.to_dict())
@@ -142,7 +152,7 @@ def color_scope_histogram():
         result = generate_histogram(
             video_path=filepath,
             timestamp=timestamp,
-            output_path=data.get("output_path") or None,
+            output_path=_validated_output(data),
             output_dir=data.get("output_dir", ""),
             display_mode=display_mode,
         )
@@ -195,7 +205,7 @@ def color_wheels_apply(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -232,7 +242,7 @@ def color_wheels_preview():
             video_path=filepath,
             timestamp=timestamp,
             settings=settings,
-            output_path=data.get("output_path") or None,
+            output_path=_validated_output(data),
             output_dir=data.get("output_dir", ""),
         )
         return jsonify(result.to_dict())
@@ -257,7 +267,7 @@ def hsl_qualify(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -294,7 +304,7 @@ def hsl_matte_preview():
             video_path=filepath,
             timestamp=timestamp,
             hsl_range=hsl_range,
-            output_path=data.get("output_path") or None,
+            output_path=_validated_output(data),
             output_dir=data.get("output_dir", ""),
         )
         return jsonify(result.to_dict())
@@ -316,7 +326,7 @@ def hsl_secondary(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -378,7 +388,7 @@ def power_window_track(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -407,7 +417,7 @@ def power_window_apply(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -463,7 +473,7 @@ def aces_apply(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -511,7 +521,7 @@ def proxy_generate(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    output = data.get("output_path") or None
+    output = _validated_output(data)
     if output:
         output = validate_output_path(output)
 
@@ -695,7 +705,7 @@ def kinetic_text_animate(job_id, filepath, data):
         text=text,
         animation_preset=preset,
         duration=duration,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=width,
         height=height,
@@ -736,7 +746,7 @@ def kinetic_text_custom(job_id, filepath, data):
         easing=easing,
         text=text,
         duration=duration,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=safe_int(data.get("width", 1920), 1920),
         height=safe_int(data.get("height", 1080), 1080),
@@ -766,7 +776,7 @@ def kinetic_text_render(job_id, filepath, data):
     result = render_kinetic_text(
         animation_data=animation_data,
         resolution=resolution,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         on_progress=_progress,
     )
@@ -793,7 +803,7 @@ def data_animation_create(job_id, filepath, data):
     result = create_data_animation(
         template=template,
         data_source=data_source,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         on_progress=_progress,
     )
@@ -816,7 +826,7 @@ def data_animation_bar_chart(job_id, filepath, data):
     result = render_bar_chart(
         data=chart_data,
         config=config,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         on_progress=_progress,
     )
@@ -837,7 +847,7 @@ def data_animation_counter(job_id, filepath, data):
         start=safe_float(data.get("start", 0), 0),
         end=safe_float(data.get("end", 100), 100),
         duration=safe_float(data.get("duration", 3), 3, min_val=0.1, max_val=60),
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=safe_int(data.get("width", 1920), 1920),
         height=safe_int(data.get("height", 1080), 1080),
@@ -874,7 +884,7 @@ def shape_animation_morph(job_id, filepath, data):
         shape_a=shape_a if shape_a else None,
         shape_b=shape_b if shape_b else None,
         duration=duration,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=safe_int(data.get("width", 1920), 1920),
         height=safe_int(data.get("height", 1080), 1080),
@@ -900,7 +910,7 @@ def shape_animation_stroke_draw(job_id, filepath, data):
     result = animate_stroke_draw(
         svg_path=filepath,
         duration=duration,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=safe_int(data.get("width", 1920), 1920),
         height=safe_int(data.get("height", 1080), 1080),
@@ -932,7 +942,7 @@ def shape_animation_fill_transition(job_id, filepath, data):
         color_a=color_a,
         color_b=color_b,
         duration=duration,
-        output_path=data.get("output_path") or None,
+        output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
         width=safe_int(data.get("width", 1920), 1920),
         height=safe_int(data.get("height", 1080), 1080),
