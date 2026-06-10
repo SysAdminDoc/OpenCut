@@ -31,6 +31,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
     validate_path,
 )
 
@@ -101,6 +102,8 @@ def apply_adjustment_route(job_id, filepath, data):
     opacity = safe_float(data.get("opacity", 1.0), 1.0, min_val=0.0, max_val=1.0)
 
     out = data.get("output_path", "")
+    if out:
+        out = validate_path(out)
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -310,7 +313,9 @@ def flight_map_route(job_id, filepath, data):
     ]
 
     out = data.get("output_path")
-    if not out:
+    if out:
+        out = validate_path(out)
+    else:
         out = os.path.join(tempfile.gettempdir(), "opencut_flight_map.mp4")
 
     w = safe_int(data.get("width", 640), 640, min_val=160, max_val=3840)
@@ -910,6 +915,8 @@ def jog_save_route():
 
         data = request.get_json(silent=True) or {}
         output = str(data.get("output_path", "")).strip()
+        if output:
+            output = validate_output_path(output)
 
         path = save_jog_mapping(mapping=data, output_path=output)
         return jsonify({"saved": True, "path": path})

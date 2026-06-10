@@ -20,11 +20,24 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
 
 audio_prod_bp = Blueprint("audio_prod", __name__)
+
+
+def _validated_output_path(data):
+    """Return a path-validated output_path from the request, or None.
+
+    @async_job only validates the primary input filepath; a user-supplied
+    output_path is a separate write target that must be validated here or an
+    attacker could overwrite arbitrary local files via FFmpeg's -y.
+    """
+    op = data.get("output_path")
+    return validate_output_path(op) if op else None
 
 
 # ===========================================================================
@@ -40,7 +53,7 @@ def route_declip(job_id, filepath, data):
 
     result = declip(
         input_path=filepath,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -60,7 +73,7 @@ def route_dehum(job_id, filepath, data):
         input_path=filepath,
         frequency=frequency,
         harmonics=harmonics,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -75,7 +88,7 @@ def route_decrackle(job_id, filepath, data):
 
     result = decrackle(
         input_path=filepath,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -93,7 +106,7 @@ def route_dewind(job_id, filepath, data):
     result = dewind(
         input_path=filepath,
         cutoff_hz=cutoff_hz,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -108,7 +121,7 @@ def route_dereverb(job_id, filepath, data):
 
     result = dereverb(
         input_path=filepath,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -144,6 +157,8 @@ def route_fingerprint_scan(job_id, filepath, data):
     from opencut.core.audio_fingerprint import scan_against_database
 
     db_path = data.get("db_path")
+    if db_path:
+        db_path = validate_path(db_path)
 
     matches = scan_against_database(
         input_path=filepath,
@@ -168,10 +183,14 @@ def route_fingerprint_add(job_id, filepath, data):
     if not label:
         raise ValueError("A 'label' is required to add a track to the fingerprint database.")
 
+    db_path = data.get("db_path")
+    if db_path:
+        db_path = validate_output_path(db_path)
+
     add_to_database(
         input_path=filepath,
         label=label,
-        db_path=data.get("db_path"),
+        db_path=db_path,
     )
     return {"status": "added", "label": label}
 
@@ -209,7 +228,7 @@ def route_room_tone_generate(job_id, filepath, data):
     result = generate_room_tone(
         reference_path=filepath,
         duration=duration,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -237,7 +256,7 @@ def route_room_tone_fill(job_id, filepath, data):
         input_path=filepath,
         tone_path=tone_path,
         gap_threshold_db=gap_threshold_db,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         on_progress=lambda pct, msg: None,
     )
     return result
@@ -260,7 +279,7 @@ def route_me_mix(job_id, filepath, data):
 
     result = generate_me_mix(
         input_path=filepath,
-        output_path=data.get("output_path"),
+        output_path=_validated_output_path(data),
         method=method,
         on_progress=lambda pct, msg: None,
     )

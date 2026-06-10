@@ -258,6 +258,8 @@ def camera_render(job_id, filepath, data):
     if output_dir:
         output_dir = validate_path(output_dir)
     out = data.get("output_path", None) or None
+    if out:
+        out = validate_output_path(out)
 
     if out is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
