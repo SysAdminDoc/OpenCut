@@ -7,6 +7,7 @@ integrated loudness (LUFS) for consistent audio across a sequence.
 
 import json
 import logging
+import math
 import os
 import re
 import subprocess as _sp
@@ -83,8 +84,10 @@ def measure_loudness(filepath: str) -> dict:
 
     # run_ffmpeg raises RuntimeError on non-zero exit; returns stderr as str
     stderr = _run_ffmpeg_raw(cmd)
-    json_match = re.search(r"\{[^{}]+\}", stderr, re.DOTALL)
-    if not json_match:
+    # Take the LAST brace block: loudnorm prints its JSON summary after any
+    # input analysis, and other braces in the stream could otherwise match.
+    json_blocks = re.findall(r"\{[^{}]+\}", stderr, re.DOTALL)
+    if not json_blocks:
         logger.debug("loudnorm stderr:\n%s", stderr[-800:])
         raise ValueError(
             f"Could not parse loudnorm JSON output for '{filepath}'. "
@@ -92,15 +95,18 @@ def measure_loudness(filepath: str) -> dict:
         )
 
     try:
-        data = json.loads(json_match.group(0))
+        data = json.loads(json_blocks[-1])
     except json.JSONDecodeError as exc:
         raise ValueError(f"loudnorm JSON parse error: {exc}") from exc
 
     def _f(key: str, default: float = -99.0) -> float:
         try:
-            return float(data.get(key, default))
+            v = float(data.get(key, default))
         except (TypeError, ValueError):
             return default
+        # Silent input yields "-inf" loudness, which is not valid JSON when
+        # re-serialised and is out of loudnorm's measured range; floor it.
+        return v if math.isfinite(v) else default
 
     # FFmpeg ``loudnorm=print_format=json`` only exposes ``input_tp`` (true
     # peak), not a distinct sample peak. Expose it under both names so
@@ -157,25 +163,27 @@ def normalize_to_lufs(
         "-f", "null", "-",
     ]
     stderr = _run_ffmpeg_raw(pass1_cmd)
-    json_match = re.search(r"\{[^{}]+\}", stderr, re.DOTALL)
-    if not json_match:
+    json_blocks = re.findall(r"\{[^{}]+\}", stderr, re.DOTALL)
+    if not json_blocks:
         raise ValueError(
             f"Could not parse loudnorm pass-1 output for '{input_path}'. "
             "Ensure the file has an audio stream."
         )
 
     try:
-        measured = json.loads(json_match.group(0))
+        measured = json.loads(json_blocks[-1])
     except json.JSONDecodeError as exc:
         raise ValueError(f"loudnorm pass-1 JSON parse error: {exc}") from exc
 
     def _mv(key: str, default: str = "0.0") -> str:
         val = str(measured.get(key, default))
         try:
-            float(val)
+            f = float(val)
         except (TypeError, ValueError):
-            val = default
-        return val
+            return default
+        # Reject -inf/inf/nan (silent input): passing measured_I=-inf to
+        # loudnorm pass 2 is out of range and aborts the encode.
+        return val if math.isfinite(f) else default
 
     input_i = _mv("input_i", "-70.0")
     input_tp = _mv("input_tp", "-70.0")
