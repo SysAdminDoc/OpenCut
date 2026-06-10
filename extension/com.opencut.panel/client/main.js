@@ -1920,7 +1920,7 @@
         },
         importFiles: function (paths, bin, cb) {
             var pathsJson = JSON.stringify(paths);
-            jsx("importFilesToProject('" + pathsJson.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "', \"" + escPath(bin || t("premiere.bin_output", "OpenCut Output")) + "\")", cb);
+            jsx("importFilesToProject('" + escSingleQuote(pathsJson) + "', \"" + escPath(bin || t("premiere.bin_output", "OpenCut Output")) + "\")", cb);
         },
         importCaptions: function (path, cb) {
             jsx('importCaptions("' + escPath(path) + '")', cb);
@@ -1938,19 +1938,19 @@
         // Journal inverse helpers (v1.9.28)
         removeSequenceMarkers: function (payload, cb) {
             var json = JSON.stringify(payload);
-            jsx("ocRemoveSequenceMarkers('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+            jsx("ocRemoveSequenceMarkers('" + escSingleQuote(json) + "')", cb);
         },
         unrenameItems: function (payload, cb) {
             var json = JSON.stringify(payload);
-            jsx("ocUnrenameItems('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+            jsx("ocUnrenameItems('" + escSingleQuote(json) + "')", cb);
         },
         removeImportedSequence: function (payload, cb) {
             var json = JSON.stringify(payload);
-            jsx("ocRemoveImportedSequence('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+            jsx("ocRemoveImportedSequence('" + escSingleQuote(json) + "')", cb);
         },
         removeImportedItem: function (payload, cb) {
             var json = JSON.stringify(payload);
-            jsx("ocRemoveImportedItem('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+            jsx("ocRemoveImportedItem('" + escSingleQuote(json) + "')", cb);
         },
         setPlayhead: function (seconds, cb) {
             jsx("ocSetSequencePlayhead(" + Number(seconds || 0) + ")", cb);
@@ -3902,6 +3902,9 @@
         el.processingFill.style.width = "0%";
         el.processingFill.setAttribute("aria-valuenow", "0");
         el.processingElapsed.textContent = "0s";
+        // Clear any leftover estimate from the previous run until the new one
+        // resolves, so users don't briefly see a stale "Xs est." figure.
+        if (el.processingEstimate) el.processingEstimate.textContent = "";
 
         // Show inline progress section too
         el.progressSection.classList.remove("hidden");
@@ -4171,9 +4174,18 @@
         currentJob = null;
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
 
-        // Dispatch to registered listeners; if any returns true, it handled the job
+        // Dispatch to registered listeners; if any returns true, it handled the job.
+        // Each listener is isolated: a throwing listener must not prevent the
+        // remaining listeners from running or, worse, leave the progress banner
+        // and body.job-active UI lock stuck on forever.
         for (var li = 0; li < jobDoneListeners.length; li++) {
-            if (jobDoneListeners[li](job) === true) return;
+            try {
+                if (jobDoneListeners[li](job) === true) return;
+            } catch (listenerErr) {
+                if (window.console && console.error) {
+                    console.error("job-done listener failed", listenerErr);
+                }
+            }
         }
 
         if (job.status === "error") {
@@ -9741,8 +9753,8 @@
         _cutReviewApplyCallback = onApply;
 
         var totalDuration = 0;
-        for (var t = 0; t < cuts.length; t++) {
-            totalDuration = Math.max(totalDuration, Number(cuts[t].end || cuts[t].start || 0));
+        for (var ti = 0; ti < cuts.length; ti++) {
+            totalDuration = Math.max(totalDuration, Number(cuts[ti].end || cuts[ti].start || 0));
         }
         var html = "";
         for (var i = 0; i < cuts.length; i++) {
@@ -10187,12 +10199,32 @@
     // ================================================================
     // Escape to Cancel + Keyboard Shortcuts
     // ================================================================
+    // True when any lightweight, Escape-dismissible surface (dropdown, menu,
+    // wizard, modal, popover) is currently open. Used to stop the Escape
+    // cancel-job shortcut from silently killing a long-running job when the
+    // user only meant to close a dropdown or dialog.
+    function _anyDismissibleSurfaceOpen() {
+        if (_overlayStack.length) return true;
+        if (document.querySelector(".custom-dropdown.open")) return true;
+        var surfaces = [
+            el.contextMenu, el.wizardOverlay, el.previewModal,
+            el.audioPreview, el.recentClipsDropdown, el.outputBrowser
+        ];
+        for (var i = 0; i < surfaces.length; i++) {
+            if (surfaces[i] && !surfaces[i].classList.contains("hidden")) return true;
+        }
+        return false;
+    }
+
     function initKeyboardShortcuts() {
         loadShortcuts();
 
         document.addEventListener("keydown", function (e) {
-            // Cancel-job shortcut works even in inputs (Escape) — but not if already consumed by a dropdown
+            // Cancel-job shortcut (Escape) works even in inputs — but never when
+            // a dropdown/menu/dialog is open (Escape should dismiss that first)
+            // or when another handler already consumed the event.
             if (!e.defaultPrevented && matchesShortcut(e, _shortcutRegistry["cancel-job"].keys) && currentJob) {
+                if (_anyDismissibleSurfaceOpen()) return;
                 _shortcutActions["cancel-job"]();
                 return;
             }
@@ -10212,8 +10244,15 @@
                 }
             }
 
-            // Enter to run the primary action for active tab/subtab
+            // Enter to run the primary action for active tab/subtab — but only
+            // when focus is not on an interactive control. Otherwise Enter on a
+            // focused button/link/tab/dropdown would be hijacked, suppressing the
+            // control's own activation and launching an unrelated job instead.
             if (e.key === "Enter" && !currentJob) {
+                if (e.target && e.target.closest &&
+                    e.target.closest("button, a, [role='button'], [role='tab'], [role='combobox'], [role='menuitem'], [tabindex]")) {
+                    return;
+                }
                 var activePanel = document.querySelector(".nav-panel.active");
                 if (!activePanel) return;
                 var activeSub = activePanel.querySelector(".sub-panel.active");
@@ -12328,6 +12367,9 @@
     }
 
     function applyI18nToDOM() {
+        // Keep the document language in sync so assistive tech uses the right
+        // pronunciation rules for the active locale.
+        try { document.documentElement.lang = _currentLang || "en"; } catch (e) {}
         var els = document.querySelectorAll("[data-i18n]");
         for (var i = 0; i < els.length; i++) {
             var k = els[i].getAttribute("data-i18n");
