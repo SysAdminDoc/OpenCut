@@ -526,6 +526,7 @@ def speed_up_silences(
         Dict with output_path, original_duration, new_duration, reduction_percent.
     """
     import os
+    import tempfile
 
     if speed_factor < 1.5:
         speed_factor = 1.5
@@ -673,17 +674,36 @@ def speed_up_silences(
             output_path,
         ]
 
+    # Windows caps a command line at ~32 KB; with many detected silences the
+    # inline -filter_complex string blows past it (OSError WinError 206).
+    # Spill large graphs to a temp script and use -filter_complex_script.
+    _filter_script = None
+    if "-filter_complex" in cmd and len(filter_complex) > 4000:
+        _fc_idx = cmd.index("-filter_complex")
+        _fd, _filter_script = tempfile.mkstemp(suffix=".ffscript", prefix="opencut_fc_")
+        with os.fdopen(_fd, "w", encoding="utf-8") as _fsf:
+            _fsf.write(filter_complex)
+        cmd[_fc_idx:_fc_idx + 2] = ["-filter_complex_script", _filter_script]
+
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=max(600, int(total_duration * 5)),
         )
     except FileNotFoundError:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"FFmpeg timed out processing '{filepath}'")
+    finally:
+        if _filter_script:
+            try:
+                os.unlink(_filter_script)
+            except OSError:
+                pass
 
     if result.returncode != 0:
         stderr = result.stderr[-500:] if result.stderr else "unknown error"
