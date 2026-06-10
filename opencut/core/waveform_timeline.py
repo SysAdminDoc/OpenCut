@@ -136,10 +136,11 @@ def generate_waveform_image(
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
     if output_path is None:
-        output_path = os.path.join(
-            tempfile.gettempdir(),
-            f"waveform_{os.getpid()}.png"
-        )
+        # The server PID is constant, so a PID-based name collides across
+        # concurrent/sequential requests — one caller could get another
+        # clip's waveform or a half-written file. Use a unique temp name.
+        fd, output_path = tempfile.mkstemp(suffix=".png", prefix="waveform_")
+        os.close(fd)
 
     if on_progress:
         on_progress(20, "Generating waveform image")

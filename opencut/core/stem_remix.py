@@ -621,7 +621,10 @@ def mix_stems(
         cmd = [get_ffmpeg_path(), "-y"]
         for p in pre_processed:
             cmd.extend(["-i", p])
-        amix = f"amix=inputs={len(pre_processed)}:duration=longest:dropout_transition=2"
+        # normalize=0: stems were split from one mix, so sum them at their
+        # natural levels. The default (normalize=1) scales every input by 1/N,
+        # making a 4-stem recombination ~12 dB quieter than the original.
+        amix = f"amix=inputs={len(pre_processed)}:duration=longest:dropout_transition=2:normalize=0"
         cmd.extend(["-filter_complex", amix, "-ar", str(SAMPLE_RATE), out])
         run_ffmpeg(cmd)
 
