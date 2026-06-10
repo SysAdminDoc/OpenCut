@@ -43,6 +43,9 @@ research.md
 content_calendar.csv
 content_calendar.ics
 
-# Markdown files local-only (except README)
+# Markdown files local-only, except the project-facing docs below
 *.md
 !README.md
+!CHANGELOG.md
+!ROADMAP.md
+!RESEARCH*.md
