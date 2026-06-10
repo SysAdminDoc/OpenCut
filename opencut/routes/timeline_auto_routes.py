@@ -12,7 +12,15 @@ from flask import Blueprint, jsonify
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, safe_int, validate_filepath
+from opencut.security import (
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    validate_filepath,
+    validate_output_path,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -119,13 +127,17 @@ def auto_mix(job_id, filepath, data):
     if not validated_tracks:
         raise ValueError("No valid tracks provided")
 
-    # Validate output file path if mix_down requested
+    # Validate output file path if mix_down requested. Bare names are joined
+    # to the resolved output dir; absolute or relative-with-separator values
+    # must pass validate_output_path (the previous startswith/colon check let
+    # absolute paths and ..\ traversal through unvalidated to FFmpeg -y).
     if mix_down and output_file:
         out_dir = _resolve_output_dir(validated_tracks[0]["file_path"],
                                       data.get("output_dir", ""))
-        if not output_file.startswith(("/", "\\")) and ":" not in output_file:
-            import os
+        import os
+        if os.path.basename(output_file) == output_file:
             output_file = os.path.join(out_dir, output_file)
+        output_file = validate_output_path(output_file)
 
     def _progress(pct):
         _update_job(job_id, progress=pct, message=f"Auto-mixing... {pct}%")

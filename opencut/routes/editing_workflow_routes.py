@@ -386,6 +386,8 @@ def paper_edit_export(job_id, filepath, data):
 
     fmt = data.get("format", "json").strip().lower()
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -475,6 +477,8 @@ def template_assemble(job_id, filepath, data):
 
     text_overrides = data.get("text_overrides", {})
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     # Validate media paths
     validated_media = {}
@@ -604,6 +608,8 @@ def data_video_create(job_id, filepath, data):
         raise ValueError("data_row must be a non-empty dict")
 
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
     if not output_path_str:
         import tempfile
         fd, output_path_str = tempfile.mkstemp(suffix=".mp4", prefix="data_video_")
@@ -781,6 +787,8 @@ def multilang_export(job_id, filepath, data):
     language = data.get("language", "").strip()
     fmt = data.get("format", "srt").strip().lower()
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -844,6 +852,8 @@ def speaker_layout_create(job_id, filepath, data):
     video_paths = _validate_file_list(data, "video_paths", required=True, max_files=12)
     layout_type = data.get("layout_type", "grid").strip().lower()
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     config = LayoutConfig(
         layout_type=layout_type,
@@ -881,6 +891,8 @@ def speaker_layout_active(job_id, filepath, data):
 
     speaker_map = data.get("speaker_map", None)
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     config = LayoutConfig(
         width=safe_int(data.get("width", 1920), 1920, min_val=2, max_val=3840),
@@ -917,6 +929,8 @@ def ceremony_auto_edit(job_id, filepath, data):
         raise ValueError("At least 2 camera files are required")
 
     output_path_str = data.get("output_path", "")
+    if output_path_str:
+        output_path_str = validate_path(output_path_str)
 
     config = CeremonyConfig(
         segment_duration=safe_float(data.get("segment_duration", 5), 5, min_val=1, max_val=60),

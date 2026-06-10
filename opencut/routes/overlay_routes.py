@@ -16,8 +16,20 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
     validate_path,
 )
+
+
+def _validated_output_override(data):
+    """Validate a user-supplied output_path override (None when absent).
+
+    @async_job validates only the primary input filepath; an explicit output
+    target must be validated separately or it becomes an arbitrary-overwrite
+    sink via FFmpeg's -y.
+    """
+    op = data.get("output_path")
+    return validate_output_path(op) if op else None
 
 logger = logging.getLogger("opencut")
 
@@ -43,7 +55,8 @@ def overlay_safe_zones(job_id, filepath, data):
     from opencut.core.safe_zones import generate_safe_zone_overlay
     from opencut.helpers import output_path as _output_path
 
-    out = data.get("output_path") or _output_path(filepath, f"safezone_{platform}", output_dir)
+    _user_out = data.get("output_path")
+    out = validate_output_path(_user_out) if _user_out else _output_path(filepath, f"safezone_{platform}", output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -137,7 +150,7 @@ def overlay_timecode(job_id, filepath, data):
 
     result = burn_timecode(
         input_path=filepath,
-        output_path_override=data.get("output_path"),
+        output_path_override=_validated_output_override(data),
         position=position,
         font_size=font_size,
         color=color,
@@ -172,7 +185,7 @@ def overlay_countdown(job_id, filepath, data):
 
     result = burn_countdown(
         input_path=filepath,
-        output_path_override=data.get("output_path"),
+        output_path_override=_validated_output_override(data),
         duration_seconds=duration_seconds,
         position=position,
         font_size=font_size,
@@ -204,7 +217,7 @@ def overlay_elapsed_timer(job_id, filepath, data):
 
     result = burn_elapsed_timer(
         input_path=filepath,
-        output_path_override=data.get("output_path"),
+        output_path_override=_validated_output_override(data),
         start_seconds=start_seconds,
         position=position,
         font_size=font_size,

@@ -312,6 +312,8 @@ def farm_render_submit(job_id, filepath, data):
     if output_dir:
         output_dir = validate_path(output_dir)
     output_file = data.get("output_file", "")
+    if output_file:
+        output_file = validate_path(output_file)
     use_remote = data.get("use_remote", False)
 
     if output_dir:
