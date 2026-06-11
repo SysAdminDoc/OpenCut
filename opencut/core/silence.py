@@ -588,8 +588,9 @@ def speed_up_silences(
     if pos < total_duration:
         all_segments.append(("speech", pos, total_duration))
 
-    # Detect if input has video (vs audio-only files like .mp3, .wav)
-    has_video = info.has_video if hasattr(info, "has_video") else not filepath.lower().endswith(
+    # Detect if input has real video. MP3/M4A files can expose cover art as an
+    # attached-pic video stream; those must stay on the audio-only path.
+    has_video = info.has_real_video if hasattr(info, "has_real_video") else not filepath.lower().endswith(
         (".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus")
     )
 

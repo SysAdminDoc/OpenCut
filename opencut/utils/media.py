@@ -78,10 +78,19 @@ class MediaInfo:
     format_name: str = ""
     video: Optional[VideoStream] = None
     audio: Optional[AudioStream] = None
+    video_is_attached_pic: bool = False
 
     @property
     def has_video(self) -> bool:
         return self.video is not None
+
+    @property
+    def has_real_video(self) -> bool:
+        return self.video is not None and not self.video_is_attached_pic
+
+    @property
+    def attached_pic(self) -> bool:
+        return self.video_is_attached_pic
 
     @property
     def has_audio(self) -> bool:
@@ -235,6 +244,7 @@ def probe(filepath: str) -> MediaInfo:
     if info.video is None:
         for stream in streams:
             if stream.get("codec_type") == "video":
+                info.video_is_attached_pic = _is_attached_pic(stream)
                 info.video = VideoStream(
                     width=_safe_int(stream.get("width"), 1920),
                     height=_safe_int(stream.get("height"), 1080),

@@ -107,10 +107,19 @@ class TestMediaProbe:
         from opencut.utils.media import probe
         info = probe(test_video)
         assert info.has_video
+        assert info.has_real_video
         assert info.has_audio
         assert info.video.width == 320
         assert info.video.height == 240
         assert info.video.fps == pytest.approx(30.0, abs=1.0)
+
+    def test_media_info_distinguishes_attached_pic_from_real_video(self):
+        from opencut.utils.media import MediaInfo, VideoStream
+
+        info = MediaInfo(video=VideoStream(), video_is_attached_pic=True)
+        assert info.has_video
+        assert info.attached_pic
+        assert not info.has_real_video
 
     def test_probe_nonexistent(self):
         from opencut.utils.media import probe

@@ -162,5 +162,7 @@ record also lives in the git commit messages.
 - `smart_reframe` guards against ZeroDivisionError from a zero aspect-ratio
   component (e.g. "16:0") or a zero source dimension from a probe failure.
 - `extract_audio_wav` no longer leaks its temp WAV when extraction fails.
+- `speed_up_silences` now treats MP3/M4A cover art as attached pictures, not
+  real video streams, so audio-only files stay on the audio concat path.
 - Waveform image uses a unique temp name instead of `waveform_<pid>.png`,
   which collided across requests in the long-lived server.

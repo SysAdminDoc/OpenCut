@@ -7,6 +7,7 @@ Tests pure logic functions with mocked external dependencies
 
 import json
 import subprocess
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -123,6 +124,32 @@ class TestSilence:
         assert summary["removed_duration"] == 13.0
         assert summary["segments_count"] == 2
         assert summary["reduction_percent"] == 65.0
+
+    def test_speed_up_silences_treats_attached_pic_as_audio_only(self, tmp_path):
+        from opencut.core.silence import TimeSegment, speed_up_silences
+
+        captured = {}
+        mock_result = MagicMock(returncode=0, stderr="")
+
+        def fake_run(cmd, **kwargs):
+            captured["cmd"] = cmd
+            captured["kwargs"] = kwargs
+            return mock_result
+
+        info = SimpleNamespace(duration=10.0, has_video=True, has_real_video=False)
+        out_path = tmp_path / "podcast_speedsilence.mp3"
+
+        with patch("opencut.core.silence.probe", side_effect=[info, SimpleNamespace(duration=7.0)]), \
+             patch("opencut.core.silence.detect_silences", return_value=[TimeSegment(2.0, 4.0, "silence")]), \
+             patch("opencut.core.silence.subprocess.run", side_effect=fake_run):
+            result = speed_up_silences("podcast.mp3", output_path=str(out_path))
+
+        cmd = captured["cmd"]
+        filter_complex = cmd[cmd.index("-filter_complex") + 1]
+        assert result["output_path"] == str(out_path)
+        assert "[outa]" in cmd
+        assert "[outv]" not in cmd
+        assert "concat=n=3:v=0:a=1[outa]" in filter_complex
 
 
 # ========================================================================

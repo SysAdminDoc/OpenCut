@@ -27,10 +27,6 @@ history, not here.
   Why: RealESRGANer(model_path=None) crashes in __init__ on every released package, and no pretrained weights are ever resolved; model_name is ignored. Resolve the weight file/URL and pass it.
   Where: opencut/core/upscale_pro.py:122-126
 
-- [ ] P2 — speed_up_silences treats MP3s with cover art as video
-  Why: probe() falls back to the attached_pic stream so has_video is true for podcast MP3s; the video trim/concat chain then fails on a single-frame stream. Expose attached_pic / has_real_video and branch on it.
-  Where: opencut/core/silence.py:591-593, opencut/utils/media.py:235-248
-
 - [ ] P2 — Concat lists in ~17 feature modules still use unescaped, platform-codec writes
   Why: write_concat_list() now exists in helpers.py (UTF-8 + correct quote escaping) and the merge path uses it, but beat_cuts, ai_intro_gen, auto_dub_pipeline, photo_montage, instant_replay, cursor_zoom, event_recap, stream_highlights, video_360, generative_extend, auto_montage, glitch_effects, hook_generator, fit_to_fill, paper_edit, guest_compilation, stringout_reel still hand-roll open(path,"w") lists that break on apostrophes/non-ASCII names.
   Where: opencut/core/* (grep: "file '" writes); replace with helpers.write_concat_list
