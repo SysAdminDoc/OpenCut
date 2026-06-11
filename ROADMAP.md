@@ -29,23 +29,12 @@ history, not here.
   Why: aria-modal dialogs without focus trap or inert background (palette/preview modal do it right); route all four dialogs through activateOverlay/deactivateOverlay, give the context menu arrow-key support and focus restoration, and make one Escape close only the topmost surface.
   Where: extension/com.opencut.panel/client/main.js:11381-11527 (wizard/audioPreview/escape chain), index.html:4039, 4064
 
-- [ ] P3 — CEP: --text-faint at 10-11px fails AA contrast; no prefers-contrast support
-  Why: ~3.5:1 against card surfaces; bump small text to --text-muted as part of the style.css consolidation.
-  Where: extension/com.opencut.panel/client/style.css (e.g. command-palette-hint ~3950)
-
 - [ ] P3 — UXP: i18n gaps and locale hygiene from the recent es push
   Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
   Where: extension/com.opencut.uxp/locales/en.json, es.json; main.js:238-244, 2061-2117, 5541-5548, 7551-7557
 
 
 ## Research-Driven Additions
-
-- [ ] P1 — Cut and publish release v1.33.0 with the June hardening pass
-  Why: latest GitHub release is v1.25.1 (2026-04-20) while the tree is v1.32.0 plus unreleased security fixes (arbitrary file overwrite via output_path sinks, FFmpeg escaping, CEP cut-review repair) — users on releases are seven versions behind known fixes.
-  Evidence: github.com/SysAdminDoc/OpenCut/releases; CHANGELOG.md [Unreleased]; commits 88bdf62, b7434f6, 81a8a85, 7521f61
-  Touches: scripts/sync_version.py (all 19 targets), CHANGELOG.md, .github/workflows/build.yml (tag v1.33.0)
-  Acceptance: GitHub release v1.33.0 exists with Windows installer + server bundles attached and CHANGELOG section dated; README badge matches.
-  Complexity: S
 
 - [ ] P1 — Decide and execute brand/namespace disambiguation (gates all distribution work)
   Why: carried from the 2026-06-09 research pass with no roadmap entry; opencut.app (48K stars) is mid-rewrite (May 2026) and will re-dominate search when it relaunches; PyPI/winget/Homebrew/SEO all need an unambiguous token first.
@@ -80,13 +69,6 @@ history, not here.
   Evidence: blog.adobe.com Jan 2026 announcement; extension/com.opencut.panel/CSXS/manifest.xml:15; README.md feature tables
   Touches: README.md, docs/UXP_MIGRATION.md, extension manifests, .github/workflows/adobe-premierepro-versions.yml
   Acceptance: documented CEP+UXP smoke pass on Premiere 26.x; README positioning updated to lead with capabilities Adobe does not bundle (silence-cut-to-timeline, stems, TTS/voice clone, local agent, social pipeline).
-  Complexity: M
-
-- [ ] P2 — Expand animated caption template library toward market parity
-  Why: 6 animation presets (core/animated_captions.py ANIMATION_PRESETS) and 19 static styles vs Submagic 35+ and CapCut 50+; template breadth is the most visible caption differentiator, and CapCut now paywalls auto-captions entirely.
-  Evidence: opencut/core/animated_captions.py:27; submagic.co; eesel.ai CapCut pricing 2026
-  Touches: opencut/core/animated_captions.py, caption_styles.py, panel Captions tab, locale files
-  Acceptance: >=20 animation presets selectable with preview, defined via a data-driven preset schema (JSON) so presets can be added without code changes.
   Complexity: M
 
 - [ ] P3 — Track onnxruntime 1.26 hardening release and raise the floor when GA
