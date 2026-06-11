@@ -350,7 +350,7 @@ class TestAudiogramGen(unittest.TestCase):
         from opencut.core.audiogram import _escape_ffmpeg_text
 
         self.assertEqual(_escape_ffmpeg_text("Hello: World"), "Hello\\: World")
-        self.assertEqual(_escape_ffmpeg_text("50%"), "50%%")
+        self.assertEqual(_escape_ffmpeg_text("50%"), "50%")
         self.assertEqual(_escape_ffmpeg_text("C:\\path"), "C\\:\\\\path")
 
     def test_generate_audiogram_invalid_style(self):

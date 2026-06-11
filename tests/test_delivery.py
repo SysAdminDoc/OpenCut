@@ -328,7 +328,7 @@ class TestNewsTickerCore(unittest.TestCase):
         result = _escape_drawtext("Hello: World's 100%")
         self.assertIn("\\:", result)
         self.assertIn("\\'", result)
-        self.assertIn("%%", result)
+        self.assertIn("100%", result)
 
     def test_tickerconfig_dataclass(self):
         from opencut.core.news_ticker import TickerConfig

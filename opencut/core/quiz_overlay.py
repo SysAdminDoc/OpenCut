@@ -19,6 +19,7 @@ from typing import Callable, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_ffmpeg_path,
     get_video_info,
     run_ffmpeg,
@@ -473,14 +474,11 @@ def generate_quiz_questions_llm(
 
 def _escape_drawtext(text: str) -> str:
     """Escape text for FFmpeg drawtext filter."""
-    text = text.replace("\\", "\\\\\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace("'", "\\'")
-    text = text.replace("%", "%%")
     # Truncate extremely long text
+    text = str(text)
     if len(text) > 120:
         text = text[:117] + "..."
-    return text
+    return escape_drawtext(text)
 
 
 def render_quiz_overlay(
@@ -555,7 +553,7 @@ def render_quiz_overlay(
 
         # Question text (centered, upper area)
         q_filter = (
-            f"[{current_label}]drawtext=text='{q_text}'"
+            f"[{current_label}]drawtext=expansion=none:text='{q_text}'"
             f":fontsize={font_size}:fontcolor={text_color}"
             f":x=(w-tw)/2:y=h*0.15"
             f":enable='{enable}'"
@@ -573,7 +571,7 @@ def render_quiz_overlay(
                 opt_color = text_color
 
             q_filter += (
-                f",drawtext=text='{opt_text}'"
+                f",drawtext=expansion=none:text='{opt_text}'"
                 f":fontsize={int(font_size * 0.85)}:fontcolor={opt_color}"
                 f":x=w*0.15:y={y_pos}"
                 f":enable='{enable}'"
@@ -712,7 +710,7 @@ def insert_quiz_at_chapters(
 
         # Question text
         filters.append(
-            f"drawtext=text='{q_text}'"
+            f"drawtext=expansion=none:text='{q_text}'"
             f":fontsize=28:fontcolor=white"
             f":x=(w-tw)/2:y=h*0.2"
             f":enable='{enable}'"
@@ -724,7 +722,7 @@ def insert_quiz_at_chapters(
             y_frac = 0.38 + oi * 0.12
             color = "00FF00" if oi == correct_idx else "white"
             filters.append(
-                f"drawtext=text='{opt_text}'"
+                f"drawtext=expansion=none:text='{opt_text}'"
                 f":fontsize=24:fontcolor={color}"
                 f":x=w*0.15:y=h*{y_frac:.2f}"
                 f":enable='{enable}'"

@@ -145,6 +145,10 @@ record also lives in the git commit messages.
 - `escape_drawtext` documents/requires `expansion=none`: under default
   drawtext expansion a literal `%` cannot be escaped at all ("Stray %") and
   caption text containing `%{...}` would be interpreted as an expression.
+- Caption styles, click/keystroke overlays, tickers, quiz cards, telemetry
+  overlays, callouts, audiograms, brand watermarks, end screens, and guest
+  lower-thirds now use the shared `escape_drawtext()` contract with
+  `expansion=none`.
 - Audio-only export to `.aac` and `.ogg` no longer fails — those containers
   were handed the mp3 encoder; now mapped to `aac` / `libvorbis`.
 - Progress-parsing FFmpeg subprocess now decodes stdout/stderr as UTF-8 with

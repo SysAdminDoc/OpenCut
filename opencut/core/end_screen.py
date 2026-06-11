@@ -18,6 +18,7 @@ from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     run_ffmpeg,
 )
 
@@ -178,7 +179,7 @@ def _build_end_screen_filter(
 
         # Get custom text from data
         custom_text = data.get(f"element_{i}_text", elem.label)
-        safe_text = custom_text.replace("'", "\\'").replace(":", "\\:")
+        safe_text = escape_drawtext(custom_text)
 
         out_label = f"e{i}"
 
@@ -188,7 +189,7 @@ def _build_end_screen_filter(
             parts.append(
                 f"[{prev_label}]drawbox=x={ex}:y={ey}:w={ew}:h={eh}"
                 f":color=0x{accent}@0.9:t=fill,"
-                f"drawtext=text='{safe_text}'"
+                f"drawtext=expansion=none:text='{safe_text}'"
                 f":fontsize={font_size}:fontcolor=0x{text_color}"
                 f":x={ex}+({ew}-text_w)/2:y={ey}+({eh}-text_h)/2"
                 f"[{out_label}]"
@@ -201,7 +202,7 @@ def _build_end_screen_filter(
                 f":color=0x333333@0.8:t=fill,"
                 f"drawbox=x={ex}:y={ey}:w={ew}:h={eh}"
                 f":color=0x{accent}@0.6:t=3,"
-                f"drawtext=text='{safe_text}'"
+                f"drawtext=expansion=none:text='{safe_text}'"
                 f":fontsize={font_size}:fontcolor=0x{text_color}@0.8"
                 f":x={ex}+({ew}-text_w)/2:y={ey}+({eh}-text_h)/2"
                 f"[{out_label}]"
@@ -212,7 +213,7 @@ def _build_end_screen_filter(
             parts.append(
                 f"[{prev_label}]drawbox=x={ex}:y={ey}:w={ew}:h={eh}"
                 f":color=0x{accent}@0.4:t=fill,"
-                f"drawtext=text='{safe_text}'"
+                f"drawtext=expansion=none:text='{safe_text}'"
                 f":fontsize={font_size}:fontcolor=0x{text_color}"
                 f":x={ex}+({ew}-text_w)/2:y={ey}+({eh}-text_h)/2"
                 f"[{out_label}]"
@@ -221,7 +222,7 @@ def _build_end_screen_filter(
             # Text element
             font_size = max(16, eh // 2)
             parts.append(
-                f"[{prev_label}]drawtext=text='{safe_text}'"
+                f"[{prev_label}]drawtext=expansion=none:text='{safe_text}'"
                 f":fontsize={font_size}:fontcolor=0x{text_color}"
                 f":x={ex}+({ew}-text_w)/2:y={ey}+({eh}-text_h)/2"
                 f"[{out_label}]"
