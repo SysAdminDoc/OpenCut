@@ -98,6 +98,8 @@ def test_progress_runner_tags_env_but_returns_unprefixed_stderr(monkeypatch, cap
     assert rc == 1
     assert stderr == "progress failure line\n"
     assert captured["kwargs"]["env"]["OPENCUT_REQUEST_ID"] == "r-progress"
+    assert captured["kwargs"]["encoding"] == "utf-8"
+    assert captured["kwargs"]["errors"] == "replace"
     assert "[r-progress] progress failure line" in caplog.text
 
 
@@ -126,10 +128,14 @@ def test_async_job_worker_receives_original_request_id(app, monkeypatch):
 
     app.register_blueprint(bp)
     client = app.test_client()
+    csrf_token = client.get("/health").get_json()["csrf_token"]
     response = client.post(
         "/n10/request-id",
         json={"ok": True},
-        headers={"X-Request-ID": "client-supplied"},
+        headers={
+            "X-OpenCut-Token": csrf_token,
+            "X-Request-ID": "client-supplied",
+        },
     )
     assert response.status_code == 200
     request_id = response.headers["X-Request-ID"]
