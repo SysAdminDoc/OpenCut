@@ -1650,6 +1650,10 @@
   </div><!-- #app -->
 
   <script type="module" src="main.js"></script>
-  <script type="module" src="udt-smoke.js"></script>
+  <script type="module">
+    if (localStorage.getItem("opencut_debug") === "1") {
+      import("./udt-smoke.js");
+    }
+  </script>
 </body>
 </html>
