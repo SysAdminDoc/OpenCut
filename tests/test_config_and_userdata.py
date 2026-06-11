@@ -176,6 +176,27 @@ def test_plugins_install_rejects_non_object_json_body(client, csrf_token):
     assert "top-level JSON object" in data["suggestion"]
 
 
+def test_app_level_csrf_guard_covers_unwrapped_mutating_routes(app):
+    @app.route("/_test/unwrapped-mutating", methods=["POST"])
+    def _unwrapped_mutating_route():
+        return {"ok": True}
+
+    local_client = app.test_client()
+
+    missing_token = local_client.post("/_test/unwrapped-mutating", json={})
+    assert missing_token.status_code == 403
+    assert missing_token.get_json()["error"] == "Invalid or missing CSRF token"
+
+    token = local_client.get("/health").get_json()["csrf_token"]
+    valid_token = local_client.post(
+        "/_test/unwrapped-mutating",
+        json={},
+        headers=csrf_headers(token),
+    )
+    assert valid_token.status_code == 200
+    assert valid_token.get_json() == {"ok": True}
+
+
 def test_template_save_allows_overwrite_at_limit(client, csrf_token, tmp_path, monkeypatch):
     templates_dir = tmp_path / "templates"
     templates_dir.mkdir()
