@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -323,9 +323,7 @@ def _apply_timed_effect_complex(
 
     # Concatenate parts
     list_file = os.path.join(tmp_dir, f"concat_{idx}.txt")
-    with open(list_file, "w", encoding="utf-8") as f:
-        for p in parts:
-            f.write(f"file '{p}'\n")
+    write_concat_list(parts, list_file)
 
     run_ffmpeg([
         get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",

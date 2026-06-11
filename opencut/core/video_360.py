@@ -25,6 +25,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from opencut.helpers import (
     get_video_info,
     run_ffmpeg,
+    write_concat_list,
 )
 from opencut.helpers import (
     output_path as _output_path,
@@ -628,9 +629,7 @@ def keyframed_reframe(
 
         # Concatenate segments
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for seg_file in segment_files:
-                f.write(f"file '{seg_file}'\n")
+        write_concat_list(segment_files, concat_file)
 
         if on_progress:
             on_progress(92, "Concatenating segments...")

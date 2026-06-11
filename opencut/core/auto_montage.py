@@ -30,6 +30,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -416,9 +417,7 @@ def assemble_montage(
 
         # Concat all segments
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for sp in segment_files:
-                f.write(f"file '{sp}'\n")
+        write_concat_list(segment_files, concat_file)
 
         concat_video = os.path.join(tmp_dir, "concat_video.mp4")
         cmd = [

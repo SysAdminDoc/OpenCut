@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -447,9 +447,7 @@ def apply_cursor_zoom(
                 on_progress(pct, f"Rendered segment {idx + 1}/{len(segments)}")
 
         # Write concat list
-        with open(concat_list, "w") as f:
-            for sp in segment_files:
-                f.write(f"file '{sp}'\n")
+        write_concat_list(segment_files, concat_list)
 
         if on_progress:
             on_progress(92, "Concatenating segments...")

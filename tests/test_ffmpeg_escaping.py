@@ -7,12 +7,52 @@ non-ASCII names). These string-level assertions lock that behavior in for CI
 where ffmpeg is not available.
 """
 import os
+from pathlib import Path
 
 from opencut.helpers import (
+    _concat_file_line,
     _concat_quote,
     escape_drawtext,
     escape_filter_path,
     write_concat_list,
+)
+
+CORE_CONCAT_MODULES = (
+    "ai_intro_gen",
+    "auto_chapter_art",
+    "auto_dub_pipeline",
+    "auto_montage",
+    "beat_cuts",
+    "beat_sync_edit",
+    "ceremony_autoedit",
+    "cursor_zoom",
+    "dialogue_premix",
+    "event_recap",
+    "fit_to_fill",
+    "generative_extend",
+    "glitch_effects",
+    "guest_compilation",
+    "hook_generator",
+    "instant_replay",
+    "music_gen",
+    "music_mood_morph",
+    "music_remix",
+    "paper_edit",
+    "photo_montage",
+    "render_farm",
+    "rough_cut",
+    "smart_render",
+    "speaker_layout",
+    "speed_ramp",
+    "stream_highlights",
+    "stringout_reel",
+    "template_assembly",
+    "timeline_copilot",
+    "transcript_edit",
+    "video_360",
+    "video_condensed",
+    "video_summary",
+    "voice_overdub",
 )
 
 
@@ -58,6 +98,9 @@ class TestConcatList:
     def test_apostrophe_close_reopen(self):
         assert _concat_quote("o'brian.mp4") == "o'\\''brian.mp4"
 
+    def test_concat_file_line_formats_escaped_entry(self):
+        assert _concat_file_line("o'brian.mp4") == "file 'o'\\''brian.mp4'\n"
+
     def test_crlf_stripped(self):
         assert _concat_quote("a\r\nb.mp4") == "ab.mp4"
 
@@ -72,3 +115,12 @@ class TestConcatList:
         assert "o'\\''brian.mp4" in text
         assert text.startswith("file '")
         assert os.path.exists(str(lst))
+
+    def test_core_modules_use_shared_concat_writer(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        for module_name in CORE_CONCAT_MODULES:
+            source = (repo_root / "opencut" / "core" / f"{module_name}.py").read_text(
+                encoding="utf-8"
+            )
+            assert "write_concat_list" in source or "_concat_file_line" in source, module_name
+            assert "file '" not in source, module_name

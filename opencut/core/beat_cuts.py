@@ -17,7 +17,14 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import (
+    get_ffmpeg_path,
+    get_ffprobe_path,
+    get_video_info,
+    output_path,
+    run_ffmpeg,
+    write_concat_list,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -421,9 +428,7 @@ def assemble_beat_synced(
 
         # Write concat list
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for sp in segment_files:
-                f.write(f"file '{sp}'\n")
+        write_concat_list(segment_files, concat_file)
 
         # Concat video segments
         concat_video = os.path.join(tmp_dir, "concat_video.mp4")

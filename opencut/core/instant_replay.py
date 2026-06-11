@@ -22,6 +22,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -257,9 +258,7 @@ def create_replay(
         # Step 4: Combine original + replay if requested
         if config.include_original:
             concat_file = os.path.join(tmp_dir, "concat.txt")
-            with open(concat_file, "w") as f:
-                f.write(f"file '{original_clip}'\n")
-                f.write(f"file '{overlay_clip}'\n")
+            write_concat_list([original_clip, overlay_clip], concat_file)
 
             cmd = [
                 get_ffmpeg_path(), "-hide_banner", "-y",

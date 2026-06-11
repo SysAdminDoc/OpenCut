@@ -26,6 +26,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -601,9 +602,7 @@ def _composite_dubbed_audio(
             # Concatenate all TTS to single track
             concat_path = os.path.join(work_dir, "concat_tts.wav")
             list_path = os.path.join(work_dir, "concat_list.txt")
-            with open(list_path, "w") as f:
-                for seg in tts_segments_with_audio:
-                    f.write(f"file '{seg.tts_audio_path}'\n")
+            write_concat_list((seg.tts_audio_path for seg in tts_segments_with_audio), list_path)
             concat_cmd = (FFmpegCmd()
                           .option("f", "concat")
                           .option("safe", "0")

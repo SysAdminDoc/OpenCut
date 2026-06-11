@@ -407,6 +407,11 @@ def _concat_quote(path: str) -> str:
     return cleaned.replace("'", "'\\''")
 
 
+def _concat_file_line(path: str) -> str:
+    """Format one escaped FFmpeg concat-demuxer file entry."""
+    return f"file '{_concat_quote(path)}'\n"
+
+
 def write_concat_list(paths, file_path: str) -> str:
     """Write a UTF-8 FFmpeg concat-demuxer list and return ``file_path``.
 
@@ -417,7 +422,7 @@ def write_concat_list(paths, file_path: str) -> str:
     """
     with open(file_path, "w", encoding="utf-8") as f:
         for p in paths:
-            f.write(f"file '{_concat_quote(p)}'\n")
+            f.write(_concat_file_line(p))
     return file_path
 
 

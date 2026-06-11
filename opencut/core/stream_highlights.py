@@ -32,6 +32,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -505,9 +506,7 @@ def assemble_highlight_reel(
 
         # Concat using FFmpeg concat demuxer
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for np in normalized:
-                f.write(f"file '{np}'\n")
+        write_concat_list(normalized, concat_file)
 
         # Apply fade transitions if requested
         if transition == "crossfade" and len(normalized) > 1:
@@ -631,9 +630,7 @@ def _assemble_with_crossfade(
         # Fallback to simple concat if xfade fails
         logger.warning("Crossfade assembly failed, falling back to simple concat")
         concat_file = os.path.join(tmp_dir, "concat_fallback.txt")
-        with open(concat_file, "w") as f:
-            for cp in clip_paths:
-                f.write(f"file '{cp}'\n")
+        write_concat_list(clip_paths, concat_file)
         cmd = [
             get_ffmpeg_path(), "-hide_banner", "-y",
             "-f", "concat", "-safe", "0", "-i", concat_file,
