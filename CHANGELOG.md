@@ -118,6 +118,8 @@ record also lives in the git commit messages.
 - Styled-caption overlay encoding now drains FFmpeg stderr in a background
   thread while raw frames are piped to stdin, preventing stderr backpressure
   from deadlocking long renders.
+- The Real-ESRGAN upscale tier now resolves and caches official model weights
+  before constructing `RealESRGANer`, instead of passing `model_path=None`.
 - **Caption burn-in failed on every Windows drive-letter path.** The
   `subtitles=`/`ass=` filter value dropped colon escaping, so `C:/...` was
   parsed as filename `C`. Added `escape_filter_path()` with the verified
