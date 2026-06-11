@@ -12,6 +12,7 @@ Can use pycaps if installed, or falls back to built-in
 Pillow-based renderer for zero-dependency operation.
 """
 
+import json
 import logging
 import os
 import tempfile
@@ -22,77 +23,51 @@ from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
-# Animation Presets
+# Animation Presets — loaded from JSON, with hardcoded fallback
 # ---------------------------------------------------------------------------
-ANIMATION_PRESETS = {
-    "pop": {
-        "label": "Pop",
-        "description": "Words pop in with scale bounce (CapCut style)",
-        "active_scale": 1.15,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.3,
-        "transition_frames": 4,
-    },
-    "fade": {
-        "label": "Fade",
-        "description": "Words fade in smoothly",
-        "active_scale": 1.0,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.2,
-        "transition_frames": 8,
-    },
-    "slide_up": {
-        "label": "Slide Up",
-        "description": "Words slide up into position",
-        "active_scale": 1.0,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.2,
-        "slide_y": -15,
-        "transition_frames": 6,
-    },
-    "typewriter": {
-        "label": "Typewriter",
-        "description": "Words appear one by one like typing",
-        "active_scale": 1.0,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.0,
-        "transition_frames": 2,
-    },
-    "bounce": {
-        "label": "Bounce",
-        "description": "Words bounce in with spring easing",
-        "active_scale": 1.2,
-        "inactive_scale": 0.8,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.3,
-        "transition_frames": 6,
-    },
-    "glow": {
-        "label": "Glow",
-        "description": "Active word gets a bright glow effect",
-        "active_scale": 1.05,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.4,
-        "glow_radius": 8,
-        "transition_frames": 5,
-    },
-    "highlight_box": {
-        "label": "Highlight Box",
-        "description": "Active word gets a colored background box",
-        "active_scale": 1.0,
-        "inactive_scale": 1.0,
-        "active_opacity": 1.0,
-        "inactive_opacity": 0.5,
-        "box_color": (255, 230, 0),
-        "box_padding": 6,
-        "transition_frames": 3,
-    },
-}
+_PRESETS_JSON = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "animation_presets.json")
+
+
+def _load_presets() -> Dict:
+    try:
+        with open(_PRESETS_JSON, "r", encoding="utf-8") as f:
+            presets = json.load(f)
+        for v in presets.values():
+            if "box_color" in v and isinstance(v["box_color"], list):
+                v["box_color"] = tuple(v["box_color"])
+            if "glow_color" in v and isinstance(v["glow_color"], list):
+                v["glow_color"] = tuple(v["glow_color"])
+            if "active_color" in v and isinstance(v["active_color"], list):
+                v["active_color"] = tuple(v["active_color"])
+            if "underline_color" in v and isinstance(v["underline_color"], list):
+                v["underline_color"] = tuple(v["underline_color"])
+        return presets
+    except (OSError, json.JSONDecodeError, KeyError) as exc:
+        logger.warning("Failed to load animation presets from %s: %s", _PRESETS_JSON, exc)
+        return {
+            "pop": {"label": "Pop", "description": "Words pop in with scale bounce",
+                    "active_scale": 1.15, "inactive_scale": 1.0, "active_opacity": 1.0,
+                    "inactive_opacity": 0.3, "transition_frames": 4},
+            "fade": {"label": "Fade", "description": "Words fade in smoothly",
+                     "active_scale": 1.0, "inactive_scale": 1.0, "active_opacity": 1.0,
+                     "inactive_opacity": 0.2, "transition_frames": 8},
+            "typewriter": {"label": "Typewriter", "description": "Words appear one by one",
+                           "active_scale": 1.0, "inactive_scale": 1.0, "active_opacity": 1.0,
+                           "inactive_opacity": 0.0, "transition_frames": 2},
+            "bounce": {"label": "Bounce", "description": "Words bounce in with spring easing",
+                       "active_scale": 1.2, "inactive_scale": 0.8, "active_opacity": 1.0,
+                       "inactive_opacity": 0.3, "transition_frames": 6},
+            "glow": {"label": "Glow", "description": "Active word gets a bright glow effect",
+                     "active_scale": 1.05, "inactive_scale": 1.0, "active_opacity": 1.0,
+                     "inactive_opacity": 0.4, "glow_radius": 8, "transition_frames": 5},
+            "highlight_box": {"label": "Highlight Box", "description": "Active word gets a colored background box",
+                              "active_scale": 1.0, "inactive_scale": 1.0, "active_opacity": 1.0,
+                              "inactive_opacity": 0.5, "box_color": (255, 230, 0), "box_padding": 6,
+                              "transition_frames": 3},
+        }
+
+
+ANIMATION_PRESETS = _load_presets()
 
 
 # ---------------------------------------------------------------------------
