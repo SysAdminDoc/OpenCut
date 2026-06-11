@@ -18,11 +18,10 @@
 
 ## Project planning
 
-- [ROADMAP.md](ROADMAP.md) remains the detailed F-number and wave-letter implementation ledger.
-- [TODO.md](TODO.md) is the compact active execution queue for the next implementation pass.
-- [ROADMAP-NEXT.md](ROADMAP-NEXT.md) keeps the older wave-letter worksheet referenced by code and tests.
-- [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work.
-- [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes current research direction and points to archived research inputs.
+- [ROADMAP.md](ROADMAP.md) is the only active open-work tracker.
+- [CHANGELOG.md](CHANGELOG.md) records shipped release-facing changes.
+- [RESEARCH.md](RESEARCH.md) summarizes the current research direction and points to archived research inputs.
+- [docs/RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md](docs/RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md) preserves the June 2026 competitive teardown evidence.
 
 ---
 
@@ -38,7 +37,7 @@
 
 **Option A -- Installer (recommended):**
 
-Download the latest `OpenCut-Setup-1.28.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+Download the latest Windows installer from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
 
 **Option B -- From source:**
 
@@ -567,9 +566,10 @@ extension/
     index.html       # UXP panel UI
     style.css        # UXP dark theme
 tests/               # pytest test suite (9,400+ estimated tests, 252 root test files)
+RESEARCH.md          # Current consolidated research conclusions
+ROADMAP.md           # Active open-work tracker
 docs/
-  RESEARCH.md        # Open source feature research (80+ projects analyzed)
-  ROADMAP.md         # Implementation roadmap with status tracking
+  RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md # June 2026 competitive teardown
   UXP_MIGRATION.md   # CEP to UXP migration plan
 installer/           # WPF installer (C# .NET 9) + legacy Inno Setup
 scripts/             # Build and utility scripts
