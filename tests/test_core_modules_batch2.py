@@ -846,6 +846,37 @@ class TestUpscalePro(unittest.TestCase):
         caps = get_upscale_capabilities()
         self.assertIsInstance(caps, dict)
 
+    def test_realesrgan_model_resolver_downloads_official_weights(self):
+        from opencut.core import upscale_pro
+
+        old_models_dir = upscale_pro.REALESRGAN_MODELS_DIR
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            upscale_pro.REALESRGAN_MODELS_DIR = tmp_dir
+            try:
+                with patch("opencut.core.upscale_pro.urllib.request.urlretrieve") as mock_retrieve:
+                    def _fake_retrieve(url, target):
+                        Path(target).write_bytes(b"x" * 2048)
+                        return target, None
+
+                    mock_retrieve.side_effect = _fake_retrieve
+                    path = upscale_pro._resolve_realesrgan_model_path("realesrgan-x4plus")
+            finally:
+                upscale_pro.REALESRGAN_MODELS_DIR = old_models_dir
+
+        self.assertTrue(path.endswith("RealESRGAN_x4plus.pth"))
+        mock_retrieve.assert_called_once()
+        self.assertIn(
+            "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+            mock_retrieve.call_args[0][0],
+        )
+
+    def test_upscale_realesrgan_uses_resolved_model_path(self):
+        from opencut.core import upscale_pro
+
+        source = Path(upscale_pro.__file__).read_text(encoding="utf-8")
+        self.assertIn("_resolve_realesrgan_model_path(canonical_model_name", source)
+        self.assertNotIn("model_path=None", source)
+
     @patch("opencut.core.upscale_pro.get_video_info",
            return_value={"width": 640, "height": 480})
     @patch("opencut.core.upscale_pro.run_ffmpeg")

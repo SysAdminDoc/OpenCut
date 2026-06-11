@@ -23,10 +23,6 @@ history, not here.
   Why: six full :root token redefinitions (12, 4462, 5386, 13215, 15466, 17214), two divergent html.theme-light blocks (16701 vs 17628), three different :focus-visible rules, and a triplicated prefers-reduced-motion block — the effective theme is "whatever the last pass overrode" and ~⅓ of 18k lines is dead weight. Consolidate to one token block per theme; then retokenize the ~340 stray hex literals.
   Where: extension/com.opencut.panel/client/style.css
 
-- [ ] P2 — Real-ESRGAN "balanced" upscale tier is dead on arrival
-  Why: RealESRGANer(model_path=None) crashes in __init__ on every released package, and no pretrained weights are ever resolved; model_name is ignored. Resolve the weight file/URL and pass it.
-  Where: opencut/core/upscale_pro.py:122-126
-
 - [ ] P2 — Concat lists in ~17 feature modules still use unescaped, platform-codec writes
   Why: write_concat_list() now exists in helpers.py (UTF-8 + correct quote escaping) and the merge path uses it, but beat_cuts, ai_intro_gen, auto_dub_pipeline, photo_montage, instant_replay, cursor_zoom, event_recap, stream_highlights, video_360, generative_extend, auto_montage, glitch_effects, hook_generator, fit_to_fill, paper_edit, guest_compilation, stringout_reel still hand-roll open(path,"w") lists that break on apostrophes/non-ASCII names.
   Where: opencut/core/* (grep: "file '" writes); replace with helpers.write_concat_list
