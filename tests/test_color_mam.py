@@ -630,6 +630,26 @@ class TestKineticType:
             )
             assert result.preset == "custom"
 
+    def test_kinetic_route_dimension_helpers_clamp_unsafe_values(self):
+        from opencut.routes.color_mam_routes import (
+            _safe_render_font_size,
+            _safe_render_height,
+            _safe_render_resolution,
+            _safe_render_width,
+        )
+
+        huge = {"width": 999999999, "height": 999999999, "font_size": 999999}
+        tiny = {"width": 1, "height": 1, "font_size": 1}
+
+        assert _safe_render_width(huge) == 7680
+        assert _safe_render_height(huge) == 4320
+        assert _safe_render_font_size(huge) == 500
+        assert _safe_render_width(tiny) == 100
+        assert _safe_render_height(tiny) == 100
+        assert _safe_render_font_size(tiny) == 8
+        assert _safe_render_resolution([999999999, 999999999]) == (7680, 4320)
+        assert _safe_render_resolution(["bad"]) == (1920, 1080)
+
     def test_easing_functions(self):
         from opencut.core.kinetic_type import (
             _ease_bounce,

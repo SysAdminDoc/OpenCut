@@ -24,6 +24,19 @@ logger = logging.getLogger("opencut")
 
 delivery_master_bp = Blueprint("delivery_master", __name__)
 
+_IMF_MIN_WIDTH = 64
+_IMF_MIN_HEIGHT = 64
+_IMF_MAX_WIDTH = 4096
+_IMF_MAX_HEIGHT = 2160
+
+
+def _safe_imf_width(data, default=1920):
+    return safe_int(data.get("width"), default, min_val=_IMF_MIN_WIDTH, max_val=_IMF_MAX_WIDTH)
+
+
+def _safe_imf_height(data, default=1080):
+    return safe_int(data.get("height"), default, min_val=_IMF_MIN_HEIGHT, max_val=_IMF_MAX_HEIGHT)
+
 
 # ===========================================================================
 # DCP Export
@@ -136,8 +149,8 @@ def export_imf(job_id, filepath, data):
         title=data.get("title", "Untitled"),
         profile=data.get("profile", "application_2"),
         frame_rate=safe_int(data.get("frame_rate"), default=24),
-        width=safe_int(data.get("width"), default=1920),
-        height=safe_int(data.get("height"), default=1080),
+        width=_safe_imf_width(data),
+        height=_safe_imf_height(data),
         video_codec=data.get("video_codec", "jpeg2000"),
         audio_tracks=audio_tracks,
         issuer=data.get("issuer", "OpenCut"),

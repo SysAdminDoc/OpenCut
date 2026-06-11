@@ -38,6 +38,9 @@ record also lives in the git commit messages.
 - Every mutating Flask request now passes through a global CSRF gate, so new
   POST/PUT/PATCH/DELETE routes stay protected even if a handler omits the
   per-route decorator.
+- Kinetic text, data-animation, shape-animation, and IMF export routes now
+  clamp render dimensions and font sizes before dispatching to allocation-heavy
+  render code.
 - The writable `~/.opencut/packages` fallback install directory is now appended
   to `sys.path` instead of taking priority over stdlib and bundled modules.
 
