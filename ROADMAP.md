@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — MCP HTTP transport has no authentication when bound non-loopback
-  Why: --http-bind 0.0.0.0 exposes every tool (transcribe, pip-install, arbitrary routes) with only a printed warning; should require the opencut.auth token or refuse non-loopback binds.
-  Where: opencut/mcp_server.py:1005-1096, 1124-1132
-
 - [ ] P2 — ~/.opencut/packages is inserted at sys.path[0]
   Why: anything dropped there shadows stdlib modules and executes in the server process; frozen builds also trust whatever python is on PATH for site-packages. Append instead of insert-at-0; validate or gate the frozen-build path.
   Where: opencut/server.py:207-213, 157-202; opencut/security.py:439; opencut/helpers.py:24-26

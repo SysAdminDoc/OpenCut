@@ -91,6 +91,40 @@ def test_f209_mcp_tools_map_to_live_flask_routes(app):
     assert missing == []
 
 
+def test_mcp_http_auth_required_only_for_non_loopback_binds():
+    assert not mcp_server._mcp_http_bind_requires_auth("127.0.0.1")
+    assert not mcp_server._mcp_http_bind_requires_auth("localhost")
+    assert not mcp_server._mcp_http_bind_requires_auth("::1")
+    assert mcp_server._mcp_http_bind_requires_auth("0.0.0.0")
+    assert mcp_server._mcp_http_bind_requires_auth("192.0.2.10")
+    assert mcp_server._mcp_http_bind_requires_auth("")
+
+
+def test_mcp_http_auth_accepts_header_or_query_token(monkeypatch):
+    monkeypatch.setattr(mcp_server._auth, "is_token_valid", lambda token: token == "secret")
+
+    assert mcp_server._mcp_http_request_is_authorized(
+        {"X-OpenCut-Auth": "secret"},
+        "/tools",
+        auth_required=True,
+    )
+    assert mcp_server._mcp_http_request_is_authorized(
+        {},
+        "/tools?auth=secret",
+        auth_required=True,
+    )
+    assert not mcp_server._mcp_http_request_is_authorized(
+        {},
+        "/tools",
+        auth_required=True,
+    )
+    assert mcp_server._mcp_http_request_is_authorized(
+        {},
+        "/tools",
+        auth_required=False,
+    )
+
+
 def test_f195_simple_tools_dispatch_to_backend(monkeypatch):
     calls = _capture_api(monkeypatch)
     cases = [
