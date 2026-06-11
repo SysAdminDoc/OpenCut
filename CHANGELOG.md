@@ -23,6 +23,12 @@ record also lives in the git commit messages.
   `torch-stack`/WhisperX exception and the advisory audit allow-list now covers
   the current Transformers config-injection CVE only in that opt-in lane.
 
+### Security — server boundary
+
+- Default CORS is now closed instead of allowing `null`/`file://`, and
+  `/health` withholds CSRF bootstrap tokens from those origins even if they are
+  explicitly added back for compatibility.
+
 ### Fixed — UXP panel
 
 - FCC caption display settings now unwrap BackendClient response payloads before

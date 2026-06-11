@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — CORS default allows null/file:// origins while /health hands out the CSRF token unauthenticated
-  Why: a local HTML file or sandboxed null-origin context can read /health, obtain the CSRF token, and drive every mutating loopback route. Drop "null" from defaults or gate token issuance.
-  Where: opencut/config.py:69,98, opencut/server.py:357, opencut/routes/system.py (/health)
-
 - [ ] P2 — Werkzeug dev server used for the Docker/remote path
   Why: app.run() is not a production server; the Docker image's whole purpose is non-localhost exposure. Ship waitress (Windows) / gunicorn (Linux) for that path.
   Where: opencut/server.py:645, Dockerfile

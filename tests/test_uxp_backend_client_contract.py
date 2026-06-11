@@ -191,11 +191,38 @@ def test_health_route_returns_csrf_token(client):
     assert body["csrf_token"], "csrf_token must be non-empty"
 
 
+def test_health_route_does_not_cors_allow_null_origin_by_default(client):
+    resp = client.get("/health", headers={"Origin": "null"})
+    body = resp.get_json()
+
+    assert resp.status_code == 200
+    assert resp.headers.get("Access-Control-Allow-Origin") != "null"
+    assert "csrf_token" not in body
+
+
+def test_health_route_does_not_emit_csrf_to_file_or_null_origins():
+    from opencut.config import OpenCutConfig
+    from opencut.server import create_app
+
+    app = create_app(OpenCutConfig(cors_origins=["null", "file://", "http://localhost:3000"]))
+    app.config["TESTING"] = True
+    test_client = app.test_client()
+
+    for origin in ("null", "file://"):
+        resp = test_client.get("/health", headers={"Origin": origin})
+        body = resp.get_json()
+        assert resp.status_code == 200
+        assert "csrf_token" not in body
+
+    resp = test_client.get("/health", headers={"Origin": "http://localhost:3000"})
+    assert resp.status_code == 200
+    assert resp.get_json().get("csrf_token")
+
+
 def test_status_route_returns_canonical_status_field(client):
     """The UXP JobPoller branches on `status in (complete, error, cancelled, running)`.
     A 404 for an unknown job is acceptable as long as the shape is JSON.
     """
-    csrf = _csrf(client)
     resp = client.get("/status/does-not-exist-9999")
     # Backend might 200 with status="not_found" or 404 — either is fine
     # as long as the response is JSON.
