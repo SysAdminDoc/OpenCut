@@ -212,13 +212,6 @@ history, not here.
   Acceptance: GitHub release v1.33.0 exists with Windows installer + server bundles attached and CHANGELOG section dated; README badge matches.
   Complexity: S
 
-- [ ] P1 — Raise the Transformers floor and advisory-gate the torch-stack lane
-  Why: transformers>=4.30 (pyproject.toml:133,148) permits installs vulnerable to CVE-2026-4372 (RCE via model config.json _attn_implementation_internal, bypasses trust_remote_code=False; fixed 5.3.0) and CVE-2026-1839 (Trainer torch.load RCE; fixed 5.0.0); OpenCut loads third-party HF checkpoints (CrisperWhisper, Florence-2, MusicGen).
-  Evidence: github.com/advisories/GHSA-69w3-r845-3855; pluto.security CVE-2026-4372 writeup
-  Touches: pyproject.toml (torch-stack, captions-whisperx, broll extras), requirements-lock.txt, docs/PYTHON_ADVISORIES.md
-  Acceptance: resolved transformers in torch-stack installs is >=5.3 (or a documented floor exception with loader-path mitigation); pip-audit lane reports no transformers advisories.
-  Complexity: S
-
 - [ ] P1 — Decide and execute brand/namespace disambiguation (gates all distribution work)
   Why: carried from the 2026-06-09 research pass with no roadmap entry; opencut.app (48K stars) is mid-rewrite (May 2026) and will re-dominate search when it relaunches; PyPI/winget/Homebrew/SEO all need an unambiguous token first.
   Evidence: github.com/OpenCut-app/OpenCut; opencut.app/roadmap; RESEARCH.md Open Question 1

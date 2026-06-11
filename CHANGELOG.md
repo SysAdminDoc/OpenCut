@@ -16,6 +16,13 @@ record also lives in the git commit messages.
 - README planning links now resolve in a fresh clone and name installer
   artifacts by the release version pattern instead of a stale filename.
 
+### Security — dependency policy
+
+- Standalone depth/model-loading installs now require `transformers>=5.3`;
+  the lower Transformers floor is confined to the explicit, documented
+  `torch-stack`/WhisperX exception and the advisory audit allow-list now covers
+  the current Transformers config-injection CVE only in that opt-in lane.
+
 ### Fixed — UXP panel
 
 - FCC caption display settings now unwrap BackendClient response payloads before
