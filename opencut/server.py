@@ -301,7 +301,7 @@ def _init_sentry_if_configured() -> bool:
 # ---------------------------------------------------------------------------
 # Flask App Factory
 # ---------------------------------------------------------------------------
-def create_app(config=None):
+def create_app(config=None, testing=False):
     """Create and configure the Flask application.
 
     Args:
@@ -331,20 +331,19 @@ def create_app(config=None):
 
     # Startup + periodic sweep of stale opencut_* temp files. Best-effort;
     # failure never blocks app startup.
-    try:
-        from opencut.core import temp_cleanup as _temp_cleanup
-        _temp_cleanup.run_startup_sweep()
-        _temp_cleanup.start_background_sweep()
-    except Exception as _cleanup_exc:  # noqa: BLE001
-        logger.warning("temp_cleanup bootstrap failed: %s", _cleanup_exc)
+    if not testing:
+        try:
+            from opencut.core import temp_cleanup as _temp_cleanup
+            _temp_cleanup.run_startup_sweep()
+            _temp_cleanup.start_background_sweep()
+        except Exception as _cleanup_exc:  # noqa: BLE001
+            logger.warning("temp_cleanup bootstrap failed: %s", _cleanup_exc)
 
-    # Optional disk-space background monitor (off by default, opt-in
-    # via OPENCUT_DISK_MONITOR_INTERVAL).
-    try:
-        from opencut.core import disk_monitor as _disk_monitor
-        _disk_monitor.start_background()
-    except Exception as _disk_exc:  # noqa: BLE001
-        logger.warning("disk_monitor bootstrap failed: %s", _disk_exc)
+        try:
+            from opencut.core import disk_monitor as _disk_monitor
+            _disk_monitor.start_background()
+        except Exception as _disk_exc:  # noqa: BLE001
+            logger.warning("disk_monitor bootstrap failed: %s", _disk_exc)
 
     from opencut.errors import error_response as _error_response  # noqa: E402
     from opencut.errors import register_error_handlers

@@ -15,7 +15,7 @@ def app():
     from opencut.config import OpenCutConfig
     from opencut.server import create_app
     test_config = OpenCutConfig()
-    flask_app = create_app(config=test_config)
+    flask_app = create_app(config=test_config, testing=True)
     flask_app.config["TESTING"] = True
     return flask_app
 
