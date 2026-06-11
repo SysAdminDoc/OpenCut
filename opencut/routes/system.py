@@ -194,6 +194,7 @@ def check_watermark_available():
 _caps_cache = {"data": None, "ts": 0.0}
 _caps_cache_lock = threading.Lock()
 _CAPS_CACHE_TTL = 30.0
+_CSRF_BOOTSTRAP_BLOCKED_ORIGINS = {"null", "file://"}
 
 
 def invalidate_caps_cache():
@@ -369,6 +370,11 @@ def _build_capabilities():
     return caps
 
 
+def _health_should_expose_csrf_token() -> bool:
+    origin = (request.headers.get("Origin") or "").strip().lower()
+    return origin not in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS
+
+
 @system_bp.route("/health", methods=["GET"])
 def health():
     # Serve cached capabilities; rebuild at most once per 30 s.
@@ -384,12 +390,14 @@ def health():
             _caps_cache["data"] = caps
             _caps_cache["ts"] = time.time()
 
-    return jsonify({
+    payload = {
         "status": "ok",
         "version": __version__,
         "capabilities": caps,
-        "csrf_token": get_csrf_token(),
-    })
+    }
+    if _health_should_expose_csrf_token():
+        payload["csrf_token"] = get_csrf_token()
+    return jsonify(payload)
 
 
 # ---------------------------------------------------------------------------

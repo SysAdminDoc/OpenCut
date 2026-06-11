@@ -31,6 +31,17 @@ def test_config_from_env_parses_limits_and_origins():
     assert config.job_stuck_timeout == 180
 
 
+def test_config_default_cors_is_closed_for_csrf_bootstrap():
+    from opencut.config import OpenCutConfig
+
+    with patch.dict(os.environ, {"OPENCUT_CORS_ORIGINS": ""}, clear=False):
+        assert OpenCutConfig.from_env().cors_origins == []
+
+    with patch.dict(os.environ, {}, clear=True):
+        assert OpenCutConfig.from_env().cors_origins == []
+    assert OpenCutConfig().cors_origins == []
+
+
 def test_jobs_module_uses_env_overrides_for_limits():
     import opencut.jobs as jobs_module
 
