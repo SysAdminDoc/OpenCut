@@ -1962,12 +1962,32 @@ const JobPoller = (() => {
   // "running" after an hour the panel gives up rather than spinning closures
   // forever. The CEP panel has the same cap; UXP previously had none.
   const MAX_POLL_ATTEMPTS = 3000;
+  const MAX_STATUS_POLL_FAILURES = 3;
 
-  async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0) {
-    const r = await BackendClient.get(`/status/${jobId}`);
+  function schedulePollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures = 0) {
+    setTimeout(() => {
+      if (activeJobId === jobId) {
+        pollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures);
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0, statusFailures = 0) {
+    let r;
+    try {
+      r = await BackendClient.get(`/status/${jobId}`);
+    } catch (err) {
+      r = { ok: false, error: err?.message ?? "Polling error" };
+    }
     if (!r.ok) {
+      const nextStatusFailures = statusFailures + 1;
+      if (nextStatusFailures < MAX_STATUS_POLL_FAILURES) {
+        schedulePollJob(jobId, onProgress, onComplete, onError, attempt, nextStatusFailures);
+        return;
+      }
       onError(r.error ?? "Polling error");
       clearTrackedJob(jobId);
+      _fireCompletionHooks();
       return;
     }
 
@@ -2003,11 +2023,7 @@ const JobPoller = (() => {
     }
 
     // Still running — schedule next poll
-    setTimeout(() => {
-      if (activeJobId === jobId) {
-        pollJob(jobId, onProgress, onComplete, onError, attempt + 1);
-      }
-    }, POLL_INTERVAL_MS);
+    schedulePollJob(jobId, onProgress, onComplete, onError, attempt + 1, 0);
   }
 
   // Post-completion hooks — called after every successful or failed job

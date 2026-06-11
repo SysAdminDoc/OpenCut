@@ -166,6 +166,21 @@ def test_job_poller_uses_status_endpoint():
     )
 
 
+def test_job_poller_retries_transient_status_failures():
+    text = _read_main_js()
+    assert "const MAX_STATUS_POLL_FAILURES = 3;" in text
+    assert "function schedulePollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures = 0)" in text
+    assert "async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0, statusFailures = 0)" in text
+    assert "const nextStatusFailures = statusFailures + 1;" in text
+    assert "if (nextStatusFailures < MAX_STATUS_POLL_FAILURES)" in text
+    assert re.search(
+        r"if \(!r\.ok\).*?schedulePollJob\(jobId, onProgress, onComplete, onError, attempt, nextStatusFailures\)",
+        text,
+        re.S,
+    ), "pollJob must retry a transient /status failure before failing the job"
+    assert "schedulePollJob(jobId, onProgress, onComplete, onError, attempt + 1, 0);" in text
+
+
 def test_job_id_is_pulled_from_canonical_field():
     """Async job submissions return ``{job_id: "..."}`` (canonical) with
     a legacy ``{id: ...}`` fallback. The poller must accept either."""
