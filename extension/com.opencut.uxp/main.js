@@ -736,7 +736,7 @@ const PProBridge = (() => {
         await markerList.createMarker(m.time);
         // Marker label/color API may vary — wrap each in try/catch
         try {
-          const created = markerList.getFirstMarkerAtTime(m.time);
+          const created = await markerList.getFirstMarkerAtTime(m.time);
           if (created) {
             await created.setName(m.label || "Beat");
             if (m.color) await created.setColorIndex(colorNameToIndex(m.color));
@@ -903,7 +903,7 @@ const PProBridge = (() => {
             const mediaPath = await child.getMediaPath?.() ?? "";
             if (mediaPath) {
               const name = await child.getName?.() ?? "";
-              const duration = await child.getOutPoint?.()?.seconds ?? 0;
+              const duration = (await child.getOutPoint?.())?.seconds ?? 0;
               items.push({ name, path: mediaPath, duration });
             }
           }
@@ -5422,7 +5422,7 @@ async function runBrollGenerate() {
         "success",
       );
       UIController.setStatus(formatI18n("uxp.video.runtime.broll_generated_status", "B-roll generation complete: {output}", { output }));
-    } else {
+    } else if (!r.ok) {
       const error = r.error || r.data?.error || t("common.unknown", "unknown");
       UIController.showToast(formatI18n("uxp.video.runtime.broll_generation_failed", "B-roll generation failed: {error}", { error }), "error");
     }
@@ -5462,7 +5462,7 @@ async function runMultimodalDiarize() {
         UIController.showToast(formatI18n("uxp.video.runtime.diarization_complete_summary", "Diarization complete: {summary}", { summary }), "success");
         UIController.setStatus(summary);
       }
-    } else {
+    } else if (!r.ok) {
       const error = r.error || r.data?.error || t("common.unknown", "unknown");
       UIController.showToast(formatI18n("uxp.video.runtime.diarization_failed", "Diarization failed: {error}", { error }), "error");
     }
@@ -5496,7 +5496,7 @@ async function runSocialUpload() {
     } else if (result) {
       UIController.showToast(formatI18n("uxp.video.runtime.uploaded_to_platform", "Uploaded to {platform}.", { platform }), "success");
     }
-  } else {
+  } else if (!r.ok) {
     const error = r.error || r.data?.error || t("common.unknown", "unknown");
     UIController.showToast(formatI18n("uxp.video.runtime.upload_failed", "Upload failed: {error}", { error }), "error");
   }
@@ -5998,10 +5998,10 @@ function bindEvents() {
     }
   });
   document.getElementById("searchQuery")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runFootageSearch();
+    if (e.key === "Enter" && !hasActiveJob()) runFootageSearch();
   });
   document.getElementById("nlpCommand")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runNlpCommand();
+    if (e.key === "Enter" && !hasActiveJob()) runNlpCommand();
   });
   document.querySelectorAll("[data-fill-target]").forEach((button) => {
     button.addEventListener("click", () => fillFieldFromSuggestion(button));
@@ -6038,7 +6038,7 @@ function bindEvents() {
   // ── Chat Editor ──
   document.getElementById("chatSendBtnUxp")?.addEventListener("click", sendChatMessage);
   document.getElementById("chatInputUxp")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendChatMessage();
+    if (e.key === "Enter" && !hasActiveJob()) sendChatMessage();
   });
 
   // ── AI B-Roll Generation ──
@@ -6124,7 +6124,7 @@ async function runDepthEffect() {
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runDepthBtnUxp", false);
-  } else {
+  } else if (!r.ok) {
     UIController.setButtonLoading("runDepthBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_depth_effect", "Failed to start depth effect");
     UIController.showToast(formatI18n("uxp.video.runtime.depth_effect_start_error", "Error: {error}", { error }), "error");
@@ -6155,7 +6155,7 @@ async function runEmotionHighlights() {
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runEmotionBtnUxp", false);
-  } else {
+  } else if (!r.ok) {
     UIController.setButtonLoading("runEmotionBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_emotion_analysis", "Failed to start emotion analysis");
     UIController.showToast(formatI18n("uxp.video.runtime.emotion_analysis_start_error", "Error: {error}", { error }), "error");
@@ -6186,7 +6186,7 @@ async function runBrollAnalysis() {
     }
     UIController.hideProcessing();
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
-  } else {
+  } else if (!r.ok) {
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
     const error = r.error || r.data?.error || t("uxp.video.runtime.failed_to_start_broll_analysis", "Failed to start B-roll analysis");
     UIController.showToast(formatI18n("uxp.video.runtime.broll_analysis_start_error", "Error: {error}", { error }), "error");
@@ -6876,7 +6876,7 @@ async function runUpscaleUxp() {
       const result = await JobPoller.poll(r.data.job_id);
       const output = result?.output_path || t("uxp.video.runtime.done", "done");
       UIController.showToast(formatI18n("uxp.video.runtime.upscaled_output", "Upscaled: {output}", { output }), "success");
-    } else {
+    } else if (!r.ok) {
       const error = r.data?.error || r.error || t("uxp.video.runtime.upscale_failed_default", "Upscale failed.");
       UIController.showToast(formatI18n("uxp.video.runtime.upscale_failed", "Upscale failed: {error}", { error }), "error");
     }
@@ -6905,7 +6905,7 @@ async function runSceneDetectUxp() {
       const result = await JobPoller.poll(r.data.job_id);
       const count = result?.scenes?.length || result?.total_scenes || 0;
       UIController.showToast(formatI18n("uxp.video.runtime.scene_boundaries_found", "Found {count} scene boundaries.", { count }), "success");
-    } else {
+    } else if (!r.ok) {
       const error = r.data?.error || r.error || t("uxp.video.runtime.scene_detection_failed_default", "Scene detection failed.");
       UIController.showToast(formatI18n("uxp.video.runtime.scene_detection_failed", "Scene detection failed: {error}", { error }), "error");
     }
@@ -6934,7 +6934,7 @@ async function runStyleTransferUxp() {
       const result = await JobPoller.poll(r.data.job_id);
       const output = result?.output_path || t("uxp.video.runtime.done", "done");
       UIController.showToast(formatI18n("uxp.video.runtime.style_applied_output", "Style applied: {output}", { output }), "success");
-    } else {
+    } else if (!r.ok) {
       const error = r.data?.error || r.error || t("uxp.video.runtime.style_transfer_failed_default", "Style transfer failed.");
       UIController.showToast(formatI18n("uxp.video.runtime.style_transfer_failed", "Style transfer failed: {error}", { error }), "error");
     }
@@ -7199,7 +7199,7 @@ async function renderApprovedShortsUxp() {
       const count = result?.total_clips || result?.clips?.length || 0;
       renderShortsBundleSummaryUxp(result);
       UIController.showToast(formatI18n("uxp.video.runtime.rendered_approved_shorts", "Rendered {count} approved short-form clip(s).", { count }), "success");
-    } else {
+    } else if (!r.ok) {
       const error = r.data?.error || r.error || t("uxp.video.runtime.approved_render_failed_default", "Approved render failed.");
       UIController.showToast(formatI18n("uxp.video.runtime.approved_render_failed", "Approved render failed: {error}", { error }), "error");
     }
@@ -7225,7 +7225,7 @@ async function runShortsPipelineUxp() {
       const count = result?.total_clips || result?.clips?.length || 0;
       renderShortsBundleSummaryUxp(result);
       UIController.showToast(formatI18n("uxp.video.runtime.generated_short_form_clips", "Generated {count} short-form clip(s).", { count }), "success");
-    } else {
+    } else if (!r.ok) {
       const error = r.data?.error || r.error || t("uxp.video.runtime.shorts_pipeline_failed_default", "Shorts pipeline failed.");
       UIController.showToast(formatI18n("uxp.video.runtime.shorts_pipeline_failed", "Shorts pipeline failed: {error}", { error }), "error");
     }

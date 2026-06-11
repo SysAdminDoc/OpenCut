@@ -9901,6 +9901,7 @@
     function addJobHistory(job) {
         if (!job || !job.type) return;
         jobHistoryList.unshift({
+            job_id: job.job_id || "",
             type: job.type,
             status: job.status || "complete",
             message: job.message || "",
@@ -10172,13 +10173,17 @@
                 // Avoid duplicating entries already in the client-side list
                 var alreadyHas = false;
                 for (var k = 0; k < jobHistoryList.length; k++) {
-                    if (jobHistoryList[k].type === j.type && jobHistoryList[k].status === j.status) {
+                    if (j.job_id && jobHistoryList[k].job_id === j.job_id) {
+                        alreadyHas = true; break;
+                    }
+                    if (!j.job_id && jobHistoryList[k].type === j.type && jobHistoryList[k].createdAt === (j.created || 0)) {
                         alreadyHas = true; break;
                     }
                 }
                 if (!alreadyHas) {
                     var created = j.created ? new Date(j.created * 1000).toLocaleTimeString() : "";
                     jobHistoryList.push({
+                        job_id: j.job_id || "",
                         type: j.type || "unknown",
                         status: j.status || "complete",
                         message: j.message || "",
@@ -15359,9 +15364,11 @@
             if (confEl) confEl.textContent = t("nlp.confidence_label", "Confidence: {percent}%")
                 .replace("{percent}", safeFixed((data.confidence || 0) * 100, 0));
             if (outEl) outEl.textContent = data.result ? JSON.stringify(data.result, null, 2) : "";
-            // Auto-execute matched route if high confidence — uses snapshot from command time
-            if (data.route && data.confidence > 0.6 && data.params) {
-                startJob(data.route, Object.assign({ filepath: snapPath, output_dir: snapFolder }, data.params));
+            if (data.route && data.confidence > 0.8 && data.params) {
+                var routeName = data.route.replace(/^\//, "");
+                if (confirm("Execute " + routeName + "?")) {
+                    startJob(data.route, Object.assign({ filepath: snapPath, output_dir: snapFolder }, data.params));
+                }
             }
         });
     }
