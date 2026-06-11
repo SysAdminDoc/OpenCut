@@ -38,6 +38,16 @@ def test_docker_runtime_is_http_only_by_default():
     assert "does not publish the optional WebSocket 5680 or\nMCP 5681 sidecars by default" in readme
 
 
+def test_docker_remote_bind_explicitly_opts_into_auth_gate():
+    dockerfile = _read("Dockerfile")
+    compose = _read("docker-compose.yml")
+
+    assert "ENV OPENCUT_HOST=0.0.0.0" in dockerfile
+    assert "ENV OPENCUT_ALLOW_REMOTE=1" in dockerfile
+    assert re.search(r"opencut-server:\s+.*?OPENCUT_ALLOW_REMOTE=1", compose, re.S)
+    assert re.search(r"opencut-server-gpu:\s+.*?OPENCUT_ALLOW_REMOTE=1", compose, re.S)
+
+
 def test_documented_compose_override_files_exist():
     docs = "\n".join(_read(path) for path in ["README.md", "Dockerfile"])
     referenced = set(re.findall(r"docker compose -f\s+([^\s]+)", docs))

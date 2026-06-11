@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased] — Hardening & quality pass
 
+### Fixed — Docker/runtime
+
+- Docker HTTP containers now set `OPENCUT_ALLOW_REMOTE=1` alongside the
+  intentional `0.0.0.0` bind, preventing startup crash-loops while preserving
+  the non-loopback auth gate.
+
 ### Security — routes layer
 
 - **Closed the unvalidated `output_path` write sinks.** `@async_job` validates

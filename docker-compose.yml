@@ -14,6 +14,7 @@ services:
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
+      - OPENCUT_ALLOW_REMOTE=1
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5679/health"]
@@ -38,6 +39,7 @@ services:
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
+      - OPENCUT_ALLOW_REMOTE=1
       - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
