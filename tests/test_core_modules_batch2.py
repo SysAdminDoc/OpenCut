@@ -15,6 +15,7 @@ import os
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 # Add project root to path
@@ -758,6 +759,19 @@ class TestStyledCaptions(unittest.TestCase):
         from opencut.core.styled_captions import _ACTION_KEYWORDS
         self.assertIn("amazing", _ACTION_KEYWORDS)
         self.assertIn("awesome", _ACTION_KEYWORDS)
+
+    def test_frame_pipe_drains_stderr_in_background(self):
+        import opencut.core.styled_captions as mod
+
+        source = Path(mod.__file__).read_text(encoding="utf-8")
+        popen_idx = source.index("proc = subprocess.Popen")
+        thread_idx = source.index("stderr_thread = threading.Thread", popen_idx)
+        write_loop_idx = source.index("for frame_num in range(total_frames):", popen_idx)
+
+        self.assertLess(thread_idx, write_loop_idx)
+        self.assertIn("stderr_thread.start()", source[thread_idx:write_loop_idx])
+        self.assertIn("stderr_thread.join(timeout=10)", source)
+        self.assertNotIn("proc.stderr.read(64 * 1024)", source)
 
 
 # ============================================================

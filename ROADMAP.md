@@ -23,10 +23,6 @@ history, not here.
   Why: six full :root token redefinitions (12, 4462, 5386, 13215, 15466, 17214), two divergent html.theme-light blocks (16701 vs 17628), three different :focus-visible rules, and a triplicated prefers-reduced-motion block — the effective theme is "whatever the last pass overrode" and ~⅓ of 18k lines is dead weight. Consolidate to one token block per theme; then retokenize the ~340 stray hex literals.
   Where: extension/com.opencut.panel/client/style.css
 
-- [ ] P2 — styled_captions frame-pipe encoder can deadlock on stderr
-  Why: stderr is read only after all frames are written to stdin; if FFmpeg fills the stderr pipe buffer with warnings it stops reading stdin and both processes block. Drain stderr in a background thread like helpers.py does.
-  Where: opencut/core/styled_captions.py:1199-1251
-
 - [ ] P2 — Real-ESRGAN "balanced" upscale tier is dead on arrival
   Why: RealESRGANer(model_path=None) crashes in __init__ on every released package, and no pretrained weights are ever resolved; model_name is ignored. Resolve the weight file/URL and pass it.
   Where: opencut/core/upscale_pro.py:122-126

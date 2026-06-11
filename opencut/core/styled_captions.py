@@ -1201,6 +1201,31 @@ def render_styled_caption_video(
         stdin=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    stderr_tail = bytearray()
+    stderr_lock = threading.Lock()
+    max_stderr_bytes = 64 * 1024
+
+    def _drain_stderr() -> None:
+        try:
+            if proc.stderr is None:
+                return
+            while True:
+                chunk = proc.stderr.read(4096)
+                if not chunk:
+                    break
+                with stderr_lock:
+                    stderr_tail.extend(chunk)
+                    if len(stderr_tail) > max_stderr_bytes:
+                        del stderr_tail[:-max_stderr_bytes]
+        except Exception as exc:
+            logger.debug("Error draining styled-caption FFmpeg stderr: %s", exc)
+
+    stderr_thread = threading.Thread(
+        target=_drain_stderr,
+        daemon=True,
+        name="styled-captions-stderr",
+    )
+    stderr_thread.start()
 
     state_idx = 0
     frames_written = 0
@@ -1235,6 +1260,11 @@ def render_styled_caption_video(
             proc.kill()
         except Exception:
             pass
+        try:
+            proc.wait(timeout=10)
+        except Exception:
+            pass
+        stderr_thread.join(timeout=10)
         raise
     finally:
         try:
@@ -1242,18 +1272,18 @@ def render_styled_caption_video(
         except Exception:
             pass
 
-    stderr_out = b""
-    try:
-        stderr_out = proc.stderr.read(64 * 1024)  # Cap at 64KB
-    except Exception:
-        pass
     try:
         proc.wait(timeout=1800)
     except subprocess.TimeoutExpired:
         logger.warning("FFmpeg encoding timed out after 1800s, killing process")
         proc.kill()
         proc.wait(timeout=10)
+        stderr_thread.join(timeout=10)
         raise RuntimeError("FFmpeg encoding timed out")
+    stderr_thread.join(timeout=10)
+
+    with stderr_lock:
+        stderr_out = bytes(stderr_tail)
 
     if proc.returncode != 0:
         err_msg = stderr_out.decode("utf-8", errors="replace").strip()
