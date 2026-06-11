@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -246,12 +246,7 @@ POSITION_PRESETS = {
 
 def _escape_drawtext(text: str) -> str:
     """Escape special characters for FFmpeg drawtext filter."""
-    # Escape colons, backslashes, single quotes, and percent signs
-    text = text.replace("\\", "\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace("'", "\\'")
-    text = text.replace("%", "%%")
-    return text
+    return escape_drawtext(text)
 
 
 def _build_drawtext_filters(
@@ -318,7 +313,7 @@ def _build_drawtext_filters(
                 y_pos = f"{base_y_expr}+{y_offset}"
 
             filters.append(
-                f"drawtext=text='{text}'"
+                f"drawtext=expansion=none:text='{text}'"
                 f":fontsize={font_size}"
                 f":fontcolor={font_color}"
                 f":box=1:boxcolor={bg_color}:boxborderw=5"

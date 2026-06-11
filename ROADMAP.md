@@ -23,10 +23,6 @@ history, not here.
   Why: six full :root token redefinitions (12, 4462, 5386, 13215, 15466, 17214), two divergent html.theme-light blocks (16701 vs 17628), three different :focus-visible rules, and a triplicated prefers-reduced-motion block — the effective theme is "whatever the last pass overrode" and ~⅓ of 18k lines is dead weight. Consolidate to one token block per theme; then retokenize the ~340 stray hex literals.
   Where: extension/com.opencut.panel/client/style.css
 
-- [ ] P2 — Drawtext escaping is duplicated and wrong about apostrophes in ~10 modules
-  Why: the local _escape_drawtext copies use \' inside single quotes (apostrophes silently dropped, graph can be mangled); helpers.escape_drawtext (ffmpeg-verified, expansion=none contract) should replace them.
-  Where: opencut/core/caption_styles.py:365-372, click_overlay.py, news_ticker.py, quiz_overlay.py, telemetry_overlay.py, callout_gen.py, audiogram.py, brand_kit.py, end_screen.py, guest_compilation.py
-
 ## P3 — Lower-severity correctness, UX, packaging
 
 - [ ] P3 — Inno installer writes HKCU/PlayerDebugMode in the elevated user's hive

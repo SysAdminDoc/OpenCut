@@ -14,6 +14,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_ffmpeg_path,
     get_video_info,
     output_path,
@@ -209,7 +210,7 @@ def generate_name_card(
         x_expr = str(margin)
         y_expr = f"h-{margin}-th"
 
-    escaped_name = name.replace("'", "'\\''").replace(":", "\\:")
+    escaped_name = escape_drawtext(name)
 
     # Build drawtext with background box and fade
     fade_in_expr = f"if(lt(t,{style.fade_in}),t/{style.fade_in},1)"
@@ -218,7 +219,7 @@ def generate_name_card(
     alpha_expr = f"min({fade_in_expr},{fade_out_expr})"
 
     drawtext = (
-        f"drawtext=text='{escaped_name}'"
+        f"drawtext=expansion=none:text='{escaped_name}'"
         f":fontsize={fontsize}"
         f":fontcolor={style.font_color}"
         f":box=1:boxcolor={style.bg_color}:boxborderw={padding}"
@@ -327,7 +328,7 @@ def process_single_message(
         card_dur = name_style.display_duration
         fade_in = name_style.fade_in
         fade_out = name_style.fade_out
-        escaped_name = guest_name.replace("'", "'\\''").replace(":", "\\:")
+        escaped_name = escape_drawtext(guest_name)
 
         # Show name card for first N seconds with fade
         enable_expr = f"between(t,0,{card_dur})"
@@ -343,7 +344,7 @@ def process_single_message(
         y_expr = f"h-{margin}-th"
 
         vf_parts.append(
-            f"drawtext=text='{escaped_name}'"
+            f"drawtext=expansion=none:text='{escaped_name}'"
             f":fontsize={fontsize}"
             f":fontcolor={name_style.font_color}"
             f":box=1:boxcolor={name_style.bg_color}:boxborderw={padding}"

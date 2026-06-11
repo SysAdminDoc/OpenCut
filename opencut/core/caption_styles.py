@@ -12,7 +12,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, output_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -364,12 +364,7 @@ def _position_y(position: str, height: int, font_size: int) -> int:
 
 def _escape_drawtext(text: str) -> str:
     """Escape text for FFmpeg drawtext filter."""
-    return (
-        text.replace("\\", "\\\\")
-        .replace("'", "\\'")
-        .replace(":", "\\:")
-        .replace("%", "%%")
-    )
+    return escape_drawtext(text)
 
 
 def _build_drawtext_filter(
@@ -388,7 +383,7 @@ def _build_drawtext_filter(
     bg_color = style.colors.get("background", "")
 
     parts = [
-        f"drawtext=text='{escaped}'",
+        f"drawtext=expansion=none:text='{escaped}'",
         "fontfile=''",
         f"fontsize={style.font_size}",
         f"fontcolor={text_color}",
@@ -497,7 +492,7 @@ def generate_style_preview(
     escaped = _escape_drawtext(sample_text)
 
     dt_parts = [
-        f"drawtext=text='{escaped}'",
+        f"drawtext=expansion=none:text='{escaped}'",
         f"fontsize={min(style.font_size, 36)}",
         f"fontcolor={text_color}",
         f"shadowcolor={shadow_color}",

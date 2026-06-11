@@ -17,6 +17,7 @@ from typing import Callable, Optional, Union
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -127,13 +128,7 @@ def _load_ticker_text(
 
 def _escape_drawtext(text: str) -> str:
     """Escape text for FFmpeg drawtext filter."""
-    # FFmpeg drawtext special characters
-    text = text.replace("\\", "\\\\")
-    text = text.replace("'", "\\'")
-    text = text.replace(":", "\\:")
-    text = text.replace("%", "%%")
-    text = text.replace("\n", " ")
-    return text
+    return escape_drawtext(str(text).replace("\n", " "))
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +230,7 @@ def create_ticker(
     # Background bar + scrolling text
     vf = (
         f"drawbox=x=0:y={bar_y}:w=iw:h={bar_h}:color={bg_color}:t=fill,"
-        f"drawtext=text='{safe_text}'"
+        f"drawtext=expansion=none:text='{safe_text}'"
         f":fontsize={font_size}:fontcolor={font_color}"
         f":x='{x_expr}':y={text_y}"
     )
@@ -341,7 +336,7 @@ def create_ticker_overlay(
     # Generate with color source + drawtext
     fc = (
         f"color=c=0x{bg_color}:s={width}x{height}:d={duration},"
-        f"drawtext=text='{safe_text}'"
+        f"drawtext=expansion=none:text='{safe_text}'"
         f":fontsize={font_size}:fontcolor={font_color}"
         f":x='{x_expr}':y={text_y}"
         f"[out]"

@@ -189,7 +189,7 @@ class TestEscapeDrawtext(unittest.TestCase):
 
     def test_escape_percent(self):
         from opencut.core.click_overlay import _escape_drawtext
-        self.assertIn("%%", _escape_drawtext("50%"))
+        self.assertEqual("50%", _escape_drawtext("50%"))
 
 
 # ============================================================

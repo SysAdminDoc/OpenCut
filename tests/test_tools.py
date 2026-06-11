@@ -709,7 +709,7 @@ class TestTelemetryOverlay(unittest.TestCase):
         """Drawtext escaper should handle colons and special chars."""
         from opencut.core.telemetry_overlay import _escape_drawtext
         self.assertEqual(_escape_drawtext("GPS: 40.7, -74.0"), "GPS\\: 40.7, -74.0")
-        self.assertEqual(_escape_drawtext("100%"), "100%%")
+        self.assertEqual(_escape_drawtext("100%"), "100%")
 
     def test_position_presets(self):
         """All four position presets should be defined."""

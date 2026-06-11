@@ -55,6 +55,19 @@ CORE_CONCAT_MODULES = (
     "voice_overdub",
 )
 
+DRAWTEXT_LITERAL_MODULES = (
+    "audiogram",
+    "brand_kit",
+    "callout_gen",
+    "caption_styles",
+    "click_overlay",
+    "end_screen",
+    "guest_compilation",
+    "news_ticker",
+    "quiz_overlay",
+    "telemetry_overlay",
+)
+
 
 class TestEscapeFilterPath:
     def test_windows_drive_letter_colon_is_escaped(self):
@@ -124,3 +137,13 @@ class TestConcatList:
             )
             assert "write_concat_list" in source or "_concat_file_line" in source, module_name
             assert "file '" not in source, module_name
+
+    def test_literal_drawtext_modules_use_shared_escape_and_expansion_none(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        for module_name in DRAWTEXT_LITERAL_MODULES:
+            source = (repo_root / "opencut" / "core" / f"{module_name}.py").read_text(
+                encoding="utf-8"
+            )
+            assert "escape_drawtext" in source, module_name
+            assert '.replace("%", "%%")' not in source, module_name
+            assert "drawtext=text='" not in source, module_name
