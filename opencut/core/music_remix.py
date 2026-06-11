@@ -24,6 +24,7 @@ from opencut.helpers import (
     get_ffmpeg_path,
     get_ffprobe_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -321,6 +322,7 @@ def _fit_smart(
 
         # Build concat list: full track + looped sections
         fd, list_file = tempfile.mkstemp(suffix=".txt", prefix="opencut_concat_")
+        os.close(fd)
         temp_segments = []
         try:
             # Extract loop segment
@@ -339,12 +341,7 @@ def _fit_smart(
             run_ffmpeg(cmd_seg, timeout=120)
 
             # Write concat list
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                escaped_music = music_path.replace("'", "'\\''")
-                f.write(f"file '{escaped_music}'\n")
-                escaped_seg = seg_path.replace("'", "'\\''")
-                for _ in range(total_loops):
-                    f.write(f"file '{escaped_seg}'\n")
+            write_concat_list([music_path] + [seg_path] * total_loops, list_file)
 
             if on_progress:
                 on_progress(70, "Concatenating segments...")

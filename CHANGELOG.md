@@ -135,6 +135,9 @@ record also lives in the git commit messages.
   names.** The concat-demuxer escaping used `\'` (rejected by ffmpeg) and the
   default text codec (cp1252 on Windows). Added `write_concat_list()` (UTF-8 +
   the correct `'\''` idiom). *Verified: apostrophe and Cyrillic/CJK names.*
+- All core concat-demuxer writers found by the repo-wide scan now use
+  `write_concat_list()` or the shared concat-line formatter instead of local
+  platform-codec path writes.
 - New shared escaping helpers in `opencut/helpers.py`
   (`escape_filter_path`, `escape_drawtext`, `write_concat_list`) with a
   string-level regression test (`tests/test_ffmpeg_escaping.py`) locking the

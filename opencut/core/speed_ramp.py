@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -260,9 +260,7 @@ def speed_ramp(
 
         # Concatenate segments
         list_file = os.path.join(tmp_dir, "concat.txt")
-        with open(list_file, "w", encoding="utf-8") as f:
-            for seg in segment_files:
-                f.write(f"file '{seg}'\n")
+        write_concat_list(segment_files, list_file)
 
         run_ffmpeg([
             get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",

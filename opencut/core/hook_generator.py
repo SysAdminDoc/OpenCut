@@ -22,6 +22,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -382,12 +383,9 @@ def apply_hook(
                 on_progress(50, "Concatenating teaser with main video...")
 
             # Create concat list
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as lst:
-                lst_path = lst.name
-                lst.write(f"file '{teaser_path}'\n")
-                lst.write(f"file '{os.path.abspath(video_path)}'\n")
+            fd, lst_path = tempfile.mkstemp(suffix=".txt")
+            os.close(fd)
+            write_concat_list([teaser_path, os.path.abspath(video_path)], lst_path)
 
             try:
                 concat_cmd = [

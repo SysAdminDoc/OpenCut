@@ -27,7 +27,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg, write_concat_list
 from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
@@ -784,12 +784,12 @@ def _reassemble_segments(
     # at its correct position
 
     # For simplicity with large segment counts, concatenate with silence padding
-    concat_list = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, prefix="reassemble_",
-    )
+    fd, concat_list_path = tempfile.mkstemp(suffix=".txt", prefix="reassemble_")
+    os.close(fd)
+    gap_files = []
     try:
         # Create silence fills for gaps between segments
-        gap_files = []
+        concat_paths = []
         prev_end = 0.0
 
         for seg in segments_sorted:
@@ -809,8 +809,7 @@ def _reassemble_segments(
                 ]
                 try:
                     run_ffmpeg(cmd, timeout=120)
-                    safe_path = gap_file.name.replace("'", "'\\''")
-                    concat_list.write(f"file '{safe_path}'\n")
+                    concat_paths.append(gap_file.name)
                     gap_files.append(gap_file.name)
                 except Exception:
                     try:
@@ -819,8 +818,7 @@ def _reassemble_segments(
                         pass
 
             # Add the processed segment
-            safe_path = seg["path"].replace("'", "'\\''")
-            concat_list.write(f"file '{safe_path}'\n")
+            concat_paths.append(seg["path"])
             prev_end = seg["end"]
 
         # Add trailing original audio if any
@@ -839,8 +837,7 @@ def _reassemble_segments(
             ]
             try:
                 run_ffmpeg(cmd, timeout=120)
-                safe_path = trail_file.name.replace("'", "'\\''")
-                concat_list.write(f"file '{safe_path}'\n")
+                concat_paths.append(trail_file.name)
                 gap_files.append(trail_file.name)
             except Exception:
                 try:
@@ -848,13 +845,13 @@ def _reassemble_segments(
                 except OSError:
                     pass
 
-        concat_list.close()
+        write_concat_list(concat_paths, concat_list_path)
 
         # Concatenate everything
         cmd = [
             ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0",
-            "-i", concat_list.name,
+            "-i", concat_list_path,
             "-c:a", "pcm_s16le",
             output_path,
         ]
@@ -862,7 +859,7 @@ def _reassemble_segments(
 
     finally:
         try:
-            os.unlink(concat_list.name)
+            os.unlink(concat_list_path)
         except OSError:
             pass
         for gf in gap_files:

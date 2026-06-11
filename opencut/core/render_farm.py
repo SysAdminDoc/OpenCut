@@ -24,6 +24,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -308,11 +309,7 @@ def _concatenate_segments(segment_paths: List[str], output_file: str) -> str:
     concat_dir = os.path.dirname(segment_paths[0])
     list_path = os.path.join(concat_dir, "concat_list.txt")
 
-    with open(list_path, "w", encoding="utf-8") as f:
-        for sp in segment_paths:
-            # Escape single quotes in paths
-            escaped = sp.replace("'", "'\\''")
-            f.write(f"file '{escaped}'\n")
+    write_concat_list(segment_paths, list_path)
 
     cmd = [
         get_ffmpeg_path(), "-hide_banner", "-y",

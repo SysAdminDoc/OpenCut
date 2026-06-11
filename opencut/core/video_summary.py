@@ -20,6 +20,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -254,11 +255,8 @@ def _concatenate_clips(clip_paths: List[str], output_file: str) -> bool:
     try:
         # Write concat file list
         fd, tmp_list = tempfile.mkstemp(suffix=".txt", prefix="opencut_concat_")
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            for path in clip_paths:
-                # Escape single quotes for ffmpeg concat format
-                escaped = path.replace("'", "'\\''")
-                f.write(f"file '{escaped}'\n")
+        os.close(fd)
+        write_concat_list(clip_paths, tmp_list)
 
         cmd = (
             FFmpegCmd()

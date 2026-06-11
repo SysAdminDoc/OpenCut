@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, output_path, run_ffmpeg
+from opencut.helpers import FFmpegCmd, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -361,10 +361,7 @@ def apply_active_speaker(
             on_progress(80, "Concatenating segments...")
 
         concat_path = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_path, "w", encoding="utf-8") as f:
-            for seg in segment_files:
-                safe = seg.replace("\\", "/").replace("'", "'\\''")
-                f.write(f"file '{safe}'\n")
+        write_concat_list(segment_files, concat_path)
 
         cmd = (FFmpegCmd()
                .option("f", "concat")

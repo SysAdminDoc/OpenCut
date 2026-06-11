@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
+    _concat_file_line,
     get_video_info,
     require_package,
     run_ffmpeg,
@@ -645,13 +646,13 @@ def _assemble_cards_to_video(card_paths: List[str], chapters: List[ChapterInfo],
     _fd, concat_file = tempfile.mkstemp(suffix=".txt", prefix="chapter_concat_")
     os.close(_fd)
     try:
-        with open(concat_file, "w") as f:
+        with open(concat_file, "w", encoding="utf-8") as f:
             for i, card_path in enumerate(card_paths):
-                f.write(f"file '{card_path}'\n")
+                f.write(_concat_file_line(card_path))
                 f.write(f"duration {config.card_duration}\n")
             # Repeat last frame to avoid truncation
             if card_paths:
-                f.write(f"file '{card_paths[-1]}'\n")
+                f.write(_concat_file_line(card_paths[-1]))
 
         cmd = (FFmpegCmd()
                .option("f", "concat")

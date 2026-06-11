@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -540,10 +540,7 @@ def _assemble_sequential(assignments, filled_template, tmpl, output_path_str, on
             on_progress(70, "Concatenating segments...")
 
         concat_path = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_path, "w", encoding="utf-8") as f:
-            for seg in segment_files:
-                safe = seg.replace("\\", "/").replace("'", "'\\''")
-                f.write(f"file '{safe}'\n")
+        write_concat_list(segment_files, concat_path)
 
         cmd = (FFmpegCmd()
                .option("f", "concat")

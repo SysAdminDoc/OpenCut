@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -196,10 +196,7 @@ def assemble_from_paper_edit(
 
         # Build concat file
         concat_path = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_path, "w", encoding="utf-8") as f:
-            for seg_path in segment_files:
-                safe = seg_path.replace("\\", "/").replace("'", "'\\''")
-                f.write(f"file '{safe}'\n")
+        write_concat_list(segment_files, concat_path)
 
         # Concatenate
         cmd = (FFmpegCmd()

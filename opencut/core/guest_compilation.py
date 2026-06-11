@@ -18,6 +18,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -485,9 +486,7 @@ def compile_guest_messages(
 
         # Write concat list
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for msg in messages:
-                f.write(f"file '{msg.output_path}'\n")
+        write_concat_list((msg.output_path for msg in messages), concat_file)
 
         # Concatenate all processed messages
         cmd = (FFmpegCmd()

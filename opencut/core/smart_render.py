@@ -17,6 +17,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -263,9 +264,7 @@ def smart_render(
 
     # Build concat file
     concat_file = os.path.join(temp_dir, "concat.txt")
-    with open(concat_file, "w", encoding="utf-8") as fh:
-        for sf in segment_files:
-            fh.write(f"file '{sf}'\n")
+    write_concat_list(segment_files, concat_file)
 
     # Concatenate
     cmd = (

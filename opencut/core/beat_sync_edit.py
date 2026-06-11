@@ -19,7 +19,14 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import (
+    get_ffmpeg_path,
+    get_ffprobe_path,
+    get_video_info,
+    output_path,
+    run_ffmpeg,
+    write_concat_list,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -585,10 +592,7 @@ def assemble_beat_sync(
         fd, list_path = tempfile.mkstemp(suffix="_beatconcat.txt")
         os.close(fd)
         try:
-            with open(list_path, "w", encoding="utf-8") as f:
-                for p in segment_paths:
-                    safe_p = p.replace("\\", "/").replace("'", "'\\''")
-                    f.write(f"file '{safe_p}'\n")
+            write_concat_list(segment_paths, list_path)
 
             # Determine output path
             if output_path_val:
