@@ -575,6 +575,18 @@ installer/           # WPF installer (C# .NET 9) + legacy Inno Setup
 scripts/             # Build and utility scripts
 ```
 
+## Cost Comparison (June 2026)
+
+| Tool | Price | Local/Cloud | Auto-Captions | Background Removal | Silence Cut |
+|------|-------|-------------|---------------|-------------------|-------------|
+| **OpenCut** | **$0** (MIT) | Local | Whisper (unlimited) | rembg/SAM2 | Yes |
+| CapCut Pro | $19.99/mo ($240/yr) | Cloud | Paywalled (was free) | Paywalled | Limited |
+| Submagic | $39/mo ($468/yr) | Cloud | 40 videos/mo | No | No |
+| AutoCut | $16/mo ($192/yr) | Local | Whisper-based | No | Yes |
+| FireCut | $20/mo ($240/yr) | Local | Yes | No | Yes |
+
+**Annual cost of paid alternatives: $192-$468/yr.** OpenCut runs locally, has no usage caps, and ships every feature above for $0 under MIT.
+
 ## Contributing
 
 Issues and PRs welcome. See `CLAUDE.md` for codebase patterns and conventions.
