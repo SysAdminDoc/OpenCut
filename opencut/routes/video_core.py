@@ -708,9 +708,10 @@ def export_video(job_id, filepath, data):
 
         if _is_cancelled(job_id):
             proc.kill()
+            proc.wait(timeout=10)
             _unregister_job_process(job_id)
             _cleanup_filter_script()
-            # Clean up partial file
+            # Clean up partial file (wait() above ensures the handle is released)
             if os.path.exists(output_path):
                 try:
                     os.unlink(output_path)
@@ -1496,8 +1497,8 @@ def preview_frame(job_id, filepath, data):
             "-vframes", "1", "-vf", f"scale={width}:-1",
             "-q:v", "2", "-y", tmp
         ]
-        _sp.run(cmd, capture_output=True, timeout=30)
-        if not os.path.isfile(tmp):
+        result = _sp.run(cmd, capture_output=True, timeout=30)
+        if result.returncode != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
             raise ValueError("Frame extraction failed")
         with open(tmp, "rb") as f:
             img_data = base64.b64encode(f.read()).decode("utf-8")
