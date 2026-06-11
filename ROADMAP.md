@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — MCP extended route tools bypass the MCP-layer path validation
-  Why: handle_tool_call dispatches opencut_route_* tools before the _validate_mcp_filepath block, so the documented fail-fast path checks never run for the opt-in extended surface (backend still validates).
-  Where: opencut/mcp_server.py:767-778 vs 790-829, opencut/mcp_extended_tools.py:322-362
-
 - [ ] P2 — No structural guarantee that every mutating route carries @require_csrf
   Why: CSRF is per-route across ~107 blueprints; today coverage is 100% but nothing enforces it for new routes. Add a startup assertion or test that every POST/PUT/PATCH/DELETE view is wrapped, or move to a before_request gate with an exempt list.
   Where: opencut/security.py:131-146, opencut/routes/__init__.py

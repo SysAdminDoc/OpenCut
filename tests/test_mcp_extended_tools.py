@@ -132,6 +132,39 @@ def test_extended_dispatch_requires_path_params(monkeypatch):
     assert "Missing path parameter `job_id`" in result["error"]
 
 
+def test_extended_dispatch_reuses_mcp_path_validation(monkeypatch):
+    calls = []
+
+    def fake_api(method, path, data=None):
+        calls.append((method, path, data))
+        return {"ok": True}
+
+    monkeypatch.setattr(mcp_server, "_api", fake_api)
+    monkeypatch.setenv(mcp_extended_tools.EXTENDED_MCP_ENV, "1")
+
+    get_tool_name = _tool_for("GET", "/agent/tools")["name"]
+    assert "Invalid path" in mcp_server.handle_tool_call(
+        get_tool_name,
+        {"path": "../secret.txt"},
+    )["error"]
+    assert "Invalid query.path" in mcp_server.handle_tool_call(
+        get_tool_name,
+        {"query": {"path": "../secret.txt"}},
+    )["error"]
+
+    post_tool_name = _tool_for("POST", "/jobs/retry/<job_id>")["name"]
+    assert "Invalid body.output_path" in mcp_server.handle_tool_call(
+        post_tool_name,
+        {"job_id": "abc-123", "body": {"output_path": "../secret.mp4"}},
+    )["error"]
+    assert "Invalid path in body.media_paths[0]" in mcp_server.handle_tool_call(
+        post_tool_name,
+        {"job_id": "abc-123", "body": {"media_paths": ["//server/share.mov"]}},
+    )["error"]
+
+    assert calls == []
+
+
 def test_cli_check_passes_in_sync():
     result = subprocess.run(
         [sys.executable, "-m", "opencut.tools.dump_mcp_extended_tools", "--check"],

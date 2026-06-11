@@ -33,6 +33,8 @@ record also lives in the git commit messages.
   keeping local loopback/debug launches on the dev server.
 - MCP HTTP sidecar binds on non-loopback interfaces now require the persistent
   `X-OpenCut-Auth` token before serving health, tool-list, or JSON-RPC calls.
+- Opt-in generated MCP route tools now run the same fail-fast path validation
+  as curated tools, including nested `query` and `body` path fields.
 - The writable `~/.opencut/packages` fallback install directory is now appended
   to `sys.path` instead of taking priority over stdlib and bundled modules.
 

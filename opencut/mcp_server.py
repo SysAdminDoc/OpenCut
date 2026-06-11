@@ -747,6 +747,29 @@ def get_mcp_tools(include_extended=None):
 
 _WIN_RESERVED_STEMS = frozenset({"CON", "PRN", "AUX", "NUL"})
 _WIN_RESERVED_RE = re.compile(r"^(COM|LPT)\d$")
+_REQUIRED_MCP_PATH_KEYS = (
+    "filepath",
+    "file",
+    "source",
+    "reference",
+    "audio_path",
+    "asset_path",
+    "media_path",
+    "captions_path",
+    "srt_path",
+    "path",
+    "reference_path",
+)
+_OPTIONAL_MCP_PATH_KEYS = (
+    "style_image",
+    "voice_ref",
+    "output_dir",
+    "output",
+    "output_path",
+    "sidecar_path",
+)
+_MCP_PATH_ARRAY_KEYS = ("files", "media_paths", "extra_files")
+_NESTED_MCP_PATH_CONTAINERS = ("body", "query")
 
 
 def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
@@ -794,9 +817,47 @@ def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
     return True
 
 
+def _mcp_path_key(prefix, key):
+    return f"{prefix}.{key}" if prefix else key
+
+
+def _validate_mcp_path_arguments(arguments, *, prefix=""):
+    """Return a validation error for unsafe path-like MCP arguments."""
+    for key in _REQUIRED_MCP_PATH_KEYS:
+        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=False):
+            label = _mcp_path_key(prefix, key)
+            return f"Invalid {label}: path traversal, null byte, or UNC path detected"
+    for key in _OPTIONAL_MCP_PATH_KEYS:
+        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=True):
+            label = _mcp_path_key(prefix, key)
+            return f"Invalid {label}: path traversal, null byte, or UNC path detected"
+
+    # Validate filepath arrays (e.g. "files" in index_footage / loudness_match).
+    for key in _MCP_PATH_ARRAY_KEYS:
+        if key not in arguments or not isinstance(arguments[key], list):
+            continue
+        label = _mcp_path_key(prefix, key)
+        for i, item in enumerate(arguments[key]):
+            if not isinstance(item, str) or not item or "\x00" in item \
+                    or item.startswith("\\\\") or item.startswith("//"):
+                return f"Invalid path in {label}[{i}]: empty, null byte, or UNC path detected"
+            parts = item.replace("\\", "/").split("/")
+            if ".." in parts:
+                return f"Invalid path in {label}[{i}]: path traversal component detected"
+
+    for key in _NESTED_MCP_PATH_CONTAINERS:
+        value = arguments.get(key)
+        if isinstance(value, dict):
+            error = _validate_mcp_path_arguments(value, prefix=_mcp_path_key(prefix, key))
+            if error:
+                return error
+    return None
+
+
 def handle_tool_call(tool_name, arguments):
     """Execute an MCP tool call by proxying to the Flask backend."""
-    if mcp_extended_tools.is_extended_tool(tool_name):
+    is_extended_tool = mcp_extended_tools.is_extended_tool(tool_name)
+    if is_extended_tool:
         if not mcp_extended_tools.extended_tools_enabled():
             return {
                 "error": (
@@ -805,10 +866,9 @@ def handle_tool_call(tool_name, arguments):
                     "opencut-mcp-server with --extended-tools."
                 )
             }
-        return mcp_extended_tools.invoke_extended_tool(tool_name, arguments, _api)
-
-    if tool_name not in _TOOL_ROUTES:
+    elif tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
+
     # Defensive: the HTTP transport passes ``arguments`` through without
     # type-checking, and the stdio transport's guard only catches None/non-
     # dict at the top level. Callers can still send ``arguments=[]`` or
@@ -817,46 +877,12 @@ def handle_tool_call(tool_name, arguments):
     if not isinstance(arguments, dict):
         return {"error": "`arguments` must be a JSON object"}
 
-    # Required scalar path keys — empty rejected
-    _required_path_keys = (
-        "filepath",
-        "file",
-        "source",
-        "reference",
-        "audio_path",
-        "asset_path",
-        "media_path",
-        "captions_path",
-        "srt_path",
-        "path",
-        "reference_path",
-    )
-    # Optional scalar path keys — empty allowed (means "not provided")
-    _optional_path_keys = (
-        "style_image",
-        "voice_ref",
-        "output_dir",
-        "output",
-        "output_path",
-        "sidecar_path",
-    )
-    for key in _required_path_keys:
-        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=False):
-            return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
-    for key in _optional_path_keys:
-        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=True):
-            return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
+    path_error = _validate_mcp_path_arguments(arguments)
+    if path_error:
+        return {"error": path_error}
 
-    # Validate filepath arrays (e.g. "files" in index_footage / loudness_match)
-    for key in ("files", "media_paths", "extra_files"):
-        if key in arguments and isinstance(arguments[key], list):
-            for i, item in enumerate(arguments[key]):
-                if not isinstance(item, str) or not item or "\x00" in item \
-                        or item.startswith("\\\\") or item.startswith("//"):
-                    return {"error": f"Invalid path in {key}[{i}]: empty, null byte, or UNC path detected"}
-                parts = item.replace("\\", "/").split("/")
-                if ".." in parts:
-                    return {"error": f"Invalid path in {key}[{i}]: path traversal component detected"}
+    if is_extended_tool:
+        return mcp_extended_tools.invoke_extended_tool(tool_name, arguments, _api)
 
     method, path = _TOOL_ROUTES[tool_name]
 
