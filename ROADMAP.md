@@ -25,73 +25,9 @@ history, not here.
 
 ## P3 — Lower-severity correctness, UX, packaging
 
-- [ ] P3 — Inno installer writes HKCU/PlayerDebugMode in the elevated user's hive
-  Why: with PrivilegesRequired=admin, HKCU and {%USERPROFILE} resolve to the elevating admin account, so the CEP panel-enable key can land for the wrong user and Premiere never loads the panel. Use runasoriginaluser or HKU of the invoking SID.
-  Where: OpenCut.iss:30, 88-99, 154-173, 259-271
-
-- [ ] P3 — OpenCut-Server.vbs builds cmd /c by unquoted concatenation
-  Why: install paths containing &/^ break or inject; quote values or set env via WshShell.Environment like OpenCut-Launcher.vbs does.
-  Where: OpenCut-Server.vbs:8-27
-
-- [ ] P3 — auth.json gets no ACL hardening on Windows
-  Why: chmod runs only under POSIX; the 256-bit bearer token is readable by other profile-access users on shared machines. Apply a restrictive DACL or document the limitation.
-  Where: opencut/auth.py:80-85
-
-- [ ] P3 — Installer fallbacks install unpinned dependencies
-  Why: Install.ps1 and install.py pip-install loose specs while requirements.txt/requirements-lock.txt are properly bounded — supply-chain drift between install paths. Point installers at the lock/requirements file.
-  Where: Install.ps1:384, install.py:78-83
-
-- [ ] P3 — Placeholder GitHub URLs in user-facing output
-  Why: cli.py and InstallerBuilder.ps1 reference github.com/opencut instead of github.com/SysAdminDoc/OpenCut.
-  Where: opencut/cli.py:48, InstallerBuilder.ps1:582
-
-- [ ] P3 — CLI: loudness-match writes to CWD for bare filenames; auto-zoom raises raw KeyError
-  Why: os.path.dirname("clip.mp4") is "" → outputs land in the process CWD silently; auto-zoom indexes info['width'/'height'] directly while fps uses .get.
-  Where: opencut/cli.py:1049, 1112-1117
-
-- [ ] P3 — Export cancel kills FFmpeg without reaping before deleting the partial file
-  Why: on Windows the output handle is briefly held after TerminateProcess, so the unlink silently fails and partials accumulate; kill(); wait(timeout) then unlink.
-  Where: opencut/routes/video_core.py (cancel path), same pattern in trim/merge
-
-- [ ] P3 — preview_frame returns success with an empty image on failure
-  Why: ffmpeg return code is unchecked and mkstemp pre-creates the file the existence check then trusts; check returncode and size>0.
-  Where: opencut/routes/video_core.py:~1470-1484
-
-- [ ] P3 — Multiview/repurpose routes skip input validation on secondary paths
-  Why: video_paths / content_path / reaction_path forwarded to core without validate_filepath, inconsistent with sibling modules.
-  Where: opencut/routes/multiview_repurpose_routes.py:80-89, 131-142
-
-- [ ] P3 — CEP: notification tone/heading inferred via English-only regexes on translated text
-  Why: in any non-English locale every toast degrades to "info" (errors lose role=alert and assertive announcement). Pass explicit type from call sites.
-  Where: extension/com.opencut.panel/client/main.js:8207-8246
-
-- [ ] P3 — CEP: command-palette section labels and fallback descriptions bypass i18n
-  Why: "Matching Tools" / "Recent" / "Favorites" etc. are hardcoded English in panel-utils while tool names localize — inconsistent.
-  Where: extension/com.opencut.panel/client/panel-utils.js:63-83, 230-267
-
-- [ ] P3 — CEP: language dropdown offers 10 locales but only en.json ships
-  Why: every non-English choice falls back with a toast; filter options to locale files that exist, or ship the locales.
-  Where: extension/com.opencut.panel/client/index.html:3615-3626, client/locales/
-
-- [ ] P3 — CEP: job-history dedupe collapses distinct runs
-  Why: server-history merge treats (type,status) as identity, dropping legitimate entries; compare job id or (type, createdAt).
-  Where: extension/com.opencut.panel/client/main.js:~10160-10166
-
-- [ ] P3 — CEP: time estimate parses duration by regexing rendered DOM text
-  Why: fragile to format/locale changes; read numeric duration from clip state instead.
-  Where: extension/com.opencut.panel/client/main.js:~12186-12194
-
 - [ ] P3 — CEP: wizard and audio-preview dialogs bypass the overlay stack
   Why: aria-modal dialogs without focus trap or inert background (palette/preview modal do it right); route all four dialogs through activateOverlay/deactivateOverlay, give the context menu arrow-key support and focus restoration, and make one Escape close only the topmost surface.
   Where: extension/com.opencut.panel/client/main.js:11381-11527 (wizard/audioPreview/escape chain), index.html:4039, 4064
-
-- [ ] P3 — CEP: body.job-active lock is pointer-events-only
-  Why: keyboard activation still reaches "locked" buttons and AT announces them enabled; set disabled/aria-disabled or inert during jobs.
-  Where: extension/com.opencut.panel/client/style.css:619-647, main.js startJob
-
-- [ ] P3 — CEP: NLP command auto-executes the server-chosen route at confidence > 0.6
-  Why: a misrouted natural-language command immediately starts a processing job; show parsed route/params with a confirm step or raise the bar.
-  Where: extension/com.opencut.panel/client/main.js:~15321-15323
 
 - [ ] P3 — CEP: --text-faint at 10-11px fails AA contrast; no prefers-contrast support
   Why: ~3.5:1 against card surfaces; bump small text to --text-muted as part of the style.css consolidation.
@@ -101,29 +37,6 @@ history, not here.
   Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
   Where: extension/com.opencut.uxp/locales/en.json, es.json; main.js:238-244, 2061-2117, 5541-5548, 7551-7557
 
-- [ ] P3 — UXP: small correctness fixes
-  Why: project-item duration reads .seconds off a Promise (await precedence, main.js:849); addMarkers doesn't await getFirstMarkerAtTime so names/colors are silently dropped (682); Enter bypasses loading guards → duplicate submissions (5872-5914); ok-without-job_id responses are reported as failures in ~9 handlers; reconnect blanket-enables primary buttons regardless of per-tab prerequisites (5520-5527).
-  Where: extension/com.opencut.uxp/main.js
-
-- [ ] P3 — UXP: ship hygiene
-  Why: udt-smoke.js (mutating test harness) loads in every production session — gate behind a debug flag; style.css stacks four :root themes with ~82 stray hex (gold-era gradients clash with the final blue accent); bolt-webview shim posts to targetOrigin "*" and reserves an exec passthrough.
-  Where: extension/com.opencut.uxp/index.html:1653, style.css, csinterface-shim.js:51-54, 160-167
-
-- [ ] P3 — Tests: function-scoped app fixture rebuilds the full app per test
-  Why: ~100 blueprints + plugin load + background sweep threads per test, never torn down — slow suite and flake risk; use session/module scope or disable sweeps under TESTING. Also: coverage gate is 54%; pr-fast CI has no Windows runner despite Windows being the primary platform.
-  Where: tests/conftest.py:12-34, .github/workflows/pr-fast.yml, build.yml
-
-- [ ] P3 — captions timeout cleanup: deleting the temp WAV while a timed-out worker still holds it
-  Why: after the timeout fix the finally-block unlink can hit PermissionError on Windows while the orphaned Whisper thread finishes; schedule deferred cleanup (helpers._schedule_temp_cleanup) for the timeout path.
-  Where: opencut/core/captions.py (finally block)
-
-- [ ] P3 — waveform_timeline materializes all PCM samples as a Python list
-  Why: ~1 GB transient for an hour of audio; sibling audio.analyze_energy uses array for this reason.
-  Where: opencut/core/waveform_timeline.py (generate_waveform_data)
-
-- [ ] P3 — smart_trim swallows analysis timeouts as "no speech detected"
-  Why: the 120s subprocess timeouts are caught by except Exception and return [], yielding confident wrong results on long files; surface them.
-  Where: opencut/core/smart_trim.py:156, 222
 
 ## Research-Driven Additions
 
@@ -175,13 +88,6 @@ history, not here.
   Touches: opencut/core/animated_captions.py, caption_styles.py, panel Captions tab, locale files
   Acceptance: >=20 animation presets selectable with preview, defined via a data-driven preset schema (JSON) so presets can be added without code changes.
   Complexity: M
-
-- [ ] P3 — Add a CapCut/paid-plugin switcher comparison to README
-  Why: CapCut Pro doubled to $19.99/mo (Jan 2026) with free-tier degradation (720p caps, paywalled auto-captions/background removal); AutoCut/FireCut complaints center on pricing and licensing — a current-price comparison table captures switchers with zero feature work.
-  Evidence: capcut.com/help/pricing-change; eesel.ai CapCut pricing; Product Hunt FireCut reviews
-  Touches: README.md
-  Acceptance: README contains a dated cost-comparison table (OpenCut $0/local vs CapCut Pro, Submagic, AutoCut, FireCut at 2026 prices) and the $1,400/yr claim is re-derived from current prices.
-  Complexity: S
 
 - [ ] P3 — Track onnxruntime 1.26 hardening release and raise the floor when GA
   Why: onnxruntime 1.26 (in development) hardens multiple OOB/overflow scenarios (Attention mask OOB write, MaxPoolGrad bounds, SVM/TreeEnsemble, RNN sequence_lens); 15+ core modules import onnxruntime via the ai/insightface/rembg stack with floor >=1.25,<2.
