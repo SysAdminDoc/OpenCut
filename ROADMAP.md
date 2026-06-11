@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Correctness / reliability
 
-- [ ] P2 — UXP: backend port scan runs once at load; Refresh never rescans
-  Why: if the backend starts later or restarts on a fallback port (5680+), checkConnection pings the stale port forever and the panel shows Offline with no recovery short of reopening it.
-  Where: extension/com.opencut.uxp/main.js:7051, 5723, 481-491
-
 - [ ] P2 — UXP: WebSocket reconnect loop cannot be stopped (including by its own Stop button)
   Why: onclose unconditionally schedules reconnect in 5s; disconnect() clears the timer before close fires, which schedules a fresh one. Needs a manual-disconnect flag plus capped backoff. Also ws://127.0.0.1:5680 is hardcoded, absent from manifest network domains, and collides with the HTTP fallback port range.
   Where: extension/com.opencut.uxp/main.js:6136, 6168-6188, 7086; extension/com.opencut.uxp/manifest.json:30-36

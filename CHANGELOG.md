@@ -51,6 +51,9 @@ record also lives in the git commit messages.
 - UXP job submission now rejects concurrent backend jobs before they overwrite
   the shared tracker/SSE stream, and job-action buttons stay locked while a
   backend job is starting or running.
+- The UXP Refresh button now rescans backend ports 5679-5689, and failed
+  background health checks retry against a newly detected port before staying
+  offline.
 - FCC caption display settings now unwrap BackendClient response payloads before
   populating token selects or applying preview CSS, making the compliance card
   functional again.

@@ -95,6 +95,17 @@ def test_backend_client_refreshes_csrf_token_from_response_header():
     )
 
 
+def test_refresh_button_rescans_backend_ports():
+    text = _read_main_js()
+    assert "async function refreshBackendBaseUrl()" in text
+    assert "async function checkConnection({ rescan = false } = {})" in text
+    assert "await refreshBackendBaseUrl();" in text
+    assert 'checkConnection({ rescan: true })' in text
+    assert re.search(r"if \(!r\.ok && !rescan\).*?await detectBackend\(\)", text, re.S), (
+        "failed health checks should rescan ports before staying offline"
+    )
+
+
 def test_backend_client_returns_ok_failure_shape():
     """The wrapper must return ``{ok, data, error, status}`` objects so
     callers can branch on `r.ok` without try/catch nesting."""
