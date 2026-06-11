@@ -11,6 +11,11 @@ record also lives in the git commit messages.
   intentional `0.0.0.0` bind, preventing startup crash-loops while preserving
   the non-loopback auth gate.
 
+### Documentation
+
+- README planning links now resolve in a fresh clone and name installer
+  artifacts by the release version pattern instead of a stale filename.
+
 ### Fixed — UXP panel
 
 - Cancelling an active job now clears any button left in the panel's loading
