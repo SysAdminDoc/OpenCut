@@ -5605,13 +5605,15 @@ function pad(n) { return String(n).padStart(2, "0"); }
 // ─────────────────────────────────────────────────────────────
 let _lastConnectionState = null;
 
-async function checkConnection({ rescan = false } = {}) {
+async function checkConnection({ rescan = false, background = false } = {}) {
   if (rescan) {
     UIController.setStatus(t("uxp.status.scanning_backend_ports", "Scanning OpenCut backend ports..."), "working");
     await refreshBackendBaseUrl();
   }
 
-  UIController.setConnection("connecting");
+  if (!background) {
+    UIController.setConnection("connecting");
+  }
   let r = await BackendClient.get("/health");
   if (!r.ok && !rescan) {
     const previousBackend = BACKEND;
@@ -5626,6 +5628,7 @@ async function checkConnection({ rescan = false } = {}) {
   if (alive && r.data?.csrf_token) csrfToken = r.data.csrf_token;
   UIController.setConnection(alive ? "connected" : "disconnected");
 
+  const wasAlive = _lastConnectionState;
   if (alive) {
     UIController.setStatus(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
     UIController.setStatusRight(`v${VERSION}`);
@@ -5638,7 +5641,6 @@ async function checkConnection({ rescan = false } = {}) {
   }
 
   // Toggle all action buttons based on connection state
-  const wasAlive = _lastConnectionState;
   if (wasAlive !== alive) {
     _lastConnectionState = alive;
     document.querySelectorAll(".oc-btn-primary").forEach(btn => {
@@ -7326,7 +7328,7 @@ async function initApp() {
   // overlapping async calls when backend is slow/down.
   function scheduleHealthCheck() {
     setTimeout(async () => {
-      const ok = await checkConnection();
+      const ok = await checkConnection({ background: true });
       if (ok) {
         // Reset backoff on success
         if (_healthBackoff !== HEALTH_CHECK_MS) {
