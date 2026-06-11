@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.32.0-blue)
+![Version](https://img.shields.io/badge/version-1.33.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
@@ -86,7 +86,7 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 
 ## Feature Overview
 
-OpenCut v1.32.0 includes **1,539 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.33.0 includes **1,539 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
