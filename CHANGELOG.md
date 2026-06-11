@@ -115,6 +115,9 @@ record also lives in the git commit messages.
 
 ### Fixed — FFmpeg integration (backend)
 
+- Styled-caption overlay encoding now drains FFmpeg stderr in a background
+  thread while raw frames are piped to stdin, preventing stderr backpressure
+  from deadlocking long renders.
 - **Caption burn-in failed on every Windows drive-letter path.** The
   `subtitles=`/`ass=` filter value dropped colon escaping, so `C:/...` was
   parsed as filename `C`. Added `escape_filter_path()` with the verified
