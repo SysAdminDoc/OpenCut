@@ -270,12 +270,28 @@ class TestWebSocketRoutes:
     def test_ws_status(self, client):
         resp = client.get("/ws/status")
         assert resp.status_code == 200
+        body = resp.get_json()
+        assert body is not None
+        assert {"running", "clients", "host", "port", "url"} <= set(body)
+        assert body["url"].startswith("ws://")
 
     def test_ws_start(self, client, csrf_token):
         resp = client.post("/ws/start", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
         assert resp.status_code in (200, 400, 429)
-        assert resp.get_json() is not None
+        body = resp.get_json()
+        assert body is not None
+        if resp.status_code == 200:
+            assert body["success"] is True
+            assert body["url"].startswith("ws://")
+            assert 1024 <= int(body["port"]) <= 65535
+
+    def test_ws_start_avoids_current_http_port(self, client, monkeypatch):
+        from opencut.routes import system
+
+        monkeypatch.setattr(system, "_port_is_free", lambda _host, _port: True)
+        with client.application.test_request_context("/ws/start", headers={"Host": "127.0.0.1:5680"}):
+            assert system._select_ws_bridge_port(5680) == 5681
 
     def test_ws_stop(self, client, csrf_token):
         resp = client.post("/ws/stop", data=json.dumps({}),

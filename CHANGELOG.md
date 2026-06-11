@@ -54,6 +54,9 @@ record also lives in the git commit messages.
 - The UXP Refresh button now rescans backend ports 5679-5689, and failed
   background health checks retry against a newly detected port before staying
   offline.
+- The UXP live-updates WebSocket now consumes the bridge URL reported by the
+  backend, uses a capped reconnect backoff, and honors manual disconnects so
+  the Stop button actually stops reconnect attempts.
 - FCC caption display settings now unwrap BackendClient response payloads before
   populating token selects or applying preview CSS, making the compliance card
   functional again.

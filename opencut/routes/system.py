@@ -9,6 +9,7 @@ import logging
 import os
 import platform
 import shutil
+import socket
 import subprocess as _sp
 import sys
 import threading
@@ -2697,6 +2698,55 @@ def social_upload(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # WebSocket Bridge Control
 # ---------------------------------------------------------------------------
+WS_BRIDGE_HOST = "127.0.0.1"
+WS_BRIDGE_DEFAULT_PORT = 5680
+WS_BRIDGE_MAX_PORT = 5689
+
+
+def _ws_bridge_url(port: int, host: str = WS_BRIDGE_HOST) -> str:
+    return f"ws://{host}:{int(port)}"
+
+
+def _request_port() -> int | None:
+    try:
+        return int(request.host.rsplit(":", 1)[1])
+    except (IndexError, TypeError, ValueError):
+        return None
+
+
+def _port_is_free(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((host, int(port)))
+        except OSError:
+            return False
+    return True
+
+
+def _select_ws_bridge_port(preferred: int) -> int:
+    http_port = _request_port()
+    candidates = [preferred] + list(range(WS_BRIDGE_DEFAULT_PORT, WS_BRIDGE_MAX_PORT + 1))
+    seen: set[int] = set()
+    for candidate in candidates:
+        if candidate in seen or candidate == http_port:
+            continue
+        seen.add(candidate)
+        if _port_is_free(WS_BRIDGE_HOST, candidate):
+            return candidate
+    raise RuntimeError("No available WebSocket bridge port in 5680-5689")
+
+
+def _ws_bridge_payload(*, running: bool, clients: int, port: int = WS_BRIDGE_DEFAULT_PORT) -> dict:
+    return {
+        "running": bool(running),
+        "clients": int(clients),
+        "host": WS_BRIDGE_HOST,
+        "port": int(port),
+        "url": _ws_bridge_url(port),
+    }
+
+
 @system_bp.route("/ws/status", methods=["GET"])
 def ws_status():
     """Get WebSocket bridge status."""
@@ -2704,13 +2754,14 @@ def ws_status():
         from opencut.core.ws_bridge import get_bridge
         bridge = get_bridge()
         if bridge and bridge.is_running:
-            return jsonify({
-                "running": True,
-                "clients": bridge.client_count,
-            })
-        return jsonify({"running": False, "clients": 0})
+            return jsonify(_ws_bridge_payload(
+                running=True,
+                clients=bridge.client_count,
+                port=bridge.port,
+            ))
+        return jsonify(_ws_bridge_payload(running=False, clients=0))
     except Exception:
-        return jsonify({"running": False, "clients": 0})
+        return jsonify(_ws_bridge_payload(running=False, clients=0))
 
 
 @system_bp.route("/ws/start", methods=["POST"])
@@ -2718,13 +2769,24 @@ def ws_status():
 def ws_start():
     """Start the WebSocket bridge."""
     try:
-        from opencut.core.ws_bridge import check_websocket_available, init_bridge
+        from opencut.core.ws_bridge import check_websocket_available, get_bridge, init_bridge
         if not check_websocket_available():
             return jsonify({"error": "websockets package not installed. pip install websockets"}), 400
+        bridge = get_bridge()
+        if bridge and bridge.is_running:
+            return jsonify(_ws_bridge_payload(
+                running=True,
+                clients=bridge.client_count,
+                port=bridge.port,
+            ) | {"success": True, "message": f"WebSocket bridge already running on port {bridge.port}"})
         data = get_json_dict() if request.is_json else {}
-        port = safe_int(data.get("port", 5680), 5680, min_val=1024, max_val=65535)
+        requested_port = safe_int(data.get("port", WS_BRIDGE_DEFAULT_PORT), WS_BRIDGE_DEFAULT_PORT, min_val=1024, max_val=65535)
+        port = _select_ws_bridge_port(requested_port)
         init_bridge(port=port)
-        return jsonify({"success": True, "message": f"WebSocket bridge started on port {port}"})
+        return jsonify(_ws_bridge_payload(running=True, clients=0, port=port) | {
+            "success": True,
+            "message": f"WebSocket bridge started on port {port}",
+        })
     except Exception as e:
         return safe_error(e, "ws_start")
 
