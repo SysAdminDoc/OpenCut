@@ -13,6 +13,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -300,12 +301,12 @@ def auto_correct_brand(
         color = _hex_to_ffmpeg_color(brand_kit.primary_color)
         margin = int(info["width"] * brand_kit.safe_zone_margin)
         fontsize = max(12, int(info["height"] * 0.02))
-        escaped_text = brand_kit.watermark_text.replace("'", "'\\''")
+        escaped_text = escape_drawtext(brand_kit.watermark_text)
 
         if filter_parts:
             # Chain onto previous filter output
             wm_filter = (
-                f"drawtext=text='{escaped_text}'"
+                f"drawtext=expansion=none:text='{escaped_text}'"
                 f":fontsize={fontsize}"
                 f":fontcolor={color}@0.3"
                 f":x=w-tw-{margin}:y=h-th-{margin}"
@@ -314,7 +315,7 @@ def auto_correct_brand(
             filter_parts[-1] = last + f"[branded];[branded]{wm_filter}"
         else:
             filter_parts.append(
-                f"[0:v]drawtext=text='{escaped_text}'"
+                f"[0:v]drawtext=expansion=none:text='{escaped_text}'"
                 f":fontsize={fontsize}"
                 f":fontcolor={color}@0.3"
                 f":x=w-tw-{margin}:y=h-th-{margin}"

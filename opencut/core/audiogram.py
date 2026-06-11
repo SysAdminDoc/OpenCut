@@ -13,7 +13,7 @@ import re
 import subprocess
 from typing import Callable, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -47,12 +47,7 @@ def _get_audio_duration(filepath: str) -> float:
 
 def _escape_ffmpeg_text(text: str) -> str:
     """Escape special characters for FFmpeg drawtext filter."""
-    # FFmpeg drawtext requires escaping these characters
-    text = text.replace("\\", "\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace("'", "\\'")
-    text = text.replace("%", "%%")
-    return text
+    return escape_drawtext(text)
 
 
 def generate_audiogram(
@@ -211,7 +206,7 @@ def generate_audiogram(
         font_size = max(24, width // 25)
         title_y = height // 20
         fc_parts.append(
-            f"{current_label}drawtext=text='{escaped}':"
+            f"{current_label}drawtext=expansion=none:text='{escaped}':"
             f"fontsize={font_size}:fontcolor=white:x=(w-text_w)/2:y={title_y}:"
             f"shadowcolor=black@0.6:shadowx=2:shadowy=2[titled]"
         )

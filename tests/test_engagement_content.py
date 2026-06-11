@@ -468,7 +468,7 @@ class TestCaptionHelpers:
     def test_escape_drawtext(self):
         from opencut.core.caption_styles import _escape_drawtext
         assert "\\:" in _escape_drawtext("test: value")
-        assert "%%" in _escape_drawtext("100%")
+        assert "100%" in _escape_drawtext("100%")
         assert "\\'" in _escape_drawtext("it's")
 
     def test_position_y_top(self):

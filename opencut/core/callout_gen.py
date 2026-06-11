@@ -14,6 +14,7 @@ from typing import Callable, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -109,11 +110,7 @@ class SpotlightResult:
 
 def _escape_text(text: str) -> str:
     """Escape special characters for FFmpeg drawtext."""
-    text = text.replace("\\", "\\\\\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace("'", "\\'")
-    text = text.replace("%", "%%")
-    return text
+    return escape_drawtext(text)
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +180,7 @@ def _build_callout_filter(ann: Annotation, video_w: int, video_h: int) -> List[s
         y_pos = "h-th-40"
 
     filters.append(
-        f"drawtext=text='{escaped}'"
+        f"drawtext=expansion=none:text='{escaped}'"
         f":fontsize={ann.font_size}:fontcolor={ann.color}"
         f":x={x_pos}:y={y_pos}"
         f":box=1:boxcolor=black@0.6:boxborderw=6"
@@ -214,7 +211,7 @@ def _build_step_filter(ann: Annotation, video_w: int, video_h: int) -> List[str]
         f":color={ann.color}@0.9:t=fill:enable='{enable}'"
     )
     filters.append(
-        f"drawtext=text='{num_text}'"
+        f"drawtext=expansion=none:text='{num_text}'"
         f":fontsize=20:fontcolor=black"
         f":x={badge_x}+8:y={badge_y}+6"
         f":enable='{enable}'"
@@ -226,7 +223,7 @@ def _build_step_filter(ann: Annotation, video_w: int, video_h: int) -> List[str]
         text_x = f"{badge_x}+40"
         text_y = f"{badge_y}+4"
         filters.append(
-            f"drawtext=text='{escaped}'"
+            f"drawtext=expansion=none:text='{escaped}'"
             f":fontsize={ann.font_size}:fontcolor={ann.color}"
             f":x={text_x}:y={text_y}"
             f":box=1:boxcolor=black@0.6:boxborderw=4"

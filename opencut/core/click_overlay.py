@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -364,12 +365,7 @@ _BADGE_POSITIONS = {
 
 def _escape_drawtext(text: str) -> str:
     """Escape special characters for FFmpeg drawtext filter."""
-    # FFmpeg drawtext requires escaping of : ; ' \ and %
-    text = text.replace("\\", "\\\\\\\\")
-    text = text.replace(":", "\\:")
-    text = text.replace("'", "\\'")
-    text = text.replace("%", "%%")
-    return text
+    return escape_drawtext(text)
 
 
 def render_keystroke_overlay(
@@ -451,7 +447,7 @@ def render_keystroke_overlay(
 
         # Background box + text
         dt_filter = (
-            f"drawtext=text='{escaped_keys}'"
+            f"drawtext=expansion=none:text='{escaped_keys}'"
             f":fontsize={font_size}"
             f":fontcolor={font_color}"
             f":x={x_expr}:y={y_expr}"
