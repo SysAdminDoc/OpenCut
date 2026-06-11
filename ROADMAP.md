@@ -17,13 +17,7 @@ history, not here.
   Where: docs/UXP_MIGRATION.md:153-155, extension/com.opencut.uxp/bolt-webview/, opencut/tools/validate_uxp_udt_results.py
   Blocked: live Premiere UDT capture.
 
-## P2 — Security / hardening
-
 ## P2 — Correctness / reliability
-
-- [ ] P2 — UXP: second concurrent job clobbers the single global job tracker
-  Why: one global activeJobId/_activeSSE; starting job B halts job A's poll loop silently, A's promise never settles, its button stays loading, and the shared banner races. Disable all run buttons while a job is active, or track jobs per-id.
-  Where: extension/com.opencut.uxp/main.js:1833-1840, 1848, 1963-1975
 
 - [ ] P2 — UXP: backend port scan runs once at load; Refresh never rescans
   Why: if the backend starts later or restarts on a fallback port (5680+), checkConnection pings the stale port forever and the panel shows Offline with no recovery short of reopening it.

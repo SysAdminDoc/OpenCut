@@ -497,6 +497,7 @@ let BACKEND = BACKEND_DEFAULT;
 // ─────────────────────────────────────────────────────────────
 let csrfToken     = null;
 let activeJobId   = null;
+let _jobStartInFlight = false;
 let elapsedTimer  = null;
 let elapsedSec    = 0;
 let lastCuts      = [];     // cuts array from last silence/filler run
@@ -515,6 +516,50 @@ let _lastTimelineAction = null;
 let _activeSSE       = null;  // current EventSource instance
 let _healthBackoff   = HEALTH_CHECK_MS;
 let _mediaScanTimer  = null;
+const _jobLockedButtonStates = new Map();
+const JOB_ACTION_BUTTON_SELECTOR = [
+  'button[id^="run"]',
+  "#socialUploadBtnUxp",
+  "#enhanceRunBtn",
+  "#variantsRunBtn",
+  "#sequenceIndexBuildBtn",
+].join(", ");
+
+function hasActiveJob() {
+  return Boolean(activeJobId || _jobStartInFlight);
+}
+
+function setJobActionsLocked(locked) {
+  if (locked) {
+    document.querySelectorAll(JOB_ACTION_BUTTON_SELECTOR).forEach((btn) => {
+      if (!_jobLockedButtonStates.has(btn)) {
+        _jobLockedButtonStates.set(btn, btn.disabled);
+      }
+      btn.disabled = true;
+      btn.setAttribute("aria-disabled", "true");
+      btn.dataset.jobLocked = "true";
+    });
+    return;
+  }
+
+  _jobLockedButtonStates.forEach((wasDisabled, btn) => {
+    if (!btn || !document.contains(btn)) return;
+    btn.removeAttribute("aria-disabled");
+    delete btn.dataset.jobLocked;
+    if (!btn.classList.contains("loading")) {
+      btn.disabled = wasDisabled;
+    }
+  });
+  _jobLockedButtonStates.clear();
+}
+
+function clearTrackedJob(jobId = null) {
+  if (!jobId || activeJobId === jobId) {
+    activeJobId = null;
+  }
+  _jobStartInFlight = false;
+  setJobActionsLocked(false);
+}
 
 // ---- Premiere Pro state cache (reduces UXP API round-trips) ----
 const _pproCache = { seq: null, ts: 0 };
@@ -1816,8 +1861,23 @@ const JobPoller = (() => {
    * @param {Function} onError      — (msg: string) => void
    */
   async function start(endpoint, body, onProgress, onComplete, onError) {
-    const r = await BackendClient.post(endpoint, body);
+    if (hasActiveJob()) {
+      onError(t("uxp.runtime.job_already_running", "Another OpenCut job is already running."));
+      return;
+    }
+
+    _jobStartInFlight = true;
+    setJobActionsLocked(true);
+    let r;
+    try {
+      r = await BackendClient.post(endpoint, body);
+    } catch (err) {
+      clearTrackedJob();
+      onError(err?.message ?? "Failed to start job");
+      return;
+    }
     if (!r.ok) {
+      clearTrackedJob();
       onError(r.error ?? "Failed to start job");
       return;
     }
@@ -1825,12 +1885,14 @@ const JobPoller = (() => {
     const jobId = r.data?.job_id ?? r.data?.id ?? null;
     if (!jobId) {
       // Synchronous response — job completed inline
+      clearTrackedJob();
       onProgress(100, "Done");
       onComplete(r.data);
       return;
     }
 
     activeJobId = jobId;
+    _jobStartInFlight = false;
 
     // Prefer SSE for real-time progress; fall back to polling
     if (SSE_AVAILABLE) {
@@ -1862,13 +1924,13 @@ const JobPoller = (() => {
         if (status === "done" || status === "complete" || status === "success") {
           es.close();
           _activeSSE = null;
-          activeJobId = null;
+          clearTrackedJob(jobId);
           onComplete(job.result ?? job);
           _fireCompletionHooks();
         } else if (status === "error" || status === "failed" || status === "cancelled") {
           es.close();
           _activeSSE = null;
-          activeJobId = null;
+          clearTrackedJob(jobId);
           onError(job.error ?? job.message ?? "Job failed");
           _fireCompletionHooks();
         }
@@ -1893,7 +1955,7 @@ const JobPoller = (() => {
     const r = await BackendClient.get(`/status/${jobId}`);
     if (!r.ok) {
       onError(r.error ?? "Polling error");
-      activeJobId = null;
+      clearTrackedJob(jobId);
       return;
     }
 
@@ -1905,7 +1967,7 @@ const JobPoller = (() => {
     onProgress(pct, msg);
 
     if (status === "done" || status === "complete" || status === "success") {
-      activeJobId = null;
+      clearTrackedJob(jobId);
       onComplete(job.result ?? job);
       _fireCompletionHooks();
       return;
@@ -1915,14 +1977,14 @@ const JobPoller = (() => {
     // that were running when the server died; treat it like an error so
     // the panel doesn't poll forever for progress that will never arrive.
     if (status === "error" || status === "failed" || status === "cancelled" || status === "interrupted") {
-      activeJobId = null;
+      clearTrackedJob(jobId);
       onError(job.error ?? job.message ?? "Job failed");
       _fireCompletionHooks();
       return;
     }
 
     if (attempt >= MAX_POLL_ATTEMPTS) {
-      activeJobId = null;
+      clearTrackedJob(jobId);
       onError("Polling timed out — the job is still running on the server.");
       _fireCompletionHooks();
       return;
@@ -1955,7 +2017,7 @@ const JobPoller = (() => {
     try {
       await BackendClient.post(`/cancel/${jobId}`, {});
     } finally {
-      if (activeJobId === jobId) activeJobId = null;
+      clearTrackedJob(jobId);
       _fireCompletionHooks();
     }
     return true;
@@ -1967,7 +2029,12 @@ const JobPoller = (() => {
    */
   function poll(jobId) {
     return new Promise((resolve, reject) => {
+      if (hasActiveJob()) {
+        reject(new Error(t("uxp.runtime.job_already_running", "Another OpenCut job is already running.")));
+        return;
+      }
       activeJobId = jobId;
+      setJobActionsLocked(true);
       const onProgress = () => {};
       const onComplete = (result) => resolve(result);
       const onError = (msg) => reject(new Error(msg));
