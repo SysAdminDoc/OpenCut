@@ -106,6 +106,31 @@ def test_refresh_button_rescans_backend_ports():
     )
 
 
+def test_live_updates_websocket_reconnect_is_stoppable_and_capped():
+    text = _read_main_js()
+    assert "const WS_RECONNECT_BASE_MS = 5000;" in text
+    assert "const WS_RECONNECT_MAX_MS = 30000;" in text
+    assert "let _uxpWsManualDisconnect = false;" in text
+    assert "function uxpWsScheduleReconnect()" in text
+    assert "if (_uxpWsManualDisconnect || _uxpWsReconnectTimer) return;" in text
+    assert "Math.min(delay * 2, WS_RECONNECT_MAX_MS)" in text
+    assert re.search(r"function uxpWsDisconnect\(\).*?_uxpWsManualDisconnect = true;", text, re.S), (
+        "manual WebSocket disconnect must stop future reconnect attempts"
+    )
+    assert re.search(r"socket\.onclose = \(\) => \{.*?uxpWsScheduleReconnect\(\);", text, re.S), (
+        "unexpected WebSocket closes should schedule the capped reconnect path"
+    )
+
+
+def test_live_updates_websocket_uses_server_reported_url():
+    text = _read_main_js()
+    assert "function uxpWsUrlFromBackend" in text
+    assert "function uxpSetWsEndpoint(data)" in text
+    assert 'BackendClient.get("/ws/status")' in text
+    assert "new WebSocket(wsUrl)" in text
+    assert 'new WebSocket("ws://127.0.0.1:5680")' not in text
+
+
 def test_backend_client_returns_ok_failure_shape():
     """The wrapper must return ``{ok, data, error, status}`` objects so
     callers can branch on `r.ok` without try/catch nesting."""

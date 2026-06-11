@@ -91,7 +91,7 @@ def test_manifest_declares_canonical_loopback_ports(manifest_data):
     domain_set = {d.strip() for d in domains}
     canonical = {
         "http://127.0.0.1:5679",  # HTTP backend
-        "http://127.0.0.1:5680",  # WebSocket
+        "ws://127.0.0.1:5680",  # WebSocket bridge
         "http://127.0.0.1:5681",  # MCP
     }
     missing = canonical - domain_set
@@ -103,9 +103,13 @@ def test_manifest_declares_full_5679_5689_range(manifest_data):
     domains = manifest_data["requiredPermissions"]["network"]["domains"]
     domain_set = {d.strip() for d in domains}
     for port in range(5679, 5690):
-        url = f"http://127.0.0.1:{port}"
-        assert url in domain_set, (
-            f"UXP manifest must declare {url} so port autodiscovery succeeds"
+        http_url = f"http://127.0.0.1:{port}"
+        ws_url = f"ws://127.0.0.1:{port}"
+        assert http_url in domain_set, (
+            f"UXP manifest must declare {http_url} so port autodiscovery succeeds"
+        )
+        assert ws_url in domain_set, (
+            f"UXP manifest must declare {ws_url} so live-update bridge fallback succeeds"
         )
 
 

@@ -26,6 +26,9 @@ const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
+const WS_BRIDGE_DEFAULT_PORT = 5680;
+const WS_RECONNECT_BASE_MS = 5000;
+const WS_RECONNECT_MAX_MS = 30000;
 const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
@@ -6047,7 +6050,7 @@ function bindEvents() {
   // ── Settings: WebSocket ──
   document.getElementById("uxpWsStartBtn")?.addEventListener("click", uxpWsStartBridge);
   document.getElementById("uxpWsStopBtn")?.addEventListener("click", uxpWsStopBridge);
-  document.getElementById("uxpWsConnectBtn")?.addEventListener("click", uxpWsConnect);
+  document.getElementById("uxpWsConnectBtn")?.addEventListener("click", () => { void uxpWsConnect(); });
 
   // ── Settings: Engine Registry ──
   document.getElementById("uxpRefreshEnginesBtn")?.addEventListener("click", uxpLoadEngines);
@@ -6232,30 +6235,96 @@ async function sendChatMessage() {
 // ─────────────────────────────────────────────────────────────
 let _uxpWs = null;
 let _uxpWsReconnectTimer = null;
+let _uxpWsReconnectDelayMs = WS_RECONNECT_BASE_MS;
 let _uxpWsConnected = false;
+let _uxpWsManualDisconnect = false;
+let _uxpWsEndpoint = "";
 
-function uxpWsConnect() {
-  if (_uxpWs && (_uxpWs.readyState === WebSocket.OPEN || _uxpWs.readyState === WebSocket.CONNECTING)) {
-    UIController.showToast(t("uxp.settings.live_updates_already_connected", "Live updates are already connected."), "info");
+function uxpWsUrlFromBackend(port = WS_BRIDGE_DEFAULT_PORT) {
+  try {
+    const backendUrl = new URL(BACKEND);
+    const protocol = backendUrl.protocol === "https:" ? "wss:" : "ws:";
+    const host = backendUrl.hostname || "127.0.0.1";
+    return `${protocol}//${host}:${port}`;
+  } catch (e) {
+    return `ws://127.0.0.1:${port}`;
+  }
+}
+
+function uxpSetWsEndpoint(data) {
+  if (!data) return;
+  const endpoint = typeof data.url === "string" ? data.url.trim() : "";
+  if (/^wss?:\/\//i.test(endpoint)) {
+    _uxpWsEndpoint = endpoint;
     return;
   }
+  const port = Number(data.port || data.websocket_port || WS_BRIDGE_DEFAULT_PORT);
+  if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
+    _uxpWsEndpoint = uxpWsUrlFromBackend(port);
+  }
+}
+
+async function uxpWsResolveUrl() {
+  if (_uxpWsEndpoint) return _uxpWsEndpoint;
   try {
-    _uxpWs = new WebSocket("ws://127.0.0.1:5680");
+    const r = await BackendClient.get("/ws/status");
+    if (r.ok && r.data) uxpSetWsEndpoint(r.data);
+  } catch (e) {
+    // Fall back to the conventional bridge port if status is temporarily unavailable.
+  }
+  return _uxpWsEndpoint || uxpWsUrlFromBackend();
+}
+
+function uxpWsClearReconnectTimer() {
+  if (_uxpWsReconnectTimer) {
+    clearTimeout(_uxpWsReconnectTimer);
+    _uxpWsReconnectTimer = null;
+  }
+}
+
+function uxpWsScheduleReconnect() {
+  if (_uxpWsManualDisconnect || _uxpWsReconnectTimer) return;
+  const delay = _uxpWsReconnectDelayMs;
+  _uxpWsReconnectTimer = setTimeout(() => {
+    _uxpWsReconnectTimer = null;
+    void uxpWsConnect({ reconnect: true });
+  }, delay);
+  _uxpWsReconnectDelayMs = Math.min(delay * 2, WS_RECONNECT_MAX_MS);
+}
+
+async function uxpWsConnect({ reconnect = false } = {}) {
+  if (_uxpWs && (_uxpWs.readyState === WebSocket.OPEN || _uxpWs.readyState === WebSocket.CONNECTING)) {
+    if (!reconnect) {
+      UIController.showToast(t("uxp.settings.live_updates_already_connected", "Live updates are already connected."), "info");
+    }
+    return;
+  }
+  _uxpWsManualDisconnect = false;
+  uxpWsClearReconnectTimer();
+  const wsUrl = await uxpWsResolveUrl();
+  let socket = null;
+  try {
+    socket = new WebSocket(wsUrl);
   } catch (e) {
     UIController.showToast(t("uxp.settings.bridge_open_failed", "Could not open the live-updates bridge."), "warning");
+    uxpWsScheduleReconnect();
     return;
   }
+  _uxpWs = socket;
 
-  _uxpWs.onopen = () => {
+  socket.onopen = () => {
     _uxpWsConnected = true;
-    _uxpWs.send(JSON.stringify({ type: "identify", client_type: "uxp", id: "uxp-1" }));
-    _uxpWs.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error"] }, id: "sub-1" }));
+    _uxpWsReconnectDelayMs = WS_RECONNECT_BASE_MS;
+    socket.send(JSON.stringify({ type: "identify", client_type: "uxp", id: "uxp-1" }));
+    socket.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error"] }, id: "sub-1" }));
     uxpUpdateWsStatus();
     UIController.setStatus(t("uxp.settings.live_updates_connected_status", "Live updates connected."), "success");
-    UIController.showToast(t("uxp.settings.live_updates_connected_status", "Live updates connected."), "success");
+    if (!reconnect) {
+      UIController.showToast(t("uxp.settings.live_updates_connected_status", "Live updates connected."), "success");
+    }
   };
 
-  _uxpWs.onmessage = (evt) => {
+  socket.onmessage = (evt) => {
     try {
       const msg = JSON.parse(evt.data);
       if (msg.type === "progress" && msg.job_id) {
@@ -6272,24 +6341,27 @@ function uxpWsConnect() {
     } catch (e) { /* ignore */ }
   };
 
-  _uxpWs.onclose = () => {
+  socket.onclose = () => {
     _uxpWsConnected = false;
-    _uxpWs = null;
+    if (_uxpWs === socket) _uxpWs = null;
     uxpUpdateWsStatus();
-    if (!_uxpWsReconnectTimer) {
-      _uxpWsReconnectTimer = setTimeout(() => {
-        _uxpWsReconnectTimer = null;
-        uxpWsConnect();
-      }, 5000);
-    }
+    uxpWsScheduleReconnect();
   };
 
-  _uxpWs.onerror = () => { _uxpWsConnected = false; };
+  socket.onerror = () => { _uxpWsConnected = false; };
 }
 
 function uxpWsDisconnect() {
-  if (_uxpWsReconnectTimer) { clearTimeout(_uxpWsReconnectTimer); _uxpWsReconnectTimer = null; }
-  if (_uxpWs) { _uxpWs.close(); _uxpWs = null; }
+  _uxpWsManualDisconnect = true;
+  _uxpWsReconnectDelayMs = WS_RECONNECT_BASE_MS;
+  uxpWsClearReconnectTimer();
+  const socket = _uxpWs;
+  _uxpWs = null;
+  if (socket) {
+    try {
+      socket.close();
+    } catch (e) { /* ignore */ }
+  }
   _uxpWsConnected = false;
   uxpUpdateWsStatus();
 }
@@ -6314,6 +6386,7 @@ async function uxpUpdateWsStatus() {
 
   const r = await BackendClient.get("/ws/status");
   if (r.ok && r.data) {
+    uxpSetWsEndpoint(r.data);
     bridgeRunning = !!r.data.running;
     clients = Number(r.data.clients || 0);
     if (_uxpWsConnected) {
@@ -6403,9 +6476,10 @@ async function uxpUpdateWsStatus() {
 async function uxpWsStartBridge() {
   const r = await BackendClient.post("/ws/start", {});
   if (r.ok && r.data?.success) {
+    uxpSetWsEndpoint(r.data);
     UIController.setStatus(t("uxp.settings.live_updates_bridge_started", "Live-updates bridge started."), "success");
     UIController.showToast(t("uxp.settings.live_updates_bridge_started", "Live-updates bridge started."), "success");
-    setTimeout(() => uxpWsConnect(), 500);
+    setTimeout(() => { void uxpWsConnect(); }, 500);
   } else {
     UIController.showToast(r.error || t("uxp.settings.failed_start_bridge", "Failed to start bridge."), "error");
   }
@@ -7190,7 +7264,7 @@ async function initApp() {
     UIController.showToast(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
 
     // Auto-connect WebSocket for real-time progress
-    uxpWsConnect();
+    void uxpWsConnect();
 
     // Scan project media so clip path inputs have autocomplete
     await scanProjectClips();
