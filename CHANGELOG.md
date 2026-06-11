@@ -57,6 +57,8 @@ record also lives in the git commit messages.
 - The UXP live-updates WebSocket now consumes the bridge URL reported by the
   backend, uses a capped reconnect backoff, and honors manual disconnects so
   the Stop button actually stops reconnect attempts.
+- UXP job polling now tolerates short `/status/<job_id>` interruptions before
+  failing a running job, preventing one dropped request from abandoning work.
 - FCC caption display settings now unwrap BackendClient response payloads before
   populating token selects or applying preview CSS, making the compliance card
   functional again.

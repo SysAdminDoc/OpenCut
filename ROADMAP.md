@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Correctness / reliability
 
-- [ ] P2 — UXP: one transient /status failure abandons a healthy running job
-  Why: pollJob's error path surfaces "Polling error" and stops on the first dropped request; retry 2-3 consecutive failures before giving up.
-  Where: extension/com.opencut.uxp/main.js:1893-1898
-
 - [ ] P2 — UXP: background health check repaints the panel "offline" every 8 seconds
   Why: each cycle sets state "connecting" first, flipping the workspace card to the red offline variant and back — constant flicker on healthy connections. Keep prior state during background checks.
   Where: extension/com.opencut.uxp/main.js:5501, 2090-2107, 7130-7147
