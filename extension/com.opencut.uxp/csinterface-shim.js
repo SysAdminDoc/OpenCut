@@ -48,9 +48,10 @@
   function _postToHost(action, params, callback) {
     const id = ++_callId;
     if (callback) _pendingCallbacks[id] = callback;
+    var origin = window.location.origin || "*";
     window.parent.postMessage(
       { _ocShimRequest: true, _callId: id, action: action, params: params },
-      "*"
+      origin
     );
     // Timeout: clean up if no response in 30s
     setTimeout(function () {
@@ -159,10 +160,8 @@
       // Route to UXP host for supported operations.
       if (mod === "child_process") {
         return {
-          exec: function (cmd, cb) {
-            _postToHost("exec", { command: cmd }, function (result) {
-              if (cb) cb(null, result, "");
-            });
+          exec: function (_cmd, cb) {
+            if (cb) cb(new Error("child_process.exec is not available in the WebView shim"), "", "");
           },
         };
       }
