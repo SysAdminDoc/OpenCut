@@ -57,35 +57,40 @@
         return [item.name || "", item.tab || "", item.sub || ""].join("::");
     }
 
+    var DEFAULT_TAB_DESCRIPTIONS = {
+        cut: "Tighten pacing, trims, and spoken edits from one focused cut workflow.",
+        captions: "Transcribe, translate, and shape subtitle deliverables without leaving the panel.",
+        audio: "Polish dialogue, stems, loudness, and generated sound from one audio surface.",
+        video: "Repair, reframe, and finish image work with cleaner visual controls.",
+        export: "Build deliverables, thumbnails, and repeatable output presets faster.",
+        timeline: "Write sequence edits and timeline metadata back into Premiere with more control.",
+        nlp: "Use search and language-driven tools to find footage or trigger edit actions.",
+        settings: "Adjust workspace defaults, templates, and system-level behavior.",
+        _default: "Open this tool and jump directly to the matching workspace.",
+        _none: "Open tools across the editing workflow.",
+    };
+
     function descriptionForItem(item, descriptionMap) {
         var itemKey = getCommandPaletteItemKey(item);
         if (descriptionMap && descriptionMap[itemKey]) return descriptionMap[itemKey];
-        if (!item) return "Open tools across the editing workflow.";
-        switch (item.tab) {
-        case "cut":
-            return "Tighten pacing, trims, and spoken edits from one focused cut workflow.";
-        case "captions":
-            return "Transcribe, translate, and shape subtitle deliverables without leaving the panel.";
-        case "audio":
-            return "Polish dialogue, stems, loudness, and generated sound from one audio surface.";
-        case "video":
-            return "Repair, reframe, and finish image work with cleaner visual controls.";
-        case "export":
-            return "Build deliverables, thumbnails, and repeatable output presets faster.";
-        case "timeline":
-            return "Write sequence edits and timeline metadata back into Premiere with more control.";
-        case "nlp":
-            return "Use search and language-driven tools to find footage or trigger edit actions.";
-        case "settings":
-            return "Adjust workspace defaults, templates, and system-level behavior.";
-        default:
-            return "Open this tool and jump directly to the matching workspace.";
-        }
+        if (!item) return (descriptionMap && descriptionMap._none) || DEFAULT_TAB_DESCRIPTIONS._none;
+        var tabDescs = (descriptionMap && descriptionMap._tabDescriptions) || DEFAULT_TAB_DESCRIPTIONS;
+        return tabDescs[item.tab] || tabDescs._default || DEFAULT_TAB_DESCRIPTIONS._default;
     }
+
+    var DEFAULT_SECTION_LABELS = {
+        recent: "Recent",
+        favorites: "Favorites",
+        currentWorkspace: "Current Workspace",
+        suggestedTools: "Suggested Tools",
+        browseAll: "Browse All",
+        matchingTools: "Matching Tools",
+    };
 
     function makePaletteContext(options) {
         options = options || {};
         return {
+            sectionLabels: options.sectionLabels || DEFAULT_SECTION_LABELS,
             items: Array.isArray(options.items) ? options.items : [],
             query: normalizePaletteText(options.query),
             activeTab: options.activeTab || "",
@@ -227,19 +232,20 @@
                 return (a.name || "").localeCompare(b.name || "");
             });
 
-            addPaletteSection(sections, "Recent", recentItems, ctx, function (item) {
+            var sl = ctx.sectionLabels || DEFAULT_SECTION_LABELS;
+            addPaletteSection(sections, sl.recent, recentItems, ctx, function (item) {
                 return { isRecent: true, isCurrent: item.tab === ctx.activeTab };
             }, seen);
 
-            addPaletteSection(sections, "Favorites", favoriteItems, ctx, function (item, key) {
+            addPaletteSection(sections, sl.favorites, favoriteItems, ctx, function (item, key) {
                 return { isRecent: !!historyLookup[key], isCurrent: item.tab === ctx.activeTab };
             }, seen);
 
-            addPaletteSection(sections, ctx.activeTab ? "Current Workspace" : "Suggested Tools", currentItems, ctx, function (item, key) {
+            addPaletteSection(sections, ctx.activeTab ? sl.currentWorkspace : sl.suggestedTools, currentItems, ctx, function (item, key) {
                 return { isRecent: !!historyLookup[key], isCurrent: true };
             }, seen);
 
-            addPaletteSection(sections, "Browse All", browseItems, ctx, function (item, key) {
+            addPaletteSection(sections, sl.browseAll, browseItems, ctx, function (item, key) {
                 return { isRecent: !!historyLookup[key], isCurrent: item.tab === ctx.activeTab };
             }, seen);
             return sections;
@@ -264,7 +270,7 @@
             return (a.item.name || "").localeCompare(b.item.name || "");
         });
 
-        if (matches.length) sections.push({ label: "Matching Tools", entries: matches });
+        if (matches.length) sections.push({ label: (ctx.sectionLabels || DEFAULT_SECTION_LABELS).matchingTools, entries: matches });
         return sections;
     }
 
