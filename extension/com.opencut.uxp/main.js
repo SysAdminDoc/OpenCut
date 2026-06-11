@@ -492,6 +492,15 @@ async function detectBackend() {
 
 let BACKEND = BACKEND_DEFAULT;
 
+async function refreshBackendBaseUrl() {
+  const detected = await detectBackend();
+  if (detected !== BACKEND) {
+    console.log(`[OpenCut UXP] Backend switched from ${BACKEND} to ${detected}`);
+  }
+  BACKEND = detected;
+  return BACKEND;
+}
+
 // ─────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────
@@ -5577,9 +5586,23 @@ function pad(n) { return String(n).padStart(2, "0"); }
 // ─────────────────────────────────────────────────────────────
 let _lastConnectionState = null;
 
-async function checkConnection() {
+async function checkConnection({ rescan = false } = {}) {
+  if (rescan) {
+    UIController.setStatus(t("uxp.status.scanning_backend_ports", "Scanning OpenCut backend ports..."), "working");
+    await refreshBackendBaseUrl();
+  }
+
   UIController.setConnection("connecting");
-  const r = await BackendClient.get("/health");
+  let r = await BackendClient.get("/health");
+  if (!r.ok && !rescan) {
+    const previousBackend = BACKEND;
+    const detected = await detectBackend();
+    if (detected !== previousBackend) {
+      BACKEND = detected;
+      console.log(`[OpenCut UXP] Backend moved from ${previousBackend} to ${BACKEND}`);
+      r = await BackendClient.get("/health");
+    }
+  }
   const alive = r.ok;
   if (alive && r.data?.csrf_token) csrfToken = r.data.csrf_token;
   UIController.setConnection(alive ? "connected" : "disconnected");
@@ -5802,7 +5825,7 @@ function bindEvents() {
   });
 
   // ── Refresh button ──
-  document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection());
+  document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection({ rescan: true }));
   document.getElementById("workspaceChooseClipBtn")?.addEventListener("click", () => handleWorkspaceAction("choose-clip"));
   document.getElementById("workspaceSearchBtn")?.addEventListener("click", () => handleWorkspaceAction("open-search"));
   document.getElementById("workspaceTimelineBtn")?.addEventListener("click", () => handleWorkspaceAction("open-timeline"));
@@ -7132,7 +7155,7 @@ async function initApp() {
   await loadLocale();
 
   // Detect which port the backend is running on (5679-5689)
-  BACKEND = await detectBackend();
+  await refreshBackendBaseUrl();
   console.log(`[OpenCut UXP] Backend detected at: ${BACKEND}`);
 
   // Init UXP Premiere Pro bridge (non-blocking)
