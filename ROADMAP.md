@@ -7,10 +7,6 @@ history, not here.
 
 ## P1 — Release blocking
 
-- [ ] P1 — UXP: FCC caption display-settings card is non-functional
-  Why: code reads schema.tokens / resp.preview_css off the BackendClient wrapper ({ok,data,status}) instead of resp.data — selects populate empty and preview never applies, while status reports success. Card exists for 47 CFR § 79.103 compliance (effective 2026-08-17).
-  Where: extension/com.opencut.uxp/main.js:7649-7666, 7617-7625 (use responseData() like main.js:7184)
-
 - [ ] P1 — External F202 macOS notarization live acceptance is credential-gated
   Why: release wiring exists, but the first live Apple acceptance still needs configured Apple credentials, notarization secrets, and a macOS release run before the claim is complete.
   Where: docs/MACOS_NOTARIZATION.md, .github/workflows/build.yml

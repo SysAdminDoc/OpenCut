@@ -18,6 +18,9 @@ record also lives in the git commit messages.
 
 ### Fixed — UXP panel
 
+- FCC caption display settings now unwrap BackendClient response payloads before
+  populating token selects or applying preview CSS, making the compliance card
+  functional again.
 - Cancelling an active job now clears any button left in the panel's loading
   state, so the initiating action is usable again without reloading the panel.
 
