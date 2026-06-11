@@ -7578,6 +7578,9 @@ function initCaptionDisplaySettingsCard() {
     if (el) el.textContent = formatMessage(key, fallback, params);
   };
 
+  const responseData = (response) => response?.data ?? response ?? {};
+  const responseError = (response) => response?.error || response?.data?.error || t("common.unknown", "unknown");
+
   function populateSelects(schema) {
     cachedSchema = schema;
     const tokens = schema.tokens || {};
@@ -7635,11 +7638,12 @@ function initCaptionDisplaySettingsCard() {
         settings: readSettings(),
         sample_text: t("uxp.fcc.preview_sample_text", "The quick brown fox jumps over the lazy dog."),
       });
-      if (!resp || resp.error) {
-        setStatus("uxp.fcc.preview_failed", "Preview failed: {error}", { error: resp?.error || t("common.unknown", "unknown") });
+      const data = responseData(resp);
+      if ((!resp?.ok && !data.preview_css) || data.error) {
+        setStatus("uxp.fcc.preview_failed", "Preview failed: {error}", { error: responseError(resp) });
         return;
       }
-      applyPreviewStyles(resp);
+      applyPreviewStyles(data);
       setStatus("uxp.fcc.preview_updated", "Preview updated. These are the FCC display tokens applied to burn-in.");
     } catch (err) {
       setStatus("uxp.fcc.preview_error", "Preview error: {error}", { error: err?.message || err });
@@ -7665,16 +7669,17 @@ function initCaptionDisplaySettingsCard() {
   // initApp() on this network call.)
   async function lazyLoadTokens() {
     try {
-      const schema = await BackendClient.get("/captions/display-settings/tokens");
-      if (!schema || schema.error) {
+      const resp = await BackendClient.get("/captions/display-settings/tokens");
+      const data = responseData(resp);
+      if ((!resp?.ok && !data.tokens) || data.error) {
         setStatus("uxp.fcc.schema_unavailable", "Could not load FCC token schema. The card will stay empty.");
         return;
       }
-      populateSelects(schema);
+      populateSelects(data);
       // Surface the compliance-date string in the hint if the backend supplies one.
       const complianceDate = document.getElementById("fccComplianceDate");
-      if (complianceDate && schema.compliance_date) {
-        complianceDate.textContent = schema.compliance_date;
+      if (complianceDate && data.compliance_date) {
+        complianceDate.textContent = data.compliance_date;
       }
       setStatus("uxp.fcc.defaults_loaded", "Defaults loaded. Adjust tokens then Preview.");
     } catch (err) {
