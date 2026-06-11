@@ -7,14 +7,6 @@ history, not here.
 
 ## P1 — Release blocking
 
-- [ ] P1 — Docker container crash-loops on startup
-  Why: the image binds 0.0.0.0 but never sets OPENCUT_ALLOW_REMOTE=1, so server.main() refuses the bind and exits 2; restart:unless-stopped loops it forever and the healthcheck never passes.
-  Where: Dockerfile (ENV/CMD), docker-compose.yml, opencut/server.py:841
-
-- [ ] P1 — UXP: cancelling a job permanently disables the button that started it
-  Why: JobPoller.cancel() closes SSE, nulls activeJobId, and never fires the job's onError/onComplete, so setButtonLoading(btn, false) never runs and every reconnect path skips .loading buttons — the Run button stays stuck until panel reload.
-  Where: extension/com.opencut.uxp/main.js:1950-1957 (cancel), 1932-1936, 5732-5736, 5556-5560
-
 - [ ] P1 — UXP: FCC caption display-settings card is non-functional
   Why: code reads schema.tokens / resp.preview_css off the BackendClient wrapper ({ok,data,status}) instead of resp.data — selects populate empty and preview never applies, while status reports success. Card exists for 47 CFR § 79.103 compliance (effective 2026-08-17).
   Where: extension/com.opencut.uxp/main.js:7649-7666, 7617-7625 (use responseData() like main.js:7184)
