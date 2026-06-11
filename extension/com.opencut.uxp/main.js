@@ -1948,12 +1948,17 @@ const JobPoller = (() => {
   }
 
   async function cancel() {
-    if (!activeJobId) return;
+    if (!activeJobId) return false;
+    const jobId = activeJobId;
     // Close SSE stream first to prevent stale events after cancel
     if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
-    await BackendClient.post(`/cancel/${activeJobId}`, {});
-    activeJobId = null;
-    _fireCompletionHooks();
+    try {
+      await BackendClient.post(`/cancel/${jobId}`, {});
+    } finally {
+      if (activeJobId === jobId) activeJobId = null;
+      _fireCompletionHooks();
+    }
+    return true;
   }
 
   /**
@@ -2223,6 +2228,13 @@ const UIController = (() => {
     btn.disabled = loading;
   }
 
+  function clearButtonLoadingStates() {
+    document.querySelectorAll("button.loading").forEach((btn) => {
+      btn.classList.remove("loading");
+      btn.disabled = false;
+    });
+  }
+
   function escapeHtml(str) {
     return escapeHtmlValue(str);
   }
@@ -2230,7 +2242,8 @@ const UIController = (() => {
   return {
     switchTab, showProcessing, hideProcessing, setProcessingMsg, setProgress,
     setStatus, setStatusRight, setConnection, showToast,
-    bindSlider, initCollapsibles, setButtonLoading, escapeHtml,
+    bindSlider, initCollapsibles, setButtonLoading, clearButtonLoadingStates,
+    escapeHtml,
   };
 })();
 
@@ -5553,7 +5566,9 @@ const _shortcutActions = {
   "audio-normalize":  () => { const b = document.getElementById("runNormalizeBtn"); if (b && !b.disabled) b.click(); },
   "audio-denoise":    () => { const b = document.getElementById("runDenoiseBtn"); if (b && !b.disabled) b.click(); },
   "export-video":     () => { const b = document.getElementById("runBatchExportBtn"); if (b && !b.disabled) b.click(); },
-  "cancel-job":       () => { if (activeJobId) JobPoller.cancel().then(() => {
+  "cancel-job":       () => { if (activeJobId) JobPoller.cancel().then((cancelled) => {
+    if (!cancelled) return;
+    UIController.clearButtonLoadingStates();
     UIController.hideProcessing();
     UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   }); },
@@ -5730,7 +5745,9 @@ function bindEvents() {
 
   // ── Cancel button ──
   document.getElementById("cancelBtn")?.addEventListener("click", async () => {
-    await JobPoller.cancel();
+    const cancelled = await JobPoller.cancel();
+    if (!cancelled) return;
+    UIController.clearButtonLoadingStates();
     UIController.hideProcessing();
     UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   });

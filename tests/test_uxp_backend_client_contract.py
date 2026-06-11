@@ -150,6 +150,16 @@ def test_terminal_job_statuses_are_complete_error_cancelled():
         )
 
 
+def test_job_cancel_clears_button_loading_state():
+    text = _read_main_js()
+    assert "function clearButtonLoadingStates()" in text
+    assert 'document.querySelectorAll("button.loading")' in text
+    assert "UIController.clearButtonLoadingStates();" in text
+    assert re.search(r"async function cancel\(\).*?return true;", text, re.S), (
+        "JobPoller.cancel() must report whether it actually cancelled a job"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Server-side contract — exercise the routes the UXP panel calls
 # ---------------------------------------------------------------------------
