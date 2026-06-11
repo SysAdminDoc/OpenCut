@@ -15,11 +15,83 @@ import logging
 import os
 import subprocess
 import tempfile
+import urllib.request
 from typing import Callable, Dict, Optional
 
 from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
+
+REALESRGAN_MODELS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "models")
+REALESRGAN_MODEL_SPECS = {
+    "RealESRGAN_x4plus": {
+        "filename": "RealESRGAN_x4plus.pth",
+        "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+        "scale": 4,
+        "num_block": 23,
+    },
+    "RealESRGAN_x2plus": {
+        "filename": "RealESRGAN_x2plus.pth",
+        "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+        "scale": 2,
+        "num_block": 23,
+    },
+    "RealESRGAN_x4plus_anime_6B": {
+        "filename": "RealESRGAN_x4plus_anime_6B.pth",
+        "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+        "scale": 4,
+        "num_block": 6,
+    },
+}
+_REALESRGAN_ALIASES = {
+    "realesrgan_x4plus": "RealESRGAN_x4plus",
+    "realesrgan-x4plus": "RealESRGAN_x4plus",
+    "x4plus": "RealESRGAN_x4plus",
+    "realesrgan_x2plus": "RealESRGAN_x2plus",
+    "realesrgan-x2plus": "RealESRGAN_x2plus",
+    "x2plus": "RealESRGAN_x2plus",
+    "realesrgan_x4plus_anime_6b": "RealESRGAN_x4plus_anime_6B",
+    "realesrgan-x4plus-anime-6b": "RealESRGAN_x4plus_anime_6B",
+    "x4plus_anime_6b": "RealESRGAN_x4plus_anime_6B",
+    "anime": "RealESRGAN_x4plus_anime_6B",
+}
+
+
+def _canonical_realesrgan_model_name(model_name: str) -> str:
+    if model_name in REALESRGAN_MODEL_SPECS:
+        return model_name
+    normalized = str(model_name or "").strip().lower().replace(" ", "_")
+    return _REALESRGAN_ALIASES.get(normalized, "RealESRGAN_x4plus")
+
+
+def _resolve_realesrgan_model_path(
+    model_name: str,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    canonical_name = _canonical_realesrgan_model_name(model_name)
+    spec = REALESRGAN_MODEL_SPECS[canonical_name]
+    os.makedirs(REALESRGAN_MODELS_DIR, exist_ok=True)
+    model_path = os.path.join(REALESRGAN_MODELS_DIR, spec["filename"])
+    if os.path.isfile(model_path) and os.path.getsize(model_path) >= 1024:
+        return model_path
+
+    if on_progress:
+        on_progress(4, f"Downloading {canonical_name} weights...")
+
+    tmp_path = f"{model_path}.download"
+    try:
+        urllib.request.urlretrieve(spec["url"], tmp_path)
+        if not os.path.isfile(tmp_path) or os.path.getsize(tmp_path) < 1024:
+            raise RuntimeError(f"Downloaded Real-ESRGAN weights are empty: {spec['url']}")
+        os.replace(tmp_path, model_path)
+    except Exception:
+        try:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+    return model_path
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -119,9 +191,20 @@ def upscale_realesrgan(
     if on_progress:
         on_progress(5, "Loading Real-ESRGAN model...")
 
-    model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+    canonical_model_name = _canonical_realesrgan_model_name(model_name)
+    model_spec = REALESRGAN_MODEL_SPECS[canonical_model_name]
+    model_path = _resolve_realesrgan_model_path(canonical_model_name, on_progress)
+    model_scale = int(model_spec["scale"])
+    model = RRDBNet(
+        num_in_ch=3,
+        num_out_ch=3,
+        num_feat=64,
+        num_block=int(model_spec["num_block"]),
+        num_grow_ch=32,
+        scale=model_scale,
+    )
     upsampler = RealESRGANer(
-        scale=4, model_path=None, model=model, tile=tile,
+        scale=model_scale, model_path=model_path, model=model, tile=tile,
         half=torch.cuda.is_available(),
     )
 
