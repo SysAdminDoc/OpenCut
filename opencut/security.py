@@ -391,7 +391,7 @@ def _verify_package_importable(python: str, package: str, target_dir: str = None
     import_name = re.split(r"[\[>=<!~]", package)[0].replace("-", "_")
     setup = ""
     if target_dir:
-        setup = f"import sys; sys.path.insert(0, {target_dir!r}); "
+        setup = f"import sys; sys.path.append({target_dir!r}); "
     cmd = [python, "-c", f"{setup}import {import_name}"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
@@ -435,9 +435,10 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     # ~/.opencut/packages — the ONLY directory guaranteed writable without admin
     _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
     os.makedirs(_target_dir, exist_ok=True)
-    # Add to sys.path so subsequent imports find the package immediately
+    # Append to sys.path so target installs are available without outranking
+    # stdlib, bundled modules, or the active environment's site-packages.
     if _target_dir not in sys.path:
-        sys.path.insert(0, _target_dir)
+        sys.path.append(_target_dir)
 
     _base = [python, "-m", "pip", "install", package, "--prefer-binary", "-q"]
 

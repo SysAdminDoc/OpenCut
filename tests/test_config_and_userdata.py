@@ -90,6 +90,21 @@ def test_runtime_boot_modules_avoid_pep604_annotations_for_python39():
     assert offenders == []
 
 
+def test_user_writable_package_dir_is_not_sys_path_priority():
+    repo_root = Path(__file__).resolve().parents[1]
+    checked = {
+        "opencut/helpers.py": "_sys.path.append(_opencut_pkg_dir)",
+        "opencut/security.py": "sys.path.append(_target_dir)",
+        "opencut/server.py": "sys.path.append(_opencut_packages)",
+        "opencut/routes/system.py": "sys.path.append(_target_dir)",
+    }
+
+    for relative_path, expected_append in checked.items():
+        text = (repo_root / relative_path).read_text(encoding="utf-8")
+        assert expected_append in text
+        assert ".path.insert(0" not in text
+
+
 def test_create_app_applies_custom_job_config():
     from opencut.config import OpenCutConfig
     from opencut.server import create_app

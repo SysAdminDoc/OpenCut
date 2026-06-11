@@ -1336,7 +1336,7 @@ def install_whisper(job_id, filepath, data):
         _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
         os.makedirs(_target_dir, exist_ok=True)
         if _target_dir not in sys.path:
-            sys.path.insert(0, _target_dir)
+            sys.path.append(_target_dir)
 
         # Build pip commands with permission fallbacks baked in
         def _pip_cmd(pkg, *extra_flags):
@@ -1637,7 +1637,7 @@ def whisper_reinstall(job_id, filepath, data):
         _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
         os.makedirs(_target_dir, exist_ok=True)
         if _target_dir not in sys.path:
-            sys.path.insert(0, _target_dir)
+            sys.path.append(_target_dir)
 
         def _run_pip_with_fallback(args, timeout=300):
             """Try pip command, then --user, then --target fallback."""

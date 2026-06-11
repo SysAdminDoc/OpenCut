@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — ~/.opencut/packages is inserted at sys.path[0]
-  Why: anything dropped there shadows stdlib modules and executes in the server process; frozen builds also trust whatever python is on PATH for site-packages. Append instead of insert-at-0; validate or gate the frozen-build path.
-  Where: opencut/server.py:207-213, 157-202; opencut/security.py:439; opencut/helpers.py:24-26
-
 - [ ] P2 — MCP extended route tools bypass the MCP-layer path validation
   Why: handle_tool_call dispatches opencut_route_* tools before the _validate_mcp_filepath block, so the documented fail-fast path checks never run for the opt-in extended surface (backend still validates).
   Where: opencut/mcp_server.py:767-778 vs 790-829, opencut/mcp_extended_tools.py:322-362
