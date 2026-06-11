@@ -16,6 +16,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -188,12 +189,7 @@ def generate_stringout(
 
         # Write concat list
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for seg in segment_files:
-                f.write(f"file '{seg}'\n")
-                if gap_seconds > 0:
-                    # Add black gap via duration extension (simple approach)
-                    pass  # handled by chapter timing only
+        write_concat_list(segment_files, concat_file)
 
         # Concatenate all segments
         cmd = (FFmpegCmd()

@@ -15,7 +15,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -296,12 +296,10 @@ def concatenate_audio(
         on_progress(10, f"Concatenating {len(input_paths)} audio files...")
 
     # Create concat list file
-    list_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
+    list_file = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
     try:
-        for p in input_paths:
-            escaped = p.replace("'", "'\\''")
-            list_file.write(f"file '{escaped}'\n")
         list_file.close()
+        write_concat_list(input_paths, list_file.name)
 
         cmd = [
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",

@@ -15,7 +15,7 @@ import os
 import tempfile
 from typing import Callable, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -196,9 +196,7 @@ def _apply_eased(
             on_progress(85, "Concatenating segments...")
 
         list_file = os.path.join(tmp_dir, "concat.txt")
-        with open(list_file, "w", encoding="utf-8") as f:
-            for seg in segments:
-                f.write(f"file '{seg}'\n")
+        write_concat_list(segments, list_file)
 
         run_ffmpeg([
             get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",

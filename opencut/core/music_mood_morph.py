@@ -20,7 +20,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, output_path, run_ffmpeg, write_concat_list
 
 logger = logging.getLogger("opencut")
 
@@ -658,10 +658,7 @@ def apply_keyframed_morph(
         fd, list_path = tempfile.mkstemp(suffix="_concat.txt")
         os.close(fd)
         try:
-            with open(list_path, "w", encoding="utf-8") as f:
-                for p in temp_parts:
-                    safe_p = p.replace("\\", "/").replace("'", "'\\''")
-                    f.write(f"file '{safe_p}'\n")
+            write_concat_list(temp_parts, list_path)
 
             concat_cmd = [
                 get_ffmpeg_path(), "-y", "-f", "concat", "-safe", "0",

@@ -21,6 +21,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -195,9 +196,7 @@ def extract_speaker_audio(
     # Concatenate via FFmpeg concat demuxer
     ref_audio_path = os.path.join(out_dir, "voice_reference.wav")
     concat_list = os.path.join(tmp_dir, "concat.txt")
-    with open(concat_list, "w", encoding="utf-8") as f:
-        for sp in segment_files:
-            f.write(f"file '{sp}'\n")
+    write_concat_list(segment_files, concat_list)
 
     cmd = (FFmpegCmd()
            .option("f", "concat")

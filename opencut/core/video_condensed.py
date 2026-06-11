@@ -15,6 +15,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -258,32 +259,31 @@ def condense_video(
     clip_files = []
     concat_list_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
-                                         delete=False) as concat_f:
-            concat_list_path = concat_f.name
+        fd, concat_list_path = tempfile.mkstemp(suffix=".txt")
+        os.close(fd)
 
-            for i, shot in enumerate(selected):
-                if on_progress:
-                    pct = 50 + int((i / len(selected)) * 35)
-                    on_progress(pct, f"Extracting clip {i+1}/{len(selected)}...")
+        for i, shot in enumerate(selected):
+            if on_progress:
+                pct = 50 + int((i / len(selected)) * 35)
+                on_progress(pct, f"Extracting clip {i+1}/{len(selected)}...")
 
-                _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-                clip_path = _ntf.name
-                _ntf.close()
-                clip_files.append(clip_path)
+            _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+            clip_path = _ntf.name
+            _ntf.close()
+            clip_files.append(clip_path)
 
-                run_ffmpeg([
-                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                    "-ss", str(shot.start),
-                    "-i", video_path,
-                    "-t", str(shot.end - shot.start),
-                    "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-                    "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "192k",
-                    clip_path,
-                ], timeout=300)
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-ss", str(shot.start),
+                "-i", video_path,
+                "-t", str(shot.end - shot.start),
+                "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k",
+                clip_path,
+            ], timeout=300)
 
-                concat_f.write(f"file '{clip_path}'\n")
+        write_concat_list(clip_files, concat_list_path)
 
         if on_progress:
             on_progress(88, "Concatenating clips...")

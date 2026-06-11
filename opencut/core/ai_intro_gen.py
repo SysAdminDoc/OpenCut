@@ -25,6 +25,7 @@ from opencut.helpers import (
     output_path,
     require_package,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -715,9 +716,7 @@ def _prepend_intro(intro_path: str, main_video: str, out_path: str) -> str:
     _fd, concat_file = tempfile.mkstemp(suffix=".txt", prefix="intro_concat_")
     os.close(_fd)
     try:
-        with open(concat_file, "w") as f:
-            f.write(f"file '{intro_path}'\n")
-            f.write(f"file '{main_video}'\n")
+        write_concat_list([intro_path, main_video], concat_file)
 
         cmd = (FFmpegCmd()
                .option("f", "concat")

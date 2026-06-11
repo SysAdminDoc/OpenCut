@@ -26,6 +26,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -616,14 +617,10 @@ def extend_clip(
 
         # Build concat file
         concat_path = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_path, "w") as f:
-            for d, seg_path in generated_segments:
-                if d == "backward":
-                    f.write(f"file '{seg_path}'\n")
-            f.write(f"file '{video_path}'\n")
-            for d, seg_path in generated_segments:
-                if d == "forward":
-                    f.write(f"file '{seg_path}'\n")
+        concat_paths = [seg_path for d, seg_path in generated_segments if d == "backward"]
+        concat_paths.append(video_path)
+        concat_paths.extend(seg_path for d, seg_path in generated_segments if d == "forward")
+        write_concat_list(concat_paths, concat_path)
 
         # Concat video segments
         fd, concat_video = tempfile.mkstemp(suffix=".mp4", prefix="concat_", dir=tmp_dir)

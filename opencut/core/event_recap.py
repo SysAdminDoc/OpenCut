@@ -19,6 +19,7 @@ from opencut.helpers import (
     get_video_info,
     output_path,
     run_ffmpeg,
+    write_concat_list,
 )
 
 logger = logging.getLogger("opencut")
@@ -411,9 +412,7 @@ def generate_recap(
 
         # Concatenate segments
         concat_file = os.path.join(tmp_dir, "concat.txt")
-        with open(concat_file, "w") as f:
-            for sf in segment_files:
-                f.write(f"file '{sf}'\n")
+        write_concat_list(segment_files, concat_file)
 
         # Apply fade in/out on the final output
         vf_parts = []
