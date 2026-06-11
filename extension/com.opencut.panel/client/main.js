@@ -20,6 +20,7 @@
     var capabilities = {};
     var selectedPath = "";
     var selectedName = "";
+    var _clipDurationSeconds = 0;
     var currentJob = null;
     var pollTimer = null;
     var healthTimer = null;
@@ -2523,6 +2524,7 @@
 
     function applyClipPreviewMeta(path, data) {
         if (!data || path !== selectedPath) return;
+        _clipDurationSeconds = parseFloat(data.duration) || 0;
         if (el.clipMetaDur) el.clipMetaDur.textContent = data.duration ? fmtDur(data.duration) : "";
         if (el.clipMetaRes) {
             el.clipMetaRes.textContent = data.video
@@ -3914,8 +3916,10 @@
         el.progressLabel.textContent = preparingMessage;
         el.cancelBtn.classList.remove("hidden");
 
-        // Lock the entire UI
+        // Lock the entire UI (pointer-events + keyboard/AT via inert)
         document.body.classList.add("job-active");
+        var mc = document.getElementById("mainContent");
+        if (mc) mc.inert = true;
 
         // Track for retry
         lastJobEndpoint = endpoint;
@@ -4351,6 +4355,8 @@
         setButtonText(el.processingCancel, rememberButtonText(el.processingCancel));
         el.processingCancel.disabled = false;
         document.body.classList.remove("job-active");
+        var mc = document.getElementById("mainContent");
+        if (mc) mc.inert = false;
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
     }
 
@@ -8270,9 +8276,9 @@
         }
     }
 
-    function showAlert(msg, errorData) {
+    function showAlert(msg, errorData, explicitTone) {
         var display = enhanceError(msg, errorData);
-        var tone = inferNotificationTone(display, errorData);
+        var tone = inferNotificationTone(display, errorData, explicitTone);
         var heading = getNotificationHeading(tone, display);
         applyNotificationTone(el.alertBanner, tone);
         if (el.alertIcon) {
@@ -12226,17 +12232,7 @@
     // ================================================================
     function fetchTimeEstimate(jobType) {
         if (!el.processingEstimate) return;
-        // Get file duration from file info (fmtDur outputs M:SS or H:MM:SS)
-        var fileDuration = 0;
-        var metaEl = document.getElementById("fileMetaDisplay");
-        if (metaEl) {
-            var txt = metaEl.textContent || "";
-            // Match M:SS or H:MM:SS format from fmtDur()
-            var hmatch = txt.match(/(\d+):(\d+):(\d+)/);
-            var mmatch = !hmatch && txt.match(/(\d+):(\d+)/);
-            if (hmatch) fileDuration = parseInt(hmatch[1]) * 3600 + parseInt(hmatch[2]) * 60 + parseInt(hmatch[3]);
-            else if (mmatch) fileDuration = parseInt(mmatch[1]) * 60 + parseInt(mmatch[2]);
-        }
+        var fileDuration = _clipDurationSeconds || 0;
         api("POST", "/system/estimate-time", { type: jobType, file_duration: fileDuration }, function (err, data) {
             if (err || !data || !data.estimate_seconds) {
                 el.processingEstimate.textContent = "";
