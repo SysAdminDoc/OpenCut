@@ -31,6 +31,8 @@ record also lives in the git commit messages.
 - Non-loopback server binds now serve through Waitress instead of Flask's
   Werkzeug development server, covering the Docker/remote runtime path while
   keeping local loopback/debug launches on the dev server.
+- MCP HTTP sidecar binds on non-loopback interfaces now require the persistent
+  `X-OpenCut-Auth` token before serving health, tool-list, or JSON-RPC calls.
 
 ### Fixed — UXP panel
 

@@ -20,6 +20,7 @@ Supports: initialize, tools/list, tools/call, resources/list, prompts/list.
 """
 
 import argparse
+import ipaddress
 import json
 import logging
 import os
@@ -27,10 +28,11 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from opencut import __version__, mcp_extended_tools
+from opencut import __version__, auth as _auth, mcp_extended_tools
 
 logger = logging.getLogger("opencut.mcp")
 
@@ -40,6 +42,7 @@ _csrf_fetched_at: float = 0.0
 # CSRF tokens have a 1-hour TTL on the backend; refresh proactively 5 minutes
 # before expiry so long-running MCP sessions never hit a 403 mid-operation.
 _CSRF_TTL_SECONDS = 3300  # 55 minutes
+_LOOPBACK_BINDS = {"localhost"}
 
 
 def _csrf_is_fresh() -> bool:
@@ -98,6 +101,33 @@ def _api(method, path, data=None):
             return {"error": f"HTTP {e.code}: {error_body[:200]}"}
     except Exception as e:
         return {"error": str(e)}
+
+
+def _mcp_http_bind_requires_auth(bind: str) -> bool:
+    addr = (bind or "").strip().lower().strip("[]")
+    if not addr:
+        return True
+    if addr in _LOOPBACK_BINDS:
+        return False
+    try:
+        return not ipaddress.ip_address(addr.split("%", 1)[0]).is_loopback
+    except ValueError:
+        return True
+
+
+def _mcp_http_request_token(headers, path: str) -> str:
+    token = _auth.extract_request_token(headers)
+    if token:
+        return token
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(path).query)
+    values = query.get("auth") or []
+    return values[0].strip() if values else ""
+
+
+def _mcp_http_request_is_authorized(headers, path: str, *, auth_required: bool) -> bool:
+    if not auth_required:
+        return True
+    return _auth.is_token_valid(_mcp_http_request_token(headers, path))
 
 
 # ---------------------------------------------------------------------------
@@ -1011,11 +1041,12 @@ def run_http_server(
 
     Defaults to ``127.0.0.1`` so the MCP sidecar matches the Flask backend's
     loopback-only default. Operators can still opt into LAN exposure with
-    ``--http-bind 0.0.0.0`` if they understand the risk — there is no
-    authentication layer on this transport, so any host that can reach it
-    can invoke every registered tool (transcribe, pip install, style
-    transfer, etc.) with the backend's CSRF token attached.
+    ``--http-bind 0.0.0.0``. Non-loopback binds require the same persistent
+    ``X-OpenCut-Auth`` token used by the main OpenCut HTTP server.
     """
+    auth_required = _mcp_http_bind_requires_auth(bind)
+    if auth_required:
+        _auth.ensure_token(label="mcp-http")
 
     class _Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
@@ -1034,16 +1065,42 @@ def run_http_server(
             raw = self.rfile.read(length) if length else b""
             return json.loads(raw) if raw else {}
 
+        def _request_path(self) -> str:
+            return urllib.parse.urlsplit(self.path).path
+
+        def _authorize(self) -> bool:
+            if _mcp_http_request_is_authorized(
+                self.headers,
+                self.path,
+                auth_required=auth_required,
+            ):
+                return True
+            self._send_json(
+                {
+                    "error": "Missing or invalid X-OpenCut-Auth token",
+                    "code": "AUTH_REQUIRED",
+                },
+                status=401,
+            )
+            return False
+
         def do_GET(self):
-            if self.path in ("/health", "/"):
+            if not self._authorize():
+                return
+
+            path = self._request_path()
+            if path in ("/health", "/"):
                 self._send_json({"status": "ok", "server": "opencut-mcp",
                                   "version": __version__, "tools": len(get_mcp_tools())})
-            elif self.path == "/tools":
+            elif path == "/tools":
                 self._send_json({"tools": get_mcp_tools()})
             else:
                 self._send_json({"error": "Not found"}, status=404)
 
         def do_POST(self):
+            if not self._authorize():
+                return
+
             try:
                 body = self._read_json()
             except Exception:
@@ -1081,10 +1138,10 @@ def run_http_server(
 
     httpd = HTTPServer((bind, port), _Handler)
     print(f"OpenCut MCP HTTP server on http://{bind}:{port}", file=sys.stderr)
-    if bind not in ("127.0.0.1", "localhost", "::1"):
+    if auth_required:
         print(
-            "  WARNING: bound to a non-loopback interface — there is NO auth "
-            "on this transport. Any reachable host can invoke every tool.",
+            "  Non-loopback bind: requests must include X-OpenCut-Auth "
+            "or ?auth= with the token from ~/.opencut/auth.json.",
             file=sys.stderr,
         )
     print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)
@@ -1126,8 +1183,8 @@ def main() -> None:
         default="127.0.0.1",
         help=(
             "Bind address for HTTP transport (default: 127.0.0.1). "
-            "Pass 0.0.0.0 to expose on the LAN — remember that this "
-            "transport has no authentication."
+            "Pass 0.0.0.0 to expose on the LAN; non-loopback binds "
+            "require X-OpenCut-Auth."
         ),
     )
     parser.add_argument(
