@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — Werkzeug dev server used for the Docker/remote path
-  Why: app.run() is not a production server; the Docker image's whole purpose is non-localhost exposure. Ship waitress (Windows) / gunicorn (Linux) for that path.
-  Where: opencut/server.py:645, Dockerfile
-
 - [ ] P2 — MCP HTTP transport has no authentication when bound non-loopback
   Why: --http-bind 0.0.0.0 exposes every tool (transcribe, pip-install, arbitrary routes) with only a printed warning; should require the opencut.auth token or refuse non-loopback binds.
   Where: opencut/mcp_server.py:1005-1096, 1124-1132

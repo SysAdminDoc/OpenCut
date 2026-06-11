@@ -36,6 +36,7 @@ dependencies = [
     "rich>=13.0,<14",
     "flask>=3.0,<4",
     "flask-cors>=6.0,<7",
+    "waitress>=3.0,<4",
     "python-json-logger>=2.0,<3",
     "psutil>=5.9",
 ]

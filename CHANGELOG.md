@@ -28,6 +28,9 @@ record also lives in the git commit messages.
 - Default CORS is now closed instead of allowing `null`/`file://`, and
   `/health` withholds CSRF bootstrap tokens from those origins even if they are
   explicitly added back for compatibility.
+- Non-loopback server binds now serve through Waitress instead of Flask's
+  Werkzeug development server, covering the Docker/remote runtime path while
+  keeping local loopback/debug launches on the dev server.
 
 ### Fixed — UXP panel
 
