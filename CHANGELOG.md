@@ -11,6 +11,11 @@ record also lives in the git commit messages.
   intentional `0.0.0.0` bind, preventing startup crash-loops while preserving
   the non-loopback auth gate.
 
+### Fixed — UXP panel
+
+- Cancelling an active job now clears any button left in the panel's loading
+  state, so the initiating action is usable again without reloading the panel.
+
 ### Security — routes layer
 
 - **Closed the unvalidated `output_path` write sinks.** `@async_job` validates
