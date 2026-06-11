@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Correctness / reliability
 
-- [ ] P2 — UXP: background health check repaints the panel "offline" every 8 seconds
-  Why: each cycle sets state "connecting" first, flipping the workspace card to the red offline variant and back — constant flicker on healthy connections. Keep prior state during background checks.
-  Where: extension/com.opencut.uxp/main.js:5501, 2090-2107, 7130-7147
-
 - [ ] P2 — CEP style.css is eight stacked re-skins, including two conflicting light themes
   Why: six full :root token redefinitions (12, 4462, 5386, 13215, 15466, 17214), two divergent html.theme-light blocks (16701 vs 17628), three different :focus-visible rules, and a triplicated prefers-reduced-motion block — the effective theme is "whatever the last pass overrode" and ~⅓ of 18k lines is dead weight. Consolidate to one token block per theme; then retokenize the ~340 stray hex literals.
   Where: extension/com.opencut.panel/client/style.css

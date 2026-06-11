@@ -98,12 +98,23 @@ def test_backend_client_refreshes_csrf_token_from_response_header():
 def test_refresh_button_rescans_backend_ports():
     text = _read_main_js()
     assert "async function refreshBackendBaseUrl()" in text
-    assert "async function checkConnection({ rescan = false } = {})" in text
+    assert "async function checkConnection({ rescan = false, background = false } = {})" in text
     assert "await refreshBackendBaseUrl();" in text
     assert 'checkConnection({ rescan: true })' in text
     assert re.search(r"if \(!r\.ok && !rescan\).*?await detectBackend\(\)", text, re.S), (
         "failed health checks should rescan ports before staying offline"
     )
+
+
+def test_background_health_checks_preserve_existing_connection_state():
+    text = _read_main_js()
+    assert 'checkConnection({ background: true })' in text
+    assert re.search(
+        r"async function checkConnection\(\{ rescan = false, background = false \} = \{\}\).*?"
+        r"if \(!background\) \{\s*UIController\.setConnection\(\"connecting\"\);",
+        text,
+        re.S,
+    ), "background health checks must not repaint the panel as connecting/offline before probing"
 
 
 def test_live_updates_websocket_reconnect_is_stoppable_and_capped():

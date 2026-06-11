@@ -59,6 +59,8 @@ record also lives in the git commit messages.
   the Stop button actually stops reconnect attempts.
 - UXP job polling now tolerates short `/status/<job_id>` interruptions before
   failing a running job, preventing one dropped request from abandoning work.
+- Periodic UXP backend health checks no longer repaint the workspace as
+  connecting/offline before each background probe completes.
 - FCC caption display settings now unwrap BackendClient response payloads before
   populating token selects or applying preview CSS, making the compliance card
   functional again.
