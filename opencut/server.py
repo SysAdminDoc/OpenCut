@@ -348,7 +348,7 @@ def create_app(config=None):
 
     from opencut.errors import error_response as _error_response  # noqa: E402
     from opencut.errors import register_error_handlers
-    from opencut.security import OpenCutRequest  # noqa: E402
+    from opencut.security import OpenCutRequest, validate_csrf_request  # noqa: E402
 
     _app = Flask(__name__)
     _app.request_class = OpenCutRequest
@@ -398,6 +398,10 @@ def create_app(config=None):
 
     except Exception as _auth_exc:  # noqa: BLE001
         logger.warning("auth middleware install failed: %s", _auth_exc)
+
+    @_app.before_request
+    def _enforce_csrf_token():  # noqa: D401 - tiny middleware
+        return validate_csrf_request()
 
     @_app.errorhandler(413)
     def handle_large_request(e):

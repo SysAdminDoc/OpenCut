@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — No structural guarantee that every mutating route carries @require_csrf
-  Why: CSRF is per-route across ~107 blueprints; today coverage is 100% but nothing enforces it for new routes. Add a startup assertion or test that every POST/PUT/PATCH/DELETE view is wrapped, or move to a before_request gate with an exempt list.
-  Where: opencut/security.py:131-146, opencut/routes/__init__.py
-
 - [ ] P2 — Remaining unbounded numeric inputs can OOM the render path
   Why: kinetic-text and delivery-master accept width/height/font_size/resolution with no max (e.g. width=999999999 reaches PIL/FFmpeg allocation); sibling routes in the same files clamp correctly.
   Where: opencut/routes/color_mam_routes.py:741-743, 759-761, 842-843, 879-880, 905-906, 937-938; opencut/routes/delivery_master_routes.py:139-140
