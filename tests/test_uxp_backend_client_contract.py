@@ -160,6 +160,23 @@ def test_job_cancel_clears_button_loading_state():
     )
 
 
+def test_job_poller_rejects_concurrent_jobs_and_locks_job_buttons():
+    text = _read_main_js()
+    assert "function hasActiveJob()" in text
+    assert "_jobStartInFlight" in text
+    assert 'button[id^="run"]' in text
+    assert "function setJobActionsLocked(locked)" in text
+    assert "setJobActionsLocked(true);" in text
+    assert "setJobActionsLocked(false);" in text
+    assert "Another OpenCut job is already running." in text
+    assert re.search(r"async function start\(.*?if \(hasActiveJob\(\)\)", text, re.S), (
+        "JobPoller.start() must reject a second job before posting"
+    )
+    assert re.search(r"function poll\(jobId\).*?if \(hasActiveJob\(\)\)", text, re.S), (
+        "JobPoller.poll() must reject a second tracked job"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Server-side contract — exercise the routes the UXP panel calls
 # ---------------------------------------------------------------------------
