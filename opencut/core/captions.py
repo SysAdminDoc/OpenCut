@@ -590,12 +590,12 @@ def transcribe(
                 logger.warning("Transcript cache write failed for %s: %s", filepath, exc)
         return result
     finally:
-        # Cleanup temp wav
         if os.path.exists(wav_path) and wav_path.startswith(tempfile.gettempdir()):
             try:
                 os.unlink(wav_path)
-            except Exception:
-                pass
+            except OSError:
+                from opencut.helpers import _schedule_temp_cleanup
+                _schedule_temp_cleanup(wav_path)
 
 
 def transcribe_audio(
