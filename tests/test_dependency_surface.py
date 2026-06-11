@@ -135,6 +135,26 @@ def test_optional_dependency_security_floor_pins():
     assert torch_stack["torchvision"] == "torchvision>=0.21"
     assert torch_stack["transformers"] == "transformers>=4.30"
 
+    depth = _dep_names(extras["depth"])
+    assert depth["transformers"] == "transformers>=5.3"
+
+
+def test_transformers_floor_exception_is_confined_to_torch_stack():
+    extras = _pyproject()["project"]["optional-dependencies"]
+    transformers_specs = {
+        extra: _dep_names(requirements).get("transformers")
+        for extra, requirements in extras.items()
+    }
+
+    assert transformers_specs["torch-stack"] == "transformers>=4.30"
+    assert transformers_specs["depth"] == "transformers>=5.3"
+    assert {
+        extra: spec
+        for extra, spec in transformers_specs.items()
+        if spec and extra not in {"depth", "torch-stack"}
+    } == {}
+    assert "transformers" not in _dep_names(extras["all"])
+
 
 def test_requirements_txt_matches_security_floor():
     text = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
