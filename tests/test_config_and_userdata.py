@@ -2,6 +2,7 @@ import ast
 import importlib
 import json
 import os
+import types
 from pathlib import Path
 from unittest.mock import patch
 
@@ -277,3 +278,40 @@ def test_server_loopback_host_detection_accepts_only_local_addresses():
     assert server._is_loopback_host("::1")
     assert not server._is_loopback_host("0.0.0.0")
     assert not server._is_loopback_host("192.168.1.25")
+
+
+def test_server_uses_production_wsgi_for_remote_non_debug():
+    import opencut.server as server
+
+    assert server._should_use_production_wsgi(host="0.0.0.0", debug=False)
+    assert not server._should_use_production_wsgi(host="0.0.0.0", debug=True)
+    assert not server._should_use_production_wsgi(host="127.0.0.1", debug=False)
+
+
+def test_remote_wsgi_server_invokes_waitress(monkeypatch):
+    import opencut.server as server
+
+    calls = []
+    waitress = types.ModuleType("waitress")
+    waitress.serve = lambda app, **kwargs: calls.append((app, kwargs))
+    monkeypatch.setitem(server.sys.modules, "waitress", waitress)
+    monkeypatch.setenv("OPENCUT_WAITRESS_THREADS", "12")
+
+    app = object()
+    server._serve_wsgi_app(app, host="0.0.0.0", port=5679, debug=False)
+
+    assert calls == [(app, {"host": "0.0.0.0", "port": 5679, "threads": 12})]
+
+
+def test_loopback_wsgi_server_uses_flask_dev_server():
+    import opencut.server as server
+
+    calls = []
+
+    class FakeApp:
+        def run(self, **kwargs):
+            calls.append(kwargs)
+
+    server._serve_wsgi_app(FakeApp(), host="127.0.0.1", port=5679, debug=False)
+
+    assert calls == [{"host": "127.0.0.1", "port": 5679, "debug": False, "threaded": True}]

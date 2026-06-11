@@ -642,7 +642,33 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     # when launched via VBS hidden launcher where console is invisible)
     _show_startup_notification(effective_port)
 
-    _get_app().run(host=host, port=effective_port, debug=debug, threaded=True)
+    _serve_wsgi_app(_get_app(), host=host, port=effective_port, debug=debug)
+
+
+def _serve_wsgi_app(app, *, host: str, port: int, debug: bool) -> None:
+    """Serve the Flask app with a production WSGI server for remote binds."""
+    if _should_use_production_wsgi(host=host, debug=debug):
+        from waitress import serve
+
+        threads = _waitress_thread_count()
+        logger.info("Serving remote OpenCut API with Waitress (threads=%s)", threads)
+        serve(app, host=host, port=port, threads=threads)
+        return
+
+    app.run(host=host, port=port, debug=debug, threaded=True)
+
+
+def _should_use_production_wsgi(*, host: str, debug: bool) -> bool:
+    return not debug and not _is_loopback_host(host)
+
+
+def _waitress_thread_count() -> int:
+    raw = os.environ.get("OPENCUT_WAITRESS_THREADS", "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 8
+    return max(1, min(value, 64))
 
 
 def download_models(model_size="base"):
