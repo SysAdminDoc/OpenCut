@@ -579,7 +579,7 @@ pause
 #define MyAppName "OpenCut"
 #define MyAppVersion "0.6.5"
 #define MyAppPublisher "OpenCut"
-#define MyAppURL "https://github.com/opencut"
+#define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}

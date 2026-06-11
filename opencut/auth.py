@@ -71,6 +71,22 @@ class AuthToken:
         return {"token": self.token, "issued_at": self.issued_at, "label": self.label}
 
 
+def _restrict_windows_acl(path: Path) -> None:
+    """Restrict file to current user only via icacls (best-effort)."""
+    import subprocess as _sp
+    try:
+        target = str(path)
+        username = os.environ.get("USERNAME", "")
+        if not username:
+            return
+        _sp.run(
+            ["icacls", target, "/inheritance:r", "/grant:r", f"{username}:(R,W)"],
+            capture_output=True, timeout=10,
+        )
+    except Exception as exc:
+        logger.warning("opencut.auth: could not restrict ACL on %s: %s", path, exc)
+
+
 def _atomic_write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix="auth_", suffix=".json")
@@ -83,6 +99,8 @@ def _atomic_write(path: Path, payload: dict) -> None:
             except OSError as exc:  # pragma: no cover - filesystem oddity
                 logger.warning("opencut.auth: could not chmod %s: %s", tmp_name, exc)
         os.replace(tmp_name, path)
+        if os.name == "nt":
+            _restrict_windows_acl(path)
     except Exception:
         try:
             os.unlink(tmp_name)

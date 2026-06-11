@@ -186,6 +186,10 @@ def _detect_silence_regions(
                     "end": total_duration,
                     "duration": total_duration - start,
                 })
+    except _sp.TimeoutExpired:
+        raise RuntimeError(f"Silence detection timed out for {file_path}")
+    except _sp.SubprocessError as exc:
+        raise RuntimeError(f"Silence detection failed for {file_path}: {exc}") from exc
     except Exception as exc:
         logger.debug("Silence detection failed for %s: %s", file_path, exc)
 
@@ -244,6 +248,10 @@ def _detect_scene_changes(
         # Parse pts_time from showinfo output
         times = re.findall(r"pts_time:\s*([\d.]+)", stderr)
         timestamps = [float(t) for t in times[:max_scenes]]
+    except _sp.TimeoutExpired:
+        raise RuntimeError(f"Scene detection timed out for {file_path}")
+    except _sp.SubprocessError as exc:
+        raise RuntimeError(f"Scene detection failed for {file_path}: {exc}") from exc
     except Exception as exc:
         logger.debug("Scene detection failed for %s: %s", file_path, exc)
 

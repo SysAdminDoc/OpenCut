@@ -28,6 +28,7 @@ from opencut.security import (
     safe_bool,
     safe_float,
     safe_int,
+    validate_filepath,
     validate_output_path,
     validate_path,
 )
@@ -62,6 +63,7 @@ def split_screen_create(job_id, filepath, data):
     video_paths = data.get("video_paths", [])
     if not video_paths:
         raise ValueError("video_paths is required (list of file paths)")
+    video_paths = [validate_filepath(p) for p in video_paths]
 
     layout_name = data.get("layout", "side_by_side")
     custom_layout = data.get("custom_layout")
@@ -114,6 +116,8 @@ def reaction_create(job_id, filepath, data):
     reaction_path = data.get("reaction_path", "")
     if not content_path or not reaction_path:
         raise ValueError("content_path and reaction_path are required")
+    content_path = validate_filepath(content_path)
+    reaction_path = validate_filepath(reaction_path)
 
     preset_name = data.get("preset", "corner_pip")
     output_width = safe_int(data.get("width", 1920), 1920, min_val=320, max_val=7680)

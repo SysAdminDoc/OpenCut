@@ -45,7 +45,7 @@ BANNER = r"""
 
 def print_banner():
     console.print(Panel(
-        BANNER + "  Open Source Video Editing Automation\n  github.com/opencut",
+        BANNER + "  Open Source Video Editing Automation\n  github.com/SysAdminDoc/OpenCut",
         style="bold cyan",
         box=box.ROUNDED,
         padding=(0, 2),
@@ -1046,7 +1046,7 @@ def loudness_match(files, target_lufs, output_dir):
     ) as progress:
         task = progress.add_task(f"Normalizing {len(files)} file(s)...", total=None)
         start_time = time.time()
-        results = batch_loudness_match(list(files), output_dir=output_dir or os.path.dirname(files[0]), target_lufs=target_lufs)
+        results = batch_loudness_match(list(files), output_dir=output_dir or os.path.dirname(os.path.abspath(files[0])), target_lufs=target_lufs)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Normalization complete ({elapsed:.1f}s)")
         progress.stop()
@@ -1110,10 +1110,12 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
         console.print("[bold]Applying zoom to video...[/bold]")
         # Build zoompan filter — simplified: use first keyframe zoom for now
         zoom_val = keyframes[0].get("zoom", zoom_amount) if keyframes else zoom_amount
+        w = info.get("width", 1920)
+        h = info.get("height", 1080)
         run_ffmpeg([
             get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", file,
-            "-vf", f"zoompan=z={zoom_val}:d=1:s={info['width']}x{info['height']}:fps={fps}",
+            "-vf", f"zoompan=z={zoom_val}:d=1:s={w}x{h}:fps={fps}",
             "-c:a", "copy", output_path,
         ])
         console.print(f"\n[green bold]Saved:[/green bold] {output_path}\n")

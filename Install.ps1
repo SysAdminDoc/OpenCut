@@ -381,8 +381,14 @@ Write-Header "Step 4/7: Python Dependencies"
 
 Write-Step "Installing core dependencies..."
 & $pythonCmd -m pip install --upgrade pip --quiet 2>$null
-& $pythonCmd -m pip install click rich flask flask-cors --quiet 2>&1 | Out-Null
-Write-Ok "Core packages installed (click, rich, flask, flask-cors)"
+$reqFile = Join-Path $script:InstallDir "requirements.txt"
+if (Test-Path $reqFile) {
+    & $pythonCmd -m pip install -r $reqFile --quiet 2>&1 | Out-Null
+    Write-Ok "Core packages installed from requirements.txt"
+} else {
+    & $pythonCmd -m pip install click rich flask flask-cors --quiet 2>&1 | Out-Null
+    Write-Ok "Core packages installed (click, rich, flask, flask-cors)"
+}
 
 # Install OpenCut package
 Write-Step "Installing OpenCut package..."

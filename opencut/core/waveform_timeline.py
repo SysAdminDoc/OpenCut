@@ -5,12 +5,12 @@ Generate waveform data arrays and images from audio for frontend
 timeline rendering and visualization.
 """
 
+import array
 import logging
 import os
-import struct
 import subprocess
 import tempfile
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from opencut.helpers import FFmpegCmd, get_ffmpeg_path, run_ffmpeg
 
@@ -36,10 +36,11 @@ def _extract_pcm(audio_path: str, sample_rate: int = 8000) -> Tuple[bytes, int]:
     return result.stdout, sample_rate
 
 
-def _pcm_to_samples(pcm_data: bytes) -> List[int]:
-    """Convert raw PCM bytes (16-bit signed LE) to sample list."""
-    n_samples = len(pcm_data) // 2
-    return list(struct.unpack(f"<{n_samples}h", pcm_data[:n_samples * 2]))
+def _pcm_to_samples(pcm_data: bytes) -> array.array:
+    """Convert raw PCM bytes (16-bit signed LE) to sample array."""
+    samples = array.array("h")
+    samples.frombytes(pcm_data[:len(pcm_data) // 2 * 2])
+    return samples
 
 
 # ------------------------------------------------------------------
