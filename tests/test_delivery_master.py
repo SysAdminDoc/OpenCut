@@ -30,7 +30,7 @@ import json
 import tempfile
 import shutil
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -257,6 +257,14 @@ class TestIMFConfig(unittest.TestCase):
         self.assertEqual(c.width, 1920)
         self.assertEqual(c.height, 1080)
         self.assertFalse(c.supplemental)
+
+    def test_route_dimension_helpers_clamp_to_supported_imf_bounds(self):
+        from opencut.routes.delivery_master_routes import _safe_imf_height, _safe_imf_width
+
+        self.assertEqual(_safe_imf_width({"width": 999999999}), 4096)
+        self.assertEqual(_safe_imf_height({"height": 999999999}), 2160)
+        self.assertEqual(_safe_imf_width({"width": 1}), 64)
+        self.assertEqual(_safe_imf_height({"height": 1}), 64)
 
     def test_to_dict(self):
         from opencut.core.imf_package import IMFConfig

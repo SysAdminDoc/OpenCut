@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — Remaining unbounded numeric inputs can OOM the render path
-  Why: kinetic-text and delivery-master accept width/height/font_size/resolution with no max (e.g. width=999999999 reaches PIL/FFmpeg allocation); sibling routes in the same files clamp correctly.
-  Where: opencut/routes/color_mam_routes.py:741-743, 759-761, 842-843, 879-880, 905-906, 937-938; opencut/routes/delivery_master_routes.py:139-140
-
 - [ ] P2 — Auth middleware install failure is swallowed (fail-open)
   Why: if opencut.auth raises at app-build time the before_request token gate is silently skipped; should be fatal when OPENCUT_ALLOW_REMOTE=1.
   Where: opencut/server.py:372-400

@@ -27,6 +27,13 @@ logger = logging.getLogger("opencut")
 
 color_mam_bp = Blueprint("color_mam", __name__)
 
+_RENDER_MIN_WIDTH = 100
+_RENDER_MIN_HEIGHT = 100
+_RENDER_MAX_WIDTH = 7680
+_RENDER_MAX_HEIGHT = 4320
+_RENDER_MIN_FONT_SIZE = 8
+_RENDER_MAX_FONT_SIZE = 500
+
 
 def _validated_output(data):
     """Path-validate a user-supplied output_path (None when absent).
@@ -36,6 +43,42 @@ def _validated_output(data):
     """
     op = data.get("output_path")
     return validate_output_path(op) if op else None
+
+
+def _safe_render_width(data, default=1920):
+    return safe_int(
+        data.get("width", default),
+        default,
+        min_val=_RENDER_MIN_WIDTH,
+        max_val=_RENDER_MAX_WIDTH,
+    )
+
+
+def _safe_render_height(data, default=1080):
+    return safe_int(
+        data.get("height", default),
+        default,
+        min_val=_RENDER_MIN_HEIGHT,
+        max_val=_RENDER_MAX_HEIGHT,
+    )
+
+
+def _safe_render_font_size(data, default=64):
+    return safe_int(
+        data.get("font_size", default),
+        default,
+        min_val=_RENDER_MIN_FONT_SIZE,
+        max_val=_RENDER_MAX_FONT_SIZE,
+    )
+
+
+def _safe_render_resolution(value, default=(1920, 1080)):
+    if not isinstance(value, (list, tuple)) or len(value) < 2:
+        return default
+    return (
+        safe_int(value[0], default[0], min_val=_RENDER_MIN_WIDTH, max_val=_RENDER_MAX_WIDTH),
+        safe_int(value[1], default[1], min_val=_RENDER_MIN_HEIGHT, max_val=_RENDER_MAX_HEIGHT),
+    )
 
 
 # ===================================================================
@@ -695,8 +738,8 @@ def kinetic_text_animate(job_id, filepath, data):
 
     preset = data.get("preset", data.get("animation_preset", "fade_in"))
     duration = safe_float(data.get("duration", 3), 3, min_val=0.1, max_val=60)
-    width = safe_int(data.get("width", 1920), 1920, min_val=100, max_val=7680)
-    height = safe_int(data.get("height", 1080), 1080, min_val=100, max_val=4320)
+    width = _safe_render_width(data)
+    height = _safe_render_height(data)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -709,7 +752,7 @@ def kinetic_text_animate(job_id, filepath, data):
         output_dir=data.get("output_dir", ""),
         width=width,
         height=height,
-        font_size=safe_int(data.get("font_size", 64), 64, min_val=8, max_val=500),
+        font_size=_safe_render_font_size(data),
         font_color=data.get("font_color", "white"),
         background_color=data.get("background_color", "black"),
         on_progress=_progress,
@@ -748,9 +791,9 @@ def kinetic_text_custom(job_id, filepath, data):
         duration=duration,
         output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
-        width=safe_int(data.get("width", 1920), 1920),
-        height=safe_int(data.get("height", 1080), 1080),
-        font_size=safe_int(data.get("font_size", 64), 64),
+        width=_safe_render_width(data),
+        height=_safe_render_height(data),
+        font_size=_safe_render_font_size(data),
         font_color=data.get("font_color", "white"),
         background_color=data.get("background_color", "black"),
         on_progress=_progress,
@@ -766,9 +809,7 @@ def kinetic_text_render(job_id, filepath, data):
     from opencut.core.kinetic_type import render_kinetic_text
 
     animation_data = data.get("animation_data", data)
-    resolution = data.get("resolution", [1920, 1080])
-    if isinstance(resolution, list):
-        resolution = tuple(resolution)
+    resolution = _safe_render_resolution(data.get("resolution", [1920, 1080]))
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -849,9 +890,9 @@ def data_animation_counter(job_id, filepath, data):
         duration=safe_float(data.get("duration", 3), 3, min_val=0.1, max_val=60),
         output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
-        width=safe_int(data.get("width", 1920), 1920),
-        height=safe_int(data.get("height", 1080), 1080),
-        font_size=safe_int(data.get("font_size", 96), 96),
+        width=_safe_render_width(data),
+        height=_safe_render_height(data),
+        font_size=_safe_render_font_size(data, default=96),
         font_color=data.get("font_color", "white"),
         background_color=data.get("background_color", "black"),
         title=data.get("title", ""),
@@ -886,8 +927,8 @@ def shape_animation_morph(job_id, filepath, data):
         duration=duration,
         output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
-        width=safe_int(data.get("width", 1920), 1920),
-        height=safe_int(data.get("height", 1080), 1080),
+        width=_safe_render_width(data),
+        height=_safe_render_height(data),
         background_color=data.get("background_color", "black"),
         easing=data.get("easing", "ease_in_out"),
         on_progress=_progress,
@@ -912,8 +953,8 @@ def shape_animation_stroke_draw(job_id, filepath, data):
         duration=duration,
         output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
-        width=safe_int(data.get("width", 1920), 1920),
-        height=safe_int(data.get("height", 1080), 1080),
+        width=_safe_render_width(data),
+        height=_safe_render_height(data),
         background_color=data.get("background_color", "black"),
         stroke_color=data.get("stroke_color", "white"),
         stroke_width=safe_int(data.get("stroke_width", 3), 3),
@@ -944,8 +985,8 @@ def shape_animation_fill_transition(job_id, filepath, data):
         duration=duration,
         output_path=_validated_output(data),
         output_dir=data.get("output_dir", ""),
-        width=safe_int(data.get("width", 1920), 1920),
-        height=safe_int(data.get("height", 1080), 1080),
+        width=_safe_render_width(data),
+        height=_safe_render_height(data),
         background_color=data.get("background_color", "black"),
         on_progress=_progress,
     )
