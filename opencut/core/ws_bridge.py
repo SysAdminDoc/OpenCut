@@ -163,14 +163,18 @@ class WebSocketBridge:
                 loop.close()
 
         except ImportError:
+            self._running = False
             logger.warning(
                 "websockets package not installed. WebSocket bridge disabled.\n"
                 "Install with: pip install websockets"
             )
         except OSError as e:
+            self._running = False
             logger.error("WebSocket bridge failed to start: %s", e)
         except Exception as e:
-            if self._running:
+            was_running = self._running
+            self._running = False
+            if was_running:
                 logger.error("WebSocket bridge error: %s", e)
 
     async def _handle_message(self, client: WSClient, raw: str):
