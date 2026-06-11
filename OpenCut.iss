@@ -85,20 +85,24 @@ Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "Inst
 ; through 18 (PPro 2025+) so modern Premiere installs (CSXS 13+) actually
 ; load the panel — the previous 7-12 range silently dropped support for
 ; CC 2023+ users.
-Root: HKCU; Subkey: "Software\Adobe\CSXS.7";  ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.8";  ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.9";  ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.10"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.11"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.12"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.13"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.14"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.15"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.16"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.17"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
-Root: HKCU; Subkey: "Software\Adobe\CSXS.18"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist; Tasks: installextension
+; PlayerDebugMode keys are written via [Run] with runasoriginaluser so
+; they land in the invoking user's hive, not the elevated admin's.
+; (PrivilegesRequired=admin causes HKCU to resolve to the wrong user.)
 
 [Run]
+; Enable CEP PlayerDebugMode in the invoking user's HKCU (not the elevated admin)
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.7""  /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.8""  /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.9""  /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.10"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.11"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.12"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.13"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.14"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.15"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.16"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.17"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
+Filename: "reg.exe"; Parameters: "add ""HKCU\Software\Adobe\CSXS.18"" /v PlayerDebugMode /t REG_SZ /d 1 /f"; Flags: runasoriginaluser runhidden; Tasks: installextension
 ; Download Whisper model (runs with visible console so user can see progress)
 Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models tiny"; StatusMsg: "Downloading Whisper AI model (tiny)..."; Flags: runasoriginaluser; Tasks: downloadmodel\tiny
 Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models base"; StatusMsg: "Downloading Whisper AI model (base)..."; Flags: runasoriginaluser; Tasks: downloadmodel\base
