@@ -202,13 +202,13 @@ def _setup_system_site_packages():
     logger.debug("  System Python not found — optional deps from pip unavailable")
 
 
-# Ensure ~/.opencut/packages (pip --target fallback) is importable EARLY —
-# this is the primary writable install directory for non-admin users
+# Ensure ~/.opencut/packages (pip --target fallback) is importable EARLY as a
+# low-priority fallback. It must not outrank stdlib or bundled app modules.
 _opencut_packages = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
 os.makedirs(_opencut_packages, exist_ok=True)
 if _opencut_packages not in sys.path:
-    sys.path.insert(0, _opencut_packages)
-    logger.info("  Added ~/.opencut/packages to sys.path (priority)")
+    sys.path.append(_opencut_packages)
+    logger.info("  Added ~/.opencut/packages to sys.path (fallback)")
 
 _setup_system_site_packages()
 
