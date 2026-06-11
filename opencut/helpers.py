@@ -811,7 +811,7 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
         logger.debug("[%s] FFmpeg progress cmd: %s", job_id,
                      " ".join(str(c) for c in full_cmd))
     proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True,
-                     **env_kwargs)
+                     encoding="utf-8", errors="replace", **env_kwargs)
     _register_job_process(job_id, proc)
 
     stderr_lines = []

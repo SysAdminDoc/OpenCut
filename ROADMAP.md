@@ -27,10 +27,6 @@ history, not here.
   Why: RealESRGANer(model_path=None) crashes in __init__ on every released package, and no pretrained weights are ever resolved; model_name is ignored. Resolve the weight file/URL and pass it.
   Where: opencut/core/upscale_pro.py:122-126
 
-- [ ] P2 — helpers progress-runner pipes decode with the platform codec
-  Why: helpers.py's _run_ffmpeg_with_progress Popen uses text=True without encoding=; UTF-8 filenames in FFmpeg output raise UnicodeDecodeError in the drain on cp1252 and can stall the loop (video_core's copy of this pattern is already fixed — port the same encoding="utf-8", errors="replace" here).
-  Where: opencut/helpers.py:~733 (also audit other text=True Popen sites in core/)
-
 - [ ] P2 — speed_up_silences treats MP3s with cover art as video
   Why: probe() falls back to the attached_pic stream so has_video is true for podcast MP3s; the video trim/concat chain then fails on a single-frame stream. Expose attached_pic / has_real_video and branch on it.
   Where: opencut/core/silence.py:591-593, opencut/utils/media.py:235-248
