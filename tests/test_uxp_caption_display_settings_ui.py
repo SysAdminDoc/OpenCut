@@ -127,6 +127,27 @@ class TestCaptionDisplaySettingsJs(unittest.TestCase):
             "Reset button is not wired to resetDefaults",
         )
 
+    def test_backend_client_wrapper_is_unwrapped_for_schema_and_preview(self):
+        block = self.js.split("function initCaptionDisplaySettingsCard()", 1)[1]
+        block = block.split("// Wire buttons.", 1)[0]
+
+        self.assertIn("const responseData = (response) => response?.data ?? response ?? {};", block)
+        self.assertRegex(
+            block,
+            r'const resp = await BackendClient\.post\("/captions/display-settings/preview"[\s\S]*?'
+            r"const data = responseData\(resp\);[\s\S]*?applyPreviewStyles\(data\);",
+            "Preview response must unwrap BackendClient {ok,data,status} before applying CSS",
+        )
+        self.assertRegex(
+            block,
+            r'const resp = await BackendClient\.get\("/captions/display-settings/tokens"\);[\s\S]*?'
+            r"const data = responseData\(resp\);[\s\S]*?populateSelects\(data\);",
+            "Token schema response must unwrap BackendClient {ok,data,status} before populating selects",
+        )
+        self.assertNotIn("applyPreviewStyles(resp);", block)
+        self.assertNotIn("populateSelects(resp);", block)
+        self.assertNotIn("populateSelects(schema);", block)
+
 
 class TestCaptionDisplaySettingsCss(unittest.TestCase):
     @classmethod
