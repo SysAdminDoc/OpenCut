@@ -35,6 +35,8 @@ record also lives in the git commit messages.
   `X-OpenCut-Auth` token before serving health, tool-list, or JSON-RPC calls.
 - Opt-in generated MCP route tools now run the same fail-fast path validation
   as curated tools, including nested `query` and `body` path fields.
+- Remote HTTP startup now fails closed when `OPENCUT_ALLOW_REMOTE=1` is set but
+  the auth-token middleware cannot be installed.
 - Every mutating Flask request now passes through a global CSRF gate, so new
   POST/PUT/PATCH/DELETE routes stay protected even if a handler omits the
   per-route decorator.

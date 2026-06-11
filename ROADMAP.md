@@ -19,10 +19,6 @@ history, not here.
 
 ## P2 — Security / hardening
 
-- [ ] P2 — Auth middleware install failure is swallowed (fail-open)
-  Why: if opencut.auth raises at app-build time the before_request token gate is silently skipped; should be fatal when OPENCUT_ALLOW_REMOTE=1.
-  Where: opencut/server.py:372-400
-
 ## P2 — Correctness / reliability
 
 - [ ] P2 — UXP: second concurrent job clobbers the single global job tracker

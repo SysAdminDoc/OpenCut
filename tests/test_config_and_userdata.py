@@ -6,6 +6,8 @@ import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from tests.conftest import csrf_headers
 
 
@@ -288,6 +290,20 @@ def test_server_main_rejects_remote_bind_without_opt_in(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "Refusing to bind OpenCut to a non-loopback host" in out
     assert "OPENCUT_ALLOW_REMOTE=1" in out
+
+
+def test_create_app_fails_closed_when_remote_auth_gate_cannot_install(monkeypatch):
+    from opencut.config import OpenCutConfig
+    import opencut.server as server
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("auth import failed")
+
+    monkeypatch.setenv("OPENCUT_ALLOW_REMOTE", "1")
+    monkeypatch.setattr(server, "_install_remote_auth_middleware", _boom)
+
+    with pytest.raises(RuntimeError, match="Remote auth middleware install failed"):
+        server.create_app(config=OpenCutConfig())
 
 
 def test_server_main_allows_remote_bind_with_explicit_opt_in(monkeypatch, capsys):

@@ -370,33 +370,13 @@ def create_app(config=None):
     # only fires when ``OPENCUT_ALLOW_REMOTE=1`` is set AND the request
     # peer is non-loopback — local panel/CLI traffic stays trusted.
     try:
-        from opencut import auth as _auth
-
-        _AUTH_EXEMPT_PATHS = frozenset({"/health", "/auth/info"})
-
-        @_app.before_request
-        def _enforce_remote_auth_token():  # noqa: D401 - tiny middleware
-            if request.path in _AUTH_EXEMPT_PATHS:
-                return None
-            if not _auth.request_requires_auth_token(request.remote_addr):
-                return None
-            token = _auth.extract_request_token(request.headers, request.args)
-            if _auth.is_token_valid(token):
-                return None
-            from opencut.security_audit import record_auth_token_rejection
-            record_auth_token_rejection()
-            return _error_response(
-                "AUTH_REQUIRED",
-                "Missing or invalid X-OpenCut-Auth token",
-                status=401,
-                suggestion=(
-                    "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
-                    "~/.opencut/auth.json or rotate it via "
-                    "`opencut-server --rotate-auth`."
-                ),
-            )
+        _install_remote_auth_middleware(_app, _error_response)
 
     except Exception as _auth_exc:  # noqa: BLE001
+        if _remote_bind_allowed():
+            raise RuntimeError(
+                "Remote auth middleware install failed while OPENCUT_ALLOW_REMOTE=1"
+            ) from _auth_exc
         logger.warning("auth middleware install failed: %s", _auth_exc)
 
     @_app.before_request
@@ -664,6 +644,34 @@ def _serve_wsgi_app(app, *, host: str, port: int, debug: bool) -> None:
 
 def _should_use_production_wsgi(*, host: str, debug: bool) -> bool:
     return not debug and not _is_loopback_host(host)
+
+
+def _install_remote_auth_middleware(app, error_response):
+    from opencut import auth as _auth
+
+    auth_exempt_paths = frozenset({"/health", "/auth/info"})
+
+    @app.before_request
+    def _enforce_remote_auth_token():  # noqa: D401 - tiny middleware
+        if request.path in auth_exempt_paths:
+            return None
+        if not _auth.request_requires_auth_token(request.remote_addr):
+            return None
+        token = _auth.extract_request_token(request.headers, request.args)
+        if _auth.is_token_valid(token):
+            return None
+        from opencut.security_audit import record_auth_token_rejection
+        record_auth_token_rejection()
+        return error_response(
+            "AUTH_REQUIRED",
+            "Missing or invalid X-OpenCut-Auth token",
+            status=401,
+            suggestion=(
+                "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
+                "~/.opencut/auth.json or rotate it via "
+                "`opencut-server --rotate-auth`."
+            ),
+        )
 
 
 def _waitress_thread_count() -> int:
