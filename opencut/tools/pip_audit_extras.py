@@ -72,6 +72,18 @@ ALLOWED_ADVISORIES: dict[str, AllowedAdvisory] = {
             "convenience extra can resolve away from the Torch 2.8 stack."
         ),
     ),
+    "CVE-2026-4372": AllowedAdvisory(
+        package="transformers",
+        aliases=(),
+        reason=(
+            "Transformers 5.3+ is required for standalone OpenCut model-loading "
+            "extras, but the explicit WhisperX torch-stack lane cannot resolve "
+            "that floor until WhisperX supports huggingface-hub>=1. The audited "
+            "pyproject[all] lane excludes Torch/Transformers-backed stacks, so "
+            "this waiver is confined to users who intentionally opt into "
+            "opencut[torch-stack]."
+        ),
+    ),
 }
 
 

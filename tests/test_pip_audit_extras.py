@@ -281,6 +281,11 @@ def test_run_audits_allows_documented_optional_dependency_advisories(monkeypatch
                             "id": "CVE-2026-1839",
                             "aliases": ["GHSA-69w3-r845-3855"],
                             "fix_versions": ["5.0.0rc3"],
+                        },
+                        {
+                            "id": "CVE-2026-4372",
+                            "aliases": [],
+                            "fix_versions": ["5.3.0"],
                         }
                     ],
                 },
@@ -295,14 +300,23 @@ def test_run_audits_allows_documented_optional_dependency_advisories(monkeypatch
     target_result = result["targets"][0]
 
     assert result["status"] == "ok"
-    assert result["vulnerability_count"] == 2
-    assert result["allowed_vulnerability_count"] == 2
+    assert result["vulnerability_count"] == 3
+    assert result["allowed_vulnerability_count"] == 3
     assert result["unallowed_vulnerability_count"] == 0
     assert target_result["status"] == "ok"
     assert all(vulnerability["allowed"] for vulnerability in target_result["vulnerabilities"])
     assert {vulnerability["waiver"]["docs"] for vulnerability in target_result["vulnerabilities"]} == {
         "docs/PYTHON_ADVISORIES.md"
     }
+
+
+def test_transformers_config_injection_waiver_is_torch_stack_scoped():
+    advisory = pip_audit_extras.ALLOWED_ADVISORIES["CVE-2026-4372"]
+
+    assert advisory.package == "transformers"
+    assert advisory.docs == "docs/PYTHON_ADVISORIES.md"
+    assert "opencut[torch-stack]" in advisory.reason
+    assert "pyproject[all]" in advisory.reason
 
 
 def test_run_audits_fails_unlisted_advisories(monkeypatch):

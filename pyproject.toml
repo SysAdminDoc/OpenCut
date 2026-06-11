@@ -130,7 +130,9 @@ tts = [
 depth = [
     "torch>=2.6",
     "torchvision>=0.21",
-    "transformers>=4.30",
+    # Standalone depth/model-loading features can take the current
+    # Transformers security floor because they are not coupled to WhisperX.
+    "transformers>=5.3",
 ]
 torch-stack = [
     # RA-15 - keep Torch/Transformers-backed feature stacks out of the
@@ -145,6 +147,9 @@ torch-stack = [
     "transnetv2-pytorch>=1.0.5,<2",
     "torch>=2.6",
     "torchvision>=0.21",
+    # WhisperX 3.8.x requires huggingface-hub<1, while Transformers 5.x
+    # requires huggingface-hub>=1.x. Keep this lane explicit and audit-gated
+    # until WhisperX supports the Transformers 5 dependency stack.
     "transformers>=4.30",
 ]
 all = [
