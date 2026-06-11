@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## [Unreleased] — Hardening & quality pass
+## [1.33.0] — 2026-06-11 — June hardening & quality pass
 
 ### Fixed — Docker/runtime
 
@@ -175,3 +175,66 @@ record also lives in the git commit messages.
   real video streams, so audio-only files stay on the audio concat path.
 - Waveform image uses a unique temp name instead of `waveform_<pid>.png`,
   which collided across requests in the long-lived server.
+- `waveform_timeline` uses `array.array` instead of Python list for PCM
+  samples (~8x less memory for long audio files).
+- `smart_trim` now surfaces subprocess timeout/errors instead of silently
+  returning an empty result as "no speech detected".
+- Export cancel now calls `proc.wait()` after killing FFmpeg before
+  unlinking the partial output file, preventing silent failure on Windows.
+- `preview_frame` checks FFmpeg return code and output file size before
+  returning success.
+- Captions temp WAV cleanup uses `_schedule_temp_cleanup` when immediate
+  unlink fails from a timed-out Whisper thread on Windows.
+- auth.json now applies a restrictive DACL via `icacls` on Windows (was
+  POSIX-only chmod).
+- Multiview/repurpose routes now validate secondary file paths
+  (`video_paths`, `content_path`, `reaction_path`) before forwarding to core.
+- Installers prefer `requirements.txt`/`requirements-lock.txt` over loose
+  pip specs in fallback paths.
+- CLI `loudness-match` resolves bare filenames to absolute paths before
+  passing output_dir.
+- CLI `auto-zoom` uses `.get()` for width/height to avoid KeyError.
+- Fixed placeholder `github.com/opencut` URLs in CLI banner and
+  InstallerBuilder.
+
+### Fixed — CEP panel
+
+- Job history dedupe now compares by `job_id` (or `type+createdAt`
+  fallback) instead of `(type, status)`.
+- NLP auto-execute raised confidence threshold to 0.8 with a confirm step.
+- `body.job-active` UI lock now sets `inert` on main content for keyboard
+  and AT users (was pointer-events-only).
+- `showAlert()` accepts an explicit tone parameter, bypassing English-only
+  regex inference for non-English locales.
+- Time estimate reads numeric clip duration from state instead of parsing
+  rendered DOM text.
+- Command palette section labels ("Recent", "Favorites", etc.) are now
+  i18n-configurable via `sectionLabels` on the palette context.
+- Language dropdown reduced to only `en` (the only shipped locale).
+
+### Fixed — UXP panel
+
+- Await precedence fix: `(await getOutPoint?.())?.seconds` instead of
+  `await getOutPoint?.()?.seconds`.
+- `addMarkers` now awaits `getFirstMarkerAtTime` so names/colors apply.
+- Enter key handlers guarded with `hasActiveJob()` to prevent duplicate
+  submissions.
+- 10 handlers changed `else` to `else if (!r.ok)` so ok-without-job_id
+  synchronous responses aren't reported as failures.
+- `udt-smoke.js` gated behind `localStorage opencut_debug=1`.
+- `postMessage` targetOrigin restricted from `"*"` to `location.origin`.
+- `cep_node.exec` passthrough blocked in the WebView shim.
+
+### Fixed — Installer
+
+- Inno Setup PlayerDebugMode registry writes use `runasoriginaluser` via
+  `reg.exe` so keys land in the invoking user's HKCU, not the admin's.
+- VBS launcher uses `WshShell.Environment` instead of `cmd /c` string
+  concatenation, preventing injection from paths containing `&` or `^`.
+
+### Changed
+
+- Background sweep threads (temp cleanup, disk monitor) are skipped during
+  test runs via `create_app(testing=True)`.
+- README: added June 2026 cost comparison table vs CapCut Pro, Submagic,
+  AutoCut, and FireCut.
