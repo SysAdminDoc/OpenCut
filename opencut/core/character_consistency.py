@@ -538,7 +538,7 @@ def _generate_with_ip_adapter(
         pipe = pipe.to("cuda")
 
     # Load character embeddings and validate presence
-    data = np.load(embeddings_path)
+    data = np.load(embeddings_path, allow_pickle=False)
     if "face_embedding" not in data and "clip_embedding" not in data:
         return ""
 

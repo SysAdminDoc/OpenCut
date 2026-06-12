@@ -13,7 +13,8 @@ import json
 import os
 import sys
 import tempfile
-from unittest.mock import patch
+import types
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -584,6 +585,118 @@ class TestCharacterGeneration:
         profile = CharacterProfile(profile_id="test", name="hero")
         generate_consistent_scene("scene prompt", profile, on_progress=on_prog)
         assert len(progress_calls) >= 2
+
+    def test_ip_adapter_loads_embeddings_without_pickle(self):
+        from opencut.core import character_consistency
+
+        fake_diffusers = types.ModuleType("diffusers")
+
+        class DummyPipeline:
+            @classmethod
+            def from_pretrained(cls, *_args, **_kwargs):
+                return cls()
+
+            def to(self, _device):
+                return self
+
+        fake_diffusers.StableDiffusionPipeline = DummyPipeline
+        fake_torch = types.ModuleType("torch")
+        fake_torch.float16 = object()
+        fake_torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+
+        with patch.dict(sys.modules, {"diffusers": fake_diffusers, "torch": fake_torch}), \
+                patch("opencut.core.character_consistency.ensure_package", return_value=True), \
+                patch("numpy.load", return_value={}) as load_mock:
+            result = character_consistency._generate_with_ip_adapter(
+                "hero in a city",
+                "embeddings.npz",
+                "out.mp4",
+                1.0,
+            )
+
+        assert result == ""
+        load_mock.assert_called_once_with("embeddings.npz", allow_pickle=False)
+
+
+class TestDepthSegmentCompose:
+    def test_depth_archives_load_without_pickle(self):
+        from opencut.core import compose_depth_segment
+
+        fake_cv2 = types.ModuleType("cv2")
+        fake_cv2.CAP_PROP_FPS = 5
+        fake_cv2.CAP_PROP_FRAME_WIDTH = 3
+        fake_cv2.CAP_PROP_FRAME_HEIGHT = 4
+        fake_cv2.VideoWriter_fourcc = lambda *_args: 0
+
+        class DummyCapture:
+            def __init__(self, _path):
+                pass
+
+            def get(self, prop):
+                if prop == fake_cv2.CAP_PROP_FPS:
+                    return 24
+                if prop == fake_cv2.CAP_PROP_FRAME_WIDTH:
+                    return 1920
+                if prop == fake_cv2.CAP_PROP_FRAME_HEIGHT:
+                    return 1080
+                return 0
+
+            def read(self):
+                return False, None
+
+            def release(self):
+                pass
+
+        class DummyWriter:
+            def __init__(self, *_args):
+                pass
+
+            def write(self, _frame):
+                pass
+
+            def release(self):
+                pass
+
+        fake_cv2.VideoCapture = DummyCapture
+        fake_cv2.VideoWriter = DummyWriter
+
+        fake_segment = types.ModuleType("opencut.core.segment_sam2")
+        fake_segment.segment_video = lambda **_kwargs: types.SimpleNamespace(mask_count=0)
+        fake_depth = types.ModuleType("opencut.core.depth_anything_v2")
+        fake_depth.estimate_depth = lambda **_kwargs: types.SimpleNamespace(frames_processed=0)
+
+        depth_archive = MagicMock()
+        depth_archive.__getitem__.return_value = []
+
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as source:
+            source.write(b"fake")
+            video_path = source.name
+
+        output_path = ""
+        try:
+            with patch.dict(
+                sys.modules,
+                {
+                    "cv2": fake_cv2,
+                    "opencut.core.segment_sam2": fake_segment,
+                    "opencut.core.depth_anything_v2": fake_depth,
+                },
+            ), patch("opencut.core.compose_depth_segment.check_composite_available", return_value=True), \
+                    patch("numpy.load", return_value=depth_archive) as load_mock:
+                result = compose_depth_segment.compose(
+                    video_path=video_path,
+                    prompts=[{"point": [10, 10]}],
+                    effects=["depth_parallax"],
+                )
+                output_path = result.output
+
+            assert result.frames_processed == 0
+            load_mock.assert_called_once()
+            assert load_mock.call_args.kwargs["allow_pickle"] is False
+        finally:
+            os.unlink(video_path)
+            if output_path and os.path.isfile(output_path):
+                os.unlink(output_path)
 
 
 # ===================================================================
