@@ -18014,3 +18014,384 @@ html.theme-light .status-bar .status-separator {
     color: #ffbd63;
     border-color: rgba(255, 189, 99, 0.3);
 }
+
+/* ============================================================
+   Final product-quality pass: calm density, consistent states.
+   ============================================================ */
+
+html body,
+html body * {
+    letter-spacing: 0;
+}
+
+html:not(.theme-light) .app::before {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent 30%),
+        linear-gradient(135deg, rgba(119, 167, 255, 0.045), transparent 46%),
+        linear-gradient(315deg, rgba(79, 214, 164, 0.030), transparent 54%);
+}
+
+html:not(.theme-light) .app::after {
+    opacity: 0.24;
+}
+
+.content-header,
+.sidebar,
+.status-bar,
+.processing-banner,
+.alert-banner,
+.session-context,
+.workspace-stage,
+.workspace-stage-card,
+.card,
+.quick-actions,
+.quick-action-btn,
+.progress,
+.results,
+.results-card,
+.job-history,
+.footer-section,
+.command-palette,
+.modal-card,
+.preview-modal,
+.toast-notification,
+.empty,
+.hint-empty,
+.assistant-empty,
+.journal-empty,
+.oc-empty-state,
+.drop-zone.empty {
+    border-radius: 8px;
+}
+
+html:not(.theme-light) .card,
+html:not(.theme-light) .workspace-stage,
+html:not(.theme-light) .workspace-stage-card,
+html:not(.theme-light) .quick-actions,
+html:not(.theme-light) .progress,
+html:not(.theme-light) .results,
+html:not(.theme-light) .results-card,
+html:not(.theme-light) .job-history,
+html:not(.theme-light) .footer-section,
+html:not(.theme-light) .session-context {
+    border-color: rgba(220, 230, 242, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.040), rgba(255, 255, 255, 0.018)),
+        rgba(17, 20, 26, 0.91);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.030),
+        0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+.card::before,
+.card::after,
+.quick-actions::before,
+.quick-action-btn::before,
+.workspace-stage::before {
+    opacity: 0.12;
+}
+
+.card:hover,
+.workspace-stage-card:hover,
+.quick-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.card-header,
+.content-header,
+.workspace-stage-header,
+.results-header,
+.progress-header {
+    gap: 10px;
+}
+
+.card-title,
+.card-heading,
+.workspace-stage-title,
+.content-title,
+.results-title,
+.hint-title,
+.quick-action-copy .btn-label {
+    color: var(--text-primary);
+    font-weight: 680;
+    line-height: 1.35;
+}
+
+.card-desc,
+.card-subtitle,
+.card-description,
+.workspace-stage-copy,
+.content-subtitle,
+.hint-copy,
+.quick-action-meta,
+.results-stats,
+.results-path {
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.btn-install,
+.btn-cancel,
+.btn-browse,
+.btn-ghost,
+.header-btn,
+.processing-cancel,
+.utility-btn,
+.quick-action-btn,
+.btn-icon,
+.banner-dismiss-btn {
+    min-height: 34px;
+    border-radius: 8px;
+    font-weight: 650;
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease,
+        opacity 140ms ease;
+}
+
+.btn-sm,
+.btn-xs {
+    min-height: 28px;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled),
+.btn-outline:hover:not(:disabled),
+.btn-install:hover:not(:disabled),
+.btn-cancel:hover:not(:disabled),
+.btn-browse:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled),
+.header-btn:hover:not(:disabled),
+.processing-cancel:hover:not(:disabled),
+.utility-btn:hover:not(:disabled),
+.quick-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.btn-outline:active:not(:disabled),
+.btn-install:active:not(:disabled),
+.btn-cancel:active:not(:disabled),
+.btn-browse:active:not(:disabled),
+.btn-ghost:active:not(:disabled),
+.header-btn:active:not(:disabled),
+.processing-cancel:active:not(:disabled),
+.utility-btn:active:not(:disabled),
+.quick-action-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled,
+.btn-outline:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled,
+.btn-install:disabled,
+.btn-cancel:disabled,
+.btn-browse:disabled,
+.header-btn:disabled,
+.processing-cancel:disabled,
+.utility-btn:disabled,
+.quick-action-btn:disabled,
+button:disabled,
+[aria-disabled="true"] {
+    opacity: 0.56;
+    filter: saturate(0.72);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="url"],
+input[type="search"],
+textarea,
+.text-input {
+    min-height: 34px;
+    border-radius: 8px;
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.text-input:focus-visible,
+.btn-primary:focus-visible,
+.btn-outline:focus-visible,
+.btn-secondary:focus-visible,
+.btn-install:focus-visible,
+.btn-cancel:focus-visible,
+.btn-browse:focus-visible,
+.btn-ghost:focus-visible,
+.header-btn:focus-visible,
+.processing-cancel:focus-visible,
+.quick-action-btn:focus-visible,
+.utility-btn:focus-visible,
+.btn-icon:focus-visible,
+.banner-dismiss-btn:focus-visible,
+.tab:focus-visible,
+.nav-tab:focus-visible,
+.sub-tab:focus-visible,
+[role="button"]:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(119, 167, 255, 0.14);
+}
+
+.status-bar,
+.conn-status,
+.workspace-chip,
+.settings-status-pill,
+.oc-status-pill,
+.feature-state-pill,
+.status-pill {
+    min-height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(220, 230, 242, 0.14);
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--text-secondary);
+}
+
+.status-bar[data-state="online"],
+.conn-status[data-state="online"],
+.status-pill[data-state="ready"],
+.oc-status-pill[data-state="ready"],
+.oc-status-pill[data-state="success"] {
+    border-color: rgba(79, 214, 164, 0.28);
+    background: rgba(79, 214, 164, 0.105);
+    color: #dffbed;
+}
+
+.status-bar[data-state="degraded"],
+.status-bar[data-state="offline"],
+.conn-status[data-state="offline"],
+.status-pill[data-state="warning"],
+.oc-status-pill[data-state="warning"] {
+    border-color: rgba(255, 189, 99, 0.28);
+    background: rgba(255, 189, 99, 0.105);
+    color: #ffe4b7;
+}
+
+.status-pill[data-state="error"],
+.oc-status-pill[data-state="error"],
+.alert-banner[data-tone="error"] {
+    border-color: rgba(255, 111, 115, 0.30);
+    background: rgba(255, 111, 115, 0.105);
+    color: #ffd9da;
+}
+
+.processing-banner:not(.hidden) {
+    border-color: rgba(119, 167, 255, 0.24);
+    background:
+        linear-gradient(180deg, rgba(119, 167, 255, 0.10), rgba(255, 255, 255, 0.020)),
+        rgba(17, 20, 26, 0.94);
+}
+
+.progress-track,
+.oc-progress-track {
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.075);
+}
+
+.progress-fill,
+.oc-progress-fill {
+    background: linear-gradient(90deg, #77a7ff, #4fd6a4);
+    transition: width 180ms ease;
+}
+
+.empty,
+.hint-empty,
+.assistant-empty,
+.journal-empty,
+.oc-empty-state,
+.drop-zone.empty {
+    border: 1px dashed rgba(220, 230, 242, 0.20);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--text-secondary);
+    box-shadow: none;
+}
+
+.hint,
+.hint-inline {
+    border-radius: 8px;
+    line-height: 1.55;
+}
+
+.toast-notification {
+    max-width: min(380px, calc(100vw - 28px));
+    border-width: 1px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.toast-title,
+.toast-message {
+    line-height: 1.45;
+}
+
+html body #clipSection.card,
+html body .transcript-editor,
+html body .transcript-search,
+html body .file-info,
+html body .media-sidecar .file-info,
+html body .favorites-bar,
+html body .polish-steps,
+html body .slider-row,
+html body .input-pair,
+html body .clip-thumb {
+    border-radius: 8px;
+}
+
+html body .btn-sm,
+html body .btn-xs,
+html body .btn-sm.btn-secondary,
+html body .btn-sm.btn-outline,
+html body button.btn-sm,
+html body button.btn-xs {
+    border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+    .main {
+        padding: 12px;
+    }
+
+    .content-header,
+    .alert-banner,
+    .processing-banner,
+    .session-context {
+        margin-left: 12px;
+        margin-right: 12px;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-outline,
+    .btn-install,
+    .btn-cancel,
+    .btn-browse,
+    .quick-action-btn {
+        min-height: 38px;
+    }
+}
