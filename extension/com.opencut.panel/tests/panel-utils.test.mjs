@@ -72,6 +72,44 @@ describe("CEP lazy DOM proxy", () => {
   });
 });
 
+describe("CEP local settings normalization", () => {
+  it("keeps only supported local panel preference keys and values", () => {
+    expect(utils.normalizeLocalSettings({
+      autoImport: true,
+      autoOpen: false,
+      showNotifications: true,
+      outputDir: "project",
+      defaultModel: "large-v3",
+      lang: "en",
+      theme: "light",
+      unexpected: "<script>",
+      nested: { value: "custom" },
+    })).toEqual({
+      autoImport: true,
+      autoOpen: false,
+      showNotifications: true,
+      outputDir: "project",
+      defaultModel: "large-v3",
+      lang: "en",
+      theme: "light",
+    });
+  });
+
+  it("drops malformed or unsupported imported panel preference values", () => {
+    expect(utils.normalizeLocalSettings({
+      autoImport: "yes",
+      autoOpen: 1,
+      showNotifications: null,
+      outputDir: "C:/Users/me",
+      defaultModel: "malicious",
+      lang: "es",
+      theme: "solarized",
+    })).toEqual({});
+    expect(utils.normalizeLocalSettings(null)).toEqual({});
+    expect(utils.normalizeLocalSettings([])).toEqual({});
+  });
+});
+
 describe("CEP command palette indexer", () => {
   it("builds deduplicated browse sections from recent, favorite, and current commands", () => {
     const sections = utils.buildCommandPaletteSections(paletteOptions({
