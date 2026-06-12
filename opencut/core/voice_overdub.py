@@ -31,8 +31,9 @@ DEFAULT_CROSSFADE_MS = 50
 # Voice cloning context: seconds of speaker audio to extract
 VOICE_CLONE_MIN_SECONDS = 10
 VOICE_CLONE_MAX_SECONDS = 30
-# Supported TTS backends
-TTS_BACKENDS = ("edge_tts", "external_api")
+# Supported TTS backends. "auto" is local-first; cloud/network providers are
+# only used when selected explicitly.
+TTS_BACKENDS = ("auto", "kokoro", "chatterbox", "edge_tts", "external_api", "silence")
 
 
 @dataclass
@@ -238,30 +239,137 @@ def _generate_tts_audio(
     text: str,
     output_path_wav: str,
     voice_profile: Optional[VoiceProfile] = None,
+    tts_backend: str = "auto",
     tts_endpoint: str = "",
     voice_name: str = "en-US-GuyNeural",
     on_progress: Optional[Callable] = None,
 ) -> str:
     """Generate speech audio from text via TTS.
 
-    Uses external API endpoint if provided, otherwise falls back to edge_tts.
+    Uses local TTS by default. Network-backed TTS providers are used only when
+    requested through ``tts_backend``.
 
     Args:
         text: Text to speak.
         output_path_wav: Output WAV file path.
         voice_profile: Optional voice profile for cloning context.
-        tts_endpoint: External TTS API endpoint URL.
-        voice_name: edge_tts voice name (fallback).
+        tts_backend: auto, kokoro, chatterbox, edge_tts, external_api, or silence.
+        tts_endpoint: External TTS API endpoint URL for external_api.
+        voice_name: edge_tts voice name when edge_tts is selected.
         on_progress: Progress callback(pct).
 
     Returns:
         Path to generated WAV file.
     """
-    if tts_endpoint:
-        return _call_external_tts(text, output_path_wav, tts_endpoint, voice_profile)
+    backend = _normalize_tts_backend(tts_backend)
+    voice_ref = voice_profile.reference_audio_path if voice_profile else ""
 
-    # Fallback to edge_tts
-    return _generate_edge_tts(text, output_path_wav, voice_name, on_progress)
+    if backend == "external_api":
+        if not tts_endpoint:
+            logger.warning("external_api TTS selected without tts_endpoint; using local fallback")
+        else:
+            try:
+                return _call_external_tts(text, output_path_wav, tts_endpoint, voice_profile)
+            except Exception as exc:
+                logger.warning("External TTS endpoint failed: %s; using local fallback", exc)
+
+    if backend == "edge_tts":
+        return _generate_edge_tts(text, output_path_wav, voice_name, on_progress)
+
+    if backend == "silence":
+        return _generate_silence_tts(text, output_path_wav)
+
+    candidates: List[str] = []
+    if backend == "auto" or backend == "external_api":
+        if voice_ref:
+            candidates.append("chatterbox")
+        candidates.append("kokoro")
+        if not voice_ref:
+            candidates.append("chatterbox")
+    elif backend in ("kokoro", "chatterbox"):
+        candidates.append(backend)
+    else:
+        logger.warning("Unsupported TTS backend '%s'; using silence fallback", tts_backend)
+
+    for candidate in candidates:
+        try:
+            if candidate == "chatterbox":
+                return _generate_chatterbox_tts(text, output_path_wav, voice_ref, on_progress)
+            if candidate == "kokoro":
+                return _generate_kokoro_tts(text, output_path_wav, on_progress)
+        except Exception as exc:
+            logger.debug("%s TTS failed: %s", candidate, exc)
+
+    return _generate_silence_tts(text, output_path_wav)
+
+
+def _normalize_tts_backend(tts_backend: str) -> str:
+    """Normalize TTS backend aliases while preserving explicit cloud choices."""
+    backend = str(tts_backend or "auto").strip().lower().replace("-", "_")
+    aliases = {
+        "local": "auto",
+        "local_first": "auto",
+        "edge": "edge_tts",
+        "api": "external_api",
+        "external": "external_api",
+        "cloud": "external_api",
+        "fallback": "silence",
+    }
+    return aliases.get(backend, backend)
+
+
+def _generate_kokoro_tts(
+    text: str,
+    output_wav: str,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """Generate speech with local Kokoro."""
+    from opencut.core.voice_gen import kokoro_generate
+
+    def _progress(pct, _msg=""):
+        if on_progress:
+            on_progress(pct)
+
+    return kokoro_generate(
+        text=text,
+        output_path=output_wav,
+        on_progress=_progress if on_progress else None,
+    )
+
+
+def _generate_chatterbox_tts(
+    text: str,
+    output_wav: str,
+    voice_reference: str = "",
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """Generate speech with local Chatterbox."""
+    from opencut.core.voice_gen import chatterbox_generate
+
+    def _progress(pct, _msg=""):
+        if on_progress:
+            on_progress(pct)
+
+    return chatterbox_generate(
+        text=text,
+        output_path=output_wav,
+        voice_ref=voice_reference or None,
+        on_progress=_progress if on_progress else None,
+    )
+
+
+def _generate_silence_tts(text: str, output_wav: str) -> str:
+    """Generate a local silent placeholder when no TTS backend is available."""
+    words = len(text.split())
+    duration = max(1.0, words / 2.5)
+    cmd = [
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono",
+        "-t", str(duration),
+        "-acodec", "pcm_s16le", output_wav,
+    ]
+    run_ffmpeg(cmd, timeout=30)
+    return output_wav
 
 
 def _call_external_tts(
@@ -296,8 +404,7 @@ def _call_external_tts(
             f.write(audio_data)
         return output_wav
     except urllib.error.URLError as e:
-        logger.warning("External TTS endpoint failed: %s — falling back to edge_tts", e)
-        return _generate_edge_tts(text, output_wav, "en-US-GuyNeural")
+        raise RuntimeError(f"External TTS endpoint failed: {e}") from e
 
 
 def _generate_edge_tts(
@@ -497,6 +604,7 @@ def overdub(
     input_path: str,
     replacements: List[Dict],
     transcript_segments: Optional[List[Dict]] = None,
+    tts_backend: str = "auto",
     tts_endpoint: str = "",
     voice_name: str = "en-US-GuyNeural",
     crossfade_ms: int = DEFAULT_CROSSFADE_MS,
@@ -513,8 +621,9 @@ def overdub(
             - replacement_text: str
             - original_text: str (optional)
         transcript_segments: Full transcript segments for voice cloning context.
-        tts_endpoint: External TTS API endpoint (empty = edge_tts fallback).
-        voice_name: edge_tts voice (fallback).
+        tts_backend: auto, kokoro, chatterbox, edge_tts, external_api, or silence.
+        tts_endpoint: External TTS API endpoint when tts_backend is external_api.
+        voice_name: edge_tts voice when tts_backend is edge_tts.
         crossfade_ms: Crossfade duration at boundaries.
         output_dir: Output directory.
         on_progress: Progress callback(pct).
@@ -597,6 +706,7 @@ def overdub(
         _generate_tts_audio(
             rep_text, raw_tts,
             voice_profile=voice_profile,
+            tts_backend=tts_backend,
             tts_endpoint=tts_endpoint,
             voice_name=voice_name,
             on_progress=lambda p: (

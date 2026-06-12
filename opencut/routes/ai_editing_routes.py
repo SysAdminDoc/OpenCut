@@ -95,7 +95,7 @@ def ai_overdub(job_id, filepath, data):
     config = OverdubConfig(
         crossfade_ms=safe_int(data.get("crossfade_ms"), 150, 10, 1000),
         voice_clone_seconds=safe_float(data.get("voice_clone_seconds"), 10.0, 2.0, 30.0),
-        tts_backend=data.get("tts_backend", "edge").strip() or "edge",
+        tts_backend=data.get("tts_backend", "auto").strip() or "auto",
         language=data.get("language", "en").strip() or "en",
         speed=safe_float(data.get("speed"), 1.0, 0.5, 2.0),
     )

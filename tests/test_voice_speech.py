@@ -635,6 +635,7 @@ class TestVoiceOverdub(unittest.TestCase):
         sig = inspect.signature(overdub)
         self.assertIn("input_path", sig.parameters)
         self.assertIn("replacements", sig.parameters)
+        self.assertIn("tts_backend", sig.parameters)
         self.assertIn("tts_endpoint", sig.parameters)
         self.assertIn("crossfade_ms", sig.parameters)
 
@@ -689,8 +690,47 @@ class TestVoiceOverdub(unittest.TestCase):
     def test_tts_backends_constant(self):
         from opencut.core.voice_overdub import TTS_BACKENDS
 
+        self.assertIn("auto", TTS_BACKENDS)
+        self.assertIn("kokoro", TTS_BACKENDS)
+        self.assertIn("chatterbox", TTS_BACKENDS)
         self.assertIn("edge_tts", TTS_BACKENDS)
         self.assertIn("external_api", TTS_BACKENDS)
+
+    def test_generate_tts_audio_auto_uses_chatterbox_reference_not_edge(self):
+        from opencut.core.voice_overdub import VoiceProfile, _generate_tts_audio
+
+        profile = VoiceProfile(reference_audio_path="/tmp/ref.wav")
+        with (
+            patch("opencut.core.voice_overdub._generate_chatterbox_tts", return_value="/tmp/out.wav") as chatterbox,
+            patch("opencut.core.voice_overdub._generate_edge_tts", side_effect=AssertionError("edge should not run")),
+        ):
+            out = _generate_tts_audio(
+                "replacement",
+                "/tmp/out.wav",
+                voice_profile=profile,
+                tts_backend="auto",
+            )
+
+        self.assertEqual(out, "/tmp/out.wav")
+        chatterbox.assert_called_once()
+
+    def test_generate_tts_audio_external_failure_uses_local_not_edge(self):
+        from opencut.core.voice_overdub import _generate_tts_audio
+
+        with (
+            patch("opencut.core.voice_overdub._call_external_tts", side_effect=RuntimeError("down")),
+            patch("opencut.core.voice_overdub._generate_kokoro_tts", return_value="/tmp/out.wav") as kokoro,
+            patch("opencut.core.voice_overdub._generate_edge_tts", side_effect=AssertionError("edge should not run")),
+        ):
+            out = _generate_tts_audio(
+                "replacement",
+                "/tmp/out.wav",
+                tts_backend="external_api",
+                tts_endpoint="https://tts.example.test",
+            )
+
+        self.assertEqual(out, "/tmp/out.wav")
+        kokoro.assert_called_once()
 
     def test_default_crossfade(self):
         from opencut.core.voice_overdub import DEFAULT_CROSSFADE_MS

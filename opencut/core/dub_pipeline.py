@@ -17,11 +17,11 @@ from opencut.core.auto_dub_pipeline import (
     auto_dub,
 )
 
-INSTALL_HINT = "pip install faster-whisper ctranslate2 edge-tts  # STT + translate + TTS"
+INSTALL_HINT = "pip install faster-whisper ctranslate2 kokoro  # STT + translate + local TTS"
 
 
 def check_dub_pipeline_available() -> bool:
-    """Returns True — pipeline uses edge-tts which is always available; Whisper is optional."""
+    """Returns True — pipeline has local and silence fallbacks; Whisper is optional."""
     return True
 
 
@@ -34,7 +34,7 @@ def dub(
     voice_clone: bool = True,
     lip_sync: bool = False,
     preserve_music: bool = True,
-    tts_engine: str = "edge",
+    tts_engine: str = "auto",
     on_progress: Optional[Callable] = None,
 ) -> DubResult:
     """
@@ -43,13 +43,13 @@ def dub(
     Args:
         video_path: Path to the source video.
         target_language: ISO 639-1 language code (e.g. "es", "fr", "de").
-        voice: Unused — voice is chosen automatically per language via edge-tts.
+        voice: Unused — voice is chosen automatically by the selected TTS backend.
         output: Output path override. Auto-generated if None.
         whisper_model: Whisper model size for transcription (tiny/base/small/medium/large).
         voice_clone: Attempt to clone the original speaker's voice characteristics.
         lip_sync: Apply lip sync to the dubbed video (requires Wav2Lip/LatentSync).
         preserve_music: Mix background music at reduced volume under dubbed audio.
-        tts_engine: TTS backend — "edge" (default), "kokoro", or "chatterbox".
+        tts_engine: TTS backend — "auto" (local-first default), "kokoro", "chatterbox", or "edge".
         on_progress: Optional callback(pct: int, msg: str).
 
     Returns:

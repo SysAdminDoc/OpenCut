@@ -234,7 +234,7 @@ def audio_auto_dub(job_id, filepath, data):
         voice_clone=safe_bool(data.get("voice_clone"), True),
         lip_sync=safe_bool(data.get("lip_sync"), True),
         preserve_music=safe_bool(data.get("preserve_music"), True),
-        tts_engine=data.get("tts_engine", "edge"),
+        tts_engine=data.get("tts_engine", "auto"),
         output_dir=data.get("output_dir", ""),
     )
 

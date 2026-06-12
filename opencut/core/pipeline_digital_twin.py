@@ -23,7 +23,7 @@ logger = logging.getLogger("opencut")
 
 INSTALL_HINT = (
     "Requires: chatterbox-tts (voice clone) + faster-whisper (STT) + "
-    "edge-tts or kokoro (TTS fallback). "
+    "kokoro or chatterbox (local TTS fallback). "
     "Optional: Wan2.2-S2V (talking head) or EchoMimic V3 (lip sync)."
 )
 
@@ -98,7 +98,7 @@ def run_pipeline(
     skip_stages: Optional[List[str]] = None,
     pre_narration_path: str = "",
     pre_avatar_path: str = "",
-    tts_engine: str = "chatterbox",
+    tts_engine: str = "auto",
     whisper_model: str = "base",
     output_dir: str = "",
     on_progress: Optional[Callable] = None,
@@ -114,7 +114,7 @@ def run_pipeline(
         skip_stages: List of stages to skip.
         pre_narration_path: Pre-generated narration audio (skips voice_clone + narrate).
         pre_avatar_path: Pre-generated avatar video (skips talking_head).
-        tts_engine: TTS backend — chatterbox, edge, kokoro, spark.
+        tts_engine: TTS backend — auto, chatterbox, kokoro, edge, spark.
         whisper_model: Whisper model for transcription in dub pipeline.
         output_dir: Directory for all outputs.
         on_progress: Optional callback.
@@ -153,23 +153,50 @@ def run_pipeline(
             narration_path = os.path.join(output_dir, "narration.wav")
 
             try:
-                if tts_engine == "chatterbox" and voice_ref_path:
+                tts_engine = str(tts_engine or "auto").strip().lower().replace("-", "_")
+                if tts_engine not in ("auto", "chatterbox", "kokoro", "edge", "edge_tts"):
+                    notes.append(f"Unsupported narration TTS '{tts_engine}', using local auto")
+                    tts_engine = "auto"
+                narration_generated = False
+
+                if tts_engine in ("auto", "chatterbox") and (voice_ref_path or tts_engine == "chatterbox"):
                     from opencut.core.tts_chatterbox import synthesize as _cb_synth
-                    result = _cb_synth(
-                        text=script.strip(),
-                        reference_audio=voice_ref_path,
-                        output_path=narration_path,
-                    )
-                    narration_path = result.output
-                    notes.append("Voice cloned via Chatterbox")
-                else:
-                    # Fallback to edge-tts
+                    try:
+                        result = _cb_synth(
+                            text=script.strip(),
+                            reference_audio=voice_ref_path,
+                            output_path=narration_path,
+                        )
+                        narration_path = result.output
+                        notes.append("Voice cloned via Chatterbox" if voice_ref_path else "Narration via Chatterbox")
+                        narration_generated = True
+                    except Exception as cb_exc:
+                        notes.append(f"Chatterbox narration failed: {cb_exc}")
+
+                if not narration_generated and tts_engine in ("auto", "kokoro"):
+                    from opencut.core.tts_kokoro import synthesize as _kokoro_synth
+                    try:
+                        result = _kokoro_synth(
+                            text=script.strip(),
+                            output_path=narration_path,
+                        )
+                        narration_path = result.output
+                        notes.append("Narration via Kokoro")
+                        narration_generated = True
+                    except Exception as kokoro_exc:
+                        notes.append(f"Kokoro narration failed: {kokoro_exc}")
+
+                if not narration_generated and tts_engine in ("edge", "edge_tts"):
                     from opencut.core.voice_gen import edge_tts_generate
                     narration_path = edge_tts_generate(
                         text=script.strip(),
                         output_dir=output_dir,
                     )
-                    notes.append(f"Narration via {tts_engine}")
+                    notes.append("Narration via Edge TTS")
+                    narration_generated = True
+
+                if not narration_generated:
+                    raise RuntimeError(f"No usable local TTS backend for {tts_engine}")
 
                 stages_completed.extend(["voice_clone", "narrate"])
             except Exception as exc:
@@ -250,7 +277,7 @@ def run_pipeline(
                             target_language=lang,
                             output=lang_output,
                             whisper_model=whisper_model,
-                            tts_engine="edge",
+                            tts_engine="auto",
                         )
                         outputs[lang] = result.output_path if hasattr(result, "output_path") else lang_output
                     except Exception as lang_exc:
