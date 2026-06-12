@@ -46,7 +46,7 @@ def track(
 ) -> CutieResult:
     if not check_cutie_available():
         raise RuntimeError(f"Cutie is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Cutie tracking wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Cutie tracking wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["CutieResult", "check_cutie_available", "INSTALL_HINT", "track"]

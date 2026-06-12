@@ -47,7 +47,7 @@ def restore(
 ) -> DiffBIRResult:
     if not check_diffbir_available():
         raise RuntimeError(f"DiffBIR is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("DiffBIR wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("DiffBIR wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["DiffBIRResult", "check_diffbir_available", "INSTALL_HINT", "restore"]

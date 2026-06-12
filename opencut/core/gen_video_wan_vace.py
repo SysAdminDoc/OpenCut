@@ -11,8 +11,7 @@ from typing import Any, Callable, List, Optional
 from opencut.helpers import _try_import
 
 INSTALL_HINT = (
-    "See ROADMAP-NEXT.md Wave K3.7 — pip install wan torch "
-    "(L-effort; extends C4 Wan2.1 T2V stub)"
+    "pip install wan torch; confirm model-weight license terms before enabling"
 )
 
 
@@ -44,7 +43,7 @@ def edit(
     on_progress: Optional[Callable[[int, str], None]] = None,
 ) -> WanVACEResult:
     raise NotImplementedError(
-        "Wan2.1 VACE wiring ships in v1.29.0. Track ROADMAP-NEXT.md Wave K3.7."
+        "Wan2.1 VACE wiring is not implemented yet. Track the live ROADMAP.md entry."
     )
 
 

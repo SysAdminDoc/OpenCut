@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed — CEP panel
+
+- Settings no longer exposes non-English UI language choices before matching
+  locale files ship, preventing a selection that cannot persistently localize
+  the panel.
+
 ### Changed — audio privacy
 
 - Standalone TTS, auto-dubbing, and overdub workflows now default to local-first
@@ -13,6 +19,8 @@ record also lives in the git commit messages.
 
 ### Fixed — release process
 
+- Release smoke and doc-size drift checks now target only live documentation
+  surfaces (`CLAUDE.md` and `README.md`) instead of removed planning files.
 - Version sync now covers the security support table, CEP package-lock root
   metadata, and the C2PA claim-generator string so release smoke fails when
   those public version surfaces drift.

@@ -58,7 +58,7 @@ def deblur(
 ) -> DeblurResult:
     if not check_deblur_motion_available():
         raise RuntimeError(f"No deblur backend available. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Motion deblur wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Motion deblur wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["DeblurResult", "check_deblur_motion_available", "INSTALL_HINT",

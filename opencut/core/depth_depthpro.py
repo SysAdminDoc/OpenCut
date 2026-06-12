@@ -51,7 +51,7 @@ def estimate(
 ) -> DepthProResult:
     if not check_depthpro_available():
         raise RuntimeError(f"Depth Pro is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Depth Pro wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Depth Pro wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["DepthProResult", "check_depthpro_available", "INSTALL_HINT", "list_backends", "estimate"]

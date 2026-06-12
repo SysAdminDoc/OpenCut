@@ -3,7 +3,7 @@ OpenCut Screenplay Parser v1.28.0 — Tier 3 (partial)
 
 IntelliScript .fdx / Fountain import. Parse scene headings + fuzzy-match transcript.
 Fountain parsing and FDX parsing work in v1.28.0.
-assemble_from_screenplay() ships in v1.29.0.
+assemble_from_screenplay() is a planned route-backed integration.
 """
 from __future__ import annotations
 
@@ -120,7 +120,7 @@ def parse_fdx(path: str) -> List[Scene]:
 
 def assemble_from_screenplay(screenplay_path, video_path, transcript_segments):
     raise NotImplementedError(
-        "assemble_from_screenplay ships in v1.29.0. Track ROADMAP-NEXT.md Wave K3.3."
+        "assemble_from_screenplay is not implemented yet. Track the live ROADMAP.md entry."
     )
 
 

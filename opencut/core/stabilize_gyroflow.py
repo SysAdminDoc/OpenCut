@@ -51,7 +51,7 @@ def stabilize(
 ) -> GyroflowResult:
     if not check_gyroflow_available():
         raise RuntimeError(f"Gyroflow is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Gyroflow wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Gyroflow wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["GyroflowResult", "check_gyroflow_available", "INSTALL_HINT",
