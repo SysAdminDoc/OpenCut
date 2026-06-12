@@ -76,6 +76,17 @@ def test_manifest_version_matches_package_version():
     assert data["version"] == __version__
 
 
+def test_manifest_diff_detects_version_drift():
+    live = tool.build_manifest()
+    committed = dict(live)
+    committed["version"] = "0.0.0"
+
+    diff = tool.diff_manifests(committed, live)
+
+    assert diff["changed"] is True
+    assert "version" in diff["fields"]
+
+
 def test_manifest_tool_names_are_unique_and_namespaced():
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     names = [tool_entry["name"] for tool_entry in data["tools"]]

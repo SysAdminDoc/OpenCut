@@ -64,6 +64,7 @@ def test_error_response_logs_structured_context(app, caplog):
 
 def test_safe_open_cut_error_logs_supplied_context(app, caplog):
     from opencut.errors import invalid_input, safe_error
+    from opencut.security import get_csrf_token
 
     bp = Blueprint("ra03_safe_open_cut_error", __name__)
 
@@ -73,7 +74,12 @@ def test_safe_open_cut_error_logs_supplied_context(app, caplog):
 
     app.register_blueprint(bp)
     caplog.set_level(logging.WARNING, logger="opencut")
-    response = app.test_client().post("/ra03/safe-open-cut-error", json={"ok": True})
+    csrf_token = get_csrf_token()
+    response = app.test_client().post(
+        "/ra03/safe-open-cut-error",
+        json={"ok": True},
+        headers={"X-OpenCut-Token": csrf_token},
+    )
     request_id = response.headers["X-Request-ID"]
 
     record = _typed_error_record(caplog.records, "INVALID_INPUT")
