@@ -225,6 +225,9 @@ def test_cloud_trust_list_omitted_when_blank(asset):
 def test_claim_generator_documents_c2pa_2_3():
     """The default claim_generator string must surface the spec version
     we target so verifiers see it without parsing the manifest."""
+    from opencut import __version__
+
+    assert f"OpenCut/{__version__}" in c2pa.CLAIM_GENERATOR_DEFAULT
     assert "2.3" in c2pa.CLAIM_GENERATOR_DEFAULT
 
 

@@ -3,6 +3,14 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [Unreleased]
+
+### Fixed — release process
+
+- Version sync now covers the security support table, CEP package-lock root
+  metadata, and the C2PA claim-generator string so release smoke fails when
+  those public version surfaces drift.
+
 ## [1.33.0] — 2026-06-11 — June hardening & quality pass
 
 ### Fixed — Docker/runtime

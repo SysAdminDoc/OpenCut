@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 INIT_PY = ROOT / "opencut" / "__init__.py"
 
 # Each entry: (relative path, regex pattern, replacement template)
-# The replacement template uses {v} for the version string.
+# The replacement template uses {v} for the version string and may also use
+# computed release-series placeholders from version_tokens().
 TARGETS = [
     (
         "pyproject.toml",
@@ -110,6 +111,19 @@ TARGETS = [
         r'("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
         r'\g<1>{v}\g<2>',
     ),
+    # CEP package-lock.json root package metadata. Keep these patterns scoped
+    # to the package root so dependency versions such as lightningcss 1.32.0
+    # are not rewritten as OpenCut releases.
+    (
+        "extension/com.opencut.panel/package-lock.json",
+        r'(^\s*"version":\s*")[0-9]+\.[0-9]+\.[0-9]+(",\s*$)',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "extension/com.opencut.panel/package-lock.json",
+        r'("":\s*\{\s*"name":\s*"opencut-panel",\s*"version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
     # UXP manifest.json
     (
         "extension/com.opencut.uxp/manifest.json",
@@ -133,7 +147,70 @@ TARGETS = [
         r'(<span id="uxpVersionDisplay">)[0-9]+\.[0-9]+\.[0-9]+( \(UXP\)</span>)',
         r'\g<1>{v}\g<2>',
     ),
+    # Security support policy tracks minor series, not full patch releases.
+    (
+        "SECURITY.md",
+        r'(latest minor\*\* \(`)[0-9]+\.[0-9]+\.x(`\) and the one immediately preceding it \(`)[0-9]+\.[0-9]+\.x(`\))',
+        r'\g<1>{series}\g<2>{previous_series}\g<3>',
+    ),
+    (
+        "SECURITY.md",
+        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Active[^\n]*\|\s*)[^\n|]+(\s*\|)',
+        r'\g<1>{series}\g<2>—                    \g<3>',
+    ),
+    (
+        "SECURITY.md",
+        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Previous[^\n]*\|\s*)\+90 days after [0-9]+\.[0-9]+(\s*\|)',
+        r'\g<1>{previous_series}\g<2>+90 days after {latest_minor}\g<3>',
+    ),
+    (
+        "SECURITY.md",
+        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Critical only[^\n]*\|\s*)\+30 days after [0-9]+\.[0-9]+(\s*\|)',
+        r'\g<1>{critical_series}\g<2>+30 days after {latest_minor}\g<3>',
+    ),
+    (
+        "SECURITY.md",
+        r'(\| )[≤<=>\s]*[0-9]+\.[0-9]+(\s+\|[^\n]*End of life[^\n]*\|\s*)n/a(\s*\|)',
+        r'\g<1>≤ {eol_minor}\g<2>n/a\g<3>',
+    ),
+    (
+        "opencut/core/c2pa_sidecar.py",
+        r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.3\)")',
+        r'\g<1>{v}\g<2>',
+    ),
 ]
+
+
+def version_tokens(version: str) -> dict[str, str]:
+    """Return replacement tokens derived from an X.Y.Z version string."""
+    major_s, minor_s, patch_s = version.split(".")
+    major = int(major_s)
+    minor = int(minor_s)
+
+    def minor_at(offset: int) -> int:
+        return max(minor + offset, 0)
+
+    return {
+        "v": version,
+        "major": str(major),
+        "minor": str(minor),
+        "patch": patch_s,
+        "series": f"{major}.{minor}.x",
+        "previous_series": f"{major}.{minor_at(-1)}.x",
+        "critical_series": f"{major}.{minor_at(-2)}.x",
+        "latest_minor": f"{major}.{minor}",
+        "previous_minor": f"{major}.{minor_at(-1)}",
+        "critical_minor": f"{major}.{minor_at(-2)}",
+        "eol_minor": f"{major}.{minor_at(-3)}",
+    }
+
+
+def render_replacement(replacement: str, version: str) -> str:
+    """Expand sync_version replacement placeholders for a target."""
+    rendered = replacement
+    for key, value in version_tokens(version).items():
+        rendered = rendered.replace(f"{{{key}}}", value)
+    return rendered
 
 
 def read_version() -> str:
@@ -158,7 +235,7 @@ def set_version(new_ver: str) -> None:
     print(f"  SET  {INIT_PY.relative_to(ROOT)}  ->  {new_ver}")
 
 
-def check_file(rel_path: str, pattern: str, version: str) -> bool:
+def check_file(rel_path: str, pattern: str, replacement: str, version: str) -> bool:
     """Check if a file's version matches. Returns True if in sync."""
     fpath = ROOT / rel_path
     if not fpath.exists():
@@ -169,9 +246,10 @@ def check_file(rel_path: str, pattern: str, version: str) -> bool:
     if not m:
         return True  # Pattern not found — nothing to check
 
-    # Extract current version from the matched text
     matched = m.group(0)
-    if version in matched:
+    repl = render_replacement(replacement, version)
+    expected = re.sub(pattern, repl, matched, count=1, flags=re.MULTILINE)
+    if expected == matched:
         return True
 
     print(f"  MISMATCH {rel_path}  (expected {version})")
@@ -186,7 +264,7 @@ def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bo
         return False
 
     text = fpath.read_text(encoding="utf-8")
-    repl = replacement.replace("{v}", version)
+    repl = render_replacement(replacement, version)
     updated, count = re.subn(pattern, repl, text, count=1, flags=re.MULTILINE)
 
     if count == 0:
@@ -217,8 +295,8 @@ def main() -> None:
     if args.check:
         print(f"\nChecking version {version} across project files:\n")
         all_ok = True
-        for rel_path, pattern, _replacement in TARGETS:
-            if not check_file(rel_path, pattern, version):
+        for rel_path, pattern, replacement in TARGETS:
+            if not check_file(rel_path, pattern, replacement, version):
                 all_ok = False
         if all_ok:
             print(f"\nAll files in sync at v{version}.")
