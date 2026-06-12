@@ -74,7 +74,7 @@ def _stub_501(name: str, hint: str = ""):
         "ROUTE_STUBBED",
         f"{name} is a Wave H Tier 3 strategic stub in v1.25.0.",
         status=501,
-        suggestion=hint or "Track the ROADMAP-NEXT.md Wave H section.",
+        suggestion=hint or "Track the live ROADMAP.md entry for this capability.",
     )
 
 
@@ -432,9 +432,9 @@ def route_flashvsr():
         return _stub_503("FlashVSR", upscale_flashvsr.INSTALL_HINT)
     return error_response(
         "NOT_IMPLEMENTED",
-        "FlashVSR wiring ships in v1.26.0.",
+        "FlashVSR wiring is not implemented yet.",
         status=501,
-        suggestion="Track ROADMAP-NEXT.md Wave H2.1 for the release.",
+        suggestion="Track the live ROADMAP.md entry for this capability.",
     )
 
 

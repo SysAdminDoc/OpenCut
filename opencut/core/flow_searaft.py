@@ -43,7 +43,7 @@ def compute_flow(
 ) -> SEARaftResult:
     if not check_searaft_available():
         raise RuntimeError(f"SEA-RAFT is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("SEA-RAFT wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("SEA-RAFT wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["SEARaftResult", "check_searaft_available", "INSTALL_HINT", "compute_flow"]

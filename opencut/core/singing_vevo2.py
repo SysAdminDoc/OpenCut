@@ -44,7 +44,7 @@ def convert(
 ) -> Vevo2Result:
     if not check_vevo2_available():
         raise RuntimeError(f"Vevo2/Amphion is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Vevo2 wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Vevo2 wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["Vevo2Result", "check_vevo2_available", "INSTALL_HINT", "convert"]

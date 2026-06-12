@@ -2,11 +2,9 @@
 """
 Doc-vs-reality size drift check.
 
-Closes RESEARCH_FEATURE_PLAN_2026-05-25.md E1: CLAUDE.md and
-PROJECT_CONTEXT.md ship hand-edited file-size and module-count claims that
-historically drift 2-3x away from the live filesystem. F252 (CEP→UXP
-migration) is sized against those numbers, so the drift directly
-mis-prices the migration estimate.
+Checks the live documentation surfaces that intentionally carry hand-edited
+file-size, module-count, route-count, and generated-count claims. These claims
+historically drift away from the live filesystem and generated manifests.
 
 RA-28 extends this same check to README.md non-badge generated-count claims so
 the route/module/test counts in prose, diagrams, and project-structure comments
@@ -37,7 +35,6 @@ from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAUDE_MD = ROOT / "CLAUDE.md"
-PROJECT_CONTEXT = ROOT / "PROJECT_CONTEXT.md"
 README = ROOT / "README.md"
 ROUTE_MANIFEST = ROOT / "opencut" / "_generated" / "route_manifest.json"
 
@@ -111,34 +108,6 @@ TARGETS: list[DocClaim] = [
         live=lambda: _file_lines("extension/com.opencut.panel/client/main.js"),
         docs=(CLAUDE_MD,),
         unit="lines",
-    ),
-    DocClaim(
-        label="CEP client/main.js inline mention",
-        regex=re.compile(r"~([\d,]+)-line\s+(?:vanilla\s+JS\s+)?`?main\.js`?", re.IGNORECASE),
-        live=lambda: _file_lines("extension/com.opencut.panel/client/main.js"),
-        docs=(PROJECT_CONTEXT,),
-        unit="lines",
-    ),
-    DocClaim(
-        label="opencut/core/ python file count",
-        regex=re.compile(r"`opencut/core/`\)?\s*\|\s*\*\*([\d,]+)\*\*\s+Python files", re.IGNORECASE),
-        live=lambda: _dir_py_count("opencut/core"),
-        docs=(PROJECT_CONTEXT,),
-        unit="files",
-    ),
-    DocClaim(
-        label="opencut/routes/ blueprint files",
-        regex=re.compile(r"`opencut/routes/`\)?\s*\|\s*\*\*([\d,]+)\*\*", re.IGNORECASE),
-        live=_route_module_count,
-        docs=(PROJECT_CONTEXT,),
-        unit="files",
-    ),
-    DocClaim(
-        label="tests file count",
-        regex=re.compile(r"Tests\s*\|\s*\*\*([\d,]+)\s*test_\*\.py\s*files", re.IGNORECASE),
-        live=_test_file_count,
-        docs=(PROJECT_CONTEXT,),
-        unit="files",
     ),
     DocClaim(
         label="README feature overview API routes",

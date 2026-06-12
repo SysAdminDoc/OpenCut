@@ -37,7 +37,7 @@ def _stub_501(name: str) -> tuple:
         "ROUTE_STUBBED",
         f"{name} is a Wave K Tier 3 strategic stub in v1.28.0.",
         status=501,
-        suggestion="Track the ROADMAP-NEXT.md Wave K section.",
+        suggestion="Track the live ROADMAP.md entry for this capability.",
     )
 
 

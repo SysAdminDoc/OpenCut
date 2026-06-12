@@ -49,7 +49,7 @@ def synthesize(
 ) -> CosyVoice2Result:
     if not check_cosyvoice2_available():
         raise RuntimeError(f"CosyVoice2 is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("CosyVoice2 wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("CosyVoice2 wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["CosyVoice2Result", "check_cosyvoice2_available", "INSTALL_HINT", "list_voices", "synthesize"]

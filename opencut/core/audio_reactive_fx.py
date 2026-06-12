@@ -61,7 +61,7 @@ def render(
 ) -> AudioReactiveResult:
     if not check_audio_reactive_available():
         raise RuntimeError(f"BeatNet is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("Audio-Reactive FX wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("Audio-Reactive FX wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["PRESETS", "check_audio_reactive_available", "INSTALL_HINT",
