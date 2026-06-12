@@ -175,7 +175,7 @@ def compose(
         depth_data = None
         if "depth_parallax" in valid_effects or "vignette_depth" in valid_effects:
             try:
-                depth_data = np.load(depth_path)["depths"]
+                depth_data = np.load(depth_path, allow_pickle=False)["depths"]
             except Exception:
                 pass
 

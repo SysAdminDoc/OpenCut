@@ -22,11 +22,18 @@ record also lives in the git commit messages.
 
 ### Fixed — release process
 
+- README test-count badge now syncs to the live suite count so the release
+  readiness gate stays green after new coverage lands.
 - Release smoke and doc-size drift checks now target only live documentation
   surfaces (`CLAUDE.md` and `README.md`) instead of removed planning files.
 - Version sync now covers the security support table, CEP package-lock root
   metadata, and the C2PA claim-generator string so release smoke fails when
   those public version surfaces drift.
+
+### Security — data loading
+
+- Character embeddings and depth-compositor archives now call `np.load` with
+  pickle explicitly disabled, with regression coverage for both paths.
 
 ### Security — cache safety
 
