@@ -12,6 +12,7 @@ Covers:
 Uses Flask test client.  No real FFmpeg, no GPU, no PIL — all mocked.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -945,6 +946,52 @@ class TestPreviewCacheManager:
                 assert mgr.get("flushkey") is None
             finally:
                 mgr.shutdown()
+
+    def test_metadata_is_scoped_to_custom_cache_dir(self):
+        from opencut.core.preview_cache import PreviewCacheManager
+        with tempfile.TemporaryDirectory() as td:
+            source = os.path.join(td, "src.jpg")
+            with open(source, "wb") as f:
+                f.write(b"data")
+            mgr = PreviewCacheManager(cache_dir=td, max_size_mb=10,
+                                      cleanup_interval=9999)
+            try:
+                mgr.put("k1", source, source_path="/video/a.mp4")
+                mgr.save_metadata()
+                assert os.path.isfile(os.path.join(td, "metadata.json"))
+            finally:
+                mgr.shutdown()
+
+            mgr2 = PreviewCacheManager(cache_dir=td, max_size_mb=10,
+                                       cleanup_interval=9999)
+            try:
+                assert mgr2.stats().entry_count == 1
+            finally:
+                mgr2.shutdown()
+
+    def test_metadata_paths_outside_cache_dir_are_ignored(self):
+        from opencut.core.preview_cache import CacheEntry, PreviewCacheManager
+        with tempfile.TemporaryDirectory() as td:
+            with tempfile.NamedTemporaryFile(delete=False) as outside:
+                outside.write(b"do-not-delete")
+                outside_path = outside.name
+            metadata = {
+                "entries": {
+                    "bad": CacheEntry(cache_key="bad", file_path=outside_path).to_dict(),
+                },
+                "hit_count": 0,
+                "miss_count": 0,
+            }
+            with open(os.path.join(td, "metadata.json"), "w", encoding="utf-8") as f:
+                json.dump(metadata, f)
+            mgr = PreviewCacheManager(cache_dir=td, max_size_mb=10,
+                                      cleanup_interval=9999)
+            try:
+                assert mgr.stats().entry_count == 0
+                assert os.path.isfile(outside_path)
+            finally:
+                mgr.shutdown()
+                os.unlink(outside_path)
 
     def test_invalidate_by_file(self):
         from opencut.core.preview_cache import PreviewCacheManager

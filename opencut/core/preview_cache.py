@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, Optional
 
 from opencut.helpers import OPENCUT_DIR
+from opencut.security import is_path_within
 
 logger = logging.getLogger("opencut")
 
@@ -100,10 +101,19 @@ class PreviewCacheManager:
         self._miss_count = 0
         self._cleanup_thread: Optional[threading.Thread] = None
         self._shutdown = threading.Event()
+        self._metadata_file = os.path.join(self._cache_dir, "metadata.json")
 
         os.makedirs(self._cache_dir, exist_ok=True)
         self._load_metadata()
         self._start_cleanup()
+
+    def _is_cache_path(self, path: str) -> bool:
+        """Return True when *path* resolves inside this cache directory."""
+        return bool(path) and is_path_within(path, self._cache_dir)
+
+    def _is_cache_file(self, path: str) -> bool:
+        """Return True when *path* is an existing file inside this cache directory."""
+        return self._is_cache_path(path) and os.path.isfile(path)
 
     # ------------------------------------------------------------------
     # Key generation
@@ -163,7 +173,7 @@ class PreviewCacheManager:
 
         # Copy file to cache directory if not already there
         cache_file = file_path
-        if not file_path.startswith(self._cache_dir):
+        if not self._is_cache_path(file_path):
             ext = os.path.splitext(file_path)[1] or ".jpg"
             cache_file = os.path.join(self._cache_dir, f"{key}{ext}")
             try:
@@ -215,8 +225,11 @@ class PreviewCacheManager:
         if entry is None:
             return False
         try:
-            if os.path.isfile(entry.file_path):
+            if self._is_cache_file(entry.file_path):
                 os.unlink(entry.file_path)
+            elif entry.file_path:
+                logger.warning("Refusing to delete preview cache path outside cache dir: %s", entry.file_path)
+                return False
         except OSError:
             pass
         return True
@@ -258,14 +271,9 @@ class PreviewCacheManager:
         """Remove all cache entries and delete cache directory contents."""
         count = 0
         with self._lock:
-            count = len(self._entries)
-            for entry in self._entries.values():
-                try:
-                    if os.path.isfile(entry.file_path):
-                        os.unlink(entry.file_path)
-                except OSError:
-                    pass
-            self._entries.clear()
+            for key in list(self._entries):
+                if self._remove_entry(key):
+                    count += 1
             self._hit_count = 0
             self._miss_count = 0
             self._save_metadata_unlocked()
@@ -283,13 +291,11 @@ class PreviewCacheManager:
             # Find LRU entry
             lru_key = min(self._entries,
                           key=lambda k: self._entries[k].last_accessed)
-            entry = self._entries.pop(lru_key)
+            entry = self._entries.get(lru_key)
+            if entry is None:
+                break
             total -= entry.file_size
-            try:
-                if os.path.isfile(entry.file_path):
-                    os.unlink(entry.file_path)
-            except OSError:
-                pass
+            self._remove_entry(lru_key)
             logger.debug("Evicted cache entry: %s", lru_key)
 
     # ------------------------------------------------------------------
@@ -433,16 +439,16 @@ class PreviewCacheManager:
     # ------------------------------------------------------------------
     def _load_metadata(self) -> None:
         """Load cache metadata from disk."""
-        if not os.path.isfile(CACHE_METADATA_FILE):
+        if not os.path.isfile(self._metadata_file):
             return
         try:
-            with open(CACHE_METADATA_FILE, "r", encoding="utf-8") as fh:
+            with open(self._metadata_file, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
             entries = data.get("entries", {})
             for k, v in entries.items():
                 entry = CacheEntry.from_dict(v)
-                # Verify file still exists
-                if os.path.isfile(entry.file_path):
+                # Verify file still exists and belongs to this cache.
+                if self._is_cache_file(entry.file_path):
                     self._entries[k] = entry
             self._hit_count = data.get("hit_count", 0)
             self._miss_count = data.get("miss_count", 0)
@@ -460,7 +466,7 @@ class PreviewCacheManager:
         }
         try:
             os.makedirs(self._cache_dir, exist_ok=True)
-            with open(CACHE_METADATA_FILE, "w", encoding="utf-8") as fh:
+            with open(self._metadata_file, "w", encoding="utf-8") as fh:
                 json.dump(data, fh, indent=2)
         except OSError as e:
             logger.warning("Failed to save cache metadata: %s", e)
