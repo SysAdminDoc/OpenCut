@@ -45,7 +45,7 @@ def restyle(
 ) -> TokenFlowResult:
     if not check_tokenflow_available():
         raise RuntimeError(f"TokenFlow is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("TokenFlow wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("TokenFlow wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["TokenFlowResult", "check_tokenflow_available", "INSTALL_HINT", "restyle"]

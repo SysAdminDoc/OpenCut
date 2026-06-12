@@ -70,7 +70,7 @@ def synthesize(
 ) -> GPTSoVITSResult:
     if not check_gptsovits_available():
         raise RuntimeError(f"GPT-SoVITS is not installed or not running. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("GPT-SoVITS wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("GPT-SoVITS wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["GPTSoVITSResult", "check_gptsovits_available", "INSTALL_HINT", "list_voices", "synthesize"]

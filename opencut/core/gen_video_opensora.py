@@ -47,7 +47,7 @@ def generate(
 ) -> OpenSoraResult:
     if not check_opensora_available():
         raise RuntimeError(f"OpenSora is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("OpenSora wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("OpenSora wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["OpenSoraResult", "check_opensora_available", "INSTALL_HINT", "generate"]

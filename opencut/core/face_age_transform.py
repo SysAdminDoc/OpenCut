@@ -5,7 +5,7 @@ AI face age slider via IP-Adapter + Cutie tracking.
 """
 from __future__ import annotations
 
-INSTALL_HINT = "See ROADMAP-NEXT.md Wave K3.4 — confirm weights licence before enabling."
+INSTALL_HINT = "Confirm model-weight license terms before enabling this capability."
 
 
 def check_face_age_available() -> bool:
@@ -14,7 +14,7 @@ def check_face_age_available() -> bool:
 
 def transform(video_path, target_age=30, output=None, on_progress=None):
     raise NotImplementedError(
-        "Face age transform ships in v1.29.0. Track ROADMAP-NEXT.md Wave K3.4."
+        "Face age transform is not implemented yet. Track the live ROADMAP.md entry."
     )
 
 

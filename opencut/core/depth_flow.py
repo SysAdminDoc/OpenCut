@@ -44,7 +44,7 @@ def generate(
 ) -> DepthFlowResult:
     if not check_depthflow_available():
         raise RuntimeError(f"DepthFlow is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("DepthFlow wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("DepthFlow wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["DepthFlowResult", "check_depthflow_available", "INSTALL_HINT", "generate"]

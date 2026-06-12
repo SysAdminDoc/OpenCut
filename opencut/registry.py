@@ -645,7 +645,7 @@ _FEATURES: List[FeatureRecord] = [
         label="LatentSync diffusion lip-sync",
         category="ai",
         state=STATE_STUB,
-        docs="ROADMAP-NEXT.md#B1",
+        docs="ROADMAP.md",
         routes=["/lipsync/latentsync"],
     ),
     FeatureRecord(
@@ -653,7 +653,7 @@ _FEATURES: List[FeatureRecord] = [
         label="MuseTalk real-time lip-sync",
         category="ai",
         state=STATE_STUB,
-        docs="ROADMAP-NEXT.md#B1",
+        docs="ROADMAP.md",
         routes=["/lipsync/musetalk"],
     ),
     FeatureRecord(
@@ -678,7 +678,7 @@ _FEATURES: List[FeatureRecord] = [
         label="FlashVSR streaming VSR",
         category="ai",
         state=STATE_STUB,
-        docs="ROADMAP-NEXT.md#H2.1",
+        docs="ROADMAP.md",
         routes=["/video/upscale/flashvsr"],
     ),
     FeatureRecord(
@@ -686,7 +686,7 @@ _FEATURES: List[FeatureRecord] = [
         label="ROSE shadow-aware inpaint",
         category="ai",
         state=STATE_STUB,
-        docs="ROADMAP-NEXT.md#H2.2",
+        docs="ROADMAP.md",
         routes=["/video/inpaint/rose"],
     ),
     FeatureRecord(

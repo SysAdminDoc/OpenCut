@@ -5,7 +5,7 @@ Expand video borders with diffusion.
 """
 from __future__ import annotations
 
-INSTALL_HINT = "See ROADMAP-NEXT.md Wave K3.6 — depends on K2.17 (LTX-2) or K3.7 (Wan2.1 VACE)."
+INSTALL_HINT = "Requires a supported diffusion video-editing backend such as LTX or Wan VACE."
 
 
 def check_outpaint_available() -> bool:
@@ -14,7 +14,7 @@ def check_outpaint_available() -> bool:
 
 def outpaint(video_path, target_width, target_height, output=None, on_progress=None):
     raise NotImplementedError(
-        "Video outpainting ships in v1.29.0. Track ROADMAP-NEXT.md Wave K3.6."
+        "Video outpainting is not implemented yet. Track the live ROADMAP.md entry."
     )
 
 

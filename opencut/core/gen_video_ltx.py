@@ -61,7 +61,7 @@ def generate(
 ) -> LTXResult:
     if not check_ltx_available():
         raise RuntimeError(f"LTX-Video is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("LTX wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("LTX wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["LTXResult", "check_ltx_available", "check_ltx2_available", "INSTALL_HINT",

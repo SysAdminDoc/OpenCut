@@ -1134,7 +1134,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("badges", step_badges, "Check README badges match live counts"),
-    StepDefinition("doc-sizes", step_doc_sizes, "Check CLAUDE.md/PROJECT_CONTEXT.md sizes within ±15% of filesystem"),
+    StepDefinition("doc-sizes", step_doc_sizes, "Check CLAUDE.md/README.md sizes within ±15% of filesystem"),
     StepDefinition("subprocess-timeouts", step_subprocess_timeouts, "AST lint: every subprocess call must be bounded by a timeout"),
     StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),

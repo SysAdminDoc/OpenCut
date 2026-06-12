@@ -48,7 +48,7 @@ def generate(
 ) -> AudioGenResult:
     if not check_audiogen_available():
         raise RuntimeError(f"AudioGen (audiocraft) is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("AudioGen wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("AudioGen wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["AudioGenResult", "check_audiogen_available", "INSTALL_HINT", "generate"]

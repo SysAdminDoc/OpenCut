@@ -1,5 +1,5 @@
 """
-Tests for scripts/check_doc_sizes.py (RESEARCH_FEATURE_PLAN_2026-05-25 E1).
+Tests for scripts/check_doc_sizes.py.
 
 The script enforces that project documentation size/count claims stay within
 ±15% of the live filesystem or generated manifests. The tests:
@@ -70,6 +70,14 @@ class TestDocSizeRegex(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertEqual(m.group(1), "1,523")
 
+    def test_targets_only_live_docs(self):
+        doc_names = {
+            doc.name
+            for target in self.mod.TARGETS
+            for doc in target.docs
+        }
+        self.assertEqual(doc_names, {"CLAUDE.md", "README.md"})
+
 
 class TestDocSizeCLI(unittest.TestCase):
     def test_check_passes_against_live_tree(self):
@@ -116,7 +124,7 @@ class TestDocSizeCLI(unittest.TestCase):
                 "- Frontend controller stub.\n"
             )
             (tmp_root / "CLAUDE.md").write_text(claude, encoding="utf-8")
-            # PROJECT_CONTEXT.md absent — script tolerates missing docs.
+            # Historical planning docs are not live doc-size targets.
 
             # Run the script with REPO_ROOT replaced via cwd-relative paths.
             script_copy = tmp_root / "check_doc_sizes.py"

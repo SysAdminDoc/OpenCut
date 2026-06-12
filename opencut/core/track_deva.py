@@ -45,7 +45,7 @@ def track(
 ) -> DEVAResult:
     if not check_deva_available():
         raise RuntimeError(f"DEVA is not installed. Install with:\n    {INSTALL_HINT}")
-    raise NotImplementedError("DEVA tracking wiring ships in v1.28.x. Track ROADMAP-NEXT.md Wave K.")
+    raise NotImplementedError("DEVA tracking wiring is not implemented yet. Track the live ROADMAP.md entry.")
 
 
 __all__ = ["DEVAResult", "check_deva_available", "INSTALL_HINT", "track"]

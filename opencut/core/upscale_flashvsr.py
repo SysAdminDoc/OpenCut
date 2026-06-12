@@ -6,7 +6,7 @@ sparse attention. Source: https://github.com/OpenImagingLab/FlashVSR
 
 Ships as a ``check_X_available()``-gated stub in v1.25.0 — the route
 returns 503 ``MISSING_DEPENDENCY`` with an install hint. Full
-integration lands in v1.26.0 once the Python package is pinned.
+integration waits for a pinned Python package.
 
 Design plan for the full implementation:
 - Lazy-import ``flashvsr`` (pip) + ``torch``.
@@ -73,7 +73,7 @@ def upscale(
             f"    {INSTALL_HINT}"
         )
     raise NotImplementedError(
-        "FlashVSR wiring ships in v1.26.0. Track "
+        "FlashVSR wiring is not implemented yet. Track "
         "https://github.com/OpenImagingLab/FlashVSR for the pip release."
     )
 
