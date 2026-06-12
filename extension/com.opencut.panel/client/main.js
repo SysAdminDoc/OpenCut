@@ -8077,7 +8077,9 @@
         try {
             var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
             if (saved) {
-                var settings = JSON.parse(saved);
+                var settings = PanelUtils.normalizeLocalSettings
+                    ? PanelUtils.normalizeLocalSettings(JSON.parse(saved))
+                    : JSON.parse(saved);
                 if (settings.autoImport !== undefined && el.settingsAutoImport) el.settingsAutoImport.checked = settings.autoImport;
                 if (settings.autoOpen !== undefined && el.settingsAutoOpen) el.settingsAutoOpen.checked = settings.autoOpen;
                 if (settings.showNotifications !== undefined && el.settingsShowNotifications) el.settingsShowNotifications.checked = settings.showNotifications;
@@ -11964,8 +11966,15 @@
                         api("POST", "/settings/import", data, function (err, result) {
                             if (err) { showToast(t("settings.import_failed", "Couldn't import settings"), "error"); return; }
                             if (data.localStorage) {
-                                localStorage.setItem("opencut_settings", JSON.stringify(data.localStorage));
-                                loadLocalSettings();
+                                try {
+                                    var localSettings = PanelUtils.normalizeLocalSettings
+                                        ? PanelUtils.normalizeLocalSettings(data.localStorage)
+                                        : data.localStorage;
+                                    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(localSettings));
+                                    loadLocalSettings();
+                                } catch (storageError) {
+                                    showToast(t("settings.import_local_failed", "Settings imported, but local panel preferences could not be saved."), "warning");
+                                }
                             }
                             showToast(t("settings.imported", "Settings imported: {items}").replace("{items}", (result.imported || []).join(", ")), "success");
                             if (typeof initPresets === "function") initPresets();

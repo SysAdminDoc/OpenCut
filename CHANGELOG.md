@@ -10,6 +10,9 @@ record also lives in the git commit messages.
 - Settings no longer exposes non-English UI language choices before matching
   locale files ship, preventing a selection that cannot persistently localize
   the panel.
+- Settings import now sanitizes local panel preferences before writing
+  `localStorage`, ignoring unknown keys and unsupported preference values while
+  surfacing storage failures as a warning toast.
 
 ### Changed — audio privacy
 
