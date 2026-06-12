@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.33.0
+   OpenCut CEP Panel - Main Controller v1.33.1
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -10173,9 +10173,14 @@
             addJobHistory(job);
         });
 
+        renderJobHistory();
+
         // Load persistent job history from backend (fills history across restarts)
         api("GET", "/jobs/history?limit=20", null, function (err, data) {
-            if (err || !data || !data.length) return;
+            if (err || !data || !data.length) {
+                renderJobHistory();
+                return;
+            }
             for (var i = data.length - 1; i >= 0; i--) {
                 var j = data[i];
                 // Avoid duplicating entries already in the client-side list
