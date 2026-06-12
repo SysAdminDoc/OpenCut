@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - CEP/UXP polish
+
+- CEP first-run, launcher, disabled-action, and settings copy now frames the
+  workflow around clear workspace actions instead of shortcut-first language.
+- CEP and UXP panel surfaces now share tighter 8px geometry, clearer focus and
+  disabled states, calmer empty-state feedback, and a more cohesive blue/teal
+  premium accent system across onboarding, workspace, tabs, cards, and controls.
+- UXP tab navigation now binds before backend discovery so the panel remains
+  navigable while the local backend is offline or still being detected.
+
 ### Fixed — CEP panel
 
 - Settings no longer exposes non-English UI language choices before matching

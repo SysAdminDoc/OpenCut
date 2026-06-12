@@ -18395,3 +18395,199 @@ html body button.btn-xs {
         min-height: 38px;
     }
 }
+
+/* ============================================================
+   Extreme premium polish: first-run clarity and state confidence.
+   ============================================================ */
+:root {
+    --r-full: 8px;
+}
+
+.content-kicker,
+.workspace-chip,
+.conn-status,
+.settings-status-pill,
+.oc-status-pill,
+.feature-state-pill,
+.status-pill,
+.job-history-status-pill,
+.wizard-kicker,
+.wizard-chip,
+.wizard-support-label,
+.command-palette-shortcut,
+.oc-feature-gated::after,
+kbd {
+    border-radius: 8px;
+}
+
+.wizard-card {
+    border-radius: 8px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.040),
+        0 28px 70px rgba(0, 0, 0, 0.44);
+}
+
+.wizard-chip,
+.command-palette-shortcut {
+    min-height: 24px;
+    padding: 4px 9px;
+    letter-spacing: 0.02em;
+}
+
+.wizard-support {
+    border-radius: 8px;
+}
+
+.wizard-footer {
+    align-items: center;
+}
+
+.wizard-footer .checkbox-row {
+    min-height: 36px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease;
+}
+
+.wizard-footer .checkbox-row:hover {
+    border-color: rgba(220, 230, 242, 0.14);
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--text-primary);
+}
+
+.wizard-footer .checkbox-row:focus-within {
+    border-color: rgba(119, 167, 255, 0.38);
+    box-shadow: 0 0 0 3px rgba(119, 167, 255, 0.12);
+}
+
+.wizard-footer input[type="checkbox"] {
+    flex: 0 0 auto;
+}
+
+.stage-action,
+.footer-toggle-btn,
+.command-palette,
+.command-palette input,
+.command-palette-item,
+.recent-clip-item {
+    border-radius: 8px;
+}
+
+.content-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "activity outputs"
+        "history history"
+        "queue queue"
+        "outputBrowser outputBrowser";
+    align-items: center;
+    gap: 0 10px;
+    padding: 6px 8px;
+}
+
+.job-history-bar {
+    grid-area: activity;
+    min-width: 0;
+    padding: 0;
+}
+
+.output-toggle-bar {
+    grid-area: outputs;
+    justify-self: end;
+    padding: 0;
+}
+
+.job-history {
+    grid-area: history;
+}
+
+.job-queue-bar {
+    grid-area: queue;
+}
+
+.output-browser {
+    grid-area: outputBrowser;
+}
+
+.footer-toggle-btn .toggle-count {
+    border-radius: 8px;
+}
+
+.job-history:not(.open) {
+    display: none;
+}
+
+.job-history.open {
+    margin-top: 8px;
+}
+
+.job-history.open:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    border-top: 1px solid rgba(220, 230, 242, 0.09);
+    background: rgba(255, 255, 255, 0.018);
+}
+
+.job-history.open:empty::before {
+    content: "No recent activity yet.";
+}
+
+.job-history.open .hint-empty {
+    min-height: 82px;
+    padding: 14px 16px;
+    border-color: rgba(220, 230, 242, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.040), rgba(255, 255, 255, 0.018));
+}
+
+.job-history.open .hint-empty::before {
+    display: none;
+}
+
+.job-history.open .hint-kicker {
+    display: none;
+}
+
+.status-bar {
+    min-height: 32px;
+}
+
+.status-bar[data-state="offline"] {
+    border-color: rgba(224, 84, 84, 0.16);
+}
+
+@media (max-width: 620px) {
+    .content-footer {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "activity"
+            "outputs"
+            "history"
+            "queue"
+            "outputBrowser";
+        gap: 8px;
+    }
+
+    .output-toggle-bar {
+        justify-self: stretch;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card:hover,
+    .workspace-stage-card:hover,
+    .quick-action-btn:hover:not(:disabled),
+    .stage-action:hover:not(:disabled) {
+        transform: none;
+    }
+}

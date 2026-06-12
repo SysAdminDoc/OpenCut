@@ -4354,3 +4354,183 @@ textarea:focus-visible,
     max-width: none;
   }
 }
+
+/* =========================================================
+   Extreme premium polish: shared CEP/UXP geometry and states
+   ========================================================= */
+:root {
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --accent: #77a7ff;
+  --accent-hover: #8eb7ff;
+  --accent-dim: rgba(119, 167, 255, 0.14);
+  --success: #4fd6a4;
+  --success-dim: rgba(79, 214, 164, 0.14);
+  --warning: #d7b170;
+  --warning-dim: rgba(215, 177, 112, 0.14);
+  --error: #e07167;
+  --error-dim: rgba(224, 113, 103, 0.14);
+}
+
+.oc-version,
+.oc-connection,
+.oc-workspace-kicker,
+.oc-workspace-guide-kicker,
+.oc-empty-state-kicker,
+.oc-result-list-item-badge,
+.oc-chip,
+.oc-status-pill,
+.oc-toast-dismiss,
+.oc-shortcut-item kbd {
+  border-radius: 8px;
+}
+
+.oc-processing-banner,
+.oc-tabs,
+.oc-workspace-overview,
+.oc-workspace-guide,
+.oc-card,
+.oc-result-area,
+.oc-status-line,
+.oc-empty-state,
+.oc-toast,
+.oc-shortcut-item,
+.oc-workspace-meta-item,
+.oc-result-insight,
+.oc-inline-summary-grid--settings .oc-inline-stat {
+  border-radius: 8px;
+}
+
+.oc-header {
+  background:
+    linear-gradient(180deg, rgba(14, 17, 23, 0.98), rgba(9, 12, 18, 0.96));
+  border-bottom-color: rgba(220, 230, 242, 0.10);
+}
+
+.oc-tabs {
+  padding: 5px;
+  background:
+    linear-gradient(180deg, rgba(17, 20, 26, 0.94), rgba(10, 13, 19, 0.92));
+}
+
+.oc-tab {
+  border-radius: 8px;
+}
+
+.oc-tab.active {
+  border-color: rgba(119, 167, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(119, 167, 255, 0.16), rgba(255, 255, 255, 0.035));
+  color: #eaf2ff;
+}
+
+.oc-workspace-overview {
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(119, 167, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 0 100%, rgba(79, 214, 164, 0.075), transparent 30%),
+    linear-gradient(180deg, rgba(18, 22, 30, 0.96), rgba(11, 15, 22, 0.94));
+}
+
+.oc-workspace-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.oc-workspace-meta-item,
+.oc-result-insight,
+.oc-inline-summary-grid--settings .oc-inline-stat {
+  border-color: rgba(220, 230, 242, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.040), rgba(255, 255, 255, 0.018));
+}
+
+.oc-btn,
+.oc-input,
+.oc-select,
+.oc-textarea,
+.oc-deliv-btn,
+.oc-cancel-btn,
+.oc-icon-btn {
+  border-radius: 8px;
+}
+
+.oc-btn-primary {
+  background: linear-gradient(135deg, #80abff 0%, #55d2a6 100%);
+  color: #081018;
+  box-shadow: 0 14px 24px rgba(79, 214, 164, 0.12);
+}
+
+.oc-btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #91b8ff 0%, #66ddaf 100%);
+}
+
+.oc-btn:disabled,
+.oc-deliv-btn:disabled,
+.oc-cancel-btn:disabled {
+  opacity: 0.56;
+  filter: saturate(0.7);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.oc-btn:focus-visible,
+.oc-input:focus-visible,
+.oc-select:focus-visible,
+.oc-textarea:focus-visible,
+.oc-tab:focus-visible,
+.oc-icon-btn:focus-visible,
+.oc-card-header[role="button"]:focus-visible,
+.oc-chip:focus-visible,
+.oc-deliv-btn:focus-visible,
+.oc-toast-dismiss:focus-visible {
+  outline: 2px solid rgba(119, 167, 255, 0.78);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(119, 167, 255, 0.12);
+}
+
+.oc-empty-state p,
+.oc-hint,
+.oc-workspace-guide-text,
+.oc-shortcut-text {
+  line-height: 1.55;
+}
+
+.oc-status-line[data-state="error"],
+.oc-workspace-guide[data-state="error"] {
+  border-color: rgba(224, 113, 103, 0.24);
+}
+
+.oc-status-line[data-state="warning"],
+.oc-workspace-guide[data-state="warning"] {
+  border-color: rgba(215, 177, 112, 0.24);
+}
+
+.oc-status-line[data-state="success"],
+.oc-workspace-guide[data-state="ready"] {
+  border-color: rgba(79, 214, 164, 0.22);
+}
+
+@media (max-width: 620px) {
+  .oc-workspace-overview,
+  .oc-workspace-guide,
+  .oc-card,
+  .oc-result-area {
+    border-radius: 8px;
+  }
+
+  .oc-workspace-guide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-btn:not(:disabled):hover,
+  .oc-tab:hover,
+  .oc-deliv-btn:hover {
+    transform: none;
+  }
+}
