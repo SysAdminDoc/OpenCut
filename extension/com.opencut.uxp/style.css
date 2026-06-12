@@ -4021,3 +4021,336 @@ textarea:hover {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* =========================================================
+   Final product-quality pass: compact premium state system.
+   ========================================================= */
+
+body,
+body * {
+  letter-spacing: 0;
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 32%),
+    linear-gradient(135deg, rgba(119, 167, 255, 0.045), transparent 46%),
+    var(--bg-primary, #08090b);
+}
+
+.oc-header,
+.oc-tabs,
+.oc-status-bar,
+.oc-processing-banner {
+  border-color: rgba(220, 230, 242, 0.11);
+  background: rgba(13, 15, 19, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.oc-content {
+  gap: 14px;
+}
+
+.oc-workspace-overview,
+.oc-workspace-guide,
+.oc-card,
+.oc-card--nested,
+.oc-result-area,
+.oc-result-list-item,
+.oc-result-insight,
+.oc-inline-summary-grid .oc-inline-stat,
+.oc-workspace-meta-item,
+.oc-empty-state,
+.oc-caption-preview-area,
+.oc-toast {
+  border-radius: 8px;
+}
+
+.oc-workspace-overview,
+.oc-workspace-guide,
+.oc-card,
+.oc-card--nested,
+.oc-result-area,
+.oc-empty-state,
+.oc-caption-preview-area {
+  border-color: rgba(220, 230, 242, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.040), rgba(255, 255, 255, 0.018)),
+    rgba(17, 20, 26, 0.91);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.030),
+    0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+.oc-card:hover,
+.oc-workspace-guide:hover,
+.oc-workspace-meta-item:hover,
+.oc-result-list-item:hover {
+  border-color: rgba(220, 230, 242, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.034),
+    0 14px 34px rgba(0, 0, 0, 0.27);
+}
+
+.oc-logo,
+.oc-workspace-title,
+.oc-section-title,
+.oc-card-header span,
+.oc-result-header,
+.oc-empty-state h3,
+.oc-workspace-guide-title {
+  color: var(--text-primary, #f4f6f8);
+  font-weight: 680;
+  line-height: 1.35;
+}
+
+.oc-workspace-subtitle,
+.oc-workspace-guide-text,
+.oc-empty-state p,
+.oc-hint,
+.oc-result-list-item-excerpt,
+.oc-status-line,
+.oc-card-copy,
+.oc-caption-intro {
+  color: var(--text-secondary, #b5bfca);
+  line-height: 1.55;
+}
+
+.oc-version,
+.oc-connection,
+.oc-status-pill,
+.oc-inline-value,
+.oc-workspace-meta-item,
+.oc-result-summary,
+.oc-result-list-item-badge,
+.oc-chip {
+  min-height: 28px;
+  border-radius: 8px;
+  border-color: rgba(220, 230, 242, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-secondary, #b5bfca);
+}
+
+.oc-status-pill[data-state="ready"],
+.oc-status-pill[data-state="success"],
+.oc-connection[data-state="connected"],
+.oc-workspace-guide[data-state="ready"] .oc-workspace-guide-kicker {
+  border-color: rgba(79, 214, 164, 0.28);
+  background: rgba(79, 214, 164, 0.105);
+  color: #dffbed;
+}
+
+.oc-status-pill[data-state="warning"],
+.oc-status-pill[data-state="empty"],
+.oc-workspace-guide[data-state="warning"] .oc-workspace-guide-kicker {
+  border-color: rgba(255, 189, 99, 0.28);
+  background: rgba(255, 189, 99, 0.105);
+  color: #ffe4b7;
+}
+
+.oc-status-pill[data-state="error"],
+.oc-workspace-guide[data-state="error"] .oc-workspace-guide-kicker {
+  border-color: rgba(255, 111, 115, 0.30);
+  background: rgba(255, 111, 115, 0.105);
+  color: #ffd9da;
+}
+
+.oc-tab {
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 650;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.oc-tab:hover {
+  border-color: rgba(220, 230, 242, 0.13);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.oc-tab.active {
+  border-color: rgba(119, 167, 255, 0.24);
+  background: rgba(119, 167, 255, 0.13);
+  color: #f8fbff;
+  box-shadow: inset 0 -2px 0 rgba(119, 167, 255, 0.72);
+}
+
+.oc-btn,
+.oc-cancel-btn,
+.oc-icon-btn,
+.oc-chip,
+.oc-deliv-btn,
+.oc-toast-dismiss {
+  min-height: 34px;
+  border-radius: 8px;
+  font-weight: 650;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
+.oc-btn-sm {
+  min-height: 28px;
+}
+
+.oc-btn-primary:not(:disabled):hover,
+.oc-btn-secondary:not(:disabled):hover,
+.oc-cancel-btn:not(:disabled):hover,
+.oc-icon-btn:not(:disabled):hover,
+.oc-chip:not([aria-disabled="true"]):hover,
+.oc-deliv-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.oc-btn-primary:not(:disabled):active,
+.oc-btn-secondary:not(:disabled):active,
+.oc-cancel-btn:not(:disabled):active,
+.oc-icon-btn:not(:disabled):active,
+.oc-deliv-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.oc-btn:disabled,
+.oc-cancel-btn:disabled,
+.oc-icon-btn:disabled,
+.oc-deliv-btn:disabled,
+.oc-chip[aria-disabled="true"],
+button:disabled,
+[aria-disabled="true"] {
+  opacity: 0.56;
+  filter: saturate(0.72);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.oc-input,
+.oc-select,
+input[type="text"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+  min-height: 34px;
+  border-radius: 8px;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-disabled, #697481);
+  opacity: 1;
+}
+
+.oc-btn:focus-visible,
+.oc-tab:focus-visible,
+.oc-chip:focus-visible,
+.oc-input:focus-visible,
+.oc-select:focus-visible,
+.oc-icon-btn:focus-visible,
+.oc-cancel-btn:focus-visible,
+.oc-deliv-btn:focus-visible,
+.oc-toast-dismiss:focus-visible,
+.oc-card-header[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--border-focus, rgba(119, 167, 255, 0.82));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(119, 167, 255, 0.14);
+}
+
+.oc-status-line {
+  border-radius: 8px;
+  border-color: rgba(220, 230, 242, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.oc-processing-banner:not(.hidden) {
+  border-color: rgba(119, 167, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(119, 167, 255, 0.10), rgba(255, 255, 255, 0.020)),
+    rgba(17, 20, 26, 0.94);
+}
+
+.oc-progress-track {
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.oc-progress-fill {
+  background: linear-gradient(90deg, #77a7ff, #4fd6a4);
+  transition: width 180ms ease;
+}
+
+.oc-empty-state {
+  border-style: dashed;
+  border-color: rgba(220, 230, 242, 0.20);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-secondary, #b5bfca);
+  box-shadow: none;
+}
+
+.oc-toast-area {
+  right: 12px;
+  bottom: 12px;
+  gap: 8px;
+}
+
+.oc-toast {
+  max-width: min(380px, calc(100vw - 24px));
+  border-width: 1px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.oc-toast-dismiss {
+  min-height: 26px;
+  width: 26px;
+}
+
+.oc-caption-preview-area {
+  min-height: 100px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%),
+    var(--bg-panel, var(--bg-card));
+  background-size: 18px 18px;
+}
+
+@media (max-width: 620px) {
+  .oc-content {
+    gap: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .oc-workspace-actions .oc-btn,
+  .oc-btn-full {
+    min-height: 38px;
+  }
+
+  .oc-toast-area {
+    left: 10px;
+    right: 10px;
+  }
+
+  .oc-toast {
+    max-width: none;
+  }
+}

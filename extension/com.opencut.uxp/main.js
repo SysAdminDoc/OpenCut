@@ -2212,7 +2212,7 @@ const UIController = (() => {
       case "success": return "Ready";
       case "warning": return "Needs attention";
       case "error": return "Action failed";
-      default: return "OpenCut";
+      default: return "Status update";
     }
   }
 
@@ -2226,6 +2226,10 @@ const UIController = (() => {
   function showToast(message, type = "info", duration) {
     const area = document.getElementById("toastArea");
     if (!area) return;
+    const maxVisibleToasts = 4;
+    while (area.children.length >= maxVisibleToasts) {
+      area.firstElementChild?.remove();
+    }
 
     const payload = (message && typeof message === "object")
       ? message
