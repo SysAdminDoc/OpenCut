@@ -71,7 +71,7 @@ logger = logging.getLogger("opencut")
 SPEC_VERSION = "0.2-sidecar"  # OpenCut sidecar wire-format; bumped for the F140 C2PA 2.3 alignment
 MANIFEST_SPEC_VERSION = SPEC_VERSION  # public alias
 C2PA_SPEC_VERSION = "2.3"  # the C2PA specification version our action vocabulary follows
-CLAIM_GENERATOR_DEFAULT = "OpenCut/1.32.0 (sidecar; c2pa-spec 2.3)"
+CLAIM_GENERATOR_DEFAULT = "OpenCut/1.33.0 (sidecar; c2pa-spec 2.3)"
 
 
 # F140 — C2PA 2.3 action vocabulary. This is the documented set of
