@@ -184,7 +184,7 @@
                             <span class="stage-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6.5h8"/><path d="M6 10h8"/><path d="M6 13.5h5"/><rect x="3.5" y="4" width="13" height="12" rx="2.5"/></svg>
                             </span>
-                            <span class="stage-action-label" data-i18n="workspace.action_open_palette">Open Command Palette</span>
+                            <span class="stage-action-label" data-i18n="workspace.action_open_palette">Open Launcher</span>
                         </button>
                     </div>
                 </div>
@@ -493,7 +493,7 @@
                             <button type="button" class="btn-secondary btn-sm" id="silencePreviewBtn" disabled title="Hear a 10s preview with silent regions removed" data-i18n="silence.preview_10s" data-i18n-title="silence.preview_10s_title">Preview 10s</button>
                             <audio id="silencePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
-                        <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Ctrl+Shift+S" data-i18n="silence.remove">Remove Silences</button>
+                        <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Select media to enable silence removal" data-i18n="silence.remove">Remove Silences</button>
                     </section>
                 </div>
 
@@ -864,7 +864,7 @@
                             <label for="actionWordsInput"><span data-i18n="captions.custom_action_words">Custom Action Words</span> <span class="hint-inline" data-i18n="common.comma_separated">(comma-separated)</span></label>
                             <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" data-i18n-placeholder="captions.action_words_placeholder" class="text-input">
                         </div>
-                        <button type="button" class="btn-primary" id="runStyledCaptionsBtn" disabled title="Ctrl+Shift+C" data-i18n="captions.generate_styled">Generate Styled Captions</button>
+                        <button type="button" class="btn-primary" id="runStyledCaptionsBtn" disabled title="Select media to enable caption generation" data-i18n="captions.generate_styled">Generate Styled Captions</button>
                         <div class="hint hidden" id="captionsHint">
                             <span data-i18n="captions.whisper_not_installed">Whisper not installed.</span>
                             <button type="button" class="btn-install" id="installWhisperBtn" data-i18n="whisper.install_now">Install Whisper Now</button>
@@ -1372,7 +1372,7 @@
                             <button type="button" class="btn-secondary btn-sm" id="denoisePreviewBtn" disabled title="Render a 10s preview with current settings" data-i18n="audio.preview_10s" data-i18n-title="audio.denoise_preview_10s_title">Preview 10s</button>
                             <audio id="denoisePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
-                        <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Ctrl+Shift+D" data-i18n="audio.remove_noise">Remove Noise</button>
+                        <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Select media to enable noise removal" data-i18n="audio.remove_noise">Remove Noise</button>
                     </section>
                 </div>
 
@@ -1468,7 +1468,7 @@
                         </div>
                         <div class="btn-row-split">
                             <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled data-i18n="audio.measure">Measure</button>
-                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Ctrl+Shift+N" data-i18n="audio.normalize">Normalize</button>
+                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Select media to enable normalization" data-i18n="audio.normalize">Normalize</button>
                         </div>
                         <!-- v1.10.2 (M): live 10s preview at target LUFS -->
                         <div class="audio-preview-row">
@@ -2925,7 +2925,7 @@
                             <span data-i18n="common.auto_import_result">Auto-import result to project</span>
                         </label>
 
-                        <button type="button" class="btn-primary" id="runExportPresetBtn" disabled title="Ctrl+Shift+E" data-i18n="export.export">Export</button>
+                        <button type="button" class="btn-primary" id="runExportPresetBtn" disabled title="Select media to enable export" data-i18n="export.export">Export</button>
                     </section>
                 </div>
 
@@ -3832,7 +3832,7 @@
                 </section>
 
                 <section class="card">
-                    <div class="card-header"><div class="card-title" data-i18n="settings.keyboard_shortcuts">Keyboard Shortcuts</div></div>
+                    <div class="card-header"><div class="card-title" data-i18n="settings.keyboard_shortcuts">Fast Actions</div></div>
                     <div class="shortcut-reference" id="shortcutReference">
                         <div class="shortcut-row"><kbd>Ctrl+K</kbd><span data-i18n="shortcuts.command_palette">Command Palette</span></div>
                         <div class="shortcut-row"><kbd>Ctrl+Shift+S</kbd><span data-i18n="shortcuts.silence">Remove Silences</span></div>
@@ -3851,7 +3851,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label" data-i18n="settings.version">Version</span>
-                        <span class="settings-value">1.33.0</span>
+                        <span class="settings-value">1.33.1</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank" data-i18n="settings.github">GitHub</a>
@@ -3984,14 +3984,14 @@
                     <div class="command-palette-kicker" data-i18n="palette.launcher">Launcher</div>
                     <div class="command-palette-title-row">
                         <div class="command-palette-title" data-i18n="palette.title">Command Palette</div>
-                        <div class="command-palette-shortcut">Ctrl+K</div>
+                        <div class="command-palette-shortcut" data-i18n="palette.launcher_badge">Launcher</div>
                     </div>
                     <div class="command-palette-subtitle" data-i18n="palette.subtitle">Jump to recent actions, favorites, and tools across the full studio workflow.</div>
                 </div>
                 <input type="text" id="commandPaletteInput" placeholder="Search operations… (e.g. denoise, reframe, captions)" autocomplete="off" spellcheck="false" aria-label="Search operations" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="commandPaletteResults" aria-describedby="commandPaletteStatus commandPaletteHint" data-i18n-placeholder="palette.search_placeholder" data-i18n-aria-label="palette.search_aria">
                 <div class="command-palette-status" id="commandPaletteStatus" role="status" aria-live="polite"></div>
                 <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Matching operations" data-i18n-aria-label="palette.matching_operations_aria"></div>
-                <div class="command-palette-hint" id="commandPaletteHint" data-i18n="palette.keyboard_hint">Use arrow keys to move, Enter to open, and Esc to close.</div>
+                <div class="command-palette-hint" id="commandPaletteHint" data-i18n="palette.keyboard_hint">Type to filter operations, then choose the result you want to open.</div>
             </div>
         </div>
 
@@ -4059,7 +4059,7 @@
                 <div class="wizard-hero">
                     <div class="wizard-kicker-row">
                         <span class="wizard-kicker" data-i18n="wizard.guided_setup">Guided Setup</span>
-                        <span class="wizard-chip" data-i18n="wizard.ctrl_k_launcher">Ctrl+K Launcher</span>
+                        <span class="wizard-chip" data-i18n="wizard.ctrl_k_launcher">Workspace Launcher</span>
                     </div>
                     <div class="wizard-header">
                         <img class="wizard-logo" width="32" height="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=" alt="OpenCut" data-i18n-alt="wizard.logo_alt">
@@ -4108,7 +4108,7 @@
                 </div>
                 <div class="wizard-support">
                     <span class="wizard-support-label" data-i18n="wizard.quick_tip">Quick Tip</span>
-                    <p data-i18n="wizard.quick_tip_body">Press Ctrl+K any time to open the command palette and jump to recent actions, pinned tools, and the current workspace.</p>
+                    <p data-i18n="wizard.quick_tip_body">Open the launcher from the workspace actions to jump to recent actions, pinned tools, and the current workspace.</p>
                 </div>
                 <div class="wizard-footer">
                     <label class="checkbox-row"><input type="checkbox" id="wizardDontShow"> <span data-i18n="wizard.dont_show_again">Don't show again</span></label>

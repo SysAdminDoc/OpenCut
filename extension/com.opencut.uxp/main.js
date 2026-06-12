@@ -32,7 +32,7 @@ const WS_RECONNECT_MAX_MS = 30000;
 const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.33.0";
+const VERSION          = "1.33.1";
 const UXP_DEFAULT_LOCALE = "en";
 const UXP_LOCALE_DIR   = "locales";
 const UXP_LOCALE_PATH  = `${UXP_LOCALE_DIR}/${UXP_DEFAULT_LOCALE}.json`;
@@ -7250,6 +7250,17 @@ async function initApp() {
   if (aboutVersion) aboutVersion.textContent = `${VERSION} (UXP)`;
   await loadLocale();
 
+  // Keep the panel navigable while backend discovery, UXP bridge checks, and
+  // migration metadata load in the background.
+  UIController.initCollapsibles();
+  bindSliders();
+  bindEvents();
+  initKeyboardShortcuts();
+  UIController.switchTab(document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut");
+  updateWorkspaceOverview();
+  updateDeliverablesSummary();
+  updateTimelineReadiness();
+
   // Detect which port the backend is running on (5679-5689)
   await refreshBackendBaseUrl();
   console.log(`[OpenCut UXP] Backend detected at: ${BACKEND}`);
@@ -7263,16 +7274,6 @@ async function initApp() {
     }
     updateTimelineReadiness();
   });
-
-  // Wire up all UI interactions
-  UIController.initCollapsibles();
-  bindSliders();
-  bindEvents();
-  initKeyboardShortcuts();
-  UIController.switchTab(document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut");
-  updateWorkspaceOverview();
-  updateDeliverablesSummary();
-  updateTimelineReadiness();
   uxpLoadEngines();
   uxpUpdateWsStatus();
   await uxpLoadMigrationRisk();
