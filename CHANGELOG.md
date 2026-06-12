@@ -28,6 +28,12 @@ record also lives in the git commit messages.
   metadata, and the C2PA claim-generator string so release smoke fails when
   those public version surfaces drift.
 
+### Security — cache safety
+
+- Preview-cache metadata is now scoped to the active cache directory and ignores
+  metadata entries whose files resolve outside that directory before eviction,
+  invalidation, or flush can delete them.
+
 ## [1.33.0] — 2026-06-11 — June hardening & quality pass
 
 ### Fixed — Docker/runtime
