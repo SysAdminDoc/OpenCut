@@ -22,6 +22,9 @@ record also lives in the git commit messages.
 
 ### Fixed — release process
 
+- Release smoke now catches MCP registry version drift, the committed MCP
+  registry manifest is back on the package version, and stale UXP harness/i18n
+  guardrails have been brought back in sync.
 - README test-count badge now syncs to the live suite count so the release
   readiness gate stays green after new coverage lands.
 - Release smoke and doc-size drift checks now target only live documentation

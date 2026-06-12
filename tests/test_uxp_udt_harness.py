@@ -90,7 +90,8 @@ def test_f267_panel_loads_bundled_udt_harness_runner():
     html = INDEX_HTML.read_text(encoding="utf-8", errors="replace")
     source = UDT_SCRIPT.read_text(encoding="utf-8", errors="replace")
 
-    assert 'src="udt-smoke.js"' in html
+    assert 'localStorage.getItem("opencut_debug") === "1"' in html
+    assert 'import("./udt-smoke.js")' in html
     assert "window.OpenCutUXPUdtHarness" in source
     assert "uxp-udt-harness.json" in source
     assert "OpenCutUXPHost.executeHostAction" in source

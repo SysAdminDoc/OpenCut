@@ -136,11 +136,9 @@ def load_committed(path: Path = MANIFEST_PATH) -> Optional[dict]:
 
 
 def _comparable(manifest: dict) -> dict:
-    """Strip timestamp + version so we don't fail closed on
-    expected-to-drift fields."""
+    """Strip only the timestamp so public registry metadata cannot drift."""
     compare = dict(manifest)
     compare.pop("generated_at", None)
-    compare.pop("version", None)
     return compare
 
 
