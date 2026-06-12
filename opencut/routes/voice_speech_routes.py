@@ -212,6 +212,7 @@ def route_overdub(job_id, filepath, data):
         raise ValueError("Missing 'replacements' list")
 
     transcript_segments = data.get("transcript_segments")
+    tts_backend = data.get("tts_backend", "auto")
     tts_endpoint = data.get("tts_endpoint", "")
     voice_name = data.get("voice_name", "en-US-GuyNeural")
     crossfade_ms = safe_int(data.get("crossfade_ms", 50), 50, min_val=0, max_val=500)
@@ -221,6 +222,7 @@ def route_overdub(job_id, filepath, data):
         input_path=filepath,
         replacements=replacements,
         transcript_segments=transcript_segments,
+        tts_backend=tts_backend,
         tts_endpoint=tts_endpoint,
         voice_name=voice_name,
         crossfade_ms=crossfade_ms,

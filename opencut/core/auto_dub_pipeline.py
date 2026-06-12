@@ -114,7 +114,7 @@ class DubConfig:
     voice_clone: bool = True        # attempt voice cloning
     lip_sync: bool = True           # attempt lip sync
     preserve_music: bool = True     # keep background music via stem separation
-    tts_engine: str = "edge"        # "edge", "kokoro", "chatterbox"
+    tts_engine: str = "auto"        # local-first: "auto", "kokoro", "chatterbox", "edge"
     output_dir: str = ""
     max_segment_gap: float = 0.5    # merge segments closer than this
 
@@ -367,6 +367,17 @@ def _extract_voice_reference(
 # ---------------------------------------------------------------------------
 # Stage 5: TTS generation
 # ---------------------------------------------------------------------------
+def _normalize_tts_engine(tts_engine: str) -> str:
+    """Normalize legacy engine names without making cloud engines implicit."""
+    engine = str(tts_engine or "auto").strip().lower().replace("-", "_")
+    aliases = {
+        "local": "auto",
+        "local_first": "auto",
+        "edge_tts": "edge",
+    }
+    return aliases.get(engine, engine)
+
+
 def _generate_tts_segment(
     text: str,
     output_audio: str,
@@ -376,19 +387,21 @@ def _generate_tts_segment(
     voice_reference: str = "",
 ) -> bool:
     """Generate TTS audio for a single segment."""
-    # Try edge-tts first (most reliable)
-    if tts_engine == "edge" or tts_engine == "auto":
+    tts_engine = _normalize_tts_engine(tts_engine)
+
+    # Prefer local voice cloning when a reference was extracted.
+    if tts_engine in ("chatterbox", "auto") and (voice_reference or tts_engine == "chatterbox"):
         try:
-            from opencut.core.voice_gen import edge_tts_generate
-            return edge_tts_generate(
+            from opencut.core.voice_gen import chatterbox_generate
+            return chatterbox_generate(
                 text=text,
                 output_path=output_audio,
-                language=target_lang,
+                voice_ref=voice_reference or None,
             )
         except Exception as exc:
-            logger.debug("edge-tts failed: %s", exc)
+            logger.debug("Chatterbox TTS failed: %s", exc)
 
-    # Try Kokoro
+    # Try Kokoro locally before any online provider.
     if tts_engine in ("kokoro", "auto"):
         try:
             from opencut.core.voice_gen import kokoro_generate
@@ -399,17 +412,28 @@ def _generate_tts_segment(
         except Exception as exc:
             logger.debug("Kokoro TTS failed: %s", exc)
 
-    # Try Chatterbox (voice cloning)
-    if tts_engine in ("chatterbox", "auto") and voice_reference:
+    # If auto has no voice reference and Kokoro is unavailable, Chatterbox can
+    # still synthesize locally with its default voice.
+    if tts_engine == "auto" and not voice_reference:
         try:
             from opencut.core.voice_gen import chatterbox_generate
             return chatterbox_generate(
                 text=text,
                 output_path=output_audio,
-                reference_audio=voice_reference,
+                voice_ref=None,
             )
         except Exception as exc:
             logger.debug("Chatterbox TTS failed: %s", exc)
+
+    if tts_engine == "edge":
+        try:
+            from opencut.core.voice_gen import edge_tts_generate
+            return edge_tts_generate(
+                text=text,
+                output_path=output_audio,
+            )
+        except Exception as exc:
+            logger.debug("edge-tts failed: %s", exc)
 
     # Fallback: generate silence as placeholder
     cmd = [

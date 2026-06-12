@@ -679,7 +679,37 @@ class TestAutoDubPipeline:
         assert c.voice_clone is True
         assert c.lip_sync is True
         assert c.preserve_music is True
-        assert c.tts_engine == "edge"
+        assert c.tts_engine == "auto"
+
+    def test_generate_tts_segment_auto_uses_chatterbox_reference_before_edge(self, tmp_path, monkeypatch):
+        """Auto TTS should stay local and prefer Chatterbox when a voice reference exists."""
+        from opencut.core import auto_dub_pipeline, voice_gen
+
+        out = tmp_path / "tts.wav"
+        calls = []
+
+        def fake_chatterbox_generate(**kwargs):
+            calls.append(("chatterbox", kwargs.get("voice_ref")))
+            out.write_bytes(b"wav")
+            return str(out)
+
+        def edge_should_not_run(**_kwargs):
+            raise AssertionError("edge_tts_generate should not run for auto TTS")
+
+        monkeypatch.setattr(voice_gen, "chatterbox_generate", fake_chatterbox_generate)
+        monkeypatch.setattr(voice_gen, "edge_tts_generate", edge_should_not_run)
+
+        result = auto_dub_pipeline._generate_tts_segment(
+            text="hello",
+            output_audio=str(out),
+            target_lang="en",
+            target_duration=1.0,
+            tts_engine="auto",
+            voice_reference="voice-ref.wav",
+        )
+
+        assert result == str(out)
+        assert calls == [("chatterbox", "voice-ref.wav")]
 
     def test_dub_config_to_dict(self):
         """DubConfig.to_dict() should work."""

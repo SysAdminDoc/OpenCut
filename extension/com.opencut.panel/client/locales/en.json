@@ -129,6 +129,7 @@
   "audio.studio_desc": "Studio-grade compressor, EQ, de-esser, limiter, reverb, and more. Processes audio in real-time.",
   "audio.studio_effects_pedalboard_title": "Studio Effects (Pedalboard)",
   "audio.tts_desc": "Generate voiceovers and narration from text. 400+ natural voices in 75+ languages.",
+  "audio.tts_engine_auto": "Auto (local first)",
   "audio.tts_engine_edge": "Edge TTS (online, free)",
   "audio.tts_engine_kokoro": "Kokoro (offline, 350MB)",
   "audio.tts_generate": "Generate Speech",

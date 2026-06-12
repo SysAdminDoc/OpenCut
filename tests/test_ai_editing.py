@@ -89,7 +89,7 @@ class TestOverdubConfig:
         from opencut.core.overdub import OverdubConfig
         cfg = OverdubConfig()
         assert cfg.crossfade_ms == 150
-        assert cfg.tts_backend == "edge"
+        assert cfg.tts_backend == "auto"
         assert cfg.language == "en"
         assert cfg.speed == 1.0
 
@@ -126,6 +126,52 @@ class TestOverdubTTSFallback:
                 os.unlink(path)
             except OSError:
                 pass
+
+    @patch("opencut.core.overdub._generate_tts_edge", side_effect=AssertionError("edge should not run"))
+    @patch("opencut.core.overdub._generate_tts_kokoro")
+    @patch("opencut.core.overdub._generate_tts_chatterbox")
+    def test_auto_tts_policy_prefers_local_voice_clone(self, mock_chatterbox, mock_kokoro, _mock_edge):
+        from opencut.core.overdub import _generate_tts_with_policy
+
+        backend = _generate_tts_with_policy(
+            "replacement text",
+            "/tmp/out.wav",
+            "auto",
+            "en",
+            1.0,
+            voice_reference="/tmp/ref.wav",
+        )
+
+        assert backend == "chatterbox"
+        mock_chatterbox.assert_called_once()
+        mock_kokoro.assert_not_called()
+
+    @patch("opencut.core.overdub._generate_tts_edge", side_effect=AssertionError("edge should not run"))
+    @patch("opencut.core.overdub._generate_tts_fallback")
+    @patch("opencut.core.overdub._generate_tts_kokoro")
+    @patch("opencut.core.overdub._generate_tts_chatterbox", side_effect=RuntimeError("missing"))
+    def test_auto_tts_policy_falls_back_to_kokoro_without_edge(
+        self,
+        mock_chatterbox,
+        mock_kokoro,
+        mock_fallback,
+        _mock_edge,
+    ):
+        from opencut.core.overdub import _generate_tts_with_policy
+
+        backend = _generate_tts_with_policy(
+            "replacement text",
+            "/tmp/out.wav",
+            "auto",
+            "en",
+            1.0,
+            voice_reference="/tmp/ref.wav",
+        )
+
+        assert backend == "kokoro"
+        mock_chatterbox.assert_called_once()
+        mock_kokoro.assert_called_once()
+        mock_fallback.assert_not_called()
 
     @patch("opencut.core.overdub.run_ffmpeg")
     def test_fallback_speed(self, mock_ffmpeg):

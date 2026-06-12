@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — audio privacy
+
+- Standalone TTS, auto-dubbing, and overdub workflows now default to local-first
+  TTS selection; Edge TTS and external API providers run only when explicitly
+  selected.
+
 ### Fixed — release process
 
 - Version sync now covers the security support table, CEP package-lock root

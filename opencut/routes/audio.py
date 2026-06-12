@@ -934,9 +934,11 @@ def tts_generate(job_id, filepath, data):
     import re as _re_tts
 
     text = data.get("text", "").strip()
-    engine = data.get("engine", "edge")
-    if engine not in ("edge", "kokoro", "chatterbox"):
+    engine = str(data.get("engine", "auto")).strip().lower().replace("-", "_")
+    if engine == "edge_tts":
         engine = "edge"
+    if engine not in ("auto", "edge", "kokoro", "chatterbox"):
+        engine = "auto"
     voice = data.get("voice", "en-US-AriaNeural")
     rate = data.get("rate", "+0%")
     if not isinstance(rate, str) or not _re_tts.match(r'^[+-]?\d{1,3}%$', rate):
@@ -959,35 +961,68 @@ def tts_generate(job_id, filepath, data):
 
     effective_dir = output_dir or tempfile.gettempdir()
 
-    if engine == "chatterbox":
-        from opencut.core.voice_gen import chatterbox_generate
-        voice_ref = data.get("voice_ref", "")
-        if voice_ref:
-            try:
-                voice_ref = validate_filepath(voice_ref)
-            except ValueError:
-                voice_ref = None
-        else:
+    voice_ref = data.get("voice_ref", "")
+    if voice_ref:
+        try:
+            voice_ref = validate_filepath(voice_ref)
+        except ValueError:
             voice_ref = None
-        exaggeration = safe_float(data.get("exaggeration", 0.5), 0.5, min_val=0.0, max_val=1.0)
-        out = chatterbox_generate(
-            text, voice_ref=voice_ref, output_dir=effective_dir,
-            exaggeration=exaggeration, on_progress=_on_progress,
-        )
-    elif engine == "kokoro":
-        from opencut.core.voice_gen import kokoro_generate
-        out = kokoro_generate(
-            text, voice=voice, output_dir=effective_dir,
-            speed=speed, on_progress=_on_progress,
-        )
     else:
+        voice_ref = None
+    exaggeration = safe_float(data.get("exaggeration", 0.5), 0.5, min_val=0.0, max_val=1.0)
+
+    out = None
+    engine_used = engine
+    voice_used = voice
+    local_errors = []
+
+    if engine in ("auto", "kokoro"):
+        try:
+            from opencut.core.voice_gen import kokoro_generate
+            kokoro_voice = str(data.get("kokoro_voice") or voice or "af_heart").strip()
+            if "Neural" in kokoro_voice or "-" in kokoro_voice:
+                kokoro_voice = "af_heart"
+            out = kokoro_generate(
+                text, voice=kokoro_voice, output_dir=effective_dir,
+                speed=speed, on_progress=_on_progress,
+            )
+            engine_used = "kokoro"
+            voice_used = kokoro_voice
+        except Exception as exc:
+            if engine == "kokoro":
+                raise
+            local_errors.append(f"Kokoro: {exc}")
+
+    if out is None and engine in ("auto", "chatterbox"):
+        try:
+            from opencut.core.voice_gen import chatterbox_generate
+            out = chatterbox_generate(
+                text, voice_ref=voice_ref, output_dir=effective_dir,
+                exaggeration=exaggeration, on_progress=_on_progress,
+            )
+            engine_used = "chatterbox"
+            voice_used = "cloned" if voice_ref else "default"
+        except Exception as exc:
+            if engine == "chatterbox":
+                raise
+            local_errors.append(f"Chatterbox: {exc}")
+
+    if out is None and engine == "edge":
         from opencut.core.voice_gen import edge_tts_generate
         out = edge_tts_generate(
             text, voice=voice, output_dir=effective_dir,
             rate=rate, pitch=pitch, on_progress=_on_progress,
         )
+        engine_used = "edge"
+        voice_used = voice
 
-    return {"output_path": out, "engine": engine, "voice": voice}
+    if out is None:
+        raise RuntimeError(
+            "No local TTS backend available for auto mode. "
+            + "; ".join(local_errors)
+        )
+
+    return {"output_path": out, "engine": engine_used, "voice": voice_used}
 
 
 @audio_bp.route("/audio/tts/subtitled", methods=["POST"])
