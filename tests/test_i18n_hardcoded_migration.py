@@ -594,6 +594,7 @@ HTML_STATIC_SHELL_CALLS = (
     ("audio.apply_effect", "data-i18n"),
     # One-hundred-twenty-fourth batch (Audio TTS form shell HTML).
     ("forms.engine", "data-i18n"),
+    ("audio.tts_engine_auto", "data-i18n"),
     ("audio.tts_engine_edge", "data-i18n"),
     ("audio.tts_engine_kokoro", "data-i18n"),
     ("forms.voice", "data-i18n"),
@@ -3158,6 +3159,7 @@ MIGRATED_KEYS = (
     "audio.effect_treble_boost",
     # One-hundred-twenty-fourth batch (Audio TTS form shell HTML).
     "audio.edge_tts_not_installed",
+    "audio.tts_engine_auto",
     "audio.tts_engine_edge",
     "audio.tts_engine_kokoro",
     "audio.tts_text_placeholder",

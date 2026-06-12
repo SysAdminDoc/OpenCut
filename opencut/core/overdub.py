@@ -6,9 +6,9 @@ segment, and crossfade it back into the timeline:
 - Extract speaker voice characteristics from surrounding audio
 - Generate replacement speech segment via TTS with cloned voice
 - Smooth crossfade at boundaries to avoid audible seams
-- Falls back to whisper-speed TTS or FFmpeg silence patching
+- Falls back to local TTS or FFmpeg silence patching
 
-Requires: openai-whisper (for transcription), TTS (Coqui) or edge-tts
+Requires: openai-whisper (for transcription) and an optional local TTS backend
 """
 
 import logging
@@ -36,7 +36,7 @@ class OverdubConfig:
     crossfade_ms: int = 150         # Crossfade duration at boundaries (ms)
     voice_clone_seconds: float = 10.0  # Seconds of surrounding audio for cloning
     sample_rate: int = 24000        # Output sample rate
-    tts_backend: str = "edge"       # "edge" (edge-tts), "coqui" (TTS), or "piper"
+    tts_backend: str = "auto"       # local-first: "auto", "kokoro", "chatterbox", "edge"
     language: str = "en"            # Language code
     speed: float = 1.0              # Playback speed multiplier
 
@@ -255,6 +255,95 @@ def _generate_tts_fallback(text: str, output_wav: str, speed: float = 1.0) -> st
     return output_wav
 
 
+def _normalize_tts_backend(tts_backend: str) -> str:
+    """Normalize TTS backend aliases while keeping cloud engines explicit."""
+    backend = str(tts_backend or "auto").strip().lower().replace("-", "_")
+    aliases = {
+        "local": "auto",
+        "local_first": "auto",
+        "edge_tts": "edge",
+        "fallback": "silence",
+    }
+    return aliases.get(backend, backend)
+
+
+def _generate_tts_kokoro(
+    text: str,
+    output_wav: str,
+    speed: float = 1.0,
+) -> str:
+    """Generate speech via local Kokoro."""
+    from opencut.core.voice_gen import kokoro_generate
+
+    return kokoro_generate(
+        text=text,
+        output_path=output_wav,
+        speed=speed,
+    )
+
+
+def _generate_tts_chatterbox(
+    text: str,
+    output_wav: str,
+    voice_reference: str = "",
+) -> str:
+    """Generate speech via local Chatterbox, optionally with a voice reference."""
+    from opencut.core.voice_gen import chatterbox_generate
+
+    return chatterbox_generate(
+        text=text,
+        output_path=output_wav,
+        voice_ref=voice_reference or None,
+    )
+
+
+def _generate_tts_with_policy(
+    text: str,
+    output_wav: str,
+    tts_backend: str,
+    language: str,
+    speed: float,
+    voice_reference: str = "",
+) -> str:
+    """Generate TTS and return the backend actually used."""
+    backend = _normalize_tts_backend(tts_backend)
+
+    if backend == "edge":
+        _generate_tts_edge(text, output_wav, language, speed)
+        return "edge"
+
+    if backend == "silence":
+        _generate_tts_fallback(text, output_wav, speed)
+        return "fallback"
+
+    candidates: list[str] = []
+    if backend == "auto":
+        if voice_reference:
+            candidates.append("chatterbox")
+        candidates.append("kokoro")
+        if not voice_reference:
+            candidates.append("chatterbox")
+    elif backend in ("kokoro", "chatterbox"):
+        candidates.append(backend)
+    else:
+        logger.warning("Unsupported TTS backend '%s'; using fallback", tts_backend)
+
+    for candidate in candidates:
+        try:
+            if candidate == "chatterbox":
+                _generate_tts_chatterbox(text, output_wav, voice_reference)
+            elif candidate == "kokoro":
+                _generate_tts_kokoro(text, output_wav, speed)
+            else:
+                continue
+            return candidate
+        except Exception as exc:
+            logger.debug("%s TTS failed: %s", candidate, exc)
+
+    _generate_tts_fallback(text, output_wav, speed)
+    return "fallback"
+
+
 # ---------------------------------------------------------------------------
 # Main Overdub
 # ---------------------------------------------------------------------------
@@ -331,13 +420,16 @@ def overdub_segment(
         _ntf.close()
         tmp_files.append(tts_path)
 
-        backend_used = config.tts_backend
+        backend_used = _normalize_tts_backend(config.tts_backend)
         try:
-            if config.tts_backend == "edge":
-                _generate_tts_edge(new_text, tts_path, config.language, config.speed)
-            else:
-                _generate_tts_fallback(new_text, tts_path, config.speed)
-                backend_used = "fallback"
+            backend_used = _generate_tts_with_policy(
+                new_text,
+                tts_path,
+                config.tts_backend,
+                config.language,
+                config.speed,
+                ref_path,
+            )
         except Exception as e:
             logger.warning("TTS backend '%s' failed: %s, using fallback", config.tts_backend, e)
             _generate_tts_fallback(new_text, tts_path, config.speed)

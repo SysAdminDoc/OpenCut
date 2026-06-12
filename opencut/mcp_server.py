@@ -32,7 +32,8 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from opencut import __version__, auth as _auth, mcp_extended_tools
+from opencut import __version__, mcp_extended_tools
+from opencut import auth as _auth
 
 logger = logging.getLogger("opencut.mcp")
 
@@ -458,7 +459,7 @@ MCP_TOOLS = [
                 "voice_clone": {"type": "boolean", "description": "Clone original speaker voice", "default": True},
                 "lip_sync": {"type": "boolean", "description": "Apply lip-sync to dubbed video", "default": False},
                 "preserve_music": {"type": "boolean", "description": "Keep background music track", "default": True},
-                "tts_engine": {"type": "string", "description": "TTS engine: edge / elevenlabs / openai", "default": "edge"},
+                "tts_engine": {"type": "string", "description": "TTS engine: auto / kokoro / chatterbox / edge", "default": "auto"},
             },
             "required": ["filepath"],
         },
