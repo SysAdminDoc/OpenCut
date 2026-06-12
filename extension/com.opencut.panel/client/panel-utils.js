@@ -52,6 +52,35 @@
         });
     }
 
+    function _copyBooleanSetting(source, target, key) {
+        if (typeof source[key] === "boolean") target[key] = source[key];
+    }
+
+    function _copyEnumSetting(source, target, key, allowed) {
+        if (typeof source[key] !== "string") return;
+        if (allowed.indexOf(source[key]) === -1) return;
+        target[key] = source[key];
+    }
+
+    function normalizeLocalSettings(value) {
+        var source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+        var settings = {};
+        _copyBooleanSetting(source, settings, "autoImport");
+        _copyBooleanSetting(source, settings, "autoOpen");
+        _copyBooleanSetting(source, settings, "showNotifications");
+        _copyEnumSetting(source, settings, "outputDir", ["source", "project", "custom"]);
+        _copyEnumSetting(source, settings, "theme", ["auto", "dark", "light"]);
+        _copyEnumSetting(source, settings, "lang", ["en"]);
+        _copyEnumSetting(source, settings, "defaultModel", [
+            "tiny", "tiny.en", "base", "base.en", "small", "small.en",
+            "medium", "medium.en", "large", "large-v1", "large-v2",
+            "large-v3", "turbo", "large-v3-turbo", "distil-large-v2",
+            "distil-large-v3", "distil-large-v3.5", "distil-medium.en",
+            "distil-small.en",
+        ]);
+        return settings;
+    }
+
     function getCommandPaletteItemKey(item) {
         if (!item) return "";
         return [item.name || "", item.tab || "", item.sub || ""].join("::");
@@ -279,6 +308,7 @@
         escapeJsxDoubleQuotedString: escapeJsxDoubleQuotedString,
         createLazyDomProxy: createLazyDomProxy,
         normalizePaletteText: normalizePaletteText,
+        normalizeLocalSettings: normalizeLocalSettings,
         formatPaletteLabel: formatPaletteLabel,
         getCommandPaletteItemKey: getCommandPaletteItemKey,
         scoreCommandPaletteItem: function (item, options) {
