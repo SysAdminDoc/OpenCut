@@ -36,6 +36,17 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Changed — Premiere 26 positioning audit
+
+- Updated README tagline to lead with silence-cut-to-timeline, stem separation,
+  voice cloning, animated captions, local LLM, and social export.
+- Added "What OpenCut adds beyond Premiere 26" comparison table contrasting
+  10 OpenCut-unique capabilities against Adobe's native feature set.
+- Added Descript to cost comparison table with stem separation and voice clone
+  columns across all competitors.
+- Documented Premiere 26.x manifest compatibility in UXP panel section
+  (CEP [13.0,99.9], UXP minVersion 25.6).
+
 ### Changed — onnxruntime floor raise
 
 - Raised onnxruntime floor from `>=1.25` to `>=1.26` in both `[ai]` and
