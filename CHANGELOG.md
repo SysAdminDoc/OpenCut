@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — D3D12VA and Vulkan HW encoder detection
+
+- Added D3D12VA encoders (h264_d3d12va, hevc_d3d12va, av1_d3d12va) to
+  hw_accel.py — vendor-agnostic Windows hardware encoding for non-NVIDIA
+  users when FFmpeg 8.x is available.
+- Added Vulkan Video encoders (h264_vulkan, hevc_vulkan, av1_vulkan) for
+  cross-platform GPU encoding via Vulkan Video API.
+- Updated priority order: nvenc > qsv > amf > d3d12va > videotoolbox > vulkan.
+- Added quality presets and test-encode options for both new HW types.
+- Added 5 new tests for D3D12VA/Vulkan parsing, priority, and verification.
+
 ### Changed — onnxruntime floor raise
 
 - Raised onnxruntime floor from `>=1.25` to `>=1.26` in both `[ai]` and
