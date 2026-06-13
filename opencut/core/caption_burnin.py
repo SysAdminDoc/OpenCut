@@ -177,6 +177,17 @@ BURNIN_STYLES = {
         "alignment": 8,                    # top center
         "margin_v": 30,
     },
+    "rtl_arabic": {
+        "label": "RTL Arabic",
+        "fontname": "Arial",
+        "fontsize": 48,
+        "primary_color": "&H00FFFFFF",
+        "outline_color": "&H00000000",
+        "outline": 3,
+        "shadow": 1,
+        "alignment": 6,                    # bottom right (natural for RTL)
+        "margin_v": 40,
+    },
 }
 
 
