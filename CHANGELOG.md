@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed — UXP i18n
+
+- Added Spanish diacritics to 400 keys in UXP es.json (507 accent/tilde
+  characters introduced; zero existed before).
+- Replaced hardcoded English "-- Select a clip --" in main.js with i18n
+  `t()` call and added corresponding en.json/es.json keys.
+- Added `scripts/lint_locales.py` — locale lint checking key uniqueness,
+  placeholder parity between en/es, missing keys, and diacritics regression.
+  Supports `--check` flag for CI enforcement.
+
 ### Fixed — CEP style.css consolidation
 
 - Merged duplicate `@media (prefers-reduced-motion: reduce)` blocks into one.

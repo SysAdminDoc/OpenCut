@@ -1382,5 +1382,6 @@
   "uxp.workspace.studio": "OpenCut Studio",
   "uxp.workspace.timeline_subtitle": "Write changes back into Premiere, export interchange, and run batch production tasks with confidence.",
   "uxp.workspace.timeline_tools": "Timeline Tools",
-  "uxp.workspace.video_subtitle": "Shape the image, plan coverage, and build short-form versions with a cleaner finishing toolkit."
+  "uxp.workspace.video_subtitle": "Shape the image, plan coverage, and build short-form versions with a cleaner finishing toolkit.",
+  "uxp.common.select_clip": "-- Select a clip --"
 }

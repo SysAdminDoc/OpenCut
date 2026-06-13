@@ -3844,7 +3844,7 @@ async function scanProjectClips() {
   const clipSelect = document.getElementById("clipSelect");
   if (clipSelect) {
     const currentVal = clipSelect.value;
-    clipSelect.innerHTML = `<option value="">-- Select a clip --</option>` +
+    clipSelect.innerHTML = `<option value="">${t("uxp.common.select_clip", "-- Select a clip --")}</option>` +
       items.map(c =>
         `<option value="${UIController.escapeHtml(c.path)}">${UIController.escapeHtml(c.name)}</option>`
       ).join("");
