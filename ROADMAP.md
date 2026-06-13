@@ -91,12 +91,6 @@ history, not here.
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
 
-- [ ] P1 — Restore public release channel parity for v1.33.x
-  Why: package metadata is at v1.33.1, README still displays v1.33.0, the local repo only has tag v1.33.0, and the public GitHub Releases page still reports v1.25.1 as latest, leaving users without current installer/source artifacts for recent security and reliability work.
-  Evidence: `gh release list --repo SysAdminDoc/OpenCut --limit 10`; `git tag --list "v1.33*"`; README.md:3,89; pyproject.toml:7; .github/workflows/build.yml:237-323
-  Touches: .github/workflows/build.yml, scripts/release_smoke.py, scripts/sync_version.py, README.md release guidance, CHANGELOG.md release headings
-  Acceptance: a current v1.33.x GitHub Release/tag or documented pre-release policy exists; README version text is covered by the sync gate; release artifacts include server package, Windows installer, Linux packages, and SBOM/provenance artifacts or explicit skipped-platform notes.
-  Complexity: M
 
 
 - [ ] P2 — Add Premiere caption-export preflight and recovery
