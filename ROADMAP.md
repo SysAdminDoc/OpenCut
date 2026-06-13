@@ -26,12 +26,11 @@ history, not here.
   Acceptance: written decision in README or CONTRIBUTING; chosen PyPI name registered (placeholder publish acceptable).
   Complexity: M
 
-- [ ] P2 — Upgrade bundled FFmpeg to 8.1 and expose D3D12/Vulkan encoders
-  Why: FFmpeg 8.1 (Mar 2026) adds D3D12 H.264/AV1 encoding (vendor-agnostic Windows hardware encode for non-NVIDIA users) and Vulkan ProRes encode/decode; bundled binary is 8.0.1-essentials and core/hw_accel.py knows only nvenc/qsv/amf/videotoolbox.
-  Evidence: 9to5linux.com FFmpeg 8.1 release notes; ffmpeg/ffmpeg.exe -version; opencut/core/hw_accel.py:70-78
-  Touches: ffmpeg/ (bundled binaries), installer/InstallerBuilder.ps1, OpenCut.iss, opencut/core/hw_accel.py, export routes/presets
-  Acceptance: hw_accel detection lists D3D12 H.264/AV1 encoders when the runtime supports them and /video/export can select them; bundled ffmpeg -version reports 8.1.x.
-  Complexity: M
+- [ ] P2 — Replace bundled FFmpeg 8.0.1 binary with 8.1.x
+  Why: Code-side D3D12VA/Vulkan encoder detection, route validation, export presets, and installer version strings are all wired; only the binary download remains.
+  Where: ffmpeg/ (bundled binaries)
+  Acceptance: bundled ffmpeg -version reports 8.1.x.
+  Complexity: S
 
 - [ ] P2 — Add SAM 3 engine for text-prompted object removal and tracking
   Why: SAM 3 (Meta, 2025-11-19, commercial-permissive SAM License) segments and tracks by concept text prompt — removes the click-and-track friction of the SAM2+ProPainter pipeline and enables "remove every watermark/logo instance" workflows; Premiere 26's native Object Mask raises user expectations here.
@@ -75,12 +74,6 @@ history, not here.
   Acceptance: semantic search supports a versioned engine registry for CLIP/OpenCLIP/SigLIP-style models, cache keys include engine/model/schema version, and a benchmark fixture compares retrieval quality against the current CLIP baseline.
   Complexity: L
 
-- [ ] P3 — Add CJK, Bengali, and RTL caption font-fallback render fixtures
-  Why: current release gates preserve caption Unicode/text shaping, but community requests around CJK and Bengali captions show users need proof that rendered captions have real glyph fallback and line breaking, not only round-trip strings.
-  Evidence: https://github.com/OpenCut-app/OpenCut/issues/817; https://github.com/OpenCut-app/OpenCut/issues/790; scripts/release_smoke.py caption-unicode/text-shaping gates; opencut/core/caption_unicode_validation.py; opencut/core/styled_captions.py
-  Touches: caption renderer/font resolver, opencut/core/styled_captions.py, opencut/core/caption_burnin.py, tests/test_text_shaping_gate.py, tests/test_caption_unicode_validation.py, CEP/UXP caption style settings
-  Acceptance: automated fixtures render CJK, Bengali, and RTL/Arabic captions with non-missing glyphs and stable line breaking; UI surfaces the selected fallback font or a warning when no capable font is available.
-  Complexity: M
 
 - [ ] P3 — Add Homebrew tap for macOS CLI distribution (after brand decision + PyPI)
   Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install <name>` for the CLI/server. Depends on brand decision (P1) and PyPI publish (existing P3).

@@ -355,7 +355,7 @@ EXPORT_PRESETS = {
     # === Hardware-Accelerated ===
     "h264_hw_fast": {
         "label": "H.264 HW Accelerated (Fast)",
-        "description": "GPU-accelerated H.264 optimized for speed (NVENC/QSV/AMF)",
+        "description": "GPU-accelerated H.264 optimized for speed (NVENC/QSV/AMF/D3D12/Vulkan)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "h264", "quality": "speed", "hw_type": "auto",
@@ -366,7 +366,7 @@ EXPORT_PRESETS = {
     },
     "h264_hw_quality": {
         "label": "H.264 HW Accelerated (Quality)",
-        "description": "GPU-accelerated H.264 optimized for quality (NVENC/QSV/AMF)",
+        "description": "GPU-accelerated H.264 optimized for quality (NVENC/QSV/AMF/D3D12/Vulkan)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "h264", "quality": "quality", "hw_type": "auto",
@@ -377,7 +377,7 @@ EXPORT_PRESETS = {
     },
     "hevc_hw_fast": {
         "label": "HEVC HW Accelerated (Fast)",
-        "description": "GPU-accelerated H.265/HEVC optimized for speed",
+        "description": "GPU-accelerated H.265/HEVC optimized for speed (NVENC/QSV/AMF/D3D12/Vulkan)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "hevc", "quality": "speed", "hw_type": "auto",
@@ -388,7 +388,7 @@ EXPORT_PRESETS = {
     },
     "hevc_hw_quality": {
         "label": "HEVC HW Accelerated (Quality)",
-        "description": "GPU-accelerated H.265/HEVC optimized for quality",
+        "description": "GPU-accelerated H.265/HEVC optimized for quality (NVENC/QSV/AMF/D3D12/Vulkan)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "hevc", "quality": "quality", "hw_type": "auto",
@@ -399,7 +399,7 @@ EXPORT_PRESETS = {
     },
     "av1_hw": {
         "label": "AV1 HW Accelerated",
-        "description": "GPU-accelerated AV1 encoding (NVENC/QSV/AMF with fallback)",
+        "description": "GPU-accelerated AV1 encoding (NVENC/QSV/AMF/D3D12/Vulkan with fallback)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "av1", "quality": "balanced", "hw_type": "auto",

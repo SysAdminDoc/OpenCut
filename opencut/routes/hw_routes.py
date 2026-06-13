@@ -70,8 +70,8 @@ def hw_encode_route(job_id, filepath, data):
         raise ValueError(f"Unsupported codec: {codec}. Use h264, hevc, or av1.")
     if quality not in ("speed", "balanced", "quality"):
         raise ValueError(f"Unsupported quality: {quality}. Use speed, balanced, or quality.")
-    if hw_type not in ("auto", "nvenc", "qsv", "amf", "videotoolbox", "software"):
-        raise ValueError(f"Unsupported hw_type: {hw_type}. Use auto, nvenc, qsv, amf, videotoolbox, or software.")
+    if hw_type not in ("auto", "nvenc", "qsv", "amf", "d3d12va", "vulkan", "videotoolbox", "software"):
+        raise ValueError(f"Unsupported hw_type: {hw_type}. Use auto, nvenc, qsv, amf, d3d12va, vulkan, videotoolbox, or software.")
 
     # Resolve output path
     import os

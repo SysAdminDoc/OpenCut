@@ -5,6 +5,24 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — CJK, Bengali, and RTL caption font-fallback
+
+- Added script-aware font fallback chains to `styled_captions.py` for CJK
+  (Noto Sans CJK, MS Gothic, SimSun, Malgun, Meiryo, Yu Gothic), Indic
+  (Noto Sans Devanagari/Bengali, Mangal, Vrinda, Nirmala), and RTL
+  (Noto Sans Arabic/Hebrew, Tahoma) scripts in both Pillow and Skia
+  renderers.
+- `_load_font()` and `_load_skia_typeface()` now accept `text_hint` to
+  detect caption text scripts and try script-capable fonts before falling
+  back to Western fonts.
+- Added `get_caption_font_info(text, style_name)` for the UI to surface
+  which fallback font was selected or warn when no capable font is
+  available for the detected scripts.
+- Added Bengali fixture (`bengali_indic`) to caption Unicode validation
+  (F223), bringing complex-script fixture count from 5 to 6.
+- Added `rtl_arabic` burn-in style preset with right-aligned bottom
+  positioning (ASS alignment 6) for natural RTL reading direction.
+
 ### Added — D3D12VA and Vulkan HW encoder detection
 
 - Added D3D12VA encoders (h264_d3d12va, hevc_d3d12va, av1_d3d12va) to
@@ -15,6 +33,8 @@ record also lives in the git commit messages.
 - Updated priority order: nvenc > qsv > amf > d3d12va > videotoolbox > vulkan.
 - Added quality presets and test-encode options for both new HW types.
 - Added 5 new tests for D3D12VA/Vulkan parsing, priority, and verification.
+- Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
+  export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
 ### Changed — onnxruntime floor raise
 
