@@ -318,6 +318,8 @@ def _test_encoder(encoder_name: str) -> bool:
             cmd.extend(["-quality", "speed"])
         elif hw_type == "d3d12va":
             cmd.extend(["-quality", "speed"])
+        elif hw_type == "vulkan":
+            cmd.extend(["-qp", "30"])
 
         cmd.append(tmp_out)
 
@@ -456,8 +458,8 @@ def get_hw_encode_args(
     Args:
         codec: Target codec - "h264", "hevc", or "av1".
         quality: Quality preset - "speed", "balanced", or "quality".
-        hw_type: Hardware type - "auto", "nvenc", "qsv", "amf",
-                 "videotoolbox", or "software".
+        hw_type: Hardware type - "auto", "nvenc", "qsv", "amf", "d3d12va",
+                 "vulkan", "videotoolbox", or "software".
 
     Returns:
         List of FFmpeg arguments (e.g. ["-c:v", "h264_nvenc", "-preset", "p4", ...]).
@@ -536,8 +538,8 @@ def hw_encode(
             from input_path with a suffix.
         codec: Target codec - "h264", "hevc", or "av1".
         quality: Quality preset - "speed", "balanced", or "quality".
-        hw_type: Hardware type - "auto", "nvenc", "qsv", "amf",
-                 "videotoolbox", or "software".
+        hw_type: Hardware type - "auto", "nvenc", "qsv", "amf", "d3d12va",
+                 "vulkan", "videotoolbox", or "software".
         extra_args: Additional FFmpeg arguments to append.
         on_progress: Callback(percent, message) for progress updates.
 
