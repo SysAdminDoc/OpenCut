@@ -5,6 +5,8 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+## [1.33.1] — 2026-06-13 — CI hardening, privacy mode, v30 compat
+
 ### Security — dependency floors
 
 - Flask floor raised to >=3.1.3 (CVE-2026-27205 Vary:Cookie info disclosure).
