@@ -82,14 +82,14 @@ ai = [
     "rembg>=2.0,<3",
     "gfpgan>=1.3,<2",
     "insightface>=0.7,<1",
-    "onnxruntime>=1.25,<2",
+    "onnxruntime>=1.26,<2",
 ]
 ai-gpu = [
     "realesrgan>=0.3,<1",
     "rembg>=2.0,<3",
     "gfpgan>=1.3,<2",
     "insightface>=0.7,<1",
-    "onnxruntime-gpu>=1.25,<2",
+    "onnxruntime-gpu>=1.26,<2",
 ]
 music = [
     # F263 — AudioCraft 1.x hard-pins Torch 2.1 and is not compatible with
@@ -169,7 +169,7 @@ all = [
     "edge-tts>=6.1,<7",
     "rembg>=2.0,<3",
     "insightface>=0.7,<1",
-    "onnxruntime>=1.25,<2",
+    "onnxruntime>=1.26,<2",
     "auto-editor>=29.3,<30",
     "opentimelineio>=0.17,<1",
     "otio-aaf-adapter>=2.0,<3",

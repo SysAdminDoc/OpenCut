@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — onnxruntime floor raise
+
+- Raised onnxruntime floor from `>=1.25` to `>=1.26` in both `[ai]` and
+  `[ai-gpu]` extras (pyproject.toml). 1.26.0 hardens multiple OOB/overflow
+  scenarios and replaces unrestricted Python `setattr` config with an
+  allowlist.
+- Documented the floor raise rationale in `docs/PYTHON_ADVISORIES.md`.
+
 ### Fixed — UXP i18n
 
 - Added Spanish diacritics to 400 keys in UXP es.json (507 accent/tilde

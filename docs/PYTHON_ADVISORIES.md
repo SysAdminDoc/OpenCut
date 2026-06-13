@@ -19,6 +19,12 @@ causes `python -m opencut.tools.pip_audit_extras --json --extra all` and the
 To add a new entry, update both `ALLOWED_ADVISORIES` in
 `opencut/tools/pip_audit_extras.py` and this table in the same commit.
 
+## Floor raises
+
+| Package | Old floor | New floor | Date | Rationale |
+|---------|-----------|-----------|------|-----------|
+| `onnxruntime` / `onnxruntime-gpu` | `>=1.25,<2` | `>=1.26,<2` | 2026-06-13 | 1.26.0 hardens multiple out-of-bounds and overflow scenarios across ML and core ops (Attention mask OOB write, MaxPoolGrad bounds, SVM/TreeEnsemble, RNN sequence_lens) and replaces unrestricted Python `setattr` configuration with an allowlist. 15+ core modules import onnxruntime via the ai/insightface/rembg stack. |
+
 ## Explicit Torch stack
 
 `opencut[torch-stack]` restores the larger Torch/Transformers-backed feature
