@@ -1,115 +1,129 @@
 # Research — OpenCut
 
-**Consolidated**: 2026-06-10 (refresh)
-**Baseline**: v1.32.0 working tree — 1,539 routes (manifest verified), 602 core modules, CEP + UXP panels, DaVinci bridge, MCP server, MIT. Bundled FFmpeg 8.0.1-essentials.
-**Methodology**: Full repo walk, verification of the 2026-06-09 pass against the working tree (several ROADMAP items closed by commits 7521f61/b7434f6/81a8a85/88bdf62 on 2026-06-10), dependency/lock audit, and ~30 external sources (Adobe platform, FFmpeg, CVE databases, competitor releases, model licensing). Actionable items live in ROADMAP.md ("Research-Driven Additions").
-
----
-
 ## Executive Summary
+OpenCut is a local-first Python/Flask automation server plus Adobe Premiere CEP/UXP panel replacing ~$1,400/year of video-editing subscriptions with 1,539 API routes, 602 core modules, and ~10,200 tests. Its strongest shape is unmatched breadth with local control — no competitor (commercial or OSS) covers the same surface area. The highest-value direction is making that breadth shippable: closing the distribution gap (release-channel lag, missing package-manager presence), hardening CI/dependency advisory posture, and finalizing the CEP-to-UXP migration before Adobe's September 2026 CEP deprecation.
 
-OpenCut is a local-first Python/Flask video-editing automation server driving Premiere Pro (CEP + UXP) and DaVinci Resolve. It is feature-saturated (profanity bleep, SeedVR2 upscaling, Parakeet ASR, lip-sync dubbing, generative extend, paper-edit/rough-cut are all already implemented) and the June 2026 hardening pass just closed the worst security/correctness audit items in the working tree. The dominant gap is now **shipping and visibility, not engineering**: the latest GitHub release is **v1.25.1 (2026-04-20)** while the tree is at v1.32.0 with an unreleased security pass. Top remaining opportunities, in priority order:
-
-1. **Cut release v1.33.0** — 7 minor versions plus arbitrary-file-overwrite fixes (commit 88bdf62) are sitting unshipped (Verified).
-2. **Brand/namespace decision** — carried from the prior pass, still unactioned and still gating all distribution work; opencut.app (48K stars) is mid-rewrite and will re-dominate news cycles when it relaunches (Verified).
-3. **FFmpeg 8.1 upgrade** — D3D12 H.264/AV1 encoding (vendor-agnostic Windows HW encode) and Vulkan ProRes; `hw_accel.py` knows only nvenc/qsv/amf/videotoolbox (Verified).
-4. **SAM 3 engine** — text-prompted ("concept") segmentation + tracking, commercial-permissive license; upgrades the SAM2 click-to-track object-removal flow (Verified license; integration Likely M-L effort).
-5. **Multicam visual cues** — Resolve 20 SmartSwitch and Wraith use lip movement + shot type; `core/multicam.py` is diarization-only (Verified).
-6. **Caption template breadth** — 6 animation presets vs Submagic 35+/CapCut 50+, while CapCut just paywalled auto-captions entirely (Verified).
-7. **CapCut-refugee positioning** — CapCut Pro doubled to $19.99/mo (Jan 2026) with free-tier degradation; zero-feature-work distribution window (Verified).
+Top opportunities, in priority order:
+1. Restore public release-channel parity for the current 1.33.x code line.
+2. Add a hard local-only/privacy mode across cloud-capable surfaces.
+3. Pin PyInstaller >=6.0 in CI and add Python 3.13 to the test matrix.
+4. Raise Flask/Waitress dependency floors for recent CVEs.
+5. Add native auto-editor v30 compatibility canary.
+6. Add Premiere caption export preflight and recovery.
+7. Publish to Homebrew and winget after brand decision and code signing.
+8. Keep existing roadmap items for brand disambiguation, UXP live evidence, Vite migration, FFmpeg 8.1, SAM 3, multicam visual cues, Premiere 26 positioning, PyPI publishing, and visual-search engines.
 
 ## Product Map
-
-- **Core workflows**: (1) silence/filler/repeat-take cutting → Premiere timeline write-back; (2) transcription → styled/animated captions → SRT/native tracks; (3) audio cleanup/stems/loudness/TTS/voice-clone; (4) AI video FX (upscale incl. SeedVR2, matte, depth, face, object removal); (5) shorts/highlights pipeline → social upload/scheduling; (6) OTIO/FCPXML interchange.
-- **Personas**: solo YouTuber, podcaster, social-clip editor, Premiere/Resolve power users automating repetitive passes locally.
-- **Platforms/distribution**: Windows installer (primary), macOS/Linux source launchers, Docker (+GPU), Flatpak/AppImage scripts. No PyPI/Homebrew/winget/Snap. GitHub: 20 stars, 0 open issues, releases stalled at v1.25.1.
-- **Integrations/data flows**: panels ⇄ localhost:5679 HTTP/JSON (+ opt-in WS 5680, MCP 5681); ExtendScript/UXP bridge for sequence write-back; SQLite (jobs, FTS5 footage index) under `~/.opencut`; optional LLM (Ollama/OpenAI/Anthropic) and OAuth social upload.
+- Core workflows: Premiere sequence automation, silence/filler/repeat-take cutting, transcription/caption styling/import, audio cleanup/stems/TTS/dubbing/voice-clone, shorts/highlight generation, object removal/intelligence, OTIO/FCPXML/AAF/EDL interchange, MCP/CLI/API automation, stock footage search, multi-platform publish, watch-folder processing, webhook integrations.
+- User personas: solo creators replacing subscription plugins, podcast/video editors working inside Premiere, privacy-sensitive local teams, power users scripting repeatable edits via CLI/MCP/API.
+- Platforms and distribution: Windows installer (PyInstaller), Python 3.11+ server, CEP panel (Premiere 2019+), UXP panel (Premiere 25.6+), Docker/GPU, macOS/Linux source launchers, Flatpak/AppImage. Verified gap: public GitHub Releases show v1.25.1 as latest while internal code is v1.33.1.
+- Key integrations: Adobe panel → localhost Flask API on port 5679, WebSocket sidecar (5680), MCP sidecar (5681), SQLite job/footage stores, plugin routes under `~/.opencut/plugins`, optional social OAuth/upload, optional cloud LLM/TTS/stock providers.
 
 ## Competitive Landscape
+**Adobe Premiere 26 / UXP** — Bundles on-device Object Mask, Generative Extend, Media Intelligence, and 90+ Film Impact transitions. UXP replaces CEP by ~September 2026. Learn: on-device AI expectations are rising; live UXP packaging evidence is table-stakes. Avoid: recreating native object masking or generative extend features already shipping in the host.
 
-- **Adobe Premiere 26 (rebranded from "Premiere Pro", Jan 2026)** — now ships native on-device Object Mask, Generative Extend, Media Intelligence search, and 90+ Film Impact transitions. *Learn*: Adobe is commoditizing several OpenCut differentiators; reposition README around what Adobe will never bundle free (silence-cut→timeline, stems, TTS/voice clone, local LLM agent, social pipeline). *Avoid*: head-to-head investment in features Premiere now bundles (generative extend, basic object masking).
-- **opencut.app (48K stars)** — announced a ground-up TypeScript rewrite (May 2026) with plugin system, headless rendering, and MCP server; contributions paused. *Learn*: its rewrite will own another news cycle; the name decision can't keep slipping. *Avoid*: a browser-NLE rewrite (mission creep).
-- **Descript Underlord** — 2026 added a public API, MCP-triggered automation, and an LLM model picker (incl. Claude Sonnet 4.5). *Learn*: OpenCut's MCP server + chat agent is the right architecture; expose a model picker and promote agent-driven workflows. *Avoid*: text-first editing as primary UI.
-- **AutoCut / FireCut / Phantom Editor (Wraith)** — the paid Premiere-plugin set; user complaints center on pricing, regional affordability, setup friction, licensing/support failures. *Learn*: free + local + no-license is the durable wedge; Wraith's multicam quality bar (visual cues) is the feature to match. *Avoid*: nothing structural.
-- **DaVinci Resolve 20** — AI IntelliScript (script→rough cut), Multicam SmartSwitch (audio + lip movement + shot type), vertical-res Smart Reframe. *Learn*: visual-cue multicam switching; OpenCut has `auto_rough_cut.py`/`paper_edit.py` but multicam ignores video. *Avoid*: competing as an NLE.
-- **CapCut / Submagic** — CapCut Pro doubled to $19.99/mo (Jan 2026), free tier cut to 720p/watermarks, auto-captions paywalled; Submagic still leads template count (35+). *Learn*: capture switchers with a comparison table + template-pack expansion. *Avoid*: cloud-upload workflows.
-- **LosslessCut (41K stars)** — unchanged lesson: distribution breadth (Flathub/Snap/Homebrew/winget) beats feature count for adoption.
+**Descript** ($24-50/mo) — Full editor with Underlord AI co-editor, transcript-based editing, Overdub voice cloning, public API (open beta 2026), MCP integration. Learn: API/MCP play validates OpenCut's server-first architecture; agentic "AI co-pilot" editing is the new marketing paradigm. Avoid: making text editing the sole primary workflow.
+
+**Phantom Wraith** (Free+$19/mo) — 8-camera multicam with conversation-pattern analysis, Dopple style copy-paste, 14+ tools including silence removal and transition assistant. Learn: 8-cam support and conversation-aware switching exceed AutoPod's 4-cam limit. Avoid: metered processing.
+
+**AutoPod/FireCut/AutoCut** ($7-34/mo) — Premiere plugins proving demand for silence, captions, podcast, and multicam automation. AutoCut uniquely integrates Storyblocks B-roll injection. FireCut caps at 25 hrs/mo. OpenCut competitive lever: unlimited local processing vs. credit/time caps.
+
+**CapCut Pro** ($19.99/mo) — Credit-gated AI features (avatars, voice cloning, text-to-video). Community frustration with paywalling previously free features. Learn: credit limitations are universally disliked. Avoid: any credit-gated model.
+
+**Opus Clip** ($15-29/mo) — AI virality prediction, clip scoring. Data hostage: projects deleted 3 days after cancellation. Learn: clip scoring/virality angles are unique. Avoid: data-hostage policies.
+
+**Gling** ($20-100/mo) — AI bad-take detection beyond silence removal. Learn: take detection is a strong selling point. OpenCut already has repeat_detect.py implementing this.
+
+**OSS ecosystem** — auto-editor v29.3.1 (CLI-only silence editing), LosslessCut v3.69.0 (lossless trimmer with HTTP API), OpenTimelineIO (interchange standard). No OSS competitor matches OpenCut's breadth (1,539 routes vs. single-purpose tools).
 
 ## Security, Privacy, and Reliability
+**Release-channel lag** (Verified): `gh release list` shows v1.25.1 as latest public release vs. v1.33.1 internal. Already roadmapped.
 
-- **Fixed in working tree, NOT yet released** (Verified, commits of 2026-06-10/11): arbitrary-file-overwrite via unvalidated `output_path` sinks in 8 route modules (88bdf62); FFmpeg filter/concat escaping incl. Windows drive-colon and 32KB argv limit (b7434f6); transcription-timeout caller pinning, trailing-silence misclassification, stem-remix level loss (81a8a85); CEP cut-review `t()` shadow that broke the review panel entirely, job-done UI lock, Escape/Enter hijacks (7521f61); Docker remote-bind startup fix (5d5ee5d); UXP cancel-button loading-state recovery (8787ce6). **Shipping these is the single highest-leverage security action.**
-- **Still open from existing ROADMAP** (spot-verified): CORS null-origin + unauthenticated CSRF token via /health; MCP HTTP transport auth; `sys.path[0]` insertion; drawtext escaping copies remain in 5 modules (`caption_styles.py:365`, `click_overlay.py`, `news_ticker.py`, `quiz_overlay.py`, `telemetry_overlay.py` — down from 10).
-- **Dependency posture** (Verified against `requirements-lock.txt`/`pyproject.toml`): Flask 3.1.3 covers CVE-2026-27205; Werkzeug 3.1.7 covers CVE-2026-21860 and CVE-2026-27199; pyannote.audio `>=4.0` (Community-1, CC-BY-4.0) already pinned; Pillow `>=12.2`; torch `>=2.6`; standalone depth/model-loading extras require `transformers>=5.3`. **Documented exception**: the explicit `torch-stack` lane keeps `transformers>=4.30` because WhisperX 3.8.x requires `huggingface-hub<1.0.0`; `pyproject[all]` excludes that lane and the exception is advisory-gated. **Watch**: onnxruntime 1.26 (in development) hardens multiple OOB/overflow ops (Attention, MaxPoolGrad, SVM/TreeEnsemble, RNN); floor is `>=1.25,<2` across 15+ importing modules.
-- **Compliance**: FCC caption display settings (47 CFR §79.103(e)) compliance date confirmed **2026-08-17** — the existing P1 "UXP FCC card non-functional" item should land before then.
-- **Recovery/rollback**: unchanged from prior pass — SQLite WAL job persistence, startup interruption recovery, dry-run/backup contracts on destructive routes. No new gaps found.
+**Cloud surface gap** (Verified): `opencut/core/llm.py`, `video_llm.py`, `voice_overdub.py`, `social_post.py`, `stock_search.py`, `telemetry_aptabase.py` can contact external services. No single `OPENCUT_LOCAL_ONLY` kill switch. Already roadmapped.
+
+**CI PyInstaller unpinned** (Verified): `.github/workflows/build.yml:59` runs `pip install pyinstaller` without version pin. CVE-2025-59042 (CVSS 7.0) is a local privilege escalation during PyInstaller bootstrap on Linux/macOS — affects Flatpak/AppImage build artifacts. Fixed in PyInstaller 6.0.
+
+**Flask floor gap** (Verified): `pyproject.toml` pins `flask>=3.0,<4`. CVE-2026-27205 (Vary:Cookie info disclosure) fixed in Flask 3.1.3. Low severity for localhost listener but keeps `pip audit` clean.
+
+**Waitress floor gap** (Verified): `pyproject.toml` pins `waitress>=3.0,<4`. CVE-2024-49768/49769 (request smuggling, socket exhaustion) fixed in Waitress 3.0.1. The >=3.0 floor permits the vulnerable 3.0.0 release.
+
+**Python 3.13 untested** (Verified): CI matrix runs only Python 3.12. Flask 3.1.3 and core deps support 3.13; ML deps may lag. No test-matrix entry to catch breakage early.
+
+**Existing guardrails that reduce priority**: All `torch.load` calls use `weights_only=True`; Transformers standalone floor at >=5.3 covers CVE-2026-4372; Pillow >=12.2 covers CVE-2026-42308/25990/40192; `np.load` calls disable pickle; global CSRF gate on all mutating routes; path validation on all file-accepting routes; `safe_bool` on all boolean flags.
+
+**Node advisory posture**: Vite 5.4.21 pin with GHSA-4w7w-66w2-5vf9. Already roadmapped for HGFS-safe migration.
 
 ## Architecture Assessment
-
-- **Release process is the weakest boundary** (Verified): `CHANGELOG.md` carries a populated `[Unreleased]` section, version strings sit at 1.32.0, `build.yml` supports tag-triggered releases — yet no tag has shipped since v1.25.1 (April). This is process, not tooling; consider a release-cadence rule (every N merged fixes or 2 weeks, whichever first).
-- **Tracked-doc integrity** (Resolved after refresh): README planning links now point at tracked root files, installer artifacts are described by the release-version filename pattern, and `ROADMAP.md` is the only active open-work tracker. Local ignored agent notes were corrected to point at `ROADMAP.md` / `RESEARCH.md` instead of the removed project-context file.
-- **Refactor candidates** (carried, still valid): `client/style.css` (~18K lines, eight stacked re-skins — existing P2 item); `client/main.js` (~16.6K lines) unbundled despite `vite.config.js`.
-- **Engine currency** (Verified): Parakeet TDT (`core/asr_parakeet.py`), Whisper turbo/distil (`security.py:35-40`), SeedVR2 (`core/upscale_seedvr2.py`), FlashVSR, pyannote 4.0 are all present — the prior pass's "engine gaps" are mostly closed. Remaining genuine gaps: SAM 3 (text-prompted segmentation; repo has SAM2 only) and FFmpeg 8.1 D3D12/Vulkan encoders (`core/hw_accel.py:70-78` lists only nvenc/qsv/amf/videotoolbox; bundled binary is 8.0.1-essentials).
-- **Test/docs**: coverage ~54% un-gated; function-scoped app fixture slowness (existing P3). Issue templates now exist (`.github/ISSUE_TEMPLATE/`) — prior-pass gap closed.
+- **Privacy policy boundary needed**: one server-side local-only mode gating all external calls. Already roadmapped.
+- **Release-channel boundary needed**: release smoke should distinguish internal version sync from public artifact availability. Already roadmapped.
+- **CI security hygiene**: pin PyInstaller >=6.0, add Python 3.13 matrix entry, raise Flask/Waitress floors. New findings from this pass.
+- **Distribution gap**: no Homebrew tap or winget manifest. After brand decision and code signing, these are the two highest-leverage package-manager channels (macOS and Windows respectively).
+- **Visual search engine registry**: `opencut/core/semantic_video_search.py` fixed to CLIP ViT-B/32. Already roadmapped.
+- **Refactor candidates**: CEP `style.css` token consolidation and `main.js` modularization should follow the roadmapped Vite upgrade.
+- **Testing gaps**: Python 3.13 compat, public release parity assertion, local-only no-network mode, native auto-editor v30 fixtures, Premiere caption handoff mapping, visual-search cache invalidation, caption font-fallback rasters.
+- **Category coverage**: accessibility (existing items), i18n (existing items), observability (JSON logging + crash.log + request correlation already ship), distribution (extended here), security (extended here), plugin ecosystem (wait on brand/release stability), mobile/multi-user SaaS (rejected as architectural misfits), offline/resilience (local-only mode).
 
 ## Rejected Ideas
-
-| Idea | Reason | Source |
-|---|---|---|
-| Standalone browser/web NLE vs opencut.app | Mission creep; moat is NLE automation | opencut.app rewrite announcement |
-| Full rebrand away from "OpenCut" | Qualified distribution name + tagline suffices | prior pass, upheld |
-| SeedVR2 backend addition | **Already implemented** (`core/upscale_seedvr2.py`) | this pass, code scan |
-| Parakeet ASR engine addition | **Already implemented** (`core/asr_parakeet.py`) | this pass, code scan |
-| Profanity bleep/censor (AutoCut parity) | **Already implemented** (`core/profanity_bleep.py`, `profanity_censor.py`) | this pass, code scan |
-| IntelliScript-style script→rough-cut | Substantially covered by `auto_rough_cut.py`/`paper_edit.py`; revisit only after multicam visual cues land | Resolve 20 / code scan |
-| Depth Anything 3 Large as depth engine | Large weights CC-BY-NC-4.0 (smaller variants need per-size license verification before any work) | github.com/ByteDance-Seed/Depth-Anything-3 |
-| Competing with Premiere 26 native Generative Extend/Object Mask | Adobe bundles them free with the host app; keep OpenCut's versions as fallbacks, don't invest further | Adobe Jan 2026 release |
-| UXP Hybrid (C++) addon now | Validator/scaffold exists (RA-12); no perf case yet justifies native code | UXP changelog v26.2 |
-| FastAPI migration / Electron wrapper / mobile app | Unchanged: overhead without benefit at localhost scale | prior pass |
-| Hard Sept-2026 CEP cutover deadline | Adobe states multi-year runway; CEP 12 is last major but still serviced | Adobe community/tech blog |
+- Fix version-string drift across files: rejected because `scripts/sync_version.py --check` passes at v1.33.1; the gap is public release-channel lag.
+- Add C2PA provenance routes: rejected because `core/c2pa_sidecar.py`, `core/c2pa_embed.py`, `/provenance/c2pa`, and `/video/c2pa/*` already exist.
+- Add AAF/OTIOZ/EDL export from scratch: rejected because interchange routes and tests already exist.
+- Delete Edge-TTS: rejected because it's useful as an explicit cloud engine; fix is local-only fail-closed policy.
+- Build a standalone browser NLE: rejected because it conflicts with the Premiere automation moat and duplicates OpenCut-app (48K stars).
+- Build mobile or multi-user SaaS: rejected because it conflicts with local single-user desktop architecture.
+- Add Remotion as a hard dependency: rejected per HN/community licensing concerns for commercial/free OSS.
+- Launch plugin marketplace before brand/distribution: rejected as premature.
+- Add ONNX Runtime memory-mapped .ort model loading: rejected as premature — cold-start time is not a user-reported pain point, and model loading is lazy/one-time per server session. Reconsider if startup latency becomes a complaint after broader distribution.
+- Add agentic multi-step editing mode: rejected because `core/agent_chat.py`, `core/autonomous_agent.py`, `core/timeline_copilot.py`, and `core/paper_edit.py` already implement transcript-driven and conversational editing workflows.
+- Add multi-platform batch export: rejected because `core/multi_publish.py`, `core/platform_publish.py`, and `core/podcast_bundle.py` already cover this.
+- Add watch-folder automation: rejected because `core/watch_folder.py` and `core/scheduled_jobs.py` already wire this.
+- Add AV1 export presets: rejected because `core/av1_export.py`, `core/svtav1_psy.py`, and 25 modules already reference AV1/SVT-AV1.
+- Add voice-cloning consent workflow: rejected because 13 modules already implement consent checks for voice cloning.
+- Scale multicam beyond 4 cameras: rejected because `core/multicam.py` has no camera-count limit — it maps speakers to tracks dynamically.
+- Re-add already-roadmapped work: brand/namespace, FFmpeg 8.1, SAM 3, multicam visual cues, Premiere 26 audit, onnxruntime floor, PyPI trusted publishing, Vite migration, local-only mode, auto-editor v30, caption export preflight, visual-search engines, CJK/RTL caption fixtures.
 
 ## Sources
-
-Adobe platform
+Adobe platform and Premiere behavior
 - https://blog.developer.adobe.com/en/publish/2025/12/uxp-arrives-in-premiere-a-new-era-for-plugin-development
-- https://developer.adobe.com/premiere-pro/uxp/changelog/
-- https://community.adobe.com/t5/premiere-pro-discussions/is-cep-still-supported/td-p/14093791
-- https://blog.adobe.com/en/publish/2026/01/20/new-ai-powered-video-editing-tools-premiere-major-motion-design-upgrades-after-effects
-- https://petapixel.com/2026/01/20/rebranded-adobe-premiere-26-arrives-with-one-click-object-tracking/
+- https://developer.adobe.com/premiere-pro/uxp/
+- https://helpx.adobe.com/premiere/desktop/organize-media/file-organization/search-for-media-using-ai-powered-media-intelligence.html
+- https://helpx.adobe.com/premiere/desktop/add-video-effects/work-with-masks/object-masking.html
+- https://helpx.adobe.com/premiere/desktop/titles-and-graphics/transcript-captions/export-captions.html
 
-FFmpeg / engines / models
-- https://linuxiac.com/ffmpeg-8-1-brings-vulkan-compute-codecs-and-new-decoder-support/
-- https://9to5linux.com/ffmpeg-8-1-hoare-multimedia-framework-brings-d3d12-h-264-av1-encoding
-- https://blog.roboflow.com/what-is-sam3/
-- https://www.marktechpost.com/2025/11/20/meta-ai-releases-segment-anything-model-3-sam-3-for-promptable-concept-segmentation-in-images-and-videos/
-- https://github.com/ByteDance-Seed/Depth-Anything-3
-- https://github.com/IceClear/SeedVR2
-- https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
-- https://huggingface.co/pyannote/speaker-diarization-community-1
-- https://github.com/SYSTRAN/faster-whisper
+Commercial competitors
+- https://www.autopod.fm/
+- https://firecut.ai/changelog
+- https://www.autocut.com/en/blogs/autopod-vs-autocut-alternative/
+- https://phantomeditor.video/blog/best-autopod-alternative-2026-multicam-editing-premiere-pro
+- https://www.descript.com/api
+- https://help.descript.com/hc/en-us/articles/46056322186509-Use-Descript-with-an-AI-assistant-MCP
+- https://help.opus.pro/docs/article/import-to-adobe-premiere
+- https://www.capcut.com/resource/capcut-standard-vs-pro
 
-Security
-- https://github.com/advisories/GHSA-69w3-r845-3855 (CVE-2026-1839)
-- https://pluto.security/blog/unauthenticated-remote-code-execution-in-huggingface-transformers-via-config-injection/ (CVE-2026-4372)
-- https://www.sentinelone.com/vulnerability-database/cve-2026-27205/ (Flask)
-- https://www.sentinelone.com/vulnerability-database/cve-2026-21860/ (Werkzeug)
-- https://github.com/microsoft/onnxruntime/releases
-- https://www.fcc.gov/consumer-governmental-affairs/commission-announces-effective-date-closed-captioning-display-settings-rule
-
-Competitors / market
+OSS, awesome lists, and community signal
+- https://github.com/SysAdminDoc/OpenCut/releases
+- https://github.com/WyattBlue/auto-editor/releases
+- https://github.com/mifi/lossless-cut
 - https://github.com/OpenCut-app/OpenCut
-- https://opencut.app/roadmap
-- https://www.descript.com/underlord
-- https://descript.canny.io/changelog
-- https://www.autocut.com/en/pricing/
-- https://www.producthunt.com/products/firecut-ai/reviews
-- https://phantomeditor.video/blog/best-ai-plugins-adobe-premiere-pro-2026
-- https://www.cined.com/davinci-resolve-20-released-with-handful-of-ai-assisted-features/
-- https://www.eesel.ai/blog/capcut-pricing
-- https://github.com/SysAdminDoc/OpenCut (releases/stars state)
+- https://github.com/AcademySoftwareFoundation/OpenTimelineIO
+- https://github.com/ad-si/awesome-video-production
+- https://documents.blackmagicdesign.com/SupportNotes/DaVinci_Resolve_20_New_Features_Guide.pdf
+
+Dependencies, security, and model ecosystem
+- https://www.ffmpeg.org/
+- https://vite.dev/releases
+- https://github.com/advisories/GHSA-4w7w-66w2-5vf9
+- https://github.com/advisories/GHSA-53q9-r3pm-6pq6 (PyTorch CVE-2025-32434)
+- https://github.com/advisories/GHSA-p2xp-xx3r-mffc (PyInstaller CVE-2025-59042)
+- https://github.com/microsoft/onnxruntime/releases
+- https://huggingface.co/blog/siglip2
+- https://ai.meta.com/research/sam3/
+- https://docs.pypi.org/trusted-publishers/
+- https://www.reddit.com/r/premiere/comments/1s672iq/premiere_pro26_captions_and_export_settings/?tl=en
 
 ## Open Questions
-
-1. **Brand decision** (carried, blocks distribution): will the maintainer ship under a de-conflicted distribution name before opencut.app's rewrite relaunches?
-2. **UXP caption-track write API** (carried): still no documented create/import caption-track API in the Premiere UXP changelog through v26.2 — blocks full F252 caption roundtrip.
-3. **Release cadence intent**: is the release stall (v1.25.1 vs v1.32.0) deliberate (waiting on macOS notarization F202?) or drift? Determines whether the v1.33.0 item ships immediately or waits on external gates.
-4. **Depth Anything 3 small/base weight licenses**: per-size verification needed before any DA3 work (Large is CC-BY-NC).
+1. Should a current v1.33.x GitHub release ship before F202 macOS notarization is live, or is the release lag intentional until macOS acceptance is complete?
+2. What distribution namespace should replace or qualify "OpenCut" before PyPI, winget, Homebrew, and SEO work proceed?
+3. When will live Premiere UDT evidence be available for the UXP WebView cutover and Premiere 26 smoke pass?
+4. Should local-only mode hide cloud controls, hard-fail cloud route calls, or do both?
+5. Which visual-search model should become the default after benchmarking: current CLIP, OpenCLIP, or SigLIP 2?
+6. Is Windows code signing ($216-575/yr OV/EV certificate) budgeted for winget and SmartScreen reputation?

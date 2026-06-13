@@ -84,3 +84,94 @@ history, not here.
   Touches: .github/workflows/build.yml (publish job), pyproject.toml metadata
   Acceptance: pip install of the chosen name installs the opencut CLI/server from PyPI; releases publish automatically on tag.
   Complexity: M
+
+- [ ] P2 — Normalize live planning-file references to ROADMAP.md and RESEARCH.md
+  Why: live user-facing code still points at removed ROADMAP-NEXT.md/PROJECT_CONTEXT.md files and past "ships in v1.28.x/v1.29.0" promises, creating misleading install and release guidance.
+  Evidence: CONTRIBUTING.md:106,124; opencut/registry.py:648-689; opencut/routes/wave_h_routes.py:77,437; opencut/routes/wave_k_routes.py:40; opencut/core/audio_reactive_fx.py:64
+  Touches: CONTRIBUTING.md, scripts/check_doc_sizes.py, scripts/release_smoke.py, opencut/registry.py, Wave H/K route modules, optional-engine stub messages, related tests
+  Acceptance: `rg "ROADMAP-NEXT|PROJECT_CONTEXT|TODO.md|RESEARCH_FEATURE_PLAN" . --glob "!docs/archive/**" --glob "!tests/**"` returns no user-facing planning references except intentional historical comments; missing-engine messages point to live capability metadata or ROADMAP.md.
+  Complexity: S
+
+- [ ] P2 — Move CEP panel off unsupported Vite 5 with HGFS-safe regression evidence
+  Why: Vite 5.4.21 remains pinned with a documented advisory waiver because Vite 6+ regressed VMware HGFS paths, but Vite's maintained release line has moved to 8.x with 7.3/6.4 backports.
+  Evidence: extension/com.opencut.panel/package.json:22; docs/NODE_ADVISORIES.md:13,27-34,66-74; tests/test_panel_node_entrypoints.py; vite.dev/releases
+  Touches: extension/com.opencut.panel/package.json, package-lock.json, scripts/panel-node-gate.ps1, docs/NODE_ADVISORIES.md, extension panel build/audit tests, CI release smoke
+  Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
+  Complexity: M
+
+- [ ] P1 — Restore public release channel parity for v1.33.x
+  Why: package metadata is at v1.33.1, README still displays v1.33.0, the local repo only has tag v1.33.0, and the public GitHub Releases page still reports v1.25.1 as latest, leaving users without current installer/source artifacts for recent security and reliability work.
+  Evidence: `gh release list --repo SysAdminDoc/OpenCut --limit 10`; `git tag --list "v1.33*"`; README.md:3,89; pyproject.toml:7; .github/workflows/build.yml:237-323
+  Touches: .github/workflows/build.yml, scripts/release_smoke.py, scripts/sync_version.py, README.md release guidance, CHANGELOG.md release headings
+  Acceptance: a current v1.33.x GitHub Release/tag or documented pre-release policy exists; README version text is covered by the sync gate; release artifacts include server package, Windows installer, Linux packages, and SBOM/provenance artifacts or explicit skipped-platform notes.
+  Complexity: M
+
+- [ ] P2 — Add a local-only privacy mode that fails closed across cloud-capable providers
+  Why: OpenCut's local-first promise is central, but LLM, video-LLM, cloud TTS, stock search, telemetry, and social upload code paths can contact external services when configured without a single global guardrail.
+  Evidence: README.md local/no-cloud positioning; opencut/core/llm.py; opencut/core/video_llm.py; opencut/core/voice_overdub.py; opencut/core/social_post.py; opencut/core/stock_search.py; opencut/core/telemetry_aptabase.py
+  Touches: opencut/config.py, cloud-capable core modules, social/LLM/TTS/stock routes, CEP/UXP settings, release-smoke or pytest no-network checks
+  Acceptance: `OPENCUT_LOCAL_ONLY=1` and the matching UI setting hide or disable cloud controls, route calls fail with structured local-alternative errors, and tests prove external-provider functions are not invoked in local-only mode.
+  Complexity: M
+
+- [ ] P2 — Add native auto-editor v30 compatibility canarying
+  Why: OpenCut's adapter prefers the native auto-editor binary, but packaging/model-card guidance still points to the legacy v29 Python package while upstream v30.5.0 is the active Nim line.
+  Evidence: github.com/WyattBlue/auto-editor release 30.5.0; pyproject.toml:103,172; opencut/core/auto_edit.py; opencut/model_cards.py:345-352; opencut/registry.py:459-464
+  Touches: opencut/core/auto_edit.py, opencut/model_cards.py, opencut/registry.py, generated feature readiness/model cards, tests/test_auto_editor_json.py or equivalent fixture tests
+  Acceptance: a fixture or smoke test validates current v30 `auto-editor --export json` output, v29 fallback remains covered, and install hints distinguish native v30 binary usage from the legacy pip fallback.
+  Complexity: M
+
+- [ ] P2 — Add Premiere caption-export preflight and recovery
+  Why: Premiere 26 caption export/burn settings have community-reported failure modes; OpenCut's caption workflows should warn before a failed host handoff and preserve a sidecar/burn-in fallback.
+  Evidence: https://www.reddit.com/r/premiere/comments/1s672iq/premiere_pro26_captions_and_export_settings/?tl=en; Adobe caption export docs; opencut/routes/captions.py; opencut/core/caption_burnin.py; extension/com.opencut.panel/client/index.html caption burn-in UI
+  Touches: CEP host bridge, UXP host bridge, caption export/burn-in routes, caption status UI, tests for host-status mapping and fallback sidecar generation
+  Acceptance: panel preflight reports caption track/export readiness before host export, unknown or unsafe host states produce a deterministic warning plus SRT/sidecar or OpenCut burn-in fallback, and tests cover success/warning/error status mapping.
+  Complexity: M
+
+- [ ] P2 — Add versioned visual-search engines beyond fixed CLIP ViT-B/32
+  Why: Adobe Media Intelligence makes on-device visual retrieval table-stakes, while OpenCut's semantic search is hard-coded to `openai/clip-vit-base-patch32` and a single cache schema.
+  Evidence: Adobe Media Intelligence docs; Hugging Face SigLIP 2; opencut/core/semantic_video_search.py:43; tests/test_object_intel.py semantic search coverage
+  Touches: opencut/core/semantic_video_search.py, footage index/cache schema, model cards/registry, search routes, CEP/UXP Search UI, semantic-search tests
+  Acceptance: semantic search supports a versioned engine registry for CLIP/OpenCLIP/SigLIP-style models, cache keys include engine/model/schema version, and a benchmark fixture compares retrieval quality against the current CLIP baseline.
+  Complexity: L
+
+- [ ] P3 — Add CJK, Bengali, and RTL caption font-fallback render fixtures
+  Why: current release gates preserve caption Unicode/text shaping, but community requests around CJK and Bengali captions show users need proof that rendered captions have real glyph fallback and line breaking, not only round-trip strings.
+  Evidence: https://github.com/OpenCut-app/OpenCut/issues/817; https://github.com/OpenCut-app/OpenCut/issues/790; scripts/release_smoke.py caption-unicode/text-shaping gates; opencut/core/caption_unicode_validation.py; opencut/core/styled_captions.py
+  Touches: caption renderer/font resolver, opencut/core/styled_captions.py, opencut/core/caption_burnin.py, tests/test_text_shaping_gate.py, tests/test_caption_unicode_validation.py, CEP/UXP caption style settings
+  Acceptance: automated fixtures render CJK, Bengali, and RTL/Arabic captions with non-missing glyphs and stable line breaking; UI surfaces the selected fallback font or a warning when no capable font is available.
+  Complexity: M
+
+- [ ] P2 — Pin PyInstaller >=6.0 in CI build workflow
+  Why: CVE-2025-59042 (CVSS 7.0) is a local privilege escalation during PyInstaller bootstrap on Linux/macOS via filenames containing `?`. CI installs PyInstaller without a version pin (`pip install pyinstaller` at .github/workflows/build.yml:59), so Linux Flatpak/AppImage build artifacts could be produced by a vulnerable version.
+  Evidence: github.com/advisories/GHSA-p2xp-xx3r-mffc; .github/workflows/build.yml:59
+  Touches: .github/workflows/build.yml (pip install line), pyproject.toml dev extras (optional)
+  Acceptance: CI installs `pyinstaller>=6.0`; Linux/macOS build artifacts are produced by a patched version.
+  Complexity: S
+
+- [ ] P2 — Add Python 3.13 to CI test matrix
+  Why: CI runs only Python 3.12. Flask 3.1.3 and core deps (click, rich, waitress, psutil) support 3.13. ML deps may lag on cp313 wheels, but a matrix entry for the core test suite catches breakage before users hit it. Python 3.11 reaches EOL October 2027; 3.13 testing is forward-looking.
+  Evidence: .github/workflows/build.yml:36 (single python-version: '3.12'); pypi.org/project/Flask/ (3.13 tested)
+  Touches: .github/workflows/build.yml (matrix strategy), pyproject.toml classifiers
+  Acceptance: CI runs the core test suite on Python 3.13; known ML-dep skips are documented, not silent failures.
+  Complexity: S
+
+- [ ] P2 — Raise Flask and Waitress dependency floors for recent CVEs
+  Why: pyproject.toml pins flask>=3.0 (CVE-2026-27205 Vary:Cookie info disclosure fixed in 3.1.3) and waitress>=3.0 (CVE-2024-49768/49769 request smuggling/socket exhaustion fixed in 3.0.1). Both are low-severity for localhost, but the permissive floors let pip resolve vulnerable versions and break the pip-audit gate.
+  Evidence: CVE-2026-27205 (sentinelone.com); CVE-2024-49768/49769 (stack.watch/product/agendaless/waitress); pyproject.toml:35,39
+  Touches: pyproject.toml (flask>=3.1.3, waitress>=3.0.1)
+  Acceptance: `pip audit` passes with no Flask/Waitress findings; pip resolves patched versions on fresh install.
+  Complexity: S
+
+- [ ] P3 — Add Homebrew tap for macOS CLI distribution (after brand decision + PyPI)
+  Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install <name>` for the CLI/server. Depends on brand decision (P1) and PyPI publish (existing P3).
+  Evidence: docs.brew.sh/Python-for-Formula-Authors; Homebrew accepts Python apps even without PyPI; no existing tap
+  Touches: new homebrew-<name> tap repo, formula file, CI publish workflow
+  Acceptance: `brew install <tap>/<name>` installs the CLI/server on macOS; formula auto-updates on new PyPI releases.
+  Complexity: M
+
+- [ ] P3 — Add winget package manifest for Windows distribution (after release parity + code signing)
+  Why: Windows users discover software via winget; no manifest exists. Requires a stable installer URL (GitHub Release .exe) and ideally a code-signed binary for SmartScreen reputation. Depends on release parity (P1) and code signing budget ($216-575/yr OV/EV certificate).
+  Evidence: github.com/microsoft/winget-pkgs (12,850+ packages); no existing OpenCut manifest; signmycode.com pricing
+  Touches: winget manifest YAML (submitted as PR to microsoft/winget-pkgs), CI release workflow (signed installer upload)
+  Acceptance: `winget install <name>` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
+  Complexity: M
