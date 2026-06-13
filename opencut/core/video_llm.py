@@ -34,6 +34,7 @@ logger = logging.getLogger("opencut")
 class VideoQueryResult:
     """Result of a multimodal LLM query about video content."""
     answer: str = ""
+    error: str = ""
     timestamps: List[float] = field(default_factory=list)
     confidence: float = 0.0
     frames_analyzed: int = 0
@@ -335,6 +336,24 @@ def query_video(
             on_progress(30, "Querying LLM...")
 
         backend = _select_backend(model)
+
+        if backend in ("openai", "anthropic"):
+            try:
+                from opencut.config import require_network_allowed
+                require_network_allowed(
+                    f"Cloud vision API '{backend}'",
+                    "model='local' or 'florence-2' for local inference",
+                )
+            except RuntimeError as exc:
+                return VideoQueryResult(
+                    answer=str(exc),
+                    error=str(exc),
+                    timestamps=[],
+                    confidence=0.0,
+                    frames_analyzed=len(frames),
+                    model_used=backend,
+                )
+
         if backend == "openai":
             api_key = os.environ.get("OPENAI_API_KEY", "")
             if not api_key:

@@ -262,6 +262,16 @@ def _generate_tts_audio(
         Path to generated WAV file.
     """
     backend = _normalize_tts_backend(tts_backend)
+
+    if backend in ("edge_tts", "external_api"):
+        try:
+            from opencut.config import is_local_only
+            if is_local_only():
+                logger.warning("Local-only mode: cloud TTS backend '%s' blocked, falling back to silence", backend)
+                backend = "silence"
+        except ImportError:
+            pass
+
     voice_ref = voice_profile.reference_audio_path if voice_profile else ""
 
     if backend == "external_api":
