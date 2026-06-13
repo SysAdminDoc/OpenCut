@@ -99,13 +99,6 @@ history, not here.
   Complexity: M
 
 
-- [ ] P2 — Add native auto-editor v30 compatibility canarying
-  Why: OpenCut's adapter prefers the native auto-editor binary, but packaging/model-card guidance still points to the legacy v29 Python package while upstream v30.5.0 is the active Nim line.
-  Evidence: github.com/WyattBlue/auto-editor release 30.5.0; pyproject.toml:103,172; opencut/core/auto_edit.py; opencut/model_cards.py:345-352; opencut/registry.py:459-464
-  Touches: opencut/core/auto_edit.py, opencut/model_cards.py, opencut/registry.py, generated feature readiness/model cards, tests/test_auto_editor_json.py or equivalent fixture tests
-  Acceptance: a fixture or smoke test validates current v30 `auto-editor --export json` output, v29 fallback remains covered, and install hints distinguish native v30 binary usage from the legacy pip fallback.
-  Complexity: M
-
 - [ ] P2 — Add Premiere caption-export preflight and recovery
   Why: Premiere 26 caption export/burn settings have community-reported failure modes; OpenCut's caption workflows should warn before a failed host handoff and preserve a sidecar/burn-in fallback.
   Evidence: https://www.reddit.com/r/premiere/comments/1s672iq/premiere_pro26_captions_and_export_settings/?tl=en; Adobe caption export docs; opencut/routes/captions.py; opencut/core/caption_burnin.py; extension/com.opencut.panel/client/index.html caption burn-in UI

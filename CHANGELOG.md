@@ -16,6 +16,12 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Added — auto-editor v30
+
+- `detect_auto_editor_generation()` distinguishes native v30+ Nim binary from
+  legacy v29 pip package. Install hints across model cards and feature registry
+  now list both install paths.
+
 ### Added — privacy
 
 - Local-only privacy mode via `OPENCUT_LOCAL_ONLY=1` env var or
