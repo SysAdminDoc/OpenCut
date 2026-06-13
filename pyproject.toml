@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
@@ -34,9 +35,9 @@ classifiers = [
 dependencies = [
     "click>=8.0,<9",
     "rich>=13.0,<14",
-    "flask>=3.0,<4",
+    "flask>=3.1.3,<4",
     "flask-cors>=6.0,<7",
-    "waitress>=3.0,<4",
+    "waitress>=3.0.1,<4",
     "python-json-logger>=2.0,<3",
     "psutil>=5.9",
 ]
