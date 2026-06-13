@@ -16,6 +16,11 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Fixed — documentation
+
+- Removed stale ROADMAP-NEXT.md and PROJECT_CONTEXT.md references from
+  CONTRIBUTING.md and docs/ROADMAP.md pointer file.
+
 ### Changed - CEP/UXP polish
 
 - CEP first-run, launcher, disabled-action, and settings copy now frames the
