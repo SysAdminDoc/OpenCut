@@ -18,6 +18,12 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Fixed — UXP i18n
+
+- Deduplicated 113 duplicate keys in UXP en.json (1497 → 1384 unique keys).
+- `formatI18n` now uses a function replacement to prevent `$&` and `$'` in
+  substitution values from corrupting output.
+
 ### Added — captions
 
 - Caption export preflight (`POST /captions/export/preflight`) checks segment

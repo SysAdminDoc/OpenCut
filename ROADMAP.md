@@ -25,9 +25,9 @@ history, not here.
 
 ## P3 — Lower-severity correctness, UX, packaging
 
-- [ ] P3 — UXP: i18n gaps and locale hygiene from the recent es push
-  Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
-  Where: extension/com.opencut.uxp/locales/en.json, es.json; main.js:238-244, 2061-2117, 5541-5548, 7551-7557
+- [ ] P3 — UXP: remaining i18n gaps — es.json diacritics, hardcoded English, locale lint
+  Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English. A locale lint (key uniqueness, placeholder parity) should be added to the workflow. (en.json dedup and formatI18n injection fix shipped in v1.33.1.)
+  Where: extension/com.opencut.uxp/locales/es.json; main.js:2061-2117, 5541-5548, 7551-7557
 
 ## Research-Driven Additions
 
