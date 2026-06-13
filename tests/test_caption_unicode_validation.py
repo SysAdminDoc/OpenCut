@@ -27,6 +27,7 @@ def test_script_classifier_detects_rtl_mixed_bidi_cjk_and_indic():
     ]
     assert "cjk" in unicode_gate.classify_caption_text("これは改行検証用の字幕です")
     assert "indic" in unicode_gate.classify_caption_text("नमस्ते दुनिया")
+    assert "indic" in unicode_gate.classify_caption_text("ওপেনকাট ক্যাপশন পরীক্ষা")
 
 
 def test_cjk_line_breaker_limitation_is_explicit_f242_followup():
@@ -39,8 +40,8 @@ def test_default_unicode_validation_report_preserves_all_export_text():
     report = unicode_gate.build_caption_unicode_report()
 
     assert report["status"] == "ok"
-    assert report["summary"]["case_count"] == 5
-    assert report["summary"]["complex_shaping_cases"] >= 3
+    assert report["summary"]["case_count"] == 6
+    assert report["summary"]["complex_shaping_cases"] >= 4
     assert report["summary"]["cjk_cases"] == 2
     assert report["summary"]["failures"] == 0
     assert report["summary"]["warnings"] == 0
@@ -54,6 +55,7 @@ def test_default_unicode_validation_report_preserves_all_export_text():
         "hindi_devanagari",
         "japanese_no_space",
         "chinese_no_space",
+        "bengali_indic",
     }
     for case in cases.values():
         assert case["srt_roundtrip"] is True
@@ -79,14 +81,14 @@ def test_cli_json_and_check_modes(capsys):
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "ok"
-    assert payload["summary"]["case_count"] == 5
+    assert payload["summary"]["case_count"] == 6
 
 
 def test_release_smoke_runs_caption_unicode_gate(monkeypatch):
     module = _release_smoke_module()
     payload = {
         "status": "ok",
-        "summary": {"case_count": 5, "warnings": 0, "failures": 0},
+        "summary": {"case_count": 6, "warnings": 0, "failures": 0},
         "cases": [],
     }
 
@@ -102,6 +104,6 @@ def test_release_smoke_runs_caption_unicode_gate(monkeypatch):
     result = module.step_caption_unicode(argparse.Namespace())
 
     assert result.status == "ok"
-    assert result.message == "5 complex-script fixtures preserved (0 advisory warnings)"
+    assert result.message == "6 complex-script fixtures preserved (0 advisory warnings)"
     assert any(step.name == "caption-unicode" for step in module.STEPS)
     assert "tests/test_caption_unicode_validation.py" in module.RELEASE_GATE_TESTS

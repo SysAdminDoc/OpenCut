@@ -126,6 +126,14 @@ DEFAULT_SCRIPT_CASES: Sequence[CaptionScriptCase] = (
         requires_complex_shaping=False,
         note="No-space Chinese should survive export; F242 handles line breaks.",
     ),
+    CaptionScriptCase(
+        case_id="bengali_indic",
+        language="bn",
+        text="ওপেনকাট ক্যাপশন পরীক্ষা",
+        expected_scripts=("indic",),
+        requires_complex_shaping=True,
+        note="Bengali conjuncts and vowel signs require a shaping-capable renderer.",
+    ),
 )
 
 

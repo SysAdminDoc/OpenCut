@@ -569,6 +569,56 @@ _FONT_DIRS = []
 _font_cache: Dict[str, str] = {}
 _font_lock = threading.Lock()
 
+_CJK_FONT_FALLBACKS = [
+    "NotoSansCJK-Regular.ttc",
+    "NotoSansCJKsc-Regular.otf",
+    "NotoSansJP-Regular.otf",
+    "NotoSansSC-Regular.otf",
+    "msgothic.ttc",
+    "SimSun.ttf",
+    "SimHei.ttf",
+    "malgun.ttf",
+    "meiryo.ttc",
+    "YuGothR.ttc",
+]
+
+_INDIC_FONT_FALLBACKS = [
+    "NotoSansDevanagari-Regular.ttf",
+    "NotoSansBengali-Regular.ttf",
+    "NotoSans-Regular.ttf",
+    "mangal.ttf",
+    "Mangal.ttf",
+    "vrinda.ttf",
+    "Vrinda.ttf",
+    "nirmala.ttf",
+    "Nirmala.ttf",
+]
+
+_RTL_FONT_FALLBACKS = [
+    "NotoSansArabic-Regular.ttf",
+    "NotoNaskhArabic-Regular.ttf",
+    "NotoSansHebrew-Regular.ttf",
+    "tahoma.ttf",
+    "Tahoma.ttf",
+]
+
+
+def _detect_text_scripts(text: str) -> Set[str]:
+    """Detect which script families are present in caption text."""
+    scripts: Set[str] = set()
+    for char in text:
+        code = ord(char)
+        if 0x0600 <= code <= 0x06FF or 0xFB50 <= code <= 0xFDFF or 0xFE70 <= code <= 0xFEFF:
+            scripts.add("arabic")
+        elif 0x0590 <= code <= 0x05FF:
+            scripts.add("hebrew")
+        elif (0x3040 <= code <= 0x30FF or 0x3400 <= code <= 0x4DBF
+              or 0x4E00 <= code <= 0x9FFF or 0xAC00 <= code <= 0xD7AF):
+            scripts.add("cjk")
+        elif 0x0900 <= code <= 0x0D7F:
+            scripts.add("indic")
+    return scripts
+
 
 def _get_font_dirs() -> List[str]:
     """Get platform-specific font directories."""
@@ -626,8 +676,12 @@ def find_font(filename: str) -> Optional[str]:
     return None
 
 
-def _load_font(style: "CaptionStyle", size_override: Optional[int] = None):
-    """Load a PIL ImageFont for the given style."""
+def _load_font(
+    style: "CaptionStyle",
+    size_override: Optional[int] = None,
+    text_hint: Optional[str] = None,
+):
+    """Load a PIL ImageFont for the given style with script-aware fallback."""
     from PIL import ImageFont
 
     size = size_override or style.font_size
@@ -640,13 +694,25 @@ def _load_font(style: "CaptionStyle", size_override: Optional[int] = None):
         except Exception:
             pass
 
-    # Try common fallbacks (Windows and Linux names)
-    for fallback in [
+    # Build script-aware fallback chain when text is available
+    script_fallbacks: List[str] = []
+    if text_hint:
+        scripts = _detect_text_scripts(text_hint)
+        if "cjk" in scripts:
+            script_fallbacks.extend(_CJK_FONT_FALLBACKS)
+        if "indic" in scripts:
+            script_fallbacks.extend(_INDIC_FONT_FALLBACKS)
+        if "arabic" in scripts or "hebrew" in scripts:
+            script_fallbacks.extend(_RTL_FONT_FALLBACKS)
+
+    all_fallbacks = script_fallbacks + [
         "arialbd.ttf", "arial.ttf", "ARIALBD.TTF", "ARIAL.TTF",
         "DejaVuSans-Bold.ttf", "DejaVuSans.ttf",
         "LiberationSans-Bold.ttf", "LiberationSans-Regular.ttf",
         "segoeui.ttf", "SEGOEUI.TTF",
-    ]:
+    ]
+
+    for fallback in all_fallbacks:
         fp = find_font(fallback)
         if fp:
             try:
@@ -769,8 +835,8 @@ def layout_caption_text(
 # Frame rendering
 # ---------------------------------------------------------------------------
 
-def _load_skia_typeface(style: "CaptionStyle"):
-    """Load a Skia Typeface for the given style, with fallbacks."""
+def _load_skia_typeface(style: "CaptionStyle", text_hint: Optional[str] = None):
+    """Load a Skia Typeface for the given style with script-aware fallback."""
     font_path = find_font(style.font_file)
     if font_path:
         try:
@@ -780,12 +846,23 @@ def _load_skia_typeface(style: "CaptionStyle"):
         except Exception:
             pass
 
-    # Try common fallbacks
-    for fallback in [
+    script_fallbacks: List[str] = []
+    if text_hint:
+        scripts = _detect_text_scripts(text_hint)
+        if "cjk" in scripts:
+            script_fallbacks.extend(_CJK_FONT_FALLBACKS)
+        if "indic" in scripts:
+            script_fallbacks.extend(_INDIC_FONT_FALLBACKS)
+        if "arabic" in scripts or "hebrew" in scripts:
+            script_fallbacks.extend(_RTL_FONT_FALLBACKS)
+
+    all_fallbacks = script_fallbacks + [
         "arialbd.ttf", "arial.ttf", "ARIALBD.TTF", "ARIAL.TTF",
         "DejaVuSans-Bold.ttf", "DejaVuSans.ttf",
         "LiberationSans-Bold.ttf", "LiberationSans-Regular.ttf",
-    ]:
+    ]
+
+    for fallback in all_fallbacks:
         fp = find_font(fallback)
         if fp:
             try:
@@ -825,8 +902,9 @@ def _render_frame_skia(
         data = surface.makeImageSnapshot().tobytes()
         return Image.frombytes("RGBA", video_size, data)
 
-    # Build Skia font from style
-    typeface = _load_skia_typeface(style)
+    # Build Skia font from style (pass text for script-aware font selection)
+    text_hint = " ".join(w.text for w in layouts if w.text)
+    typeface = _load_skia_typeface(style, text_hint=text_hint)
     sk_font = skia.Font(typeface, style.font_size)
     sk_font.setEdging(skia.Font.Edging.kAntiAlias)
     sk_font.setSubpixel(True)
@@ -1089,7 +1167,8 @@ def render_styled_caption_video(
     _ensure_pillow()
 
     style = STYLES.get(style_name, STYLES[DEFAULT_STYLE])
-    font = _load_font(style)
+    all_text = " ".join(seg.text for seg in transcription.segments if seg.text)
+    font = _load_font(style, text_hint=all_text)
     video_size = (video_width, video_height)
     max_text_width = int(video_width * style.max_width_pct)
     y_base = video_height - style.margin_bottom
@@ -1322,3 +1401,56 @@ def get_style_info() -> List[dict]:
             "action_color": f"rgb({s.action_color[0]},{s.action_color[1]},{s.action_color[2]})",
         })
     return result
+
+
+def get_caption_font_info(text: str, style_name: str = DEFAULT_STYLE) -> dict:
+    """Return font selection info for caption text.
+
+    The UI uses the warning field to alert users when no font capable of
+    rendering the detected scripts is available on the system.
+    """
+    style = STYLES.get(style_name, STYLES[DEFAULT_STYLE])
+    scripts = _detect_text_scripts(text) if text else set()
+    warning = None
+
+    if "cjk" in scripts and not any(find_font(f) for f in _CJK_FONT_FALLBACKS):
+        warning = (
+            "No CJK font found. Install Noto Sans CJK for "
+            "Chinese/Japanese/Korean caption rendering."
+        )
+    elif "indic" in scripts and not any(find_font(f) for f in _INDIC_FONT_FALLBACKS):
+        warning = (
+            "No Indic font found. Install Noto Sans Devanagari/Bengali "
+            "for Indic caption rendering."
+        )
+    elif ("arabic" in scripts or "hebrew" in scripts) and not any(
+        find_font(f) for f in _RTL_FONT_FALLBACKS
+    ):
+        warning = (
+            "No RTL font found. Install Noto Sans Arabic/Hebrew "
+            "for RTL caption rendering."
+        )
+
+    font_path = find_font(style.font_file)
+    selected = style.font_file if font_path else None
+
+    if not selected:
+        candidates: List[str] = []
+        if "cjk" in scripts:
+            candidates.extend(_CJK_FONT_FALLBACKS)
+        if "indic" in scripts:
+            candidates.extend(_INDIC_FONT_FALLBACKS)
+        if "arabic" in scripts or "hebrew" in scripts:
+            candidates.extend(_RTL_FONT_FALLBACKS)
+        candidates.extend(["arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf"])
+        for c in candidates:
+            if find_font(c):
+                selected = c
+                break
+
+    return {
+        "selected_font": selected,
+        "font_path": font_path or (find_font(selected) if selected else None),
+        "detected_scripts": sorted(scripts),
+        "warning": warning,
+    }
