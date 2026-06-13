@@ -84,7 +84,6 @@ history, not here.
   Acceptance: pip install of the chosen name installs the opencut CLI/server from PyPI; releases publish automatically on tag.
   Complexity: M
 
-
 - [ ] P2 — Move CEP panel off unsupported Vite 5 with HGFS-safe regression evidence
   Why: Vite 5.4.21 remains pinned with a documented advisory waiver because Vite 6+ regressed VMware HGFS paths, but Vite's maintained release line has moved to 8.x with 7.3/6.4 backports.
   Evidence: extension/com.opencut.panel/package.json:22; docs/NODE_ADVISORIES.md:13,27-34,66-74; tests/test_panel_node_entrypoints.py; vite.dev/releases
@@ -99,12 +98,6 @@ history, not here.
   Acceptance: a current v1.33.x GitHub Release/tag or documented pre-release policy exists; README version text is covered by the sync gate; release artifacts include server package, Windows installer, Linux packages, and SBOM/provenance artifacts or explicit skipped-platform notes.
   Complexity: M
 
-- [ ] P2 — Add a local-only privacy mode that fails closed across cloud-capable providers
-  Why: OpenCut's local-first promise is central, but LLM, video-LLM, cloud TTS, stock search, telemetry, and social upload code paths can contact external services when configured without a single global guardrail.
-  Evidence: README.md local/no-cloud positioning; opencut/core/llm.py; opencut/core/video_llm.py; opencut/core/voice_overdub.py; opencut/core/social_post.py; opencut/core/stock_search.py; opencut/core/telemetry_aptabase.py
-  Touches: opencut/config.py, cloud-capable core modules, social/LLM/TTS/stock routes, CEP/UXP settings, release-smoke or pytest no-network checks
-  Acceptance: `OPENCUT_LOCAL_ONLY=1` and the matching UI setting hide or disable cloud controls, route calls fail with structured local-alternative errors, and tests prove external-provider functions are not invoked in local-only mode.
-  Complexity: M
 
 - [ ] P2 — Add native auto-editor v30 compatibility canarying
   Why: OpenCut's adapter prefers the native auto-editor binary, but packaging/model-card guidance still points to the legacy v29 Python package while upstream v30.5.0 is the active Nim line.
