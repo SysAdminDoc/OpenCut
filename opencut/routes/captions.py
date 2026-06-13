@@ -2223,6 +2223,41 @@ def captions_qc():
         return safe_error(exc, "captions_qc")
 
 
+@captions_bp.route("/captions/export/preflight", methods=["POST"])
+@require_csrf
+def captions_export_preflight():
+    """Check caption export readiness and recommend fallback strategy.
+
+    Body fields::
+
+        {
+            "segments": [...],         // OR srt_text
+            "srt_text": "...",
+            "video_duration": 120.5,   // optional
+            "host_version": "26.1",    // optional, from panel
+            "force_strategy": null     // optional override
+        }
+
+    Returns ``{ ready, fallback_strategy, diagnostics, caption_count, ... }``.
+    """
+    try:
+        from opencut.core.caption_export_preflight import run_caption_export_preflight
+    except ImportError:
+        from opencut.core.caption_export_preflight import run_caption_export_preflight
+    data = request.get_json(silent=True) or {}
+    try:
+        result = run_caption_export_preflight(
+            segments=data.get("segments"),
+            srt_text=data.get("srt_text"),
+            video_duration=safe_float(data.get("video_duration", 0), default=0, min_val=0),
+            host_version=data.get("host_version"),
+            force_strategy=data.get("force_strategy"),
+        )
+        return jsonify(result)
+    except Exception as exc:
+        return safe_error(exc, "captions_export_preflight")
+
+
 @captions_bp.route("/captions/qc/reading-profiles", methods=["GET"])
 def captions_qc_reading_profiles():
     """Return source-backed caption reading-speed profiles (F240)."""
