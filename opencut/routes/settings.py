@@ -692,6 +692,40 @@ def retry_job(job_id):
 
 
 # ---------------------------------------------------------------------------
+# Local-Only Privacy Mode
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/local-only", methods=["GET"])
+def get_local_only_setting():
+    """Get local-only privacy mode status."""
+    try:
+        from ..config import is_local_only
+        from ..user_data import load_local_only_setting
+    except ImportError:
+        from opencut.config import is_local_only
+        from opencut.user_data import load_local_only_setting
+    setting = load_local_only_setting()
+    setting["active"] = is_local_only()
+    return jsonify(setting)
+
+
+@settings_bp.route("/settings/local-only", methods=["POST"])
+@require_csrf
+def save_local_only_setting_route():
+    """Toggle local-only privacy mode."""
+    try:
+        from ..user_data import save_local_only_setting
+    except ImportError:
+        from opencut.user_data import save_local_only_setting
+    data, error = _require_json_object()
+    if error:
+        return error
+    enabled = safe_bool(data.get("enabled", False), default=False)
+    save_local_only_setting(enabled)
+    return jsonify({"success": True, "enabled": enabled})
+
+
+# ---------------------------------------------------------------------------
 # LLM Settings
 # ---------------------------------------------------------------------------
 

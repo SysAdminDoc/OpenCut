@@ -121,6 +121,13 @@ def search_stock_video(
     Returns:
         List of StockMediaResult.
     """
+    try:
+        from opencut.config import require_network_allowed
+        require_network_allowed("Stock media search", "local media files")
+    except (ImportError, RuntimeError) as exc:
+        if isinstance(exc, RuntimeError):
+            return []
+
     if not query or not query.strip():
         raise ValueError("Search query cannot be empty")
     source = source.lower().strip()
@@ -227,6 +234,13 @@ def search_stock_photo(
     Returns:
         List of StockMediaResult.
     """
+    try:
+        from opencut.config import require_network_allowed
+        require_network_allowed("Stock media search", "local media files")
+    except (ImportError, RuntimeError) as exc:
+        if isinstance(exc, RuntimeError):
+            return []
+
     if not query or not query.strip():
         raise ValueError("Search query cannot be empty")
     source = source.lower().strip()
@@ -319,6 +333,12 @@ def download_stock_media(
     Returns:
         Dict with output_path and file_size.
     """
+    try:
+        from opencut.config import require_network_allowed
+        require_network_allowed("Stock media search", "local media files")
+    except ImportError:
+        pass
+
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 

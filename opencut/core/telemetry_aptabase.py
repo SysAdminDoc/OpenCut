@@ -515,6 +515,13 @@ def track(
     Returns ``False`` when telemetry is disabled or invalidly configured.  The
     caller should not treat telemetry failure as a user-facing operation error.
     """
+    try:
+        from opencut.config import is_local_only
+        if is_local_only():
+            return False
+    except ImportError:
+        pass
+
     cfg = get_config()
     if not cfg.enabled:
         return False
