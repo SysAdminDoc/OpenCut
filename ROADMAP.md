@@ -33,7 +33,6 @@ history, not here.
   Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
   Where: extension/com.opencut.uxp/locales/en.json, es.json; main.js:238-244, 2061-2117, 5541-5548, 7551-7557
 
-
 ## Research-Driven Additions
 
 - [ ] P1 — Decide and execute brand/namespace disambiguation (gates all distribution work)
@@ -85,12 +84,6 @@ history, not here.
   Acceptance: pip install of the chosen name installs the opencut CLI/server from PyPI; releases publish automatically on tag.
   Complexity: M
 
-- [ ] P2 — Normalize live planning-file references to ROADMAP.md and RESEARCH.md
-  Why: live user-facing code still points at removed ROADMAP-NEXT.md/PROJECT_CONTEXT.md files and past "ships in v1.28.x/v1.29.0" promises, creating misleading install and release guidance.
-  Evidence: CONTRIBUTING.md:106,124; opencut/registry.py:648-689; opencut/routes/wave_h_routes.py:77,437; opencut/routes/wave_k_routes.py:40; opencut/core/audio_reactive_fx.py:64
-  Touches: CONTRIBUTING.md, scripts/check_doc_sizes.py, scripts/release_smoke.py, opencut/registry.py, Wave H/K route modules, optional-engine stub messages, related tests
-  Acceptance: `rg "ROADMAP-NEXT|PROJECT_CONTEXT|TODO.md|RESEARCH_FEATURE_PLAN" . --glob "!docs/archive/**" --glob "!tests/**"` returns no user-facing planning references except intentional historical comments; missing-engine messages point to live capability metadata or ROADMAP.md.
-  Complexity: S
 
 - [ ] P2 — Move CEP panel off unsupported Vite 5 with HGFS-safe regression evidence
   Why: Vite 5.4.21 remains pinned with a documented advisory waiver because Vite 6+ regressed VMware HGFS paths, but Vite's maintained release line has moved to 8.x with 7.3/6.4 backports.
