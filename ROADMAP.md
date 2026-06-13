@@ -46,12 +46,11 @@ history, not here.
   Acceptance: multicam cut generation offers an "audio+visual" mode that prefers the on-camera active speaker on a test clip with audio bleed.
   Complexity: L
 
-- [ ] P2 — Premiere 26 compatibility and positioning audit
-  Why: Adobe rebranded to "Premiere" 26.x (Jan 2026) and shipped native Object Mask, Generative Extend, Media Intelligence, and 90+ Film Impact transitions — README comparisons predate this; CEP HostList [13.0,99.9] should cover 26.x but no documented test pass exists.
-  Evidence: blog.adobe.com Jan 2026 announcement; extension/com.opencut.panel/CSXS/manifest.xml:15; README.md feature tables
-  Touches: README.md, docs/UXP_MIGRATION.md, extension manifests, .github/workflows/adobe-premierepro-versions.yml
-  Acceptance: documented CEP+UXP smoke pass on Premiere 26.x; README positioning updated to lead with capabilities Adobe does not bundle (silence-cut-to-timeline, stems, TTS/voice clone, local agent, social pipeline).
-  Complexity: M
+- [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
+  Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.
+  Blocked: Premiere 26.x license/installation.
+  Acceptance: documented smoke test pass on Premiere 26.0 or 26.2.x for both CEP and UXP panels.
+  Complexity: S
 
 - [ ] P3 — Publish the server package to PyPI via trusted publishing (after brand decision)
   Why: pip install of the server/CLI is the cheapest distribution surface and currently impossible (no PyPI package); trusted publishing avoids long-lived tokens in CI.
