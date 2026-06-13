@@ -87,8 +87,6 @@ history, not here.
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
 
-
-
 - [ ] P2 — Add versioned visual-search engines beyond fixed CLIP ViT-B/32
   Why: Adobe Media Intelligence makes on-device visual retrieval table-stakes, while OpenCut's semantic search is hard-coded to `openai/clip-vit-base-patch32` and a single cache schema.
   Evidence: Adobe Media Intelligence docs; Hugging Face SigLIP 2; opencut/core/semantic_video_search.py:43; tests/test_object_intel.py semantic search coverage

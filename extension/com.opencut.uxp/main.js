@@ -241,7 +241,8 @@ function t(key, fallback) {
 function formatI18n(key, fallback, values = {}) {
   let text = t(key, fallback);
   Object.keys(values).forEach((name) => {
-    text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(values[name]));
+    const val = String(values[name]);
+    text = text.replace(new RegExp(`\\{${name}\\}`, "g"), () => val);
   });
   return text;
 }
