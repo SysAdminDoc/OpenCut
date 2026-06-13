@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed — CEP style.css consolidation
+
+- Merged duplicate `@media (prefers-reduced-motion: reduce)` blocks into one.
+- Completed light theme variable block with missing accent gradients, mesh
+  background effects, and glow-opacity tokens (8 new variables).
+- Retokenized 14 hardcoded hex color literals in light theme overrides to use
+  CSS custom properties (`--text-primary`, `--text-secondary`, `--bg-surface`,
+  `--bg-raised`).
+
 ## [1.33.1] — 2026-06-13 — CI hardening, privacy mode, v30 compat
 
 ### Security — dependency floors
