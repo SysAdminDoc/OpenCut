@@ -54,13 +54,6 @@ history, not here.
   Acceptance: documented CEP+UXP smoke pass on Premiere 26.x; README positioning updated to lead with capabilities Adobe does not bundle (silence-cut-to-timeline, stems, TTS/voice clone, local agent, social pipeline).
   Complexity: M
 
-- [ ] P3 — Track onnxruntime 1.26 hardening release and raise the floor when GA
-  Why: onnxruntime 1.26 (in development) hardens multiple OOB/overflow scenarios (Attention mask OOB write, MaxPoolGrad bounds, SVM/TreeEnsemble, RNN sequence_lens); 15+ core modules import onnxruntime via the ai/insightface/rembg stack with floor >=1.25,<2.
-  Evidence: github.com/microsoft/onnxruntime/releases (1.26 notes); pyproject.toml:83,90
-  Touches: pyproject.toml, requirements files, docs/PYTHON_ADVISORIES.md
-  Acceptance: floor raised to >=1.26 once released and advisory doc records the hardening rationale.
-  Complexity: S
-
 - [ ] P3 — Publish the server package to PyPI via trusted publishing (after brand decision)
   Why: pip install of the server/CLI is the cheapest distribution surface and currently impossible (no PyPI package); trusted publishing avoids long-lived tokens in CI.
   Evidence: docs.pypi.org/trusted-publishers/; RESEARCH.md distribution assessment
