@@ -16,6 +16,13 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Added — privacy
+
+- Local-only privacy mode via `OPENCUT_LOCAL_ONLY=1` env var or
+  `/settings/local-only` UI toggle. Blocks cloud LLM providers (keeps
+  Ollama), cloud vision APIs, cloud TTS, social uploads, stock search,
+  and telemetry with structured local-alternative error messages.
+
 ### Fixed — documentation
 
 - Removed stale ROADMAP-NEXT.md and PROJECT_CONTEXT.md references from
