@@ -543,3 +543,16 @@ def save_telemetry_settings(settings: dict) -> None:
     current["app_key"] = str(current.get("app_key") or "").strip()[:200]
     current["base_url"] = str(current.get("base_url") or "").strip().rstrip("/")[:500]
     write_user_file("telemetry_settings.json", current)
+
+
+def load_local_only_setting() -> dict:
+    """Load local-only privacy mode setting."""
+    saved = read_user_file("local_only.json", default={})
+    if not isinstance(saved, dict):
+        return {"enabled": False}
+    return {"enabled": bool(saved.get("enabled", False))}
+
+
+def save_local_only_setting(enabled: bool) -> None:
+    """Save local-only privacy mode setting."""
+    write_user_file("local_only.json", {"enabled": bool(enabled)})

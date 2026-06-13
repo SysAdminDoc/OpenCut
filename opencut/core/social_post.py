@@ -746,6 +746,16 @@ def upload_to_platform(
     if not os.path.isfile(filepath):
         return UploadResult(platform=platform, success=False, error=f"File not found: {filepath}")
 
+    try:
+        from opencut.config import is_local_only
+        if is_local_only():
+            return UploadResult(
+                platform=platform, success=False,
+                error="Local-only mode is active. Social media uploads are disabled.",
+            )
+    except ImportError:
+        pass
+
     platform = platform.lower().strip()
 
     uploaders = {

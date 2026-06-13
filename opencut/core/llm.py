@@ -288,6 +288,20 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
         config = LLMConfig()
 
     provider = config.provider.lower().strip()
+
+    if provider != "ollama":
+        try:
+            from opencut.config import require_network_allowed
+            require_network_allowed(
+                f"Cloud LLM provider '{provider}'",
+                "provider='ollama' for local inference",
+            )
+        except RuntimeError as exc:
+            return LLMResponse(
+                text=str(exc), provider=provider,
+                model=config.model, error=str(exc),
+            )
+
     handler = _PROVIDERS.get(provider)
     if handler is None:
         msg = f"Unknown LLM provider: '{provider}'. Use 'ollama', 'openai', 'anthropic', or 'gemini'."
@@ -331,6 +345,17 @@ def check_llm_reachable(config=None):
 
     provider = config.provider.lower().strip()
     result = {"available": False, "provider": provider, "models": [], "error": ""}
+
+    if provider != "ollama":
+        try:
+            from opencut.config import require_network_allowed
+            require_network_allowed(
+                f"Cloud LLM provider '{provider}'",
+                "provider='ollama' for local inference",
+            )
+        except RuntimeError as exc:
+            result["error"] = str(exc)
+            return result
 
     if provider == "ollama":
         try:

@@ -57,6 +57,7 @@ def _env_csv(name: str, default: list[str]) -> list[str]:
 class OpenCutConfig:
     """Application configuration, populated from environment or overrides."""
 
+    local_only: bool = False
     bundled_mode: bool = False
     whisper_models_dir: Optional[str] = None
     torch_home: Optional[str] = None
@@ -83,6 +84,7 @@ class OpenCutConfig:
             or whisper_dir is not None
         )
         return cls(
+            local_only=_env_bool("OPENCUT_LOCAL_ONLY", default=False),
             bundled_mode=bundled,
             whisper_models_dir=whisper_dir,
             torch_home=os.environ.get("TORCH_HOME", None),
@@ -100,3 +102,28 @@ class OpenCutConfig:
             max_batch_files=_env_int("OPENCUT_MAX_BATCH_FILES", 100, min_val=1, max_val=10000),
             job_stuck_timeout=_env_int("OPENCUT_JOB_STUCK_TIMEOUT", 7200, min_val=60, max_val=86400),
         )
+
+
+_LOCAL_ONLY_SETTING_FILE = "local_only.json"
+
+
+def is_local_only() -> bool:
+    """Check if local-only mode is active (env var OR user setting)."""
+    if _env_bool("OPENCUT_LOCAL_ONLY", default=False):
+        return True
+    try:
+        from . import user_data  # noqa: E402
+        settings = user_data.read_user_file(_LOCAL_ONLY_SETTING_FILE, default={})
+        return bool(settings.get("enabled", False))
+    except Exception:
+        return False
+
+
+def require_network_allowed(feature: str, local_alternative: str = "") -> None:
+    """Raise RuntimeError if local-only mode blocks a cloud feature."""
+    if not is_local_only():
+        return
+    msg = f"Local-only mode is active. {feature} requires network access and is disabled."
+    if local_alternative:
+        msg += f" Use {local_alternative} instead."
+    raise RuntimeError(msg)
