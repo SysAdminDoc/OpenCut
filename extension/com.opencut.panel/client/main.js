@@ -838,6 +838,8 @@
     function getOverlayCloseHandler(element) {
         if (element === el.commandPaletteOverlay) return closeCommandPalette;
         if (element === el.previewModal) return closePreviewModal;
+        if (element === el.wizardOverlay) return closeWizard;
+        if (element === el.audioPreview) return closeAudioPreview;
         return null;
     }
 
@@ -11423,9 +11425,7 @@
             el.audioPreviewPlayer.pause();
             el.audioPreviewPlayer.src = "";
         }
-        if (_audioPreviewReturnFocusEl && typeof _audioPreviewReturnFocusEl.focus === "function") {
-            try { _audioPreviewReturnFocusEl.focus(); } catch (e) {}
-        }
+        deactivateOverlay(el.audioPreview);
         _audioPreviewReturnFocusEl = null;
     }
 
@@ -11440,7 +11440,7 @@
         _audioPreviewReturnFocusEl = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
         el.audioPreviewPlayer.src = BACKEND + "/file?path=" + encodeURIComponent(filePath);
         el.audioPreview.classList.remove("hidden");
-        if (el.audioPreviewClose) el.audioPreviewClose.focus();
+        activateOverlay(el.audioPreview, { returnFocus: _audioPreviewReturnFocusEl, initialFocus: el.audioPreviewClose });
         try { el.audioPreviewPlayer.play().catch(function() {}); } catch (e) {}
     }
 
@@ -11512,7 +11512,6 @@
     // ================================================================
     // First-Run Wizard
     // ================================================================
-    var _globalEscapeHandlersAdded = false;
 
     function closeWizard() {
         if (!el.wizardOverlay) return;
@@ -11522,33 +11521,11 @@
             s.wizardDismissed = !!(el.wizardDontShow && el.wizardDontShow.checked);
             localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(s));
         } catch (e) {}
-        if (el.stageChooseMediaBtn) el.stageChooseMediaBtn.focus();
+        deactivateOverlay(el.wizardOverlay);
     }
 
     function initWizard() {
         if (!el.wizardOverlay) return;
-        if (!_globalEscapeHandlersAdded) {
-            _globalEscapeHandlersAdded = true;
-            document.addEventListener("keydown", function (e) {
-                if (e.key === "Escape" && el.wizardOverlay && !el.wizardOverlay.classList.contains("hidden")) {
-                    closeWizard();
-                }
-                if (e.key === "Escape" && el.previewModal && !el.previewModal.classList.contains("hidden")) {
-                    closePreviewModal();
-                }
-                if (e.key === "Escape" && el.audioPreview && !el.audioPreview.classList.contains("hidden")) {
-                    closeAudioPreview();
-                }
-                if (e.key === "Escape" && el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
-                    hideRecentClipsDropdown(false);
-                }
-                if (e.key === "Escape" && el.outputBrowser && !el.outputBrowser.classList.contains("hidden")) {
-                    _outputBrowserOpen = false;
-                    el.outputBrowser.classList.add("hidden");
-                    setExpanded(el.outputBrowserToggle, false);
-                }
-            });
-        }
         // Check if user has dismissed the wizard before
         try {
             var settings = JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || "{}");
@@ -11558,13 +11535,7 @@
         if (el.wizardDontShow) el.wizardDontShow.checked = false;
         el.wizardOverlay.classList.remove("hidden");
         var wizardFocusTarget = el.wizardCard || el.wizardCloseBtn;
-        if (wizardFocusTarget && typeof wizardFocusTarget.focus === "function") {
-            try {
-                wizardFocusTarget.focus({ preventScroll: true });
-            } catch (e) {
-                wizardFocusTarget.focus();
-            }
-        }
+        activateOverlay(el.wizardOverlay, { returnFocus: el.stageChooseMediaBtn, initialFocus: wizardFocusTarget });
         // Animate steps
         var steps = el.wizardOverlay.querySelectorAll(".wizard-step");
         for (var i = 1; i < steps.length; i++) {
