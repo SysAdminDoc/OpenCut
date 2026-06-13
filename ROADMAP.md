@@ -17,12 +17,6 @@ history, not here.
   Where: docs/UXP_MIGRATION.md:153-155, extension/com.opencut.uxp/bolt-webview/, opencut/tools/validate_uxp_udt_results.py
   Blocked: live Premiere UDT capture.
 
-## P2 — Correctness / reliability
-
-- [ ] P2 — CEP style.css is eight stacked re-skins, including two conflicting light themes
-  Why: six full :root token redefinitions (12, 4462, 5386, 13215, 15466, 17214), two divergent html.theme-light blocks (16701 vs 17628), three different :focus-visible rules, and a triplicated prefers-reduced-motion block — the effective theme is "whatever the last pass overrode" and ~⅓ of 18k lines is dead weight. Consolidate to one token block per theme; then retokenize the ~340 stray hex literals.
-  Where: extension/com.opencut.panel/client/style.css
-
 ## P3 — Lower-severity correctness, UX, packaging
 
 - [ ] P3 — UXP: remaining i18n gaps — es.json diacritics, hardcoded English, locale lint
