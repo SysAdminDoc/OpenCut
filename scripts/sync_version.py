@@ -178,6 +178,17 @@ TARGETS = [
         r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.3\)")',
         r'\g<1>{v}\g<2>',
     ),
+    # README.md version badge and feature-overview heading
+    (
+        "README.md",
+        r'(!\[Version\]\(https://img\.shields\.io/badge/version-)[0-9]+\.[0-9]+\.[0-9]+(-blue\))',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "README.md",
+        r'(OpenCut v)[0-9]+\.[0-9]+\.[0-9]+( includes \*\*)',
+        r'\g<1>{v}\g<2>',
+    ),
 ]
 
 
