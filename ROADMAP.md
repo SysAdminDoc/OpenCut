@@ -25,7 +25,6 @@ history, not here.
 
 ## P3 — Lower-severity correctness, UX, packaging
 
-
 - [ ] P3 — UXP: i18n gaps and locale hygiene from the recent es push
   Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
   Where: extension/com.opencut.uxp/locales/en.json, es.json; main.js:238-244, 2061-2117, 5541-5548, 7551-7557
@@ -88,12 +87,7 @@ history, not here.
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
 
-- [ ] P2 — Add Premiere caption-export preflight and recovery
-  Why: Premiere 26 caption export/burn settings have community-reported failure modes; OpenCut's caption workflows should warn before a failed host handoff and preserve a sidecar/burn-in fallback.
-  Evidence: https://www.reddit.com/r/premiere/comments/1s672iq/premiere_pro26_captions_and_export_settings/?tl=en; Adobe caption export docs; opencut/routes/captions.py; opencut/core/caption_burnin.py; extension/com.opencut.panel/client/index.html caption burn-in UI
-  Touches: CEP host bridge, UXP host bridge, caption export/burn-in routes, caption status UI, tests for host-status mapping and fallback sidecar generation
-  Acceptance: panel preflight reports caption track/export readiness before host export, unknown or unsafe host states produce a deterministic warning plus SRT/sidecar or OpenCut burn-in fallback, and tests cover success/warning/error status mapping.
-  Complexity: M
+
 
 - [ ] P2 — Add versioned visual-search engines beyond fixed CLIP ViT-B/32
   Why: Adobe Media Intelligence makes on-device visual retrieval table-stakes, while OpenCut's semantic search is hard-coded to `openai/clip-vit-base-patch32` and a single cache schema.
