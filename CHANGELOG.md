@@ -18,6 +18,14 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Added — captions
+
+- Caption export preflight (`POST /captions/export/preflight`) checks segment
+  validity, timecode range, QC compliance, and host version before export.
+  Returns a fallback strategy (native, srt_sidecar, or burnin) when native
+  Premiere caption export is risky. Premiere 26.0/26.0.1 flagged based on
+  community reports.
+
 ### Fixed — CEP panel
 
 - Wizard and audio-preview dialogs now route through the overlay stack
