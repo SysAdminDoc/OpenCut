@@ -12,7 +12,7 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app before bumping the badge.
 
-> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Silence-cut, podcast editing, styled captions, local transcript editing, and AI upscaling run on your own machine -- no subscriptions, no cloud upload, and no API keys required for core features.
+> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- all running on your own machine with no subscriptions, no usage caps, no cloud upload, and no API keys required for core features.
 
 ---
 
@@ -81,6 +81,27 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 1. Start the backend: run `OpenCut-Server.bat` on Windows, `OpenCut-Server.command` on macOS, `./OpenCut-Server.sh` on Linux, the installed launcher, or `python -m opencut.server`
 2. In Premiere Pro: **Window > Extensions > OpenCut**
 3. Select a clip and start editing
+
+---
+
+## What OpenCut adds beyond Premiere 26
+
+Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligence, and 90+ Film Impact transitions natively. OpenCut complements those with capabilities Adobe does not bundle:
+
+| Capability | OpenCut | Premiere 26.x Native |
+|-----------|---------|---------------------|
+| Silence-cut to timeline | Full ripple-delete with cut review panel | Pause-mute only (no ripple delete) |
+| Stem separation | Demucs / BS-RoFormer / MDX-Net (unlimited) | Not available |
+| Voice cloning | Chatterbox TTS (15-sec training, local) | Not available |
+| Filler word detection | CrisperWhisper verbatim markers + custom words | Not available |
+| Animated captions | 19 styles, word-by-word pop/fade/bounce/glow | Basic captions, cloud translation |
+| LLM highlights | Ollama (local, no API key), engagement scoring | Not available |
+| Social export | Direct YouTube/TikTok/Instagram OAuth upload | Not available |
+| Cross-NLE export | OTIO to Resolve, FCP, Avid | Not available |
+| Repeated take detection | Jaccard-overlap transcript similarity | Not available |
+| Cut review panel | Human-in-loop approve/reject before applying | Not available |
+
+**No usage caps.** Unlike CapCut Pro ($240/yr, metered), Descript ($288-600/yr, credit burn), and Submagic ($468/yr, 40 videos/mo), OpenCut processes unlimited content for $0.
 
 ---
 
@@ -277,7 +298,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 - **Connection-aware UI** -- Buttons disable when server is offline, re-enable on reconnect
 - **Near-complete feature parity** with CEP panel including depth effects, emotion highlights, B-roll, chat editor, social upload, engine preferences, and WebSocket bridge
 
-> **Migration note:** CEP support in Premiere Pro ends approximately September 2026. The UXP panel is the future-facing option. See `docs/UXP_MIGRATION.md` for the migration plan.
+> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. CEP support in Premiere Pro ends approximately September 2026. The UXP panel is the future-facing option. See `docs/UXP_MIGRATION.md` for the migration plan.
 
 ---
 
@@ -577,15 +598,16 @@ scripts/             # Build and utility scripts
 
 ## Cost Comparison (June 2026)
 
-| Tool | Price | Local/Cloud | Auto-Captions | Background Removal | Silence Cut |
-|------|-------|-------------|---------------|-------------------|-------------|
-| **OpenCut** | **$0** (MIT) | Local | Whisper (unlimited) | rembg/SAM2 | Yes |
-| CapCut Pro | $19.99/mo ($240/yr) | Cloud | Paywalled (was free) | Paywalled | Limited |
-| Submagic | $39/mo ($468/yr) | Cloud | 40 videos/mo | No | No |
-| AutoCut | $16/mo ($192/yr) | Local | Whisper-based | No | Yes |
-| FireCut | $20/mo ($240/yr) | Local | Yes | No | Yes |
+| Tool | Price | Local/Cloud | Auto-Captions | Stem Separation | Voice Clone | Silence Cut |
+|------|-------|-------------|---------------|----------------|-------------|-------------|
+| **OpenCut** | **$0** (MIT) | Local | Whisper (unlimited) | Demucs (unlimited) | Chatterbox (unlimited) | Yes |
+| CapCut Pro | $19.99/mo ($240/yr) | Cloud | Paywalled (was free) | No | No | Limited |
+| Descript | $24-50/mo ($288-600/yr) | Cloud | 1-12h/mo quota | No | Overdub (metered) | Yes |
+| Submagic | $39/mo ($468/yr) | Cloud | 40 videos/mo | No | No | No |
+| AutoCut | $16/mo ($192/yr) | Local | Whisper-based | No | No | Yes |
+| FireCut | $20/mo ($240/yr) | Local | Yes | No | No | Yes |
 
-**Annual cost of paid alternatives: $192-$468/yr.** OpenCut runs locally, has no usage caps, and ships every feature above for $0 under MIT.
+**Annual cost of paid alternatives: $192-$600/yr.** OpenCut runs locally, has no usage caps, and ships every feature above for $0 under MIT.
 
 ## Contributing
 
