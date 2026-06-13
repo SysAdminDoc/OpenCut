@@ -5,8 +5,8 @@
 #define MyAppVersion "1.33.1"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
-#define BundledFfmpegVersion "8.0.1-essentials_build-www.gyan.dev"
-#define BundledFfprobeVersion "8.0.1-essentials_build-www.gyan.dev"
+#define BundledFfmpegVersion "8.1-essentials_build-www.gyan.dev"
+#define BundledFfprobeVersion "8.1-essentials_build-www.gyan.dev"
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}
