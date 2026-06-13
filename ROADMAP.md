@@ -25,9 +25,6 @@ history, not here.
 
 ## P3 — Lower-severity correctness, UX, packaging
 
-- [ ] P3 — CEP: wizard and audio-preview dialogs bypass the overlay stack
-  Why: aria-modal dialogs without focus trap or inert background (palette/preview modal do it right); route all four dialogs through activateOverlay/deactivateOverlay, give the context menu arrow-key support and focus restoration, and make one Escape close only the topmost surface.
-  Where: extension/com.opencut.panel/client/main.js:11381-11527 (wizard/audioPreview/escape chain), index.html:4039, 4064
 
 - [ ] P3 — UXP: i18n gaps and locale hygiene from the recent es push
   Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; en.json has 113 duplicated keys (uxp.agent.runtime.* / uxp.captions.runtime.* pasted twice); toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English; formatI18n's unescaped string replace corrupts values containing $& or $'. Add a locale lint (key uniqueness, placeholder parity) to the workflow.
@@ -90,8 +87,6 @@ history, not here.
   Touches: extension/com.opencut.panel/package.json, package-lock.json, scripts/panel-node-gate.ps1, docs/NODE_ADVISORIES.md, extension panel build/audit tests, CI release smoke
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
-
-
 
 - [ ] P2 — Add Premiere caption-export preflight and recovery
   Why: Premiere 26 caption export/burn settings have community-reported failure modes; OpenCut's caption workflows should warn before a failed host handoff and preserve a sidecar/burn-in fallback.

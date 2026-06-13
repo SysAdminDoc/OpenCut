@@ -18,6 +18,13 @@ record also lives in the git commit messages.
 - Added Python 3.13 test matrix job running core test suite on Ubuntu.
 - Added Python 3.13 classifier to pyproject.toml.
 
+### Fixed — CEP panel
+
+- Wizard and audio-preview dialogs now route through the overlay stack
+  (activateOverlay/deactivateOverlay) for proper focus trap, inert background,
+  and topmost-only Escape dispatch. Removes the waterfall Escape listener that
+  closed every visible surface at once. Audio preview gains aria-modal="true".
+
 ### Added — auto-editor v30
 
 - `detect_auto_editor_generation()` distinguishes native v30+ Nim binary from
