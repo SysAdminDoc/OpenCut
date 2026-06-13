@@ -17,12 +17,6 @@ history, not here.
   Where: docs/UXP_MIGRATION.md:153-155, extension/com.opencut.uxp/bolt-webview/, opencut/tools/validate_uxp_udt_results.py
   Blocked: live Premiere UDT capture.
 
-## P3 — Lower-severity correctness, UX, packaging
-
-- [ ] P3 — UXP: remaining i18n gaps — es.json diacritics, hardcoded English, locale lint
-  Why: es.json has zero Spanish diacritics across 1,381 keys and a {plural} hack that breaks agreement; toast headings/dismiss label/status-tone regexes/shortcut labels are hardcoded English. A locale lint (key uniqueness, placeholder parity) should be added to the workflow. (en.json dedup and formatI18n injection fix shipped in v1.33.1.)
-  Where: extension/com.opencut.uxp/locales/es.json; main.js:2061-2117, 5541-5548, 7551-7557
-
 ## Research-Driven Additions
 
 - [ ] P1 — Decide and execute brand/namespace disambiguation (gates all distribution work)
