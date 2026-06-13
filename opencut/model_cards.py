@@ -348,7 +348,7 @@ CARDS: List[ModelCard] = [
         license="Unlicense (public domain)",
         upstream="https://github.com/WyattBlue/auto-editor",
         hardware="cpu",
-        install_hint="pip install auto-editor",
+        install_hint="Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
         privacy="local-only",
     ),
     ModelCard(

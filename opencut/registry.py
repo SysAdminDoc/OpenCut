@@ -460,7 +460,7 @@ _FEATURES: List[FeatureRecord] = [
         label="auto-editor automatic cuts",
         category="editing",
         state=STATE_AVAILABLE,
-        install_hint="pip install auto-editor",
+        install_hint="Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
         routes=["/timeline/auto-editor"],
         probe=_check("check_auto_editor_available"),
     ),
