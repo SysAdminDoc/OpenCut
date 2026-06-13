@@ -115,6 +115,33 @@ def check_auto_editor_version():
     return None
 
 
+def detect_auto_editor_generation():
+    """Detect whether auto-editor is v30+ (Nim native) or v29.x (pip legacy).
+
+    Returns:
+        dict with keys: version (str|None), generation ("v30"|"v29"|None),
+        native (bool), path (str|None).
+    """
+    result = {"version": None, "generation": None, "native": False, "path": None}
+    native = shutil.which("auto-editor")
+    if native:
+        result["path"] = native
+        result["native"] = True
+    version = check_auto_editor_version()
+    if version is None:
+        return result
+    result["version"] = version
+    try:
+        major = int(version.split(".")[0])
+        if major >= 30:
+            result["generation"] = "v30"
+            return result
+    except (ValueError, IndexError):
+        pass
+    result["generation"] = "v29"
+    return result
+
+
 def _probe_media_info(input_path):
     """Get video duration and fps via consolidated get_video_info(). Returns (duration, fps)."""
     info = get_video_info(input_path)
