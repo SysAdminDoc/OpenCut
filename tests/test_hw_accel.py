@@ -123,6 +123,12 @@ Encoders:
  V..... av1_nvenc            NVIDIA NVENC AV1 encoder (codec av1)
  V..... h264_qsv             H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (Intel Quick Sync Video acceleration) (codec h264)
  V..... hevc_amf             AMD AMF HEVC encoder (codec hevc)
+ V..... h264_d3d12va         D3D12VA H.264 encoder (codec h264)
+ V..... hevc_d3d12va         D3D12VA HEVC encoder (codec hevc)
+ V..... av1_d3d12va          D3D12VA AV1 encoder (codec av1)
+ V..... h264_vulkan          Vulkan H.264 encoder (codec h264)
+ V..... hevc_vulkan          Vulkan HEVC encoder (codec hevc)
+ V..... av1_vulkan           Vulkan AV1 encoder (codec av1)
  A..... aac                  AAC (Advanced Audio Coding) (codec aac)
  A..... libmp3lame           libmp3lame MP3 (codec mp3)
 """
@@ -143,6 +149,20 @@ Encoders:
         from opencut.core.hw_accel import _parse_encoders_output
         found = _parse_encoders_output(self.SAMPLE_ENCODERS_OUTPUT)
         self.assertIn("hevc_amf", found)
+
+    def test_parse_finds_d3d12va_encoders(self):
+        from opencut.core.hw_accel import _parse_encoders_output
+        found = _parse_encoders_output(self.SAMPLE_ENCODERS_OUTPUT)
+        self.assertIn("h264_d3d12va", found)
+        self.assertIn("hevc_d3d12va", found)
+        self.assertIn("av1_d3d12va", found)
+
+    def test_parse_finds_vulkan_encoders(self):
+        from opencut.core.hw_accel import _parse_encoders_output
+        found = _parse_encoders_output(self.SAMPLE_ENCODERS_OUTPUT)
+        self.assertIn("h264_vulkan", found)
+        self.assertIn("hevc_vulkan", found)
+        self.assertIn("av1_vulkan", found)
 
     def test_parse_ignores_software_codecs(self):
         from opencut.core.hw_accel import _parse_encoders_output
@@ -250,6 +270,16 @@ class TestEncoderVerification(unittest.TestCase):
         self.assertIn("-quality", call_args)
         self.assertIn("speed", call_args)
 
+    @patch("opencut.core.hw_accel.get_ffmpeg_path", return_value="/usr/bin/ffmpeg")
+    @patch("subprocess.run")
+    def test_encoder_d3d12va_uses_speed_quality(self, mock_run, mock_ffmpeg):
+        from opencut.core.hw_accel import _test_encoder
+        mock_run.return_value = MagicMock(returncode=0)
+        _test_encoder("h264_d3d12va")
+        call_args = mock_run.call_args[0][0]
+        self.assertIn("-quality", call_args)
+        self.assertIn("speed", call_args)
+
 
 # ============================================================
 # Test Priority-Based Selection
@@ -283,6 +313,24 @@ class TestPrioritySelection(unittest.TestCase):
         ]
         result = _pick_preferred(encoders, "h264")
         self.assertEqual(result, "h264_amf")
+
+    def test_amf_preferred_over_d3d12va(self):
+        from opencut.core.hw_accel import HWEncoder, _pick_preferred
+        encoders = [
+            HWEncoder(name="h264_d3d12va", codec="h264", hw_type="d3d12va", supports_h264=True),
+            HWEncoder(name="h264_amf", codec="h264", hw_type="amf", supports_h264=True),
+        ]
+        result = _pick_preferred(encoders, "h264")
+        self.assertEqual(result, "h264_amf")
+
+    def test_d3d12va_preferred_over_vulkan(self):
+        from opencut.core.hw_accel import HWEncoder, _pick_preferred
+        encoders = [
+            HWEncoder(name="av1_vulkan", codec="av1", hw_type="vulkan", supports_av1=True),
+            HWEncoder(name="av1_d3d12va", codec="av1", hw_type="d3d12va", supports_av1=True),
+        ]
+        result = _pick_preferred(encoders, "av1")
+        self.assertEqual(result, "av1_d3d12va")
 
     def test_returns_none_when_no_encoders(self):
         from opencut.core.hw_accel import _pick_preferred

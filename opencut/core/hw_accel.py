@@ -1,11 +1,11 @@
 """
-OpenCut Hardware-Accelerated Encoding Module v1.0.0
+OpenCut Hardware-Accelerated Encoding Module v1.1.0
 
-Detects available GPU encoders (NVENC, QSV, AMF, VideoToolbox),
-verifies they actually work via synthetic test encodes, and provides
-hardware-accelerated encoding with automatic fallback to software.
+Detects available GPU encoders (NVENC, QSV, AMF, D3D12VA, VideoToolbox,
+Vulkan), verifies they actually work via synthetic test encodes, and
+provides hardware-accelerated encoding with automatic fallback to software.
 
-Priority: nvenc > qsv > amf > videotoolbox > software
+Priority: nvenc > qsv > amf > d3d12va > videotoolbox > vulkan > software
 """
 
 import logging
@@ -77,12 +77,20 @@ _KNOWN_HW_ENCODERS = {
     "h264_amf":           ("h264",  "amf"),
     "hevc_amf":           ("hevc",  "amf"),
     "av1_amf":            ("av1",   "amf"),
+    "h264_d3d12va":       ("h264",  "d3d12va"),
+    "hevc_d3d12va":       ("hevc",  "d3d12va"),
+    "av1_d3d12va":        ("av1",   "d3d12va"),
     "h264_videotoolbox":  ("h264",  "videotoolbox"),
     "hevc_videotoolbox":  ("hevc",  "videotoolbox"),
+    "h264_vulkan":        ("h264",  "vulkan"),
+    "hevc_vulkan":        ("hevc",  "vulkan"),
+    "av1_vulkan":         ("av1",   "vulkan"),
 }
 
 # Priority order for hardware types (lower index = higher priority)
-_HW_PRIORITY = ["nvenc", "qsv", "amf", "videotoolbox"]
+# Vendor-specific first, then platform-abstract (D3D12VA on Windows,
+# VideoToolbox on macOS), then cross-platform Vulkan Video.
+_HW_PRIORITY = ["nvenc", "qsv", "amf", "d3d12va", "videotoolbox", "vulkan"]
 
 # Quality presets per hardware type
 _QUALITY_PRESETS = {
@@ -101,10 +109,20 @@ _QUALITY_PRESETS = {
         "balanced": ["-quality", "balanced", "-rc", "vbr_latency", "-qp_i", "23", "-qp_p", "23"],
         "quality":  ["-quality", "quality", "-rc", "vbr_latency", "-qp_i", "18", "-qp_p", "18"],
     },
+    "d3d12va": {
+        "speed":    ["-quality", "speed"],
+        "balanced": ["-quality", "balanced"],
+        "quality":  ["-quality", "quality"],
+    },
     "videotoolbox": {
         "speed":    ["-q:v", "65", "-allow_sw", "1"],
         "balanced": ["-q:v", "50", "-allow_sw", "1"],
         "quality":  ["-q:v", "35", "-allow_sw", "1"],
+    },
+    "vulkan": {
+        "speed":    [],
+        "balanced": [],
+        "quality":  [],
     },
 }
 
@@ -175,7 +193,7 @@ HW_ENCODING_PRESETS = {
     },
     "av1_hw": {
         "label": "AV1 HW Accelerated",
-        "description": "GPU-accelerated AV1 encoding (NVENC/QSV/AMF)",
+        "description": "GPU-accelerated AV1 encoding (NVENC/QSV/AMF/D3D12/Vulkan)",
         "category": "hw_accel",
         "width": 1920, "height": 1080,
         "codec": "av1", "quality": "balanced", "hw_type": "auto",
@@ -297,6 +315,8 @@ def _test_encoder(encoder_name: str) -> bool:
         elif hw_type == "qsv":
             cmd.extend(["-preset", "veryfast"])
         elif hw_type == "amf":
+            cmd.extend(["-quality", "speed"])
+        elif hw_type == "d3d12va":
             cmd.extend(["-quality", "speed"])
 
         cmd.append(tmp_out)
