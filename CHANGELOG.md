@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security — dependency floors
+
+- Flask floor raised to >=3.1.3 (CVE-2026-27205 Vary:Cookie info disclosure).
+- Waitress floor raised to >=3.0.1 (CVE-2024-49768/49769 request smuggling).
+- PyInstaller pinned to >=6.0 in CI (CVE-2025-59042 local privilege escalation).
+
+### Changed — CI
+
+- Added Python 3.13 test matrix job running core test suite on Ubuntu.
+- Added Python 3.13 classifier to pyproject.toml.
+
 ### Changed - CEP/UXP polish
 
 - CEP first-run, launcher, disabled-action, and settings copy now frames the

@@ -141,27 +141,6 @@ history, not here.
   Acceptance: automated fixtures render CJK, Bengali, and RTL/Arabic captions with non-missing glyphs and stable line breaking; UI surfaces the selected fallback font or a warning when no capable font is available.
   Complexity: M
 
-- [ ] P2 — Pin PyInstaller >=6.0 in CI build workflow
-  Why: CVE-2025-59042 (CVSS 7.0) is a local privilege escalation during PyInstaller bootstrap on Linux/macOS via filenames containing `?`. CI installs PyInstaller without a version pin (`pip install pyinstaller` at .github/workflows/build.yml:59), so Linux Flatpak/AppImage build artifacts could be produced by a vulnerable version.
-  Evidence: github.com/advisories/GHSA-p2xp-xx3r-mffc; .github/workflows/build.yml:59
-  Touches: .github/workflows/build.yml (pip install line), pyproject.toml dev extras (optional)
-  Acceptance: CI installs `pyinstaller>=6.0`; Linux/macOS build artifacts are produced by a patched version.
-  Complexity: S
-
-- [ ] P2 — Add Python 3.13 to CI test matrix
-  Why: CI runs only Python 3.12. Flask 3.1.3 and core deps (click, rich, waitress, psutil) support 3.13. ML deps may lag on cp313 wheels, but a matrix entry for the core test suite catches breakage before users hit it. Python 3.11 reaches EOL October 2027; 3.13 testing is forward-looking.
-  Evidence: .github/workflows/build.yml:36 (single python-version: '3.12'); pypi.org/project/Flask/ (3.13 tested)
-  Touches: .github/workflows/build.yml (matrix strategy), pyproject.toml classifiers
-  Acceptance: CI runs the core test suite on Python 3.13; known ML-dep skips are documented, not silent failures.
-  Complexity: S
-
-- [ ] P2 — Raise Flask and Waitress dependency floors for recent CVEs
-  Why: pyproject.toml pins flask>=3.0 (CVE-2026-27205 Vary:Cookie info disclosure fixed in 3.1.3) and waitress>=3.0 (CVE-2024-49768/49769 request smuggling/socket exhaustion fixed in 3.0.1). Both are low-severity for localhost, but the permissive floors let pip resolve vulnerable versions and break the pip-audit gate.
-  Evidence: CVE-2026-27205 (sentinelone.com); CVE-2024-49768/49769 (stack.watch/product/agendaless/waitress); pyproject.toml:35,39
-  Touches: pyproject.toml (flask>=3.1.3, waitress>=3.0.1)
-  Acceptance: `pip audit` passes with no Flask/Waitress findings; pip resolves patched versions on fresh install.
-  Complexity: S
-
 - [ ] P3 — Add Homebrew tap for macOS CLI distribution (after brand decision + PyPI)
   Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install <name>` for the CLI/server. Depends on brand decision (P1) and PyPI publish (existing P3).
   Evidence: docs.brew.sh/Python-for-Formula-Authors; Homebrew accepts Python apps even without PyPI; no existing tap
