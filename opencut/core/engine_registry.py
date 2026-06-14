@@ -239,6 +239,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_demucs_available,
         check_depth_available,
         check_edge_tts_available,
+        check_nemo_asr_available,
         check_rembg_available,
         check_rvm_available,
         check_sam2_available,
@@ -294,6 +295,30 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="slow",
         quality_rating="high",
         tags=["fillers", "verbatim"],
+    ))
+    reg.register(EngineInfo(
+        name="parakeet_tdt",
+        domain="transcription",
+        display_name="Parakeet TDT 0.6B v3",
+        description="NVIDIA NeMo streaming ASR (tops HF Open ASR leaderboard, 25 EU langs, ~4x faster on CPU)",
+        check_fn=check_nemo_asr_available,
+        priority=85,
+        vram_mb=2400,
+        speed_rating="fast",
+        quality_rating="high",
+        tags=["streaming", "nemo", "multilingual"],
+    ))
+    reg.register(EngineInfo(
+        name="canary_1b_flash",
+        domain="transcription",
+        display_name="Canary 1B Flash",
+        description="NVIDIA NeMo batch ASR (RTFx 1000+, transcription + translation)",
+        check_fn=check_nemo_asr_available,
+        priority=80,
+        vram_mb=4200,
+        speed_rating="fast",
+        quality_rating="high",
+        tags=["batch", "nemo", "translation"],
     ))
 
     # --- Background Removal ---

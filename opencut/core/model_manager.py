@@ -55,6 +55,18 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "description": "Whisper Medium -- high accuracy, slower",
         "category": "transcription",
     },
+    "parakeet-tdt-0.6b-v3": {
+        "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/resolve/main/parakeet-tdt-0.6b-v3.nemo",
+        "size_mb": 2440,
+        "description": "NVIDIA Parakeet TDT 0.6B v3 -- streaming ASR, 25 EU languages (NeMo)",
+        "category": "transcription",
+    },
+    "canary-1b-flash": {
+        "url": "https://huggingface.co/nvidia/canary-1b-flash/resolve/main/canary-1b-flash.nemo",
+        "size_mb": 4200,
+        "description": "NVIDIA Canary 1B Flash -- batch ASR + translation, RTFx 1000+ (NeMo)",
+        "category": "transcription",
+    },
     "whisper-large-v3": {
         "url": "https://huggingface.co/openai/whisper-large-v3/resolve/main/model.safetensors",
         "size_mb": 6170,

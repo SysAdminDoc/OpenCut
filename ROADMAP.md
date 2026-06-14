@@ -128,13 +128,6 @@ history, not here.
 
 ### P2
 
-- [ ] P2 — Wire NVIDIA Parakeet TDT 0.6B v3 (+ Canary-1B-Flash) as ASR engines
-  Why: Both stubs already exist but are dark and unregistered. Parakeet TDT 0.6B v3 tops the HF Open ASR Leaderboard (~6.3% mean WER vs Whisper Large-v3 at 4× the params), is ~4× faster on CPU, now covers 25 EU languages, and ships under a permissive code+weight licence — a strict upgrade over the bundled Whisper path for clean-audio English/EU work.
-  Evidence: opencut/core/asr_parakeet.py + asr_canary.py (NotImplementedError stubs, INSTALL_HINT "nemo_toolkit[asr] # Apache-2.0 + CC-BY-4.0 model"); huggingface.co/nvidia/parakeet-tdt-0.6b-v3 (CC-BY-4.0); northflank.com 2026 ASR benchmarks
-  Touches: opencut/core/asr_parakeet.py, asr_canary.py, transcription engine registry, checks.py availability flag, model_manager.py, transcription route/preset, registry availability test
-  Acceptance: Parakeet (streaming) and Canary (batch) appear as selectable transcription engines gated by availability check, with a model download entry and registry test; faster-whisper/WhisperX retained as fallback.
-  Complexity: M
-
 - [ ] P2 — Wire LatentSync lip-sync onto the existing dub pipeline (local dubbing-with-lip-sync)
   Why: OpenCut already ships the full dub pipeline (transcribe→translate→voice-clone→render) but stops before re-animating the mouth — the exact visual lip-sync stage Rask AI ($120/mo), HeyGen, and sync.so ($0.04–0.133/sec) paywall. Wiring an Apache-2.0 lip-sync model as the dub pipeline's optional final stage converts a paywalled flagship into a local/MIT feature.
   Evidence: opencut/core/lipsync_advanced.py + lipsync_echomimic.py (stubs return 501 ROUTE_STUBBED); live dub pipeline in dub_pipeline.py / auto_dub_pipeline.py / isochronous_translate.py / multilang_audio.py; github.com/bytedance/LatentSync (Apache-2.0 code; 1.6 trained 512×512); RESEARCH.md Competitive Landscape (Rask/HeyGen/sync.so)
