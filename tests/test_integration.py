@@ -360,3 +360,46 @@ class TestTimelineSmartBins:
         data = resp.get_json()
         assert data["validated_rules"] == []
         assert data["invalid"] == []
+
+
+# =====================================================================
+# /timeline/beat-cut  (beat-synced cut list for the active sequence)
+# =====================================================================
+
+class TestTimelineBeatCut:
+    def test_requires_csrf(self, client):
+        resp = client.post(
+            "/timeline/beat-cut",
+            data=json.dumps({"filepath": "x.mp4"}),
+            headers={"Content-Type": "application/json"},
+        )
+        assert resp.status_code == 403
+
+    def test_missing_filepath_returns_structured_error(self, client, csrf_token):
+        resp = client.post(
+            "/timeline/beat-cut",
+            data=json.dumps({}),
+            headers=csrf_headers(csrf_token),
+        )
+        assert resp.status_code in (400, 404)
+        body = resp.get_json()
+        assert "error" in body and "code" in body
+
+    def test_happy_path_returns_job(self, client, csrf_token, tmp_path):
+        from opencut.core.beat_sync_edit import Beat, BeatDetectResult
+
+        media = tmp_path / "clip.mp4"
+        media.write_bytes(b"\x00" * 64)  # passes validate_filepath isfile check
+        fake = BeatDetectResult(
+            beats=[Beat(timestamp=i * 0.5, strength=0.7, beat_number=i,
+                        is_downbeat=(i % 4 == 0)) for i in range(8)],
+            tempo_bpm=120.0, total_beats=8, duration=4.0,
+        )
+        with patch("opencut.core.beat_sync_edit.detect_beats", return_value=fake):
+            resp = client.post(
+                "/timeline/beat-cut",
+                data=json.dumps({"filepath": str(media), "mode": "every_bar"}),
+                headers=csrf_headers(csrf_token),
+            )
+        assert resp.status_code in (200, 202)
+        assert "job_id" in resp.get_json()

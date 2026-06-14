@@ -144,6 +144,61 @@ def timeline_export_from_markers(job_id, filepath, data):
 
 
 # ---------------------------------------------------------------------------
+# Timeline: Beat-Synced Cut List (emits beat-aligned ripple-cut boundaries)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/beat-cut", methods=["POST"])
+@require_csrf
+@async_job("timeline-beat-cut", filepath_required=True)
+def timeline_beat_cut(job_id, filepath, data):
+    """Detect beats in a clip's audio and emit beat-aligned clip boundaries.
+
+    Returns a cut list (``{start, end, ...}`` second ranges) the panel renders
+    in the cut-review preview and applies to the active sequence via
+    ``ocApplySequenceCuts``. Unlike ``/audio/beat-sync`` (which renders a NEW
+    montage file), this produces timeline-native cut points for the sequence
+    the editor already has open.
+    """
+    from opencut.core.beat_sync_edit import (
+        BEAT_SYNC_MODES,
+        DEFAULT_MODE,
+        detect_beats,
+        plan_timeline_beat_cuts,
+    )
+
+    mode = (data.get("mode") or DEFAULT_MODE).strip()
+    if mode not in BEAT_SYNC_MODES:
+        mode = DEFAULT_MODE
+    sensitivity = safe_float(data.get("sensitivity", 0.5), 0.5, min_val=0.0, max_val=1.0)
+    custom_n = safe_int(data.get("custom_n", 1), 1, min_val=1, max_val=64)
+    min_cut_duration = safe_float(data.get("min_cut_duration", 0.25), 0.25, min_val=0.0, max_val=10.0)
+
+    def _p(pct, msg=""):
+        _update_job(job_id, progress=int(pct), message=msg or "Detecting beats...")
+
+    detect = detect_beats(filepath, sensitivity=sensitivity, on_progress=_p)
+    if _is_cancelled(job_id):
+        return {"cuts": [], "total_cuts": 0, "cancelled": True}
+
+    _update_job(job_id, progress=95, message="Planning beat-aligned cuts...")
+    cuts = plan_timeline_beat_cuts(
+        detect.beats,
+        detect.duration,
+        mode=mode,
+        custom_n=custom_n,
+        min_cut_duration=min_cut_duration,
+    )
+    return {
+        "cuts": cuts,
+        "total_cuts": len(cuts),
+        "tempo_bpm": round(detect.tempo_bpm, 1),
+        "total_beats": detect.total_beats,
+        "duration": round(detect.duration, 3),
+        "mode": mode,
+        "beats": [b.to_dict() for b in detect.beats],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Timeline: Batch Rename (validation only — execution via ExtendScript)
 # ---------------------------------------------------------------------------
 # Characters Premiere/NTFS reject in item names. We block them up front

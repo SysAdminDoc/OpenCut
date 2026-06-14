@@ -677,3 +677,91 @@ def list_beat_sync_modes() -> List[Dict]:
         {"name": name, "description": info["description"], "beat_divisor": info["beat_divisor"]}
         for name, info in BEAT_SYNC_MODES.items()
     ]
+
+
+def _fmt_tc(seconds: float) -> str:
+    """Human-readable M:SS.mmm timecode for cut labels."""
+    seconds = max(0.0, float(seconds))
+    minutes = int(seconds // 60)
+    secs = seconds - minutes * 60
+    return f"{minutes}:{secs:06.3f}"
+
+
+def plan_timeline_beat_cuts(
+    beats: List[Beat],
+    total_duration: float,
+    mode: str = "every_beat",
+    custom_n: int = 1,
+    min_cut_duration: float = 0.25,
+    start_offset: float = 0.0,
+) -> List[dict]:
+    """Plan beat-aligned clip boundaries for a *single* active-sequence clip.
+
+    Unlike :func:`plan_beat_sync_cuts` (which assigns *multiple* clips to a
+    montage and renders a new file), this returns the cut boundaries for ONE
+    timeline: consecutive beat-to-beat segments selected by ``mode``, suitable
+    for the cut-review panel and the ExtendScript ``ocApplySequenceCuts``
+    ripple-apply path (which consumes ``{start, end}`` second ranges).
+
+    Each returned segment is a beat-aligned clip boundary; the editor reviews
+    them and selectively applies (e.g. to remove off-beat dead segments or to
+    razor the timeline onto the beat grid). Segments shorter than
+    ``min_cut_duration`` are merged forward so micro-cuts don't pile up.
+
+    Returns a list of ``{start, end, duration, beat_number, strength, label}``
+    dicts (seconds). Always returns a list — empty when there is nothing to cut.
+    """
+    if not beats:
+        return []
+
+    start_offset = max(0.0, float(start_offset))
+    total_duration = float(total_duration or 0.0)
+
+    selected = _select_cut_beats(beats, mode=mode, custom_n=custom_n)
+    # accent_only / coarse modes can return nothing on short clips — fall back
+    # to every beat so the route still produces a usable cut list.
+    if not selected:
+        selected = list(beats)
+
+    # Collect ascending, de-duplicated boundary timestamps within the clip.
+    bounds: List[Tuple[float, Optional[Beat]]] = [(start_offset, None)]
+    for b in selected:
+        ts = float(b.timestamp)
+        if ts > start_offset + 1e-6 and (total_duration <= 0 or ts < total_duration - 1e-6):
+            bounds.append((ts, b))
+    end_ts = total_duration if total_duration > start_offset else (
+        max(float(b.timestamp) for b in beats)
+    )
+    bounds.append((end_ts, None))
+    bounds.sort(key=lambda x: x[0])
+
+    # Merge boundaries closer than min_cut_duration (keep the earlier, drop the
+    # later) so we never emit a sub-min_cut_duration segment.
+    min_cut_duration = max(0.0, float(min_cut_duration))
+    merged: List[Tuple[float, Optional[Beat]]] = []
+    for ts, beat in bounds:
+        if merged and ts - merged[-1][0] < min_cut_duration:
+            # Keep the last boundary's timestamp; preserve a beat tag if present.
+            if beat is not None and merged[-1][1] is None:
+                merged[-1] = (merged[-1][0], beat)
+            continue
+        merged.append((ts, beat))
+
+    cuts: List[dict] = []
+    for i in range(len(merged) - 1):
+        seg_start, start_beat = merged[i]
+        seg_end = merged[i + 1][0]
+        if seg_end - seg_start < 1e-6:
+            continue
+        beat_number = start_beat.beat_number if start_beat is not None else (i and -1 or 0)
+        strength = round(start_beat.strength, 3) if start_beat is not None else 1.0
+        cuts.append({
+            "start": round(seg_start, 4),
+            "end": round(seg_end, 4),
+            "duration": round(seg_end - seg_start, 4),
+            "beat_number": beat_number,
+            "strength": strength,
+            "label": f"Beat {beat_number} ({_fmt_tc(seg_start)})" if beat_number >= 0
+            else f"Segment {_fmt_tc(seg_start)}",
+        })
+    return cuts

@@ -3263,6 +3263,21 @@
                             <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn" data-i18n="timeline.add_markers_to_sequence">Add Markers to Sequence</button>
                         </div>
                     </section>
+                    <section class="card mt-sm">
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.beat_cut_title">Beat-Synced Cuts</div></div>
+                        <p class="card-desc" data-i18n="timeline.beat_cut_desc">Detect beats and emit beat-aligned clip boundaries you can review and ripple-apply to the active sequence.</p>
+                        <div class="form-group">
+                            <label for="beatCutMode" data-i18n="timeline.beat_cut_mode">Cut on</label>
+                            <select id="beatCutMode" aria-label="Beat cut mode" data-i18n-aria-label="timeline.beat_cut_mode">
+                                <option value="every_beat" selected data-i18n="timeline.beat_cut_every_beat">Every beat</option>
+                                <option value="every_2_beats" data-i18n="timeline.beat_cut_every_2">Every 2 beats</option>
+                                <option value="every_bar" data-i18n="timeline.beat_cut_every_bar">Every bar (4 beats)</option>
+                                <option value="every_8_beats" data-i18n="timeline.beat_cut_every_8">Every 2 bars (8 beats)</option>
+                                <option value="accent_only" data-i18n="timeline.beat_cut_accent">Accents (downbeats)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-primary" id="runBeatCutBtn" disabled data-i18n="timeline.beat_cut_run">Detect Beat Cuts</button>
+                    </section>
                 </div>
 
                 <!-- MULTICAM AUTO-SWITCH -->

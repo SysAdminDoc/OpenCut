@@ -3400,7 +3400,7 @@
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
         "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "previewShortsPlanBtn", "runShortsBtn",
         "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
-        "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
+        "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runBeatCutBtn", "runMulticamBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
         "polishInterviewBtn", "denoisePreviewBtn",
         "normalizePreviewBtn", "silencePreviewBtn",
@@ -14043,6 +14043,31 @@
             .replace("{bpm}", safeFixed(r.bpm || 0, 1));
     });
 
+    function runBeatCut() {
+        var modeEl = document.getElementById("beatCutMode");
+        startJob("/timeline/beat-cut", {
+            filepath: selectedPath,
+            mode: modeEl ? modeEl.value : "every_beat",
+        });
+    }
+
+    // Beat-synced cuts → reuse the shared cut-review + ripple-apply pipeline.
+    addJobDoneListener(function (job) {
+        if (job.type !== "timeline-beat-cut" || job.status !== "complete" || !job.result) return;
+        var cuts = job.result.cuts || [];
+        var tlStatus = document.getElementById("tlWritebackStatus");
+        if (tlStatus) {
+            tlStatus.textContent = t("timeline.beat_cuts_ready", "{count} beat-aligned cut{plural} ready to review (BPM {bpm}).")
+                .replace("{count}", cuts.length)
+                .replace("{plural}", cuts.length === 1 ? "" : "s")
+                .replace("{bpm}", safeFixed(job.result.tempo_bpm || 0, 1));
+        }
+        showCutReview(cuts, function (selectedCuts) {
+            lastTimelineCuts = selectedCuts;
+            applySequenceCuts(selectedCuts);
+        });
+    });
+
     function addBeatMarkersToSequence() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert(t("timeline.no_beat_markers", "No beat markers detected.")); return; }
@@ -15444,6 +15469,8 @@
         if (beatBtn) beatBtn.addEventListener("click", runBeatMarkers);
         var addBeatBtn = document.getElementById("addBeatMarkersBtn");
         if (addBeatBtn) addBeatBtn.addEventListener("click", addBeatMarkersToSequence);
+        var beatCutBtn = document.getElementById("runBeatCutBtn");
+        if (beatCutBtn) beatCutBtn.addEventListener("click", runBeatCut);
 
         // Multicam
         var multicamBtn = document.getElementById("runMulticamBtn");

@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — Beat-synced cuts to the active sequence (`POST /timeline/beat-cut`)
+
+- New timeline-native beat-cut path: detect beats in a clip's audio and emit
+  beat-aligned clip boundaries as a cut list the panel reviews and ripple-applies
+  to the **active Premiere sequence**. Unlike `/audio/beat-sync` (which renders a
+  new montage file), this produces cut points for the sequence already open.
+- `core/beat_sync_edit.py::plan_timeline_beat_cuts()` — pure planner over detected
+  beats + a clip duration, with mode selection (every beat / 2 beats / bar / 2 bars
+  / accents) and `min_cut_duration` merging. Returns `{start, end, duration,
+  beat_number, strength, label}` segments (the shape `ocApplySequenceCuts` and the
+  cut-review panel already consume).
+- CEP panel: a "Beat-Synced Cuts" card on the Timeline → Beat Markers sub-tab,
+  wired through the shared cut-review preview + ripple-apply pipeline (the same one
+  silence/filler/auto-edit use). Added to the queue allowlist and i18n.
+- Tests: 4 planner unit tests + 3 route smoke tests; i18n/a11y/parity green.
+
 ### Changed — Brand/namespace disambiguation: distribution token `opencut-ppro`
 
 - Resolved the carried brand/namespace question (RESEARCH Open Question 1). The

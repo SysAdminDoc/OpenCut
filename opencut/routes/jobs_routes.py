@@ -186,7 +186,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/audio/beat-markers", "/audio/loudness-match",
     "/captions/chapters", "/captions/repeat-detect",
     "/video/color-match", "/video/auto-zoom", "/video/multicam-cuts",
-    "/timeline/export-from-markers", "/search/index",
+    "/timeline/export-from-markers", "/timeline/beat-cut", "/search/index",
     # v2.0 additions
     "/workflow/run",
     # v1.9.0 additions
