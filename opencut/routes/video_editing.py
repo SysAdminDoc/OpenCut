@@ -621,7 +621,7 @@ def video_multicam_cuts():
 
         result = multicam.generate_multicam_cuts(
             effective_segments,
-            speaker_map=effective_speaker_map,
+            speaker_to_track=effective_speaker_map,
             min_cut_duration=min_cut_duration,
         )
         cuts = result.get("cuts", []) if isinstance(result, dict) else result

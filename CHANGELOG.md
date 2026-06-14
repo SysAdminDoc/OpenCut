@@ -36,6 +36,13 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Fixed — Engineering audit (batch 4): multicam kwarg mismatch
+
+- **video_editing.py**: Fixed `speaker_map=` → `speaker_to_track=` in
+  `generate_multicam_cuts()` call. The route passed a keyword argument
+  that didn't match the function signature, causing a TypeError at
+  runtime on every multicam cut request.
+
 ### Fixed — Engineering audit (batch 3): SQLite connection safety
 
 - **job_store.py**: Wrapped PRAGMA setup in try/except to close the
