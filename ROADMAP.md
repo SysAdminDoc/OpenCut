@@ -81,6 +81,3 @@ history, not here.
   Why: Frontend expects structured {code, message, suggestion} responses; raw strings lack machine-readable error codes.
   Where: opencut/routes/video_editing.py (13), video_core.py (18), audio.py (4)
 
-- [ ] P2 — Add WAL checkpoint before close_all_connections() on shutdown
-  Why: SQLite WAL mode can leave orphaned -wal/-shm files on Windows if checkpoint is not run before closing.
-  Where: opencut/job_store.py close_all_connections()
