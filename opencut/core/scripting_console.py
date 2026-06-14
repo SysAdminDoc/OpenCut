@@ -6,6 +6,7 @@ Returns output as string.  Restricts dangerous imports and file system
 access outside the project.  Stores execution history to disk.
 """
 
+import ast
 import io
 import json
 import logging
@@ -63,6 +64,50 @@ _BLOCKED_PATTERNS = (
     "__module__", "__wrapped__", "__qualname__", "__self__",
     "__func__", "__closure__",
 )
+
+def _check_ast_safety(code: str) -> Optional[str]:
+    """Validate parsed script structure against sandbox-escape patterns.
+
+    The lowercased substring scan in :data:`_BLOCKED_PATTERNS` is bypassable
+    with obfuscation and produces false positives on strings/comments. This
+    operates on the parsed AST instead, so it catches dunder attribute access
+    and blocked-builtin references regardless of source formatting, and covers
+    every dunder — not just the hand-maintained pattern list.
+
+    Returns an error message if unsafe, ``None`` if safe (or unparseable, in
+    which case ``compile()`` surfaces the syntax error with line info).
+    """
+    try:
+        tree = ast.parse(code, mode="exec")
+    except SyntaxError:
+        return None
+
+    for node in ast.walk(tree):
+        # Any dunder attribute access is an escape vector (__class__,
+        # __globals__, __reduce__, __getattribute__, ...). Block them all.
+        if isinstance(node, ast.Attribute):
+            attr = node.attr
+            if attr.startswith("__") and attr.endswith("__"):
+                return f"Use of '{attr}' is not allowed in the sandbox"
+        # Direct references to blocked builtins, even when shadowed or aliased
+        # syntactically (e.g. ``g = getattr``).
+        elif isinstance(node, ast.Name):
+            if node.id in _BLOCKED_BUILTINS:
+                return f"Use of '{node.id}' is not allowed in the sandbox"
+        # Imports of blocked modules — _safe_import enforces this at runtime,
+        # but rejecting at parse time gives a clearer, earlier error.
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top in _BLOCKED_MODULES:
+                    return f"Import of '{alias.name}' is not allowed in the sandbox"
+        elif isinstance(node, ast.ImportFrom):
+            top = (node.module or "").split(".")[0]
+            if top in _BLOCKED_MODULES:
+                return f"Import of '{node.module}' is not allowed in the sandbox"
+
+    return None
+
 
 # Maximum output length (characters)
 MAX_OUTPUT_LENGTH = 50_000
@@ -373,6 +418,14 @@ def execute_script(
             )
             _append_history(code, result)
             return result
+
+    # Obfuscation-proof structural check on the parsed AST (catches dunder
+    # access and blocked-builtin references the substring scan above misses).
+    ast_error = _check_ast_safety(code)
+    if ast_error:
+        result = ScriptResult(output="", success=False, error=ast_error)
+        _append_history(code, result)
+        return result
 
     sandbox = create_sandbox(context)
 

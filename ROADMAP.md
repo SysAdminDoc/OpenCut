@@ -69,14 +69,6 @@ history, not here.
 
 ## Audit-Driven — Security hardening
 
-- [ ] P1 — Harden expression_engine.py eval() sandbox with AST-based validation
-  Why: User expressions are compiled+eval'd. Current regex-based validation is bypassable. Needs AST node whitelist or RestrictedPython.
-  Where: opencut/core/expression_engine.py
-
-- [ ] P1 — Harden scripting_console.py exec() sandbox against dunder bypass
-  Why: Dunder block uses lowercased string search which is bypassable with obfuscation. Needs AST-level Name node validation.
-  Where: opencut/core/scripting_console.py
-
 - [ ] P2 — Migrate 35 raw jsonify({"error":...}) responses to structured error_response()
   Why: Frontend expects structured {code, message, suggestion} responses; raw strings lack machine-readable error codes.
   Where: opencut/routes/video_editing.py (13), video_core.py (18), audio.py (4)

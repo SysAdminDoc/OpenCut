@@ -339,6 +339,31 @@ def list_functions() -> List[dict]:
 
 import ast  # noqa: E402
 
+# Whitelist of AST node types permitted in an expression. Anything not on
+# this list is rejected outright — a closed allow-list cannot be bypassed by
+# obfuscation the way a deny-list can. Expressions are pure arithmetic over a
+# fixed set of sandbox names, so attribute access, subscripting, comprehensions,
+# lambdas, assignments, f-strings, and starred args are all intentionally absent.
+_ALLOWED_NODE_TYPES = (
+    ast.Expression,
+    ast.Constant,
+    ast.Name, ast.Load,
+    ast.Call, ast.keyword,
+    ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.Compare,
+    ast.IfExp,
+    ast.Tuple, ast.List,
+    # Boolean / arithmetic / bitwise operators
+    ast.And, ast.Or,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
+    ast.LShift, ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd,
+    ast.UAdd, ast.USub, ast.Not, ast.Invert,
+    # Comparison operators (membership/identity intentionally excluded)
+    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
+)
+
+# Retained for backward compatibility and as a defense-in-depth deny-list that
+# layers under the whitelist above. The whitelist already blocks every
+# ``ast.Attribute`` node, so dunder walks cannot be expressed at all.
 _BANNED_NODE_TYPES = (
     ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal,
     ast.Delete, ast.ClassDef, ast.AsyncFunctionDef, ast.FunctionDef,
@@ -369,11 +394,20 @@ _RESERVED_NAMES = frozenset(SANDBOX_FUNCTIONS) | frozenset({
     "True", "False",
 })
 
+# Only callables actually exposed in the sandbox globals may be invoked.
+# Built from the sandbox function table (constants like ``pi`` are excluded
+# because they are not callable) plus ``random`` injected per-context.
+_ALLOWED_CALL_NAMES = frozenset(
+    name for name, value in SANDBOX_FUNCTIONS.items() if callable(value)
+) | frozenset({"random"})
+
 
 def _check_ast_safety(expr_str: str) -> Optional[str]:
-    """Check expression AST for safety violations.
+    """Check expression AST against a closed node whitelist.
 
-    Returns error message if unsafe, None if safe.
+    Returns error message if unsafe, None if safe. Unlike a deny-list, a
+    whitelist cannot be bypassed by obfuscation: any node type or call target
+    not explicitly allowed is rejected.
     """
     try:
         tree = ast.parse(expr_str, mode="eval")
@@ -381,21 +415,16 @@ def _check_ast_safety(expr_str: str) -> Optional[str]:
         return f"Syntax error: {e}"
 
     for node in ast.walk(tree):
-        if isinstance(node, _BANNED_NODE_TYPES):
+        if not isinstance(node, _ALLOWED_NODE_TYPES):
             return f"Forbidden construct: {type(node).__name__}"
 
-        if isinstance(node, ast.Attribute):
-            if node.attr in _BANNED_ATTRS:
-                return f"Forbidden attribute access: {node.attr}"
-
         if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name):
-                if node.func.id in ("eval", "exec", "compile", "open",
-                                    "__import__", "input", "getattr",
-                                    "setattr", "delattr", "globals",
-                                    "locals", "vars", "dir", "type",
-                                    "isinstance", "issubclass"):
-                    return f"Forbidden function call: {node.func.id}"
+            # Whitelist forbids ast.Attribute, so func is always a Name here;
+            # guard anyway and constrain to known sandbox callables.
+            if not isinstance(node.func, ast.Name):
+                return "Forbidden call: only direct function calls are allowed"
+            if node.func.id not in _ALLOWED_CALL_NAMES:
+                return f"Forbidden function call: {node.func.id}"
 
     return None
 
