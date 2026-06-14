@@ -546,6 +546,7 @@ def video_multicam_cuts():
     segments = data.get("segments", None)
     speaker_map = data.get("speaker_map", None)
     min_cut_duration = safe_float(data.get("min_cut_duration", 1.0), 1.0, min_val=0.1, max_val=60.0)
+    mode = (data.get("mode") or "audio").strip().lower()
 
     # Validate segments if provided directly
     if segments is not None:
@@ -626,13 +627,37 @@ def video_multicam_cuts():
         cuts = result.get("cuts", []) if isinstance(result, dict) else result
         total_cuts = result.get("total_cuts", len(cuts)) if isinstance(result, dict) else len(cuts)
 
+        visual_applied = False
+        if mode == "audio+visual" and filepath and cuts:
+            try:
+                from opencut.core.multicam_visual import (
+                    analyze_frames,
+                    check_visual_multicam_available,
+                    refine_cuts_with_visual,
+                )
+                if check_visual_multicam_available():
+                    sample_times = [c["time"] for c in cuts]
+                    cues = analyze_frames(filepath, sample_times)
+                    speaker_face_map = data.get("speaker_face_map")
+                    cuts = refine_cuts_with_visual(
+                        cuts, cues.cues,
+                        speaker_face_map=speaker_face_map,
+                    )
+                    total_cuts = len(cuts)
+                    visual_applied = True
+            except Exception as exc:
+                logger.warning("Visual multicam refinement failed, using audio-only: %s", exc)
+
         speakers = sorted({str(s.get("speaker", "")) for s in effective_segments if s.get("speaker")})
-        return jsonify({
+        resp = {
             "cuts": cuts,
             "total_cuts": total_cuts,
             "speakers": speakers,
             "speaker_map": effective_speaker_map,
-        })
+        }
+        if mode == "audio+visual":
+            resp["mode"] = "audio+visual" if visual_applied else "audio_fallback"
+        return jsonify(resp)
     except ImportError:
         return jsonify({"error": "multicam module not available"}), 503
     except Exception as exc:

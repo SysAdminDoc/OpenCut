@@ -203,6 +203,12 @@ def check_sam3_available() -> bool:
     return _try_import("sam3") is not None
 
 
+def check_visual_multicam_available() -> bool:
+    """Check if visual multicam cues (MediaPipe + OpenCV) are available."""
+    return (_try_import("mediapipe") is not None
+            and _try_import("cv2") is not None)
+
+
 def check_propainter_available() -> bool:
     """Check if ProPainter (video inpainting) is available."""
     return _try_import("propainter") is not None
