@@ -29,6 +29,31 @@
 
 ---
 
+## Naming & distribution
+
+**Decision (2026-06-14):** the product keeps the name **OpenCut**, but the
+package-manager distribution token is **`opencut-ppro`**.
+
+There is an unrelated, popular browser-based editor also called *OpenCut*
+([github.com/OpenCut-app/OpenCut](https://github.com/OpenCut-app/OpenCut),
+~48K stars). To keep search, PyPI, Homebrew, and winget unambiguous — and to
+stay distinct from it when it relaunches — this project distributes under a
+qualified token: the **`-ppro`** suffix marks the Adobe **Premiere Pro**
+integration that uniquely identifies this tool. So:
+
+- **PyPI:** `pip install opencut-ppro[standard]` (distribution name `opencut-ppro`)
+- **Homebrew / winget:** the same `opencut-ppro` token (see ROADMAP).
+- **Unchanged:** the product name *OpenCut*, the Python import package
+  (`import opencut`), the CLI commands (`opencut`, `opencut-server`,
+  `opencut-mcp-server`), and the CEP/UXP extension IDs
+  (`com.opencut.panel`, `com.opencut.uxp`).
+
+The `opencut-ppro` name is reserved-by-decision here and in `pyproject.toml`;
+the actual PyPI publish (via trusted publishing) is tracked in the roadmap and
+is the one step that needs the maintainer's PyPI account.
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -375,7 +400,7 @@ flask, flask-cors, click, rich
 ### Standard (recommended, ~200MB)
 
 ```bash
-pip install opencut[standard]
+pip install opencut-ppro[standard]
 ```
 
 Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
@@ -383,7 +408,7 @@ Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, 
 ### Audited convenience install (non-Torch optional stack)
 
 ```bash
-pip install opencut[all]
+pip install opencut-ppro[all]
 ```
 
 Adds all standard deps plus: `pedalboard`, `edge-tts`, `rembg`, `insightface`, `onnxruntime`, `auto-editor`, `opentimelineio`, and `otio-aaf-adapter`. Torch/Transformers-backed packages stay out of this release-audited lane until their advisory and resolver posture is clean.
@@ -391,11 +416,11 @@ Adds all standard deps plus: `pedalboard`, `edge-tts`, `rembg`, `insightface`, `
 For the larger Torch-backed stack, install the explicit extra or narrower feature extras:
 
 ```bash
-pip install opencut[all,torch-stack]
-pip install opencut[captions-whisperx]  # WhisperX diarized captions
+pip install opencut-ppro[all,torch-stack]
+pip install opencut-ppro[captions-whisperx]  # WhisperX diarized captions
 ```
 
-`torch-stack` includes WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2, PyTorch, torchvision, and Transformers. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut[music]`, `opencut[enhance]`) because they hard-pin older Torch stacks.
+`torch-stack` includes WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2, PyTorch, torchvision, and Transformers. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut-ppro[music]`, `opencut-ppro[enhance]`) because they hard-pin older Torch stacks.
 
 ### GPU Acceleration
 
@@ -542,7 +567,7 @@ A: Make sure the backend is running. Check that port 5679 is not blocked. The pa
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: Most AI features are optional. Install them individually or use the audited `pip install opencut[all]` convenience lane. Torch-backed features use `pip install opencut[all,torch-stack]` or narrower extras such as `opencut[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed. Each missing feature shows an install button in the panel.
+A: Most AI features are optional. Install them individually or use the audited `pip install opencut-ppro[all]` convenience lane. Torch-backed features use `pip install opencut-ppro[all,torch-stack]` or narrower extras such as `opencut-ppro[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed. Each missing feature shows an install button in the panel.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.

@@ -19,24 +19,18 @@ history, not here.
 
 ## Research-Driven Additions
 
-- [ ] P1 — Decide and execute brand/namespace disambiguation (gates all distribution work)
-  Why: carried from the 2026-06-09 research pass with no roadmap entry; opencut.app (48K stars) is mid-rewrite (May 2026) and will re-dominate search when it relaunches; PyPI/winget/Homebrew/SEO all need an unambiguous token first.
-  Evidence: github.com/OpenCut-app/OpenCut; opencut.app/roadmap; RESEARCH.md Open Question 1
-  Touches: pyproject.toml project name, README tagline/badges, GitHub repo description/topics
-  Acceptance: written decision in README or CONTRIBUTING; chosen PyPI name registered (placeholder publish acceptable).
-  Complexity: M
-
 - [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
   Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.
   Blocked: Premiere 26.x license/installation.
   Acceptance: documented smoke test pass on Premiere 26.0 or 26.2.x for both CEP and UXP panels.
   Complexity: S
 
-- [ ] P3 — Publish the server package to PyPI via trusted publishing (after brand decision)
-  Why: pip install of the server/CLI is the cheapest distribution surface and currently impossible (no PyPI package); trusted publishing avoids long-lived tokens in CI.
+- [ ] P3 — Publish the server package to PyPI via trusted publishing
+  Why: pip install of the server/CLI is the cheapest distribution surface and currently impossible (no PyPI package); trusted publishing avoids long-lived tokens in CI. Brand decision is DONE — distribution name is `opencut-ppro` (pyproject.toml + README "Naming & distribution").
   Evidence: docs.pypi.org/trusted-publishers/; RESEARCH.md distribution assessment
   Touches: .github/workflows/build.yml (publish job), pyproject.toml metadata
-  Acceptance: pip install of the chosen name installs the opencut CLI/server from PyPI; releases publish automatically on tag.
+  Blocked: needs the maintainer's PyPI account / trusted-publisher config (credential-gated).
+  Acceptance: `pip install opencut-ppro` installs the opencut CLI/server from PyPI; releases publish automatically on tag.
   Complexity: M
 
 - [ ] P2 — Move CEP panel off unsupported Vite 5 with HGFS-safe regression evidence
@@ -46,18 +40,18 @@ history, not here.
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
 
-- [ ] P3 — Add Homebrew tap for macOS CLI distribution (after brand decision + PyPI)
-  Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install <name>` for the CLI/server. Depends on brand decision (P1) and PyPI publish (existing P3).
+- [ ] P3 — Add Homebrew tap for macOS CLI distribution (after PyPI)
+  Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install opencut-ppro` for the CLI/server. Depends on PyPI publish (existing P3). Brand decision is DONE (`opencut-ppro`).
   Evidence: docs.brew.sh/Python-for-Formula-Authors; Homebrew accepts Python apps even without PyPI; no existing tap
-  Touches: new homebrew-<name> tap repo, formula file, CI publish workflow
-  Acceptance: `brew install <tap>/<name>` installs the CLI/server on macOS; formula auto-updates on new PyPI releases.
+  Touches: new homebrew-opencut-ppro tap repo, formula file, CI publish workflow
+  Acceptance: `brew install <tap>/opencut-ppro` installs the CLI/server on macOS; formula auto-updates on new PyPI releases.
   Complexity: M
 
 - [ ] P3 — Add winget package manifest for Windows distribution (after release parity + code signing)
   Why: Windows users discover software via winget; no manifest exists. Requires a stable installer URL (GitHub Release .exe) and ideally a code-signed binary for SmartScreen reputation. Depends on release parity (P1) and code signing budget ($216-575/yr OV/EV certificate).
-  Evidence: github.com/microsoft/winget-pkgs (12,850+ packages); no existing OpenCut manifest; signmycode.com pricing
+  Evidence: github.com/microsoft/winget-pkgs (12,850+ packages); no existing OpenCut manifest; signmycode.com pricing. Brand decision is DONE — publisher token `SysAdminDoc.OpenCut` / dist token `opencut-ppro`.
   Touches: winget manifest YAML (submitted as PR to microsoft/winget-pkgs), CI release workflow (signed installer upload)
-  Acceptance: `winget install <name>` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
+  Acceptance: `winget install SysAdminDoc.OpenCut` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
   Complexity: M
 
 ## Research-Driven Additions (2026-06-14)

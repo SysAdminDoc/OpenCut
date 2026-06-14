@@ -115,7 +115,7 @@ def test_transitive_web_dep_floors_match_lockfile():
 
     requirements-lock.txt holds urllib3 2.7.0, Werkzeug 3.1.7, requests 2.33.0,
     Jinja2 3.1.6. The pyproject resolver lane must floor the same packages so
-    `pip install opencut[all]` without the lock cannot regress below the
+    `pip install opencut-ppro[all]` without the lock cannot regress below the
     advisory-fixed versions.
     """
     project = _pyproject()["project"]
