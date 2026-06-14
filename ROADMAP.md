@@ -33,7 +33,6 @@ history, not here.
   Complexity: S
 
 
-
 - [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
   Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.
   Blocked: Premiere 26.x license/installation.
@@ -53,8 +52,6 @@ history, not here.
   Touches: extension/com.opencut.panel/package.json, package-lock.json, scripts/panel-node-gate.ps1, docs/NODE_ADVISORIES.md, extension panel build/audit tests, CI release smoke
   Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
   Complexity: M
-
-
 
 - [ ] P3 — Add Homebrew tap for macOS CLI distribution (after brand decision + PyPI)
   Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install <name>` for the CLI/server. Depends on brand decision (P1) and PyPI publish (existing P3).
