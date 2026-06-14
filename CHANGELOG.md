@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — SeedVR2 upscaling engine (Apache-2.0, one-step diffusion)
+
+- Wired the previously-dark `upscale_seedvr2` stub into the upscaling engine
+  registry as `seedvr2`, gated by `check_seedvr2_available()` (diffusers + torch).
+  It is registered at higher priority than Real-ESRGAN, so it auto-selects when
+  its Apache-2.0 SeedVR2-3B weights are installed and **falls back to Real-ESRGAN**
+  otherwise. `POST /video/ai/upscale` gained an `engine` param (`auto`/`seedvr2`/
+  `realesrgan`) that tries SeedVR2 first and degrades to Real-ESRGAN on any
+  unavailability (recorded in the response `notes`), never hard-failing.
+- Added a `seedvr2-3b` model-download catalog entry (Apache-2.0, ~6 GB) and a
+  registry test suite (`tests/test_upscaling_engines.py`). The heavy diffusion
+  forward activates once the local weights are present; the entry point raises a
+  structured error when absent (matching the NeMo ASR engine contract).
+
 ### Added — Beat-synced cuts to the active sequence (`POST /timeline/beat-cut`)
 
 - New timeline-native beat-cut path: detect beats in a clip's audio and emit

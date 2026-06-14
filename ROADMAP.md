@@ -56,15 +56,6 @@ history, not here.
 
 ## Research-Driven Additions (2026-06-14)
 
-### P2
-
-- [ ] P2 — Wire SeedVR2 as a clean-license upscaling engine
-  Why: SeedVR2 (ByteDance, ICLR 2026, Apache-2.0) is one-step diffusion video restoration, >4x faster than multi-step VSR and beats Real-ESRGAN; its stub already exists and the license is MIT-distribution-safe.
-  Evidence: opencut/core/upscale_seedvr2.py (NotImplementedError stub); github.com/IceClear/SeedVR2; huggingface.co/ByteDance-Seed/SeedVR2-3B (Apache-2.0)
-  Touches: opencut/core/upscale_seedvr2.py, engine_registry.py (upscaling domain), checks.py availability flag, model_manager.py, upscaling route/preset
-  Acceptance: SeedVR2 appears as a selectable upscaling engine, gated by availability check, with a model download entry and registry test; falls back to Real-ESRGAN when unavailable.
-  Complexity: L
-
 ### P3
 
 - [ ] P3 — Upgrade depth backend to Depth Anything 3 Small (Apache-2.0)
