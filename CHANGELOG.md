@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Brand/namespace disambiguation: distribution token `opencut-ppro`
+
+- Resolved the carried brand/namespace question (RESEARCH Open Question 1). The
+  product keeps the name **OpenCut**, but the package-manager distribution token
+  is now **`opencut-ppro`** to stay unambiguous against the unrelated browser
+  editor opencut.app (~48K stars) across PyPI/Homebrew/winget/SEO. The `-ppro`
+  suffix marks the Premiere Pro integration that uniquely identifies this tool.
+- `pyproject.toml` `[project].name` → `opencut-ppro`; SBOM root component and
+  README `pip install` examples updated to match. **Unchanged:** the import
+  package (`import opencut`), CLI commands (`opencut`, `opencut-server`,
+  `opencut-mcp-server`), and CEP/UXP extension IDs. Decision recorded in the
+  README "Naming & distribution" section. (All candidate names were free on
+  PyPI; the actual publish remains a credential-gated roadmap item.)
+
 ### Security — Bundled FFmpeg 8.1.1 + June-2026 security-patch provenance
 
 - Reconciled the bundled-FFmpeg version pin to `8.1.1-essentials_build-www.gyan.dev`

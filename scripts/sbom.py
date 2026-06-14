@@ -349,10 +349,10 @@ def build_sbom() -> Dict:
 
     root_component = {
         "type": "application",
-        "bom-ref": f"pkg:pypi/opencut@{opencut_ver}",
-        "name": "opencut",
+        "bom-ref": f"pkg:pypi/opencut-ppro@{opencut_ver}",
+        "name": "opencut-ppro",
         "version": opencut_ver,
-        "purl": f"pkg:pypi/opencut@{opencut_ver}",
+        "purl": f"pkg:pypi/opencut-ppro@{opencut_ver}",
         "description": "Video editing automation for Adobe Premiere Pro",
     }
 

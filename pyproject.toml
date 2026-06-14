@@ -3,9 +3,15 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "opencut"
+# Distribution/PyPI token is disambiguated from opencut.app (the browser-based
+# editor at github.com/OpenCut-app/OpenCut, ~48K stars) which would otherwise
+# dominate search. The "-ppro" qualifier signals the Adobe Premiere Pro
+# integration that uniquely identifies this project. The product name
+# ("OpenCut"), the import package (`opencut`), the CLI commands, and the CEP/UXP
+# extension IDs are unchanged. See README "Naming & distribution".
+name = "opencut-ppro"
 version = "1.33.1"
-description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
+description = "OpenCut for Premiere Pro - local AI video editing automation (captions, audio, VFX) for Adobe Premiere Pro via CEP/UXP, CLI, REST, and MCP"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"

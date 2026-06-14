@@ -25,7 +25,7 @@ def test_sbom_generator_emits_cyclonedx_json(tmp_path):
     assert "SBOM written" in result.stdout
     assert bom["bomFormat"] == "CycloneDX"
     assert bom["specVersion"] == "1.5"
-    assert bom["metadata"]["component"]["name"] == "opencut"
+    assert bom["metadata"]["component"]["name"] == "opencut-ppro"
     properties = _metadata_properties(bom)
     assert properties["opencut:sbom:fidelity"] == "declared-only"
     assert "requirements-lock.txt" in properties["opencut:sbom:vulnerability-audit-targets"]
