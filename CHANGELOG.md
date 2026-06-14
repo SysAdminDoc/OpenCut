@@ -36,6 +36,23 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Fixed — Engineering audit: correctness, safety, resource leaks
+
+- **segment_sam3.py**: Fixed unreliable `frame_count` scope check
+  (`"frame_count" in dir()` → initialized at top), added
+  `VideoCapture.isOpened()` / `VideoWriter.isOpened()` validation, moved
+  GPU cleanup (`del predictor, state` + `empty_cache()`) into a `finally`
+  block to guarantee cleanup on exception paths.
+- **semantic_video_search.py**: Fixed unused `fps` variable in
+  `_extract_key_frames()`, fixed progress callback always reporting 0%
+  (now computes actual percentage), fixed temp directory leak in
+  `build_clip_index()` and `semantic_search()` (added `finally:
+  shutil.rmtree`), removed dead `family` variable from
+  `_compute_frame_embeddings`.
+- **object_intel_routes.py**: Fixed 4 instances of `validate_filepath()`
+  misused on output directories (should be `validate_path()` — files vs.
+  directories use different validation functions).
+
 ### Added — Versioned visual-search engine registry
 
 - Added `SEARCH_ENGINES` registry to `semantic_video_search.py` with 4
