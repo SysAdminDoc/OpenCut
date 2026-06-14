@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — NVIDIA NeMo ASR engines (Parakeet TDT 0.6B v3 + Canary 1B Flash)
+
+- Wired the previously-dark `asr_parakeet` (streaming) and `asr_canary` (batch)
+  stubs into the transcription engine registry as `parakeet_tdt` and
+  `canary_1b_flash`. Both are gated by a new `check_nemo_asr_available()` check
+  (accepts the `nemo` / `nemo_toolkit[asr]` install), retain faster-whisper and
+  CrisperWhisper as fallbacks, and ship `parakeet-tdt-0.6b-v3` /
+  `canary-1b-flash` model-catalog entries for on-demand download. Engines report
+  unavailable (never crash) when NeMo is absent.
+
 ### Changed — Route manifest tags readiness; advertised count excludes stubs
 
 - `dump_route_manifest` now classifies every route as

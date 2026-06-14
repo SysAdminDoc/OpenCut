@@ -193,6 +193,16 @@ def check_crisper_whisper_available() -> bool:
     return _try_import("transformers") is not None and _try_import("torch") is not None
 
 
+def check_nemo_asr_available() -> bool:
+    """Check if NVIDIA NeMo ASR (Parakeet / Canary engines) is available.
+
+    NeMo installs the ``nemo`` import package via the ``nemo_toolkit[asr]``
+    distribution; accept either name so the check matches the install hint.
+    Never raises -- returns False when the optional dependency is absent.
+    """
+    return _try_import("nemo") is not None or _try_import("nemo_toolkit") is not None
+
+
 def check_sam2_available() -> bool:
     """Check if SAM2 (Segment Anything Model 2) is available."""
     return _try_import("sam2") is not None
