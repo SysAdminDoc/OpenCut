@@ -17,7 +17,7 @@ from flask import Blueprint, jsonify
 
 from opencut.checks import check_demucs_available
 from opencut.core.workflow import workflow_step
-from opencut.errors import safe_error
+from opencut.errors import error_response, safe_error
 from opencut.helpers import (
     _make_sequence_name,
     _resolve_output_dir,
@@ -681,16 +681,19 @@ def audio_measure():
     try:
         data = get_json_dict()
     except ValueError as exc:
-        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+        return error_response("INVALID_INPUT", str(exc), status=400,
+                              suggestion="Send a top-level JSON object in the request body.")
     filepath = str(data.get("filepath", "")).strip()
 
     if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
+        return error_response("INVALID_INPUT", "No file path provided",
+                              status=400, suggestion="Provide a filepath to the audio file.")
 
     try:
         filepath = validate_filepath(filepath)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response("INVALID_INPUT", str(e), status=400,
+                              suggestion="Check the file path and try again.")
 
     try:
         from opencut.core.audio_suite import measure_loudness
@@ -1159,7 +1162,8 @@ def audio_gen_silence():
         try:
             output_dir = validate_path(output_dir)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response("INVALID_INPUT", str(e), status=400,
+                                  suggestion="Check the output_dir path and try again.")
     duration = safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=3600.0)
 
     try:

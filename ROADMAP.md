@@ -67,12 +67,6 @@ history, not here.
   Acceptance: `winget install <name>` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
   Complexity: M
 
-## Audit-Driven — Security hardening
-
-- [ ] P2 — Migrate 35 raw jsonify({"error":...}) responses to structured error_response()
-  Why: Frontend expects structured {code, message, suggestion} responses; raw strings lack machine-readable error codes.
-  Where: opencut/routes/video_editing.py (13), video_core.py (18), audio.py (4)
-
 ## Research-Driven Additions (2026-06-14)
 
 ### P1

@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Structured error responses across video/audio routes
+
+- Migrated the remaining 35 raw `jsonify({"error": ...})` responses in
+  `routes/video_editing.py`, `routes/video_core.py`, and `routes/audio.py` to
+  the structured `error_response()` helper. Every error now returns a
+  machine-readable `code`, a `suggestion`, and request-id correlation, and is
+  logged through the typed-error path — matching the rest of the API surface
+  the frontend already consumes.
+
 ### Security — AST whitelist for the expression sandbox
 
 - Replaced the deny-list AST check in `expression_engine.py` with a closed
