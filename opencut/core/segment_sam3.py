@@ -129,8 +129,14 @@ def segment_video(
         fd, output_path = tempfile.mkstemp(suffix=ext, prefix="opencut_sam3_")
         os.close(fd)
 
+    frame_count = 0
+    predictor = None
+    state = None
+    torch = None
+
     try:
-        import torch
+        import torch as _torch
+        torch = _torch
         from sam3.build_sam import build_sam3_video_predictor
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -195,14 +201,19 @@ def segment_video(
             import numpy as np
 
             cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                raise RuntimeError(f"Failed to open video: {video_path}")
+
             fps = cap.get(cv2.CAP_PROP_FPS) or 24
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+            if not writer.isOpened():
+                cap.release()
+                raise RuntimeError(f"Failed to create VideoWriter: {output_path}")
 
-            frame_count = 0
             try:
                 while True:
                     ret, frame = cap.read()
@@ -236,17 +247,13 @@ def segment_video(
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(coco_data, f)
 
-        del predictor, state
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
         if on_progress:
             on_progress(100, "Done")
 
         return SAM3Result(
             output=output_path,
             output_format=output_format,
-            frames_processed=frame_count if "frame_count" in dir() else len(masks),
+            frames_processed=frame_count if frame_count > 0 else len(masks),
             objects_tracked=len(prompts),
             model=model,
             processing_seconds=round(proc_time, 2),
@@ -265,6 +272,13 @@ def segment_video(
             except OSError:
                 pass
         raise RuntimeError(f"SAM3 segmentation failed: {exc}") from exc
+    finally:
+        if predictor is not None:
+            del predictor
+        if state is not None:
+            del state
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 def segment_video_auto(

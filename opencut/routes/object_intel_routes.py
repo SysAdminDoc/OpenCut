@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -43,7 +43,7 @@ def text_segment(job_id, filepath, data):
     output_dir = (data.get("output_dir") or "").strip()
 
     if output_dir:
-        output_dir = validate_filepath(output_dir) if output_dir else ""
+        output_dir = validate_path(output_dir) if output_dir else ""
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -132,7 +132,6 @@ def object_remove_sam3(job_id, filepath, data):
         raise ValueError("query or prompts is required (e.g., 'the watermark in the corner')")
 
     if output_dir:
-        from opencut.security import validate_path
         output_dir = validate_path(output_dir)
 
     output_path = ""
@@ -225,7 +224,7 @@ def physics_remove(job_id, filepath, data):
     output_dir = (data.get("output_dir") or "").strip()
 
     if output_dir:
-        output_dir = validate_filepath(output_dir) if output_dir else ""
+        output_dir = validate_path(output_dir) if output_dir else ""
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -323,7 +322,7 @@ def track_overlay(job_id, filepath, data):
     output_dir = (data.get("output_dir") or "").strip()
 
     if output_dir:
-        output_dir = validate_filepath(output_dir) if output_dir else ""
+        output_dir = validate_path(output_dir) if output_dir else ""
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -477,7 +476,7 @@ def reframe_multi(job_id, filepath, data):
     output_dir = (data.get("output_dir") or "").strip()
 
     if output_dir:
-        output_dir = validate_filepath(output_dir) if output_dir else ""
+        output_dir = validate_path(output_dir) if output_dir else ""
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
