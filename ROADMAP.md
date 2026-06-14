@@ -26,13 +26,6 @@ history, not here.
   Acceptance: written decision in README or CONTRIBUTING; chosen PyPI name registered (placeholder publish acceptable).
   Complexity: M
 
-- [ ] P2 — Replace bundled FFmpeg 8.0.1 binary with 8.1.x
-  Why: Code-side D3D12VA/Vulkan encoder detection, route validation, export presets, and installer version strings are all wired; only the binary download remains.
-  Where: ffmpeg/ (bundled binaries)
-  Acceptance: bundled ffmpeg -version reports 8.1.x.
-  Complexity: S
-
-
 - [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
   Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.
   Blocked: Premiere 26.x license/installation.
@@ -68,15 +61,6 @@ history, not here.
   Complexity: M
 
 ## Research-Driven Additions (2026-06-14)
-
-### P1
-
-- [ ] P1 — Assert bundled-FFmpeg security patch level, not just version 8.1.x
-  Why: complements the existing "bump bundled FFmpeg to 8.1.x" item — the June-2026 FFmpeg zero-days (heap/stack overflows reachable via crafted media, the first untrusted-input path a media tool hits) landed as post-release master commits, so an 8.1.x release tag may predate them.
-  Evidence: CVE-2026-6385 (GHSA-q22x-99q7-fr6w, CVSS 6.5) + CVE-2026-39210..39218 (reserved); thehackernews.com/2026/06/ai-agent-uncovers-21-zero-days-in.html; ffmpeg/ffmpeg.exe (bundled)
-  Touches: ffmpeg/ (bundled binary provenance), scripts/ FFmpeg build/verify, docs/PYTHON_ADVISORIES.md or a new FFmpeg provenance note
-  Acceptance: bundled `ffmpeg -version` build is documented to include the June-2026 security commits (commit hash or post-fix snapshot recorded), not merely reporting 8.1.x.
-  Complexity: S
 
 ### P2
 

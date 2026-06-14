@@ -218,6 +218,7 @@ public class InstallEngine
             ["ffmpeg_path"] = _config.FfmpegPath,
             ["bundled_ffmpeg_version"] = AppConstants.BundledFfmpegVersion,
             ["bundled_ffprobe_version"] = AppConstants.BundledFfprobeVersion,
+            ["bundled_ffmpeg_security_floor"] = AppConstants.BundledFfmpegSecurityFloor,
             ["installed_at_utc"] = DateTime.UtcNow.ToString("O"),
         };
 

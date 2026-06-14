@@ -5,6 +5,28 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security — Bundled FFmpeg 8.1.1 + June-2026 security-patch provenance
+
+- Reconciled the bundled-FFmpeg version pin to `8.1.1-essentials_build-www.gyan.dev`
+  across `AppConstants.cs`, `OpenCut.iss`, and the manifest test (the Inno pin had
+  drifted to `8.1`, leaving `test_inno_installer_writes_ffmpeg_manifest` red).
+- New `opencut/core/ffmpeg_provenance.py` is the single source of truth for the
+  acceptable bundled build. It parses `ffmpeg -version` (gyan.dev release, gyan
+  git-master, BtbN `git describe`, distro `n`-prefixed) and grades it against two
+  lanes: a release floor (`>= 8.1.1`) or a git-master snapshot dated `>= 2026-06-10`
+  (reference commit `b29bdd3715`). This asserts a *security patch level* — the
+  June-2026 FFmpeg zero-days (CVE-2026-6385 + CVE-2026-39210..39218, crafted-media
+  heap/stack overflows) landed as post-release master commits, so a bare `8.1.x`
+  tag is insufficient on its own.
+- `GET /system/capabilities` now carries `ffmpeg.security` (graded result) and a
+  `ffmpeg_below_security_floor` finding so a stale bundled binary is visible at runtime.
+- `scripts/verify_ffmpeg_provenance.py` is a stdlib build/CI gate that fails closed
+  when the bundled binary is below the floor and records ground-truth provenance
+  (version, git commit/snapshot date, lane, CVE list) to a manifest.
+- Installer manifests (`installer.json`, both WPF + Inno) now record
+  `bundled_ffmpeg_security_floor`. Provenance requirements documented in
+  `docs/RELEASE_PROVENANCE.md`.
+
 ### Added — NVIDIA NeMo ASR engines (Parakeet TDT 0.6B v3 + Canary 1B Flash)
 
 - Wired the previously-dark `asr_parakeet` (streaming) and `asr_canary` (batch)

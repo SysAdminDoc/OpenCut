@@ -9,7 +9,9 @@ What we capture today:
 
 * ``ffmpeg`` — presence, version, decoder/encoder lists pruned to a
   curated allow-list, hardware-accelerated encoder availability
-  (``nvenc``, ``qsv``, ``amf``, ``videotoolbox``).
+  (``nvenc``, ``qsv``, ``amf``, ``videotoolbox``), and a ``security``
+  sub-record grading the build against the June-2026 patch floor
+  (see :mod:`opencut.core.ffmpeg_provenance`).
 * ``gpu`` — derived from :mod:`opencut.gpu` (``cuda``, ``mps``,
   ``directml``, or ``cpu``) plus the existing ``check_vram`` helper.
 * ``ffprobe`` — presence + version.
@@ -165,8 +167,18 @@ def _probe_ffmpeg() -> dict:
 
     version_result = _run_capturing([ffmpeg_bin, "-version"])
     version = ""
+    banner = ""
     if version_result is not None:
-        version = _extract_version(version_result.stdout or "")
+        banner = version_result.stdout or ""
+        version = _extract_version(banner)
+
+    security: dict = {}
+    try:
+        from opencut.core.ffmpeg_provenance import check_security_floor
+
+        security = check_security_floor(banner)
+    except Exception as exc:  # never let provenance grading break the probe
+        logger.debug("capability_profile: ffmpeg security grade failed: %s", exc)
 
     hwaccel: List[str] = []
     hw_result = _run_capturing([ffmpeg_bin, "-hide_banner", "-hwaccels"])
@@ -181,6 +193,7 @@ def _probe_ffmpeg() -> dict:
         "available": True,
         "path": ffmpeg_bin,
         "version": version,
+        "security": security,
         "encoders": _ffmpeg_codecs(ffmpeg_bin, "encoders"),
         "decoders": _ffmpeg_codecs(ffmpeg_bin, "decoders"),
         "hwaccel": sorted(hwaccel),
@@ -261,6 +274,24 @@ def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
             )
         )
     else:
+        security = profile.ffmpeg.get("security") or {}
+        # Only flag a genuine below-floor build we could parse — an unreadable
+        # banner ("unknown" lane) is a probe/availability issue, not a security
+        # finding, and would otherwise double up with ffmpeg_missing.
+        if security and not security.get("ok", True) and security.get("lane") != "unknown":
+            findings.append(
+                CapabilityFinding(
+                    severity="warning",
+                    rule="ffmpeg_below_security_floor",
+                    message=(
+                        f"Bundled FFmpeg ({security.get('version') or 'unknown'}) is below the "
+                        f"June-2026 security floor: {security.get('reason', '')}. Rebuild from "
+                        "gyan.dev 8.1.1 (or a git-master snapshot >= 2026-06-10) so crafted-media "
+                        "CVEs (CVE-2026-6385 et al.) are patched."
+                    ),
+                )
+            )
+
         hw_encoders = [e for e in profile.ffmpeg.get("encoders", []) if "_" in e and not e.startswith("lib")]
         if not hw_encoders:
             findings.append(
