@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — Normalized 0–100 virality score on highlights/clips
+
+- `EngagementScore.compute_virality()` maps the existing engagement dimensions
+  (hook / emotional / pacing / quotability) to a single deterministic, hook-forward
+  **0–100 virality score** — the headline number Opus Clip paywalls — so creators
+  can sort and threshold clips at a glance. It is a heuristic, not a performance
+  guarantee, and is distinct from the editing-relevance `overall` composite.
+- Surfaced as a top-level `virality` field (plus inside the `engagement` block)
+  on `POST /video/highlights` and the magic-clips/shorts response. Deterministic
+  unit tests added.
+
 ### Added — LatentSync lip-sync as the dub pipeline's opt-in final stage
 
 - Wired a new `lipsync_latentsync` engine into a new `lip_sync` engine-registry

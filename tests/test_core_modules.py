@@ -434,6 +434,27 @@ class TestAutoEdit:
 class TestHighlights:
     """Tests for opencut.core.highlights — LLM highlight extraction."""
 
+    def test_virality_score_is_deterministic_0_100(self):
+        """compute_virality maps the 4 dims to a stable 0-100 int."""
+        from opencut.core.highlights import EngagementScore
+        e = EngagementScore(hook_strength=1.0, emotional_peak=1.0,
+                            pacing=1.0, quotability=1.0)
+        assert e.compute_virality() == 100
+        # Same inputs -> same output (deterministic), and it's an int in range.
+        assert e.compute_virality() == e.virality == 100
+        zero = EngagementScore()
+        assert zero.compute_virality() == 0
+
+    def test_virality_is_hook_forward(self):
+        """Hook weighs more than pacing, so a strong hook outscores fast pacing."""
+        from opencut.core.highlights import EngagementScore
+        hooky = EngagementScore(hook_strength=1.0)
+        hooky.compute_virality()
+        pacey = EngagementScore(pacing=1.0)
+        pacey.compute_virality()
+        assert hooky.virality > pacey.virality
+        assert 0 <= pacey.virality <= 100 and 0 <= hooky.virality <= 100
+
     def test_parse_highlights_json_valid(self):
         """Should parse well-formed JSON array of highlights."""
         from opencut.core.highlights import _parse_highlights_json
