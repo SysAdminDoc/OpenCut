@@ -85,13 +85,6 @@ history, not here.
 
 ### P1
 
-- [ ] P1 — Floor-pin transitive web deps in pyproject.toml to match requirements-lock.txt
-  Why: requirements-lock.txt is safe (urllib3 2.7.0, Werkzeug 3.1.7, requests 2.33.0, Jinja2 3.1.6) but pyproject [dependencies]/[all] only pin flask/flask-cors/waitress; `pip install opencut[all]` without the lock resolves transitively and can pull vulnerable urllib3/Werkzeug/Jinja2.
-  Evidence: pyproject.toml:35-43 (no transitive floors); urllib3 CVE-2026-21441 (GHSA-38jv-5279-wg99, fixed 2.6.3); Werkzeug CVE-2026-21860 / CVE-2025-66221 (fixed 3.1.5, Windows safe_join DoS); Jinja2 CVE-2025-27516 (fixed 3.1.6); requests CVE-2026-25645 (fixed 2.33.0)
-  Touches: pyproject.toml (dependencies + all/standard extras), requirements.txt, dependency-floor test
-  Acceptance: `pip install opencut[all]` in a clean resolver (no lockfile) cannot select urllib3<2.6.3, Werkzeug<3.1.5, Jinja2<3.1.6, or requests<2.33.0; a test asserts the floors.
-  Complexity: S
-
 - [ ] P1 — Assert bundled-FFmpeg security patch level, not just version 8.1.x
   Why: complements the existing "bump bundled FFmpeg to 8.1.x" item — the June-2026 FFmpeg zero-days (heap/stack overflows reachable via crafted media, the first untrusted-input path a media tool hits) landed as post-release master commits, so an 8.1.x release tag may predate them.
   Evidence: CVE-2026-6385 (GHSA-q22x-99q7-fr6w, CVSS 6.5) + CVE-2026-39210..39218 (reserved); thehackernews.com/2026/06/ai-agent-uncovers-21-zero-days-in.html; ffmpeg/ffmpeg.exe (bundled)

@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security — Transitive web-dependency floor pins (RA-23)
+
+- Floored Werkzeug (`>=3.1.5`) and Jinja2 (`>=3.1.6`) in core
+  `pyproject.toml` dependencies — they ship transitively with flask and are
+  always installed, so a clean resolver (no `requirements-lock.txt`) can no
+  longer pull Werkzeug CVE-2026-21860 / CVE-2025-66221 (`safe_join` Windows
+  device-name DoS) or Jinja2 CVE-2025-27516 (sandbox breakout).
+- Floored `requests>=2.33.0` and `urllib3>=2.6.3` in the `standard` and `all`
+  extras, where they enter via faster-whisper's huggingface-hub fetch path —
+  closing urllib3 CVE-2026-21441 (decompression-bomb DoS) and requests
+  CVE-2026-25645 in the release-audited lane.
+- Synced `requirements.txt` flask/waitress floors to the pyproject values and
+  added the new security pins; `tests/test_dependency_surface.py` now asserts
+  the transitive floors and the resolver lane matches the lockfile.
+
 ### Added — CJK, Bengali, and RTL caption font-fallback
 
 - Added script-aware font fallback chains to `styled_captions.py` for CJK
