@@ -36,6 +36,14 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Fixed — Engineering audit (batch 3): SQLite connection safety
+
+- **job_store.py**: Wrapped PRAGMA setup in try/except to close the
+  connection on failure instead of leaking it (lines 134-140).
+- **job_store.py**: Added `PRAGMA wal_checkpoint(TRUNCATE)` before
+  closing connections in `close_all_connections()` to prevent orphaned
+  WAL/SHM files on Windows shutdown.
+
 ### Fixed — Engineering audit (batch 2): VideoCapture validation
 
 - **segment_sam2.py**: Added `cap.isOpened()` check after `cv2.VideoCapture()`
