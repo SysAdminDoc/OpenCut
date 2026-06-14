@@ -12,7 +12,7 @@ import subprocess as _sp
 from flask import Blueprint, jsonify, request
 
 from opencut.core.workflow import workflow_step
-from opencut.errors import safe_error
+from opencut.errors import error_response, safe_error
 from opencut.helpers import (
     _resolve_output_dir,
     _unique_output_path,
@@ -551,25 +551,32 @@ def video_multicam_cuts():
     # Validate segments if provided directly
     if segments is not None:
         if not isinstance(segments, list):
-            return jsonify({"error": "segments must be a list"}), 400
+            return error_response("INVALID_INPUT", "segments must be a list",
+                                  status=400, suggestion="Provide segments as a JSON array.")
         if len(segments) > 50000:
-            return jsonify({"error": "Too many segments (max 50000)"}), 400
+            return error_response("TOO_MANY_ITEMS", "Too many segments (max 50000)",
+                                  status=400, suggestion="Reduce the number of segments and retry.")
 
     # Need either segments, a diarization file, or a media filepath to diarize
     if not segments and not diarization_file and not filepath:
-        return jsonify({"error": "filepath, diarization_file, or segments required"}), 400
+        return error_response(
+            "INVALID_INPUT", "filepath, diarization_file, or segments required",
+            status=400,
+            suggestion="Provide a media filepath, a diarization_file, or segments directly.")
 
     if filepath and not diarization_file and not segments:
         try:
             filepath = validate_filepath(filepath)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response("INVALID_INPUT", str(e), status=400,
+                                  suggestion="Check the file path and try again.")
 
     if diarization_file:
         try:
             diarization_file = validate_filepath(diarization_file)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response("INVALID_INPUT", str(e), status=400,
+                                  suggestion="Check the diarization file path and try again.")
 
     # Load diarization file if segments not given directly
     effective_segments = segments
@@ -577,12 +584,16 @@ def video_multicam_cuts():
         try:
             file_size = os.path.getsize(diarization_file)
             if file_size > 50_000_000:
-                return jsonify({"error": "Diarization file too large (max 50 MB)"}), 400
+                return error_response(
+                    "FILE_TOO_LARGE", "Diarization file too large (max 50 MB)",
+                    status=400, suggestion="Provide a smaller diarization file (under 50 MB).")
             import json as _json
             with open(diarization_file, encoding="utf-8") as _f:
                 effective_segments = _json.load(_f)
         except Exception as exc:
-            return jsonify({"error": f"Could not read diarization_file: {exc}"}), 400
+            return error_response(
+                "FILE_READ_ERROR", f"Could not read diarization_file: {exc}",
+                status=400, suggestion="Ensure the diarization file is valid JSON.")
 
     # If filepath given but no segments, attempt transcription with speaker diarization
     if effective_segments is None and not diarization_file and filepath:
@@ -591,7 +602,11 @@ def video_multicam_cuts():
             from opencut.utils.config import CaptionConfig
             available, _backend = check_whisper_available()
             if not available:
-                return jsonify({"error": "Whisper not installed. Cannot transcribe for multicam. Provide segments or diarization_file instead."}), 400
+                return error_response(
+                    "MISSING_DEPENDENCY",
+                    "Whisper not installed. Cannot transcribe for multicam. Provide segments or diarization_file instead.",
+                    status=400,
+                    suggestion="Install Whisper from the Settings tab, or provide segments/diarization_file directly.")
             config = CaptionConfig(model="base", word_timestamps=True)
             result = transcribe(filepath, config=config)
             effective_segments = []
@@ -604,12 +619,17 @@ def video_multicam_cuts():
                         "speaker": getattr(seg, "speaker", "SPEAKER_00"),
                     })
         except ImportError:
-            return jsonify({"error": "Transcription modules not available. Provide segments directly."}), 503
+            return error_response(
+                "MODULE_NOT_AVAILABLE",
+                "Transcription modules not available. Provide segments directly.",
+                status=503,
+                suggestion="Install transcription dependencies from the Settings tab, or provide segments directly.")
         except Exception as exc:
             return safe_error(exc, "multicam_xml_transcription")
 
     if not isinstance(effective_segments, list) or not effective_segments:
-        return jsonify({"error": "No valid segments found"}), 400
+        return error_response("INVALID_INPUT", "No valid segments found",
+                              status=400, suggestion="Provide non-empty diarization segments.")
 
     try:
         from opencut.core import multicam
@@ -659,7 +679,9 @@ def video_multicam_cuts():
             resp["mode"] = "audio+visual" if visual_applied else "audio_fallback"
         return jsonify(resp)
     except ImportError:
-        return jsonify({"error": "multicam module not available"}), 503
+        return error_response("MODULE_NOT_AVAILABLE", "multicam module not available",
+                              status=503,
+                              suggestion="Install the multicam dependencies from the Settings tab.")
     except Exception as exc:
         return safe_error(exc, "video_multicam_cuts")
 
@@ -687,7 +709,8 @@ def multicam_xml_export():
 
     cuts = data.get("cuts", [])
     if not cuts or not isinstance(cuts, list):
-        return jsonify({"error": "cuts must be a non-empty list"}), 400
+        return error_response("INVALID_INPUT", "cuts must be a non-empty list",
+                              status=400, suggestion="Provide cuts as a non-empty JSON array.")
 
     source_files = data.get("source_files", {})
     sequence_name = str(data.get("sequence_name", "OpenCut Multicam"))
@@ -701,7 +724,8 @@ def multicam_xml_export():
         try:
             output_dir = validate_path(output_dir)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response("INVALID_INPUT", str(e), status=400,
+                                  suggestion="Check the output_dir path and try again.")
     else:
         output_dir = os.path.join(os.path.expanduser("~"), ".opencut", "exports")
     os.makedirs(output_dir, exist_ok=True)

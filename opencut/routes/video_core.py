@@ -18,7 +18,7 @@ from flask import Blueprint, jsonify
 
 from opencut.checks import check_watermark_available
 from opencut.core.workflow import workflow_step
-from opencut.errors import safe_error
+from opencut.errors import error_response, safe_error
 from opencut.helpers import (
     _get_file_duration,
     _resolve_output_dir,
@@ -69,11 +69,13 @@ def video_auto_detect_watermark():
     prompt = data.get("prompt", "watermark")[:200]
 
     if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
+        return error_response("INVALID_INPUT", "No file path provided",
+                              status=400, suggestion="Provide a filepath to the media file.")
     try:
         filepath = validate_filepath(filepath)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response("INVALID_INPUT", str(e), status=400,
+                              suggestion="Check the file path and try again.")
 
     try:
         from opencut.core.object_removal import detect_watermark_region
@@ -82,7 +84,9 @@ def video_auto_detect_watermark():
             return jsonify(result)
         return jsonify({"detected": False, "message": "No watermark detected", "suggestion": "Try adjusting the prompt or manually specify the region"})
     except ImportError as e:
-        return jsonify({"error": str(e), "suggestion": "Install: pip install transformers torch opencv-python-headless"}), 400
+        return error_response(
+            "MISSING_DEPENDENCY", str(e), status=400,
+            suggestion="Install: pip install transformers torch opencv-python-headless")
     except Exception as exc:
         return safe_error(exc, "video_auto_detect_watermark")
 
@@ -849,11 +853,15 @@ def batch_create():
     params = data.get("params", {})
 
     if not operation:
-        return jsonify({"error": "No operation specified"}), 400
+        return error_response("INVALID_INPUT", "No operation specified",
+                              status=400, suggestion="Specify a batch operation.")
     if not filepaths:
-        return jsonify({"error": "No files specified"}), 400
+        return error_response("INVALID_INPUT", "No files specified",
+                              status=400, suggestion="Provide at least one filepath.")
     if len(filepaths) > MAX_BATCH_FILES:
-        return jsonify({"error": f"Too many files. Maximum is {MAX_BATCH_FILES}."}), 400
+        return error_response(
+            "TOO_MANY_ITEMS", f"Too many files. Maximum is {MAX_BATCH_FILES}.",
+            status=400, suggestion=f"Submit at most {MAX_BATCH_FILES} files per batch.")
 
     # Validate all file paths
     validated_paths = []
@@ -861,7 +869,8 @@ def batch_create():
         try:
             validated_paths.append(validate_filepath(fp))
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response("INVALID_INPUT", str(e), status=400,
+                                  suggestion="Check the file paths and try again.")
     filepaths = validated_paths
 
     # Validate params["output_dir"] so ``_execute_batch_item`` receives an
@@ -873,7 +882,8 @@ def batch_create():
             try:
                 params["output_dir"] = validate_path(_out)
             except ValueError as e:
-                return jsonify({"error": f"output_dir — {e}"}), 400
+                return error_response("INVALID_INPUT", f"output_dir — {e}", status=400,
+                                      suggestion="Check the output_dir path and try again.")
 
     parallel = safe_bool(data.get("parallel", True), True)
 
@@ -951,7 +961,8 @@ def batch_status(batch_id):
         from opencut.core.batch_process import get_batch
         batch = get_batch(batch_id)
         if not batch:
-            return jsonify({"error": "Batch not found"}), 404
+            return error_response("NOT_FOUND", "Batch not found", status=404,
+                                  suggestion="Check the batch ID.")
         return jsonify(batch.summary)
     except Exception as e:
         return safe_error(e, "batch_status")
@@ -965,7 +976,8 @@ def batch_cancel(batch_id):
         from opencut.core.batch_process import cancel_batch
         if cancel_batch(batch_id):
             return jsonify({"status": "cancelled"})
-        return jsonify({"error": "Batch not found"}), 404
+        return error_response("NOT_FOUND", "Batch not found", status=404,
+                              suggestion="Check the batch ID.")
     except Exception as e:
         return safe_error(e, "batch_cancel")
 
@@ -1009,9 +1021,12 @@ def batch_parallel():
     max_workers = safe_int(data.get("max_workers", 2), 2, min_val=1, max_val=8)
 
     if not operations:
-        return jsonify({"error": "No operations specified"}), 400
+        return error_response("INVALID_INPUT", "No operations specified",
+                              status=400, suggestion="Provide at least one operation.")
     if len(operations) > MAX_BATCH_FILES:
-        return jsonify({"error": f"Too many operations. Maximum is {MAX_BATCH_FILES}."}), 400
+        return error_response(
+            "TOO_MANY_ITEMS", f"Too many operations. Maximum is {MAX_BATCH_FILES}.",
+            status=400, suggestion=f"Submit at most {MAX_BATCH_FILES} operations per batch.")
 
     # Build operation specs and validate filepaths + output_dirs. Parallel
     # batch dispatch writes to ``payload["output_dir"]`` without re-checking
@@ -1020,32 +1035,41 @@ def batch_parallel():
     specs = []
     for i, op in enumerate(operations):
         if not isinstance(op, dict):
-            return jsonify({"error": f"Operation {i}: must be a JSON object"}), 400
+            return error_response("INVALID_INPUT", f"Operation {i}: must be a JSON object",
+                                  status=400, suggestion="Each operation must be a JSON object.")
         endpoint = op.get("endpoint", "")
         payload = op.get("payload", {})
         if not isinstance(payload, dict):
-            return jsonify({"error": f"Operation {i}: payload must be an object"}), 400
+            return error_response("INVALID_INPUT", f"Operation {i}: payload must be an object",
+                                  status=400, suggestion="Operation payload must be a JSON object.")
         if not endpoint:
-            return jsonify({"error": f"Operation {i}: missing endpoint"}), 400
+            return error_response("INVALID_INPUT", f"Operation {i}: missing endpoint",
+                                  status=400, suggestion="Each operation must include an endpoint.")
         fp = payload.get("filepath", "")
         if fp:
             try:
                 payload["filepath"] = validate_filepath(fp)
             except ValueError as e:
-                return jsonify({"error": f"Operation {i}: {e}"}), 400
+                return error_response("INVALID_INPUT", f"Operation {i}: {e}", status=400,
+                                      suggestion="Check the operation filepath and try again.")
         od = payload.get("output_dir", "")
         if od:
             try:
                 payload["output_dir"] = validate_path(od)
             except ValueError as e:
-                return jsonify({"error": f"Operation {i}: output_dir — {e}"}), 400
+                return error_response("INVALID_INPUT", f"Operation {i}: output_dir — {e}",
+                                      status=400, suggestion="Check the operation output_dir and try again.")
         specs.append(OperationSpec(endpoint=endpoint, payload=payload))
 
     # Create a parent job to track overall progress
     try:
         job_id = _new_job("batch_parallel", f"{len(specs)} operations")
     except TooManyJobsError:
-        return jsonify({"error": "Too many concurrent jobs. Please wait for existing jobs to finish."}), 429
+        return error_response(
+            "TOO_MANY_JOBS",
+            "Too many concurrent jobs. Please wait for existing jobs to finish.",
+            status=429,
+            suggestion="Wait for a job to finish or cancel one from the processing bar.")
 
     executor = BatchExecutor(
         operations=specs,
