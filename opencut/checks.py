@@ -198,6 +198,11 @@ def check_sam2_available() -> bool:
     return _try_import("sam2") is not None
 
 
+def check_sam3_available() -> bool:
+    """Check if SAM3 (Segment Anything Model 3) is available."""
+    return _try_import("sam3") is not None
+
+
 def check_propainter_available() -> bool:
     """Check if ProPainter (video inpainting) is available."""
     return _try_import("propainter") is not None

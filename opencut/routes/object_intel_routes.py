@@ -112,6 +112,83 @@ def text_segment_preview(job_id, filepath, data):
 
 
 # ---------------------------------------------------------------------------
+# POST /video/object-remove/sam3
+# ---------------------------------------------------------------------------
+@object_intel_bp.route("/video/object-remove/sam3", methods=["POST"])
+@require_csrf
+@async_job("object_remove_sam3")
+def object_remove_sam3(job_id, filepath, data):
+    """Remove objects from video using SAM3 text prompts with SAM2 fallback."""
+    from opencut.core.segment_sam3 import segment_video_auto
+
+    text_query = (data.get("query") or data.get("text_query") or "").strip()
+    prompts = data.get("prompts") or []
+    model = (data.get("model") or data.get("sam3_model") or "small").strip()
+    output_format = (data.get("output_format") or "alpha_video").strip()
+    propagate = safe_bool(data.get("propagate"), True)
+    output_dir = (data.get("output_dir") or "").strip()
+
+    if not text_query and not prompts:
+        raise ValueError("query or prompts is required (e.g., 'the watermark in the corner')")
+
+    if output_dir:
+        from opencut.security import validate_path
+        output_dir = validate_path(output_dir)
+
+    output_path = ""
+    if output_dir:
+        import os
+        base = os.path.splitext(os.path.basename(filepath))[0]
+        output_path = os.path.join(output_dir, f"{base}_sam3_removed.mp4")
+
+    def _progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+
+    result = segment_video_auto(
+        video_path=filepath,
+        prompts=prompts,
+        text_query=text_query,
+        model=model,
+        output_format=output_format,
+        propagate=propagate,
+        output_path=output_path,
+        on_progress=_progress,
+    )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# GET /video/object-remove/engines
+# ---------------------------------------------------------------------------
+@object_intel_bp.route("/video/object-remove/engines", methods=["GET"])
+def object_remove_engines():
+    """List available object removal engines."""
+    from opencut.core.segment_sam2 import check_sam2_available
+    from opencut.core.segment_sam3 import check_sam3_available
+
+    engines = [
+        {
+            "id": "sam3",
+            "name": "SAM 3",
+            "available": check_sam3_available(),
+            "text_prompts": True,
+            "click_prompts": True,
+            "box_prompts": True,
+        },
+        {
+            "id": "sam2",
+            "name": "SAM 2.1",
+            "available": check_sam2_available(),
+            "text_prompts": False,
+            "click_prompts": True,
+            "box_prompts": True,
+        },
+    ]
+    return jsonify({"engines": engines})
+
+
+# ---------------------------------------------------------------------------
 # POST /video/physics-remove
 # ---------------------------------------------------------------------------
 @object_intel_bp.route("/video/physics-remove", methods=["POST"])
