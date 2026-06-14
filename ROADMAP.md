@@ -88,15 +88,6 @@ history, not here.
 
 ## Research-Driven Additions (2026-06-14, second pass)
 
-### P2
-
-- [ ] P2 — Wire LatentSync lip-sync onto the existing dub pipeline (local dubbing-with-lip-sync)
-  Why: OpenCut already ships the full dub pipeline (transcribe→translate→voice-clone→render) but stops before re-animating the mouth — the exact visual lip-sync stage Rask AI ($120/mo), HeyGen, and sync.so ($0.04–0.133/sec) paywall. Wiring an Apache-2.0 lip-sync model as the dub pipeline's optional final stage converts a paywalled flagship into a local/MIT feature.
-  Evidence: opencut/core/lipsync_advanced.py + lipsync_echomimic.py (stubs return 501 ROUTE_STUBBED); live dub pipeline in dub_pipeline.py / auto_dub_pipeline.py / isochronous_translate.py / multilang_audio.py; github.com/bytedance/LatentSync (Apache-2.0 code; 1.6 trained 512×512); RESEARCH.md Competitive Landscape (Rask/HeyGen/sync.so)
-  Touches: new opencut/core/lipsync_latentsync.py engine, engine_registry.py (lip-sync domain), checks.py, model_manager.py, dub-pipeline final-stage hook, a lip-sync route, cut-review/preview gate, both panels
-  Acceptance: after a dub render, a lip-sync stage re-animates the speaker's mouth to the new audio behind an availability check and preview gate; falls back to audio-only dub when unavailable. Confirm the LatentSync *checkpoint* licence at the model-card level before defaulting it (Open Question 3); ship as opt-in if the weight licence proves restrictive.
-  Complexity: L
-
 ### P3
 
 - [ ] P3 — Re-aim the IC-Light relight stub at v1 (Apache-2.0), not v2

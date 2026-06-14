@@ -115,6 +115,22 @@ def check_seedvr2_available() -> bool:
         return False
 
 
+def check_latentsync_available() -> bool:
+    """Check if the LatentSync lip-sync diffusion stack is installed.
+
+    Re-exports the core module's own check so the dub pipeline, lip-sync route,
+    and engine registry share one import. Never raises -- returns False when the
+    optional diffusion dependency is absent (the dub pipeline falls back to
+    heuristic / audio-only lip-sync).
+    """
+    try:
+        from opencut.core.lipsync_latentsync import check_latentsync_available as _c
+
+        return bool(_c())
+    except Exception:
+        return False
+
+
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None

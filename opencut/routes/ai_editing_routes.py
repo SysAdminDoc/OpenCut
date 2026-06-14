@@ -150,9 +150,33 @@ def ai_lip_sync(job_id, filepath, data):
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)
+    # LatentSync is opt-in (checkpoint licence unconfirmed); default is the
+    # always-available heuristic. Either way the route never hard-fails.
+    backend = (data.get("backend") or "heuristic").strip().lower()
+    if backend not in ("heuristic", "latentsync"):
+        backend = "heuristic"
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
+
+    notes = []
+    if backend == "latentsync":
+        try:
+            from opencut.core import lipsync_latentsync
+            if lipsync_latentsync.check_latentsync_available():
+                res = lipsync_latentsync.apply_latentsync(
+                    video_path=filepath, audio_path=audio_path,
+                    output_path=out_path, on_progress=_on_progress,
+                )
+                return {
+                    "output_path": res["output_path"],
+                    "engine": "latentsync",
+                    "frames_processed": res["frames_processed"],
+                    "notes": res["notes"],
+                }
+            notes.append("LatentSync backend not installed; used heuristic lip-sync.")
+        except (RuntimeError, NotImplementedError) as exc:
+            notes.append(f"LatentSync unavailable ({exc}); used heuristic lip-sync.")
 
     result = apply_lip_sync(
         video_path=filepath,
@@ -164,9 +188,11 @@ def ai_lip_sync(job_id, filepath, data):
 
     return {
         "output_path": result.output_path,
+        "engine": "heuristic",
         "frames_processed": result.frames_processed,
         "frames_synced": result.frames_synced,
         "audio_duration": round(result.audio_duration, 2),
+        "notes": notes,
     }
 
 

@@ -113,6 +113,7 @@ class DubConfig:
     whisper_model: str = "base"
     voice_clone: bool = True        # attempt voice cloning
     lip_sync: bool = True           # attempt lip sync
+    lip_sync_backend: str = "heuristic"  # "heuristic" (default) or "latentsync" (opt-in)
     preserve_music: bool = True     # keep background music via stem separation
     tts_engine: str = "auto"        # local-first: "auto", "kokoro", "chatterbox", "edge"
     output_dir: str = ""
@@ -514,14 +515,32 @@ def _apply_lip_sync(
     dubbed_video: str,
     work_dir: str,
     on_progress: Optional[Callable] = None,
+    backend: str = "heuristic",
 ) -> str:
-    """Apply lip sync to match new audio. Returns output path or original if failed."""
+    """Apply lip sync to match new audio. Returns output path or original if failed.
+
+    ``backend="latentsync"`` opts into the diffusion engine when its weights are
+    installed; on any unavailability it degrades to the heuristic, and if that
+    also fails the dubbed (audio-only) video is returned unchanged.
+    """
     _stage_progress(on_progress, STAGE_LIP_SYNC, 0, "Applying lip sync...")
+
+    # Opt-in LatentSync stage (checkpoint licence unconfirmed — never default).
+    if backend == "latentsync":
+        try:
+            from opencut.core import lipsync_latentsync
+            if lipsync_latentsync.check_latentsync_available():
+                res = lipsync_latentsync.apply_latentsync(video_path=dubbed_video)
+                out = res["output_path"] if res else ""
+                if out and os.path.isfile(out):
+                    _stage_progress(on_progress, STAGE_LIP_SYNC, 100, "LatentSync applied")
+                    return out
+        except Exception as exc:
+            logger.info("LatentSync lip sync unavailable (%s); falling back to heuristic", exc)
 
     try:
         from opencut.core.lip_sync_gen import LipSyncConfig, apply_lip_sync
 
-        os.path.join(work_dir, "lip_synced.mp4")
         config = LipSyncConfig()
 
         result = apply_lip_sync(
@@ -760,7 +779,8 @@ def auto_dub(
 
         # Stage 6: Lip sync (optional, on composited output)
         if config.lip_sync and os.path.isfile(out_path):
-            synced = _apply_lip_sync(video_path, out_path, work_dir, on_progress)
+            synced = _apply_lip_sync(video_path, out_path, work_dir, on_progress,
+                                     backend=config.lip_sync_backend)
             if synced != out_path:
                 lip_synced = True
                 out_path = synced
