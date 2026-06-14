@@ -66,3 +66,21 @@ history, not here.
   Touches: winget manifest YAML (submitted as PR to microsoft/winget-pkgs), CI release workflow (signed installer upload)
   Acceptance: `winget install <name>` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
   Complexity: M
+
+## Audit-Driven — Security hardening
+
+- [ ] P1 — Harden expression_engine.py eval() sandbox with AST-based validation
+  Why: User expressions are compiled+eval'd. Current regex-based validation is bypassable. Needs AST node whitelist or RestrictedPython.
+  Where: opencut/core/expression_engine.py
+
+- [ ] P1 — Harden scripting_console.py exec() sandbox against dunder bypass
+  Why: Dunder block uses lowercased string search which is bypassable with obfuscation. Needs AST-level Name node validation.
+  Where: opencut/core/scripting_console.py
+
+- [ ] P2 — Migrate 35 raw jsonify({"error":...}) responses to structured error_response()
+  Why: Frontend expects structured {code, message, suggestion} responses; raw strings lack machine-readable error codes.
+  Where: opencut/routes/video_editing.py (13), video_core.py (18), audio.py (4)
+
+- [ ] P2 — Add WAL checkpoint before close_all_connections() on shutdown
+  Why: SQLite WAL mode can leave orphaned -wal/-shm files on Windows if checkpoint is not run before closing.
+  Where: opencut/job_store.py close_all_connections()

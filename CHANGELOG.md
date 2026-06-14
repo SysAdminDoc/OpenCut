@@ -36,6 +36,12 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Fixed — Engineering audit (batch 2): VideoCapture validation
+
+- **segment_sam2.py**: Added `cap.isOpened()` check after `cv2.VideoCapture()`
+  to fail early with a clear error instead of silently producing corrupt output.
+- **multicam_visual.py**: Added `cap.isOpened()` check in `analyze_frames()`.
+
 ### Fixed — Engineering audit: correctness, safety, resource leaks
 
 - **segment_sam3.py**: Fixed unreliable `frame_count` scope check
