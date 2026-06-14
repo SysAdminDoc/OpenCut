@@ -104,6 +104,33 @@ def test_python_313_classifier_requires_ci_lane():
 def test_core_dependency_security_floor_pins():
     deps = _dep_names(_pyproject()["project"]["dependencies"])
     assert deps["flask-cors"] == "flask-cors>=6.0,<7"
+    # RA-23 — Werkzeug/Jinja2 ship transitively with flask; their resolver
+    # floor must match the lockfile security level even without the lockfile.
+    assert deps["werkzeug"] == "Werkzeug>=3.1.5"
+    assert deps["jinja2"] == "Jinja2>=3.1.6"
+
+
+def test_transitive_web_dep_floors_match_lockfile():
+    """RA-23 — clean-resolver installs cannot select vulnerable web deps.
+
+    requirements-lock.txt holds urllib3 2.7.0, Werkzeug 3.1.7, requests 2.33.0,
+    Jinja2 3.1.6. The pyproject resolver lane must floor the same packages so
+    `pip install opencut[all]` without the lock cannot regress below the
+    advisory-fixed versions.
+    """
+    project = _pyproject()["project"]
+    core = _dep_names(project["dependencies"])
+    extras = project["optional-dependencies"]
+
+    # Always-present web deps (via flask) floored in core.
+    assert core["werkzeug"] == "Werkzeug>=3.1.5"  # CVE-2026-21860 / CVE-2025-66221
+    assert core["jinja2"] == "Jinja2>=3.1.6"  # CVE-2025-27516
+
+    # Transitive HTTP stack floored in every lane that pulls it.
+    for extra in ("standard", "all"):
+        deps = _dep_names(extras[extra])
+        assert deps["requests"] == "requests>=2.33.0"  # CVE-2026-25645
+        assert deps["urllib3"] == "urllib3>=2.6.3"  # CVE-2026-21441
 
 
 def test_optional_dependency_security_floor_pins():
@@ -125,10 +152,10 @@ def test_optional_dependency_security_floor_pins():
 
     for extra in ("ai", "all"):
         deps = _dep_names(extras[extra])
-        assert deps["onnxruntime"] == "onnxruntime>=1.25,<2"
+        assert deps["onnxruntime"] == "onnxruntime>=1.26,<2"
 
     deps = _dep_names(extras["ai-gpu"])
-    assert deps["onnxruntime-gpu"] == "onnxruntime-gpu>=1.25,<2"
+    assert deps["onnxruntime-gpu"] == "onnxruntime-gpu>=1.26,<2"
 
     torch_stack = _dep_names(extras["torch-stack"])
     assert torch_stack["torch"] == "torch>=2.6"

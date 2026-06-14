@@ -40,6 +40,14 @@ dependencies = [
     "waitress>=3.0.1,<4",
     "python-json-logger>=2.0,<3",
     "psutil>=5.9",
+    # RA-23 — Werkzeug/Jinja2 ship transitively with flask and are always
+    # present. Pin the resolver floor to the same security level the lockfile
+    # already holds so `pip install opencut` (no lock) cannot pull the
+    # vulnerable releases: Werkzeug CVE-2026-21860 / CVE-2025-66221
+    # (safe_join Windows device-name DoS, fixed 3.1.5) and Jinja2
+    # CVE-2025-27516 (sandbox breakout, fixed 3.1.6).
+    "Werkzeug>=3.1.5",
+    "Jinja2>=3.1.6",
 ]
 
 [project.optional-dependencies]
@@ -55,6 +63,12 @@ standard = [
     # downstream plugin needs pydub.
     "noisereduce>=3.0,<4",
     "scenedetect[opencv]>=0.6,<1",
+    # RA-23 — requests/urllib3 enter transitively via faster-whisper's
+    # huggingface-hub fetch path. Floor them to the lockfile security level so
+    # this lane cannot resolve urllib3<2.6.3 (CVE-2026-21441 decompression-bomb
+    # DoS) or requests<2.33.0 (CVE-2026-25645).
+    "requests>=2.33.0",
+    "urllib3>=2.6.3",
 ]
 captions = [
     "faster-whisper>=1.1,<2",
@@ -173,6 +187,11 @@ all = [
     "auto-editor>=29.3,<30",
     "opentimelineio>=0.17,<1",
     "otio-aaf-adapter>=2.0,<3",
+    # RA-23 — floor the transitive web stack in the release-audited [all] lane
+    # so a clean resolver (no requirements-lock.txt) cannot select vulnerable
+    # urllib3/requests releases. Werkzeug/Jinja2 floors come from core deps.
+    "requests>=2.33.0",
+    "urllib3>=2.6.3",
 ]
 dev = [
     "pytest>=7.0,<10",
