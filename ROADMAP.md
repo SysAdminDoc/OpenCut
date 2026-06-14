@@ -33,12 +33,6 @@ history, not here.
   Complexity: S
 
 
-- [ ] P2 — Multicam: add visual speech cues (lip movement, shot type) to cut decisions
-  Why: DaVinci Resolve 20 Multicam SmartSwitch and Phantom Wraith combine audio with lip-movement and wide/close shot detection; opencut/core/multicam.py is diarization-only and mis-cuts on cross-mic bleed; multimodal diarization (face+voice mapping) already exists as building blocks.
-  Evidence: cined.com Resolve 20 release coverage; phantomeditor.video Wraith; opencut/core/multicam.py (no visual input)
-  Touches: opencut/core/multicam.py, multimodal diarization modules, /video/multicam-cuts route, panel Timeline tab
-  Acceptance: multicam cut generation offers an "audio+visual" mode that prefers the on-camera active speaker on a test clip with audio bleed.
-  Complexity: L
 
 - [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
   Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.

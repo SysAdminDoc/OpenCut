@@ -36,6 +36,18 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Added — Multicam visual speech cues (audio+visual mode)
+
+- Added `core/multicam_visual.py` with MediaPipe Face Mesh lip movement
+  scoring and shot type classification (wide/medium/close by face-to-frame
+  ratio) for multicam cut refinement.
+- `/video/multicam-cuts` now accepts `mode: "audio+visual"` to combine
+  diarization with visual lip movement analysis. Cross-mic bleed is
+  resolved by checking which on-camera face is actually speaking.
+- Each cut in visual mode gains `visual_confidence`, `shot_type`, and
+  optional `visual_override` annotations.
+- Added `check_visual_multicam_available()` to `checks.py`.
+
 ### Added — SAM 3 text-prompted object removal engine
 
 - Added `core/segment_sam3.py` with text-prompted object segmentation and
