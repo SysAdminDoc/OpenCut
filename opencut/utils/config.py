@@ -64,6 +64,9 @@ class DiarizeConfig:
     min_segment_duration: float = 1.0
     # HuggingFace auth token for pyannote models
     hf_token: Optional[str] = None
+    # Diarization pipeline. Defaults to the CC-BY-4.0 community-1 model (lower
+    # DER, "always freely accessible"); falls back to legacy 3.1 on load failure.
+    model: str = "pyannote/speaker-diarization-community-1"
 
 
 @dataclass

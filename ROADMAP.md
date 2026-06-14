@@ -98,10 +98,4 @@ history, not here.
   Complexity: M
 
 
-- [ ] P3 — Upgrade speaker diarization default to pyannote community-1 (evaluate Sortformer)
-  Why: OpenCut diarizes via pyannote.audio; pyannote/speaker-diarization-community-1 (CC-BY-4.0, "always freely accessible") is the new default with lower DER, and NVIDIA Sortformer reportedly more than halves DER vs the legacy pipeline — a low-risk accuracy bump for podcast/multicam workflows.
-  Evidence: huggingface.co/pyannote/speaker-diarization-community-1 (CC-BY-4.0); emergentmind.com Sortformer; OpenCut pyannote diarization (README Captions & Transcription)
-  Touches: diarization module(s), engine_registry.py (diarization domain), checks.py, model_manager.py, diarization availability test
-  Acceptance: community-1 is the default diarization pipeline (legacy retained as fallback) with availability check and test; Sortformer evaluated and added as an optional engine if licence/availability permit.
-  Complexity: S
 

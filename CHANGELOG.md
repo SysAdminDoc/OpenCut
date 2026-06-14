@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Default speaker diarization upgraded to pyannote community-1
+
+- `diarize()` now defaults to `pyannote/speaker-diarization-community-1`
+  (CC-BY-4.0, "always freely accessible", lower DER) and automatically falls
+  back to legacy `speaker-diarization-3.1` when the community model can't be
+  loaded (terms not accepted, offline cache miss). The model is configurable via
+  `DiarizeConfig.model`.
+- New `diarization` engine-registry domain: `pyannote_community1` (default,
+  priority 80) > `pyannote_legacy` (60, fallback) > `sortformer` (50, optional,
+  NVIDIA NeMo-gated). Added `check_diarization_available()` /
+  `check_sortformer_available()`, a `pyannote-community-1` model entry, and
+  `tests/test_diarization_engines.py`.
+
 ### Added — Normalized 0–100 virality score on highlights/clips
 
 - `EngagementScore.compute_virality()` maps the existing engagement dimensions

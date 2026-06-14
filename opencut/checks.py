@@ -131,6 +131,29 @@ def check_latentsync_available() -> bool:
         return False
 
 
+def check_diarization_available() -> bool:
+    """Check if the pyannote diarization stack (community-1 / legacy) is installed.
+
+    Re-exports the diarize module's pyannote check so the engine registry and
+    routes share one import. Never raises.
+    """
+    try:
+        from opencut.core.diarize import check_pyannote_available
+
+        return bool(check_pyannote_available())
+    except Exception:
+        return False
+
+
+def check_sortformer_available() -> bool:
+    """Check if NVIDIA Sortformer (NeMo) diarization is available.
+
+    Sortformer ships in NVIDIA NeMo; availability mirrors the NeMo install.
+    Kept as an optional/opt-in diarization engine. Never raises.
+    """
+    return _try_import("nemo") is not None or _try_import("nemo_toolkit") is not None
+
+
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None

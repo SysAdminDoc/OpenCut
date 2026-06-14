@@ -97,6 +97,12 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "description": "LatentSync-1.6 -- audio-conditioned diffusion lip-sync (code Apache-2.0; checkpoint licence opt-in)",
         "category": "lip_sync",
     },
+    "pyannote-community-1": {
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/main/config.yaml",
+        "size_mb": 90,
+        "description": "pyannote speaker-diarization-community-1 -- default diarization pipeline (CC-BY-4.0)",
+        "category": "diarization",
+    },
 }
 
 

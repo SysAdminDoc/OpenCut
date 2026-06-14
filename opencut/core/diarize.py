@@ -5,6 +5,7 @@ Uses pyannote.audio to detect who is speaking when, enabling automatic
 camera switching for multi-speaker content.
 """
 
+import logging
 import os
 import tempfile
 from dataclasses import dataclass, field
@@ -13,6 +14,8 @@ from typing import Dict, List, Optional
 from ..utils.config import DiarizeConfig
 from .audio import extract_audio_wav
 from .silence import TimeSegment
+
+logger = logging.getLogger("opencut")
 
 
 @dataclass
@@ -116,6 +119,13 @@ class DiarizationResult:
         return merged
 
 
+# Default diarization pipeline: CC-BY-4.0 community-1 (lower DER, "always freely
+# accessible"). Legacy 3.1 is retained as an automatic fallback when the
+# community model cannot be loaded (e.g. terms not yet accepted on HF).
+DEFAULT_DIARIZATION_MODEL = "pyannote/speaker-diarization-community-1"
+LEGACY_DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
+
+
 def check_pyannote_available() -> bool:
     """Check if pyannote.audio is installed."""
     try:
@@ -167,11 +177,27 @@ def diarize(
             "Set HUGGINGFACE_TOKEN env var or pass --hf-token."
         )
 
-    # Load pipeline
-    pipeline = Pipeline.from_pretrained(
-        "pyannote/speaker-diarization-3.1",
-        token=hf_token,
-    )
+    # Load pipeline: prefer the configured/community model, fall back to legacy
+    # 3.1 if it cannot be loaded (terms not accepted, offline cache miss, etc.).
+    requested_model = getattr(config, "model", None) or DEFAULT_DIARIZATION_MODEL
+    pipeline = None
+    for candidate in (requested_model, LEGACY_DIARIZATION_MODEL):
+        try:
+            pipeline = Pipeline.from_pretrained(candidate, token=hf_token)
+            if candidate != requested_model:
+                logger.warning(
+                    "Diarization model %s unavailable; fell back to %s",
+                    requested_model, candidate,
+                )
+            break
+        except Exception as exc:
+            logger.warning("Could not load diarization model %s: %s", candidate, exc)
+    if pipeline is None:
+        raise RuntimeError(
+            f"Could not load any diarization pipeline ({requested_model} or "
+            f"{LEGACY_DIARIZATION_MODEL}). Accept the model terms on HuggingFace "
+            "and verify your token."
+        )
 
     # Use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
