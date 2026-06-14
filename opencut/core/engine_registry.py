@@ -239,6 +239,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_demucs_available,
         check_depth_available,
         check_edge_tts_available,
+        check_latentsync_available,
         check_nemo_asr_available,
         check_rembg_available,
         check_rvm_available,
@@ -467,6 +468,34 @@ def _register_builtin_engines(reg: EngineRegistry):
         vram_mb=1500,
         speed_rating="slow",
         quality_rating="high",
+    ))
+
+    # --- Lip Sync ---
+    # Heuristic MediaPipe jaw-overlay is the always-available default; LatentSync
+    # is a higher-quality diffusion engine kept OPT-IN (lower priority, so it is
+    # never auto-selected) until its checkpoint licence is confirmed.
+    reg.register(EngineInfo(
+        name="mediapipe_jaw",
+        domain="lip_sync",
+        display_name="Heuristic (MediaPipe jaw)",
+        description="Audio-driven jaw/mouth overlay; no model download, graceful fallback",
+        check_fn=lambda: True,
+        priority=50,
+        vram_mb=0,
+        speed_rating="fast",
+        quality_rating="low",
+    ))
+    reg.register(EngineInfo(
+        name="latentsync",
+        domain="lip_sync",
+        display_name="LatentSync (diffusion)",
+        description="Audio-conditioned latent-diffusion lip-sync (opt-in: code Apache-2.0, checkpoint licence unconfirmed). Falls back to heuristic when unavailable.",
+        check_fn=check_latentsync_available,
+        priority=40,  # below heuristic so it is never auto-selected (opt-in only)
+        vram_mb=6000,
+        speed_rating="slow",
+        quality_rating="high",
+        tags=["diffusion", "opt-in", "dubbing"],
     ))
 
     # --- Object Removal ---

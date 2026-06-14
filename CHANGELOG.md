@@ -5,6 +5,23 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — LatentSync lip-sync as the dub pipeline's opt-in final stage
+
+- Wired a new `lipsync_latentsync` engine into a new `lip_sync` engine-registry
+  domain. The dub pipeline (transcribe→translate→voice-clone→render) can now
+  re-animate the speaker's mouth to the new audio — the visual lip-sync stage
+  Rask/HeyGen/sync.so paywall — via `DubConfig.lip_sync_backend="latentsync"` and
+  `POST /ai/lip-sync` (`backend` param).
+- **Opt-in by design** (RESEARCH Open Question 3): LatentSync's *code* is
+  Apache-2.0 but its *checkpoint* licence is unconfirmed, so the engine is
+  registered below the always-available heuristic and is never auto-selected.
+  The dub stage degrades gracefully: LatentSync → heuristic jaw-overlay →
+  audio-only dub, so it never hard-fails.
+- Added `check_latentsync_available()`, a `latentsync-1.6` model-download entry,
+  and `tests/test_lipsync_engines.py` (registry, opt-in ordering, availability
+  gating, license hygiene, dub-config plumbing). Full diffusion forward activates
+  once local weights are present.
+
 ### Added — SeedVR2 upscaling engine (Apache-2.0, one-step diffusion)
 
 - Wired the previously-dark `upscale_seedvr2` stub into the upscaling engine

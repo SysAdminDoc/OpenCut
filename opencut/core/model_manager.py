@@ -91,6 +91,12 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "description": "SeedVR2-3B -- one-step diffusion video super-resolution (Apache-2.0)",
         "category": "upscaling",
     },
+    "latentsync-1.6": {
+        "url": "https://huggingface.co/ByteDance/LatentSync-1.6/resolve/main/latentsync_unet.pt",
+        "size_mb": 5200,
+        "description": "LatentSync-1.6 -- audio-conditioned diffusion lip-sync (code Apache-2.0; checkpoint licence opt-in)",
+        "category": "lip_sync",
+    },
 }
 
 
