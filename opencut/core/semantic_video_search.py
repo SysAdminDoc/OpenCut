@@ -39,8 +39,44 @@ logger = logging.getLogger("opencut")
 # How many key frames to extract per clip for indexing
 FRAMES_PER_CLIP = 12
 
-# CLIP model identifier
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
+# Default engine — legacy CLIP ViT-B/32
+DEFAULT_ENGINE = "clip-vit-b32"
+
+# Engine registry — maps engine IDs to HuggingFace model configs.
+# Schema version is bumped when embedding format changes (breaking cache).
+SEARCH_ENGINES = {
+    "clip-vit-b32": {
+        "label": "CLIP ViT-B/32 (OpenAI)",
+        "model_name": "openai/clip-vit-base-patch32",
+        "family": "clip",
+        "embed_dim": 512,
+        "schema_version": 1,
+    },
+    "clip-vit-l14": {
+        "label": "CLIP ViT-L/14 (OpenAI)",
+        "model_name": "openai/clip-vit-large-patch14",
+        "family": "clip",
+        "embed_dim": 768,
+        "schema_version": 1,
+    },
+    "siglip-base": {
+        "label": "SigLIP ViT-B/16 (Google)",
+        "model_name": "google/siglip-base-patch16-224",
+        "family": "siglip",
+        "embed_dim": 768,
+        "schema_version": 1,
+    },
+    "siglip2-base": {
+        "label": "SigLIP 2 ViT-B/16 (Google)",
+        "model_name": "google/siglip2-base-patch16-224",
+        "family": "siglip",
+        "embed_dim": 768,
+        "schema_version": 1,
+    },
+}
+
+# Backward compat alias
+CLIP_MODEL_NAME = SEARCH_ENGINES[DEFAULT_ENGINE]["model_name"]
 
 # Cache directory
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "clip_cache")
@@ -123,15 +159,18 @@ def _clip_file_hash(filepath: str) -> str:
         return hashlib.sha256(filepath.encode()).hexdigest()[:24]
 
 
-def _cache_path(clip_hash: str) -> str:
-    """Return the cache file path for a clip hash."""
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    return os.path.join(CACHE_DIR, f"clip_{clip_hash}.npz")
+def _cache_path(clip_hash: str, engine: str = DEFAULT_ENGINE) -> str:
+    """Return the cache file path for a clip hash, scoped by engine."""
+    eng = SEARCH_ENGINES.get(engine, SEARCH_ENGINES[DEFAULT_ENGINE])
+    schema_v = eng.get("schema_version", 1)
+    engine_dir = os.path.join(CACHE_DIR, f"{engine}_v{schema_v}")
+    os.makedirs(engine_dir, exist_ok=True)
+    return os.path.join(engine_dir, f"clip_{clip_hash}.npz")
 
 
-def _load_cached_embeddings(clip_hash: str) -> Optional[Dict]:
+def _load_cached_embeddings(clip_hash: str, engine: str = DEFAULT_ENGINE) -> Optional[Dict]:
     """Load cached embeddings for a clip. Returns None if not cached."""
-    path = _cache_path(clip_hash)
+    path = _cache_path(clip_hash, engine)
     if not os.path.isfile(path):
         return None
     try:
@@ -146,9 +185,9 @@ def _load_cached_embeddings(clip_hash: str) -> Optional[Dict]:
         return None
 
 
-def _save_cached_embeddings(clip_hash: str, data: Dict):
+def _save_cached_embeddings(clip_hash: str, data: Dict, engine: str = DEFAULT_ENGINE):
     """Save embeddings to cache."""
-    path = _cache_path(clip_hash)
+    path = _cache_path(clip_hash, engine)
     try:
         import numpy as np
 
@@ -238,8 +277,8 @@ def _extract_key_frames(
 # ---------------------------------------------------------------------------
 # CLIP embedding computation
 # ---------------------------------------------------------------------------
-def _load_clip_model(on_progress: Optional[Callable] = None):
-    """Lazy-load CLIP model. Returns (model, processor, torch)."""
+def _load_clip_model(engine: str = DEFAULT_ENGINE, on_progress: Optional[Callable] = None):
+    """Lazy-load a visual-language model. Returns (model, processor, torch, engine_cfg)."""
     if not ensure_package("transformers", "transformers", on_progress):
         raise RuntimeError("transformers required for semantic search")
     if not ensure_package("torch", "torch", on_progress):
@@ -247,14 +286,25 @@ def _load_clip_model(on_progress: Optional[Callable] = None):
     if not ensure_package("PIL", "Pillow", on_progress):
         raise RuntimeError("Pillow required")
 
-    import torch
-    from transformers import CLIPModel, CLIPProcessor
+    eng = SEARCH_ENGINES.get(engine, SEARCH_ENGINES[DEFAULT_ENGINE])
+    model_name = eng["model_name"]
+    family = eng.get("family", "clip")
 
-    logger.info("Loading CLIP model: %s", CLIP_MODEL_NAME)
-    processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
-    model = CLIPModel.from_pretrained(CLIP_MODEL_NAME)
+    import torch
+
+    if family == "siglip":
+        from transformers import AutoModel, AutoProcessor
+        logger.info("Loading SigLIP model: %s", model_name)
+        processor = AutoProcessor.from_pretrained(model_name)
+        model = AutoModel.from_pretrained(model_name)
+    else:
+        from transformers import CLIPModel, CLIPProcessor
+        logger.info("Loading CLIP model: %s", model_name)
+        processor = CLIPProcessor.from_pretrained(model_name)
+        model = CLIPModel.from_pretrained(model_name)
+
     model.eval()
-    return model, processor, torch
+    return model, processor, torch, eng
 
 
 def _compute_frame_embeddings(
@@ -262,16 +312,19 @@ def _compute_frame_embeddings(
     model,
     processor,
     torch_mod,
+    engine_cfg: Optional[Dict] = None,
     batch_size: int = 16,
     on_progress: Optional[Callable] = None,
 ) -> "numpy.ndarray":  # noqa: F821
-    """Compute CLIP image embeddings for a list of frames.
+    """Compute image embeddings for a list of frames.
 
     Returns a numpy array of shape (N, embed_dim).
     """
     import numpy as np
     from PIL import Image
 
+    embed_dim = (engine_cfg or {}).get("embed_dim", 512)
+    family = (engine_cfg or {}).get("family", "clip")
     all_embeds = []
     total = len(frame_paths)
 
@@ -284,12 +337,14 @@ def _compute_frame_embeddings(
                 images.append(img)
             except Exception as e:
                 logger.warning("Failed to open frame %s: %s", fp, e)
-                # Use a blank image as placeholder
                 images.append(Image.new("RGB", (THUMB_WIDTH, THUMB_HEIGHT), (0, 0, 0)))
 
         inputs = processor(images=images, return_tensors="pt", padding=True)
         with torch_mod.no_grad():
-            embeds = model.get_image_features(**inputs)
+            if family == "siglip":
+                embeds = model.get_image_features(**inputs)
+            else:
+                embeds = model.get_image_features(**inputs)
             embeds = embeds / embeds.norm(dim=-1, keepdim=True)
             all_embeds.append(embeds.cpu().numpy())
 
@@ -297,13 +352,14 @@ def _compute_frame_embeddings(
             done = min(bi + batch_size, total)
             on_progress(0, f"Embedding frames: {done}/{total}")
 
-    return np.concatenate(all_embeds, axis=0) if all_embeds else np.zeros((0, 512))
+    return np.concatenate(all_embeds, axis=0) if all_embeds else np.zeros((0, embed_dim))
 
 
 def _compute_text_embedding(
     query: str, model, processor, torch_mod,
+    engine_cfg: Optional[Dict] = None,
 ) -> "numpy.ndarray":  # noqa: F821
-    """Compute CLIP text embedding for a query string.
+    """Compute text embedding for a query string.
 
     Uses multiple prompt templates for robustness.
     """
@@ -319,7 +375,6 @@ def _compute_text_embedding(
     with torch_mod.no_grad():
         embeds = model.get_text_features(**inputs)
         embeds = embeds / embeds.norm(dim=-1, keepdim=True)
-        # Average across prompt variants
         avg = embeds.mean(dim=0, keepdim=True)
         avg = avg / avg.norm(dim=-1, keepdim=True)
 
@@ -347,38 +402,59 @@ def _compute_image_embedding(
 # ---------------------------------------------------------------------------
 # Index building
 # ---------------------------------------------------------------------------
+def list_search_engines() -> List[Dict]:
+    """Return the list of available search engines with their metadata."""
+    engines = []
+    for eid, cfg in SEARCH_ENGINES.items():
+        engines.append({
+            "id": eid,
+            "label": cfg["label"],
+            "model_name": cfg["model_name"],
+            "family": cfg.get("family", "clip"),
+            "embed_dim": cfg.get("embed_dim", 512),
+            "schema_version": cfg.get("schema_version", 1),
+            "default": eid == DEFAULT_ENGINE,
+        })
+    return engines
+
+
 def build_clip_index(
     clip_paths: List[str],
     frames_per_clip: int = FRAMES_PER_CLIP,
     force_rebuild: bool = False,
+    engine: str = DEFAULT_ENGINE,
     on_progress: Optional[Callable] = None,
 ) -> dict:
-    """Build or update a CLIP embedding index for a set of video clips.
+    """Build or update a visual embedding index for a set of video clips.
 
-    Results are cached per-clip based on file hash. Re-indexes only clips
-    that have changed.
+    Results are cached per-clip and per-engine based on file hash. Re-indexes
+    only clips that have changed or that lack cache for the requested engine.
 
     Args:
         clip_paths: List of video file paths.
         frames_per_clip: Number of key frames per clip.
         force_rebuild: Force re-index even if cache exists.
+        engine: Search engine ID from SEARCH_ENGINES registry.
         on_progress: Progress callback(pct, msg).
 
     Returns:
-        Dict with clip_count, total_frames, cached_count, rebuilt_count.
+        Dict with clip_count, total_frames, cached_count, rebuilt_count, engine.
     """
+    if engine not in SEARCH_ENGINES:
+        engine = DEFAULT_ENGINE
+
     if not clip_paths:
         raise ValueError("No clip paths provided for indexing")
 
-    # Validate paths
     valid_paths = [p for p in clip_paths if os.path.isfile(p)]
     if not valid_paths:
         raise FileNotFoundError("None of the provided clip paths exist")
 
     if on_progress:
-        on_progress(5, f"Indexing {len(valid_paths)} clips...")
+        eng_label = SEARCH_ENGINES[engine]["label"]
+        on_progress(5, f"Indexing {len(valid_paths)} clips with {eng_label}...")
 
-    model, processor, torch_mod = _load_clip_model(on_progress)
+    model, processor, torch_mod, engine_cfg = _load_clip_model(engine, on_progress)
 
     cached_count = 0
     rebuilt_count = 0
@@ -387,9 +463,8 @@ def build_clip_index(
     for ci, clip_path in enumerate(valid_paths):
         clip_hash = _clip_file_hash(clip_path)
 
-        # Check cache
         if not force_rebuild:
-            cached = _load_cached_embeddings(clip_hash)
+            cached = _load_cached_embeddings(clip_hash, engine)
             if cached is not None:
                 cached_count += 1
                 total_frames += cached.get("frame_count", 0)
@@ -398,7 +473,6 @@ def build_clip_index(
                     on_progress(pct, f"Clip {ci+1}/{len(valid_paths)} (cached)")
                 continue
 
-        # Extract key frames
         work_dir = tempfile.mkdtemp(prefix=f"clipidx_{ci}_")
         frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
 
@@ -406,7 +480,6 @@ def build_clip_index(
             logger.warning("No frames extracted from %s", clip_path)
             continue
 
-        # Compute embeddings
         def _emb_progress(pct_inner, msg=""):
             if on_progress:
                 base = 5 + int(90 * ci / len(valid_paths))
@@ -414,12 +487,12 @@ def build_clip_index(
 
         embeddings = _compute_frame_embeddings(
             frames, model, processor, torch_mod,
+            engine_cfg=engine_cfg,
             on_progress=_emb_progress,
         )
 
         info = get_video_info(clip_path)
 
-        # Save to cache
         cache_data = {
             "clip_path": os.path.abspath(clip_path),
             "clip_hash": clip_hash,
@@ -429,8 +502,9 @@ def build_clip_index(
             "timestamps": timestamps,
             "frame_paths": frames,
             "embeddings": embeddings,
+            "engine": engine,
         }
-        _save_cached_embeddings(clip_hash, cache_data)
+        _save_cached_embeddings(clip_hash, cache_data, engine)
 
         rebuilt_count += 1
         total_frames += len(frames)
@@ -447,6 +521,7 @@ def build_clip_index(
         "total_frames": total_frames,
         "cached_count": cached_count,
         "rebuilt_count": rebuilt_count,
+        "engine": engine,
     }
 
 
@@ -460,6 +535,7 @@ def semantic_search(
     max_results: int = DEFAULT_MAX_RESULTS,
     min_score: float = MIN_SIMILARITY,
     auto_index: bool = True,
+    engine: str = DEFAULT_ENGINE,
     on_progress: Optional[Callable] = None,
 ) -> dict:
     """Search video clips by text query or image similarity.
@@ -473,11 +549,15 @@ def semantic_search(
         max_results: Maximum results to return.
         min_score: Minimum similarity score threshold.
         auto_index: Auto-build index if missing.
+        engine: Search engine ID from SEARCH_ENGINES registry.
         on_progress: Progress callback(pct, msg).
 
     Returns:
         SemanticSearchResult as dict.
     """
+    if engine not in SEARCH_ENGINES:
+        engine = DEFAULT_ENGINE
+
     if not query and not query_image:
         raise ValueError("Must provide either query text or query_image")
 
@@ -492,39 +572,38 @@ def semantic_search(
     query_type = "text" if query else "image"
 
     if on_progress:
-        on_progress(5, f"Semantic search ({query_type}): {query or os.path.basename(query_image)}")
+        eng_label = SEARCH_ENGINES[engine]["label"]
+        on_progress(5, f"Semantic search ({query_type}, {eng_label}): {query or os.path.basename(query_image)}")
 
-    # Load model
-    model, processor, torch_mod = _load_clip_model(on_progress)
+    model, processor, torch_mod, engine_cfg = _load_clip_model(engine, on_progress)
 
-    # Compute query embedding
     if on_progress:
         on_progress(10, "Computing query embedding...")
 
     if query:
-        query_embed = _compute_text_embedding(query, model, processor, torch_mod)
+        query_embed = _compute_text_embedding(query, model, processor, torch_mod, engine_cfg)
     else:
         query_embed = _compute_image_embedding(query_image, model, processor, torch_mod)
 
-    # Gather clip embeddings (from cache or compute)
     all_results = []
     total_frames_searched = 0
     any_cached = False
 
     for ci, clip_path in enumerate(valid_paths):
         clip_hash = _clip_file_hash(clip_path)
-        cached = _load_cached_embeddings(clip_hash)
+        cached = _load_cached_embeddings(clip_hash, engine)
 
         if cached is None:
             if auto_index:
-                # Index this clip on the fly
                 if on_progress:
                     on_progress(15, f"Indexing {os.path.basename(clip_path)}...")
                 work_dir = tempfile.mkdtemp(prefix=f"search_idx_{ci}_")
                 frames, timestamps = _extract_key_frames(clip_path, work_dir)
                 if not frames:
                     continue
-                embeddings = _compute_frame_embeddings(frames, model, processor, torch_mod)
+                embeddings = _compute_frame_embeddings(
+                    frames, model, processor, torch_mod, engine_cfg=engine_cfg,
+                )
                 info = get_video_info(clip_path)
                 cached = {
                     "clip_path": os.path.abspath(clip_path),
@@ -535,8 +614,9 @@ def semantic_search(
                     "timestamps": timestamps,
                     "frame_paths": frames,
                     "embeddings": embeddings,
+                    "engine": engine,
                 }
-                _save_cached_embeddings(clip_hash, cached)
+                _save_cached_embeddings(clip_hash, cached, engine)
             else:
                 logger.warning("Clip not indexed and auto_index=False: %s", clip_path)
                 continue

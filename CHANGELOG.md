@@ -36,6 +36,21 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Added — Versioned visual-search engine registry
+
+- Added `SEARCH_ENGINES` registry to `semantic_video_search.py` with 4
+  engines: CLIP ViT-B/32 (default), CLIP ViT-L/14, SigLIP ViT-B/16,
+  and SigLIP 2 ViT-B/16.
+- Cache keys now include engine ID and schema version — different models
+  use separate cache directories, preventing embedding dimension mismatches.
+- `build_clip_index()` and `semantic_search()` accept an `engine` parameter.
+- Model loading supports both CLIP (CLIPModel/CLIPProcessor) and SigLIP
+  (AutoModel/AutoProcessor) families.
+- Added `list_search_engines()` function and `GET /search/semantic/engines`
+  route for UI engine discovery.
+- Routes `/search/semantic` and `/search/semantic/index` now accept `engine`
+  parameter to select among registered models.
+
 ### Added — Multicam visual speech cues (audio+visual mode)
 
 - Added `core/multicam_visual.py` with MediaPipe Face Mesh lip movement

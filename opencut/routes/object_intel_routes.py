@@ -391,6 +391,7 @@ def semantic_search_route(job_id, filepath, data):
     max_results = safe_int(data.get("max_results"), 20, 1, 200)
     min_score = safe_float(data.get("min_score"), 0.15, 0.0, 1.0)
     auto_index = safe_bool(data.get("auto_index"), True)
+    engine = (data.get("engine") or "clip-vit-b32").strip()
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -402,10 +403,21 @@ def semantic_search_route(job_id, filepath, data):
         max_results=max_results,
         min_score=min_score,
         auto_index=auto_index,
+        engine=engine,
         on_progress=_progress,
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET /search/semantic/engines
+# ---------------------------------------------------------------------------
+@object_intel_bp.route("/search/semantic/engines", methods=["GET"])
+def semantic_engines():
+    """List available visual search engines."""
+    from opencut.core.semantic_video_search import list_search_engines
+    return jsonify({"engines": list_search_engines()})
 
 
 # ---------------------------------------------------------------------------
@@ -415,7 +427,7 @@ def semantic_search_route(job_id, filepath, data):
 @require_csrf
 @async_job("semantic_index", filepath_required=False)
 def semantic_index_route(job_id, filepath, data):
-    """Pre-build a CLIP embedding index for a set of clips."""
+    """Pre-build a visual embedding index for a set of clips."""
     from opencut.core.semantic_video_search import build_clip_index
 
     clip_paths = data.get("clip_paths", [])
@@ -432,6 +444,7 @@ def semantic_index_route(job_id, filepath, data):
 
     frames_per_clip = safe_int(data.get("frames_per_clip"), 12, 1, 100)
     force_rebuild = safe_bool(data.get("force_rebuild"), False)
+    engine = (data.get("engine") or "clip-vit-b32").strip()
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -440,6 +453,7 @@ def semantic_index_route(job_id, filepath, data):
         clip_paths=validated_paths,
         frames_per_clip=frames_per_clip,
         force_rebuild=force_rebuild,
+        engine=engine,
         on_progress=_progress,
     )
 
