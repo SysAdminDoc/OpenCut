@@ -154,6 +154,20 @@ def check_sortformer_available() -> bool:
     return _try_import("nemo") is not None or _try_import("nemo_toolkit") is not None
 
 
+def check_iclight_available() -> bool:
+    """Check if the IC-Light v1 (Apache-2.0) relight diffusion stack is installed.
+
+    Re-exports the core module's own check so routes and the engine registry
+    share one import. Never raises.
+    """
+    try:
+        from opencut.core.relight_iclight import check_iclight_available as _c
+
+        return bool(_c())
+    except Exception:
+        return False
+
+
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None

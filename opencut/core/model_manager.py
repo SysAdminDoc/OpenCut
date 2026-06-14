@@ -103,6 +103,12 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "description": "pyannote speaker-diarization-community-1 -- default diarization pipeline (CC-BY-4.0)",
         "category": "diarization",
     },
+    "ic-light-v1": {
+        "url": "https://huggingface.co/lllyasviel/ic-light/resolve/main/iclight_sd15_fc.safetensors",
+        "size_mb": 1700,
+        "description": "IC-Light v1 FC -- text-conditioned per-frame relight (Apache-2.0)",
+        "category": "relight",
+    },
 }
 
 
