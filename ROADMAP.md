@@ -32,12 +32,6 @@ history, not here.
   Acceptance: bundled ffmpeg -version reports 8.1.x.
   Complexity: S
 
-- [ ] P2 — Add SAM 3 engine for text-prompted object removal and tracking
-  Why: SAM 3 (Meta, 2025-11-19, commercial-permissive SAM License) segments and tracks by concept text prompt — removes the click-and-track friction of the SAM2+ProPainter pipeline and enables "remove every watermark/logo instance" workflows; Premiere 26's native Object Mask raises user expectations here.
-  Evidence: blog.roboflow.com/what-is-sam3; marktechpost SAM 3 release post; no sam3 references in opencut/core/
-  Touches: opencut/core/ (new sam3 module beside the SAM2 object-removal module), engine registry, opencut/routes/video_specialty.py, panel Video tab
-  Acceptance: object-removal accepts a text prompt when engine=sam3; registry lists sam3 with auto-fallback to sam2; model manager can download/delete the checkpoint.
-  Complexity: L
 
 - [ ] P2 — Multicam: add visual speech cues (lip movement, shot type) to cut decisions
   Why: DaVinci Resolve 20 Multicam SmartSwitch and Phantom Wraith combine audio with lip-movement and wide/close shot detection; opencut/core/multicam.py is diarization-only and mis-cuts on cross-mic bleed; multimodal diarization (face+voice mapping) already exists as building blocks.

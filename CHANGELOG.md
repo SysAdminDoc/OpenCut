@@ -36,6 +36,19 @@ record also lives in the git commit messages.
 - Wired D3D12VA and Vulkan into `/hw/encode` route validation and all HW
   export preset descriptions. Installer version strings updated for FFmpeg 8.1.
 
+### Added — SAM 3 text-prompted object removal engine
+
+- Added `core/segment_sam3.py` with text-prompted object segmentation and
+  tracking via SAM 3, plus `segment_video_auto()` with auto-fallback to
+  CLIP+SAM2 when SAM3 is not installed.
+- Added `POST /video/object-remove/sam3` route accepting text queries
+  (e.g., "the watermark in the corner") with SAM2 fallback.
+- Added `GET /video/object-remove/engines` listing available segmentation
+  backends with capability flags (text_prompts, click_prompts, box_prompts).
+- Updated `get_removal_capabilities()` to include `sam3` availability.
+- Added `check_sam3_available()` to `checks.py`.
+- Added `/video/object-remove/sam3` to queue allowlist.
+
 ### Changed — Premiere 26 positioning audit
 
 - Updated README tagline to lead with silence-cut-to-timeline, stem separation,

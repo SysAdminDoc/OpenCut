@@ -359,6 +359,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/enhance/auto",
     # Shorts A/B variants (RESEARCH_FEATURE_PLAN_2026-05-25 Q8)
     "/shorts/variants",
+    # SAM 3 text-prompted object removal
+    "/video/object-remove/sam3",
 })
 
 
