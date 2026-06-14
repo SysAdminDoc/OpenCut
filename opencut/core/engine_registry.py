@@ -240,6 +240,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_depth_available,
         check_diarization_available,
         check_edge_tts_available,
+        check_iclight_available,
         check_latentsync_available,
         check_nemo_asr_available,
         check_rembg_available,
@@ -538,6 +539,23 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="medium",
         quality_rating="high",
         tags=["nemo", "optional"],
+    ))
+
+    # --- Relighting ---
+    # IC-Light v1 is Apache-2.0 with real public weights (MIT-distribution-safe).
+    # IC-Light v2 is intentionally not registered (non-commercial, weights
+    # never publicly released).
+    reg.register(EngineInfo(
+        name="iclight",
+        domain="relight",
+        display_name="IC-Light v1",
+        description="Apache-2.0 per-frame relight (text- or background-conditioned). Gated by availability.",
+        check_fn=check_iclight_available,
+        priority=70,
+        vram_mb=4000,
+        speed_rating="slow",
+        quality_rating="high",
+        tags=["diffusion", "apache-2.0"],
     ))
 
     # --- Object Removal ---

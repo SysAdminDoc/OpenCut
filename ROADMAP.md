@@ -90,12 +90,5 @@ history, not here.
 
 ### P3
 
-- [ ] P3 — Re-aim the IC-Light relight stub at v1 (Apache-2.0), not v2
-  Why: relight_iclight.py is titled "IC-Light V2 Per-Frame Relight", but IC-Light v2 is non-commercial and its full weights were never publicly released (HF Space demo only) — un-shippable under MIT. IC-Light v1 is Apache-2.0 and ships real weights, so the stub can become a real engine only by retargeting v1.
-  Evidence: opencut/core/relight_iclight.py:1-4 ("IC-Light V2" stub); github.com/lllyasviel/IC-Light (v1 Apache-2.0); IC-Light/discussions/98 (v2 non-commercial, weights unreleased)
-  Touches: opencut/core/relight_iclight.py, relight_video_lav.py / relight_diffrenderer.py (relight domain), engine_registry.py, checks.py, model_manager.py, relight route/preset
-  Acceptance: IC-Light v1 is a selectable relight engine gated by availability check with a model download entry and registry test; the v2 framing is removed from docstrings/hints.
-  Complexity: M
-
 
 

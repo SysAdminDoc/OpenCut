@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Re-aimed the IC-Light relight engine at v1 (Apache-2.0)
+
+- `relight_iclight.py` was titled "IC-Light V2" but IC-Light v2 is non-commercial
+  and its full weights were never publicly released — un-shippable under MIT.
+  Re-targeted it at **IC-Light v1** (`lllyasviel/IC-Light`, Apache-2.0, real public
+  weights). Removed the v2 framing from docstrings/hints, added `MODEL_ID/NAME/
+  LICENSE`, `check_iclight_available()`, an `ic-light-v1` model entry, and a new
+  `relight` engine-registry domain. The `/video/relight/iclight` route now reports
+  the v1 Apache-2.0 licence. Registry test suite added.
+
 ### Changed — Default speaker diarization upgraded to pyannote community-1
 
 - `diarize()` now defaults to `pyannote/speaker-diarization-community-1`

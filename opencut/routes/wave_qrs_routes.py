@@ -25,7 +25,7 @@ Wave R — Foley + Lip Sync + Camera-controlled I2V + Consumer/HPC T2V
   R3.2  Step-Video T2V       — /generate/stepvideo
 
 Wave S — Relighting, VSR, ASR, VLM, Face Tools
-  S1.1  IC-Light V2 relight  — /video/relight/iclight
+  S1.1  IC-Light v1 relight (Apache-2.0) — /video/relight/iclight
   S1.2  Light-A-Video relight— /video/relight/lav
   S1.3  DiffusionRenderer    — /video/relight/diffrenderer
   S2.1  SeedVR2 VSR          — /video/upscale/seedvr2
@@ -440,15 +440,15 @@ def route_stepvideo_info():
 # Wave S
 # =============================================================
 
-# S1.1 — IC-Light V2 -----------------------------------------
+# S1.1 — IC-Light v1 (Apache-2.0) ----------------------------
 @wave_qrs_bp.route("/video/relight/iclight", methods=["POST"])
 @require_csrf
 @async_job("iclight_relight", filepath_required=True)
 def route_iclight_relight(job_id, filepath, data):
-    """Per-frame relighting via IC-Light V2 (text or background reference)."""
+    """Per-frame relighting via IC-Light v1 (text or background reference)."""
     from opencut.core import relight_iclight
-    if not relight_iclight.check_diffusers_available():
-        raise RuntimeError("diffusers not installed. " + relight_iclight.INSTALL_HINT)
+    if not relight_iclight.check_iclight_available():
+        raise RuntimeError(relight_iclight.INSTALL_HINT)
     result = relight_iclight.relight(
         video_path=filepath,
         mode=str(data.get("mode") or "text"),
@@ -466,9 +466,9 @@ def route_iclight_info():
     try:
         from opencut.core import relight_iclight
         return jsonify({
-            "available": relight_iclight.check_diffusers_available(),
+            "available": relight_iclight.check_iclight_available(),
             "modes": ["text", "background"],
-            "licence": "Apache-2.0 (code); IC-Light weights research-friendly",
+            "licence": "Apache-2.0 (IC-Light v1 code + weights)",
             "install_hint": relight_iclight.INSTALL_HINT,
         })
     except Exception as exc:
