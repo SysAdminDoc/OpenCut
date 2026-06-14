@@ -238,6 +238,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_deepface_available,
         check_demucs_available,
         check_depth_available,
+        check_diarization_available,
         check_edge_tts_available,
         check_latentsync_available,
         check_nemo_asr_available,
@@ -246,6 +247,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_sam2_available,
         check_seedvr2_available,
         check_silero_vad_available,
+        check_sortformer_available,
         check_transnetv2_available,
         check_upscale_available,
     )
@@ -496,6 +498,46 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="slow",
         quality_rating="high",
         tags=["diffusion", "opt-in", "dubbing"],
+    ))
+
+    # --- Speaker Diarization ---
+    # community-1 (CC-BY-4.0, lower DER, always freely accessible) is the default;
+    # legacy 3.1 is retained as the auto-fallback. Sortformer (NVIDIA NeMo) is an
+    # optional engine, available only when NeMo is installed.
+    reg.register(EngineInfo(
+        name="pyannote_community1",
+        domain="diarization",
+        display_name="pyannote community-1",
+        description="pyannote/speaker-diarization-community-1 (CC-BY-4.0, lower DER) — default",
+        check_fn=check_diarization_available,
+        priority=80,
+        vram_mb=2000,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["cc-by-4.0", "default"],
+    ))
+    reg.register(EngineInfo(
+        name="pyannote_legacy",
+        domain="diarization",
+        display_name="pyannote 3.1 (legacy)",
+        description="pyannote/speaker-diarization-3.1 — retained fallback",
+        check_fn=check_diarization_available,
+        priority=60,
+        vram_mb=2000,
+        speed_rating="medium",
+        quality_rating="medium",
+    ))
+    reg.register(EngineInfo(
+        name="sortformer",
+        domain="diarization",
+        display_name="NVIDIA Sortformer (NeMo)",
+        description="NVIDIA Sortformer end-to-end diarization — optional, requires NeMo",
+        check_fn=check_sortformer_available,
+        priority=50,
+        vram_mb=4000,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["nemo", "optional"],
     ))
 
     # --- Object Removal ---
