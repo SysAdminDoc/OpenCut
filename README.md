@@ -5,12 +5,16 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1539-orange)
-![Tests](https://img.shields.io/badge/Tests-10200+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1536-orange)
+![Tests](https://img.shields.io/badge/Tests-10300+-brightgreen)
 
-> Route count is generated from `opencut/_generated/route_manifest.json`; run
+> Route count is generated from `opencut/_generated/route_manifest.json` and
+> reflects **shipped** routes only — each route is tagged
+> `implemented` / `dependency-gated` / `stub`, and strategic 501 stubs are
+> excluded from the advertised count. Run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
-> sync with the live Flask app before bumping the badge.
+> sync with the live Flask app, and `GET /system/route-readiness` for the live
+> shipped count and stub list.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- all running on your own machine with no subscriptions, no usage caps, no cloud upload, and no API keys required for core features.
 
@@ -107,7 +111,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.33.1 includes **1,539 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.33.1 includes **1,536 shipped API routes** (implemented or dependency-gated; 10 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -309,7 +313,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,539 API routes     |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,536 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+

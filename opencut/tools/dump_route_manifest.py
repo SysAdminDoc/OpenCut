@@ -21,6 +21,7 @@ dict orderings, and methods are sorted alphabetically with the standard
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import logging
 from collections import Counter, defaultdict
@@ -31,9 +32,46 @@ from typing import Dict, Iterable, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "opencut" / "_generated" / "route_manifest.json"
-MANIFEST_VERSION = 2
+MANIFEST_VERSION = 3
 
 _STD_METHODS = {"HEAD", "OPTIONS"}
+
+# Route readiness tiers. Only ``stub`` routes are excluded from the advertised
+# (shipped) route count — they return HTTP 501 and have no real implementation.
+# ``dependency-gated`` routes are fully implemented but require an optional
+# dependency to be installed; they ship and are counted.
+READINESS_IMPLEMENTED = "implemented"
+READINESS_DEPENDENCY_GATED = "dependency-gated"
+READINESS_STUB = "stub"
+
+# Source-level markers. 501 ROUTE_STUBBED / _stub_501 are strategic stubs with
+# no implementation; _stub_503 / missing_dependency mark optional-dependency
+# gates on otherwise-real handlers.
+_STUB_MARKERS = ("_stub_501(", "ROUTE_STUBBED")
+_DEPENDENCY_MARKERS = ("_stub_503(", "missing_dependency(", "MISSING_DEPENDENCY")
+
+
+def _classify_readiness(view_func) -> str:
+    """Classify a Flask view function as implemented / dependency-gated / stub.
+
+    Uses static inspection of the (unwrapped) handler source so the manifest
+    can report which advertised routes are real vs. 501 strategic stubs. When
+    the source is unavailable (e.g. generated backend routes), the route is a
+    real implementation, so it defaults to ``implemented``.
+    """
+    if view_func is None:
+        return READINESS_IMPLEMENTED
+    try:
+        target = inspect.unwrap(view_func)
+        source = inspect.getsource(target)
+    except (OSError, TypeError, ValueError):
+        return READINESS_IMPLEMENTED
+
+    if any(marker in source for marker in _STUB_MARKERS):
+        return READINESS_STUB
+    if any(marker in source for marker in _DEPENDENCY_MARKERS):
+        return READINESS_DEPENDENCY_GATED
+    return READINESS_IMPLEMENTED
 
 
 @dataclass
@@ -42,10 +80,12 @@ class RouteEntry:
     methods: List[str]
     endpoint: str
     blueprint: str
+    readiness: str = READINESS_IMPLEMENTED
     workflow: Optional[Dict[str, str]] = None
 
     def as_tuple(self):
-        return (self.rule, tuple(self.methods), self.endpoint, self.blueprint, self.workflow)
+        return (self.rule, tuple(self.methods), self.endpoint, self.blueprint,
+                self.readiness, self.workflow)
 
 
 @dataclass
@@ -53,8 +93,10 @@ class Manifest:
     version: int
     generated_at: str
     total_routes: int
+    shipped_route_count: int
     blueprint_count: int
     method_counts: Dict[str, int]
+    readiness_counts: Dict[str, int]
     blueprints: Dict[str, Dict[str, object]]
     routes: List[Dict[str, object]] = field(default_factory=list)
 
@@ -63,8 +105,10 @@ class Manifest:
             "version": self.version,
             "generated_at": self.generated_at,
             "total_routes": self.total_routes,
+            "shipped_route_count": self.shipped_route_count,
             "blueprint_count": self.blueprint_count,
             "method_counts": dict(sorted(self.method_counts.items())),
+            "readiness_counts": dict(sorted(self.readiness_counts.items())),
             "blueprints": {
                 name: {
                     "route_count": meta["route_count"],
@@ -87,15 +131,17 @@ def _collect_routes(app) -> List[RouteEntry]:
             continue
         endpoint = rule.endpoint
         blueprint = endpoint.split(".", 1)[0] if "." in endpoint else "<app>"
+        view_func = app.view_functions.get(endpoint)
         workflow = None
         if "POST" in methods:
-            workflow = get_workflow_step_metadata(app.view_functions.get(endpoint))
+            workflow = get_workflow_step_metadata(view_func)
         entries.append(
             RouteEntry(
                 rule=rule.rule,
                 methods=methods,
                 endpoint=endpoint,
                 blueprint=blueprint,
+                readiness=_classify_readiness(view_func),
                 workflow=workflow,
             )
         )
@@ -104,6 +150,7 @@ def _collect_routes(app) -> List[RouteEntry]:
 
 def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
     method_counts: Counter = Counter()
+    readiness_counts: Counter = Counter()
     by_blueprint: Dict[str, Dict[str, object]] = defaultdict(
         lambda: {"route_count": 0, "method_counts": Counter(), "sample_rules": []}
     )
@@ -112,6 +159,7 @@ def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
     for entry in entries:
         for method in entry.methods:
             method_counts[method] += 1
+        readiness_counts[entry.readiness] += 1
         bucket = by_blueprint[entry.blueprint]
         bucket["route_count"] += 1
         bucket["method_counts"].update(entry.methods)
@@ -122,6 +170,7 @@ def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
             "methods": list(entry.methods),
             "endpoint": entry.endpoint,
             "blueprint": entry.blueprint,
+            "readiness": entry.readiness,
         }
         if entry.workflow:
             route_payload["workflow"] = dict(entry.workflow)
@@ -136,12 +185,16 @@ def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
         for name, meta in by_blueprint.items()
     }
 
+    shipped = len(routes_payload) - readiness_counts.get(READINESS_STUB, 0)
+
     return Manifest(
         version=MANIFEST_VERSION,
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         total_routes=len(routes_payload),
+        shipped_route_count=shipped,
         blueprint_count=len(blueprints_payload),
         method_counts=dict(method_counts),
+        readiness_counts=dict(readiness_counts),
         blueprints=blueprints_payload,
         routes=routes_payload,
     )
@@ -189,7 +242,7 @@ def diff_manifests(expected: dict, live: dict) -> List[str]:
     expected_sig = _manifest_signature(expected)
     live_sig = _manifest_signature(live)
 
-    for key in ("version", "total_routes", "blueprint_count"):
+    for key in ("version", "total_routes", "shipped_route_count", "blueprint_count"):
         if expected_sig.get(key) != live_sig.get(key):
             diffs.append(
                 f"{key}: committed={expected_sig.get(key)!r} live={live_sig.get(key)!r}"

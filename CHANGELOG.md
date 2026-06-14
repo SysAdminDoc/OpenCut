@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Route manifest tags readiness; advertised count excludes stubs
+
+- `dump_route_manifest` now classifies every route as
+  `implemented` / `dependency-gated` / `stub` via static handler inspection,
+  and records `readiness_counts` plus a `shipped_route_count` (total minus the
+  10 HTTP-501 strategic stubs). Manifest schema bumped to version 3.
+- New `GET /system/route-readiness` endpoint surfaces the shipped count and the
+  explicit stub / dependency-gated rule lists so panels and tooling stop
+  presenting 501 stubs as shipped capabilities. (Panels already gate
+  `data-feature-id` actions via F100 `feature-state.js`; the Tier-3 stub
+  actions are not surfaced as panel buttons, so none are presented as shipped.)
+- README route badge and route-count claims now advertise the **shipped** count
+  (1,536) instead of the raw total; `scripts/sync_badges.py` binds the badge to
+  `shipped_route_count`.
+
 ### Changed — Structured error responses across video/audio routes
 
 - Migrated the remaining 35 raw `jsonify({"error": ...})` responses in

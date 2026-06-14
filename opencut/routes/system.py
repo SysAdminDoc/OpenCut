@@ -3206,6 +3206,45 @@ def system_capabilities():
         return safe_error(exc, "system_capabilities")
 
 
+@system_bp.route("/system/route-readiness", methods=["GET"])
+def system_route_readiness():
+    """Report route readiness tiers so panels can disable stub actions.
+
+    Sources the committed route manifest (F099) and returns the advertised
+    (shipped) route count plus the explicit lists of ``stub`` (HTTP 501, no
+    implementation) and ``dependency-gated`` rules. Panels grey out stub
+    actions with a "planned" hint instead of presenting 501s as shipped.
+    """
+    try:
+        from opencut.errors import error_response
+        from opencut.tools.dump_route_manifest import load_manifest
+
+        manifest = load_manifest()
+        if not manifest:
+            return error_response(
+                "NOT_FOUND",
+                "Route manifest is not available.",
+                status=404,
+                suggestion="Run `python -m opencut.tools.dump_route_manifest` to generate it.",
+            )
+        routes = manifest.get("routes", [])
+        stub_rules = sorted({
+            r["rule"] for r in routes if r.get("readiness") == "stub"
+        })
+        gated_rules = sorted({
+            r["rule"] for r in routes if r.get("readiness") == "dependency-gated"
+        })
+        return jsonify({
+            "total_routes": manifest.get("total_routes", len(routes)),
+            "shipped_route_count": manifest.get("shipped_route_count"),
+            "readiness_counts": manifest.get("readiness_counts", {}),
+            "stub_rules": stub_rules,
+            "dependency_gated_rules": gated_rules,
+        })
+    except Exception as exc:
+        return safe_error(exc, "system_route_readiness")
+
+
 @system_bp.route("/system/audit-log", methods=["GET"])
 def system_audit_log():
     """Return recent structured security rejection audit events."""

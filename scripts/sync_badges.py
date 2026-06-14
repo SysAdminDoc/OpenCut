@@ -7,7 +7,9 @@ hand-edited "API Routes-1344" / "Tests-7600+" badge that drifted away from
 the generated route manifest and the live test count.
 
 Source of truth:
-  - Routes  -> ``opencut/_generated/route_manifest.json::total_routes``
+  - Routes  -> ``opencut/_generated/route_manifest.json::shipped_route_count``
+              (advertised count excludes 501 strategic stubs; falls back to
+              ``total_routes`` for older manifests without the field)
   - Tests   -> ``len(glob('tests/test_*.py'))`` rounded down to nearest 100.
               The README badge uses ``<N>+`` (e.g. ``7600+``) so any drift
               by less than 100 is intentionally tolerated.
@@ -49,10 +51,12 @@ def _live_route_count() -> int:
             "Run: python -m opencut.tools.dump_route_manifest"
         )
     payload = json.loads(ROUTE_MANIFEST.read_text(encoding="utf-8"))
-    total = int(payload.get("total_routes", 0))
-    if total <= 0:
+    # Advertise shipped routes only (excludes 501 strategic stubs). Older
+    # manifests without the field fall back to total_routes.
+    count = int(payload.get("shipped_route_count", payload.get("total_routes", 0)))
+    if count <= 0:
         raise SystemExit("ERROR: route manifest reports zero routes")
-    return total
+    return count
 
 
 def _live_test_count_rounded() -> int:

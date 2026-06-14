@@ -87,6 +87,50 @@ def test_no_route_uses_head_or_options_explicitly(committed_manifest):
             )
 
 
+def test_manifest_tags_every_route_with_readiness(committed_manifest):
+    valid = {"implemented", "dependency-gated", "stub"}
+    for route in committed_manifest["routes"]:
+        assert route.get("readiness") in valid, (
+            f"{route['rule']} has invalid readiness {route.get('readiness')!r}"
+        )
+
+
+def test_shipped_count_excludes_stubs(committed_manifest):
+    counts = committed_manifest["readiness_counts"]
+    stub_count = counts.get("stub", 0)
+    assert stub_count >= 1, "expected at least one 501 strategic stub"
+    assert (
+        committed_manifest["shipped_route_count"]
+        == committed_manifest["total_routes"] - stub_count
+    )
+    assert sum(counts.values()) == committed_manifest["total_routes"]
+
+
+def test_known_501_stub_routes_are_tagged_stub(committed_manifest):
+    by_rule = {r["rule"]: r for r in committed_manifest["routes"]}
+    for rule in ("/agent/search-footage", "/agent/storyboard",
+                 "/lipsync/gaussian", "/video/outpaint"):
+        assert by_rule[rule]["readiness"] == "stub", f"{rule} should be a stub"
+
+
+def test_real_routes_are_not_tagged_stub(committed_manifest):
+    by_rule = {r["rule"]: r for r in committed_manifest["routes"]}
+    # Core, fully-implemented routes must never be excluded from the count.
+    for rule in ("/silence", "/audio/normalize", "/export-video"):
+        assert by_rule[rule]["readiness"] != "stub", f"{rule} wrongly tagged stub"
+
+
+def test_route_readiness_endpoint_reports_stubs(client, committed_manifest):
+    resp = client.get("/system/route-readiness")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["total_routes"] == committed_manifest["total_routes"]
+    assert data["shipped_route_count"] == committed_manifest["shipped_route_count"]
+    assert "/agent/storyboard" in data["stub_rules"]
+    assert "/silence" not in data["stub_rules"]
+    assert len(data["stub_rules"]) == committed_manifest["readiness_counts"].get("stub", 0)
+
+
 def test_manifest_diff_catches_route_metadata_changes(committed_manifest):
     from opencut.tools.dump_route_manifest import diff_manifests
 

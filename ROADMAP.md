@@ -80,13 +80,6 @@ history, not here.
 
 ### P2
 
-- [ ] P2 — Add a capability/stub manifest so docs and panels stop presenting Tier-3 501 stubs as shipped
-  Why: 145 NotImplementedError core stubs and ~22 routes returning HTTP 501 (wave_h/wave_k) are counted in the 1,539-route badge and feature framing; honest at the route level but misleading as distribution widens.
-  Evidence: opencut/routes/wave_h_routes.py, wave_k_routes.py (501 handlers); opencut/_generated/route_manifest.json (counts stubs); README route-count badge
-  Touches: opencut/tools/dump_route_manifest.py (tag implemented/gated/stub), /capabilities or /health extension, extension/com.opencut.panel + com.opencut.uxp (grey out stubbed actions), README badge generation
-  Acceptance: manifest tags every route implemented/dependency-gated/stub; advertised route-count counts only shipped routes; both panels disable Tier-3 stub actions with a "planned" hint.
-  Complexity: M
-
 - [ ] P2 — Beat-synced auto-edit (assemble cuts to detected beats)
   Why: OpenCut detects beats (librosa) and writes Premiere markers but cannot assemble to them; aescripts "Automated Video Editing", Cardboard (`sync_to_beats`), and CapCut all ship music-driven beat-cutting.
   Evidence: opencut/core/ beat detection + beat-marker export already present; aescripts.com/automated-video-editing-for-premiere-pro/; startuphub.ai Cardboard (sync_to_beats op)
