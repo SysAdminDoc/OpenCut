@@ -604,7 +604,9 @@ def _fallback_watermark_detection(frame, on_progress=None) -> Optional[Dict]:
 # Capabilities
 # ---------------------------------------------------------------------------
 def get_removal_capabilities() -> Dict:
+    from opencut.core.segment_sam3 import check_sam3_available
     return {
+        "sam3": check_sam3_available(),
         "sam2": check_sam2_available(),
         "propainter": check_propainter_available(),
         "lama": check_lama_available(),
