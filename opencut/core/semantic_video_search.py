@@ -227,7 +227,7 @@ def _extract_key_frames(
     """
     info = get_video_info(video_path)
     duration = info.get("duration", 0)
-    info.get("fps", 30.0)
+    fps = info.get("fps", 30.0)  # noqa: F841
 
     if duration <= 0:
         # Try to get at least one frame
@@ -324,7 +324,6 @@ def _compute_frame_embeddings(
     from PIL import Image
 
     embed_dim = (engine_cfg or {}).get("embed_dim", 512)
-    family = (engine_cfg or {}).get("family", "clip")
     all_embeds = []
     total = len(frame_paths)
 
@@ -341,16 +340,13 @@ def _compute_frame_embeddings(
 
         inputs = processor(images=images, return_tensors="pt", padding=True)
         with torch_mod.no_grad():
-            if family == "siglip":
-                embeds = model.get_image_features(**inputs)
-            else:
-                embeds = model.get_image_features(**inputs)
+            embeds = model.get_image_features(**inputs)
             embeds = embeds / embeds.norm(dim=-1, keepdim=True)
             all_embeds.append(embeds.cpu().numpy())
 
         if on_progress:
             done = min(bi + batch_size, total)
-            on_progress(0, f"Embedding frames: {done}/{total}")
+            on_progress(int(100 * done / total), f"Embedding frames: {done}/{total}")
 
     return np.concatenate(all_embeds, axis=0) if all_embeds else np.zeros((0, embed_dim))
 
@@ -474,44 +470,48 @@ def build_clip_index(
                 continue
 
         work_dir = tempfile.mkdtemp(prefix=f"clipidx_{ci}_")
-        frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
+        try:
+            frames, timestamps = _extract_key_frames(clip_path, work_dir, count=frames_per_clip)
 
-        if not frames:
-            logger.warning("No frames extracted from %s", clip_path)
-            continue
+            if not frames:
+                logger.warning("No frames extracted from %s", clip_path)
+                continue
 
-        def _emb_progress(pct_inner, msg=""):
+            def _emb_progress(pct_inner, msg=""):
+                if on_progress:
+                    base = 5 + int(90 * ci / len(valid_paths))
+                    on_progress(base, msg)
+
+            embeddings = _compute_frame_embeddings(
+                frames, model, processor, torch_mod,
+                engine_cfg=engine_cfg,
+                on_progress=_emb_progress,
+            )
+
+            info = get_video_info(clip_path)
+
+            cache_data = {
+                "clip_path": os.path.abspath(clip_path),
+                "clip_hash": clip_hash,
+                "frame_count": len(frames),
+                "fps": info.get("fps", 30.0),
+                "duration": info.get("duration", 0),
+                "timestamps": timestamps,
+                "frame_paths": frames,
+                "embeddings": embeddings,
+                "engine": engine,
+            }
+            _save_cached_embeddings(clip_hash, cache_data, engine)
+
+            rebuilt_count += 1
+            total_frames += len(frames)
+
             if on_progress:
-                base = 5 + int(90 * ci / len(valid_paths))
-                on_progress(base, msg)
-
-        embeddings = _compute_frame_embeddings(
-            frames, model, processor, torch_mod,
-            engine_cfg=engine_cfg,
-            on_progress=_emb_progress,
-        )
-
-        info = get_video_info(clip_path)
-
-        cache_data = {
-            "clip_path": os.path.abspath(clip_path),
-            "clip_hash": clip_hash,
-            "frame_count": len(frames),
-            "fps": info.get("fps", 30.0),
-            "duration": info.get("duration", 0),
-            "timestamps": timestamps,
-            "frame_paths": frames,
-            "embeddings": embeddings,
-            "engine": engine,
-        }
-        _save_cached_embeddings(clip_hash, cache_data, engine)
-
-        rebuilt_count += 1
-        total_frames += len(frames)
-
-        if on_progress:
-            pct = 5 + int(90 * (ci + 1) / len(valid_paths))
-            on_progress(pct, f"Indexed clip {ci+1}/{len(valid_paths)}: {os.path.basename(clip_path)}")
+                pct = 5 + int(90 * (ci + 1) / len(valid_paths))
+                on_progress(pct, f"Indexed clip {ci+1}/{len(valid_paths)}: {os.path.basename(clip_path)}")
+        finally:
+            import shutil
+            shutil.rmtree(work_dir, ignore_errors=True)
 
     if on_progress:
         on_progress(100, f"Index complete: {len(valid_paths)} clips, {total_frames} frames")
@@ -598,25 +598,29 @@ def semantic_search(
                 if on_progress:
                     on_progress(15, f"Indexing {os.path.basename(clip_path)}...")
                 work_dir = tempfile.mkdtemp(prefix=f"search_idx_{ci}_")
-                frames, timestamps = _extract_key_frames(clip_path, work_dir)
-                if not frames:
-                    continue
-                embeddings = _compute_frame_embeddings(
-                    frames, model, processor, torch_mod, engine_cfg=engine_cfg,
-                )
-                info = get_video_info(clip_path)
-                cached = {
-                    "clip_path": os.path.abspath(clip_path),
-                    "clip_hash": clip_hash,
-                    "frame_count": len(frames),
-                    "fps": info.get("fps", 30.0),
-                    "duration": info.get("duration", 0),
-                    "timestamps": timestamps,
-                    "frame_paths": frames,
-                    "embeddings": embeddings,
-                    "engine": engine,
-                }
-                _save_cached_embeddings(clip_hash, cached, engine)
+                try:
+                    frames, timestamps = _extract_key_frames(clip_path, work_dir)
+                    if not frames:
+                        continue
+                    embeddings = _compute_frame_embeddings(
+                        frames, model, processor, torch_mod, engine_cfg=engine_cfg,
+                    )
+                    info = get_video_info(clip_path)
+                    cached = {
+                        "clip_path": os.path.abspath(clip_path),
+                        "clip_hash": clip_hash,
+                        "frame_count": len(frames),
+                        "fps": info.get("fps", 30.0),
+                        "duration": info.get("duration", 0),
+                        "timestamps": timestamps,
+                        "frame_paths": frames,
+                        "embeddings": embeddings,
+                        "engine": engine,
+                    }
+                    _save_cached_embeddings(clip_hash, cached, engine)
+                finally:
+                    import shutil
+                    shutil.rmtree(work_dir, ignore_errors=True)
             else:
                 logger.warning("Clip not indexed and auto_index=False: %s", clip_path)
                 continue
