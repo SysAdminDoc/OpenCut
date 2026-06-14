@@ -152,3 +152,44 @@ history, not here.
   Acceptance: a supported URL is fetched to the local media cache and becomes usable by any existing route exactly like a local file; failures return structured errors.
   Complexity: M
 
+## Research-Driven Additions (2026-06-14, second pass)
+
+### P2
+
+- [ ] P2 — Wire NVIDIA Parakeet TDT 0.6B v3 (+ Canary-1B-Flash) as ASR engines
+  Why: Both stubs already exist but are dark and unregistered. Parakeet TDT 0.6B v3 tops the HF Open ASR Leaderboard (~6.3% mean WER vs Whisper Large-v3 at 4× the params), is ~4× faster on CPU, now covers 25 EU languages, and ships under a permissive code+weight licence — a strict upgrade over the bundled Whisper path for clean-audio English/EU work.
+  Evidence: opencut/core/asr_parakeet.py + asr_canary.py (NotImplementedError stubs, INSTALL_HINT "nemo_toolkit[asr] # Apache-2.0 + CC-BY-4.0 model"); huggingface.co/nvidia/parakeet-tdt-0.6b-v3 (CC-BY-4.0); northflank.com 2026 ASR benchmarks
+  Touches: opencut/core/asr_parakeet.py, asr_canary.py, transcription engine registry, checks.py availability flag, model_manager.py, transcription route/preset, registry availability test
+  Acceptance: Parakeet (streaming) and Canary (batch) appear as selectable transcription engines gated by availability check, with a model download entry and registry test; faster-whisper/WhisperX retained as fallback.
+  Complexity: M
+
+- [ ] P2 — Wire LatentSync lip-sync onto the existing dub pipeline (local dubbing-with-lip-sync)
+  Why: OpenCut already ships the full dub pipeline (transcribe→translate→voice-clone→render) but stops before re-animating the mouth — the exact visual lip-sync stage Rask AI ($120/mo), HeyGen, and sync.so ($0.04–0.133/sec) paywall. Wiring an Apache-2.0 lip-sync model as the dub pipeline's optional final stage converts a paywalled flagship into a local/MIT feature.
+  Evidence: opencut/core/lipsync_advanced.py + lipsync_echomimic.py (stubs return 501 ROUTE_STUBBED); live dub pipeline in dub_pipeline.py / auto_dub_pipeline.py / isochronous_translate.py / multilang_audio.py; github.com/bytedance/LatentSync (Apache-2.0 code; 1.6 trained 512×512); RESEARCH.md Competitive Landscape (Rask/HeyGen/sync.so)
+  Touches: new opencut/core/lipsync_latentsync.py engine, engine_registry.py (lip-sync domain), checks.py, model_manager.py, dub-pipeline final-stage hook, a lip-sync route, cut-review/preview gate, both panels
+  Acceptance: after a dub render, a lip-sync stage re-animates the speaker's mouth to the new audio behind an availability check and preview gate; falls back to audio-only dub when unavailable. Confirm the LatentSync *checkpoint* licence at the model-card level before defaulting it (Open Question 3); ship as opt-in if the weight licence proves restrictive.
+  Complexity: L
+
+### P3
+
+- [ ] P3 — Re-aim the IC-Light relight stub at v1 (Apache-2.0), not v2
+  Why: relight_iclight.py is titled "IC-Light V2 Per-Frame Relight", but IC-Light v2 is non-commercial and its full weights were never publicly released (HF Space demo only) — un-shippable under MIT. IC-Light v1 is Apache-2.0 and ships real weights, so the stub can become a real engine only by retargeting v1.
+  Evidence: opencut/core/relight_iclight.py:1-4 ("IC-Light V2" stub); github.com/lllyasviel/IC-Light (v1 Apache-2.0); IC-Light/discussions/98 (v2 non-commercial, weights unreleased)
+  Touches: opencut/core/relight_iclight.py, relight_video_lav.py / relight_diffrenderer.py (relight domain), engine_registry.py, checks.py, model_manager.py, relight route/preset
+  Acceptance: IC-Light v1 is a selectable relight engine gated by availability check with a model download entry and registry test; the v2 framing is removed from docstrings/hints.
+  Complexity: M
+
+- [ ] P3 — Normalized 0–100 virality/hook score over existing engagement scoring
+  Why: Opus Clip's headline paywalled feature is a single normalized 0–100 virality score; OpenCut already computes multi-dimensional engagement scoring for highlights but surfaces no comparable normalized number creators can sort/threshold on.
+  Evidence: opusclip.canny.io (virality score 0–100); OpenCut engagement scoring (README Highlight & Shorts Generation: "hook strength, emotional intensity, pacing, quotability")
+  Touches: highlight/engagement scoring module, highlights route response schema, panel Shorts/Highlights tab display
+  Acceptance: each highlight/clip returns a normalized 0–100 score (deterministic mapping from existing engagement dimensions) shown in the panel and sortable; documented as a heuristic, not a guarantee.
+  Complexity: S
+
+- [ ] P3 — Upgrade speaker diarization default to pyannote community-1 (evaluate Sortformer)
+  Why: OpenCut diarizes via pyannote.audio; pyannote/speaker-diarization-community-1 (CC-BY-4.0, "always freely accessible") is the new default with lower DER, and NVIDIA Sortformer reportedly more than halves DER vs the legacy pipeline — a low-risk accuracy bump for podcast/multicam workflows.
+  Evidence: huggingface.co/pyannote/speaker-diarization-community-1 (CC-BY-4.0); emergentmind.com Sortformer; OpenCut pyannote diarization (README Captions & Transcription)
+  Touches: diarization module(s), engine_registry.py (diarization domain), checks.py, model_manager.py, diarization availability test
+  Acceptance: community-1 is the default diarization pipeline (legacy retained as fallback) with availability check and test; Sortformer evaluated and added as an optional engine if licence/availability permit.
+  Complexity: S
+
