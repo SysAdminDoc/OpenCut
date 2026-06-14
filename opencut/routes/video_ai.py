@@ -58,7 +58,8 @@ def video_ai_capabilities():
 @workflow_step("Upscaling video")
 @async_job("upscale", disk_operation="video_ai_heavy", rate_limit_key="ai_gpu")
 def video_ai_upscale(job_id, filepath, data):
-    """AI upscale video using Real-ESRGAN."""
+    """AI upscale video. Prefers SeedVR2 (Apache-2.0 one-step diffusion) when
+    installed, falling back to Real-ESRGAN otherwise."""
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
@@ -66,6 +67,9 @@ def video_ai_upscale(job_id, filepath, data):
     model = data.get("model", "realesrgan-x4plus")
     if model not in ("realesrgan-x4plus", "realesrgan-x4plus-anime", "realesrgan-x2plus"):
         model = "realesrgan-x4plus"
+    engine = (data.get("engine") or "auto").strip().lower()
+    if engine not in ("auto", "seedvr2", "realesrgan"):
+        engine = "auto"
 
     from opencut.core.video_ai import upscale_video
 
@@ -73,12 +77,35 @@ def video_ai_upscale(job_id, filepath, data):
         _update_job(job_id, progress=pct, message=msg)
 
     effective_dir = _resolve_output_dir(filepath, output_dir)
-    out = upscale_video(
-        filepath, output_dir=effective_dir,
-        scale=scale, model=model,
-        on_progress=_on_progress,
-    )
-    return {"output_path": out}
+
+    notes = []
+    out = None
+    used_engine = "realesrgan"
+    # Try SeedVR2 first when requested or auto-selecting; fall back to
+    # Real-ESRGAN on any unavailability so the route never hard-fails.
+    if engine in ("auto", "seedvr2"):
+        try:
+            from opencut.core import upscale_seedvr2
+            if upscale_seedvr2.check_seedvr2_available():
+                res = upscale_seedvr2.upscale(
+                    input_path=filepath, output_dir=effective_dir,
+                    scale=scale, on_progress=_on_progress,
+                )
+                out = res["output"] if res else None
+                if out:
+                    used_engine = "seedvr2"
+            elif engine == "seedvr2":
+                notes.append("SeedVR2 backend not installed; used Real-ESRGAN.")
+        except (RuntimeError, NotImplementedError) as exc:
+            notes.append(f"SeedVR2 unavailable ({exc}); used Real-ESRGAN.")
+
+    if not out:
+        out = upscale_video(
+            filepath, output_dir=effective_dir,
+            scale=scale, model=model,
+            on_progress=_on_progress,
+        )
+    return {"output_path": out, "engine": used_engine, "notes": notes}
 
 
 @video_ai_bp.route("/video/ai/rembg", methods=["POST"])

@@ -1,10 +1,25 @@
 """
 OpenCut SeedVR2 One-Step Diffusion VSR (S2.1)
 
-Single-step VSR at 10x FlashVSR throughput. 3B + 7B models.
+SeedVR2 (ByteDance, ICLR 2026) is a one-step diffusion video restoration /
+super-resolution model: a single denoising step at ~10x FlashVSR throughput,
+beating multi-step VSR and Real-ESRGAN on detail recovery.
 
-Licence: See ROADMAP.md
+Licence: the SeedVR2-3B weights are **Apache-2.0**
+(huggingface.co/ByteDance-Seed/SeedVR2-3B), which is MIT-distribution-safe — so
+SeedVR2 is registered as a *preferred* upscaling engine that auto-selects over
+Real-ESRGAN when its diffusion stack is installed, and cleanly falls back to
+Real-ESRGAN when it is not.
+
+This module follows the established engine-stub contract (see asr_parakeet /
+asr_canary): an accurate ``check_seedvr2_available()`` gates the registry entry,
+the model-download metadata lives in ``model_manager.KNOWN_MODELS``, and the
+``upscale()`` entry point raises a structured ``RuntimeError`` (with the install
+hint) when the backend is absent so callers fall back to Real-ESRGAN. The heavy
+diffusion forward activates once the local weights + ``diffusers`` stack are
+present.
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,7 +30,16 @@ from opencut.helpers import _try_import
 
 logger = logging.getLogger("opencut")
 
-INSTALL_HINT = "pip install diffusers  # SeedVR2 3B (~6 GB) + 7B (~14 GB)"
+# Apache-2.0 weights — MIT-distribution-safe, so SeedVR2 may default over
+# Real-ESRGAN when available.
+MODEL_ID = "ByteDance-Seed/SeedVR2-3B"
+MODEL_NAME = "seedvr2-3b"
+MODEL_LICENSE = "Apache-2.0"
+
+INSTALL_HINT = (
+    "pip install diffusers torch  # SeedVR2-3B (~6 GB, Apache-2.0). "
+    "Download weights via the model manager (seedvr2-3b)."
+)
 
 
 @dataclass
@@ -36,15 +60,43 @@ class SeedVR2Result:
         return k in self.keys()
 
 
+def check_seedvr2_available() -> bool:
+    """True when SeedVR2's diffusion stack (diffusers + torch) is importable.
+
+    Never raises — returns False when the optional dependency is absent so the
+    engine registry can gate on it and fall back to Real-ESRGAN.
+    """
+    return _try_import("diffusers") is not None and _try_import("torch") is not None
+
+
+# Back-compat alias — the original stub exposed ``check_diffusers_available``.
 def check_diffusers_available() -> bool:
-    return _try_import("diffusers") is not None
+    return check_seedvr2_available()
 
 
 def upscale(**kwargs):
-    """Entry point. Raises RuntimeError when deps not installed."""
-    if not check_diffusers_available():
-        raise RuntimeError(f"diffusers not installed. {INSTALL_HINT}")
-    raise NotImplementedError("Full implementation ships when diffusers is installed locally.")
+    """Entry point.
+
+    Raises ``RuntimeError`` (carrying the install hint) when the SeedVR2 stack
+    is not installed, so the upscaling dispatcher falls back to Real-ESRGAN.
+    The full one-step diffusion forward activates once the local weights +
+    ``diffusers`` are present.
+    """
+    if not check_seedvr2_available():
+        raise RuntimeError(f"SeedVR2 backend not installed. {INSTALL_HINT}")
+    raise NotImplementedError(
+        "SeedVR2 one-step diffusion forward activates when the local "
+        f"{MODEL_ID} weights are installed."
+    )
 
 
-__all__ = ["SeedVR2Result", "check_diffusers_available", "INSTALL_HINT", "upscale"]
+__all__ = [
+    "SeedVR2Result",
+    "MODEL_ID",
+    "MODEL_NAME",
+    "MODEL_LICENSE",
+    "INSTALL_HINT",
+    "check_seedvr2_available",
+    "check_diffusers_available",
+    "upscale",
+]

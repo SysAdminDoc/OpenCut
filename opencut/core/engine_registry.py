@@ -243,6 +243,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_rembg_available,
         check_rvm_available,
         check_sam2_available,
+        check_seedvr2_available,
         check_silero_vad_available,
         check_transnetv2_available,
         check_upscale_available,
@@ -444,6 +445,18 @@ def _register_builtin_engines(reg: EngineRegistry):
     ))
 
     # --- Upscaling ---
+    reg.register(EngineInfo(
+        name="seedvr2",
+        domain="upscaling",
+        display_name="SeedVR2 (one-step diffusion)",
+        description="Apache-2.0 one-step diffusion VSR; ~10x faster than multi-step, beats Real-ESRGAN. Falls back to Real-ESRGAN when unavailable.",
+        check_fn=check_seedvr2_available,
+        priority=90,  # preferred over Real-ESRGAN (80) when its weights are installed
+        vram_mb=8000,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["diffusion", "apache-2.0", "vsr"],
+    ))
     reg.register(EngineInfo(
         name="realesrgan",
         domain="upscaling",

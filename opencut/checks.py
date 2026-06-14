@@ -99,6 +99,22 @@ def check_upscale_available():
     return _try_import("realesrgan") is not None
 
 
+def check_seedvr2_available() -> bool:
+    """Check if the SeedVR2 one-step-diffusion upscaling stack is installed.
+
+    Re-exports the core module's own check so routes and the engine registry
+    share one import. Never raises -- returns False when the optional
+    diffusion dependency is absent (the upscaling registry falls back to
+    Real-ESRGAN).
+    """
+    try:
+        from opencut.core.upscale_seedvr2 import check_seedvr2_available as _c
+
+        return bool(_c())
+    except Exception:
+        return False
+
+
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None

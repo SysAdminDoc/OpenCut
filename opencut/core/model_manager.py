@@ -85,6 +85,12 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "description": "Real-ESRGAN x4 -- video upscaling model",
         "category": "upscaling",
     },
+    "seedvr2-3b": {
+        "url": "https://huggingface.co/ByteDance-Seed/SeedVR2-3B/resolve/main/seedvr2_3b.safetensors",
+        "size_mb": 6000,
+        "description": "SeedVR2-3B -- one-step diffusion video super-resolution (Apache-2.0)",
+        "category": "upscaling",
+    },
 }
 
 
