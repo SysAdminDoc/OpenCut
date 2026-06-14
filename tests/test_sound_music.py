@@ -763,6 +763,47 @@ class TestBeatSyncLogic(unittest.TestCase):
         from opencut.core.beat_sync_edit import plan_beat_sync_cuts
         self.assertEqual(plan_beat_sync_cuts([], [], "every_beat"), [])
 
+    # --- plan_timeline_beat_cuts (single active-sequence cut list) ------------
+    def test_timeline_beat_cuts_empty(self):
+        from opencut.core.beat_sync_edit import plan_timeline_beat_cuts
+        self.assertEqual(plan_timeline_beat_cuts([], 10.0), [])
+
+    def test_timeline_beat_cuts_every_beat_segments(self):
+        from opencut.core.beat_sync_edit import plan_timeline_beat_cuts
+        beats = self._make_beats(8, bpm=120.0)  # 0.5s apart, total ~3.5s
+        cuts = plan_timeline_beat_cuts(beats, total_duration=4.0, mode="every_beat",
+                                       min_cut_duration=0.0)
+        # 8 beats (one at t=0) + end boundary => 8 segments spanning the clip.
+        self.assertEqual(len(cuts), 8)
+        # Segments are contiguous, ascending, and clamped to the clip.
+        for i, c in enumerate(cuts):
+            self.assertLess(c["start"], c["end"])
+            self.assertGreaterEqual(c["start"], 0.0)
+            self.assertLessEqual(c["end"], 4.0 + 1e-6)
+            if i:
+                self.assertAlmostEqual(c["start"], cuts[i - 1]["end"], places=3)
+
+    def test_timeline_beat_cuts_min_duration_merges(self):
+        from opencut.core.beat_sync_edit import plan_timeline_beat_cuts
+        beats = self._make_beats(16, bpm=240.0)  # 0.25s apart
+        # min_cut_duration 0.6s forces merging adjacent 0.25s beats.
+        cuts = plan_timeline_beat_cuts(beats, total_duration=4.0, mode="every_beat",
+                                       min_cut_duration=0.6)
+        self.assertTrue(cuts)
+        for c in cuts:
+            self.assertGreaterEqual(c["duration"], 0.6 - 1e-6)
+
+    def test_timeline_beat_cuts_shape_matches_cut_review(self):
+        from opencut.core.beat_sync_edit import plan_timeline_beat_cuts
+        beats = self._make_beats(8)
+        cuts = plan_timeline_beat_cuts(beats, total_duration=4.0)
+        # ocApplySequenceCuts + cut-review consume {start, end}; we also tag it.
+        for c in cuts:
+            self.assertEqual(
+                {"start", "end", "duration", "beat_number", "strength", "label"},
+                set(c.keys()),
+            )
+
     @patch("opencut.core.beat_sync_edit.get_video_info",
            return_value={"width": 1920, "height": 1080, "fps": 30.0, "duration": 60.0})
     def test_plan_cuts_single_clip(self, mock_info):

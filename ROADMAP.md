@@ -58,13 +58,6 @@ history, not here.
 
 ### P2
 
-- [ ] P2 — Beat-synced auto-edit (assemble cuts to detected beats)
-  Why: OpenCut detects beats (librosa) and writes Premiere markers but cannot assemble to them; aescripts "Automated Video Editing", Cardboard (`sync_to_beats`), and CapCut all ship music-driven beat-cutting.
-  Evidence: opencut/core/ beat detection + beat-marker export already present; aescripts.com/automated-video-editing-for-premiere-pro/; startuphub.ai Cardboard (sync_to_beats op)
-  Touches: new core beat-assembly module, a /timeline beat-cut route, ExtendScript/UXP apply path, panel Cut/Timeline tab
-  Acceptance: given a clip + audio track, the route emits ripple cuts / clip boundaries aligned to detected beats and applies them to the active sequence (with a cut-review preview).
-  Complexity: M
-
 - [ ] P2 — Wire SeedVR2 as a clean-license upscaling engine
   Why: SeedVR2 (ByteDance, ICLR 2026, Apache-2.0) is one-step diffusion video restoration, >4x faster than multi-step VSR and beats Real-ESRGAN; its stub already exists and the license is MIT-distribution-safe.
   Evidence: opencut/core/upscale_seedvr2.py (NotImplementedError stub); github.com/IceClear/SeedVR2; huggingface.co/ByteDance-Seed/SeedVR2-3B (Apache-2.0)
