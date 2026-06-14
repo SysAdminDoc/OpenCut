@@ -385,7 +385,9 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "pacing": getattr(c.engagement, "pacing", 0),
                     "quotability": getattr(c.engagement, "quotability", 0),
                     "overall": getattr(c.engagement, "overall", 0),
+                    "virality": getattr(c.engagement, "virality", 0),
                 } if getattr(c, "engagement", None) else None,
+                "virality": getattr(c.engagement, "virality", 0) if getattr(c, "engagement", None) else 0,
             }
             for c in clips
         ],

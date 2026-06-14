@@ -97,12 +97,6 @@ history, not here.
   Acceptance: IC-Light v1 is a selectable relight engine gated by availability check with a model download entry and registry test; the v2 framing is removed from docstrings/hints.
   Complexity: M
 
-- [ ] P3 — Normalized 0–100 virality/hook score over existing engagement scoring
-  Why: Opus Clip's headline paywalled feature is a single normalized 0–100 virality score; OpenCut already computes multi-dimensional engagement scoring for highlights but surfaces no comparable normalized number creators can sort/threshold on.
-  Evidence: opusclip.canny.io (virality score 0–100); OpenCut engagement scoring (README Highlight & Shorts Generation: "hook strength, emotional intensity, pacing, quotability")
-  Touches: highlight/engagement scoring module, highlights route response schema, panel Shorts/Highlights tab display
-  Acceptance: each highlight/clip returns a normalized 0–100 score (deterministic mapping from existing engagement dimensions) shown in the panel and sortable; documented as a heuristic, not a guarantee.
-  Complexity: S
 
 - [ ] P3 — Upgrade speaker diarization default to pyannote community-1 (evaluate Sortformer)
   Why: OpenCut diarizes via pyannote.audio; pyannote/speaker-diarization-community-1 (CC-BY-4.0, "always freely accessible") is the new default with lower DER, and NVIDIA Sortformer reportedly more than halves DER vs the legacy pipeline — a low-risk accuracy bump for podcast/multicam workflows.

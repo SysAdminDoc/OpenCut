@@ -388,6 +388,17 @@ def video_highlights(job_id, filepath, data):
                     "score": h.score,
                     "reason": h.reason,
                     "title": h.title,
+                    # Normalized 0-100 hook-forward virality score (heuristic) so
+                    # creators can sort/threshold clips at a glance.
+                    "virality": getattr(h.engagement, "virality", 0) if h.engagement else 0,
+                    "engagement": {
+                        "hook_strength": h.engagement.hook_strength,
+                        "emotional_peak": h.engagement.emotional_peak,
+                        "pacing": h.engagement.pacing,
+                        "quotability": h.engagement.quotability,
+                        "overall": h.engagement.overall,
+                        "virality": h.engagement.virality,
+                    } if h.engagement else None,
                 }
                 for h in result.highlights
             ],

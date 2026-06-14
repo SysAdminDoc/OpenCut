@@ -27,6 +27,7 @@ class EngagementScore:
     pacing: float = 0.0              # 0-1: conversational energy / words-per-second
     quotability: float = 0.0         # 0-1: how quotable/shareable the content is
     overall: float = 0.0             # 0-1: weighted composite score
+    virality: int = 0                # 0-100: hook-forward, creator-sortable heuristic
 
     def compute_overall(self):
         """Compute weighted overall engagement score."""
@@ -37,6 +38,24 @@ class EngagementScore:
             self.quotability * 0.25
         )
         return self.overall
+
+    def compute_virality(self) -> int:
+        """Deterministic 0-100 virality/hook score from the engagement dimensions.
+
+        A single normalized number creators can sort and threshold on (the
+        headline feature Opus Clip paywalls). Hook-forward by design — distinct
+        from ``overall`` (the editing-relevance composite) — but still a pure,
+        repeatable mapping of the same four signals. It is a heuristic, not a
+        guarantee of how a clip will actually perform.
+        """
+        raw = (
+            self.hook_strength * 0.35 +
+            self.emotional_peak * 0.25 +
+            self.quotability * 0.25 +
+            self.pacing * 0.15
+        )
+        self.virality = max(0, min(100, round(raw * 100)))
+        return self.virality
 
 
 @dataclass
@@ -391,6 +410,7 @@ def _score_engagement(highlight: Highlight, transcript_segments: List[Dict]) -> 
         quotability=round(quotability_score, 3),
     )
     engagement.compute_overall()
+    engagement.compute_virality()
     return engagement
 
 
