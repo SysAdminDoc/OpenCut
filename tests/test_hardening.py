@@ -250,6 +250,78 @@ def test_scripting_console_blocked_patterns_expanded():
         assert pat in _BLOCKED_PATTERNS, f"{pat} missing from _BLOCKED_PATTERNS"
 
 
+def test_expression_engine_whitelist_blocks_attribute_access():
+    """Whitelist rejects every attribute node, closing dunder-walk escapes."""
+    from opencut.core.expression_engine import validate_expression
+
+    for expr in (
+        "().__class__",
+        "(1).__class__.__bases__",
+        "[].__class__.__mro__",
+        "().__class__.__subclasses__()",
+        "foo.bar",
+    ):
+        result = validate_expression(expr)
+        assert not result["valid"], f"{expr} should be rejected"
+
+
+def test_expression_engine_whitelist_blocks_unknown_calls():
+    """Only sandbox callables may be invoked; everything else is rejected."""
+    from opencut.core.expression_engine import validate_expression
+
+    for expr in ("breakpoint()", "eval('1')", "open('x')", "unknown_fn(1)"):
+        result = validate_expression(expr)
+        assert not result["valid"], f"{expr} should be rejected"
+
+
+def test_expression_engine_whitelist_allows_legit_expressions():
+    """Real motion-design expressions still validate under the whitelist."""
+    from opencut.core.expression_engine import validate_expression
+
+    for expr in (
+        "sin(t * pi * 2)",
+        "lerp(0, 100, progress)",
+        "1 if beat else 0",
+        "noise(1.0, octaves=4)",
+        "clamp(amplitude * 2, 0, 1)",
+        "2 + 3 * frame",
+        "min(w, h) / 2",
+    ):
+        assert validate_expression(expr)["valid"], f"{expr} should be valid"
+
+
+def test_scripting_console_ast_blocks_dunders_outside_pattern_list():
+    """AST check catches escape dunders the substring scan does not list."""
+    from opencut.core.scripting_console import _BLOCKED_PATTERNS, execute_script
+
+    # __base__ / __flags__ are real escape vectors absent from _BLOCKED_PATTERNS.
+    for expr in ("type(1).__base__", "object.__flags__", "(1).__delattr__"):
+        assert not any(p in expr for p in _BLOCKED_PATTERNS), \
+            f"{expr} unexpectedly already in pattern list"
+        result = execute_script(expr)
+        assert not result.success, f"{expr} should be rejected"
+        assert "not allowed" in result.error
+
+
+def test_scripting_console_ast_blocks_blocked_builtin_reference():
+    """Referencing a blocked builtin by name is caught structurally."""
+    from opencut.core.scripting_console import execute_script
+
+    for expr in ("g = getattr", "h = eval", "j = globals"):
+        result = execute_script(expr)
+        assert not result.success, f"{expr} should be rejected"
+        assert "not allowed" in result.error
+
+
+def test_scripting_console_ast_allows_legit_scripts():
+    """Ordinary sandbox scripts still execute under the AST check."""
+    from opencut.core.scripting_console import execute_script
+
+    result = execute_script("total = sum([1, 2, 3])\nprint(sqrt(total * 6))")
+    assert result.success, result.error
+    assert "6.0" in result.output
+
+
 def test_webhook_url_rejects_localhost():
     """Webhook URL validation blocks localhost/private IPs."""
     import pytest as _pt

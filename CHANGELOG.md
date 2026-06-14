@@ -5,6 +5,25 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security — AST whitelist for the expression sandbox
+
+- Replaced the deny-list AST check in `expression_engine.py` with a closed
+  node **whitelist**: only arithmetic/boolean/comparison nodes, calls to known
+  sandbox functions, and ternaries are permitted. Every `ast.Attribute` node is
+  now rejected outright, so dunder-walk escapes (`().__class__.__subclasses__`)
+  and obfuscated variants cannot be expressed at all. Call targets are
+  constrained to the sandbox's callable table; unknown calls (`breakpoint()`,
+  `eval()`) are rejected at validation time.
+
+### Security — AST-level dunder/builtin guard for the scripting console
+
+- Added an obfuscation-proof structural check to `scripting_console.py` that
+  parses the script and rejects any dunder attribute access (`__base__`,
+  `__flags__`, `__delattr__`, ... — including escape vectors absent from the
+  hand-maintained substring list) and any reference to a blocked builtin
+  (`getattr`, `eval`, `globals`, ...), regardless of source formatting. The
+  lowercased substring scan is retained as a first-pass net.
+
 ### Security — Transitive web-dependency floor pins (RA-23)
 
 - Floored Werkzeug (`>=3.1.5`) and Jinja2 (`>=3.1.6`) in core
