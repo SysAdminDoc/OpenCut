@@ -5,8 +5,12 @@
 #define MyAppVersion "1.33.1"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
-#define BundledFfmpegVersion "8.1-essentials_build-www.gyan.dev"
-#define BundledFfprobeVersion "8.1-essentials_build-www.gyan.dev"
+#define BundledFfmpegVersion "8.1.1-essentials_build-www.gyan.dev"
+#define BundledFfprobeVersion "8.1.1-essentials_build-www.gyan.dev"
+; June-2026 FFmpeg zero-days (CVE-2026-6385 et al.) landed as post-release master
+; commits; guaranteed-clean fallback is a gyan.dev git-master snapshot >= 2026-06-10
+; (commit b29bdd3715). Mirrors opencut/core/ffmpeg_provenance.py.
+#define BundledFfmpegSecurityFloor "release>=8.1.1 OR git-master>=2026-06-10 (commit b29bdd3715)"
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}
@@ -171,7 +175,8 @@ begin
     '  "server_path": "' + JsonEscape(ExpandConstant('{app}\server')) + '",' + #13#10 +
     '  "ffmpeg_path": "' + JsonEscape(ExpandConstant('{app}\ffmpeg')) + '",' + #13#10 +
     '  "bundled_ffmpeg_version": "' + JsonEscape('{#BundledFfmpegVersion}') + '",' + #13#10 +
-    '  "bundled_ffprobe_version": "' + JsonEscape('{#BundledFfprobeVersion}') + '"' + #13#10 +
+    '  "bundled_ffprobe_version": "' + JsonEscape('{#BundledFfprobeVersion}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_security_floor": "' + JsonEscape('{#BundledFfmpegSecurityFloor}') + '"' + #13#10 +
     '}' + #13#10;
   SaveStringToFile(ManifestPath, Json, False);
 end;
