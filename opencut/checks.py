@@ -207,6 +207,11 @@ def check_autoshot_available():
     return _try_import("autoshot") is not None
 
 
+def check_ocr_available():
+    """Check if an OCR engine (pytesseract or easyocr) is installed."""
+    return _try_import("pytesseract") is not None or _try_import("easyocr") is not None
+
+
 def check_resemble_enhance_available():
     """Check if Resemble Enhance (speech super-resolution) is installed."""
     return _try_import("resemble_enhance") is not None

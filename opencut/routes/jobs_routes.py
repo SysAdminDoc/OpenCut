@@ -368,6 +368,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/agent/storyboard",
     # Import-by-link footage ingest
     "/search/ingest",
+    # Multimodal index (transcript + OCR + audio tags)
+    "/search/multimodal-index",
 })
 
 

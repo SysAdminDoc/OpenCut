@@ -284,6 +284,104 @@ def search_clear_db_index():
 
 
 # ---------------------------------------------------------------------------
+# Multimodal index: transcript + OCR text + audio event tags
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/multimodal-index", methods=["POST"])
+@require_csrf
+@async_job("multimodal-index", filepath_required=False)
+def search_multimodal_index(job_id, filepath, data):
+    """Index files with transcript, OCR text, and audio event classification."""
+    files = data.get("files", [])
+    folder = data.get("folder", "").strip()
+    model = data.get("model", "base")
+    language = data.get("language", None)
+    enable_ocr = safe_bool(data.get("ocr"), default=True)
+    enable_audio_tags = safe_bool(data.get("audio_tags"), default=True)
+
+    if folder and (not files or not isinstance(files, list)):
+        from opencut.security import validate_path
+        folder = validate_path(folder)
+        if not os.path.isdir(folder):
+            raise ValueError("folder is not a directory")
+        _MEDIA_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v",
+                       ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"}
+        files = [os.path.join(folder, f) for f in os.listdir(folder)
+                 if os.path.splitext(f)[1].lower() in _MEDIA_EXTS]
+        if not files:
+            raise ValueError("No media files found in folder")
+
+    if not isinstance(files, list) or not files:
+        raise ValueError("files or folder required")
+    if len(files) > 100:
+        raise ValueError("Too many files (max 100)")
+
+    validated_files = [validate_filepath(str(f).strip()) for f in files if isinstance(f, str) and f.strip()]
+
+    from opencut.security import VALID_WHISPER_MODELS
+    if model not in VALID_WHISPER_MODELS:
+        raise ValueError(f"Invalid model: {model}")
+
+    from opencut.core.captions import check_whisper_available, transcribe
+    from opencut.core.footage_index_db import index_file as db_index_file
+    from opencut.utils.config import CaptionConfig
+
+    available, backend = check_whisper_available()
+    if not available:
+        raise ValueError("No Whisper backend installed. Run: pip install faster-whisper")
+
+    total = len(validated_files)
+    indexed = 0
+    errors = []
+
+    for idx, fpath in enumerate(validated_files):
+        if _is_cancelled(job_id):
+            return {"indexed": indexed, "total": total, "errors": errors}
+
+        base_pct = int((idx / total) * 90)
+        _update_job(job_id, progress=base_pct,
+                    message=f"Indexing {os.path.basename(fpath)} ({idx+1}/{total})...")
+
+        try:
+            config = CaptionConfig(model=model, language=language, word_timestamps=True)
+            result = transcribe(fpath, config=config)
+            transcript = ""
+            if hasattr(result, "segments"):
+                transcript = " ".join(getattr(seg, "text", "") for seg in result.segments)
+
+            ocr_text = ""
+            if enable_ocr:
+                try:
+                    from opencut.core.multimodal_index import extract_ocr_text
+                    ocr_text = extract_ocr_text(fpath)
+                except Exception as ocr_exc:
+                    logger.debug("OCR failed for %s: %s", fpath, ocr_exc)
+
+            audio_tags = ""
+            if enable_audio_tags:
+                try:
+                    from opencut.core.multimodal_index import classify_audio_events
+                    audio_tags = classify_audio_events(fpath)
+                except Exception as at_exc:
+                    logger.debug("Audio classify failed for %s: %s", fpath, at_exc)
+
+            from opencut.helpers import get_video_info
+            info = get_video_info(fpath)
+            duration = info.get("duration", 0)
+
+            db_index_file(fpath, transcript, duration=duration,
+                          ocr_text=ocr_text, audio_tags=audio_tags)
+            indexed += 1
+        except Exception as file_exc:
+            logger.warning("Failed to index %s: %s", fpath, file_exc)
+            errors.append({"file": fpath, "error": str(file_exc)})
+
+    return {"indexed": indexed, "total": total, "errors": errors,
+            "modalities": ["transcript"] +
+            (["ocr"] if enable_ocr else []) +
+            (["audio_tags"] if enable_audio_tags else [])}
+
+
+# ---------------------------------------------------------------------------
 # Import-by-link: URL → local media cache
 # ---------------------------------------------------------------------------
 @search_bp.route("/search/ingest", methods=["POST"])
