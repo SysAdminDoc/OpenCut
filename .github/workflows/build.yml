@@ -76,7 +76,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           pip install pytest-cov pytest-xdist
-          python -m pytest tests/ -v --tb=short --cov=opencut --cov-report=term-missing --cov-fail-under=55 -n auto --dist worksteal
+          python -m pytest tests/ -v --tb=short --cov=opencut --cov-report=term-missing --cov-fail-under=58 -n auto --dist worksteal
 
       - name: Check version sync
         run: python scripts/sync_version.py --check
