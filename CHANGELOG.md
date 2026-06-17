@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security — Werkzeug floor raised to >=3.1.6 (CVE-2026-27199)
+
+- Bumped Werkzeug floor from >=3.1.5 to >=3.1.6 in both `pyproject.toml`
+  and `requirements.txt`. CVE-2026-27199 is a `safe_join()` Windows
+  device-name bypass that causes hanging file reads in `send_from_directory`.
+
+### Fixed — Route manifest + README badge drift
+
+- Regenerated `route_manifest.json` and `feature_readiness.json` to reflect
+  recent url_ingest, multimodal_index, and AutoShot additions. README badges
+  and inline counts updated: 1,545 shipped routes, 6 stubs.
+
 ### Changed — Feature-state now reflects route readiness
 
 - Generated feature-readiness records now cross-reference the route

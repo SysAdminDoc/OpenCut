@@ -11,8 +11,9 @@ waitress>=3.0.1,<4
 python-json-logger>=2.0,<3
 psutil>=5.9
 # RA-23 — Werkzeug/Jinja2 ship with flask; pin the security floor (Werkzeug
-# CVE-2026-21860/CVE-2025-66221 fixed 3.1.5, Jinja2 CVE-2025-27516 fixed 3.1.6).
-Werkzeug>=3.1.5
+# CVE-2026-21860/CVE-2025-66221 fixed 3.1.5, CVE-2026-27199 fixed 3.1.6;
+# Jinja2 CVE-2025-27516 fixed 3.1.6).
+Werkzeug>=3.1.6
 Jinja2>=3.1.6
 
 # === STANDARD (recommended) ===
