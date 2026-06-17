@@ -100,6 +100,35 @@ def test_model_card_hardware_metadata_flows_to_feature_manifest():
     assert edge_tts["minimum_vram_mb"] == 0
 
 
+def test_privacy_license_fields_in_feature_manifest():
+    manifest = registry.feature_manifest()
+    by_id = {record["feature_id"]: record for record in manifest["features"]}
+
+    for feature in manifest["features"]:
+        assert "privacy" in feature, f"{feature['feature_id']} missing privacy"
+        assert "license" in feature, f"{feature['feature_id']} missing license"
+        assert "advisory_notes" in feature, f"{feature['feature_id']} missing advisory_notes"
+
+    demucs = by_id["audio.demucs"]
+    assert demucs["privacy"] == "local-only"
+    assert demucs["license"] == "MIT"
+
+    edge = by_id["audio.edge-tts"]
+    assert "cloud" in edge["privacy"].lower()
+
+
+def test_cloud_feature_has_advisory_notes():
+    manifest = registry.feature_manifest()
+    by_id = {record["feature_id"]: record for record in manifest["features"]}
+
+    has_advisory = False
+    for fid, record in by_id.items():
+        if record["advisory_notes"]:
+            has_advisory = True
+            break
+    assert has_advisory, "expected at least one feature with advisory notes"
+
+
 def test_generated_readiness_records_are_merged_into_manifest():
     manifest = registry.feature_manifest()
 
