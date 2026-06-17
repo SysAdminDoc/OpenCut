@@ -28,8 +28,9 @@ class SilenceConfig:
 @dataclass
 class CaptionConfig:
     """Configuration for caption/subtitle generation."""
-    # Whisper model size: tiny, base, small, medium, large-v3, turbo
-    model: str = "base"
+    # Whisper model size: tiny, base, small, medium, large-v3, turbo,
+    # large-v3-turbo (default — within 1-2% WER of large-v3 at 5.4x speed)
+    model: str = "large-v3-turbo"
     # Language code (None = auto-detect)
     language: Optional[str] = None
     # Enable word-level timestamps for animated captions

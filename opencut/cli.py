@@ -1571,6 +1571,101 @@ def polish(input_file, output, port, no_repeats, no_fillers, no_chapters, timeou
                       f"{result.get('original_duration', 0):.1f}s)[/dim]\n")
 
 
+@cli.group()
+def config():
+    """Manage ~/.opencut configuration files."""
+    pass
+
+
+@config.command("export")
+@click.option("-o", "--output", type=click.Path(), default=None,
+              help="Output JSON file (default: stdout)")
+def config_export(output):
+    """Export all ~/.opencut settings to a single JSON backup."""
+    import glob
+
+    data_dir = os.path.join(os.path.expanduser("~"), ".opencut")
+    if not os.path.isdir(data_dir):
+        raise click.ClickException(f"Data directory not found: {data_dir}")
+
+    bundle = {}
+    for path in sorted(glob.glob(os.path.join(data_dir, "*.json"))):
+        name = os.path.basename(path)
+        try:
+            with open(path, encoding="utf-8") as f:
+                bundle[name] = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            console.print(f"[yellow]Warning:[/yellow] skipping {name}: {exc}")
+
+    payload = json.dumps(bundle, indent=2, ensure_ascii=False)
+    if output:
+        Path(output).write_text(payload + "\n", encoding="utf-8")
+        console.print(f"[green]Exported {len(bundle)} config files to {output}[/green]")
+    else:
+        click.echo(payload)
+
+
+@config.command("import")
+@click.argument("backup_file", type=click.Path(exists=True))
+@click.option("--dry-run", is_flag=True, help="Show what would be written without writing")
+def config_import(backup_file, dry_run):
+    """Import settings from a JSON backup created by 'config export'."""
+    data_dir = os.path.join(os.path.expanduser("~"), ".opencut")
+    os.makedirs(data_dir, exist_ok=True)
+
+    with open(backup_file, encoding="utf-8") as f:
+        bundle = json.load(f)
+
+    if not isinstance(bundle, dict):
+        raise click.ClickException("Invalid backup: expected a JSON object")
+
+    for name, data in bundle.items():
+        if not name.endswith(".json"):
+            console.print(f"[yellow]Skipping non-JSON key:[/yellow] {name}")
+            continue
+        target = os.path.join(data_dir, name)
+        if dry_run:
+            console.print(f"  Would write: {target}")
+        else:
+            with open(target, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            console.print(f"  [green]Wrote:[/green] {target}")
+
+    action = "Would import" if dry_run else "Imported"
+    console.print(f"\n[bold]{action} {len(bundle)} config files[/bold]")
+
+
+@config.command("validate")
+def config_validate():
+    """Check ~/.opencut config files for JSON parse errors."""
+    import glob
+
+    data_dir = os.path.join(os.path.expanduser("~"), ".opencut")
+    if not os.path.isdir(data_dir):
+        raise click.ClickException(f"Data directory not found: {data_dir}")
+
+    errors = 0
+    checked = 0
+    for path in sorted(glob.glob(os.path.join(data_dir, "*.json"))):
+        name = os.path.basename(path)
+        checked += 1
+        try:
+            with open(path, encoding="utf-8") as f:
+                json.load(f)
+        except json.JSONDecodeError as exc:
+            console.print(f"  [red]INVALID[/red] {name}: {exc}")
+            errors += 1
+        except OSError as exc:
+            console.print(f"  [yellow]UNREADABLE[/yellow] {name}: {exc}")
+            errors += 1
+
+    if errors:
+        console.print(f"\n[red bold]{errors}/{checked} config files have issues[/red bold]")
+        raise SystemExit(1)
+    else:
+        console.print(f"\n[green bold]All {checked} config files are valid JSON[/green bold]")
+
+
 def main():
     """Entry point."""
     cli()
