@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — 121 coverage expansion tests across 10 untested core modules
+
+- New `tests/test_coverage_expansion.py` adds focused unit tests for:
+  url_ingest (16), multimodal_index (7), edl_aaf (14), media_relink (9),
+  auto_update (14), structured_ingest (12), batch_conform (5),
+  project_organizer (15), storage_tiering (10), render_queue (9).
+  All tests are fast (<1s total), require no external services, and run
+  without optional ML/GPU dependencies. CI coverage floor raised to 55%.
+
 ### Changed — Docker compose hardened + MCP sidecar profile
 
 - Added CPU/memory resource limits (CPU: 4c/4G, GPU: 8c/16G), JSON-file
