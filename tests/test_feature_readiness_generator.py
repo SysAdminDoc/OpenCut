@@ -40,6 +40,36 @@ def test_generator_carries_model_card_hardware_requirements():
     assert flashvsr["minimum_vram_mb"] == 12288
 
 
+def test_dependency_gated_routes_produce_non_available_features():
+    payload = dump_feature_readiness.build_manifest()
+    records = payload["records"]
+    for record in records:
+        if record["state"] == "available":
+            continue
+        assert record["state"] in ("stub", "missing_dependency"), (
+            f"{record['feature_id']} has unexpected state {record['state']!r}"
+        )
+
+    non_available = [r for r in records if r["state"] != "available"]
+    assert len(non_available) > 0, "expected at least one non-available generated record"
+
+
+def test_derive_feature_state_logic():
+    from opencut.tools.dump_feature_readiness import _derive_feature_state
+
+    readiness = {
+        "/a": "stub",
+        "/b": "dependency-gated",
+        "/c": "implemented",
+    }
+    assert _derive_feature_state(["/a"], readiness) == "stub"
+    assert _derive_feature_state(["/a", "/b"], readiness) == "missing_dependency"
+    assert _derive_feature_state(["/a", "/c"], readiness) == "available"
+    assert _derive_feature_state(["/c"], readiness) == "available"
+    assert _derive_feature_state(["/b"], readiness) == "missing_dependency"
+    assert _derive_feature_state([], readiness) == "available"
+
+
 def test_dumper_check_mode_passes_against_committed_artifact():
     rc = dump_feature_readiness.cli(["--check"])
     assert rc == 0

@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-06-07T00:11:16Z",
+  "generated_at": "2026-06-17T00:55:37Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_records": 66,
-  "total_routes": 90,
+  "total_records": 71,
+  "total_routes": 97,
   "records": [
     {
       "feature_id": "auto.ab-av1",
@@ -64,7 +64,7 @@
       "feature_id": "auto.audio-reactive-fx",
       "label": "Audio Reactive Fx",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -99,7 +99,7 @@
       "label": "auto-editor",
       "category": "editing",
       "state": "available",
-      "install_hint": "pip install auto-editor",
+      "install_hint": "Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/auto-edit"
@@ -132,7 +132,7 @@
       "feature_id": "auto.cinefocus",
       "label": "Cinefocus",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -183,7 +183,7 @@
       "feature_id": "auto.cosyvoice2",
       "label": "Cosyvoice2",
       "category": "audio",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -217,7 +217,7 @@
       "feature_id": "auto.deblur-motion",
       "label": "Deblur Motion",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -251,7 +251,7 @@
       "feature_id": "auto.depth-depthpro",
       "label": "Depth Depthpro",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -268,7 +268,7 @@
       "feature_id": "auto.depth-flow",
       "label": "Depth Flow",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -285,7 +285,7 @@
       "feature_id": "auto.diffbir",
       "label": "Diffbir",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -321,7 +321,7 @@
       "feature_id": "auto.echomimic",
       "label": "Echomimic",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -445,7 +445,7 @@
       "feature_id": "auto.gen-video-ltx",
       "label": "Gen Video Ltx",
       "category": "generate",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -462,7 +462,7 @@
       "feature_id": "auto.gen-video-opensora",
       "label": "Gen Video Opensora",
       "category": "generate",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -497,13 +497,31 @@
       "feature_id": "auto.gyroflow",
       "label": "Gyroflow",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/stabilize/gyroflow"
       ],
       "check_name": "check_gyroflow",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "",
+      "requires_gpu": false,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "auto.iclight",
+      "label": "Iclight",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/relight/iclight",
+        "/video/relight/iclight/info"
+      ],
+      "check_name": "check_iclight_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -545,6 +563,23 @@
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
       "requires_gpu": true,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "auto.latentsync",
+      "label": "Latentsync",
+      "category": "ai",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/ai/lip-sync"
+      ],
+      "check_name": "check_latentsync_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "",
+      "requires_gpu": false,
       "minimum_vram_mb": 0
     },
     {
@@ -655,7 +690,7 @@
       "feature_id": "audio.omnivoice",
       "label": "OmniVoice TTS",
       "category": "audio",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "pip install omnivoice",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -740,7 +775,7 @@
       "feature_id": "video.style.reezsynth",
       "label": "ReEzSynth (Ebsynth successor)",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "pip install reezsynth (stub — roadmap H2.5)",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -774,7 +809,7 @@
       "feature_id": "video.inpaint.rose",
       "label": "ROSE shadow-aware inpaint",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "pip install rose-inpaint (stub — roadmap H2.2)",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -812,6 +847,7 @@
       "install_hint": "pip install sam2",
       "docs": "docs/MODELS.md",
       "routes": [
+        "/video/object-remove/engines",
         "/video/segment/sam2",
         "/video/segment/sam2/info"
       ],
@@ -823,10 +859,27 @@
       "minimum_vram_mb": 0
     },
     {
+      "feature_id": "auto.sam3",
+      "label": "Sam3",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/object-remove/engines"
+      ],
+      "check_name": "check_sam3_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "",
+      "requires_gpu": false,
+      "minimum_vram_mb": 0
+    },
+    {
       "feature_id": "video.matte.sammie",
       "label": "Sammie-Roto-2 (VideoMaMa)",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "pip install sammie-roto (stub — roadmap H2.3)",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -843,7 +896,7 @@
       "feature_id": "auto.searaft",
       "label": "Searaft",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -857,10 +910,27 @@
       "minimum_vram_mb": 0
     },
     {
+      "feature_id": "auto.seedvr2",
+      "label": "Seedvr2",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/ai/upscale"
+      ],
+      "check_name": "check_seedvr2_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "",
+      "requires_gpu": false,
+      "minimum_vram_mb": 0
+    },
+    {
       "feature_id": "auto.sfx-audiogen",
       "label": "Sfx Audiogen",
       "category": "audio",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -984,7 +1054,7 @@
       "feature_id": "auto.tokenflow",
       "label": "Tokenflow",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1001,7 +1071,7 @@
       "feature_id": "auto.track-cutie",
       "label": "Track Cutie",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1018,7 +1088,7 @@
       "feature_id": "auto.track-deva",
       "label": "Track Deva",
       "category": "video",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1035,7 +1105,7 @@
       "feature_id": "auto.vevo2",
       "label": "Vevo2",
       "category": "audio",
-      "state": "available",
+      "state": "missing_dependency",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1064,6 +1134,23 @@
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
       "requires_gpu": true,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "auto.visual-multicam",
+      "label": "Visual Multicam",
+      "category": "video",
+      "state": "missing_dependency",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/multicam-cuts"
+      ],
+      "check_name": "check_visual_multicam_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "",
+      "requires_gpu": false,
       "minimum_vram_mb": 0
     },
     {
