@@ -283,6 +283,56 @@ def search_clear_db_index():
         return safe_error(e, "search_clear_db_index")
 
 
+# ---------------------------------------------------------------------------
+# Import-by-link: URL → local media cache
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/ingest", methods=["POST"])
+@require_csrf
+@async_job("url_ingest", filepath_required=False)
+def search_ingest_url(job_id, filepath, data):
+    """Fetch a video URL to the local media cache."""
+    from opencut.core import url_ingest
+
+    def _prog(p, m=""):
+        _update_job(job_id, progress=int(p), message=str(m))
+
+    url = str(data.get("url") or "")
+    result = url_ingest.ingest_url(url, on_progress=_prog)
+    return {
+        "filepath": result.filepath,
+        "url": result.url,
+        "title": result.title,
+        "duration": result.duration,
+        "filesize_mb": result.filesize_mb,
+        "source": result.source,
+        "cached": result.cached,
+        "notes": result.notes,
+    }
+
+
+@search_bp.route("/search/ingest/cache", methods=["GET"])
+def search_ingest_cache():
+    """List cached ingest files."""
+    try:
+        from opencut.core import url_ingest
+        entries = url_ingest.list_cached()
+        return jsonify({"entries": entries, "count": len(entries)})
+    except Exception as e:
+        return safe_error(e, "ingest_cache_list")
+
+
+@search_bp.route("/search/ingest/cache", methods=["DELETE"])
+@require_csrf
+def search_ingest_cache_clear():
+    """Clear the ingest cache."""
+    try:
+        from opencut.core import url_ingest
+        count = url_ingest.clear_cache()
+        return jsonify({"cleared": count})
+    except Exception as e:
+        return safe_error(e, "ingest_cache_clear")
+
+
 @search_bp.route("/search/db-diagnostics", methods=["GET"])
 def search_db_diagnostics():
     """Get read-only diagnostics for the SQLite footage index."""

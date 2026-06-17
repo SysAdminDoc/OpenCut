@@ -14,6 +14,31 @@ record also lives in the git commit messages.
   for these features before the user clicks them (was: all generated
   features showed as available regardless of route status).
 
+### Added — Import-by-link footage ingest
+
+- New `url_ingest` module (`opencut/core/url_ingest.py`): fetches video from
+  a URL to `~/.opencut/media_ingest/` so existing routes consume it as a local
+  file. Uses yt-dlp when installed (YouTube, Vimeo, Zoom Clips, Medal, etc.);
+  falls back to plain HTTP download for direct-link URLs. SHA-256 content-
+  addressed caching avoids re-downloads.
+- New routes: `POST /search/ingest` (async job), `GET /search/ingest/cache`,
+  `DELETE /search/ingest/cache`.
+
+### Added — AutoShot scene-detection engine
+
+- Added AutoShot as a selectable scene-detection engine with priority 85
+  (above TransNetV2's 70). `detect_scenes_auto()` now tries AutoShot first
+  for gradual-transition-aware detection, falling back to TransNetV2 →
+  PySceneDetect → FFmpeg threshold. `check_autoshot_available()`, engine
+  registry entry, and 5 new tests added.
+
+### Added — Model privacy/license posture in feature-state
+
+- Feature-state entries now expose `privacy` (local-only / cloud), `license`
+  (SPDX token), and `advisory_notes` from the model-card registry. The CEP
+  panel annotates gated buttons with data-feature-privacy/license attributes,
+  privacy chip badges ("Local" / "Cloud"), and advisory notes in tooltips.
+
 ### Changed — Collapsed 4 duplicate 501 stubs onto canonical pipelines
 
 - `/video/trailer/generate` now delegates to `trailer_gen.generate()`.

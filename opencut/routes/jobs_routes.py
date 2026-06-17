@@ -366,6 +366,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/outpaint",
     "/agent/search-footage",
     "/agent/storyboard",
+    # Import-by-link footage ingest
+    "/search/ingest",
 })
 
 
