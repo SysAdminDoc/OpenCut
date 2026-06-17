@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — 12 new animated caption presets (19 → 31)
+
+- Neon Glow, Slide Up, Word Pop, Emoji React, Speaker Colored, Retro VHS,
+  Podcast, Gaming, Luxury, TikTok Bold, Handwritten, and RTL Arabic.
+  Caption style count now exceeds 30, matching paid competitor expectations.
+
 ### Added — Smart pause detection for silence removal
 
 - New `smart_pause=true` option on `/silence` route and `detect_speech()`
