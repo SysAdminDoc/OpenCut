@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — Smart pause detection for silence removal
+
+- New `smart_pause=true` option on `/silence` route and `detect_speech()`
+  that preserves dramatic pauses (0.8-3.0s silences preceded by
+  sentence-ending speech) instead of cutting them. When a transcript is
+  available, uses sentence-final punctuation as context; without transcript,
+  falls back to a duration heuristic that preserves short mid-speech pauses.
+- New `filter_smart_pauses()` function in `opencut/core/silence.py` with 2
+  unit tests.
+
 ### Added — MCP tool catalog expanded from 39 to 86 curated tools
 
 - Added 47 new curated MCP tools covering video editing (trim, merge, concat,
