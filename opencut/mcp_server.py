@@ -685,6 +685,573 @@ MCP_TOOLS = [
             "required": ["filepath", "reference_path"],
         },
     },
+    # ------------------------------------------------------------------
+    # Video editing tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_trim_video",
+        "description": "Trim a video to specified start and end times.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "start": {"type": "number", "description": "Start time in seconds"},
+                "end": {"type": "number", "description": "End time in seconds"},
+            },
+            "required": ["filepath", "start", "end"],
+        },
+    },
+    {
+        "name": "opencut_merge_videos",
+        "description": "Merge multiple video files with optional format conversion.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "files": {"type": "array", "items": {"type": "string"}, "description": "Paths to video files"},
+                "output_format": {"type": "string", "description": "Output container format", "default": "mp4"},
+            },
+            "required": ["files"],
+        },
+    },
+    {
+        "name": "opencut_concat_videos",
+        "description": "Concatenate video files sequentially without re-encoding when possible.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "files": {"type": "array", "items": {"type": "string"}, "description": "Paths to video files in order"},
+            },
+            "required": ["files"],
+        },
+    },
+    {
+        "name": "opencut_reframe_video",
+        "description": "Reframe video to a new aspect ratio with smart cropping or padding.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "aspect_ratio": {"type": "string", "description": "Target aspect ratio, e.g. 9:16, 1:1, 4:3"},
+                "mode": {"type": "string", "description": "Reframe mode: crop, pad, or smart", "default": "smart"},
+            },
+            "required": ["filepath", "aspect_ratio"],
+        },
+    },
+    {
+        "name": "opencut_stabilize_video",
+        "description": "Stabilize shaky video footage using motion analysis.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "smoothing": {"type": "number", "description": "Smoothing factor (higher = smoother)", "default": 10},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_speed_change",
+        "description": "Change playback speed of a video uniformly.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "speed": {"type": "number", "description": "Speed multiplier (e.g. 0.5 for half, 2.0 for double)"},
+            },
+            "required": ["filepath", "speed"],
+        },
+    },
+    {
+        "name": "opencut_speed_ramp",
+        "description": "Apply speed ramping with keyframes for variable playback speed.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "keyframes": {"type": "array", "items": {"type": "object"}, "description": "Keyframe array [{time, speed}]"},
+            },
+            "required": ["filepath", "keyframes"],
+        },
+    },
+    {
+        "name": "opencut_pip",
+        "description": "Create a picture-in-picture composite with an overlay video.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to base video"},
+                "overlay": {"type": "string", "description": "Path to overlay video"},
+                "position": {"type": "string", "description": "Position: top-left, top-right, bottom-left, bottom-right, center", "default": "bottom-right"},
+            },
+            "required": ["filepath", "overlay"],
+        },
+    },
+    {
+        "name": "opencut_blend_videos",
+        "description": "Blend two video layers with a compositing mode.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to base video"},
+                "overlay": {"type": "string", "description": "Path to overlay video"},
+                "mode": {"type": "string", "description": "Blend mode: add, multiply, screen, overlay", "default": "overlay"},
+                "opacity": {"type": "number", "description": "Overlay opacity 0.0-1.0", "default": 0.5},
+            },
+            "required": ["filepath", "overlay"],
+        },
+    },
+    {
+        "name": "opencut_letterbox",
+        "description": "Add letterbox/pillarbox bars to fit a target aspect ratio.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "aspect_ratio": {"type": "string", "description": "Target aspect ratio, e.g. 16:9, 2.39:1"},
+                "color": {"type": "string", "description": "Bar color as hex or name", "default": "black"},
+            },
+            "required": ["filepath", "aspect_ratio"],
+        },
+    },
+    {
+        "name": "opencut_preview_frame",
+        "description": "Extract a single preview frame from a video at a given timestamp.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "time": {"type": "number", "description": "Timestamp in seconds to extract"},
+            },
+            "required": ["filepath", "time"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # Video effects tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_chromakey",
+        "description": "Apply chroma key (green/blue screen) removal to a video.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "color": {"type": "string", "description": "Key color: green, blue, or hex value", "default": "green"},
+                "tolerance": {"type": "number", "description": "Color tolerance 0.0-1.0", "default": 0.3},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_lut_apply",
+        "description": "Apply a LUT (Look-Up Table) color grade to a video.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "lut_path": {"type": "string", "description": "Path to .cube or .3dl LUT file"},
+            },
+            "required": ["filepath", "lut_path"],
+        },
+    },
+    {
+        "name": "opencut_lut_generate",
+        "description": "Generate a LUT from a reference image or video for consistent color grading.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "reference": {"type": "string", "description": "Path to reference image or video"},
+            },
+            "required": ["filepath", "reference"],
+        },
+    },
+    {
+        "name": "opencut_video_fx",
+        "description": "Apply a video effect (blur, sharpen, vignette, glitch, film grain, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "effect": {"type": "string", "description": "Effect name: blur, sharpen, vignette, glitch, grain, glow"},
+                "params": {"type": "object", "description": "Effect-specific parameters"},
+            },
+            "required": ["filepath", "effect"],
+        },
+    },
+    {
+        "name": "opencut_denoise_video",
+        "description": "Reduce visual noise in a video using spatial/temporal filtering.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "strength": {"type": "number", "description": "Denoise strength 0.0-1.0", "default": 0.5},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_interpolate",
+        "description": "Interpolate frames using neural methods to increase video frame rate.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "target_fps": {"type": "number", "description": "Target frame rate"},
+            },
+            "required": ["filepath", "target_fps"],
+        },
+    },
+    {
+        "name": "opencut_transitions",
+        "description": "Apply a transition effect between clips or at cut points.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "type": {"type": "string", "description": "Transition type: crossfade, wipe, slide, zoom, dip-to-black"},
+                "duration": {"type": "number", "description": "Transition duration in seconds", "default": 0.5},
+            },
+            "required": ["filepath", "type"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # Caption tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_caption_burnin",
+        "description": "Burn caption segments into video with customizable styling.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "segments": {"type": "array", "items": {"type": "object"}, "description": "Caption segments [{start, end, text}]"},
+                "style": {"type": "object", "description": "Caption style: font, size, color, position, bg"},
+            },
+            "required": ["filepath", "segments"],
+        },
+    },
+    {
+        "name": "opencut_caption_translate",
+        "description": "Translate existing captions or SRT to a target language.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video or SRT file"},
+                "target_language": {"type": "string", "description": "Target language code (e.g. es, fr, de, ja)"},
+            },
+            "required": ["filepath", "target_language"],
+        },
+    },
+    {
+        "name": "opencut_caption_styled",
+        "description": "Generate and render styled captions (TikTok, YouTube, cinematic, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "style": {"type": "string", "description": "Caption style preset name"},
+            },
+            "required": ["filepath", "style"],
+        },
+    },
+    {
+        "name": "opencut_caption_animated",
+        "description": "Render animated captions with word-level timing and motion effects.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "style": {"type": "string", "description": "Animation style preset"},
+                "segments": {"type": "array", "items": {"type": "object"}, "description": "Caption segments with word timing"},
+            },
+            "required": ["filepath", "style", "segments"],
+        },
+    },
+    {
+        "name": "opencut_caption_srt_import",
+        "description": "Import an SRT file and convert to timeline caption segments.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file for alignment"},
+                "srt_path": {"type": "string", "description": "Path to SRT subtitle file"},
+            },
+            "required": ["filepath", "srt_path"],
+        },
+    },
+    {
+        "name": "opencut_caption_karaoke",
+        "description": "Generate karaoke-style word-by-word highlight captions from audio.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video or audio file"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # Audio tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_audio_effects",
+        "description": "Apply a chain of audio effects (EQ, reverb, compression, delay, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+                "effects": {"type": "array", "items": {"type": "object"}, "description": "Effects chain [{name, params}]"},
+            },
+            "required": ["filepath", "effects"],
+        },
+    },
+    {
+        "name": "opencut_audio_duck",
+        "description": "Auto-duck music volume under speech segments.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to mixed audio/video file"},
+                "music_path": {"type": "string", "description": "Path to music track"},
+                "speech_path": {"type": "string", "description": "Path to speech track"},
+            },
+            "required": ["filepath", "music_path", "speech_path"],
+        },
+    },
+    {
+        "name": "opencut_audio_isolate",
+        "description": "Isolate dialogue/vocals from background noise and music.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_audio_normalize",
+        "description": "Normalize audio loudness to a target LUFS level.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+                "target_lufs": {"type": "number", "description": "Target loudness in LUFS", "default": -14},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_filler_remove",
+        "description": "Detect and remove filler words (um, uh, like, etc.) from audio.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+                "words": {"type": "array", "items": {"type": "string"}, "description": "Filler words to detect"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_beat_markers",
+        "description": "Detect beats in audio and return marker timestamps.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_audio_enhance",
+        "description": "Enhance audio quality using a preset profile (podcast, music, dialogue).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio or video file"},
+                "preset": {"type": "string", "description": "Enhancement preset: podcast, music, dialogue, broadcast", "default": "podcast"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # Timeline & workflow tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_workflow_run",
+        "description": "Execute a multi-step editing workflow from a preset or custom steps.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "preset": {"type": "string", "description": "Named workflow preset"},
+                "steps": {"type": "array", "items": {"type": "object"}, "description": "Custom workflow steps [{tool, args}]"},
+            },
+        },
+    },
+    {
+        "name": "opencut_workflow_presets",
+        "description": "List available workflow presets and their descriptions.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_timeline_batch_rename",
+        "description": "Batch-rename clips or segments on the timeline.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "renames": {"type": "array", "items": {"type": "object"}, "description": "Rename operations [{old_name, new_name}]"},
+            },
+            "required": ["renames"],
+        },
+    },
+    {
+        "name": "opencut_timeline_smart_bins",
+        "description": "Organize timeline clips into smart bins based on rules.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "rules": {"type": "array", "items": {"type": "object"}, "description": "Bin rules [{field, operator, value, bin_name}]"},
+            },
+            "required": ["rules"],
+        },
+    },
+    {
+        "name": "opencut_timeline_beat_cut",
+        "description": "Auto-cut a video to the beat of its audio track.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "mode": {"type": "string", "description": "Cut mode: on-beat, off-beat, every-other", "default": "on-beat"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_batch_export",
+        "description": "Export video using a named export preset (social, broadcast, archive, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "preset": {"type": "string", "description": "Export preset name"},
+            },
+            "required": ["filepath", "preset"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # Deliverables & search tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_vfx_sheet",
+        "description": "Generate a VFX breakdown sheet from sequence data.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sequence_data": {"type": "object", "description": "Sequence/timeline data with VFX annotations"},
+            },
+            "required": ["sequence_data"],
+        },
+    },
+    {
+        "name": "opencut_adr_list",
+        "description": "Generate an ADR (Automated Dialogue Replacement) cue list from sequence data.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sequence_data": {"type": "object", "description": "Sequence/timeline data with dialogue markers"},
+            },
+            "required": ["sequence_data"],
+        },
+    },
+    {
+        "name": "opencut_music_cue_sheet",
+        "description": "Generate a music cue sheet with timing, rights, and usage data.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sequence_data": {"type": "object", "description": "Sequence/timeline data with music cues"},
+            },
+            "required": ["sequence_data"],
+        },
+    },
+    {
+        "name": "opencut_nlp_command",
+        "description": "Parse a natural-language editing instruction into tool calls.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Natural-language editing command"},
+                "llm_config": {"type": "object", "description": "Optional LLM configuration overrides"},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "opencut_ingest_url",
+        "description": "Ingest media from a URL for search indexing and processing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "URL to media resource"},
+            },
+            "required": ["url"],
+        },
+    },
+    # ------------------------------------------------------------------
+    # System & settings tools
+    # ------------------------------------------------------------------
+    {
+        "name": "opencut_system_info",
+        "description": "Return system information including OS, CPU, RAM, and disk stats.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_gpu_status",
+        "description": "Return GPU availability, driver version, VRAM, and compute capability.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_dependencies",
+        "description": "List installed dependencies and their versions (FFmpeg, Python packages, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_feature_state",
+        "description": "Return the enabled/disabled state of all feature flags.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_social_upload",
+        "description": "Upload a rendered video to a social platform (YouTube, TikTok, Instagram, etc.).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to rendered video"},
+                "platform": {"type": "string", "description": "Target platform: youtube, tiktok, instagram, twitter"},
+                "credentials": {"type": "object", "description": "Platform auth credentials or token reference"},
+            },
+            "required": ["filepath", "platform", "credentials"],
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -733,6 +1300,60 @@ _TOOL_ROUTES = {
     "opencut_brand_kit": ("GET", "/settings/brand-kit"),
     "opencut_semantic_search": ("POST", "/search/ai"),
     "opencut_spectral_match": ("POST", "/audio/spectral-match"),
+    # Video editing tools
+    "opencut_trim_video": ("POST", "/video/trim"),
+    "opencut_merge_videos": ("POST", "/video/merge"),
+    "opencut_concat_videos": ("POST", "/video/concat"),
+    "opencut_reframe_video": ("POST", "/video/reframe"),
+    "opencut_stabilize_video": ("POST", "/video/stabilize"),
+    "opencut_speed_change": ("POST", "/video/speed/change"),
+    "opencut_speed_ramp": ("POST", "/video/speed/ramp"),
+    "opencut_pip": ("POST", "/video/pip"),
+    "opencut_blend_videos": ("POST", "/video/blend"),
+    "opencut_letterbox": ("POST", "/video/letterbox"),
+    "opencut_preview_frame": ("POST", "/video/preview-frame"),
+    # Video effects tools
+    "opencut_chromakey": ("POST", "/video/chromakey"),
+    "opencut_lut_apply": ("POST", "/video/lut/apply"),
+    "opencut_lut_generate": ("POST", "/video/lut/generate-from-ref"),
+    "opencut_video_fx": ("POST", "/video/fx/apply"),
+    "opencut_denoise_video": ("POST", "/video/denoise"),
+    "opencut_interpolate": ("POST", "/video/interpolate/neural"),
+    "opencut_transitions": ("POST", "/video/transitions/apply"),
+    # Caption tools
+    "opencut_caption_burnin": ("POST", "/captions/burnin/segments"),
+    "opencut_caption_translate": ("POST", "/captions/translate"),
+    "opencut_caption_styled": ("POST", "/styled-captions"),
+    "opencut_caption_animated": ("POST", "/captions/animated/render"),
+    "opencut_caption_srt_import": ("POST", "/timeline/srt-to-captions"),
+    "opencut_caption_karaoke": ("POST", "/captions/karaoke"),
+    # Audio tools
+    "opencut_audio_effects": ("POST", "/audio/effects/apply"),
+    "opencut_audio_duck": ("POST", "/audio/duck"),
+    "opencut_audio_isolate": ("POST", "/audio/isolate"),
+    "opencut_audio_normalize": ("POST", "/audio/normalize"),
+    "opencut_filler_remove": ("POST", "/fillers"),
+    "opencut_beat_markers": ("POST", "/audio/beat-markers"),
+    "opencut_audio_enhance": ("POST", "/audio/enhance"),
+    # Timeline & workflow tools
+    "opencut_workflow_run": ("POST", "/workflow/run"),
+    "opencut_workflow_presets": ("GET", "/workflow/presets"),
+    "opencut_timeline_batch_rename": ("POST", "/timeline/batch-rename"),
+    "opencut_timeline_smart_bins": ("POST", "/timeline/smart-bins"),
+    "opencut_timeline_beat_cut": ("POST", "/timeline/beat-cut"),
+    "opencut_batch_export": ("POST", "/export/preset"),
+    # Deliverables & search tools
+    "opencut_vfx_sheet": ("POST", "/deliverables/vfx-sheet"),
+    "opencut_adr_list": ("POST", "/deliverables/adr-list"),
+    "opencut_music_cue_sheet": ("POST", "/deliverables/music-cue-sheet"),
+    "opencut_nlp_command": ("POST", "/nlp/command"),
+    "opencut_ingest_url": ("POST", "/search/ingest"),
+    # System & settings tools
+    "opencut_system_info": ("GET", "/system/info"),
+    "opencut_gpu_status": ("GET", "/gpu/status"),
+    "opencut_dependencies": ("GET", "/system/dependencies"),
+    "opencut_feature_state": ("GET", "/system/feature-state"),
+    "opencut_social_upload": ("POST", "/social/upload"),
 }
 
 
@@ -760,6 +1381,10 @@ _REQUIRED_MCP_PATH_KEYS = (
     "srt_path",
     "path",
     "reference_path",
+    "overlay",
+    "lut_path",
+    "music_path",
+    "speech_path",
 )
 _OPTIONAL_MCP_PATH_KEYS = (
     "style_image",
