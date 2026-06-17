@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — Centralized config schema registry with versioned migration
+
+- New `register_config_schema()` and `read_user_file_versioned()` in
+  `opencut/user_data.py`. Config files can declare a schema version
+  and register migration functions. `read_user_file_versioned()` auto-
+  migrates old configs on read, stamps `_schema_version`, and persists
+  the upgraded data. Unknown keys are preserved, not stripped.
+
 ### Added — 121 coverage expansion tests across 10 untested core modules
 
 - New `tests/test_coverage_expansion.py` adds focused unit tests for:
