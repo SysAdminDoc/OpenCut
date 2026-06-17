@@ -361,6 +361,11 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/shorts/variants",
     # SAM 3 text-prompted object removal
     "/video/object-remove/sam3",
+    # Collapsed stubs → canonical pipelines
+    "/video/trailer/generate",
+    "/video/outpaint",
+    "/agent/search-footage",
+    "/agent/storyboard",
 })
 
 

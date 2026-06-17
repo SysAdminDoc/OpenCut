@@ -1,20 +1,20 @@
 {
   "version": 3,
-  "generated_at": "2026-06-14T19:45:46Z",
-  "total_routes": 1546,
-  "shipped_route_count": 1536,
+  "generated_at": "2026-06-17T01:01:06Z",
+  "total_routes": 1547,
+  "shipped_route_count": 1541,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 16,
     "GET": 392,
     "PATCH": 1,
-    "POST": 1139,
+    "POST": 1140,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1507,
-    "stub": 10
+    "implemented": 1512,
+    "stub": 6
   },
   "blueprints": {
     "<app>": {
@@ -902,13 +902,13 @@
       ]
     },
     "timeline": {
-      "route_count": 12,
+      "route_count": 13,
       "method_counts": {
         "GET": 1,
-        "POST": 11
+        "POST": 12
       },
       "sample_rules": [
-        "/timeline/batch-rename",
+        "/timeline/beat-cut",
         "/timeline/export-from-markers",
         "/timeline/otio/install"
       ]
@@ -1445,7 +1445,7 @@
       ],
       "endpoint": "wave_h.route_agent_search",
       "blueprint": "wave_h",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/agent/skills",
@@ -1472,7 +1472,7 @@
       ],
       "endpoint": "wave_h.route_agent_storyboard",
       "blueprint": "wave_h",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/agent/tools",
@@ -12029,6 +12029,15 @@
       "readiness": "implemented"
     },
     {
+      "rule": "/timeline/beat-cut",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_beat_cut",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
       "rule": "/timeline/diff",
       "methods": [
         "POST"
@@ -14006,7 +14015,7 @@
       ],
       "endpoint": "wave_k.route_outpaint_video",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/video/overlay-types",
@@ -14807,7 +14816,7 @@
       ],
       "endpoint": "wave_k.route_trailer_gen",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/video/transitions/apply",
