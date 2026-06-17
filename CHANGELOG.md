@@ -5,6 +5,37 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Feature-state now reflects route readiness
+
+- Generated feature-readiness records now cross-reference the route
+  manifest's `readiness` field instead of defaulting to `"available"`.
+  Routes classified as `dependency-gated` produce `"missing_dependency"`
+  features; stub routes produce `"stub"` features. Panels disable buttons
+  for these features before the user clicks them (was: all generated
+  features showed as available regardless of route status).
+
+### Changed — Collapsed 4 duplicate 501 stubs onto canonical pipelines
+
+- `/video/trailer/generate` now delegates to `trailer_gen.generate()`.
+- `/video/outpaint` now delegates to `frame_extension.outpaint_aspect_ratio()`.
+- `/agent/search-footage` now delegates to
+  `semantic_video_search.semantic_search()`.
+- `/agent/storyboard` now delegates to
+  `ai_storyboard.generate_storyboard_from_script()`.
+- Shipped route count rises from 1,536 to 1,541. Users no longer hit 501
+  for capabilities that already have working local implementations.
+
+### Changed — Default depth backend upgraded to Depth Anything 3 Small
+
+- New `depth_anything_3` module + a `depth-anything/DA3-SMALL` (Apache-2.0,
+  single-transformer SOTA, ~+25% geometry) default for CineFocus bokeh/parallax,
+  with `Depth-Anything-V2-Small` retained as the automatic fallback. CineFocus
+  now routes both depth-load sites through a central `_load_depth_backend()` that
+  resolves DA3 first and degrades to DA2 on any load failure.
+- New `depth_anything_3` engine-registry entry (priority 85 > DA2's 80) +
+  `check_depth_anything_3_available()`, a `da3-small` model entry, and
+  `tests/test_depth_engines.py`.
+
 ### Changed — Re-aimed the IC-Light relight engine at v1 (Apache-2.0)
 
 - `relight_iclight.py` was titled "IC-Light V2" but IC-Light v2 is non-commercial
