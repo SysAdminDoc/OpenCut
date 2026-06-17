@@ -5,64 +5,32 @@ the June 2026 engineering/product audit (verified findings, with file
 locations); fixes already shipped are recorded in CHANGELOG.md and git
 history, not here.
 
-## P1 — Release blocking
+Blocked items (credential/license/hardware-gated) live in
+[`Roadmap_Blocked.md`](Roadmap_Blocked.md).
 
-- [ ] P1 — External F202 macOS notarization live acceptance is credential-gated
-  Why: release wiring exists, but the first live Apple acceptance still needs configured Apple credentials, notarization secrets, and a macOS release run before the claim is complete.
-  Where: docs/MACOS_NOTARIZATION.md, .github/workflows/build.yml
-  Blocked: Apple credentials / notarization secrets / live macOS release runner.
+## P2
 
-- [ ] P1 — External F252 UXP WebView cutover still needs live Premiere UDT evidence
-  Why: WebView scaffolding and validators exist, but the cutover cannot be claimed until an in-Premiere UDT capture passes the strict validator and residual CEP-only paths are accounted for.
-  Where: docs/UXP_MIGRATION.md:153-155, extension/com.opencut.uxp/bolt-webview/, opencut/tools/validate_uxp_udt_results.py
-  Blocked: live Premiere UDT capture.
-
-## Research-Driven Additions
-
-- [ ] P2 — Run documented CEP+UXP smoke pass on Premiere 26.x
-  Why: README positioning now leads with OpenCut-unique capabilities vs Adobe 26.x. Manifests mathematically cover 26.x (CEP [13.0,99.9], UXP minVersion 25.6). Remaining: live smoke test on an actual Premiere 26.x install.
-  Blocked: Premiere 26.x license/installation.
-  Acceptance: documented smoke test pass on Premiere 26.0 or 26.2.x for both CEP and UXP panels.
-  Complexity: S
-
-- [ ] P3 — Publish the server package to PyPI via trusted publishing
-  Why: pip install of the server/CLI is the cheapest distribution surface and currently impossible (no PyPI package); trusted publishing avoids long-lived tokens in CI. Brand decision is DONE — distribution name is `opencut-ppro` (pyproject.toml + README "Naming & distribution").
-  Evidence: docs.pypi.org/trusted-publishers/; RESEARCH.md distribution assessment
-  Touches: .github/workflows/build.yml (publish job), pyproject.toml metadata
-  Blocked: needs the maintainer's PyPI account / trusted-publisher config (credential-gated).
-  Acceptance: `pip install opencut-ppro` installs the opencut CLI/server from PyPI; releases publish automatically on tag.
+- [ ] P2 — Align feature-state with route-readiness truth
+  Why: the route manifest now distinguishes implemented, dependency-gated, and stub routes, but generated feature records can still be marked available and the panel gates actions from `/system/feature-state`.
+  Evidence: `opencut/tools/dump_feature_readiness.py`, `opencut/_generated/feature_readiness.json`, `opencut/_generated/route_manifest.json`, `opencut/registry.py`, `extension/com.opencut.panel/client/feature-state.js`
+  Touches: `opencut/tools/dump_feature_readiness.py`, `opencut/registry.py`, `opencut/_generated/feature_readiness.json`, `/system/feature-state`, CEP/UXP feature-state consumers, feature-registry tests
+  Acceptance: generated feature readiness carries route readiness where a route binding exists; no route tagged `stub` can produce an `available` feature; dependency-gated routes surface as gated rather than shipped; panels badge/disable stub and gated actions consistently.
   Complexity: M
 
-- [ ] P2 — Move CEP panel off unsupported Vite 5 with HGFS-safe regression evidence
-  Why: Vite 5.4.21 remains pinned with a documented advisory waiver because Vite 6+ regressed VMware HGFS paths, but Vite's maintained release line has moved to 8.x with 7.3/6.4 backports.
-  Evidence: extension/com.opencut.panel/package.json:22; docs/NODE_ADVISORIES.md:13,27-34,66-74; tests/test_panel_node_entrypoints.py; vite.dev/releases
-  Touches: extension/com.opencut.panel/package.json, package-lock.json, scripts/panel-node-gate.ps1, docs/NODE_ADVISORIES.md, extension panel build/audit tests, CI release smoke
-  Acceptance: panel build/audit uses a supported Vite line, the documented Vite advisory waiver is removed, and Windows UNC/HGFS-safe `*:win` entrypoints plus Linux CI build/verify still pass.
+- [ ] P2 — Collapse duplicate 501 route aliases onto implemented pipelines
+  Why: several remaining strategic stubs duplicate workflows that already have local implementations, so users can hit a 501 even though OpenCut can perform the underlying task elsewhere.
+  Evidence: `/video/trailer/generate`, `/video/outpaint`, `/agent/storyboard`, `/agent/search-footage`; `opencut/core/trailer_gen.py`, `opencut/core/frame_extension.py`, `opencut/core/ai_storyboard.py`, `opencut/core/semantic_video_search.py`, `opencut/routes/wave_h_routes.py`, `opencut/routes/wave_k_routes.py`
+  Touches: route handlers in `wave_h_routes.py` and `wave_k_routes.py`, canonical workflow modules, route manifest generation, route-manifest tests, route-specific behavior tests, panel command catalog if those aliases are exposed
+  Acceptance: trailer, outpaint, storyboard, and search-footage endpoints either delegate to the existing canonical local pipeline or are explicitly renamed/hidden as future model-specific research endpoints; shipped-route count and tests reflect the new truth.
   Complexity: M
 
-- [ ] P3 — Add Homebrew tap for macOS CLI distribution (after PyPI)
-  Why: macOS has no package-manager install path — users must clone + pip-install manually. A Homebrew tap gives macOS users `brew install opencut-ppro` for the CLI/server. Depends on PyPI publish (existing P3). Brand decision is DONE (`opencut-ppro`).
-  Evidence: docs.brew.sh/Python-for-Formula-Authors; Homebrew accepts Python apps even without PyPI; no existing tap
-  Touches: new homebrew-opencut-ppro tap repo, formula file, CI publish workflow
-  Acceptance: `brew install <tap>/opencut-ppro` installs the CLI/server on macOS; formula auto-updates on new PyPI releases.
-  Complexity: M
+## P3
 
-- [ ] P3 — Add winget package manifest for Windows distribution (after release parity + code signing)
-  Why: Windows users discover software via winget; no manifest exists. Requires a stable installer URL (GitHub Release .exe) and ideally a code-signed binary for SmartScreen reputation. Depends on release parity (P1) and code signing budget ($216-575/yr OV/EV certificate).
-  Evidence: github.com/microsoft/winget-pkgs (12,850+ packages); no existing OpenCut manifest; signmycode.com pricing. Brand decision is DONE — publisher token `SysAdminDoc.OpenCut` / dist token `opencut-ppro`.
-  Touches: winget manifest YAML (submitted as PR to microsoft/winget-pkgs), CI release workflow (signed installer upload)
-  Acceptance: `winget install SysAdminDoc.OpenCut` installs OpenCut on Windows; manifest auto-updates via GitHub Release URLs.
-  Complexity: M
-
-## Research-Driven Additions (2026-06-14)
-
-### P3
-
-- [ ] P3 — Upgrade depth backend to Depth Anything 3 Small (Apache-2.0)
-  Why: DA3 (Nov 2025) is single-transformer SOTA (~+25% geometry vs prior) and DA3-Small is Apache-2.0; cinefocus/depth effects currently default to Depth-Anything-V2-Small.
-  Evidence: opencut/core/cinefocus.py:176 (DA2-Small default); github.com/ByteDance-Seed/depth-anything-3; huggingface.co/depth-anything/DA3-SMALL
-  Touches: opencut/core/cinefocus.py, compose_depth_segment.py, depth engine selection, model_manager.py
-  Acceptance: DA3-Small is the default depth backend (DA2 retained as fallback) for bokeh/parallax/depth routes, with availability check and test.
+- [ ] P3 — Surface model privacy/license posture in feature-state and engine controls
+  Why: OpenCut's strongest competitive wedge is local/private execution with explicit model licensing, but that posture is mostly in model cards and docs instead of the action point where users choose engines or cloud-backed features.
+  Evidence: `opencut/model_cards.py`, `docs/MODELS.md`, `/system/feature-state`, `extension/com.opencut.panel/client/feature-state.js`, local-only mode, competitor cloud/credit positioning from Adobe, Descript, Opus, HeyGen/Rask, and Premiere plugin tools
+  Touches: model-card registry, feature-state response schema, CEP/UXP engine controls, local-only gating UI, locale strings, schema/contract tests, panel tests
+  Acceptance: model-backed feature-state entries expose local/cloud, license, install, and hardware posture; CEP and UXP show concise badges/tooltips before execution; local-only mode visibly blocks cloud-backed features before click; tests cover at least one local, dependency-gated, restricted-license, and cloud-backed feature.
   Complexity: M
 
 - [ ] P3 — Local multimodal footage search (object + on-screen-text + sound-event index)
@@ -85,10 +53,3 @@ history, not here.
   Touches: new ingest module (URL → local cache via yt-dlp-class fetch), watch_folder/scheduled_jobs integration, panel input affordance
   Acceptance: a supported URL is fetched to the local media cache and becomes usable by any existing route exactly like a local file; failures return structured errors.
   Complexity: M
-
-## Research-Driven Additions (2026-06-14, second pass)
-
-### P3
-
-
-

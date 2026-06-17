@@ -114,6 +114,15 @@ def test_generated_readiness_records_are_merged_into_manifest():
     assert "/timeline/export-otio" in otio.routes
 
 
+def test_stub_features_never_resolve_as_available():
+    manifest = registry.feature_manifest()
+    for record in manifest["features"]:
+        if record["state"] == registry.STATE_STUB:
+            assert record["state"] != registry.STATE_AVAILABLE, (
+                f"{record['feature_id']} is stub but resolved as available"
+            )
+
+
 def test_assert_states_valid_rejects_unknown():
     bad = registry.FeatureRecord(
         feature_id="test.bad",

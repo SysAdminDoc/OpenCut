@@ -33,7 +33,14 @@ from opencut.registry import (
     NON_AI_CHECKS,
     STATE_AVAILABLE,
 )
-from opencut.tools.dump_route_manifest import build_manifest as build_route_manifest
+from opencut.tools.dump_route_manifest import (
+    READINESS_DEPENDENCY_GATED,
+    READINESS_IMPLEMENTED,
+    READINESS_STUB,
+)
+from opencut.tools.dump_route_manifest import (
+    build_manifest as build_route_manifest,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROUTES_DIR = REPO_ROOT / "opencut" / "routes"
@@ -217,7 +224,40 @@ def _requires_gpu(hardware: str) -> bool:
     return hardware.strip().lower().startswith("gpu")
 
 
-def _record_for_probe(probe: str, routes: Iterable[str]) -> dict:
+_ROUTE_READINESS_TO_FEATURE_STATE = {
+    READINESS_STUB: "stub",
+    READINESS_DEPENDENCY_GATED: "missing_dependency",
+    READINESS_IMPLEMENTED: STATE_AVAILABLE,
+}
+
+
+def _derive_feature_state(
+    routes: Iterable[str],
+    route_readiness: Dict[str, str],
+) -> str:
+    """Derive a feature state from its routes' readiness classifications.
+
+    If ALL routes are stubs the feature is ``stub``; if ALL are
+    dependency-gated (and none implemented) it is ``missing_dependency``;
+    otherwise at least one route is implemented so the feature is ``available``.
+    """
+    levels = set()
+    for route in routes:
+        levels.add(route_readiness.get(route, READINESS_IMPLEMENTED))
+    if not levels:
+        return STATE_AVAILABLE
+    if levels == {READINESS_STUB}:
+        return "stub"
+    if levels <= {READINESS_STUB, READINESS_DEPENDENCY_GATED}:
+        return "missing_dependency"
+    return STATE_AVAILABLE
+
+
+def _record_for_probe(
+    probe: str,
+    routes: Iterable[str],
+    route_readiness: Optional[Dict[str, str]] = None,
+) -> dict:
     routes_sorted = sorted(set(routes))
     cards = {card.check_name: card for card in CARDS}
     card = cards.get(probe)
@@ -242,11 +282,14 @@ def _record_for_probe(probe: str, routes: Iterable[str]) -> dict:
         install_hint = "see route response for dependency hint"
         docs = "docs/MODELS.md"
         hardware = ""
+
+    state = _derive_feature_state(routes_sorted, route_readiness or {})
+
     return {
         "feature_id": feature_id,
         "label": label,
         "category": category,
-        "state": STATE_AVAILABLE,
+        "state": state,
         "install_hint": install_hint,
         "docs": docs,
         "routes": routes_sorted,
@@ -264,13 +307,19 @@ def build_manifest(route_manifest: Optional[dict] = None) -> dict:
     endpoint_probes = route_endpoint_probes()
     routes_by_probe: Dict[str, Set[str]] = defaultdict(set)
 
+    route_readiness: Dict[str, str] = {}
     for route in route_manifest.get("routes", []):
+        rule = str(route.get("rule") or "")
+        if rule:
+            route_readiness[rule] = str(
+                route.get("readiness") or READINESS_IMPLEMENTED
+            )
         endpoint = str(route.get("endpoint") or "")
         for probe in endpoint_probes.get(endpoint, []):
-            routes_by_probe[probe].add(str(route.get("rule") or ""))
+            routes_by_probe[probe].add(rule)
 
     records = [
-        _record_for_probe(probe, routes)
+        _record_for_probe(probe, routes, route_readiness)
         for probe, routes in sorted(routes_by_probe.items())
         if routes
     ]
