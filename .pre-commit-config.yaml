@@ -16,6 +16,18 @@ repos:
 
   - repo: local
     hooks:
+      - id: route-manifest-check
+        name: route manifest freshness
+        entry: python -m opencut.tools.dump_route_manifest --check
+        language: system
+        pass_filenames: false
+        files: ^opencut/(routes/|server\.py|__init__\.py)
+      - id: feature-readiness-check
+        name: feature readiness freshness
+        entry: python -m opencut.tools.dump_feature_readiness --check
+        language: system
+        pass_filenames: false
+        files: ^opencut/(routes/|checks\.py|registry\.py|model_cards\.py)
       - id: pytest-smoke
         name: pytest smoke tests
         entry: python -m pytest tests/test_route_smoke.py tests/test_core_modules.py -x -q --tb=short --no-header

@@ -67,6 +67,12 @@ jobs:
           pip install ruff
           ruff check opencut/ --select E,F,I --ignore E501,E402
 
+      - name: Check route manifest freshness
+        run: python -m opencut.tools.dump_route_manifest --check
+
+      - name: Check feature readiness freshness
+        run: python -m opencut.tools.dump_feature_readiness --check
+
       - name: Run tests with coverage
         run: |
           pip install pytest-cov pytest-xdist
