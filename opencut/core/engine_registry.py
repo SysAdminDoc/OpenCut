@@ -234,9 +234,11 @@ def get_registry() -> EngineRegistry:
 def _register_builtin_engines(reg: EngineRegistry):
     """Register all built-in engine backends."""
     from opencut.checks import (
+        check_autoshot_available,
         check_crisper_whisper_available,
         check_deepface_available,
         check_demucs_available,
+        check_depth_anything_3_available,
         check_depth_available,
         check_diarization_available,
         check_edge_tts_available,
@@ -374,6 +376,18 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="medium",
         quality_rating="high",
     ))
+    reg.register(EngineInfo(
+        name="autoshot",
+        domain="scene_detection",
+        display_name="AutoShot",
+        description="Gradual-transition-aware shot boundary detection (~4% F1 over TransNetV2)",
+        check_fn=check_autoshot_available,
+        priority=85,
+        vram_mb=500,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["gradual-transitions"],
+    ))
 
     # --- TTS ---
     reg.register(EngineInfo(
@@ -437,10 +451,22 @@ def _register_builtin_engines(reg: EngineRegistry):
 
     # --- Depth Estimation ---
     reg.register(EngineInfo(
+        name="depth_anything_3",
+        domain="depth_estimation",
+        display_name="Depth Anything 3 (Small)",
+        description="Single-transformer SOTA monocular depth (Apache-2.0); default, falls back to V2",
+        check_fn=check_depth_anything_3_available,
+        priority=85,  # preferred over V2 (80) — DA2 retained as fallback
+        vram_mb=900,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["apache-2.0", "default"],
+    ))
+    reg.register(EngineInfo(
         name="depth_anything_v2",
         domain="depth_estimation",
         display_name="Depth Anything V2",
-        description="Monocular depth estimation for effects",
+        description="Monocular depth estimation for effects (fallback)",
         check_fn=check_depth_available,
         priority=80,
         vram_mb=800,
