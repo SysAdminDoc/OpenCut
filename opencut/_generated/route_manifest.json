@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-06-17T01:01:06Z",
-  "total_routes": 1547,
-  "shipped_route_count": 1541,
+  "generated_at": "2026-06-17T01:48:55Z",
+  "total_routes": 1551,
+  "shipped_route_count": 1545,
   "blueprint_count": 107,
   "method_counts": {
-    "DELETE": 16,
-    "GET": 392,
+    "DELETE": 17,
+    "GET": 393,
     "PATCH": 1,
-    "POST": 1140,
+    "POST": 1142,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1512,
+    "implemented": 1516,
     "stub": 6
   },
   "blueprints": {
@@ -793,11 +793,11 @@
       ]
     },
     "search": {
-      "route_count": 9,
+      "route_count": 13,
       "method_counts": {
-        "DELETE": 2,
-        "GET": 2,
-        "POST": 5
+        "DELETE": 3,
+        "GET": 3,
+        "POST": 7
       },
       "sample_rules": [
         "/search/footage",
@@ -10559,6 +10559,42 @@
         "POST"
       ],
       "endpoint": "search.search_index",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/ingest",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.search_ingest_url",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/ingest/cache",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "search.search_ingest_cache_clear",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/ingest/cache",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "search.search_ingest_cache",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/multimodal-index",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.search_multimodal_index",
       "blueprint": "search",
       "readiness": "implemented"
     },
