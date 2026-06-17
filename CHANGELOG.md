@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — MCP tool catalog expanded from 39 to 86 curated tools
+
+- Added 47 new curated MCP tools covering video editing (trim, merge, concat,
+  reframe, stabilize, speed, PiP, blend), video effects (chromakey, LUT, FX,
+  denoise, interpolation, transitions), captions (burn-in, translate, styled,
+  animated, karaoke, SRT import), audio (effects, duck, isolate, normalize,
+  filler removal, beat markers, enhance), timeline/workflow (run, presets, batch
+  rename, smart bins, beat cut, export), deliverables (VFX sheet, ADR list,
+  music cue sheet), search (NLP command, URL ingest), and system (info, GPU,
+  dependencies, feature state, social upload).
+- Agent clients (Claude, Cursor, etc.) now discover 86 OpenCut capabilities
+  vs 39 previously. Extended tools (1,482 route-level) remain opt-in.
+
 ### Security — Werkzeug floor raised to >=3.1.6 (CVE-2026-27199)
 
 - Bumped Werkzeug floor from >=3.1.5 to >=3.1.6 in both `pyproject.toml`
