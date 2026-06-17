@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added — 537 more coverage expansion tests (658 total, 30+ modules)
+
+- New test files: `test_coverage_infra.py` (169 tests covering errors,
+  schemas, workers, config, helpers, checks), `test_coverage_core_logic.py`
+  (137 tests covering timecode_utils, metadata_tools, safe_zones, hdr_tools,
+  dead_time, stream_chapters, timelapse, highlight_detect, soft_subtitles,
+  adr_cueing), `test_coverage_core_extra.py` (159 tests covering analytics,
+  selects_bin, show_notes, ffmpeg_builder, ab_av1, ab_compare, cinemagraph,
+  surround_mix, gpu_dashboard, display_calibration, apple_silicon, amd_gpu),
+  `test_coverage_schemas_mcp.py` (72 tests covering schemas, MCP tool
+  catalog validation, error factories, config, helpers, checks, workers).
+  CI coverage floor raised from 55% to 58%.
+
 ### Added — Centralized config schema registry with versioned migration
 
 - New `register_config_schema()` and `read_user_file_versioned()` in

@@ -1,14 +1,12 @@
 """Coverage expansion: core logic modules."""
 
 import json
-import math
 import os
 import tempfile
 from dataclasses import asdict
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ===================================================================
 # 1. opencut/core/timecode_utils.py
