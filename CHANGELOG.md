@@ -24,6 +24,24 @@ record also lives in the git commit messages.
 - New routes: `POST /search/ingest` (async job), `GET /search/ingest/cache`,
   `DELETE /search/ingest/cache`.
 
+### Added — Local multimodal footage search (OCR + audio event index)
+
+- Footage index schema upgraded to v2: `ocr_text` and `audio_tags` columns
+  added to the `footage` table, FTS5 index rebuilt to cover all four fields
+  (file_path, transcript, ocr_text, audio_tags). Existing v1 databases
+  auto-migrate on first access.
+- New `multimodal_index` module (`opencut/core/multimodal_index.py`):
+  extracts on-screen text from key frames via pytesseract or easyocr, and
+  classifies audio events (speech, music, silence, tempo) via librosa
+  spectral heuristics with a basic fallback.
+- New `POST /search/multimodal-index` route: indexes files with transcript +
+  OCR text + audio event tags in a single pass. OCR and audio tags are
+  opt-in (default on) via `ocr` and `audio_tags` body params.
+- FTS5 search now matches across transcript, on-screen text, and audio
+  event tags — a query for "music" or "logo" hits audio events and OCR
+  text respectively, not just spoken words.
+- `check_ocr_available()` added to `checks.py`.
+
 ### Added — AutoShot scene-detection engine
 
 - Added AutoShot as a selectable scene-detection engine with priority 85

@@ -19,7 +19,7 @@ logger = logging.getLogger("opencut")
 
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "footage_index.db")
 _thread_local = threading.local()
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Track all opened connections so close_all_connections() can close them
 # on server shutdown.  Mirrors the pattern in job_store.py — without this
@@ -128,6 +128,54 @@ def _create_schema_v1(conn: sqlite3.Connection) -> None:
     """)
 
 
+def _create_schema_v2(conn: sqlite3.Connection) -> None:
+    """Add multimodal columns: ocr_text and audio_tags."""
+    for col, default in (("ocr_text", "''"), ("audio_tags", "''")):
+        try:
+            conn.execute(
+                f"ALTER TABLE footage ADD COLUMN {col} TEXT NOT NULL DEFAULT {default}"
+            )
+        except sqlite3.OperationalError:
+            pass
+    conn.execute("DROP TRIGGER IF EXISTS footage_ai")
+    conn.execute("DROP TRIGGER IF EXISTS footage_ad")
+    conn.execute("DROP TRIGGER IF EXISTS footage_au")
+    conn.execute("INSERT INTO footage_fts(footage_fts) VALUES('rebuild')")
+
+    conn.execute("DROP TABLE IF EXISTS footage_fts")
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS footage_fts USING fts5(
+            file_path,
+            transcript,
+            ocr_text,
+            audio_tags,
+            content=footage,
+            content_rowid=id
+        )
+    """)
+    conn.execute("INSERT INTO footage_fts(footage_fts) VALUES('rebuild')")
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS footage_ai AFTER INSERT ON footage BEGIN
+            INSERT INTO footage_fts(rowid, file_path, transcript, ocr_text, audio_tags)
+            VALUES (new.id, new.file_path, new.transcript, new.ocr_text, new.audio_tags);
+        END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS footage_ad AFTER DELETE ON footage BEGIN
+            INSERT INTO footage_fts(footage_fts, rowid, file_path, transcript, ocr_text, audio_tags)
+            VALUES ('delete', old.id, old.file_path, old.transcript, old.ocr_text, old.audio_tags);
+        END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS footage_au AFTER UPDATE ON footage BEGIN
+            INSERT INTO footage_fts(footage_fts, rowid, file_path, transcript, ocr_text, audio_tags)
+            VALUES ('delete', old.id, old.file_path, old.transcript, old.ocr_text, old.audio_tags);
+            INSERT INTO footage_fts(rowid, file_path, transcript, ocr_text, audio_tags)
+            VALUES (new.id, new.file_path, new.transcript, new.ocr_text, new.audio_tags);
+        END
+    """)
+
+
 def init_db():
     """Create tables if they don't exist."""
     conn = _get_conn()
@@ -135,12 +183,13 @@ def init_db():
         conn,
         store_name="footage index",
         target_version=SCHEMA_VERSION,
-        migrations={1: _create_schema_v1},
+        migrations={1: _create_schema_v1, 2: _create_schema_v2},
     )
     conn.commit()
 
 
-def index_file(file_path, transcript, duration=0, file_size=0):
+def index_file(file_path, transcript, duration=0, file_size=0,
+               ocr_text="", audio_tags=""):
     """Add or update a file in the index.
 
     Args:
@@ -148,11 +197,9 @@ def index_file(file_path, transcript, duration=0, file_size=0):
         transcript: full transcript text
         duration: media duration in seconds
         file_size: file size in bytes
+        ocr_text: on-screen text extracted via OCR
+        audio_tags: space-separated audio event tags (e.g. "music speech applause")
     """
-    # Without init_db the very first call from a fresh thread (no prior
-    # search/get_stats) hits "no such table: footage" because the
-    # CREATE TABLE IF NOT EXISTS only runs from init_db. Mirror the
-    # pattern used by every read function below.
     init_db()
     conn = _get_conn()
     now = time.time()
@@ -169,18 +216,24 @@ def index_file(file_path, transcript, duration=0, file_size=0):
             pass
 
     conn.execute("""
-        INSERT INTO footage (file_path, transcript, indexed_at, file_mtime, duration, file_size)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO footage (file_path, transcript, indexed_at, file_mtime,
+                             duration, file_size, ocr_text, audio_tags)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(file_path) DO UPDATE SET
             transcript = excluded.transcript,
             indexed_at = excluded.indexed_at,
             file_mtime = excluded.file_mtime,
             duration = excluded.duration,
-            file_size = excluded.file_size
-    """, (file_path, transcript, now, mtime, duration, file_size))
+            file_size = excluded.file_size,
+            ocr_text = excluded.ocr_text,
+            audio_tags = excluded.audio_tags
+    """, (file_path, transcript, now, mtime, duration, file_size,
+          ocr_text, audio_tags))
     conn.commit()
 
-    logger.debug("Indexed: %s (%d chars)", os.path.basename(file_path), len(transcript))
+    logger.debug("Indexed: %s (%d chars, %d ocr, %d tags)",
+                 os.path.basename(file_path), len(transcript),
+                 len(ocr_text), len(audio_tags.split()) if audio_tags else 0)
 
 
 def search(query, limit=50):
@@ -212,6 +265,7 @@ def search(query, limit=50):
     try:
         rows = conn.execute("""
             SELECT f.file_path, f.transcript, f.indexed_at, f.duration, f.file_size,
+                   f.ocr_text, f.audio_tags,
                    snippet(footage_fts, 1, '<mark>', '</mark>', '...', 32) AS snippet,
                    rank
             FROM footage_fts
@@ -225,7 +279,9 @@ def search(query, limit=50):
         for row in rows:
             results.append({
                 "file_path": row["file_path"],
-                "transcript": row["transcript"][:500],  # Truncate for response size
+                "transcript": row["transcript"][:500],
+                "ocr_text": (row["ocr_text"] or "")[:500],
+                "audio_tags": row["audio_tags"] or "",
                 "snippet": row["snippet"] or "",
                 "rank": row["rank"],
                 "indexed_at": row["indexed_at"],
