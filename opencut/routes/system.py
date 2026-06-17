@@ -3287,6 +3287,7 @@ def check_failures():
         return safe_error(e, "check_failures")
 
 
+
 @system_bp.route("/system/feature-state", methods=["GET"])
 def feature_state():
     """Return the feature readiness manifest (F100).
