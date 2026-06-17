@@ -88,6 +88,7 @@ def silence_remove(job_id, filepath, data):
     detection_method = data.get("method", "auto")
     if detection_method not in ("energy", "vad", "auto"):
         detection_method = "auto"
+    smart_pause = safe_bool(data.get("smart_pause"), default=False)
 
     _update_job(job_id, progress=5, message="Analyzing media file...")
 
@@ -111,8 +112,10 @@ def silence_remove(job_id, filepath, data):
     _file_dur = _file_info.duration if _file_info else 0.0
 
     method_label = "Silero VAD" if detection_method == "vad" else ("auto (VAD → energy fallback)" if detection_method == "auto" else "energy threshold")
+    if smart_pause:
+        method_label += " + smart pause"
     _update_job(job_id, progress=15, message=f"Detecting silences via {method_label}...")
-    segments = detect_speech(filepath, config=scfg, file_duration=_file_dur, method=detection_method)
+    segments = detect_speech(filepath, config=scfg, file_duration=_file_dur, method=detection_method, smart_pause=smart_pause)
 
     if _is_cancelled(job_id):
         return

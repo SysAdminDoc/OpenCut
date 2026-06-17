@@ -170,6 +170,35 @@ class TestSilenceDetection:
         assert segments[1].start < 5.5
         assert segments[1].end > 7.5
 
+    def test_smart_pause_filter_with_transcript(self):
+        from opencut.core.silence import TimeSegment, filter_smart_pauses
+
+        silences = [
+            TimeSegment(start=3.0, end=4.5, label="silence"),
+            TimeSegment(start=8.0, end=9.2, label="silence"),
+            TimeSegment(start=15.0, end=20.0, label="silence"),
+        ]
+        segments = [
+            {"start": 0.0, "end": 2.8, "text": "This is a dramatic moment."},
+            {"start": 4.5, "end": 7.5, "text": "Then more speech happened"},
+            {"start": 9.2, "end": 14.0, "text": "Final sentence here!"},
+        ]
+        result = filter_smart_pauses(silences, segments=segments)
+        assert len(result) == 2, f"expected 2 (non-dramatic + long), got {len(result)}"
+        assert result[0].start == 8.0
+        assert result[1].start == 15.0
+
+    def test_smart_pause_filter_without_transcript(self):
+        from opencut.core.silence import TimeSegment, filter_smart_pauses
+
+        silences = [
+            TimeSegment(start=3.0, end=4.0, label="silence"),
+            TimeSegment(start=8.0, end=15.0, label="silence"),
+        ]
+        result = filter_smart_pauses(silences, segments=None)
+        assert len(result) == 1
+        assert result[0].start == 8.0
+
     def test_edit_summary(self, test_audio):
         from opencut.core.silence import detect_speech, get_edit_summary
         segments = detect_speech(test_audio)

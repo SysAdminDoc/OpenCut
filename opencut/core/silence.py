@@ -290,6 +290,8 @@ def detect_speech(
     config: Optional[SilenceConfig] = None,
     file_duration: float = 0.0,
     method: str = "energy",
+    smart_pause: bool = False,
+    transcript_segments: Optional[List[dict]] = None,
 ) -> List[TimeSegment]:
     """
     Detect speech segments by inverting silence detection results.
@@ -303,6 +305,10 @@ def detect_speech(
         file_duration: Pre-probed file duration to avoid redundant ffprobe calls.
         method: Detection method — "energy" (FFmpeg threshold), "vad" (Silero VAD),
                 or "auto" (try VAD first, fall back to energy).
+        smart_pause: When True, preserve dramatic pauses (short silences
+            after sentence-ending speech) instead of cutting them.
+        transcript_segments: Optional transcript ``[{start, end, text}]``
+            for context-aware smart-pause classification.
 
     Returns:
         List of TimeSegment objects representing speech regions.
@@ -363,6 +369,12 @@ def detect_speech(
             file_duration=total_duration,
         )
 
+    if smart_pause:
+        silences = filter_smart_pauses(
+            silences,
+            segments=transcript_segments,
+        )
+
     # Invert: get speech segments (gaps between silences)
     speech_segments = []
 
@@ -411,6 +423,75 @@ def detect_speech(
     filtered = [s for s in merged if s.duration >= config.min_speech_duration]
 
     return filtered
+
+
+def filter_smart_pauses(
+    silences: List[TimeSegment],
+    segments: Optional[List[dict]] = None,
+    max_pause_duration: float = 3.0,
+    min_pause_duration: float = 0.8,
+) -> List[TimeSegment]:
+    """Remove dramatic pauses from a silence list based on speech context.
+
+    A silence is preserved as a dramatic pause when:
+    - Its duration is between min_pause_duration and max_pause_duration
+    - It is preceded by a speech segment ending with sentence-final
+      punctuation (period, question mark, exclamation) suggesting the
+      speaker paused intentionally
+
+    Without transcript segments the function falls back to a simple
+    duration heuristic: silences shorter than max_pause_duration that
+    are flanked by non-trivial speech on both sides are assumed
+    intentional.
+
+    Args:
+        silences: Detected silence TimeSegments (from detect_silences).
+        segments: Transcript segments ``[{start, end, text}, ...]`` for
+            context-aware classification. Optional.
+        max_pause_duration: Silences longer than this are always cut.
+        min_pause_duration: Silences shorter than this are always cut
+            (they're micro-pauses, not dramatic).
+
+    Returns:
+        Filtered silence list with dramatic pauses removed.
+    """
+    if not silences:
+        return silences
+
+    def _preceding_text(silence_start: float) -> str:
+        if not segments:
+            return ""
+        best = ""
+        best_end = -1.0
+        for seg in segments:
+            seg_end = float(seg.get("end", 0))
+            if seg_end <= silence_start and seg_end > best_end:
+                best_end = seg_end
+                best = str(seg.get("text", "")).strip()
+        return best
+
+    kept: List[TimeSegment] = []
+    for sil in silences:
+        dur = sil.duration
+        if dur < min_pause_duration or dur > max_pause_duration:
+            kept.append(sil)
+            continue
+        preceding = _preceding_text(sil.start)
+        if preceding and preceding[-1:] in ".?!":
+            logger.debug(
+                "Smart pause: preserving %.2fs pause after '%s'",
+                dur,
+                preceding[-40:],
+            )
+            continue
+        if not segments and dur <= 1.5:
+            continue
+        kept.append(sil)
+
+    removed = len(silences) - len(kept)
+    if removed:
+        logger.info("Smart pause: preserved %d dramatic pause(s)", removed)
+    return kept
 
 
 def _merge_overlapping(segments: List[TimeSegment]) -> List[TimeSegment]:
