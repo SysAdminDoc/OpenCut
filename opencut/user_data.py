@@ -152,6 +152,69 @@ def write_user_file(filename: str, data):
             raise
 
 
+CONFIG_SCHEMAS: dict = {}
+
+
+def register_config_schema(
+    filename: str,
+    version: int,
+    migrations: dict | None = None,
+) -> None:
+    """Register a config file's schema version and migration functions.
+
+    Args:
+        filename: The config filename (e.g. "whisper_settings.json").
+        version: Current schema version (positive integer).
+        migrations: Dict of ``{target_version: fn(data) -> data}`` that
+            upgrade data from ``target_version - 1`` to ``target_version``.
+    """
+    CONFIG_SCHEMAS[filename] = {
+        "version": version,
+        "migrations": migrations or {},
+    }
+
+
+def read_user_file_versioned(filename: str, default=None):
+    """Read a config file and auto-migrate from older schema versions.
+
+    If the file has no ``_schema_version`` field, it is treated as v0
+    and all registered migrations are applied in order. Unknown keys
+    are preserved (not stripped).
+    """
+    data = read_user_file(filename, default=default)
+    if data is None or not isinstance(data, dict):
+        return data
+
+    schema = CONFIG_SCHEMAS.get(filename)
+    if schema is None:
+        return data
+
+    current = data.get("_schema_version", 0)
+    target = schema["version"]
+    if current >= target:
+        return data
+
+    migrations = schema.get("migrations") or {}
+    for v in range(current + 1, target + 1):
+        fn = migrations.get(v)
+        if fn is not None:
+            try:
+                data = fn(data)
+            except Exception as exc:
+                logger.warning(
+                    "Config migration %s v%d→v%d failed: %s",
+                    filename, v - 1, v, exc,
+                )
+                break
+
+    data["_schema_version"] = target
+    try:
+        write_user_file(filename, data)
+    except Exception:
+        pass
+    return data
+
+
 def _utc_iso(timestamp: float) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
 
