@@ -108,15 +108,18 @@ def test_shipped_count_excludes_stubs(committed_manifest):
 
 def test_known_501_stub_routes_are_tagged_stub(committed_manifest):
     by_rule = {r["rule"]: r for r in committed_manifest["routes"]}
-    for rule in ("/agent/search-footage", "/agent/storyboard",
-                 "/lipsync/gaussian", "/video/outpaint"):
+    for rule in ("/lipsync/gaussian", "/lipsync/fantasy2",
+                 "/generate/cloud/submit", "/video/face-age",
+                 "/generate/wan-vace"):
         assert by_rule[rule]["readiness"] == "stub", f"{rule} should be a stub"
 
 
 def test_real_routes_are_not_tagged_stub(committed_manifest):
     by_rule = {r["rule"]: r for r in committed_manifest["routes"]}
     # Core, fully-implemented routes must never be excluded from the count.
-    for rule in ("/silence", "/audio/normalize", "/export-video"):
+    for rule in ("/silence", "/audio/normalize", "/export-video",
+                 "/agent/search-footage", "/agent/storyboard",
+                 "/video/trailer/generate", "/video/outpaint"):
         assert by_rule[rule]["readiness"] != "stub", f"{rule} wrongly tagged stub"
 
 
@@ -126,8 +129,9 @@ def test_route_readiness_endpoint_reports_stubs(client, committed_manifest):
     data = resp.get_json()
     assert data["total_routes"] == committed_manifest["total_routes"]
     assert data["shipped_route_count"] == committed_manifest["shipped_route_count"]
-    assert "/agent/storyboard" in data["stub_rules"]
+    assert "/lipsync/gaussian" in data["stub_rules"]
     assert "/silence" not in data["stub_rules"]
+    assert "/agent/storyboard" not in data["stub_rules"]
     assert len(data["stub_rules"]) == committed_manifest["readiness_counts"].get("stub", 0)
 
 

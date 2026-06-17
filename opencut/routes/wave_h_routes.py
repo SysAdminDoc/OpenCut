@@ -29,9 +29,11 @@ Tier 2 (stubbed — 503 MISSING_DEPENDENCY):
   POST /video/style/reezsynth         — ReEzSynth temporal style transfer
   POST /audio/music/vidmuse           — VidMuse video-to-music
 
+Tier 1 (wired to canonical pipelines):
+  POST /agent/search-footage          — semantic CLIP footage search
+  POST /agent/storyboard              — script-to-storyboard generation
+
 Tier 3 (stubbed — 501 ROUTE_STUBBED):
-  POST /agent/search-footage          — VideoAgent concept search
-  POST /agent/storyboard              — ViMax script-to-storyboard
   POST /generate/cloud/submit         — Hailuo / Seedance cloud gen-video
   GET  /generate/cloud/status/<id>
   GET  /generate/cloud/backends
@@ -49,7 +51,15 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, safe_int, validate_path
+from opencut.security import (
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    validate_filepath,
+    validate_path,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -563,16 +573,76 @@ def route_vidmuse_info():
 
 @wave_h_bp.route("/agent/search-footage", methods=["POST"])
 @require_csrf
-def route_agent_search():
-    from opencut.core import video_agent
-    return _stub_501("VideoAgent search", video_agent.INSTALL_HINT)
+@async_job("agent_search_footage", filepath_required=False)
+def route_agent_search(job_id, filepath, data):
+    from opencut.core import semantic_video_search
+
+    def _prog(p, m=""):
+        _update_job(job_id, progress=int(p), message=str(m))
+
+    raw_paths = data.get("clip_paths") or []
+    if isinstance(raw_paths, str):
+        raw_paths = [raw_paths]
+    clip_paths = [validate_filepath(str(p)) for p in raw_paths]
+    if not clip_paths:
+        raise ValueError("clip_paths is required (list of file paths to search)")
+    query = str(data.get("query") or "")
+    query_image = str(data.get("query_image") or "")
+    max_results = safe_int(data.get("max_results"), default=20)
+    min_score = safe_float(data.get("min_score"), default=0.15)
+    auto_index = safe_bool(data.get("auto_index"), default=True)
+    engine = str(data.get("engine") or "clip-vit-b32")
+    result = semantic_video_search.semantic_search(
+        clip_paths,
+        query=query,
+        query_image=query_image,
+        max_results=max_results,
+        min_score=min_score,
+        auto_index=auto_index,
+        engine=engine,
+        on_progress=_prog,
+    )
+    return result
 
 
 @wave_h_bp.route("/agent/storyboard", methods=["POST"])
 @require_csrf
-def route_agent_storyboard():
-    from opencut.core import video_agent
-    return _stub_501("ViMax storyboard", video_agent.INSTALL_HINT)
+@async_job("agent_storyboard", filepath_required=False)
+def route_agent_storyboard(job_id, filepath, data):
+    import tempfile
+    from dataclasses import asdict
+
+    from opencut.core import ai_storyboard
+
+    def _prog(p, m=""):
+        _update_job(job_id, progress=int(p), message=str(m))
+
+    script_text = str(data.get("script_text") or "")
+    if not script_text:
+        raise ValueError("script_text is required")
+    output_dir = str(data.get("output_dir") or "")
+    if output_dir:
+        validate_path(output_dir)
+    else:
+        output_dir = tempfile.mkdtemp(prefix="opencut_storyboard_")
+    use_sd = safe_bool(data.get("use_stable_diffusion"), default=False)
+    sd_api_url = str(data.get("sd_api_url") or "http://127.0.0.1:7860")
+    columns = safe_int(data.get("columns"), default=3)
+    panel_width = safe_int(data.get("panel_width"), default=640)
+    panel_height = safe_int(data.get("panel_height"), default=360)
+    export_pdf = safe_bool(data.get("export_pdf"), default=True)
+    result = ai_storyboard.generate_storyboard_from_script(
+        script_text,
+        output_dir,
+        on_progress=_prog,
+        use_stable_diffusion=use_sd,
+        sd_api_url=sd_api_url,
+        columns=columns,
+        panel_width=panel_width,
+        panel_height=panel_height,
+        export_pdf=export_pdf,
+    )
+    return asdict(result)
 
 
 @wave_h_bp.route("/generate/cloud/submit", methods=["POST"])

@@ -691,10 +691,10 @@ _FEATURES: List[FeatureRecord] = [
     ),
     FeatureRecord(
         feature_id="ai.video-agent",
-        label="VideoAgent / ViMax agentic search",
+        label="Semantic search + storyboard generation",
         category="llm",
-        state=STATE_STUB,
-        install_hint="pip install videoagent",
+        state=STATE_AVAILABLE,
+        install_hint="pip install transformers torch (for CLIP search); core storyboard is bundled",
         docs="docs/MODELS.md#videoagent--vimax-agentic-search",
         routes=["/agent/search-footage", "/agent/storyboard"],
         probe=_check("check_video_agent_available"),

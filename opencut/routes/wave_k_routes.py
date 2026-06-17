@@ -902,8 +902,37 @@ def route_dub_pipeline(job_id, filepath, data):
 
 @wave_k_bp.route("/video/trailer/generate", methods=["POST"])
 @require_csrf
-def route_trailer_gen():
-    return _stub_501("Trailer Generator (K3.2)")
+@async_job("trailer_generate")
+def route_trailer_gen(job_id, filepath, data):
+    from opencut.core import trailer_gen
+
+    def _prog(p, m=""):
+        _update_job(job_id, progress=int(p), message=str(m))
+
+    style = str(data.get("style") or "trailer")
+    target_duration = safe_float(data.get("target_duration"), default=60.0)
+    max_clips = safe_int(data.get("max_clips"), default=8)
+    title_text = str(data.get("title_text") or "")
+    output = str(data.get("output") or "") or None
+    result = trailer_gen.generate(
+        filepath,
+        style=style,
+        target_duration=target_duration,
+        max_clips=max_clips,
+        title_text=title_text,
+        output=output,
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "duration": result.duration,
+        "style": result.style,
+        "clips_used": result.clips_used,
+        "has_music": result.has_music,
+        "has_title_card": result.has_title_card,
+        "pipeline_steps": result.pipeline_steps,
+        "notes": result.notes,
+    }
 
 
 @wave_k_bp.route("/screenplay/parse", methods=["POST"])
@@ -951,8 +980,26 @@ def route_slate_id():
 
 @wave_k_bp.route("/video/outpaint", methods=["POST"])
 @require_csrf
-def route_outpaint_video():
-    return _stub_501("Video Outpainting (K3.6)")
+@async_job("video_outpaint")
+def route_outpaint_video(job_id, filepath, data):
+    from opencut.core import frame_extension
+
+    def _prog(p, m=""):
+        _update_job(job_id, progress=int(p), message=str(m))
+
+    target_ratio = str(data.get("target_ratio") or "16:9")
+    fill_method = str(data.get("fill_method") or "auto")
+    ai_enhance = safe_bool(data.get("ai_enhance"), default=True)
+    output = str(data.get("output") or "") or None
+    result = frame_extension.outpaint_aspect_ratio(
+        filepath,
+        target_ratio=target_ratio,
+        output_path_arg=output,
+        fill_method=fill_method,
+        ai_enhance=ai_enhance,
+        on_progress=_prog,
+    )
+    return result
 
 
 @wave_k_bp.route("/generate/wan-vace", methods=["POST"])
