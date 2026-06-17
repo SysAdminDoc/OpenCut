@@ -8,22 +8,6 @@ history, not here.
 Blocked items (credential/license/hardware-gated) live in
 [`Roadmap_Blocked.md`](Roadmap_Blocked.md).
 
-## P2
-
-- [ ] P2 — Align feature-state with route-readiness truth
-  Why: the route manifest now distinguishes implemented, dependency-gated, and stub routes, but generated feature records can still be marked available and the panel gates actions from `/system/feature-state`.
-  Evidence: `opencut/tools/dump_feature_readiness.py`, `opencut/_generated/feature_readiness.json`, `opencut/_generated/route_manifest.json`, `opencut/registry.py`, `extension/com.opencut.panel/client/feature-state.js`
-  Touches: `opencut/tools/dump_feature_readiness.py`, `opencut/registry.py`, `opencut/_generated/feature_readiness.json`, `/system/feature-state`, CEP/UXP feature-state consumers, feature-registry tests
-  Acceptance: generated feature readiness carries route readiness where a route binding exists; no route tagged `stub` can produce an `available` feature; dependency-gated routes surface as gated rather than shipped; panels badge/disable stub and gated actions consistently.
-  Complexity: M
-
-- [ ] P2 — Collapse duplicate 501 route aliases onto implemented pipelines
-  Why: several remaining strategic stubs duplicate workflows that already have local implementations, so users can hit a 501 even though OpenCut can perform the underlying task elsewhere.
-  Evidence: `/video/trailer/generate`, `/video/outpaint`, `/agent/storyboard`, `/agent/search-footage`; `opencut/core/trailer_gen.py`, `opencut/core/frame_extension.py`, `opencut/core/ai_storyboard.py`, `opencut/core/semantic_video_search.py`, `opencut/routes/wave_h_routes.py`, `opencut/routes/wave_k_routes.py`
-  Touches: route handlers in `wave_h_routes.py` and `wave_k_routes.py`, canonical workflow modules, route manifest generation, route-manifest tests, route-specific behavior tests, panel command catalog if those aliases are exposed
-  Acceptance: trailer, outpaint, storyboard, and search-footage endpoints either delegate to the existing canonical local pipeline or are explicitly renamed/hidden as future model-specific research endpoints; shipped-route count and tests reflect the new truth.
-  Complexity: M
-
 ## P3
 
 - [ ] P3 — Surface model privacy/license posture in feature-state and engine controls
