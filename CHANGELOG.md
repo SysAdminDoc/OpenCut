@@ -5,6 +5,26 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Docker compose hardened + MCP sidecar profile
+
+- Added CPU/memory resource limits (CPU: 4c/4G, GPU: 8c/16G), JSON-file
+  log rotation (50-100MB × 3-5 files), and an opt-in MCP sidecar profile
+  (`docker compose --profile mcp up`). GPU service now reads
+  `NVIDIA_VISIBLE_DEVICES` from environment instead of hardcoding `all`.
+
+### Changed — Default Whisper model upgraded to large-v3-turbo
+
+- `CaptionConfig.model` default changed from `base` to `large-v3-turbo`.
+  Within 1-2% WER of large-v3 at 5.4x speed. Existing users keep their
+  configured model.
+
+### Added — CLI config export/import/validate commands
+
+- `opencut config export [-o backup.json]` dumps all `~/.opencut/*.json`
+  settings to a single JSON bundle. `opencut config import backup.json`
+  restores them. `opencut config validate` checks all config files for
+  JSON parse errors (exits non-zero on failure).
+
 ### Added — 12 new animated caption presets (19 → 31)
 
 - Neon Glow, Slide Up, Word Pop, Emoji React, Speaker Colored, Retro VHS,

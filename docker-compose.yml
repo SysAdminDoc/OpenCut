@@ -3,24 +3,28 @@ services:
     build: .
     ports:
       - "5679:5679"
-      # Default Docker runtime publishes the HTTP API only. Optional
-      # WebSocket/MCP sidecars require an explicit custom service/profile.
     volumes:
-      # Persist models, settings, job history across container rebuilds
-      # Match the Dockerfile's non-root ``opencut`` user home; mounting to
-      # ``/root/.opencut`` writes to the wrong path (or fails outright)
-      # because the runtime user is ``opencut`` (uid != 0), not root.
       - opencut-data:/home/opencut/.opencut
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5679/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   # GPU-enabled variant - use: docker compose --profile gpu up opencut-server-gpu
   opencut-server-gpu:
@@ -29,20 +33,18 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5679:5679"
-      # Default Docker runtime publishes the HTTP API only. Optional
-      # WebSocket/MCP sidecars require an explicit custom service/profile.
     volumes:
-      # Match the Dockerfile's non-root ``opencut`` user home; mounting to
-      # ``/root/.opencut`` writes to the wrong path (or fails outright)
-      # because the runtime user is ``opencut`` (uid != 0), not root.
       - opencut-data:/home/opencut/.opencut
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
-      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
     deploy:
       resources:
+        limits:
+          cpus: "8.0"
+          memory: 16G
         reservations:
           devices:
             - driver: nvidia
@@ -54,8 +56,44 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
     profiles:
       - gpu
+
+  # MCP sidecar - use: docker compose --profile mcp up opencut-mcp
+  opencut-mcp:
+    build: .
+    entrypoint: ["python", "-m", "opencut.mcp_server"]
+    command: ["--host", "0.0.0.0", "--port", "5681"]
+    ports:
+      - "5681:5681"
+    volumes:
+      - opencut-data:/home/opencut/.opencut
+    environment:
+      - OPENCUT_BUNDLED=false
+      - PYTHONUNBUFFERED=1
+      - OPENCUT_ALLOW_REMOTE=1
+      - OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679
+    depends_on:
+      opencut-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    profiles:
+      - mcp
 
 volumes:
   opencut-data:
