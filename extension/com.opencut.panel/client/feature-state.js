@@ -107,6 +107,29 @@
         };
     }
 
+    function privacyFor(featureId) {
+        var rec = getFeature(featureId);
+        if (!rec) return null;
+        return {
+            privacy: rec.privacy || "",
+            license: rec.license || "",
+            advisoryNotes: rec.advisory_notes || [],
+        };
+    }
+
+    var PRIVACY_BADGES = {
+        "local-only": { chip: "Local", tone: "success" },
+        "cloud": { chip: "Cloud", tone: "caution" },
+    };
+
+    function _privacyChip(privacy) {
+        if (!privacy) return null;
+        var key = privacy.toLowerCase();
+        if (key === "local-only") return PRIVACY_BADGES["local-only"];
+        if (key.indexOf("cloud") !== -1) return PRIVACY_BADGES["cloud"];
+        return null;
+    }
+
     function _hardwareSummary(record) {
         if (!record) return "";
         var parts = [];
@@ -131,17 +154,35 @@
     function _annotateHardware(el, record) {
         if (!el || !record) return;
         var summary = _hardwareSummary(record);
-        if (!summary) return;
-        el.setAttribute("data-feature-hardware", record.hardware || "");
-        if (record.minimum_vram_mb) {
-            el.setAttribute("data-feature-min-vram-mb", String(record.minimum_vram_mb));
+        if (summary) {
+            el.setAttribute("data-feature-hardware", record.hardware || "");
+            if (record.minimum_vram_mb) {
+                el.setAttribute("data-feature-min-vram-mb", String(record.minimum_vram_mb));
+            }
+            if (record.requires_gpu) {
+                el.setAttribute("data-feature-requires-gpu", "true");
+            }
         }
-        if (record.requires_gpu) {
-            el.setAttribute("data-feature-requires-gpu", "true");
+        if (record.privacy) {
+            el.setAttribute("data-feature-privacy", record.privacy);
+            var pChip = _privacyChip(record.privacy);
+            if (pChip) {
+                el.setAttribute("data-feature-privacy-chip", pChip.chip);
+            }
         }
-        var title = el.title || "";
-        if (title.indexOf("Hardware:") === -1) {
-            el.title = title ? title + "\nHardware: " + summary : "Hardware: " + summary;
+        if (record.license) {
+            el.setAttribute("data-feature-license", record.license);
+        }
+        var parts = [];
+        if (summary) parts.push("Hardware: " + summary);
+        if (record.privacy) parts.push("Privacy: " + record.privacy);
+        if (record.license) parts.push("License: " + record.license);
+        if (parts.length) {
+            var title = el.title || "";
+            var newInfo = parts.join("\n");
+            if (title.indexOf("Hardware:") === -1 && title.indexOf("Privacy:") === -1) {
+                el.title = title ? title + "\n" + newInfo : newInfo;
+            }
         }
     }
 
@@ -164,6 +205,16 @@
         var hardware = _hardwareSummary(badge.record);
         if (hardware) {
             hint += "\nHardware: " + hardware;
+        }
+        if (badge.record.privacy) {
+            hint += "\nPrivacy: " + badge.record.privacy;
+        }
+        if (badge.record.license) {
+            hint += "\nLicense: " + badge.record.license;
+        }
+        var notes = badge.record.advisory_notes || [];
+        if (notes.length) {
+            hint += "\nAdvisory: " + notes[0];
         }
         el.title = hint;
         el.setAttribute("data-feature-state", badge.record.state);
@@ -194,10 +245,12 @@
 
     var api = {
         STATE_BADGES: STATE_BADGES,
+        PRIVACY_BADGES: PRIVACY_BADGES,
         fetchManifest: fetchManifest,
         getFeature: getFeature,
         isAvailable: isAvailable,
         hardwareFor: hardwareFor,
+        privacyFor: privacyFor,
         badgeFor: badgeFor,
         applyGating: applyGating,
         // Test helpers — never call from production code.

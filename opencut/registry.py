@@ -127,6 +127,9 @@ class FeatureRecord:
     hardware: str = ""
     requires_gpu: bool = False
     minimum_vram_mb: int = 0
+    privacy: str = ""
+    license: str = ""
+    advisory_notes: List[str] = field(default_factory=list)
 
     def resolved_state(self) -> ReadinessState:
         """Return the readiness state after probing optional dependencies."""
@@ -936,6 +939,28 @@ def _merge_generated_records(
     return records
 
 
+def _enrich_from_model_cards(records: Iterable[FeatureRecord]) -> List[FeatureRecord]:
+    """Fill privacy/license/advisory_notes from model cards where available."""
+    from opencut.model_cards import CARDS
+
+    cards_by_check = {card.check_name: card for card in CARDS}
+    cards_by_fid = {card.feature_id: card for card in CARDS}
+    out = list(records)
+    for record in out:
+        card = cards_by_check.get(_probe_name(record)) or cards_by_fid.get(
+            record.feature_id
+        )
+        if card is None:
+            continue
+        if not record.privacy:
+            record.privacy = card.privacy
+        if not record.license:
+            record.license = card.license
+        if not record.advisory_notes and card.advisory_notes:
+            record.advisory_notes = list(card.advisory_notes)
+    return out
+
+
 def _build_index(records: Iterable[FeatureRecord]) -> Dict[str, FeatureRecord]:
     out: Dict[str, FeatureRecord] = {}
     for record in records:
@@ -947,11 +972,21 @@ def _build_index(records: Iterable[FeatureRecord]) -> Dict[str, FeatureRecord]:
 
 _GENERATED_FEATURES = load_generated_feature_records()
 
+_FEATURES_MERGED = _merge_generated_records(_FEATURES, _GENERATED_FEATURES)
+
+_ENRICHED = False
+
+
+def _ensure_enriched() -> None:
+    global _ENRICHED
+    if _ENRICHED:
+        return
+    _ENRICHED = True
+    _enrich_from_model_cards(list(FEATURES.values()))
+
 
 # Public, immutable view of the catalogue.
-FEATURES: Dict[str, FeatureRecord] = _build_index(
-    _merge_generated_records(_FEATURES, _GENERATED_FEATURES)
-)
+FEATURES: Dict[str, FeatureRecord] = _build_index(_FEATURES_MERGED)
 
 
 # ---------------------------------------------------------------------------
@@ -961,20 +996,24 @@ FEATURES: Dict[str, FeatureRecord] = _build_index(
 
 def list_features() -> List[FeatureRecord]:
     """Return every registered feature in insertion order."""
+    _ensure_enriched()
     return list(FEATURES.values())
 
 
 def get_feature(feature_id: str) -> Optional[FeatureRecord]:
+    _ensure_enriched()
     return FEATURES.get(feature_id)
 
 
 def feature_states() -> Dict[str, ReadinessState]:
     """Return ``{feature_id: resolved_state}`` for fast manifest dumps."""
+    _ensure_enriched()
     return {fid: rec.resolved_state() for fid, rec in FEATURES.items()}
 
 
 def feature_manifest() -> dict:
     """Build the JSON payload served by ``GET /system/feature-state``."""
+    _ensure_enriched()
     payload = [record.as_dict() for record in FEATURES.values()]
     counts: Dict[str, int] = {state: 0 for state in STATES}
     for record in payload:
