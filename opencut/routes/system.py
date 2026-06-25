@@ -724,6 +724,34 @@ def check_dependencies():
             if _deps_cache["data"] is not None and (time.time() - _deps_cache["ts"]) < _DEPS_CACHE_TTL:
                 return jsonify(_deps_cache["data"])
 
+    # Map of dependency display name -> (import module, pip install command).
+    # The install_hint is surfaced to the panel so users know how to install
+    # missing packages without leaving the UI.
+    _DEP_INSTALL_HINTS = {
+        "faster-whisper": "pip install faster-whisper",
+        "whisperx": "pip install opencut-ppro[captions-whisperx]",
+        "demucs": "pip install opencut-ppro[audio]",
+        "pedalboard": "pip install pedalboard",
+        "deepfilternet": "pip install opencut-ppro[audio]",
+        "noisereduce": "pip install noisereduce",
+        "librosa": "pip install librosa",
+        "pydub": "pip install pydub",
+        "opencv": "pip install opencv-python-headless",
+        "Pillow": "pip install Pillow",
+        "numpy": "pip install numpy",
+        "rembg": "pip install rembg",
+        "realesrgan": "pip install opencut-ppro[ai]",
+        "gfpgan": "pip install opencut-ppro[ai]",
+        "insightface": "pip install opencut-ppro[ai]",
+        "edge-tts": "pip install edge-tts",
+        "audiocraft": "pip install opencut-ppro[music]",
+        "scenedetect": "pip install scenedetect[opencv]",
+        "pyannote.audio": "pip install opencut-ppro[captions-whisperx]",
+        "mediapipe": "pip install mediapipe",
+        "torch": "pip install torch --index-url https://download.pytorch.org/whl/cu121",
+        "onnxruntime": "pip install onnxruntime",
+    }
+
     deps = {}
     checks = {
         "faster-whisper": "faster_whisper",
@@ -755,7 +783,11 @@ def check_dependencies():
             version = getattr(mod, "__version__", getattr(mod, "VERSION", "installed"))
             deps[name] = {"installed": True, "version": str(version)}
         except ImportError:
-            deps[name] = {"installed": False, "version": None}
+            deps[name] = {
+                "installed": False,
+                "version": None,
+                "install_hint": _DEP_INSTALL_HINTS.get(name, ""),
+            }
 
     # Check FFmpeg
     try:
@@ -772,7 +804,11 @@ def check_dependencies():
             "version": line if r.returncode == 0 and line else None,
         }
     except Exception:
-        deps["ffmpeg"] = {"installed": False, "version": None}
+        deps["ffmpeg"] = {
+            "installed": False,
+            "version": None,
+            "install_hint": "winget install ffmpeg  |  brew install ffmpeg  |  apt install ffmpeg",
+        }
 
     # Color match (cv2 + numpy)
     try:

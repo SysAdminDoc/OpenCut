@@ -11869,6 +11869,7 @@
             var frag = document.createDocumentFragment();
             var installedCount = 0;
             var missingCount = 0;
+            var missingHints = [];
             for (var i = 0; i < keys.length; i++) {
                 var name = keys[i];
                 var info = data[name];
@@ -11878,17 +11879,40 @@
                 var isInstalled = !!(info && info.installed);
                 if (isInstalled) installedCount++;
                 else missingCount++;
+                var installHint = (!isInstalled && info && info.install_hint) ? info.install_hint : "";
+                if (installHint) missingHints.push(installHint);
                 var versionText = isInstalled
                     ? ((info && info.version ? info.version : t("settings.deps_ok_version", "OK")).toString().substring(0, 12))
                     : t("settings.deps_missing_version", "missing");
                 var div = document.createElement("div");
-                div.className = "dep-item";
+                div.className = "dep-item" + (installHint ? " has-hint" : "");
+                var hintMarkup = installHint
+                    ? '<span class="dep-hint" title="' + esc(installHint) + '">' + esc(installHint) + '</span>'
+                    : "";
                 div.innerHTML = '<span class="dep-dot ' + (isInstalled ? "installed" : "missing") + '"></span>' +
                     '<span class="dep-name">' + esc(name) + '</span>' +
-                    '<span class="dep-version">' + esc(versionText) + '</span>';
+                    '<span class="dep-version">' + esc(versionText) + '</span>' +
+                    hintMarkup;
                 frag.appendChild(div);
             }
             el.depGrid.innerHTML = "";
+            // If there are missing deps, show a bulk install hint at the top
+            if (missingCount > 0) {
+                var bulkDiv = document.createElement("div");
+                bulkDiv.className = "dep-bulk-hint";
+                bulkDiv.innerHTML =
+                    '<span class="dep-bulk-title">' +
+                    esc(t("settings.deps_install_title", "Install missing packages")) +
+                    "</span>" +
+                    '<span class="dep-bulk-body">' +
+                    esc(t(
+                        "settings.deps_install_body",
+                        "Run the following in a terminal (Command Prompt, PowerShell, or Terminal) to install recommended dependencies:"
+                    )) +
+                    "</span>" +
+                    '<code class="dep-bulk-cmd">pip install opencut-ppro[all]</code>';
+                el.depGrid.appendChild(bulkDiv);
+            }
             el.depGrid.appendChild(frag);
             setStatusLine(
                 "depsStatusLine",

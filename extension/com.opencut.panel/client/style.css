@@ -3483,6 +3483,54 @@ input[type="checkbox"]:disabled {
     font-family: var(--font-mono);
     font-size: 10px;
 }
+.dep-item.has-hint {
+    flex-wrap: wrap;
+}
+.dep-hint {
+    width: 100%;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    padding: 2px 0 0 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+}
+.dep-bulk-hint {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: var(--r-xs);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    grid-column: 1 / -1;
+}
+.dep-bulk-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.dep-bulk-body {
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+.dep-bulk-cmd {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: var(--r-xs);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    user-select: all;
+    -webkit-user-select: all;
+    cursor: text;
+}
 
 /* ============================================================
    WORKFLOW BUILDER
@@ -6888,9 +6936,10 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
 .server-status-banner {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 6px;
     margin: 0 24px 16px;
     padding: 12px 16px;
     border-radius: 18px;
@@ -6904,6 +6953,13 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.03),
         0 18px 32px rgba(20, 6, 9, 0.18);
+}
+.server-status-hint {
+    font-size: 10px;
+    color: rgba(255, 226, 217, 0.7);
+    font-family: var(--font-mono);
+    text-align: center;
+    line-height: 1.5;
 }
 
 .server-status-banner::before {
