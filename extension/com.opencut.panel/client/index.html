@@ -140,6 +140,7 @@
         <main class="main" id="mainContent" tabindex="-1" role="main">
             <div class="server-status-banner hidden" id="serverStatusBanner">
                 <span id="serverStatusMsg" data-i18n="conn.reconnecting">Server disconnected. Reconnecting…</span>
+                <span class="server-status-hint" id="serverStatusHint" data-i18n="conn.start_hint">Start the backend with Start-OpenCut.bat, or run: python -m opencut.server</span>
             </div>
 
             <section class="workspace-stage" id="workspaceStage" aria-labelledby="workspaceStageTitle">
@@ -3774,7 +3775,7 @@
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.ws_bridge">Live Updates Bridge</div>
                     </div>
-                    <p class="card-desc" data-i18n="ws.settings_desc">Keep progress, completion, and cancel feedback flowing between the backend and the panel while longer jobs run.</p>
+                    <p class="card-desc" data-i18n="ws.settings_desc">Optional WebSocket connection for streaming progress during longer jobs. Not required for the panel to work -- the panel connects to the backend over HTTP automatically.</p>
                     <div class="settings-row settings-row-inline">
                         <span class="settings-label" data-i18n="ws.label_bridge">Bridge</span>
                         <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown" data-i18n="ws.status_checking">Checking…</span>

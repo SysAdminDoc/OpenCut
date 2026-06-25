@@ -560,14 +560,14 @@ pre-commit install --hook-type pre-push
 
 ## FAQ
 
-**Q: The panel says "Server offline"**
-A: Make sure the backend is running. Check that port 5679 is not blocked. The panel will auto-reconnect with exponential backoff when the server comes back.
+**Q: The panel says "Server offline" or "Server disconnected"**
+A: The OpenCut backend server must be running before the panel can connect. Start it by double-clicking `Start-OpenCut.bat` (created by the installer), or open a terminal and run `python -m opencut.server`. Keep that window open while using the panel. Check that port 5679 is not blocked by a firewall. The panel will auto-reconnect with exponential backoff when the server comes back. Note: the "Live Updates Bridge" in Settings is an optional WebSocket feature for streaming progress -- it is **not** required for the panel to work.
 
 **Q: Transcription is slow**
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: Most AI features are optional. Install them individually or use the audited `pip install opencut-ppro[all]` convenience lane. Torch-backed features use `pip install opencut-ppro[all,torch-stack]` or narrower extras such as `opencut-ppro[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed. Each missing feature shows an install button in the panel.
+A: Most AI features are optional. Install them individually or use the audited `pip install opencut-ppro[all]` convenience lane. Torch-backed features use `pip install opencut-ppro[all,torch-stack]` or narrower extras such as `pip install opencut-ppro[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed and what's missing -- each missing package shows the pip command to install it.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
