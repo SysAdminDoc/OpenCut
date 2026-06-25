@@ -61,33 +61,67 @@ is the one step that needs the maintainer's PyPI account.
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
 - **Windows 10/11, macOS, or Linux** (Windows installer, macOS/Linux source launchers, and Linux Flatpak/AppImage release packaging)
 - **Python 3.11+** for source installs; the Windows installer bundles its own runtime
+- **FFmpeg** must be installed and on your system PATH for all video/audio processing. The Windows installer handles this automatically; source installs require a manual install (see below)
 
 ### Installation
 
-**Option A -- Installer (recommended):**
+**Option A -- Windows Installer (recommended for Windows):**
 
 Download the latest Windows installer from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
 
-**Option B -- From source:**
+**Option B -- Install.bat (recommended for Windows source installs):**
 
-```bash
+This is the easiest way to install from source on Windows. It handles FFmpeg, Python dependencies, the CEP extension, registry keys, and launcher creation in one step.
+
+```
 git clone https://github.com/SysAdminDoc/OpenCut.git
 cd OpenCut
-pip install -e ".[all]"
-python -m opencut.server
 ```
+
+Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
+1. Check for and install FFmpeg (via winget) if missing
+2. Verify Python 3.9+ is on your PATH
+3. Install all Python dependencies (Flask, click, rich, etc.)
+4. Install the OpenCut Python package
+5. Optionally install Whisper for caption generation
+6. Copy the CEP extension to Adobe's extensions folder
+7. Set the `PlayerDebugMode` registry key so unsigned extensions load
+8. Create `Start-OpenCut.bat` on your desktop to launch the backend server
+
+After the installer finishes, you are ready to use OpenCut -- see **Launch** below.
+
+**Option C -- From source (manual):**
+
+If you prefer manual control or are on macOS/Linux, follow these steps:
+
+1. **Install FFmpeg** and make sure it is on your system PATH:
+   - Windows: `winget install Gyan.FFmpeg` or download from https://ffmpeg.org/download.html and add the `bin` folder to your PATH
+   - macOS: `brew install ffmpeg`
+   - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
+   - Verify: `ffmpeg -version` should print version info
+
+2. **Clone and install the Python package:**
+   ```bash
+   git clone https://github.com/SysAdminDoc/OpenCut.git
+   cd OpenCut
+   pip install -e ".[all]"
+   ```
+   If `pip` is not found, use `python -m pip install -e ".[all]"` or `py -3.12 -m pip install -e ".[all]"` on Windows. If you get permission errors, add `--user` to the pip command.
+
+3. **Install the CEP extension** (for the Premiere Pro panel):
+   - Windows: copy the folder `extension/com.opencut.panel` to `%APPDATA%\Adobe\CEP\extensions\` (create the `extensions` folder if it does not exist)
+   - macOS: copy to `~/Library/Application Support/Adobe/CEP/extensions/`
+   - Then set the debug registry key so Premiere loads unsigned extensions:
+     - Windows: open `regedit`, navigate to `HKCU\Software\Adobe\CSXS.18` (create the key if needed), add a String value `PlayerDebugMode` set to `1`. Repeat for CSXS.17, .16, etc. to cover your Premiere version.
+     - macOS: `defaults write com.adobe.CSXS.18 PlayerDebugMode 1`
+
+4. **Start the server:** `python -m opencut.server`
 
 Add `torch-stack` or narrower feature extras only when you need Torch-backed
 backends such as WhisperX diarized captioning, Demucs separation, pyannote
 diarization, RealESRGAN/GFPGAN restoration, or TransNetV2 scene detection.
 The source default keeps the audited convenience extra away from current
 Torch/Transformers advisory exposure.
-
-Then copy `extension/com.opencut.panel` to your CEP extensions folder and set `PlayerDebugMode = 1` in the registry.
-
-**Option C -- Install.bat:**
-
-Clone the repo and run `Install.bat` as Administrator. Handles FFmpeg check, Python deps, CEP deployment, registry keys, and launcher creation.
 
 **Option D -- Docker:**
 
@@ -107,9 +141,32 @@ Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller 
 
 ### Launch
 
-1. Start the backend: run `OpenCut-Server.bat` on Windows, `OpenCut-Server.command` on macOS, `./OpenCut-Server.sh` on Linux, the installed launcher, or `python -m opencut.server`
-2. In Premiere Pro: **Window > Extensions > OpenCut**
-3. Select a clip and start editing
+1. **Start the backend server** -- this must be running before the panel can connect:
+   - Windows (installer): double-click `Start-OpenCut.bat` on your desktop or in the OpenCut folder
+   - Windows (source): open a terminal in the OpenCut folder and run `python -m opencut.server`
+   - macOS: run `./OpenCut-Server.command` or `python -m opencut.server`
+   - Linux: run `./OpenCut-Server.sh` or `python -m opencut.server`
+   - You should see output like `Running on http://127.0.0.1:5679` -- **keep this terminal window open**
+2. Open Premiere Pro and go to **Window > Extensions > OpenCut**
+3. The panel should show a green connection indicator. Select a clip and start editing.
+
+### Troubleshooting
+
+**Panel says "Server offline" or won't connect:**
+The OpenCut panel connects to a backend server running on `http://127.0.0.1:5679`. If the panel cannot connect:
+- Make sure the backend server is running (step 1 above). You need a terminal window open with `python -m opencut.server` running.
+- Check the terminal for errors. Common issues: port 5679 already in use (change with `OPENCUT_PORT=5680`), missing Python packages (re-run `pip install -e ".[all]"`).
+- Check that your firewall is not blocking localhost connections on port 5679.
+- The "Live Updates Bridge" toggle in the Settings tab is an optional WebSocket feature for streaming progress updates. It is **not** required for the panel to work -- do not confuse it with the main server connection.
+
+**"Module not found" errors for AI features:**
+Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard** -- it shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
+
+**FFmpeg not found:**
+The server needs FFmpeg on your PATH. Run `ffmpeg -version` in a terminal to verify. If not found: Windows users can run `winget install Gyan.FFmpeg`, macOS users `brew install ffmpeg`, Linux users `sudo apt install ffmpeg`. After installing, restart your terminal and the OpenCut server.
+
+**Python not found or wrong version:**
+OpenCut requires Python 3.11 or later. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH".
 
 ---
 
@@ -561,13 +618,13 @@ pre-commit install --hook-type pre-push
 ## FAQ
 
 **Q: The panel says "Server offline" or "Server disconnected"**
-A: The OpenCut backend server must be running before the panel can connect. Start it by double-clicking `Start-OpenCut.bat` (created by the installer), or open a terminal and run `python -m opencut.server`. Keep that window open while using the panel. Check that port 5679 is not blocked by a firewall. The panel will auto-reconnect with exponential backoff when the server comes back. Note: the "Live Updates Bridge" in Settings is an optional WebSocket feature for streaming progress -- it is **not** required for the panel to work.
+A: See the [Troubleshooting](#troubleshooting) section above. In short: the backend server must be running (`python -m opencut.server` or `Start-OpenCut.bat`), keep its terminal window open, and make sure port 5679 is not blocked by a firewall. The panel auto-reconnects with exponential backoff when the server comes back.
 
 **Q: Transcription is slow**
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: Most AI features are optional. Install them individually or use the audited `pip install opencut-ppro[all]` convenience lane. Torch-backed features use `pip install opencut-ppro[all,torch-stack]` or narrower extras such as `pip install opencut-ppro[captions-whisperx]`. Check the Dependency Dashboard in Settings to see what's installed and what's missing -- each missing package shows the pip command to install it.
+A: See the [Troubleshooting](#troubleshooting) section above. Most AI features are optional. Use `pip install -e ".[all]"` (source) or `pip install opencut-ppro[all]` (PyPI) to install all audited extras. For Torch-backed features add `torch-stack`: `pip install opencut-ppro[all,torch-stack]`. The Dependency Dashboard in the Settings tab shows every optional package and the pip command to install it.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
