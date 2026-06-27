@@ -997,6 +997,7 @@ body {
   --accent-dim:    rgba(216, 183, 130, 0.12);
   --text-primary:  #edf2f7;
   --text-secondary:#b6c1cf;
+  --text-muted:    rgba(182, 193, 207, 0.68);
   --text-disabled: #6d7c91;
   --border:        rgba(198, 208, 223, 0.09);
   --border-light:  rgba(214, 223, 235, 0.16);
@@ -1921,7 +1922,7 @@ body {
 .oc-shortcut-label {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: #f7f9fc;
 }
 
@@ -1931,19 +1932,9 @@ body {
   color: rgba(203, 213, 224, 0.72);
 }
 
-.oc-shortcut-item kbd {
+.oc-quick-action {
   flex-shrink: 0;
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid rgba(216, 224, 233, 0.1);
-  background: rgba(8, 14, 22, 0.84);
-  color: rgba(245, 248, 251, 0.92);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 24px;
-  letter-spacing: 0.02em;
+  min-width: 76px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4382,7 +4373,7 @@ textarea:focus-visible,
 .oc-chip,
 .oc-status-pill,
 .oc-toast-dismiss,
-.oc-shortcut-item kbd {
+.oc-quick-action {
   border-radius: 8px;
 }
 

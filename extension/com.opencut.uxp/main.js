@@ -551,7 +551,9 @@ function setJobActionsLocked(locked) {
       btn.disabled = true;
       btn.setAttribute("aria-disabled", "true");
       btn.dataset.jobLocked = "true";
+      btn.title = t("uxp.status.job_running_action_title", "Another OpenCut job is running. Wait for it to finish or cancel it first.");
     });
+    syncQuickActionButtons();
     return;
   }
 
@@ -559,11 +561,13 @@ function setJobActionsLocked(locked) {
     if (!btn || !document.contains(btn)) return;
     btn.removeAttribute("aria-disabled");
     delete btn.dataset.jobLocked;
+    if (btn.dataset.backendLocked !== "true") btn.removeAttribute("title");
     if (!btn.classList.contains("loading")) {
       btn.disabled = wasDisabled;
     }
   });
   _jobLockedButtonStates.clear();
+  syncQuickActionButtons();
 }
 
 function clearTrackedJob(jobId = null) {
@@ -572,6 +576,7 @@ function clearTrackedJob(jobId = null) {
   }
   _jobStartInFlight = false;
   setJobActionsLocked(false);
+  syncQuickActionButtons();
 }
 
 // ---- Premiere Pro state cache (reduces UXP API round-trips) ----
@@ -2112,6 +2117,7 @@ const UIController = (() => {
     setProcessingMsg(msg);
     setProgress(0);
     startElapsedTimer();
+    syncQuickActionButtons();
   }
 
   function hideProcessing() {
@@ -2119,6 +2125,7 @@ const UIController = (() => {
     if (banner) banner.classList.add("hidden");
     document.getElementById("mainContent")?.setAttribute("aria-busy", "false");
     stopElapsedTimer();
+    syncQuickActionButtons();
   }
 
   function setProcessingMsg(msg) {
@@ -2325,13 +2332,17 @@ const UIController = (() => {
     const btn = document.getElementById(btnId);
     if (!btn) return;
     btn.classList.toggle("loading", loading);
-    btn.disabled = loading;
+    const locked = btn.dataset.backendLocked === "true" || btn.dataset.jobLocked === "true";
+    btn.disabled = loading || locked;
+    btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
   }
 
   function clearButtonLoadingStates() {
     document.querySelectorAll("button.loading").forEach((btn) => {
       btn.classList.remove("loading");
-      btn.disabled = false;
+      const locked = btn.dataset.backendLocked === "true" || btn.dataset.jobLocked === "true";
+      btn.disabled = locked;
+      btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
     });
   }
 
@@ -5652,8 +5663,18 @@ async function checkConnection({ rescan = false, background = false } = {}) {
       // Don't override buttons already disabled for other reasons (loading state)
       if (!btn.classList.contains("loading")) {
         btn.disabled = !alive;
+        if (!alive) {
+          btn.dataset.backendLocked = "true";
+          btn.setAttribute("aria-disabled", "true");
+          btn.title = t("uxp.status.backend_offline_action_title", "Start or reconnect the OpenCut backend before running this action.");
+        } else if (btn.dataset.backendLocked === "true") {
+          delete btn.dataset.backendLocked;
+          btn.removeAttribute("aria-disabled");
+          btn.removeAttribute("title");
+        }
       }
     });
+    syncQuickActionButtons();
     // Show reconnection toast when server comes back
     if (alive && wasAlive === false) {
       UIController.showToast(t("uxp.status.server_reconnected", "Server reconnected."), "success");
@@ -5665,97 +5686,65 @@ async function checkConnection({ rescan = false, background = false } = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Keyboard Shortcuts
+// Settings quick actions
 // ─────────────────────────────────────────────────────────────
-const SHORTCUT_DEFS = {
-  "silence-detect":    { keys: "Ctrl+Shift+S", label: "Detect Silence" },
-  "caption-generate":  { keys: "Ctrl+Shift+C", label: "Generate Captions" },
-  "audio-normalize":   { keys: "Ctrl+Shift+N", label: "Normalize Audio" },
-  "audio-denoise":     { keys: "Ctrl+Shift+D", label: "Denoise Audio" },
-  "export-video":      { keys: "Ctrl+Shift+E", label: "Export Video" },
-  "cancel-job":        { keys: "Escape",        label: "Cancel Current Job" },
-};
+const QUICK_ACTION_DEFS = Object.freeze({
+  "silence-detect": { tab: "cut", targetId: "runSilenceBtn" },
+  "caption-generate": { tab: "captions", targetId: "runTranscribeBtn" },
+  "audio-normalize": { tab: "audio", targetId: "runNormalizeBtn" },
+});
 
-const _shortcutActions = {
-  "silence-detect":   () => { const b = document.getElementById("runSilenceBtn"); if (b && !b.disabled) b.click(); },
-  "caption-generate": () => { const b = document.getElementById("runTranscribeBtn"); if (b && !b.disabled) b.click(); },
-  "audio-normalize":  () => { const b = document.getElementById("runNormalizeBtn"); if (b && !b.disabled) b.click(); },
-  "audio-denoise":    () => { const b = document.getElementById("runDenoiseBtn"); if (b && !b.disabled) b.click(); },
-  "export-video":     () => { const b = document.getElementById("runBatchExportBtn"); if (b && !b.disabled) b.click(); },
-  "cancel-job":       () => { if (activeJobId) JobPoller.cancel().then((cancelled) => {
-    if (!cancelled) return;
-    UIController.clearButtonLoadingStates();
-    UIController.hideProcessing();
-    UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
-  }); },
-};
-
-/**
- * Match a keyboard event against a shortcut string like "Ctrl+Shift+S" or "Escape".
- */
-function matchesShortcut(e, keysStr) {
-  const parts = keysStr.split("+");
-  let needCtrl = false, needShift = false, needAlt = false, needMeta = false;
-  let keyPart = "";
-  for (const p of parts) {
-    const lp = p.trim().toLowerCase();
-    if (lp === "ctrl")               needCtrl  = true;
-    else if (lp === "shift")         needShift = true;
-    else if (lp === "alt")           needAlt   = true;
-    else if (lp === "meta" || lp === "cmd") needMeta  = true;
-    else                             keyPart   = lp;
-  }
-  if (e.ctrlKey !== needCtrl)  return false;
-  if (e.shiftKey !== needShift) return false;
-  if (e.altKey !== needAlt)    return false;
-  if (e.metaKey !== needMeta)  return false;
-  const eventKey = e.key.toLowerCase();
-  if (keyPart === "escape") return eventKey === "escape";
-  return eventKey === keyPart;
+function syncQuickActionButtons() {
+  document.querySelectorAll('[data-quick-action="cancel-job"]').forEach((btn) => {
+    btn.disabled = !activeJobId;
+    btn.setAttribute("aria-disabled", activeJobId ? "false" : "true");
+    btn.title = activeJobId
+      ? t("uxp.settings.cancel_active_job_text", "Stop a long-running process from the visible action button.")
+      : t("uxp.settings.no_active_job", "No active job to cancel.");
+  });
 }
 
-function initKeyboardShortcuts() {
-  document.addEventListener("keydown", (e) => {
-    // Escape / cancel-job always works, even inside inputs
-    if (!e.defaultPrevented && matchesShortcut(e, SHORTCUT_DEFS["cancel-job"].keys) && activeJobId) {
-      _shortcutActions["cancel-job"]();
+async function cancelActiveJobFromSettings() {
+  if (!activeJobId) {
+    UIController.showToast(t("uxp.settings.no_active_job", "No active job to cancel."), "info");
+    return;
+  }
+  const cancelled = await JobPoller.cancel();
+  if (!cancelled) return;
+  UIController.clearButtonLoadingStates();
+  UIController.hideProcessing();
+  UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
+  syncQuickActionButtons();
+}
+
+function runSettingsQuickAction(actionId) {
+  if (actionId === "cancel-job") {
+    cancelActiveJobFromSettings();
+    return;
+  }
+
+  const def = QUICK_ACTION_DEFS[actionId];
+  if (!def) {
+    UIController.showToast(t("uxp.settings.quick_action_missing", "That action is not available in this panel build."), "warning");
+    return;
+  }
+
+  UIController.switchTab(def.tab);
+  requestAnimationFrame(() => {
+    const target = document.getElementById(def.targetId);
+    if (!target) {
+      UIController.showToast(t("uxp.settings.quick_action_missing", "That action is not available in this panel build."), "warning");
       return;
     }
-
-    // Don't fire other shortcuts when typing in inputs
-    const tag = e.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
-
-    for (const id of Object.keys(SHORTCUT_DEFS)) {
-      if (id === "cancel-job") continue;
-      if (matchesShortcut(e, SHORTCUT_DEFS[id].keys)) {
-        e.preventDefault();
-        if (_shortcutActions[id]) _shortcutActions[id]();
-        return;
-      }
+    target.focus({ preventScroll: false });
+    if (target.disabled || target.getAttribute("aria-disabled") === "true") {
+      UIController.showToast(
+        target.title || t("uxp.settings.quick_action_unavailable", "This action is not ready yet. Check the active workspace status."),
+        "warning"
+      );
+      return;
     }
-
-    // Enter to activate the primary button on the visible tab
-    if (e.key === "Enter" && !activeJobId) {
-      const activePanel = document.querySelector(".oc-tab-panel.active");
-      if (!activePanel) return;
-      const primaryBtn = activePanel.querySelector(".oc-btn-primary:not([disabled])");
-      if (primaryBtn) {
-        e.preventDefault();
-        primaryBtn.click();
-      }
-    }
-
-    // Number keys 1-8 to switch tabs (only when focus is on body)
-    if (e.key >= "1" && e.key <= "8" && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
-        && e.target === document.body) {
-      const tabBtns = document.querySelectorAll(".oc-tab");
-      const idx = parseInt(e.key) - 1;
-      if (tabBtns[idx]) {
-        e.preventDefault();
-        tabBtns[idx].click();
-      }
-    }
+    target.click();
   });
 }
 
@@ -5852,6 +5841,11 @@ function bindEvents() {
 
   // ── Refresh button ──
   document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection({ rescan: true }));
+  document.querySelectorAll("[data-quick-action]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      runSettingsQuickAction(event.currentTarget?.dataset?.quickAction || "");
+    });
+  });
   document.getElementById("workspaceChooseClipBtn")?.addEventListener("click", () => handleWorkspaceAction("choose-clip"));
   document.getElementById("workspaceSearchBtn")?.addEventListener("click", () => handleWorkspaceAction("open-search"));
   document.getElementById("workspaceTimelineBtn")?.addEventListener("click", () => handleWorkspaceAction("open-timeline"));
@@ -7256,7 +7250,7 @@ async function initApp() {
   UIController.initCollapsibles();
   bindSliders();
   bindEvents();
-  initKeyboardShortcuts();
+  syncQuickActionButtons();
   UIController.switchTab(document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut");
   updateWorkspaceOverview();
   updateDeliverablesSummary();

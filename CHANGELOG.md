@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — UXP panel quick-action polish
+
+- Replaced Settings-tab keyboard shortcut hints with visible quick-action
+  buttons that focus the destination control before running, keep cancel
+  availability synced with active jobs, and explain backend-locked actions
+  through localized titles/ARIA state.
+
 ### Changed — CEP panel confirmation polish
 
 - Replaced remaining CEP native browser dialogs with panel-local confirmation,
