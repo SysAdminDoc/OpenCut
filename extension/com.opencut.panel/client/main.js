@@ -836,6 +836,7 @@
     }
 
     function getOverlayCloseHandler(element) {
+        if (element && typeof element._ocCloseOverlay === "function") return element._ocCloseOverlay;
         if (element === el.commandPaletteOverlay) return closeCommandPalette;
         if (element === el.previewModal) return closePreviewModal;
         if (element === el.wizardOverlay) return closeWizard;
@@ -882,6 +883,171 @@
                 first.focus();
             }
         }, true);
+    }
+
+    var _panelDialogId = 0;
+
+    function closePanelDialog(overlay, value, callback) {
+        if (!overlay) return;
+        deactivateOverlay(overlay);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (typeof callback === "function") callback(value);
+    }
+
+    function showPanelDialog(options, callback) {
+        options = options || {};
+        var dialogId = "ocPanelDialog" + (++_panelDialogId);
+        var overlay = document.createElement("div");
+        var card = document.createElement("div");
+        var header = document.createElement("div");
+        var title = document.createElement("div");
+        var message = document.createElement("div");
+        var body = document.createElement("div");
+        var actions = document.createElement("div");
+        var input = null;
+        var error = null;
+        var tone = options.tone || "info";
+        var closeValue = options.cancelValue !== undefined ? options.cancelValue : null;
+
+        function finish(value, submit) {
+            if (submit && input) {
+                var raw = input.value || "";
+                if (options.required && !raw.trim()) {
+                    error.textContent = options.requiredMessage || t("dialog.required", "Enter a value to continue.");
+                    input.classList.add("is-invalid");
+                    try { input.focus(); } catch (e) {}
+                    return;
+                }
+                value = raw;
+            }
+            closePanelDialog(overlay, value, callback);
+        }
+
+        overlay.className = "panel-dialog-overlay panel-dialog-tone-" + tone;
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("aria-labelledby", dialogId + "Title");
+        overlay.setAttribute("aria-describedby", dialogId + "Message");
+        overlay._ocCloseOverlay = function () { finish(closeValue, false); };
+
+        card.className = "panel-dialog-card";
+        header.className = "panel-dialog-header";
+        title.className = "panel-dialog-title";
+        title.id = dialogId + "Title";
+        title.textContent = options.title || t("dialog.title", "Review action");
+        message.className = "panel-dialog-message";
+        message.id = dialogId + "Message";
+        message.textContent = options.message || "";
+        header.appendChild(title);
+        if (options.message) header.appendChild(message);
+        card.appendChild(header);
+
+        body.className = "panel-dialog-body";
+        if (options.detail) {
+            var detail = document.createElement("div");
+            detail.className = "panel-dialog-detail";
+            detail.textContent = options.detail;
+            body.appendChild(detail);
+        }
+        if (options.input) {
+            var label = document.createElement("label");
+            label.className = "panel-dialog-label";
+            label.setAttribute("for", dialogId + "Input");
+            label.textContent = options.inputLabel || t("dialog.input_label", "Details");
+            input = options.multiline ? document.createElement("textarea") : document.createElement("input");
+            input.id = dialogId + "Input";
+            input.className = options.multiline ? "panel-dialog-input panel-dialog-textarea" : "panel-dialog-input";
+            if (!options.multiline) input.type = options.inputType || "text";
+            input.value = options.defaultValue || "";
+            input.placeholder = options.placeholder || "";
+            input.setAttribute("aria-describedby", dialogId + "Help");
+            input.addEventListener("input", function () {
+                input.classList.remove("is-invalid");
+                if (error) error.textContent = "";
+            });
+            if (!options.multiline) {
+                input.addEventListener("keydown", function (e) {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        finish(null, true);
+                    }
+                });
+            }
+            body.appendChild(label);
+            body.appendChild(input);
+            if (options.inputHelp) {
+                var help = document.createElement("div");
+                help.id = dialogId + "Help";
+                help.className = "panel-dialog-help";
+                help.textContent = options.inputHelp;
+                body.appendChild(help);
+            }
+            error = document.createElement("div");
+            error.className = "panel-dialog-error";
+            error.setAttribute("role", "alert");
+            body.appendChild(error);
+        }
+        if (body.children.length) card.appendChild(body);
+
+        actions.className = "panel-dialog-actions";
+        var actionList = options.actions || [
+            { label: options.cancelLabel || t("common.cancel", "Cancel"), value: closeValue, className: "btn btn-ghost", submit: false },
+            { label: options.confirmLabel || t("dialog.continue", "Continue"), value: true, className: "btn btn-primary", submit: !!options.input }
+        ];
+        for (var i = 0; i < actionList.length; i++) {
+            (function (action) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = action.className || "btn btn-secondary";
+                btn.textContent = action.label;
+                if (action.title) btn.title = action.title;
+                btn.addEventListener("click", function () {
+                    finish(action.value, !!action.submit);
+                });
+                actions.appendChild(btn);
+            })(actionList[i]);
+        }
+        card.appendChild(actions);
+        overlay.appendChild(card);
+        overlay.addEventListener("click", function (e) {
+            if (e.target === overlay) finish(closeValue, false);
+        });
+        document.body.appendChild(overlay);
+        activateOverlay(overlay, { initialFocus: input || actions.querySelector("button:last-child") });
+    }
+
+    function showPanelConfirm(options, callback) {
+        options = options || {};
+        options.cancelValue = false;
+        options.actions = [
+            { label: options.cancelLabel || t("common.cancel", "Cancel"), value: false, className: "btn btn-ghost" },
+            { label: options.confirmLabel || t("dialog.confirm", "Confirm"), value: true, className: options.confirmClass || "btn btn-primary" }
+        ];
+        showPanelDialog(options, function (value) {
+            if (typeof callback === "function") callback(value === true);
+        });
+    }
+
+    function showPanelPrompt(options, callback) {
+        options = options || {};
+        options.input = true;
+        options.cancelValue = null;
+        options.actions = [
+            { label: options.cancelLabel || t("common.cancel", "Cancel"), value: null, className: "btn btn-ghost" },
+            { label: options.confirmLabel || t("dialog.continue", "Continue"), value: null, className: options.confirmClass || "btn btn-primary", submit: true }
+        ];
+        showPanelDialog(options, callback);
+    }
+
+    function showPanelChoice(options, callback) {
+        options = options || {};
+        var actions = [];
+        actions.push({ label: options.cancelLabel || t("common.cancel", "Cancel"), value: null, className: "btn btn-ghost" });
+        var choices = options.choices || [];
+        for (var i = 0; i < choices.length; i++) actions.push(choices[i]);
+        options.actions = actions;
+        options.cancelValue = null;
+        showPanelDialog(options, callback);
     }
 
     var _generatedLabelId = 0;
@@ -9629,12 +9795,20 @@
         }
         if (el.journalClearBtn) {
             el.journalClearBtn.addEventListener("click", function () {
-                if (!confirm(t("journal.clear_confirm", "Clear all journal entries? This does not undo anything in Premiere."))) return;
-                updateJournalSummary([], t("journal.clearing_status", "Clearing the journal history. This does not undo anything in Premiere."), "working");
-                api("POST", "/journal/clear", {}, function (err) {
-                    if (err) { showAlert(t("toast.journal_clear_failed", "Could not clear: {error}").replace("{error}", err.error || err)); return; }
-                    showToast(t("toast.journal_cleared", "Journal cleared"), "success");
-                    renderJournalList();
+                showPanelConfirm({
+                    title: t("journal.clear_title", "Clear operation journal?"),
+                    message: t("journal.clear_confirm", "This removes the panel journal history. It does not undo anything in Premiere."),
+                    confirmLabel: t("journal.clear_confirm_button", "Clear Journal"),
+                    confirmClass: "btn btn-secondary",
+                    tone: "warning"
+                }, function (confirmed) {
+                    if (!confirmed) return;
+                    updateJournalSummary([], t("journal.clearing_status", "Clearing the journal history. This does not undo anything in Premiere."), "working");
+                    api("POST", "/journal/clear", {}, function (err) {
+                        if (err) { showAlert(t("toast.journal_clear_failed", "Could not clear: {error}").replace("{error}", err.error || err)); return; }
+                        showToast(t("toast.journal_cleared", "Journal cleared"), "success");
+                        renderJournalList();
+                    });
                 });
             });
         }
@@ -15116,42 +15290,48 @@
             setStatusLine("searchStatus", t("search.already_empty_status", "The footage library is already empty."), "idle");
             return;
         }
-        if (typeof window !== "undefined" && typeof window.confirm === "function") {
-            var confirmed = window.confirm(t("search.clear_confirm", "Clear the indexed footage library? You can rebuild it anytime from project clips."));
+        showPanelConfirm({
+            title: t("search.clear_title", "Clear footage search library?"),
+            message: t("search.clear_confirm", "This removes indexed transcript/search data for {count}. You can rebuild it anytime from project clips.")
+                .replace("{count}", formatSearchFilesIndexed(totalFiles)),
+            confirmLabel: t("search.clear_confirm_button", "Clear Library"),
+            confirmClass: "btn btn-secondary",
+            tone: "warning"
+        }, function (confirmed) {
             if (!confirmed) return;
-        }
-        var originalBtnText = rememberButtonText(btn);
-        if (btn) {
-            btn.disabled = true;
-            setButtonText(btn, t("search.clearing_button", "Clearing…"));
-        }
-        setStatusPill("searchIndexPill", t("search.clearing_pill", "Clearing"), "working", t("search.clearing_title", "Clearing indexed footage library."));
-        setStatusLine("searchStatus", t("search.clearing_status", "Clearing indexed footage and resetting search state…"), "working");
-        api("DELETE", "/search/index", null, function (err, data) {
+            var originalBtnText = rememberButtonText(btn);
             if (btn) {
-                btn.disabled = false;
-                setButtonText(btn, originalBtnText);
+                btn.disabled = true;
+                setButtonText(btn, t("search.clearing_button", "Clearing…"));
             }
-            if (err || (data && data.error)) {
-                if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage library just now."), "error");
-                setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage library just now. Try again in a moment."), "error");
-                showAlert(
-                    t("search.clear_failed_alert", "Failed to clear footage index: {error}")
-                        .replace("{error}", data ? data.error : t("search.network_error", "Network error"))
+            setStatusPill("searchIndexPill", t("search.clearing_pill", "Clearing"), "working", t("search.clearing_title", "Clearing indexed footage library."));
+            setStatusLine("searchStatus", t("search.clearing_status", "Clearing indexed footage and resetting search state…"), "working");
+            api("DELETE", "/search/index", null, function (err, data) {
+                if (btn) {
+                    btn.disabled = false;
+                    setButtonText(btn, originalBtnText);
+                }
+                if (err || (data && data.error)) {
+                    if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage library just now."), "error");
+                    setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage library just now. Try again in a moment."), "error");
+                    showAlert(
+                        t("search.clear_failed_alert", "Failed to clear footage index: {error}")
+                            .replace("{error}", data ? data.error : t("search.network_error", "Network error"))
+                    );
+                    return;
+                }
+                renderSearchIndexStats({ total_files: 0, total_segments: 0 });
+                if (statsEl) {
+                    setHintState(statsEl, t("search.index_cleared_hint", "Search index cleared. Re-index project clips when you're ready to search again."), "success");
+                }
+                renderSearchResultsEmpty(
+                    t("search.library_title", "Search the footage library"),
+                    t("search.library_body", "Index project clips, then use descriptive queries to find the right sound bite or shot."),
+                    "info"
                 );
-                return;
-            }
-            renderSearchIndexStats({ total_files: 0, total_segments: 0 });
-            if (statsEl) {
-                setHintState(statsEl, t("search.index_cleared_hint", "Search index cleared. Re-index project clips when you're ready to search again."), "success");
-            }
-            renderSearchResultsEmpty(
-                t("search.library_title", "Search the footage library"),
-                t("search.library_body", "Index project clips, then use descriptive queries to find the right sound bite or shot."),
-                "info"
-            );
-            setStatusLine("searchStatus", t("search.library_cleared_status", "Library index cleared. Re-index project clips to search again."), "success");
-            showToast(t("search.index_cleared_toast", "Footage index cleared"), "success");
+                setStatusLine("searchStatus", t("search.library_cleared_status", "Library index cleared. Re-index project clips to search again."), "success");
+                showToast(t("search.index_cleared_toast", "Footage index cleared"), "success");
+            });
         });
     }
 
@@ -15396,9 +15576,19 @@
             if (outEl) outEl.textContent = data.result ? JSON.stringify(data.result, null, 2) : "";
             if (data.route && data.confidence > 0.8 && data.params) {
                 var routeName = data.route.replace(/^\//, "");
-                if (confirm("Execute " + routeName + "?")) {
-                    startJob(data.route, Object.assign({ filepath: snapPath, output_dir: snapFolder }, data.params));
-                }
+                showPanelConfirm({
+                    title: t("nlp.execute_title", "Run matched command?"),
+                    message: t("nlp.execute_confirm", "OpenCut matched this instruction to {route}. Review the parsed route before running it on the selected clip.")
+                        .replace("{route}", routeName),
+                    detail: t("nlp.execute_confidence", "Confidence: {percent}%")
+                        .replace("{percent}", safeFixed((data.confidence || 0) * 100, 0)),
+                    confirmLabel: t("nlp.execute_button", "Run Command"),
+                    tone: "info"
+                }, function (confirmed) {
+                    if (confirmed) {
+                        startJob(data.route, Object.assign({ filepath: snapPath, output_dir: snapFolder }, data.params));
+                    }
+                });
             }
         });
     }
@@ -16562,31 +16752,40 @@
             // H1.5 — "Send log" → GitHub issue URL
             // --------------------------------------------------------------
             function sendLog() {
-                var desc = (typeof prompt === "function")
-                    ? (prompt(t("prompt.issue_description", "What went wrong?  (optional)")) || "")
-                    : "";
-                api("POST", "/system/issue-report/bundle", {
-                    title: t("issue.report_title", "OpenCut issue report from panel"),
-                    description: desc,
-                    log_tail_lines: 200,
-                    include_crash: true,
-                    include_logs: true
-                }, function (err, data) {
-                    if (err || !data || !data.url) {
-                        showToast(t("toast.issue_bundle_failed", "Could not assemble issue bundle"), "error");
-                        return;
-                    }
-                    // CEP allows opening external URLs via CSInterface.
-                    try {
-                        if (typeof cs !== "undefined" && cs && cs.openURLInDefaultBrowser) {
-                            cs.openURLInDefaultBrowser(data.url);
-                        } else if (typeof window !== "undefined" && window.open) {
-                            window.open(data.url, "_blank");
+                showPanelPrompt({
+                    title: t("prompt.issue_title", "Prepare issue report"),
+                    message: t("prompt.issue_message", "Add a short note so the generated report opens with useful context. Review the report before submitting it."),
+                    inputLabel: t("prompt.issue_description_label", "What went wrong?"),
+                    placeholder: t("prompt.issue_description", "What went wrong? (optional)"),
+                    inputHelp: t("prompt.issue_help", "Home paths are scrubbed, but you should still review the issue body before submitting."),
+                    multiline: true,
+                    confirmLabel: t("prompt.issue_confirm", "Build Report"),
+                    tone: "info"
+                }, function (desc) {
+                    if (desc === null) return;
+                    api("POST", "/system/issue-report/bundle", {
+                        title: t("issue.report_title", "OpenCut issue report from panel"),
+                        description: desc || "",
+                        log_tail_lines: 200,
+                        include_crash: true,
+                        include_logs: true
+                    }, function (err, data) {
+                        if (err || !data || !data.url) {
+                            showToast(t("toast.issue_bundle_failed", "Could not assemble issue bundle"), "error");
+                            return;
                         }
-                        showToast(t("toast.issue_report_opened", "Issue report opened — review before submitting"), "success");
-                    } catch (e) {
-                        showAlert(t("alert.issue_bundle_url", "Issue bundle URL (copy manually):\n\n{url}").replace("{url}", data.url));
-                    }
+                        // CEP allows opening external URLs via CSInterface.
+                        try {
+                            if (typeof cs !== "undefined" && cs && cs.openURLInDefaultBrowser) {
+                                cs.openURLInDefaultBrowser(data.url);
+                            } else if (typeof window !== "undefined" && window.open) {
+                                window.open(data.url, "_blank");
+                            }
+                            showToast(t("toast.issue_report_opened", "Issue report opened — review before submitting"), "success");
+                        } catch (e) {
+                            showAlert(t("alert.issue_bundle_url", "Issue bundle URL (copy manually):\n\n{url}").replace("{url}", data.url));
+                        }
+                    });
                 });
             }
 
@@ -16630,33 +16829,45 @@
                             files["opencut-presets.json"] = presets || {};
                             files["opencut-favorites.json"] = favs || [];
                             files["opencut-workflows.json"] = flows || [];
-                            var publicChoice = false;
-                            try {
-                                publicChoice = !!confirm(
-                                    t(
-                                        "gist.confirm_public",
-                                        "Push as a PUBLIC gist?\n\nCancel = secret gist (requires GITHUB_TOKEN env)."
-                                    )
-                                );
-                            } catch (e) {}
-                            api("POST", "/settings/gist/push", {
-                                files: files,
-                                description: t("gist.export_description", "OpenCut presets export"),
-                                public: publicChoice
-                            }, function (err, data) {
-                                if (err || !data || !data.html_url) {
+                            showPanelChoice({
+                                title: t("gist.visibility_title", "Choose gist visibility"),
+                                message: t("gist.visibility_message", "Secret gists are unlisted and require GITHUB_TOKEN on the backend. Public gists are visible to anyone with the link."),
+                                tone: "warning",
+                                choices: [
+                                    {
+                                        label: t("gist.secret_button", "Create Secret Gist"),
+                                        value: false,
+                                        className: "btn btn-secondary",
+                                        title: t("gist.secret_title", "Requires GITHUB_TOKEN and keeps the gist unlisted.")
+                                    },
+                                    {
+                                        label: t("gist.public_button", "Create Public Gist"),
+                                        value: true,
+                                        className: "btn btn-primary",
+                                        title: t("gist.public_title", "Public gist visible to anyone with the link.")
+                                    }
+                                ]
+                            }, function (publicChoice) {
+                                if (publicChoice === null) return;
+                                api("POST", "/settings/gist/push", {
+                                    files: files,
+                                    description: t("gist.export_description", "OpenCut presets export"),
+                                    public: publicChoice
+                                }, function (err, data) {
+                                    if (err || !data || !data.html_url) {
+                                        showAlert(
+                                            t("gist.push_failed", "Gist push failed: {error}")
+                                                .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                                        );
+                                        return;
+                                    }
                                     showAlert(
-                                        t("gist.push_failed", "Gist push failed: {error}")
-                                            .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                                        t(
+                                            "gist.created",
+                                            "Gist created:\n\n{url}\n\nCopy this URL to share your presets."
+                                        ).replace("{url}", data.html_url)
                                     );
-                                    return;
-                                }
-                                showAlert(
-                                    t(
-                                        "gist.created",
-                                        "Gist created:\n\n{url}\n\nCopy this URL to share your presets."
-                                    ).replace("{url}", data.html_url)
-                                );
+                                });
                             });
                         });
                     });
@@ -16664,34 +16875,43 @@
             }
 
             function gistPull() {
-                var url = (typeof prompt === "function")
-                    ? (prompt(t("gist.pull_prompt", "Paste gist URL or ID:")) || "")
-                    : "";
-                url = String(url).trim();
-                if (!url) return;
-                api("POST", "/settings/gist/pull", { gist: url }, function (err, data) {
-                    if (err || !data || !data.files) {
-                        showAlert(
-                            t("gist.pull_failed", "Gist pull failed: {error}")
-                                .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
-                        );
-                        return;
-                    }
-                    var summary = [];
-                    for (var k in data.files) {
-                        if (Object.prototype.hasOwnProperty.call(data.files, k)) {
-                            summary.push(" - " + k);
+                showPanelPrompt({
+                    title: t("gist.pull_title", "Pull settings from gist"),
+                    message: t("gist.pull_message", "Paste a gist URL or ID. OpenCut will download the files into your local settings area for review."),
+                    inputLabel: t("gist.pull_label", "Gist URL or ID"),
+                    placeholder: t("gist.pull_prompt", "Paste gist URL or ID"),
+                    required: true,
+                    requiredMessage: t("gist.pull_required", "Paste a gist URL or ID before continuing."),
+                    confirmLabel: t("gist.pull_confirm", "Pull Gist"),
+                    tone: "info"
+                }, function (url) {
+                    if (url === null) return;
+                    url = String(url).trim();
+                    if (!url) return;
+                    api("POST", "/settings/gist/pull", { gist: url }, function (err, data) {
+                        if (err || !data || !data.files) {
+                            showAlert(
+                                t("gist.pull_failed", "Gist pull failed: {error}")
+                                    .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                            );
+                            return;
                         }
-                    }
-                    showAlert(
-                        t(
-                            "gist.pulled_files",
-                            "Pulled {count} file(s) from gist {id}:\n\n{files}\n\nReview the files in ~/.opencut/ before applying."
-                        )
-                            .replace("{count}", summary.length)
-                            .replace("{id}", data.id || "")
-                            .replace("{files}", summary.join("\n"))
-                    );
+                        var summary = [];
+                        for (var k in data.files) {
+                            if (Object.prototype.hasOwnProperty.call(data.files, k)) {
+                                summary.push(" - " + k);
+                            }
+                        }
+                        showAlert(
+                            t(
+                                "gist.pulled_files",
+                                "Pulled {count} file(s) from gist {id}:\n\n{files}\n\nReview the files in ~/.opencut/ before applying."
+                            )
+                                .replace("{count}", summary.length)
+                                .replace("{id}", data.id || "")
+                                .replace("{files}", summary.join("\n"))
+                        );
+                    });
                 });
             }
 

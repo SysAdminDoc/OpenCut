@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — CEP panel confirmation polish
+
+- Replaced remaining CEP native browser dialogs with panel-local confirmation,
+  choice, and prompt flows for journal clearing, footage-index clearing,
+  natural-language route execution, issue reports, and gist sync. The new
+  dialogs use the shared overlay focus trap, localized copy, validation,
+  reduced-motion handling, and light/dark theme styling.
+- Added a CEP guard test that blocks reintroducing native `alert`,
+  `confirm`, or `prompt` globals in panel source.
+
 ### Added — 537 more coverage expansion tests (658 total, 30+ modules)
 
 - New test files: `test_coverage_infra.py` (169 tests covering errors,
