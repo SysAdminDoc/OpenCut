@@ -27,13 +27,6 @@ blocked (see `Roadmap_Blocked.md`)._
   Acceptance: `npm run audit:check:win -- --json`, `npm run build:verify:win`, and `py -3.12 -m pytest tests/test_node_advisories.py tests/test_panel_node_entrypoints.py` pass; any remaining Vite waiver is documented as dev-server-only and tied to the blocked HGFS upgrade.
   Complexity: M
 
-- [ ] P1 — Replace CEP native dialogs with panel-local confirmation and input flows
-  Why: UXP forbids `alert`/`confirm`/`prompt` and uses inline confirmation, but CEP still relies on native dialogs for journal clear, search clear, route execution, issue description, and gist push/pull.
-  Evidence: `extension/com.opencut.panel/client/main.js:9632`, `15119`, `15399`, `16565`, `16635`, `16667`; `tests/test_uxp_confirmation_guard.py`; `extension/com.opencut.uxp/main.js:3578`.
-  Touches: `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.panel/client/index.html`, `extension/com.opencut.panel/client/locales/en.json`, CEP panel tests.
-  Acceptance: CEP source has no `window.confirm`, bare `confirm(`, `window.prompt`, or bare `prompt(` usage outside tests/fixtures; destructive flows use inline second-click confirmation, toast/status feedback, and localized copy; a CEP guard test matching UXP coverage passes.
-  Complexity: M
-
 - [ ] P0 — Refresh bundled FFmpeg and provenance floor
   Why: The bundled binary is below OpenCut's own release provenance floor, so release security/trust is already red before packaging.
   Evidence: `ffmpeg\ffmpeg.exe -version` reports `8.0.1-essentials_build-www.gyan.dev`; `scripts\verify_ffmpeg_provenance.py` exits `RESULT: BELOW FLOOR`; `docs/RELEASE_PROVENANCE.md:38-46`; FFmpeg security advisories and LosslessCut issue #2943.

@@ -12830,6 +12830,225 @@ body:not(.has-clip) .media-sidecar .file-info {
 }
 
 /* ============================================================
+   PANEL-LOCAL DIALOGS
+   Shared confirmation, choice, and prompt surface for CEP flows.
+   ============================================================ */
+.panel-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10003;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 50% 24%, rgba(216, 184, 135, 0.18), transparent 32%),
+        rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(14px);
+    animation: panel-dialog-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.panel-dialog-card {
+    width: min(520px, calc(100vw - 32px));
+    max-height: min(620px, calc(100vh - 48px));
+    overflow: auto;
+    border-radius: 20px;
+    border: 1px solid rgba(236, 230, 218, 0.13);
+    background:
+        radial-gradient(circle at top left, rgba(216, 184, 135, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(25, 34, 49, 0.98), rgba(13, 18, 28, 0.98));
+    box-shadow:
+        0 30px 90px rgba(0, 0, 0, 0.56),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.panel-dialog-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid rgba(236, 230, 218, 0.08);
+}
+
+.panel-dialog-title {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 740;
+    line-height: 1.25;
+}
+
+.panel-dialog-message {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.panel-dialog-body {
+    display: grid;
+    gap: 10px;
+    padding: 16px 22px 0;
+}
+
+.panel-dialog-detail,
+.panel-dialog-help {
+    border-radius: 14px;
+    border: 1px solid rgba(236, 230, 218, 0.08);
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.panel-dialog-detail {
+    padding: 10px 12px;
+}
+
+.panel-dialog-help {
+    padding: 9px 11px;
+}
+
+.panel-dialog-label {
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.panel-dialog-label::before {
+    display: none;
+}
+
+.panel-dialog-input {
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(236, 230, 218, 0.13);
+    background: rgba(7, 11, 18, 0.78);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.panel-dialog-textarea {
+    min-height: 108px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.panel-dialog-input:focus-visible {
+    border-color: rgba(122, 207, 255, 0.55);
+    box-shadow:
+        0 0 0 3px rgba(122, 207, 255, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.panel-dialog-input.is-invalid {
+    border-color: rgba(232, 93, 93, 0.72);
+    box-shadow: 0 0 0 3px rgba(232, 93, 93, 0.16);
+}
+
+.panel-dialog-error {
+    min-height: 16px;
+    color: var(--neon-red);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.panel-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 22px 20px;
+    border-top: 1px solid rgba(236, 230, 218, 0.08);
+}
+
+.panel-dialog-actions .btn {
+    min-height: 36px;
+}
+
+.panel-dialog-tone-warning .panel-dialog-card {
+    border-color: rgba(255, 200, 120, 0.22);
+}
+
+.panel-dialog-tone-warning .panel-dialog-title::before,
+.panel-dialog-tone-info .panel-dialog-title::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 9px;
+    border-radius: 999px;
+    background: rgba(122, 207, 255, 0.92);
+    box-shadow: 0 0 0 5px rgba(122, 207, 255, 0.12);
+}
+
+.panel-dialog-tone-warning .panel-dialog-title::before {
+    background: rgba(255, 200, 120, 0.96);
+    box-shadow: 0 0 0 5px rgba(255, 200, 120, 0.13);
+}
+
+@keyframes panel-dialog-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+    .panel-dialog-overlay {
+        align-items: flex-end;
+        padding: 14px;
+    }
+
+    .panel-dialog-card {
+        width: 100%;
+        max-height: calc(100vh - 28px);
+        border-radius: 18px;
+    }
+
+    .panel-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .panel-dialog-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel-dialog-overlay {
+        animation: none;
+    }
+}
+
+html.theme-light .panel-dialog-overlay {
+    background:
+        radial-gradient(circle at 50% 24%, rgba(0, 120, 212, 0.12), transparent 32%),
+        rgba(8, 17, 31, 0.34);
+}
+
+html.theme-light .panel-dialog-card {
+    border-color: rgba(32, 56, 88, 0.14);
+    background:
+        radial-gradient(circle at top left, rgba(0, 120, 212, 0.08), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 251, 0.98));
+    box-shadow:
+        0 30px 90px rgba(21, 35, 54, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+html.theme-light .panel-dialog-header,
+html.theme-light .panel-dialog-actions {
+    border-color: rgba(32, 56, 88, 0.10);
+}
+
+html.theme-light .panel-dialog-detail,
+html.theme-light .panel-dialog-help {
+    border-color: rgba(32, 56, 88, 0.10);
+    background: rgba(0, 120, 212, 0.045);
+}
+
+html.theme-light .panel-dialog-input {
+    border-color: rgba(32, 56, 88, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+}
+
+/* ============================================================
    LUT GRID (v1.9.35, feature I)
    ============================================================ */
 .lut-grid {
