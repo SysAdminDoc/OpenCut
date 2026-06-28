@@ -1,10 +1,12 @@
 # Source-linked issue seeds. Each entry is a single issue that
 # `scripts/seed_github_issues.py` can push into the SysAdminDoc/OpenCut tracker.
-# Keep `roadmap_id` aligned with ROADMAP.md so closing the issue auto-closes
-# the roadmap item via the seeder's `--reconcile` mode.
+# Keep `roadmap_id` aligned with active unchecked ROADMAP.md rows. Historical
+# rows must be marked `status: shipped` or `status: archived`; only `active`
+# rows are eligible for `gh issue create`.
 
 seeds:
   - roadmap_id: F097
+    status: shipped
     title: "F097: seed initial source-linked issue backlog"
     labels: ["type:chore", "area:docs", "roadmap:now", "priority:p0"]
     body: |
@@ -20,6 +22,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F097.
 
   - roadmap_id: F098
+    status: shipped
     title: "F098: release smoke matrix runner (shipped)"
     labels: ["type:chore", "area:packaging", "roadmap:now", "priority:p0"]
     body: |
@@ -37,6 +40,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F098.
 
   - roadmap_id: F099
+    status: shipped
     title: "F099: generated route + feature manifest"
     labels: ["type:chore", "area:docs", "area:server", "roadmap:now", "priority:p1"]
     body: |
@@ -54,6 +58,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F099.
 
   - roadmap_id: F100
+    status: shipped
     title: "F100: stub readiness policy + UI gating"
     labels: ["type:feature", "area:server", "area:cep-panel", "roadmap:now", "priority:p1"]
     body: |
@@ -72,6 +77,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F100.
 
   - roadmap_id: F111
+    status: shipped
     title: "F111: caption QC gate"
     labels: ["type:feature", "area:captions", "roadmap:now", "priority:p0"]
     body: |
@@ -90,6 +96,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F111.
 
   - roadmap_id: F112
+    status: shipped
     title: "F112: local auth + bind-address hardening"
     labels: ["type:security", "area:server", "roadmap:now", "priority:p0"]
     body: |
@@ -105,6 +112,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F112.
 
   - roadmap_id: F115
+    status: shipped
     title: "F115: model + license cards for AI extras"
     labels: ["type:feature", "area:ai", "area:docs", "roadmap:now", "priority:p1"]
     body: |
@@ -122,6 +130,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F115.
 
   - roadmap_id: F117
+    status: shipped
     title: "F117: good-first-issue backlog generator"
     labels: ["type:chore", "area:docs", "good first issue", "roadmap:now", "priority:p2"]
     body: |
@@ -139,6 +148,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F117.
 
   - roadmap_id: F118
+    status: shipped
     title: "F118: roadmap source appendix linter"
     labels: ["type:chore", "type:test", "area:docs", "roadmap:now", "priority:p1"]
     body: |
@@ -154,6 +164,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F118.
 
   - roadmap_id: F101
+    status: archived
     title: "F101: Windows ARM64 packaging — evaluation tracker"
     labels: ["type:chore", "area:packaging", "roadmap:next", "priority:p2"]
     body: |
@@ -173,6 +184,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F101.
 
   - roadmap_id: F102
+    status: shipped
     title: "F102: CSV/EDL/marker import automation"
     labels: ["type:feature", "area:export", "area:server", "roadmap:next", "priority:p2"]
     body: |
@@ -183,6 +195,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F102.
 
   - roadmap_id: F103
+    status: shipped
     title: "F103: timeline marker colour/source metadata preservation"
     labels: ["type:feature", "area:export", "roadmap:next", "priority:p2"]
     body: |
@@ -193,6 +206,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F103.
 
   - roadmap_id: F106
+    status: shipped
     title: "F106: codec + hardware capability profile endpoint"
     labels: ["type:feature", "area:server", "roadmap:next", "priority:p2"]
     body: |
@@ -204,6 +218,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F106.
 
   - roadmap_id: F109
+    status: shipped
     title: "F109: OpenColorIO/ACES validation"
     labels: ["type:feature", "area:video", "roadmap:next", "priority:p2"]
     body: |
@@ -214,6 +229,7 @@ seeds:
       Source: ROADMAP.md v4.3 → F109.
 
   - roadmap_id: F116
+    status: shipped
     title: "F116: plugin manifest v1 + sandbox boundary"
     labels: ["type:feature", "area:integrations", "roadmap:next", "priority:p2"]
     body: |

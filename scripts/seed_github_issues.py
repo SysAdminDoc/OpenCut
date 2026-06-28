@@ -16,7 +16,9 @@ Usage::
 
 Authentication and write access to ``SysAdminDoc/OpenCut`` are required
 for ``--apply``. The script is idempotent: it skips any seed whose
-``roadmap_id`` already appears in an existing open issue title.
+``roadmap_id`` already appears in an existing open issue title. Active
+seeds are also checked against the current unchecked rows in ``ROADMAP.md``
+so shipped or archived rows cannot leak back into the public tracker.
 
 Why YAML instead of bespoke JSON: the seed manifest is hand-edited; YAML
 keeps the multi-line ``body`` fields readable. PyYAML is an optional
@@ -50,7 +52,10 @@ for _stream_attr in ("stdout", "stderr"):
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SEEDS_PATH = REPO_ROOT / ".github" / "issue-seeds.yml"
 LABELS_PATH = REPO_ROOT / ".github" / "labels.yml"
+ROADMAP_PATH = REPO_ROOT / "ROADMAP.md"
 DEFAULT_REPO = "SysAdminDoc/OpenCut"
+VALID_SEED_STATUSES = {"active", "archived", "shipped"}
+ACTIVE_ROADMAP_ITEM_RE = re.compile(r"^\s*-\s*\[\s*\]\s+(?P<item>.+?)\s*$", re.MULTILINE)
 
 
 @dataclass
@@ -60,6 +65,7 @@ class Seed:
     body: str
     labels: List[str] = field(default_factory=list)
     good_first: bool = False
+    status: str = "active"
 
 
 @dataclass
@@ -278,10 +284,16 @@ def load_seeds(path: Path = SEEDS_PATH) -> List[Seed]:
         title = str(entry.get("title") or "").strip()
         body = str(entry.get("body") or "").strip()
         labels = entry.get("labels") or []
+        status = str(entry.get("status") or "active").strip().lower()
         if not isinstance(labels, list):
             raise SeedParseError(f"labels must be a list for {roadmap_id!r}")
         if not roadmap_id or not title:
             raise SeedParseError(f"seed entry needs roadmap_id and title: {entry!r}")
+        if status not in VALID_SEED_STATUSES:
+            raise SeedParseError(
+                f"seed {roadmap_id!r} has invalid status {status!r}; "
+                f"expected one of {sorted(VALID_SEED_STATUSES)}"
+            )
         if roadmap_id not in title:
             raise SeedParseError(
                 f"seed title for {roadmap_id} must contain the roadmap id for dedup ({title!r})"
@@ -293,6 +305,7 @@ def load_seeds(path: Path = SEEDS_PATH) -> List[Seed]:
                 body=body,
                 labels=[str(lbl) for lbl in labels],
                 good_first=bool(entry.get("good_first") or "good first issue" in labels),
+                status=status,
             )
         )
     return seeds
@@ -380,6 +393,52 @@ def issue_already_seeded(seed: Seed, existing_titles: Iterable[str]) -> bool:
     return any(needle in (title or "").upper() for title in existing_titles)
 
 
+def load_active_roadmap_items(path: Path = ROADMAP_PATH) -> List[str]:
+    """Return active unchecked roadmap item headings from ``ROADMAP.md``."""
+    if not path.exists():
+        raise FileNotFoundError(f"roadmap missing: {path}")
+    text = path.read_text(encoding="utf-8")
+    return [match.group("item").strip() for match in ACTIVE_ROADMAP_ITEM_RE.finditer(text)]
+
+
+def seed_is_active_in_roadmap(seed: Seed, active_items: Iterable[str]) -> bool:
+    needle = seed.roadmap_id.casefold()
+    return any(needle in item.casefold() for item in active_items)
+
+
+def _select_creatable_seeds(
+    seeds: Iterable[Seed],
+    *,
+    good_first_only: bool,
+    roadmap_path: Path,
+) -> tuple[List[Seed], List[str]]:
+    selected = [s for s in seeds if (s.good_first if good_first_only else True)]
+    active_items = load_active_roadmap_items(roadmap_path)
+    creatable: List[Seed] = []
+    actions: List[str] = []
+    stale_ids: List[str] = []
+
+    for seed in selected:
+        if seed.status in {"archived", "shipped"}:
+            actions.append(
+                f"SKIP {seed.roadmap_id}: {seed.status} seed is not active in ROADMAP.md"
+            )
+            continue
+        if not seed_is_active_in_roadmap(seed, active_items):
+            stale_ids.append(seed.roadmap_id)
+            continue
+        creatable.append(seed)
+
+    if stale_ids:
+        joined = ", ".join(sorted(stale_ids))
+        raise RuntimeError(
+            "stale active issue seed(s) are missing from active ROADMAP.md items: "
+            f"{joined}. Mark shipped/archived rows explicitly or restore the roadmap item."
+        )
+
+    return creatable, actions
+
+
 # ---------------------------------------------------------------------------
 # Apply paths
 # ---------------------------------------------------------------------------
@@ -422,14 +481,18 @@ def apply_seeds(
     dry_run: bool,
     good_first_only: bool,
     once: bool,
+    roadmap_path: Path = ROADMAP_PATH,
 ) -> List[str]:
-    selected = [s for s in seeds if (s.good_first if good_first_only else True)]
+    selected, actions = _select_creatable_seeds(
+        seeds,
+        good_first_only=good_first_only,
+        roadmap_path=roadmap_path,
+    )
 
     if not _gh_available() and not dry_run:
         raise RuntimeError("gh CLI not found on PATH — install GitHub CLI or run --dry-run only")
 
     existing = [] if dry_run else existing_issue_titles(repo)
-    actions: List[str] = []
 
     for seed in selected:
         if not dry_run and issue_already_seeded(seed, existing):
@@ -476,6 +539,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--labels", action="store_true", help="ensure labels from .github/labels.yml exist")
     parser.add_argument("--good-first", action="store_true", help="only seed entries flagged good_first / labeled 'good first issue'")
     parser.add_argument("--once", action="store_true", help="apply only the first seed (used for smoke tests)")
+    parser.add_argument("--roadmap", type=Path, default=ROADMAP_PATH, help="roadmap file used to validate active seeds")
     parser.add_argument("--dry-run", action="store_true", default=True, help="print intended actions without calling gh (default)")
     parser.add_argument("--apply", dest="dry_run", action="store_false", help="actually call gh issue/label create")
     parser.add_argument("--json", action="store_true", help="emit a machine-readable summary on stdout")
@@ -494,6 +558,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         dry_run=args.dry_run,
         good_first_only=args.good_first,
         once=args.once,
+        roadmap_path=args.roadmap,
     )
 
     if args.json:
