@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "total": 55,
+  "total": 66,
   "cards": [
     {
       "check_name": "check_acestep_available",
@@ -42,7 +42,7 @@
       "license": "Unlicense (public domain)",
       "upstream": "https://github.com/WyattBlue/auto-editor",
       "hardware": "cpu",
-      "install_hint": "pip install auto-editor",
+      "install_hint": "Native v30+ binary: https://github.com/WyattBlue/auto-editor/releases — or legacy pip: pip install auto-editor",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
@@ -64,6 +64,24 @@
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_autoshot_available",
+      "feature_id": "video.scenes.autoshot",
+      "label": "AutoShot gradual-transition scene detector",
+      "category": "video",
+      "license": "Custom (verify upstream before redistributing weights)",
+      "upstream": "https://github.com/wentaozhu/AutoShot",
+      "hardware": "cpu/gpu",
+      "install_hint": "git clone https://github.com/wentaozhu/AutoShot && pip install -e AutoShot",
+      "privacy": "local-only",
+      "latency": "medium",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "AutoShot is preferred over TransNetV2 when installed; keep it opt-in until the upstream license and weights are reviewed for release bundling."
+      ],
       "license_waiver": ""
     },
     {
@@ -211,6 +229,22 @@
       "license_waiver": ""
     },
     {
+      "check_name": "check_depth_anything_3_available",
+      "feature_id": "video.depth.da3",
+      "label": "Depth Anything 3 Small",
+      "category": "video",
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/ByteDance-Seed/depth-anything-3",
+      "hardware": "gpu",
+      "install_hint": "pip install transformers torch  # Depth Anything 3 Small",
+      "privacy": "local-only (model downloads only)",
+      "latency": "medium",
+      "quality_notes": "Preferred depth backend with Depth Anything V2 retained as fallback.",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
       "check_name": "check_depth_available",
       "feature_id": "video.depth",
       "label": "Depth Anything V2",
@@ -224,6 +258,24 @@
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_diarization_available",
+      "feature_id": "captions.pyannote-diarization",
+      "label": "pyannote speaker diarization",
+      "category": "captions",
+      "license": "CC-BY-4.0 (community-1; legacy model terms vary)",
+      "upstream": "https://huggingface.co/pyannote/speaker-diarization-community-1",
+      "hardware": "cpu/gpu",
+      "install_hint": "pip install pyannote.audio",
+      "privacy": "local-only (HF token used for gated weight download only)",
+      "latency": "~1x realtime depending on device",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "The community-1 pipeline is the default; legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms."
+      ],
       "license_waiver": ""
     },
     {
@@ -379,6 +431,24 @@
       "license_waiver": ""
     },
     {
+      "check_name": "check_iclight_available",
+      "feature_id": "video.relight.iclight",
+      "label": "IC-Light v1 relight",
+      "category": "video",
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/lllyasviel/IC-Light",
+      "hardware": "gpu (>= 4 GB VRAM)",
+      "install_hint": "pip install diffusers>=0.32 torch",
+      "privacy": "local-only (model downloads only)",
+      "latency": "slow",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "OpenCut targets IC-Light v1 only; IC-Light v2 is not registered because the local module documents non-commercial/release concerns."
+      ],
+      "license_waiver": ""
+    },
+    {
       "check_name": "check_kokoro_available",
       "feature_id": "audio.kokoro",
       "label": "Kokoro TTS (82M, CPU-only)",
@@ -409,6 +479,24 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Kontext-dev weights (~24 GB) download on first use; the pro variant is commercial and is not used."
+      ],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_latentsync_available",
+      "feature_id": "lipsync.latentsync",
+      "label": "LatentSync diffusion lip-sync",
+      "category": "lipsync",
+      "license": "Apache-2.0 (code; checkpoint license unconfirmed)",
+      "upstream": "https://github.com/bytedance/LatentSync",
+      "hardware": "gpu (>= 6 GB VRAM)",
+      "install_hint": "pip install diffusers torch torchvision",
+      "privacy": "local-only (model downloads only)",
+      "latency": "slow",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "The engine is opt-in and not auto-selected until the checkpoint license is confirmed."
       ],
       "license_waiver": ""
     },
@@ -501,6 +589,24 @@
       "license_waiver": ""
     },
     {
+      "check_name": "check_nemo_asr_available",
+      "feature_id": "captions.nemo-asr",
+      "label": "NVIDIA NeMo ASR (Parakeet / Canary)",
+      "category": "captions",
+      "license": "Apache-2.0 (toolkit; model terms vary)",
+      "upstream": "https://github.com/NVIDIA/NeMo",
+      "hardware": "cpu/gpu",
+      "install_hint": "pip install \"nemo_toolkit[asr]\"",
+      "privacy": "local-only (model downloads only)",
+      "latency": "sub-realtime on supported GPU; CPU varies by model",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "Parakeet and Canary are selectable ASR engines; verify each downloaded model card before redistributing weights."
+      ],
+      "license_waiver": ""
+    },
+    {
       "check_name": "check_neural_deflicker_available",
       "feature_id": "video.restore.deflicker",
       "label": "All-In-One-Deflicker",
@@ -512,6 +618,22 @@
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_ocr_available",
+      "feature_id": "vision.ocr",
+      "label": "pytesseract / EasyOCR text extraction",
+      "category": "vision",
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/tesseract-ocr/tesseract",
+      "hardware": "cpu/gpu",
+      "install_hint": "pip install pytesseract easyocr  # plus system Tesseract for pytesseract",
+      "privacy": "local-only",
+      "latency": "medium",
+      "quality_notes": "Used by multimodal footage search, OCR extraction, and OCR-based PII redaction.",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
       "license_waiver": ""
@@ -687,6 +809,24 @@
       "license_waiver": ""
     },
     {
+      "check_name": "check_sam3_available",
+      "feature_id": "video.sam3",
+      "label": "SAM 3 text-prompted video segmentation",
+      "category": "video",
+      "license": "Custom (SAM License, commercial-permissive)",
+      "upstream": "https://github.com/facebookresearch/sam3",
+      "hardware": "gpu",
+      "install_hint": "pip install sam3 torch",
+      "privacy": "local-only (model downloads only)",
+      "latency": "slow",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "SAM 3 is used for text-prompted object removal and falls back to SAM2/CLIP when absent."
+      ],
+      "license_waiver": ""
+    },
+    {
       "check_name": "check_sammie_available",
       "feature_id": "video.matte.sammie",
       "label": "Sammie-Roto-2 (VideoMaMa)",
@@ -721,6 +861,22 @@
       "license_waiver": ""
     },
     {
+      "check_name": "check_seedvr2_available",
+      "feature_id": "video.upscale.seedvr2",
+      "label": "SeedVR2 one-step diffusion VSR",
+      "category": "video",
+      "license": "Apache-2.0",
+      "upstream": "https://huggingface.co/ByteDance-Seed/SeedVR2-3B",
+      "hardware": "gpu (>= 8 GB VRAM)",
+      "install_hint": "pip install diffusers torch  # download seedvr2-3b via model manager",
+      "privacy": "local-only (model downloads only)",
+      "latency": "medium",
+      "quality_notes": "Preferred upscaling engine when installed; falls back to Real-ESRGAN.",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
       "check_name": "check_silero_vad_available",
       "feature_id": "captions.silero-vad",
       "label": "Silero VAD",
@@ -750,6 +906,24 @@
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_sortformer_available",
+      "feature_id": "captions.sortformer",
+      "label": "NVIDIA Sortformer diarization",
+      "category": "captions",
+      "license": "Apache-2.0 (NeMo toolkit; model terms vary)",
+      "upstream": "https://github.com/NVIDIA/NeMo",
+      "hardware": "gpu",
+      "install_hint": "pip install \"nemo_toolkit[asr]\"",
+      "privacy": "local-only (model downloads only)",
+      "latency": "~1x realtime depending on GPU",
+      "quality_notes": "",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [
+        "Sortformer is an optional NeMo-gated diarization engine; verify the selected checkpoint license before redistribution."
+      ],
       "license_waiver": ""
     },
     {
@@ -870,6 +1044,22 @@
       "advisory_notes": [
         "Falls back to a keyword lexicon when no LLM provider is configured."
       ],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_visual_multicam_available",
+      "feature_id": "video.multicam.visual-cues",
+      "label": "MediaPipe visual multicam cues",
+      "category": "video",
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/google-ai-edge/mediapipe",
+      "hardware": "cpu/gpu",
+      "install_hint": "pip install mediapipe opencv-python-headless",
+      "privacy": "local-only",
+      "latency": "medium",
+      "quality_notes": "Adds lip-movement and shot-size cues to audio-only multicam switching.",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [],
       "license_waiver": ""
     },
     {
