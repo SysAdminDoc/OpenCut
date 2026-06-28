@@ -5,7 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
-### Changed — GitHub issue seed guard
+### Changed - UXP markup safety
+
+- Added a static UXP DOM-sink safety guard that inventories reviewed
+  `innerHTML` and HTML accumulator render paths, verifies dynamic markup
+  expressions are escaped, and pins script-like backend/user field families
+  to escaped rendering before they reach panel markup.
+
+### Changed - GitHub issue seed guard
 
 - GitHub issue seeding now validates active seeds against unchecked
   `ROADMAP.md` rows, skips manifest rows marked `status: shipped` or
