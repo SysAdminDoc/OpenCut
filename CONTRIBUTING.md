@@ -95,7 +95,6 @@ Version-bump commits touch `opencut/__init__.py` + 16 other targets. Always run 
 - Run `python -m ruff check --select E,F,I --ignore E501 opencut/` before pushing; the local release smoke blocks on this.
 - Ship a test for any new behaviour. `tests/test_route_smoke.py` has the smoke harness; `tests/fuzz/` has the Atheris entry points.
 - Update `CHANGELOG.md` with a bullet under the relevant version.
-- Update `CLAUDE.md` if your change introduces a new pattern / gotcha / file location that future sessions should know about. CLAUDE.md is deliberately verbose — it's the onboarding document for maintainers returning after months away.
 - **Don't commit `content_calendar.*`** — those are marketing-local files and shouldn't land upstream.
 
 ## Release checklist
@@ -103,7 +102,7 @@ Version-bump commits touch `opencut/__init__.py` + 16 other targets. Always run 
 1. `python scripts/sync_version.py --set X.Y.Z` and verify with `--check`.
 2. `python -m ruff check --select E,F,I --ignore E501 opencut/` → `All checks passed!`
 3. `python -c "from opencut.server import create_app; create_app()"` → smoke boot.
-4. `CHANGELOG.md` + `CLAUDE.md` + `ROADMAP.md` updated.
+4. `CHANGELOG.md` + `ROADMAP.md` updated.
 5. `python scripts/sbom.py` to refresh the SBOM (optional but nice).
 6. Run `python scripts/release_smoke.py --json`.
 7. Build artifacts locally: `pyinstaller opencut_server.spec`, `dotnet publish installer/src/OpenCut.Installer/OpenCut.Installer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true`, `iscc OpenCut.iss` if the Inno fallback is needed, and platform-specific package scripts.
@@ -122,5 +121,4 @@ Version-bump commits touch `opencut/__init__.py` + 16 other targets. Always run 
 ## Where to ask questions
 
 - Bugs / security: [SECURITY.md](SECURITY.md).
-- Architecture / "where does X live": read [`CLAUDE.md`](CLAUDE.md) — it documents every non-obvious invariant + gotcha in the codebase.
 - Feature roadmap: [`ROADMAP.md`](ROADMAP.md) (active task tracker and feature plan).
