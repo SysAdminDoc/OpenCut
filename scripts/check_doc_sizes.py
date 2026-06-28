@@ -99,7 +99,6 @@ class DocClaim:
 
 # Each regex must capture the documented number as group 1 (or named "n").
 TARGETS: list[DocClaim] = [
-    ),
     DocClaim(
         label="README feature overview API routes",
         regex=re.compile(r"OpenCut\s+v[\d.]+\s+includes\s+\*\*([\d,]+)\s+API routes\*\*", re.IGNORECASE),
