@@ -14,7 +14,6 @@ TEST_PROJECT = (
 )
 UNIT_SCRIPT = REPO_ROOT / "scripts" / "test_wpf_installer.ps1"
 SMOKE_SCRIPT = REPO_ROOT / "scripts" / "smoke_wpf_installer.ps1"
-BUILD_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
 RELEASE_SMOKE = REPO_ROOT / "scripts" / "release_smoke.py"
 APP = REPO_ROOT / "installer" / "src" / "OpenCut.Installer" / "App.xaml.cs"
 CLI_OPTIONS = (
@@ -85,21 +84,6 @@ def test_wpf_smoke_script_uses_temp_profile_and_quiet_install_uninstall():
     ]
     for needle in required:
         assert needle in text
-
-
-def test_windows_build_workflow_runs_wpf_xunit_and_headless_smoke():
-    text = _read(BUILD_WORKFLOW)
-    assert "Test WPF installer contracts" in text
-    assert "./scripts/test_wpf_installer.ps1" in text
-    assert "Smoke test Windows installer (WPF)" in text
-    assert "scripts/smoke_wpf_installer.ps1" in text
-    assert "installer/dist/wpf/OpenCut-WPF-Setup-*.exe" in text
-    assert text.index("Build Windows installer (WPF)") < text.index(
-        "Smoke test Windows installer (WPF)"
-    )
-    assert text.index("Smoke test Windows installer (WPF)") < text.index(
-        "Build Windows installer (Inno Setup)"
-    )
 
 
 def test_release_smoke_includes_wpf_installer_contract_tests():

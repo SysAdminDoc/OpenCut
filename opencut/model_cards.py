@@ -237,6 +237,10 @@ CARDS: List[ModelCard] = [
         advisory_notes=[
             "AutoShot is preferred over TransNetV2 when installed; keep it opt-in until the upstream license and weights are reviewed for release bundling.",
         ],
+        license_waiver=(
+            "Custom upstream terms are intentionally opt-in: OpenCut does not bundle AutoShot "
+            "weights or source, and users must install/review the upstream repository themselves."
+        ),
     ),
     ModelCard(
         check_name="check_upscale_available",
@@ -369,6 +373,10 @@ CARDS: List[ModelCard] = [
         advisory_notes=[
             "SAM 3 is used for text-prompted object removal and falls back to SAM2/CLIP when absent.",
         ],
+        license_waiver=(
+            "SAM 3 is optional and model downloads are not redistributed by OpenCut; operators "
+            "must accept the upstream SAM License before installing weights."
+        ),
     ),
     ModelCard(
         check_name="check_seedvr2_available",

@@ -1,11 +1,10 @@
-"""F201 WPF installer CI wiring tests."""
+"""F201 WPF installer automation wrapper tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
 SCRIPT = REPO_ROOT / "scripts" / "build_wpf_installer_ci.ps1"
 POLICY_DOC = REPO_ROOT / "docs" / "INSTALLER_POLICY.md"
 
@@ -33,28 +32,10 @@ def test_wpf_installer_ci_script_stages_ffmpeg_from_path():
     assert "ffmpeg" in text
 
 
-def test_build_workflow_builds_wpf_installer_before_inno():
-    text = _read(WORKFLOW)
-
-    wpf_step = text.index("Build Windows installer (WPF)")
-    inno_step = text.index("Build Windows installer (Inno Setup)")
-    assert wpf_step < inno_step
-    assert "./scripts/build_wpf_installer_ci.ps1" in text
-    assert "runner.os == 'Windows'" in text
-
-
-def test_build_workflow_archives_wpf_installer_separately():
-    text = _read(WORKFLOW)
-
-    assert "Archive Windows installer (WPF)" in text
-    assert "OpenCut-Setup-WPF-Windows" in text
-    assert "installer/dist/wpf/OpenCut-WPF-Setup-*.exe" in text
-
-
-def test_installer_policy_marks_f201_ci_path_done():
+def test_installer_policy_marks_f201_local_wrapper_done():
     text = _read(POLICY_DOC)
 
     assert "F201 status" in text
     assert "scripts/build_wpf_installer_ci.ps1" in text
-    assert "WPF in CI" in text
+    assert "local build wrapper" in text
     assert "DONE" in text

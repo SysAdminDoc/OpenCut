@@ -1,11 +1,10 @@
-"""F203 Windows Authenticode signing workflow tests."""
+"""F203 Windows Authenticode signing tests."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
 SCRIPT = REPO_ROOT / "scripts" / "sign_windows_artifacts.ps1"
 DOC = REPO_ROOT / "docs" / "WINDOWS_CODESIGNING.md"
 POLICY_DOC = REPO_ROOT / "docs" / "INSTALLER_POLICY.md"
@@ -49,22 +48,6 @@ def test_codesigning_script_has_renewal_warning_gate():
     assert "renew before release" in text
 
 
-def test_build_workflow_signs_after_both_windows_installers_before_archives():
-    text = _read(WORKFLOW)
-
-    wpf = text.index("Build Windows installer (WPF)")
-    inno = text.index("Build Windows installer (Inno Setup)")
-    sign = text.index("Sign Windows installers")
-    smoke = text.index("Smoke test Windows installer (Inno)")
-    archive_wpf = text.index("Archive Windows installer (WPF)")
-    archive_inno = text.index("\n      - name: Archive Windows installer\n")
-
-    assert wpf < inno < sign < smoke < archive_wpf < archive_inno
-    assert "./scripts/sign_windows_artifacts.ps1" in text
-    assert "WINDOWS_CODESIGN_PFX_BASE64" in text
-    assert "WINDOWS_CODESIGN_CERT_EXPIRES_AT" in text
-
-
 def test_codesigning_doc_and_policy_reference_f203():
     doc = _read(DOC)
     policy = _read(POLICY_DOC)
@@ -77,5 +60,8 @@ def test_codesigning_doc_and_policy_reference_f203():
         "signtool verify",
     ):
         assert token in doc
+    assert "Required Environment Variables" in doc
+    assert "GitHub Actions" not in doc
+    assert ".github/workflows" not in doc
     assert "F203 status" in policy
     assert "docs/WINDOWS_CODESIGNING.md" in policy

@@ -44,7 +44,10 @@ We don't run a paid bounty programme, but we credit reporters in `CHANGELOG.md` 
 
 ## Out of Scope
 
-- Third-party dependencies (report upstream). We monitor `pyproject.toml` / `requirements.txt` via Dependabot.
+- Third-party dependencies (report upstream). We audit `pyproject.toml`,
+  `requirements.txt`, `requirements-lock.txt`, and panel dependencies locally
+  with `python scripts/release_smoke.py --json`, `pip-audit`, npm advisory
+  checks, and the declared SBOM generator.
 - User-supplied plugins loaded via `~/.opencut/plugins/` — plugins run with the host's trust, so audit before installing.
 - Social-engineering / phishing attacks against maintainers.
 - Reports that require pre-existing local code execution (e.g. "an attacker with shell access can edit `~/.opencut/settings.json`").

@@ -18,7 +18,7 @@
       }
     }
   },
-  "generated_at": "2026-06-12T12:15:58Z",
+  "generated_at": "2026-06-28T02:51:38Z",
   "homepage": "https://github.com/SysAdminDoc/OpenCut",
   "install": {
     "command": "pip install \"opencut[mcp]\"",
@@ -45,11 +45,47 @@
     "captions",
     "ai"
   ],
-  "tool_count": 39,
+  "tool_count": 86,
   "tools": [
+    {
+      "description": "Generate an ADR (Automated Dialogue Replacement) cue list from sequence data.",
+      "name": "opencut_adr_list"
+    },
+    {
+      "description": "Auto-duck music volume under speech segments.",
+      "name": "opencut_audio_duck"
+    },
+    {
+      "description": "Apply a chain of audio effects (EQ, reverb, compression, delay, etc.).",
+      "name": "opencut_audio_effects"
+    },
+    {
+      "description": "Enhance audio quality using a preset profile (podcast, music, dialogue).",
+      "name": "opencut_audio_enhance"
+    },
+    {
+      "description": "Isolate dialogue/vocals from background noise and music.",
+      "name": "opencut_audio_isolate"
+    },
+    {
+      "description": "Normalize audio loudness to a target LUFS level.",
+      "name": "opencut_audio_normalize"
+    },
     {
       "description": "Generate face-detected zoom keyframes for a push-in zoom effect on talking-head clips.",
       "name": "opencut_auto_zoom"
+    },
+    {
+      "description": "Export video using a named export preset (social, broadcast, archive, etc.).",
+      "name": "opencut_batch_export"
+    },
+    {
+      "description": "Detect beats in audio and return marker timestamps.",
+      "name": "opencut_beat_markers"
+    },
+    {
+      "description": "Blend two video layers with a compositing mode.",
+      "name": "opencut_blend_videos"
     },
     {
       "description": "Get, save, delete, or preview the local Brand Kit settings.",
@@ -64,8 +100,32 @@
       "name": "opencut_capability_probe"
     },
     {
+      "description": "Render animated captions with word-level timing and motion effects.",
+      "name": "opencut_caption_animated"
+    },
+    {
+      "description": "Burn caption segments into video with customizable styling.",
+      "name": "opencut_caption_burnin"
+    },
+    {
+      "description": "Generate karaoke-style word-by-word highlight captions from audio.",
+      "name": "opencut_caption_karaoke"
+    },
+    {
       "description": "Run the caption QC gate over SRT text or an SRT file.",
       "name": "opencut_caption_qc"
+    },
+    {
+      "description": "Import an SRT file and convert to timeline caption segments.",
+      "name": "opencut_caption_srt_import"
+    },
+    {
+      "description": "Generate and render styled captions (TikTok, YouTube, cinematic, etc.).",
+      "name": "opencut_caption_styled"
+    },
+    {
+      "description": "Translate existing captions or SRT to a target language.",
+      "name": "opencut_caption_translate"
     },
     {
       "description": "Generate YouTube chapter timestamps from a video transcript using LLM analysis.",
@@ -76,12 +136,28 @@
       "name": "opencut_chat_edit"
     },
     {
+      "description": "Apply chroma key (green/blue screen) removal to a video.",
+      "name": "opencut_chromakey"
+    },
+    {
       "description": "Match the color profile of a source video clip to a reference clip using histogram matching.",
       "name": "opencut_color_match"
     },
     {
+      "description": "Concatenate video files sequentially without re-encoding when possible.",
+      "name": "opencut_concat_videos"
+    },
+    {
       "description": "Reduce noise from audio/video using FFmpeg filters (afftdn, highpass, gate)",
       "name": "opencut_denoise_audio"
+    },
+    {
+      "description": "Reduce visual noise in a video using spatial/temporal filtering.",
+      "name": "opencut_denoise_video"
+    },
+    {
+      "description": "List installed dependencies and their versions (FFmpeg, Python packages, etc.).",
+      "name": "opencut_dependencies"
     },
     {
       "description": "Generate a depth map video using Depth Anything V2",
@@ -108,12 +184,24 @@
       "name": "opencut_face_reshape"
     },
     {
+      "description": "Return the enabled/disabled state of all feature flags.",
+      "name": "opencut_feature_state"
+    },
+    {
+      "description": "Detect and remove filler words (um, uh, like, etc.) from audio.",
+      "name": "opencut_filler_remove"
+    },
+    {
       "description": "Search indexed media library by spoken content. Returns matching clips with timestamps.",
       "name": "opencut_footage_search"
     },
     {
       "description": "Generate music with AI (MusicGen instrumental or ACE-Step with vocals+lyrics)",
       "name": "opencut_generate_music"
+    },
+    {
+      "description": "Return GPU availability, driver version, VRAM, and compute capability.",
+      "name": "opencut_gpu_status"
     },
     {
       "description": "Extract highlight/viral clips using LLM analysis of transcript",
@@ -124,8 +212,20 @@
       "name": "opencut_index_footage"
     },
     {
+      "description": "Ingest media from a URL for search indexing and processing.",
+      "name": "opencut_ingest_url"
+    },
+    {
+      "description": "Interpolate frames using neural methods to increase video frame rate.",
+      "name": "opencut_interpolate"
+    },
+    {
       "description": "Check the status of a running OpenCut job",
       "name": "opencut_job_status"
+    },
+    {
+      "description": "Add letterbox/pillarbox bars to fit a target aspect ratio.",
+      "name": "opencut_letterbox"
     },
     {
       "description": "Animate a portrait image or video to match spoken audio using EchoMimic diffusion-based lip-sync.",
@@ -136,12 +236,44 @@
       "name": "opencut_loudness_match"
     },
     {
+      "description": "Apply a LUT (Look-Up Table) color grade to a video.",
+      "name": "opencut_lut_apply"
+    },
+    {
+      "description": "Generate a LUT from a reference image or video for consistent color grading.",
+      "name": "opencut_lut_generate"
+    },
+    {
       "description": "Parse CSV, Premiere CSV, or EDL markers into OpenCut's normalized marker format.",
       "name": "opencut_marker_import"
     },
     {
+      "description": "Merge multiple video files with optional format conversion.",
+      "name": "opencut_merge_videos"
+    },
+    {
       "description": "Generate multicam cut decisions from speaker diarization \u2014 cuts to the camera angle assigned to whoever is speaking.",
       "name": "opencut_multicam_cuts"
+    },
+    {
+      "description": "Generate a music cue sheet with timing, rights, and usage data.",
+      "name": "opencut_music_cue_sheet"
+    },
+    {
+      "description": "Parse a natural-language editing instruction into tool calls.",
+      "name": "opencut_nlp_command"
+    },
+    {
+      "description": "Create a picture-in-picture composite with an overlay video.",
+      "name": "opencut_pip"
+    },
+    {
+      "description": "Extract a single preview frame from a video at a given timestamp.",
+      "name": "opencut_preview_frame"
+    },
+    {
+      "description": "Reframe video to a new aspect ratio with smart cropping or padding.",
+      "name": "opencut_reframe_video"
     },
     {
       "description": "Detect and identify repeated/fumbled takes in a video or audio file using transcript similarity analysis.",
@@ -180,20 +312,60 @@
       "name": "opencut_smart_upscale"
     },
     {
+      "description": "Upload a rendered video to a social platform (YouTube, TikTok, Instagram, etc.).",
+      "name": "opencut_social_upload"
+    },
+    {
       "description": "Match a clip's spectral profile to a reference audio or video file.",
       "name": "opencut_spectral_match"
+    },
+    {
+      "description": "Change playback speed of a video uniformly.",
+      "name": "opencut_speed_change"
+    },
+    {
+      "description": "Apply speed ramping with keyframes for variable playback speed.",
+      "name": "opencut_speed_ramp"
     },
     {
       "description": "Detect and extract highlight moments from sports or action video using optical-flow motion analysis combined with audio energy scoring.",
       "name": "opencut_sports_highlights"
     },
     {
+      "description": "Stabilize shaky video footage using motion analysis.",
+      "name": "opencut_stabilize_video"
+    },
+    {
       "description": "Apply style transfer to video (preset styles or arbitrary reference image)",
       "name": "opencut_style_transfer"
     },
     {
+      "description": "Return system information including OS, CPU, RAM, and disk stats.",
+      "name": "opencut_system_info"
+    },
+    {
+      "description": "Batch-rename clips or segments on the timeline.",
+      "name": "opencut_timeline_batch_rename"
+    },
+    {
+      "description": "Auto-cut a video to the beat of its audio track.",
+      "name": "opencut_timeline_beat_cut"
+    },
+    {
+      "description": "Organize timeline clips into smart bins based on rules.",
+      "name": "opencut_timeline_smart_bins"
+    },
+    {
       "description": "Transcribe video/audio to text with timestamps using Whisper AI",
       "name": "opencut_transcribe"
+    },
+    {
+      "description": "Apply a transition effect between clips or at cut points.",
+      "name": "opencut_transitions"
+    },
+    {
+      "description": "Trim a video to specified start and end times.",
+      "name": "opencut_trim_video"
     },
     {
       "description": "Generate speech from text (edge-tts, Kokoro, or Chatterbox with voice cloning)",
@@ -202,11 +374,27 @@
     {
       "description": "AI upscale video using Real-ESRGAN (2x or 4x resolution)",
       "name": "opencut_upscale"
+    },
+    {
+      "description": "Generate a VFX breakdown sheet from sequence data.",
+      "name": "opencut_vfx_sheet"
+    },
+    {
+      "description": "Apply a video effect (blur, sharpen, vignette, glitch, film grain, etc.).",
+      "name": "opencut_video_fx"
+    },
+    {
+      "description": "List available workflow presets and their descriptions.",
+      "name": "opencut_workflow_presets"
+    },
+    {
+      "description": "Execute a multi-step editing workflow from a preset or custom steps.",
+      "name": "opencut_workflow_run"
     }
   ],
   "transports": [
     "stdio",
     "http"
   ],
-  "version": "1.33.0"
+  "version": "1.33.1"
 }

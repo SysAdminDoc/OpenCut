@@ -47,6 +47,7 @@ ALLOWED_LICENSES = (
 )
 
 WARNING_LICENSES = (
+    "CC-BY-4.0",
     "LGPL-2.1",
     "LGPL-3.0",
     "EPL-2.0",
@@ -58,6 +59,7 @@ DENIED_LICENSES = (
     "GPL-3.0-only",
     "GPL-3.0",
     "CC-BY-NC",
+    "Custom",
     "non-commercial",
     "research-only",
     "NTU S-Lab License",  # ProPainter
