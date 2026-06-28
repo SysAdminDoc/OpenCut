@@ -4,12 +4,14 @@ OpenCut Enhanced Captions Module v0.7.1
 Enhanced caption features:
 - WhisperX word-level phoneme alignment (wav2vec2)
 - Speaker diarization labels
-- NLLB translation (200+ languages via CTranslate2)
+- Restricted-license NLLB / SeamlessM4T translation engines
 - ASS karaoke subtitle export with smooth fill/wipe
 - pysubs2 subtitle format conversion (SRT/ASS/VTT/MicroDVD)
 
 WhisperX extends faster-whisper with precise word boundaries.
-NLLB runs through CTranslate2 (already a dep via faster-whisper).
+NLLB runs through CTranslate2 (already a dep via faster-whisper). NLLB
+and SeamlessM4T checkpoints are non-commercial-license engines, so route
+callers must explicitly opt in before either model is downloaded or used.
 """
 
 import logging
@@ -19,6 +21,114 @@ from typing import Callable, Dict, List, Optional, Tuple
 from opencut.helpers import ensure_package
 
 logger = logging.getLogger("opencut")
+
+
+class TranslationLicenseError(ValueError):
+    """Raised when a restricted translation backend was not explicitly accepted."""
+
+
+TRANSLATION_LICENSE_OPT_IN_FIELDS = (
+    "accept_restricted_license",
+    "accept_model_license",
+    "allow_restricted_translation",
+    "allow_noncommercial",
+)
+
+TRANSLATION_BACKENDS = {
+    "nllb": {
+        "id": "nllb",
+        "label": "NLLB-200 distilled 600M",
+        "license": "CC-BY-NC-4.0",
+        "commercial_safe": False,
+        "opt_in_required": True,
+        "privacy": "local-only after model download",
+        "install_component": "nllb",
+        "install_hint": "pip install ctranslate2 sentencepiece huggingface-hub",
+        "model_id": "JustFrederik/nllb-200-distilled-600M-ct2-float16",
+        "upstream": "https://huggingface.co/facebook/nllb-200-distilled-600M",
+        "redistribution": (
+            "OpenCut does not bundle NLLB weights; operators must accept the "
+            "upstream non-commercial license before downloading."
+        ),
+        "notice": (
+            "NLLB-200 is CC-BY-NC-4.0 and is not selected automatically for "
+            "commercial-safe workflows. Choose it only after accepting the "
+            "non-commercial model terms."
+        ),
+    },
+    "seamless": {
+        "id": "seamless",
+        "label": "SeamlessM4T v2 Large",
+        "license": "CC-BY-NC-4.0",
+        "commercial_safe": False,
+        "opt_in_required": True,
+        "privacy": "local-only after model download",
+        "install_component": "seamless",
+        "install_hint": "pip install transformers torch sentencepiece",
+        "model_id": "facebook/seamless-m4t-v2-large",
+        "upstream": "https://huggingface.co/facebook/seamless-m4t-v2-large",
+        "redistribution": (
+            "OpenCut does not bundle SeamlessM4T weights; operators must accept "
+            "the upstream non-commercial model terms before downloading."
+        ),
+        "notice": (
+            "SeamlessM4T v2 is a non-commercial-license engine and is not "
+            "selected automatically for commercial-safe workflows. Choose it "
+            "only after accepting the model terms."
+        ),
+    },
+}
+
+
+def translation_license_opted_in(data: Dict) -> bool:
+    """Return whether a caller explicitly accepted restricted model terms."""
+    if not isinstance(data, dict):
+        return False
+    for key in TRANSLATION_LICENSE_OPT_IN_FIELDS:
+        value = data.get(key)
+        if isinstance(value, bool):
+            if value:
+                return True
+        elif isinstance(value, str) and value.strip().lower() in {"1", "true", "yes", "on", "accepted"}:
+            return True
+    return False
+
+
+def translation_backends_manifest() -> List[Dict]:
+    """Return public, JSON-safe metadata for caption translation engines."""
+    return [dict(info) for info in TRANSLATION_BACKENDS.values()]
+
+
+def get_translation_backend_info(backend: str) -> Dict:
+    backend = (backend or "auto").strip().lower()
+    return dict(TRANSLATION_BACKENDS.get(backend, {}))
+
+
+def resolve_translation_backend(backend: str = "auto", *, allow_restricted: bool = False) -> str:
+    """Resolve a requested backend without silently choosing restricted engines."""
+    requested = (backend or "auto").strip().lower()
+    if requested not in {"auto", *TRANSLATION_BACKENDS.keys()}:
+        requested = "auto"
+
+    if requested == "auto":
+        safe = [name for name, info in TRANSLATION_BACKENDS.items() if info.get("commercial_safe")]
+        if safe:
+            return safe[0]
+        raise TranslationLicenseError(
+            "No commercial-safe local caption translation backend is configured. "
+            "NLLB-200 and SeamlessM4T are non-commercial-license engines; choose "
+            "backend `nllb` or `seamless` with `accept_restricted_license=true` "
+            "only after accepting the upstream model terms."
+        )
+
+    info = TRANSLATION_BACKENDS[requested]
+    if info.get("opt_in_required") and not allow_restricted:
+        raise TranslationLicenseError(
+            f"{info['label']} uses {info['license']} and requires explicit opt-in. "
+            f"Send backend `{requested}` with `accept_restricted_license=true` "
+            "after reviewing the upstream non-commercial model terms."
+        )
+    return requested
 
 # ---------------------------------------------------------------------------
 # Availability Checks

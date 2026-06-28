@@ -31,17 +31,29 @@ from opencut.routes.captions import (
 
 
 def test_validator_accepts_segments_list():
-    err = _validate_translate_input({"segments": [{"start": 0, "end": 1, "text": "hi"}]})
+    err = _validate_translate_input({
+        "segments": [{"start": 0, "end": 1, "text": "hi"}],
+        "backend": "nllb",
+        "accept_restricted_license": True,
+    })
     assert err is None
 
 
 def test_validator_accepts_srt_path_only():
-    err = _validate_translate_input({"srt_path": "/tmp/x.srt"})
+    err = _validate_translate_input({
+        "srt_path": "/tmp/x.srt",
+        "backend": "nllb",
+        "accept_restricted_license": True,
+    })
     assert err is None
 
 
 def test_validator_accepts_srt_content_only():
-    err = _validate_translate_input({"srt_content": "1\n00:00:00,000 --> 00:00:01,000\nhi\n"})
+    err = _validate_translate_input({
+        "srt_content": "1\n00:00:00,000 --> 00:00:01,000\nhi\n",
+        "backend": "nllb",
+        "accept_restricted_license": True,
+    })
     assert err is None
 
 
@@ -170,6 +182,7 @@ def test_route_translates_segments_input(client):
         "segments": [{"start": 0, "end": 1, "text": "hello"}],
         "target_lang": "es",
         "backend": "nllb",
+        "accept_restricted_license": True,
     }
     resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
     assert resp.status_code == 200, resp.get_json()
@@ -188,6 +201,7 @@ def test_route_translates_srt_content_input_and_emits_srt(client):
         "srt_content": SAMPLE_SRT,
         "target_lang": "es",
         "backend": "nllb",
+        "accept_restricted_license": True,
     }
     resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
     assert resp.status_code == 200, resp.get_json()
@@ -210,6 +224,7 @@ def test_route_writes_srt_to_disk_when_path_provided(tmp_path, client):
         "srt_content": SAMPLE_SRT,
         "target_lang": "es",
         "backend": "nllb",
+        "accept_restricted_license": True,
         "srt_output_path": str(target),
     }
     resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
@@ -236,6 +251,7 @@ def test_route_legacy_bom_round_trip_with_srt_path(tmp_path, client, monkeypatch
         "srt_path": str(src),
         "target_lang": "es",
         "backend": "nllb",
+        "accept_restricted_license": True,
         "srt_output_path": str(dst),
         "srt_legacy_bom": True,
     }
@@ -254,3 +270,67 @@ def test_route_rejects_empty_input_with_400(client):
     assert resp.status_code == 400
     body = resp.get_json()
     assert "Provide" in body.get("error", "")
+
+
+def test_route_rejects_auto_backend_without_commercial_safe_default(client):
+    headers = _csrf_headers(client)
+    body = {
+        "segments": [{"start": 0, "end": 1, "text": "hello"}],
+        "target_lang": "es",
+    }
+
+    resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
+
+    assert resp.status_code == 400
+    payload = resp.get_json()
+    assert "No commercial-safe local caption translation backend" in payload.get("error", "")
+    assert "accept_restricted_license=true" in payload.get("error", "")
+
+
+def test_route_rejects_nllb_without_restricted_license_opt_in(client):
+    headers = _csrf_headers(client)
+    body = {
+        "segments": [{"start": 0, "end": 1, "text": "hello"}],
+        "target_lang": "es",
+        "backend": "nllb",
+    }
+
+    resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
+
+    assert resp.status_code == 400
+    payload = resp.get_json()
+    assert "NLLB-200 distilled 600M uses CC-BY-NC-4.0" in payload.get("error", "")
+    assert "accept_restricted_license=true" in payload.get("error", "")
+
+
+def test_route_reports_restricted_backend_license_after_opt_in(client):
+    headers = _csrf_headers(client)
+    body = {
+        "segments": [{"start": 0, "end": 1, "text": "hello"}],
+        "target_lang": "es",
+        "backend": "nllb",
+        "accept_restricted_license": True,
+    }
+
+    resp = client.post("/captions/translate", data=json.dumps(body), headers=headers)
+    assert resp.status_code == 200, resp.get_json()
+    job = _poll_job(client, resp.get_json()["job_id"])
+    assert job["status"] == "complete", job
+    result = job["result"]
+    assert result["backend"] == "nllb"
+    assert result["backend_license"] == "CC-BY-NC-4.0"
+    assert result["backend_commercial_safe"] is False
+    assert result["restricted_license_accepted"] is True
+    assert "not selected automatically" in result["license_notice"]
+
+
+def test_install_nllb_requires_restricted_license_opt_in(client):
+    headers = _csrf_headers(client)
+    resp = client.post(
+        "/captions/enhanced/install",
+        data=json.dumps({"component": "nllb", "no_input": True}),
+        headers=headers,
+    )
+
+    assert resp.status_code == 400
+    assert "accept_restricted_license=true" in resp.get_json().get("error", "")

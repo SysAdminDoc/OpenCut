@@ -984,7 +984,7 @@
                                 <span data-i18n="captions.translate">Caption Translation</span>
                             </div>
                         </div>
-                        <p class="card-desc" data-i18n="captions.translate_desc">Translate your captions into 200+ languages. Runs fully offline after a one-time model download.</p>
+                        <p class="card-desc" data-i18n="captions.translate_desc">Translate captions with optional local engines. NLLB and SeamlessM4T use non-commercial model terms and require explicit opt-in before download or use.</p>
 
                         <div class="form-group">
                             <label for="translateModel" data-i18n="captions.translate_step_transcribe">Step 1: Transcribe (if needed)</label>
@@ -1047,11 +1047,16 @@
                             </select>
                         </div>
 
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="translateRestrictedOptIn">
+                            <span data-i18n="captions.translate_restricted_optin">I understand NLLB/SeamlessM4T use CC-BY-NC non-commercial model terms and will only use them where allowed.</span>
+                        </label>
+
                         <button type="button" class="btn-primary" id="runTranslateBtn" disabled data-i18n="captions.translate_run">Transcribe &amp; Translate</button>
 
                         <div class="hint hidden" id="translateHint">
-                            <span data-i18n="captions.nllb_not_installed">NLLB translation model not installed.</span>
-                            <button type="button" class="btn-install" id="installNllbBtn" data-i18n="install.nllb">Install NLLB</button>
+                            <span data-i18n="captions.nllb_not_installed">NLLB translation dependencies are not installed. NLLB is CC-BY-NC and requires the opt-in above.</span>
+                            <button type="button" class="btn-install" id="installNllbBtn" data-i18n="install.nllb">Install NLLB (CC-BY-NC)</button>
                         </div>
                     </section>
                 </div>

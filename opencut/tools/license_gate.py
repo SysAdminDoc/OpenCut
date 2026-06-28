@@ -58,6 +58,7 @@ DENIED_LICENSES = (
     "GPL-2.0-only",
     "GPL-3.0-only",
     "GPL-3.0",
+    "CC-BY-NC-4.0",
     "CC-BY-NC",
     "Custom",
     "non-commercial",

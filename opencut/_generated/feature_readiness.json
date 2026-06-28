@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-06-28T02:45:26Z",
+  "generated_at": "2026-06-28T14:12:39Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_records": 71,
-  "total_routes": 97,
+  "total_records": 72,
+  "total_routes": 98,
   "records": [
     {
       "feature_id": "auto.ab-av1",
@@ -666,6 +666,23 @@
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
       "requires_gpu": true,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "captions.translate.nllb",
+      "label": "NLLB-200 distilled caption translation",
+      "category": "captions",
+      "state": "available",
+      "install_hint": "pip install ctranslate2 sentencepiece huggingface-hub",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/captions/enhanced/capabilities"
+      ],
+      "check_name": "check_nllb_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "cpu/gpu",
+      "requires_gpu": false,
       "minimum_vram_mb": 0
     },
     {
