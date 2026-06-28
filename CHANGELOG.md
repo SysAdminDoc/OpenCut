@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Bundled FFmpeg provenance
+
+- Refreshed the local bundled FFmpeg/ffprobe binaries to Gyan
+  `8.1.2-essentials_build-www.gyan.dev` and updated installer/provenance pins
+  plus release provenance metadata for the current security floor.
+
 ### Changed — CEP Node advisory gate
 
 - Patched the transitive `js-yaml` advisory through an npm override and

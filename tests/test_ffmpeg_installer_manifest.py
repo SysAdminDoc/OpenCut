@@ -1,7 +1,7 @@
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FFMPEG_VERSION = "8.1.1-essentials_build-www.gyan.dev"
+FFMPEG_VERSION = "8.1.2-essentials_build-www.gyan.dev"
 
 
 def test_wpf_installer_constants_pin_bundled_ffmpeg_version():

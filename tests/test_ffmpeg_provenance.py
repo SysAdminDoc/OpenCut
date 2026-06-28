@@ -116,7 +116,7 @@ def test_provenance_record_documents_floor_without_binary():
     assert rec["required_release_floor"] == "8.1.1"
     assert rec["required_snapshot_floor_date"] == "2026-06-10"
     assert rec["reference_git_commit"] == "b29bdd3715"
-    assert rec["pinned_installer_version"] == "8.1.1-essentials_build-www.gyan.dev"
+    assert rec["pinned_installer_version"] == fp.PINNED_INSTALLER_VERSION
     assert "CVE-2026-6385" in rec["cves_addressed"]
     assert rec["bundled"] is None
 
