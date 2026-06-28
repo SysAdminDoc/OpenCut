@@ -99,9 +99,6 @@ class DocClaim:
 
 # Each regex must capture the documented number as group 1 (or named "n").
 TARGETS: list[DocClaim] = [
-        live=lambda: _file_lines("extension/com.opencut.panel/client/main.js"),
-        docs=(CLAUDE_MD,),
-        unit="lines",
     ),
     DocClaim(
         label="README feature overview API routes",
