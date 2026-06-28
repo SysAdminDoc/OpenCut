@@ -63,7 +63,7 @@ REFERENCE_GIT_DATE = "2026-06-10"
 
 # The human-readable version string the installers pin (see AppConstants.cs /
 # OpenCut.iss). Kept here so the Python side and the C#/Inno side agree.
-PINNED_INSTALLER_VERSION = "8.1.1-essentials_build-www.gyan.dev"
+PINNED_INSTALLER_VERSION = "8.1.2-essentials_build-www.gyan.dev"
 
 # The June-2026 FFmpeg advisories this floor exists to clear.
 JUNE_2026_CVES: tuple[str, ...] = (

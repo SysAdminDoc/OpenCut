@@ -13,13 +13,6 @@ blocked (see `Roadmap_Blocked.md`)._
 
 ## Research-Driven Additions
 
-- [ ] P0 — Refresh bundled FFmpeg and provenance floor
-  Why: The bundled binary is below OpenCut's own release provenance floor, so release security/trust is already red before packaging.
-  Evidence: `ffmpeg\ffmpeg.exe -version` reports `8.0.1-essentials_build-www.gyan.dev`; `scripts\verify_ffmpeg_provenance.py` exits `RESULT: BELOW FLOOR`; `docs/RELEASE_PROVENANCE.md:38-46`; FFmpeg security advisories and LosslessCut issue #2943.
-  Touches: `ffmpeg\ffmpeg.exe`, `ffmpeg\ffprobe.exe`, `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, `docs/RELEASE_PROVENANCE.md`, installer provenance/version tests.
-  Acceptance: bundled `ffmpeg.exe -version` reports a compliant release or snapshot lane; `py -3.12 scripts\verify_ffmpeg_provenance.py` passes; focused release-provenance tests pass; docs record the updated version, lane, source URL, and CVE floor.
-  Complexity: M
-
 - [ ] P1 — Reconcile docs with local-build-only release policy
   Why: GitHub Actions workflows and Dependabot config were removed, but active docs still promise CI/workflow builds and Dependabot monitoring.
   Evidence: `git log --oneline -1 592ec577`; absent `.github/workflows` and `.github/dependabot.yml`; `SECURITY.md:47`; `CONTRIBUTING.md:11`, `95`, `108`; `docs/MACOS_NOTARIZATION.md:3`; `docs/WINDOWS_CODESIGNING.md:4`, `61`; `docs/INSTALLER_POLICY.md`.

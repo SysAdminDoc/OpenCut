@@ -5,8 +5,8 @@
 #define MyAppVersion "1.33.1"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
-#define BundledFfmpegVersion "8.1.1-essentials_build-www.gyan.dev"
-#define BundledFfprobeVersion "8.1.1-essentials_build-www.gyan.dev"
+#define BundledFfmpegVersion "8.1.2-essentials_build-www.gyan.dev"
+#define BundledFfprobeVersion "8.1.2-essentials_build-www.gyan.dev"
 ; June-2026 FFmpeg zero-days (CVE-2026-6385 et al.) landed as post-release master
 ; commits; guaranteed-clean fallback is a gyan.dev git-master snapshot >= 2026-06-10
 ; (commit b29bdd3715). Mirrors opencut/core/ffmpeg_provenance.py.
