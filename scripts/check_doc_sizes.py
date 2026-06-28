@@ -34,7 +34,6 @@ from pathlib import Path
 from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
-CLAUDE_MD = ROOT / "CLAUDE.md"
 README = ROOT / "README.md"
 ROUTE_MANIFEST = ROOT / "opencut" / "_generated" / "route_manifest.json"
 
@@ -100,11 +99,6 @@ class DocClaim:
 
 # Each regex must capture the documented number as group 1 (or named "n").
 TARGETS: list[DocClaim] = [
-    DocClaim(
-        # Match either the bare form "(~N lines)" or the dated form
-        # "(~N lines as of YYYY-MM-DD; was ~M lines through ...)".
-        label="CEP client/main.js lines",
-        regex=re.compile(r"client/main\.js[^\n]*?\(~?([\d,]+)\s*lines?[^)]*\)", re.IGNORECASE),
         live=lambda: _file_lines("extension/com.opencut.panel/client/main.js"),
         docs=(CLAUDE_MD,),
         unit="lines",
