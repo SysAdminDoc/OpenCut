@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — GitHub issue seed guard
+
+- GitHub issue seeding now validates active seeds against unchecked
+  `ROADMAP.md` rows, skips manifest rows marked `status: shipped` or
+  `status: archived`, and fails before issue creation when an active seed has
+  gone stale.
+
 ### Changed — Local release documentation
 
 - Reconciled active release, installer, signing, notarization, SBOM, and

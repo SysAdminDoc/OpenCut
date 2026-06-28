@@ -13,13 +13,6 @@ blocked (see `Roadmap_Blocked.md`)._
 
 ## Research-Driven Additions
 
-- [ ] P1 — Guard GitHub issue seeding against stale roadmap IDs
-  Why: The issue seeder can still create shipped or obsolete F097-F116 issues from `ROADMAP.md v4.3`, which would pollute the public tracker with work no longer present in the active roadmap.
-  Evidence: `.github/issue-seeds.yml`; `py -3.12 scripts\seed_github_issues.py --dry-run --once`; `tests/test_seed_github_issues.py:57`; active `ROADMAP.md`.
-  Touches: `.github/issue-seeds.yml`, `scripts/seed_github_issues.py`, `tests/test_seed_github_issues.py`, `CONTRIBUTING.md`.
-  Acceptance: dry-run skips or fails seeds whose `roadmap_id` is absent from active `ROADMAP.md` unless explicitly marked archived/shipped; shipped seeds cannot create issues; tests cover stale IDs, shipped IDs, good-first filtering, and one valid active roadmap seed.
-  Complexity: M
-
 - [ ] P1 - Harden UXP DOM rendering sinks
   Why: The UXP panel is the strategic Premiere surface, and it still has many `innerHTML` render paths fed by backend/user-facing result data. Current call sites usually escape interpolated values, but there is no UXP-specific static allowlist gate to keep new markup sinks from regressing.
   Evidence: `extension/com.opencut.uxp/main.js:2263`, `extension/com.opencut.uxp/main.js:3842`, `extension/com.opencut.uxp/main.js:5041`, `extension/com.opencut.uxp/main.js:6641`, `tests/test_uxp_confirmation_guard.py`, `tests/test_i18n_hardcoded_migration.py:9138`.
