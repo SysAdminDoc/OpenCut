@@ -174,7 +174,7 @@ def _is_audio_only(input_path: str) -> bool:
     """Return True when the file extension implies an audio-only container.
 
     ``helpers.get_video_info`` returns 1920x1080 defaults on probe failure
-    (CLAUDE.md gotcha), so we can't rely on width/height alone — extension
+    (known issue), so we can't rely on width/height alone — extension
     is the only reliable hint for the planner.
     """
     return os.path.splitext(input_path)[1].lower() in _AUDIO_ONLY_EXTS
