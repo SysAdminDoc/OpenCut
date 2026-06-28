@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Installer accessibility polish
+
+- Bound installer version badges to the shared app version constant and added
+  accessible names/help text for icon-only window controls, progress bars,
+  activity logs, and key install options. Shared WPF focus states now cover
+  link, checkbox, and radio controls.
+
 ### Changed — UXP panel quick-action polish
 
 - Replaced Settings-tab keyboard shortcut hints with visible quick-action
