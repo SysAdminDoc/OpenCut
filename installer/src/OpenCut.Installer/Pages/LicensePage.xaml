@@ -35,6 +35,7 @@
                         BorderThickness="1" CornerRadius="12" Padding="14,12">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <TextBlock x:Name="LicenseText" TextWrapping="Wrap"
+                                   AutomationProperties.Name="MIT license text"
                                    Foreground="{DynamicResource Subtext1}"
                                    FontFamily="{DynamicResource MonoFont}"
                                    FontSize="11.5" LineHeight="18" />
@@ -62,6 +63,7 @@
                     Click="Back_Click" Margin="0,0,10,0" />
             <Button x:Name="NextBtn" Grid.Column="2" Content="Continue"
                     Style="{StaticResource PrimaryButton}"
+                    AutomationProperties.HelpText="Accept the license terms to enable Continue."
                     IsEnabled="False" Click="Next_Click" />
         </Grid>
     </Grid>

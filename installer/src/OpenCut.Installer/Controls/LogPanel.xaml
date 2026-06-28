@@ -4,6 +4,8 @@
     <Border Background="{DynamicResource Mantle}" BorderBrush="{DynamicResource Surface1}"
             BorderThickness="1" CornerRadius="12" Padding="2">
         <RichTextBox x:Name="LogBox" IsReadOnly="True"
+                     AutomationProperties.Name="Activity log"
+                     AutomationProperties.HelpText="Read-only log of installer actions and errors."
                      Background="{DynamicResource Mantle}"
                      Foreground="{DynamicResource Subtext0}"
                      FontFamily="{DynamicResource MonoFont}"

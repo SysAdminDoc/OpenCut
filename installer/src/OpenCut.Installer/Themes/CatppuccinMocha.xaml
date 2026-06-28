@@ -217,12 +217,18 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <TextBlock x:Name="Tb" Text="{TemplateBinding Content}"
-                               Foreground="{TemplateBinding Foreground}"
-                               FontSize="{TemplateBinding FontSize}"
-                               Padding="{TemplateBinding Padding}" />
+                    <Border x:Name="Bd" BorderThickness="1" BorderBrush="Transparent"
+                            CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <TextBlock x:Name="Tb" Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}" />
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Tb" Property="TextDecorations" Value="Underline" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Blue}" />
                             <Setter TargetName="Tb" Property="TextDecorations" Value="Underline" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -261,6 +267,9 @@
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Overlay1}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Blue}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{StaticResource Overlay0}" />
@@ -301,6 +310,9 @@
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Outer" Property="BorderBrush" Value="{StaticResource Overlay1}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Outer" Property="BorderBrush" Value="{StaticResource Blue}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{StaticResource Overlay0}" />

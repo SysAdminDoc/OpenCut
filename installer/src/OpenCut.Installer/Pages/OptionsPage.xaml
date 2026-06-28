@@ -61,6 +61,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="PathBox" Grid.Column="0"
                                      Text="C:\Program Files\OpenCut"
+                                     AutomationProperties.Name="Install location"
+                                     AutomationProperties.HelpText="Folder where OpenCut server, FFmpeg, logs, and supporting files will be installed."
                                      Margin="0,0,10,0"
                                      TextChanged="PathBox_TextChanged" />
                             <Button Grid.Column="1" Content="Browse…"
@@ -83,6 +85,7 @@
                                   IsChecked="True" Margin="0,14,0,0"
                                   Checked="CepCheck_Changed" Unchecked="CepCheck_Changed" />
                         <CheckBox x:Name="DebugModeCheck" Content="Enable PlayerDebugMode (recommended for CEP)"
+                                  AutomationProperties.HelpText="Lets the Adobe CEP extension load reliably after installation."
                                   IsChecked="True" Margin="18,6,0,0"
                                   Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
                         <TextBlock x:Name="CepStatusText"
@@ -103,6 +106,7 @@
                         <CheckBox x:Name="StartMenuCheck" Content="Create Start Menu shortcut" IsChecked="True"
                                   Margin="0,6,0,0" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
                         <CheckBox x:Name="AutostartCheck" Content="Start with Windows"
+                                  AutomationProperties.HelpText="Starts the OpenCut server automatically when Windows starts."
                                   Margin="0,6,0,0" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
                     </StackPanel>
                 </Border>
@@ -115,6 +119,7 @@
                                    Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
                         <CheckBox x:Name="OptionalDepsCheck" Content="Install optional Python tools"
+                                  AutomationProperties.HelpText="Installs selected optional Python helpers when Python is available."
                                   Margin="0,14,0,0"
                                   Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
                         <StackPanel x:Name="OptionalDepsPanel" Margin="20,8,0,0" Visibility="Collapsed">
@@ -138,6 +143,7 @@
                                    Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
                         <CheckBox x:Name="WhisperCheck" Content="Download Whisper model for captions"
+                                  AutomationProperties.HelpText="Downloads the selected Whisper model during setup for caption and transcript workflows."
                                   Margin="0,14,0,0"
                                   Checked="WhisperCheck_Changed" Unchecked="WhisperCheck_Changed" />
                         <StackPanel x:Name="ModelPanel" Margin="20,8,0,0" Visibility="Collapsed">

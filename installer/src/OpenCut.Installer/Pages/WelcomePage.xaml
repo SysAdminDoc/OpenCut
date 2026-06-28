@@ -1,6 +1,7 @@
 <Page x:Class="OpenCut.Installer.Pages.WelcomePage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:models="clr-namespace:OpenCut.Installer.Models"
       Background="Transparent">
 
     <Grid Margin="44,28,44,34">
@@ -25,6 +26,7 @@
                     </Border>
 
                     <Image x:Name="Logo" Source="/Assets/logo.png" Width="76" Height="76"
+                           AutomationProperties.Name="OpenCut logo"
                            RenderOptions.BitmapScalingMode="HighQuality"
                            HorizontalAlignment="Left" Margin="0,24,0,16"
                            Opacity="0">
@@ -34,7 +36,8 @@
                     </Image>
 
                     <TextBlock Text="Install OpenCut" Style="{StaticResource PageTitleText}" />
-                    <TextBlock x:Name="VersionText" Text="v1.19.0"
+                    <TextBlock x:Name="VersionText"
+                               Text="{Binding Source={x:Static models:AppConstants.AppVersion}, StringFormat='v{0}'}"
                                Foreground="{DynamicResource Blue}" FontSize="14"
                                FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold"
                                Margin="0,8,0,0" />
