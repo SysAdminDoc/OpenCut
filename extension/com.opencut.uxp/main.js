@@ -61,6 +61,17 @@ const DELIVERABLE_BUTTON_IDS = {
   music_cue_sheet: "delivMusicCueBtn",
   asset_list: "delivAssetListBtn",
 };
+const CAPTION_STYLES_ENDPOINT = "/captions/styles";
+const DEFAULT_CAPTION_STYLE_ID = "minimal_clean";
+const UXP_CAPTION_STYLE_FALLBACK = [
+  {
+    id: DEFAULT_CAPTION_STYLE_ID,
+    name: "Minimal Clean",
+    category: "minimal",
+    preview_description: "Simple white text, no frills",
+    animation_type: "fade",
+  },
+];
 const WORKSPACE_META   = {
   cut: {
     titleKey: "uxp.workspace.cut_title",
@@ -2551,6 +2562,99 @@ function buildSearchResultCard(item, index) {
   };
 }
 
+function normalizeCaptionStyleCatalog(styles) {
+  if (!Array.isArray(styles)) return [];
+  const seen = new Set();
+  const out = [];
+  styles.forEach((style) => {
+    const id = String(style?.id || "").trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    out.push({
+      id,
+      name: String(style?.name || id).trim() || id,
+      category: String(style?.category || "uncategorized").trim() || "uncategorized",
+      description: String(style?.preview_description || "").trim(),
+      animation: String(style?.animation_type || "").trim(),
+    });
+  });
+  return out;
+}
+
+function captionStyleGroupLabel(category) {
+  const normalized = String(category || "uncategorized").trim();
+  if (!normalized) return t("uxp.captions.styles_group_uncategorized", "Uncategorized");
+  return normalized
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function populateCaptionStyleSelect(styles, source = "backend") {
+  const select = document.getElementById("captionStyle");
+  if (!select) return false;
+  const normalized = normalizeCaptionStyleCatalog(styles);
+  if (!normalized.length) return false;
+
+  const previous = select.value || DEFAULT_CAPTION_STYLE_ID;
+  select.textContent = "";
+
+  const categories = new Map();
+  normalized.forEach((style) => {
+    if (!categories.has(style.category)) categories.set(style.category, []);
+    categories.get(style.category).push(style);
+  });
+
+  categories.forEach((items, category) => {
+    const group = document.createElement("optgroup");
+    group.label = captionStyleGroupLabel(category);
+    items.forEach((style) => {
+      const option = document.createElement("option");
+      option.value = style.id;
+      option.textContent = style.name;
+      option.dataset.category = style.category;
+      if (style.description) option.title = style.description;
+      if (style.animation) option.dataset.animation = style.animation;
+      if (source !== "backend") option.dataset.catalogFallback = "true";
+      group.appendChild(option);
+    });
+    select.appendChild(group);
+  });
+
+  const values = new Set(normalized.map((style) => style.id));
+  select.value = values.has(previous) ? previous : normalized[0].id;
+  select.dataset.catalogSource = source;
+  select.dataset.catalogCount = String(normalized.length);
+  updateCaptionsWorkspaceSummary();
+  return true;
+}
+
+async function loadCaptionStyleCatalog({ silent = false } = {}) {
+  const select = document.getElementById("captionStyle");
+  if (!select) return false;
+  try {
+    const response = await BackendClient.get(CAPTION_STYLES_ENDPOINT);
+    const data = response?.data ?? response ?? {};
+    const styles = Array.isArray(data.styles) ? data.styles : [];
+    if (!response?.ok || !populateCaptionStyleSelect(styles, "backend")) {
+      throw new Error(response?.error || t("uxp.captions.runtime.styles_catalog_empty", "Caption style catalog is empty."));
+    }
+    return true;
+  } catch (err) {
+    populateCaptionStyleSelect(UXP_CAPTION_STYLE_FALLBACK, "fallback");
+    if (!silent) {
+      UIController.showToast(
+        formatI18n("uxp.captions.runtime.styles_catalog_failed", "Caption styles could not be loaded: {error}", {
+          error: err?.message || err,
+        }),
+        "warning"
+      );
+    }
+    return false;
+  }
+}
+
 function setCaptionsStatus(message, state = "idle", title) {
   const line = document.getElementById("captionsStatusLine");
   if (!line) return;
@@ -2608,8 +2712,8 @@ function updateCaptionsPlanSummary() {
   );
   setTextAndTitle(
     "captionsPlanStyle",
-    getSelectLabel("captionStyle", t("uxp.captions.style_youtube_bold", "YouTube Bold")),
-    getSelectLabel("captionStyle", t("uxp.captions.style_youtube_bold", "YouTube Bold"))
+    getSelectLabel("captionStyle", t("uxp.captions.style_minimal_clean", "Minimal Clean")),
+    getSelectLabel("captionStyle", t("uxp.captions.style_minimal_clean", "Minimal Clean"))
   );
 
   const diarization = document.getElementById("enableDiarization")?.checked;
@@ -4050,7 +4154,7 @@ async function runTranscribe() {
 
   const model    = document.getElementById("whisperModel")?.value ?? "medium";
   const lang     = document.getElementById("transcribeLang")?.value ?? "auto";
-  const style    = document.getElementById("captionStyle")?.value ?? "youtube_bold";
+  const style    = document.getElementById("captionStyle")?.value ?? DEFAULT_CAPTION_STYLE_ID;
   const diarize  = document.getElementById("enableDiarization")?.checked ?? false;
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
 
@@ -4069,8 +4173,8 @@ async function runTranscribe() {
   setTextAndTitle("captionsOutputValue", t("uxp.captions.runtime.processing_transcript", "Processing transcript..."), clipPath);
   syncCaptionsActionButtons();
 
-  // The "captionStyle" select offers visual styles (youtube_bold, neon_pop,
-  // ...) that have nothing to do with the /captions transcription format.
+  // The "captionStyle" select offers visual styles from /captions/styles.
+  // Those style IDs have nothing to do with the /captions transcription format.
   // The backend's ``format`` param accepts only srt/vtt/json/ass and silently
   // coerces unknowns to srt — so the user's style choice was being lost.
   // Send a real format here; the visual style will be applied later via
@@ -4078,7 +4182,7 @@ async function runTranscribe() {
   await JobPoller.start(
     "/captions",
     { filepath: clipPath, model, language: lang === "auto" ? null : lang,
-      format: "srt", diarize, word_timestamps: wordLevel },
+      format: "srt", caption_style: style, diarize, word_timestamps: wordLevel },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.cut.runtime.transcribing", "Transcribing...")); },
     (result) => {
       UIController.hideProcessing();
@@ -7251,6 +7355,7 @@ async function initApp() {
   bindSliders();
   bindEvents();
   syncQuickActionButtons();
+  populateCaptionStyleSelect(UXP_CAPTION_STYLE_FALLBACK, "fallback");
   UIController.switchTab(document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut");
   updateWorkspaceOverview();
   updateDeliverablesSummary();
@@ -7278,6 +7383,7 @@ async function initApp() {
   if (alive) {
     _healthBackoff = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
+    await loadCaptionStyleCatalog({ silent: true });
     await loadLlmSettings();
     UIController.showToast(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
 

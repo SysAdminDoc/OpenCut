@@ -290,13 +290,8 @@
             </div>
             <div class="oc-field-row">
               <label class="oc-label" for="captionStyle" data-i18n="uxp.captions.caption_style">Caption Style</label>
-              <select class="oc-select" id="captionStyle">
-                <option value="youtube_bold" data-i18n="uxp.captions.style_youtube_bold">YouTube Bold</option>
-                <option value="neon_pop" data-i18n="uxp.captions.style_neon_pop">Neon Pop</option>
-                <option value="cinematic" data-i18n="uxp.captions.style_cinematic">Cinematic</option>
-                <option value="netflix" data-i18n="uxp.captions.style_netflix">Netflix</option>
-                <option value="sports" data-i18n="uxp.captions.style_sports">Sports</option>
-                <option value="minimal" data-i18n="uxp.captions.style_minimal">Minimal</option>
+              <select class="oc-select" id="captionStyle" data-catalog-source="fallback">
+                <option value="minimal_clean" data-catalog-fallback="true" data-i18n="uxp.captions.style_minimal_clean">Minimal Clean</option>
               </select>
             </div>
             <div class="oc-checkbox-row">
@@ -318,7 +313,7 @@
               </div>
               <div class="oc-inline-stat">
                 <span class="oc-label" data-i18n="uxp.captions.style">Style</span>
-                <span class="oc-inline-value" id="captionsPlanStyle" data-i18n="uxp.captions.style_youtube_bold">YouTube Bold</span>
+                <span class="oc-inline-value" id="captionsPlanStyle" data-i18n="uxp.captions.style_minimal_clean">Minimal Clean</span>
               </div>
             </div>
             <p class="oc-hint oc-caption-plan-note" id="captionsPlanNote" data-i18n="uxp.captions.plan_note_default">Word timing is on. Speaker splits are off.</p>

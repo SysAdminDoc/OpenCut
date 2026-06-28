@@ -8,17 +8,7 @@ history, not here.
 Blocked items (credential/license/hardware-gated) live in
 [`Roadmap_Blocked.md`](Roadmap_Blocked.md).
 
-_No actionable items remaining. All open work is either shipped or
-blocked (see `Roadmap_Blocked.md`)._
-
 ## Research-Driven Additions
-
-- [ ] P2 - Generate UXP caption styles from the shared style catalog
-  Why: The backend exposes 55 built-in caption styles, and the CEP panel exposes grouped style choices, but UXP still shows six hard-coded caption styles. Caption templates are a visible paid-competitor feature, so UXP parity matters before CEP deprecation pressure increases.
-  Evidence: `opencut/core/caption_styles.py:43`, `opencut/routes/engagement_content_routes.py:46`, `extension/com.opencut.uxp/index.html:292`, `extension/com.opencut.panel/client/index.html:813`, `tests/test_engagement_content.py:342`.
-  Touches: `opencut/core/caption_styles.py`, `opencut/routes/engagement_content_routes.py`, `extension/com.opencut.uxp/index.html`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/locales/en.json`, `tests/test_uxp_caption_styles.py`, `tests/test_panel_parity.py`.
-  Acceptance: UXP loads caption styles from the same backend/generated catalog as CEP; all 55 backend styles are reachable or intentionally hidden by explicit metadata; the UXP preview uses the selected style id; tests fail when CEP, UXP, and backend style ids drift.
-  Complexity: M
 
 - [ ] P2 - Promote C2PA provenance to signed embedded export credentials
   Why: OpenCut has C2PA sidecars and a metadata embed helper, but the documented sidecar path says real C2PA verifiers will not accept unsigned sidecars as trust credentials. Adobe Content Credentials and C2PA workflows make verifiable export provenance a differentiator for AI-assisted local editing.

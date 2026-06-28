@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - UXP caption style catalog
+
+- UXP caption styles now load from the backend `/captions/styles` catalog
+  when the server is available, keep a backend-compatible `minimal_clean`
+  fallback while offline, and send the selected `caption_style` id with
+  transcription jobs.
+
 ### Changed - Caption translation license safety
 
 - Added explicit NLLB and SeamlessM4T model-card records, fail-closed
