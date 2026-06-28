@@ -286,6 +286,23 @@ def check_crisper_whisper_available() -> bool:
     return _try_import("transformers") is not None and _try_import("torch") is not None
 
 
+def check_nllb_available() -> bool:
+    """Check if the opt-in NLLB caption translation stack is available."""
+    try:
+        from opencut.core.captions_enhanced import check_nllb_available as _c
+
+        return bool(_c())
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
+        return False
+
+
+def check_seamless_m4t_available() -> bool:
+    """Check if the opt-in SeamlessM4T caption translation stack is available."""
+    return (_try_import("transformers") is not None
+            and _try_import("torch") is not None)
+
+
 def check_nemo_asr_available() -> bool:
     """Check if NVIDIA NeMo ASR (Parakeet / Canary engines) is available.
 

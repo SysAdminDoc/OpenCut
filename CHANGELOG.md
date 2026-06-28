@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Caption translation license safety
+
+- Added explicit NLLB and SeamlessM4T model-card records, fail-closed
+  translation backend selection, and CEP opt-in copy so CC-BY-NC caption
+  translation engines cannot be downloaded or used silently.
+
 ### Changed - UXP markup safety
 
 - Added a static UXP DOM-sink safety guard that inventories reviewed

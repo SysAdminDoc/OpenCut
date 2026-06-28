@@ -12,10 +12,7 @@ from __future__ import annotations
 
 import inspect
 import json
-import re
 from pathlib import Path
-
-import pytest
 
 from opencut import checks
 from opencut import model_cards
@@ -51,6 +48,26 @@ def test_every_check_has_card_or_is_excluded():
         + "\n  - ".join(missing)
         + "\nAdd one or the other before merging."
     )
+
+
+def test_caption_translation_engines_are_license_classified():
+    """NLLB and SeamlessM4T must stay explicit opt-in restricted engines."""
+    cards = {card.feature_id: card for card in model_cards.CARDS}
+    required = {
+        "captions.translate.nllb": "NLLB",
+        "captions.translate.seamless-m4t": "SeamlessM4T",
+    }
+    missing = set(required) - set(cards)
+    assert not missing, f"missing caption translation model cards: {sorted(missing)}"
+
+    for feature_id, label in required.items():
+        card = cards[feature_id]
+        assert card.license.startswith("CC-BY-NC"), f"{label} license must stay restricted"
+        assert card.license_waiver, f"{label} needs an explicit opt-in waiver"
+        joined_notes = " ".join(card.advisory_notes).lower()
+        assert "non-commercial" in joined_notes
+        assert "never auto-selected" in joined_notes
+        assert "accept_restricted_license" in joined_notes
 
 
 def test_no_card_has_a_stale_check_name():

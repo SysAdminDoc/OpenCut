@@ -1465,6 +1465,8 @@ def captions_enhanced_capabilities():
             TRANSLATION_LANGUAGES,
             check_nllb_available,
             check_pysubs2_available,
+            get_translation_backend_info,
+            translation_backends_manifest,
             check_whisperx_available,
         )
         return jsonify({
@@ -1472,6 +1474,13 @@ def captions_enhanced_capabilities():
             "nllb": check_nllb_available(),
             "pysubs2": check_pysubs2_available(),
             "languages": TRANSLATION_LANGUAGES,
+            "translation_backends": translation_backends_manifest(),
+            "translation_default_backend": "",
+            "translation_default_notice": (
+                "No commercial-safe local translation backend is configured. "
+                "NLLB and SeamlessM4T require explicit non-commercial-license opt-in."
+            ),
+            "nllb_license": get_translation_backend_info("nllb").get("license", ""),
         })
     except Exception as e:
         return safe_error(e, "captions_enhanced_capabilities")
@@ -1521,15 +1530,57 @@ def _validate_translate_input(data, *, max_segments=10000):
     srt_content = data.get("srt_content")
     if isinstance(srt_content, str):
         srt_content = srt_content.strip()
+
+    def _license_error() -> str | None:
+        try:
+            from opencut.core.captions_enhanced import (
+                TranslationLicenseError,
+                resolve_translation_backend,
+                translation_license_opted_in,
+            )
+
+            resolve_translation_backend(
+                data.get("backend", "auto"),
+                allow_restricted=translation_license_opted_in(data),
+            )
+        except TranslationLicenseError as exc:
+            return str(exc)
+        except Exception as exc:  # noqa: BLE001 - keep pre-validation user-facing.
+            return f"Translation backend validation failed: {exc}"
+        return None
+
     if segs:
         if not isinstance(segs, list):
             return "segments must be a list"
         if len(segs) > max_segments:
             return f"Too many segments (max {max_segments})"
-        return None
+        return _license_error()
     if srt_path or srt_content:
-        return None
+        return _license_error()
     return "Provide `segments`, `srt_path`, or `srt_content`."
+
+
+def _validate_enhanced_install_input(data):
+    """Require explicit license acceptance before restricted translation installs."""
+    component = (data.get("component") or "whisperx").strip().lower()
+    if component not in {"nllb", "seamless"}:
+        return None
+    try:
+        from opencut.core.captions_enhanced import (
+            TranslationLicenseError,
+            resolve_translation_backend,
+            translation_license_opted_in,
+        )
+
+        resolve_translation_backend(
+            component,
+            allow_restricted=translation_license_opted_in(data),
+        )
+    except TranslationLicenseError as exc:
+        return str(exc)
+    except Exception as exc:  # noqa: BLE001 - keep pre-validation user-facing.
+        return f"Enhanced caption install validation failed: {exc}"
+    return None
 
 
 def _srt_to_translate_segments(srt_text: str, *, max_segments: int = 10000):
@@ -1575,7 +1626,11 @@ def _segments_to_srt_text(segments) -> str:
     pre_validate=_validate_translate_input,
 )
 def captions_translate(job_id, filepath, data):
-    """Translate caption segments. Backend: auto (SeamlessM4T > NLLB), seamless, or nllb.
+    """Translate caption segments.
+
+    Backend ``auto`` is fail-closed until a commercial-safe local translation
+    engine is registered. ``nllb`` and ``seamless`` are non-commercial-license
+    engines and require ``accept_restricted_license=true``.
 
     Input accepted (F139):
 
@@ -1641,9 +1696,18 @@ def captions_translate(job_id, filepath, data):
 
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
-    backend = data.get("backend", "auto")
-    if backend not in ("nllb", "seamless", "auto"):
-        backend = "auto"
+    from opencut.core.captions_enhanced import (
+        get_translation_backend_info,
+        resolve_translation_backend,
+        translation_license_opted_in,
+    )
+
+    restricted_accepted = translation_license_opted_in(data)
+    backend = resolve_translation_backend(
+        data.get("backend", "auto"),
+        allow_restricted=restricted_accepted,
+    )
+    backend_info = get_translation_backend_info(backend)
 
     output_srt = safe_bool(data.get("output_srt", False), False)
     if srt_input_used:
@@ -1714,6 +1778,12 @@ def captions_translate(job_id, filepath, data):
         "target_lang": target_lang,
         "source_lang": source_lang,
         "backend": backend,
+        "backend_label": backend_info.get("label", backend),
+        "backend_license": backend_info.get("license", ""),
+        "backend_commercial_safe": bool(backend_info.get("commercial_safe")),
+        "restricted_license_accepted": restricted_accepted,
+        "license_notice": backend_info.get("notice", ""),
+        "redistribution": backend_info.get("redistribution", ""),
         "count": len(translated),
         "input_format": "srt" if srt_input_used else "segments",
     }
@@ -1791,16 +1861,37 @@ def captions_convert():
 
 @captions_bp.route("/captions/enhanced/install", methods=["POST"])
 @require_csrf
-@async_job("install", filepath_required=False, rate_limit_key="model_install")
+@async_job(
+    "install",
+    filepath_required=False,
+    rate_limit_key="model_install",
+    pre_validate=_validate_enhanced_install_input,
+)
 def captions_enhanced_install(job_id, filepath, data):
     """Install enhanced caption dependencies."""
-    component = data.get("component", "whisperx")
+    component = (data.get("component") or "whisperx").strip().lower()
 
     packages = {
         "whisperx": ["whisperx"],
         "pysubs2": ["pysubs2"],
         "nllb": ["ctranslate2", "sentencepiece", "huggingface-hub"],
+        "seamless": ["transformers", "torch", "sentencepiece"],
     }
+
+    if component in {"nllb", "seamless"}:
+        from opencut.core.captions_enhanced import (
+            TranslationLicenseError,
+            resolve_translation_backend,
+            translation_license_opted_in,
+        )
+
+        try:
+            resolve_translation_backend(
+                component,
+                allow_restricted=translation_license_opted_in(data),
+            )
+        except TranslationLicenseError as exc:
+            raise ValueError(str(exc)) from exc
 
     pkgs = packages.get(component, [])
     if not pkgs:

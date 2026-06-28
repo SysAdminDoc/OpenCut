@@ -179,6 +179,48 @@ CARDS: List[ModelCard] = [
         ],
     ),
     ModelCard(
+        check_name="check_nllb_available",
+        feature_id="captions.translate.nllb",
+        label="NLLB-200 distilled caption translation",
+        category="captions",
+        license="CC-BY-NC-4.0",
+        upstream="https://huggingface.co/facebook/nllb-200-distilled-600M",
+        hardware="cpu/gpu",
+        install_hint="pip install ctranslate2 sentencepiece huggingface-hub",
+        privacy="local-only (model downloads only)",
+        latency="seconds per caption batch on CPU/GPU depending on model size",
+        advisory_notes=[
+            "Non-commercial model license: never auto-selected by /captions/translate and not bundled with OpenCut.",
+            "Operators must pass accept_restricted_license=true before download/use.",
+        ],
+        license_waiver=(
+            "NLLB is preserved as an explicit opt-in backend only. OpenCut does not "
+            "redistribute the weights, does not choose it from the default auto path, "
+            "and requires accept_restricted_license=true before use."
+        ),
+    ),
+    ModelCard(
+        check_name="check_seamless_m4t_available",
+        feature_id="captions.translate.seamless-m4t",
+        label="SeamlessM4T v2 caption translation",
+        category="captions",
+        license="CC-BY-NC-4.0",
+        upstream="https://huggingface.co/facebook/seamless-m4t-v2-large",
+        hardware="gpu (recommended)",
+        install_hint="pip install transformers torch sentencepiece",
+        privacy="local-only (model downloads only)",
+        latency="slow; large checkpoint",
+        advisory_notes=[
+            "Non-commercial model license: never auto-selected by /captions/translate and not bundled with OpenCut.",
+            "Operators must pass accept_restricted_license=true before download/use.",
+        ],
+        license_waiver=(
+            "SeamlessM4T is preserved as an explicit opt-in backend only. OpenCut does "
+            "not redistribute the weights, does not choose it from the default auto "
+            "path, and requires accept_restricted_license=true before use."
+        ),
+    ),
+    ModelCard(
         check_name="check_multimodal_diarize_available",
         feature_id="captions.multimodal-diarise",
         label="Multimodal diarisation pipeline",

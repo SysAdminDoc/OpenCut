@@ -1592,6 +1592,7 @@
         el.translateSourceLang = $("translateSourceLang");
         el.translateTargetLang = $("translateTargetLang");
         el.translateFormat = $("translateFormat");
+        el.translateRestrictedOptIn = $("translateRestrictedOptIn");
         el.runTranslateBtn = $("runTranslateBtn");
         el.translateHint = $("translateHint");
         el.installNllbBtn = $("installNllbBtn");
@@ -5907,17 +5908,37 @@
     var pendingAnimCap = false;
     var pendingTranslate = false;
 
+    function requireTranslationLicenseOptIn() {
+        if (!el.translateRestrictedOptIn || el.translateRestrictedOptIn.checked) {
+            return true;
+        }
+        var message = t(
+            "captions.translate_license_required",
+            "NLLB and SeamlessM4T use non-commercial model terms. Tick the license opt-in before translating or installing NLLB."
+        );
+        setHintState(el.translateHint, message, "warning", el.installNllbBtn);
+        showAlert(message, "warning");
+        return false;
+    }
+
+    function translationRequestPayload(segments) {
+        return {
+            filepath: selectedPath,
+            segments: segments,
+            source_lang: el.translateSourceLang.value,
+            target_lang: el.translateTargetLang.value,
+            format: el.translateFormat.value,
+            output_dir: projectFolder,
+            backend: "nllb",
+            accept_restricted_license: true,
+        };
+    }
+
     function runTranslate() {
+        if (!requireTranslationLicenseOptIn()) return;
         if (lastTranscriptSegments) {
             // We have segments from a previous transcription, translate them
-            startJob("/captions/translate", {
-                filepath: selectedPath,
-                segments: lastTranscriptSegments,
-                source_lang: el.translateSourceLang.value,
-                target_lang: el.translateTargetLang.value,
-                format: el.translateFormat.value,
-                output_dir: projectFolder,
-            });
+            startJob("/captions/translate", translationRequestPayload(lastTranscriptSegments));
         } else {
             // Need to transcribe first, then auto-chain into translation
             showAlert(t("toast.transcribing_then_translating", "Step 1/2: Transcribing first, then translating…"));
@@ -5932,8 +5953,9 @@
     }
 
     function installNllb() {
-        setHintState(el.translateHint, t("install.nllb_start", "Installing NLLB translation…"), "info", el.installNllbBtn);
-        startJob("/captions/enhanced/install", { component: "nllb", no_input: true });
+        if (!requireTranslationLicenseOptIn()) return;
+        setHintState(el.translateHint, t("install.nllb_start", "Installing NLLB translation dependencies after CC-BY-NC opt-in…"), "info", el.installNllbBtn);
+        startJob("/captions/enhanced/install", { component: "nllb", no_input: true, accept_restricted_license: true });
     }
 
     // --- KARAOKE CAPTIONS ---
@@ -7029,14 +7051,7 @@
             pendingTranslate = false;
             jobStepCurrent = 2;
             showAlert(t("toast.translating_captions_step", "Step 2/2: Translating captions…"));
-            startJob("/captions/translate", {
-                filepath: selectedPath,
-                segments: job.result.segments,
-                source_lang: el.translateSourceLang.value,
-                target_lang: el.translateTargetLang.value,
-                format: el.translateFormat.value,
-                output_dir: projectFolder,
-            });
+            startJob("/captions/translate", translationRequestPayload(job.result.segments));
             return true;
         }
     });
