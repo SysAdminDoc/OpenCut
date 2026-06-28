@@ -14,16 +14,6 @@ def test_notarization_script_uses_notarytool_and_hardened_runtime():
     assert "APPLE_API_PRIVATE_KEY" in script
 
 
-def test_release_workflow_notarizes_macos_artifact():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
-
-    assert "Notarize macOS bundle" in workflow
-    assert "scripts/notarize_macos.sh" in workflow
-    assert "OpenCut-Server-macOS.zip" in workflow
-    assert "MACOS_CERTIFICATE_P12_BASE64" in workflow
-    assert "APPLE_API_PRIVATE_KEY" in workflow
-
-
 def test_notarization_docs_name_required_secrets_and_apple_docs():
     docs = (REPO_ROOT / "docs" / "MACOS_NOTARIZATION.md").read_text(encoding="utf-8")
 
@@ -38,3 +28,6 @@ def test_notarization_docs_name_required_secrets_and_apple_docs():
 
     assert "developer.apple.com/documentation/security/notarizing-macos-software-before-distribution" in docs
     assert "notarytool" in docs
+    assert "scripts/notarize_macos.sh --check-env" in docs
+    assert "GitHub Actions" not in docs
+    assert ".github/workflows" not in docs

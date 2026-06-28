@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Local release documentation
+
+- Reconciled active release, installer, signing, notarization, SBOM, and
+  contribution docs with the local-build-only release policy and replaced
+  obsolete workflow guard tests with local release-policy guards.
+- Refreshed MCP, feature-readiness, and model/license generated contracts so
+  the local `pytest-fast` release smoke passes against the current source.
+
 ### Changed — Bundled FFmpeg provenance
 
 - Refreshed the local bundled FFmpeg/ffprobe binaries to Gyan

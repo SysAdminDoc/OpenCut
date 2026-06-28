@@ -3,15 +3,15 @@
   "enabled_by": "OPENCUT_MCP_EXTENDED_TOOLS=1 or opencut-mcp-server --extended-tools",
   "manifest_version": 1,
   "method_counts": {
-    "DELETE": 15,
+    "DELETE": 16,
     "GET": 377,
     "PATCH": 1,
-    "POST": 1087,
+    "POST": 1053,
     "PUT": 2
   },
-  "response_schema_count": 101,
+  "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1482,
+  "tool_count": 1449,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -439,6 +439,36 @@
         "response_schema": "IndexResult"
       },
       "name": "opencut_route_delete_search_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false,
+        "title": "DELETE /search/ingest/cache"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /search/ingest/cache.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.search_ingest_cache_clear",
+        "generated": true,
+        "method": "DELETE",
+        "path": "/search/ingest/cache",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_delete_search_ingest_cache"
     },
     {
       "annotations": {
@@ -1593,36 +1623,6 @@
         "response_schema": "ModelListResult"
       },
       "name": "opencut_route_get_api_gpu_models"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": true,
-        "title": "GET /api/gpu/status"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /api/gpu/status. Response schema: GpuStatusResult.",
-      "inputSchema": {
-        "properties": {
-          "query": {
-            "additionalProperties": true,
-            "description": "Optional query-string parameters to append to the route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "infra",
-        "endpoint": "infra.gpu_status",
-        "generated": true,
-        "method": "GET",
-        "path": "/api/gpu/status",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "GpuStatusResult"
-      },
-      "name": "opencut_route_get_api_gpu_status"
     },
     {
       "annotations": {
@@ -8481,6 +8481,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /search/ingest/cache"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /search/ingest/cache.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.search_ingest_cache",
+        "generated": true,
+        "method": "GET",
+        "path": "/search/ingest/cache",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_search_ingest_cache"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /search/semantic/engines"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /search/semantic/engines.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "object_intel",
+        "endpoint": "object_intel.semantic_engines",
+        "generated": true,
+        "method": "GET",
+        "path": "/search/semantic/engines",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_search_semantic_engines"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /settings/auto-zoom"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /settings/auto-zoom. Response schema: SettingsResult.",
@@ -8656,6 +8716,36 @@
         "response_schema": "SettingsResult"
       },
       "name": "opencut_route_get_settings_llm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /settings/local-only"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /settings/local-only.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "settings",
+        "endpoint": "settings.get_local_only_setting",
+        "generated": true,
+        "method": "GET",
+        "path": "/settings/local-only",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_settings_local_only"
     },
     {
       "annotations": {
@@ -9395,36 +9485,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
-        "title": "GET /system/dependencies"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/dependencies.",
-      "inputSchema": {
-        "properties": {
-          "query": {
-            "additionalProperties": true,
-            "description": "Optional query-string parameters to append to the route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "system",
-        "endpoint": "system.check_dependencies",
-        "generated": true,
-        "method": "GET",
-        "path": "/system/dependencies",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_get_system_dependencies"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": true,
         "title": "GET /system/deprecations"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/deprecations.",
@@ -9551,36 +9611,6 @@
         "response_schema": "EvalDataset"
       },
       "name": "opencut_route_get_system_eval_datasets_by_dataset_id"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": true,
-        "title": "GET /system/feature-state"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/feature-state.",
-      "inputSchema": {
-        "properties": {
-          "query": {
-            "additionalProperties": true,
-            "description": "Optional query-string parameters to append to the route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "system",
-        "endpoint": "system.feature_state",
-        "generated": true,
-        "method": "GET",
-        "path": "/system/feature-state",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_get_system_feature_state"
     },
     {
       "annotations": {
@@ -9826,9 +9856,9 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
-        "title": "GET /system/status"
+        "title": "GET /system/route-readiness"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/status.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/route-readiness.",
       "inputSchema": {
         "properties": {
           "query": {
@@ -9842,15 +9872,15 @@
       },
       "metadata": {
         "blueprint": "system",
-        "endpoint": "system.system_status",
+        "endpoint": "system.system_route_readiness",
         "generated": true,
         "method": "GET",
-        "path": "/system/status",
+        "path": "/system/route-readiness",
         "path_params": [],
         "priority": "extended",
         "response_schema": ""
       },
-      "name": "opencut_route_get_system_status"
+      "name": "opencut_route_get_system_route_readiness"
     },
     {
       "annotations": {
@@ -11056,6 +11086,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /video/object-remove/engines"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/object-remove/engines.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "object_intel",
+        "endpoint": "object_intel.object_remove_engines",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/object-remove/engines",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_object_remove_engines"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /video/overlay-types"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/overlay-types.",
@@ -12022,36 +12082,6 @@
         "response_schema": "SettingsResult"
       },
       "name": "opencut_route_get_whisper_settings"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": true,
-        "title": "GET /workflow/presets"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /workflow/presets.",
-      "inputSchema": {
-        "properties": {
-          "query": {
-            "additionalProperties": true,
-            "description": "Optional query-string parameters to append to the route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "workflow",
-        "endpoint": "workflow.list_workflow_presets",
-        "generated": true,
-        "method": "GET",
-        "path": "/workflow/presets",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_get_workflow_presets"
     },
     {
       "annotations": {
@@ -19287,36 +19317,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /audio/beat-markers"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/beat-markers. Response schema: BeatMarkersResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_beat_markers",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/beat-markers",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "BeatMarkersResult"
-      },
-      "name": "opencut_route_post_audio_beat_markers"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /audio/beat-sync"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/beat-sync.",
@@ -19797,36 +19797,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /audio/duck"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/duck.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_duck_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/duck",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_audio_duck"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /audio/duck-video"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/duck-video.",
@@ -19857,36 +19827,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /audio/effects/apply"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/effects/apply.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_effects_apply",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/effects/apply",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_audio_effects_apply"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /audio/energy-envelope"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/energy-envelope.",
@@ -19912,36 +19852,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_audio_energy_envelope"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /audio/enhance"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/enhance.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_enhance",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/enhance",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_audio_enhance"
     },
     {
       "annotations": {
@@ -20272,36 +20182,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_audio_gen_tone"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /audio/isolate"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/isolate.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_isolate",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/isolate",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_audio_isolate"
     },
     {
       "annotations": {
@@ -20842,36 +20722,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_audio_music_yue"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /audio/normalize"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/normalize.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.audio_normalize",
-        "generated": true,
-        "method": "POST",
-        "path": "/audio/normalize",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_audio_normalize"
     },
     {
       "annotations": {
@@ -23029,36 +22879,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /captions/animated/render"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/animated/render. Response schema: FileOutputResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "captions",
-        "endpoint": "captions.animated_caption_render",
-        "generated": true,
-        "method": "POST",
-        "path": "/captions/animated/render",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "FileOutputResult"
-      },
-      "name": "opencut_route_post_captions_animated_render"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /captions/burnin/file"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/burnin/file. Response schema: FileOutputResult.",
@@ -23084,36 +22904,6 @@
         "response_schema": "FileOutputResult"
       },
       "name": "opencut_route_post_captions_burnin_file"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /captions/burnin/segments"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/burnin/segments. Response schema: FileOutputResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "captions",
-        "endpoint": "captions.burnin_from_segments",
-        "generated": true,
-        "method": "POST",
-        "path": "/captions/burnin/segments",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "FileOutputResult"
-      },
-      "name": "opencut_route_post_captions_burnin_segments"
     },
     {
       "annotations": {
@@ -23239,6 +23029,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /captions/export/preflight"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/export/preflight.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "captions",
+        "endpoint": "captions.captions_export_preflight",
+        "generated": true,
+        "method": "POST",
+        "path": "/captions/export/preflight",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_captions_export_preflight"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /captions/export/premiere-xml"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/export/premiere-xml.",
@@ -23264,36 +23084,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_captions_export_premiere_xml"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /captions/karaoke"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/karaoke. Response schema: FileOutputResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "captions",
-        "endpoint": "captions.captions_karaoke",
-        "generated": true,
-        "method": "POST",
-        "path": "/captions/karaoke",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "FileOutputResult"
-      },
-      "name": "opencut_route_post_captions_karaoke"
     },
     {
       "annotations": {
@@ -23474,36 +23264,6 @@
         "response_schema": "CaptionPreviewResult"
       },
       "name": "opencut_route_post_captions_style_preview"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /captions/translate"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /captions/translate. Response schema: CaptionTranslationResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "captions",
-        "endpoint": "captions.captions_translate",
-        "generated": true,
-        "method": "POST",
-        "path": "/captions/translate",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "CaptionTranslationResult"
-      },
-      "name": "opencut_route_post_captions_translate"
     },
     {
       "annotations": {
@@ -24649,36 +24409,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /deliverables/adr-list"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /deliverables/adr-list. Response schema: DeliverableResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "deliverables",
-        "endpoint": "deliverables.deliverables_adr_list",
-        "generated": true,
-        "method": "POST",
-        "path": "/deliverables/adr-list",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "DeliverableResult"
-      },
-      "name": "opencut_route_post_deliverables_adr_list"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /deliverables/asset-list"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /deliverables/asset-list. Response schema: DeliverableResult.",
@@ -24704,66 +24434,6 @@
         "response_schema": "DeliverableResult"
       },
       "name": "opencut_route_post_deliverables_asset_list"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /deliverables/music-cue-sheet"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /deliverables/music-cue-sheet. Response schema: DeliverableResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "deliverables",
-        "endpoint": "deliverables.deliverables_music_cue_sheet",
-        "generated": true,
-        "method": "POST",
-        "path": "/deliverables/music-cue-sheet",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "DeliverableResult"
-      },
-      "name": "opencut_route_post_deliverables_music_cue_sheet"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /deliverables/vfx-sheet"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /deliverables/vfx-sheet. Response schema: DeliverableResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "deliverables",
-        "endpoint": "deliverables.deliverables_vfx_sheet",
-        "generated": true,
-        "method": "POST",
-        "path": "/deliverables/vfx-sheet",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "DeliverableResult"
-      },
-      "name": "opencut_route_post_deliverables_vfx_sheet"
     },
     {
       "annotations": {
@@ -26059,36 +25729,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /export/preset"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /export/preset.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_core",
-        "endpoint": "video_core.export_with_preset_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/export/preset",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_export_preset"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /export/prores"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /export/prores.",
@@ -26324,36 +25964,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_favorites_save"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /fillers"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /fillers.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "audio",
-        "endpoint": "audio.filler_removal",
-        "generated": true,
-        "method": "POST",
-        "path": "/fillers",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_fillers"
     },
     {
       "annotations": {
@@ -29837,36 +29447,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_mxf_probe"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /nlp/command"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /nlp/command.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "nlp",
-        "endpoint": "nlp.nlp_command",
-        "generated": true,
-        "method": "POST",
-        "path": "/nlp/command",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_nlp_command"
     },
     {
       "annotations": {
@@ -33614,6 +33194,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /search/multimodal-index"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /search/multimodal-index.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.search_multimodal_index",
+        "generated": true,
+        "method": "POST",
+        "path": "/search/multimodal-index",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_search_multimodal_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /search/semantic"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /search/semantic.",
@@ -34064,6 +33674,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /settings/local-only"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /settings/local-only.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "settings",
+        "endpoint": "settings.save_local_only_setting_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/settings/local-only",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_settings_local_only"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /settings/loudness-target"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /settings/loudness-target. Response schema: SettingsResult.",
@@ -34479,36 +34119,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_social_generate_captions"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /social/upload"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /social/upload.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "system",
-        "endpoint": "system.social_upload",
-        "generated": true,
-        "method": "POST",
-        "path": "/social/upload",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_social_upload"
     },
     {
       "annotations": {
@@ -35139,36 +34749,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_stringout_generate"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /styled-captions"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /styled-captions.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "captions",
-        "endpoint": "captions.styled_captions_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/styled-captions",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_styled_captions"
     },
     {
       "annotations": {
@@ -36614,36 +36194,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /timeline/batch-rename"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/batch-rename.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "timeline",
-        "endpoint": "timeline.timeline_batch_rename",
-        "generated": true,
-        "method": "POST",
-        "path": "/timeline/batch-rename",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_timeline_batch_rename"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /timeline/diff"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/diff.",
@@ -36969,66 +36519,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_timeline_sequence_index_filter"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /timeline/smart-bins"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/smart-bins.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "timeline",
-        "endpoint": "timeline.timeline_smart_bins",
-        "generated": true,
-        "method": "POST",
-        "path": "/timeline/smart-bins",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_timeline_smart_bins"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /timeline/srt-to-captions"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/srt-to-captions.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "timeline",
-        "endpoint": "timeline.timeline_srt_to_captions",
-        "generated": true,
-        "method": "POST",
-        "path": "/timeline/srt-to-captions",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_timeline_srt_to_captions"
     },
     {
       "annotations": {
@@ -37694,36 +37184,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/ai/denoise"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/ai/denoise. Response schema: VideoAIResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_ai",
-        "endpoint": "video_ai.video_ai_denoise",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/ai/denoise",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "VideoAIResult"
-      },
-      "name": "opencut_route_post_video_ai_denoise"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/ai/install"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/ai/install.",
@@ -38174,36 +37634,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/blend"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/blend.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.blend_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/blend",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_blend"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/body-effects"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/body-effects.",
@@ -38439,36 +37869,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_c2pa_read"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/chromakey"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/chromakey.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.chromakey_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/chromakey",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_chromakey"
     },
     {
       "annotations": {
@@ -40424,36 +39824,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/fx/apply"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/fx/apply.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.video_fx_apply",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/fx/apply",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_fx_apply"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/gamut/check-clipping"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/gamut/check-clipping.",
@@ -40844,36 +40214,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/interpolate/neural"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/interpolate/neural.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "enhancement",
-        "endpoint": "enhancement.interp_neural",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/interpolate/neural",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_interpolate_neural"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/kinetic-text/animate"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/kinetic-text/animate.",
@@ -41084,36 +40424,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/lut/apply"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/lut/apply.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.lut_apply",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/lut/apply",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_lut_apply"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/lut/blend"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/lut/blend.",
@@ -41204,36 +40514,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/lut/generate-from-ref"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/lut/generate-from-ref.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.video_lut_from_ref",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/lut/generate-from-ref",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_lut_generate_from_ref"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/magic-clips/plan"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/magic-clips/plan.",
@@ -41319,36 +40599,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_matte_sammie"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/merge"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/merge.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_core",
-        "endpoint": "video_core.video_merge",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/merge",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_merge"
     },
     {
       "annotations": {
@@ -41624,6 +40874,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /video/object-remove/sam3"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/object-remove/sam3.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "object_intel",
+        "endpoint": "object_intel.object_remove_sam3",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/object-remove/sam3",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_object_remove_sam3"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /video/one-click-enhance"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/one-click-enhance.",
@@ -41774,36 +41054,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/pip"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/pip.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.pip_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/pip",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_pip"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/power-windows/apply"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/power-windows/apply.",
@@ -41889,36 +41139,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_power_windows_track"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/preview-frame"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/preview-frame.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_core",
-        "endpoint": "video_core.preview_frame",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/preview-frame",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_preview_frame"
     },
     {
       "annotations": {
@@ -42129,36 +41349,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_quality_score"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/reframe"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/reframe.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_editing",
-        "endpoint": "video_editing.video_reframe",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/reframe",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_reframe"
     },
     {
       "annotations": {
@@ -42944,66 +42134,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/speed/change"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/speed/change.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.speed_change_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/speed/change",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_speed_change"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/speed/ramp"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/speed/ramp.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.speed_ramp_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/speed/ramp",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_speed_ramp"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/speed/reverse"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/speed/reverse.",
@@ -43029,36 +42159,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_speed_reverse"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/stabilize-advanced"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/stabilize-advanced.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_proc",
-        "endpoint": "video_proc.stabilize_advanced_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/stabilize-advanced",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_stabilize_advanced"
     },
     {
       "annotations": {
@@ -43634,36 +42734,6 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
-        "title": "POST /video/transitions/apply"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/transitions/apply.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_fx",
-        "endpoint": "video_fx.transitions_apply",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/transitions/apply",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_transitions_apply"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
         "title": "POST /video/transitions/join"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/transitions/join.",
@@ -43689,36 +42759,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_transitions_join"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /video/trim"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/trim.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "video_core",
-        "endpoint": "video_core.video_trim",
-        "generated": true,
-        "method": "POST",
-        "path": "/video/trim",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": ""
-      },
-      "name": "opencut_route_post_video_trim"
     },
     {
       "annotations": {
@@ -44649,36 +43689,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_workflow_conditional"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": false,
-        "title": "POST /workflow/run"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /workflow/run. Response schema: WorkflowResult.",
-      "inputSchema": {
-        "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional JSON request body for the backend route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "workflow",
-        "endpoint": "workflow.run_workflow_route",
-        "generated": true,
-        "method": "POST",
-        "path": "/workflow/run",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "WorkflowResult"
-      },
-      "name": "opencut_route_post_workflow_run"
     },
     {
       "annotations": {

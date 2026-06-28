@@ -16,7 +16,7 @@ def test_pyproject_all_target_includes_base_and_optional_dependencies():
         "all",
     )
 
-    assert "flask>=3.0,<4" in requirements
+    assert "flask>=3.1.3,<4" in requirements
     assert "faster-whisper>=1.1,<2" in requirements
     assert "otio-aaf-adapter>=2.0,<3" in requirements
     advisory_heavy_prefixes = (

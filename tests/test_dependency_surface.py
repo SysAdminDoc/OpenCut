@@ -4,7 +4,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
-WORKFLOW_DIR = REPO_ROOT / ".github" / "workflows"
 
 
 def _pyproject() -> dict:
@@ -87,26 +86,12 @@ def test_ruff_target_tracks_python_floor():
     assert all(tuple(map(int, version.split("."))) >= (3, 11) for version in advertised_versions)
 
 
-def test_python_313_classifier_requires_ci_lane():
-    """RA-21: do not advertise Python 3.13 until a workflow tests it."""
-    classifiers = set(_pyproject()["project"]["classifiers"])
-    workflow_text = "\n".join(
-        path.read_text(encoding="utf-8", errors="replace")
-        for path in sorted(WORKFLOW_DIR.glob("*.yml"))
-    )
-
-    if "Programming Language :: Python :: 3.13" in classifiers:
-        assert "python-version: '3.13'" in workflow_text or 'python-version: "3.13"' in workflow_text
-    else:
-        assert "Programming Language :: Python :: 3.13" not in classifiers
-
-
 def test_core_dependency_security_floor_pins():
     deps = _dep_names(_pyproject()["project"]["dependencies"])
     assert deps["flask-cors"] == "flask-cors>=6.0,<7"
     # RA-23 — Werkzeug/Jinja2 ship transitively with flask; their resolver
     # floor must match the lockfile security level even without the lockfile.
-    assert deps["werkzeug"] == "Werkzeug>=3.1.5"
+    assert deps["werkzeug"] == "Werkzeug>=3.1.6"
     assert deps["jinja2"] == "Jinja2>=3.1.6"
 
 
@@ -123,7 +108,7 @@ def test_transitive_web_dep_floors_match_lockfile():
     extras = project["optional-dependencies"]
 
     # Always-present web deps (via flask) floored in core.
-    assert core["werkzeug"] == "Werkzeug>=3.1.5"  # CVE-2026-21860 / CVE-2025-66221
+    assert core["werkzeug"] == "Werkzeug>=3.1.6"  # CVE-2026-21860 / CVE-2025-66221
     assert core["jinja2"] == "Jinja2>=3.1.6"  # CVE-2025-27516
 
     # Transitive HTTP stack floored in every lane that pulls it.

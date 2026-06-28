@@ -18,7 +18,6 @@ METAINFO = REPO_ROOT / "packaging" / "linux" / f"{APP_ID}.metainfo.xml"
 FLATPAK_RUNNER = REPO_ROOT / "packaging" / "linux" / "flatpak" / "opencut-server"
 APPIMAGE_RUNNER = REPO_ROOT / "packaging" / "linux" / "appimage" / "AppRun"
 BUILD_SCRIPT = REPO_ROOT / "scripts" / "build_linux_packages.sh"
-WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
 RELEASE_SMOKE = REPO_ROOT / "scripts" / "release_smoke.py"
 
 
@@ -130,21 +129,6 @@ def test_build_script_has_lf_line_endings_and_executable_bit():
     first_field = (result.stdout.split("\t", 1)[0] or "").split()
     mode = first_field[0] if first_field else ""
     assert mode == "100755"
-
-
-def test_release_workflow_builds_and_uploads_linux_desktop_packages():
-    workflow = _read(WORKFLOW)
-
-    assert "Install Linux packaging tools" in workflow
-    assert "flatpak-builder appstream desktop-file-utils" in workflow
-    assert "appimagetool-x86_64.AppImage" in workflow
-    assert "Build Linux desktop packages" in workflow
-    assert "bash scripts/build_linux_packages.sh" in workflow
-    assert "Archive Linux desktop packages" in workflow
-    assert "OpenCut-Linux-Desktop-Packages" in workflow
-    assert "Upload Linux desktop packages to release" in workflow
-    assert "dist/linux-packages/*.flatpak" in workflow
-    assert "dist/linux-packages/*.AppImage" in workflow
 
 
 def test_release_smoke_includes_linux_packaging_contract():

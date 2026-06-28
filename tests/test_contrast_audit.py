@@ -11,7 +11,6 @@ from opencut.tools import contrast_audit
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RELEASE_SMOKE_PATH = REPO_ROOT / "scripts" / "release_smoke.py"
-PR_FAST_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "pr-fast.yml"
 
 
 def _release_smoke_module():
@@ -95,9 +94,3 @@ def test_release_smoke_runs_contrast_audit_gate(monkeypatch):
     assert any(step.name == "contrast-audit" for step in module.STEPS)
     assert "tests/test_contrast_audit.py" in module.RELEASE_GATE_TESTS
 
-
-def test_pr_fast_does_not_skip_contrast_audit_gate():
-    text = PR_FAST_WORKFLOW.read_text(encoding="utf-8")
-
-    assert "python scripts/release_smoke.py --json" in text
-    assert "--skip contrast-audit" not in text

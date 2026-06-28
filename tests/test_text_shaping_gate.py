@@ -122,9 +122,3 @@ def test_release_smoke_runs_text_shaping_gate(monkeypatch):
     assert any(step.name == "text-shaping" for step in module.STEPS)
     assert "tests/test_text_shaping_gate.py" in module.RELEASE_GATE_TESTS
 
-
-def test_release_workflow_has_text_shaping_gate():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
-
-    assert "Text shaping gate" in workflow
-    assert "python -m opencut.tools.text_shaping_gate --json" in workflow

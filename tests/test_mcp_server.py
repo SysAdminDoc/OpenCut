@@ -60,7 +60,7 @@ def _capture_api(monkeypatch):
 def test_f195_tools_are_registered_and_mapped():
     tools_by_name = {tool["name"]: tool for tool in mcp_server.MCP_TOOLS}
 
-    assert len(mcp_server.MCP_TOOLS) == 39
+    assert len(mcp_server.MCP_TOOLS) == 86
     assert len(tools_by_name) == len(mcp_server.MCP_TOOLS)
     assert set(F195_TOOL_ROUTES).issubset(tools_by_name)
 

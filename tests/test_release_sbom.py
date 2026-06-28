@@ -32,17 +32,10 @@ def test_sbom_generator_emits_cyclonedx_json(tmp_path):
     assert any(component["name"] == "flask" for component in bom["components"])
 
 
-def test_release_workflow_generates_and_uploads_sbom():
-    workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+def test_local_release_docs_and_smoke_cover_declared_sbom():
+    smoke = (REPO_ROOT / "scripts" / "release_smoke.py").read_text(encoding="utf-8")
+    docs = (REPO_ROOT / "docs" / "RELEASE_PROVENANCE.md").read_text(encoding="utf-8")
 
-    assert "Generate release SBOM" in workflow
-    assert "Archive release SBOM" in workflow
-    assert "Upload SBOM to release" in workflow
-    assert f"python scripts/sbom.py --format json --output {SBOM_PATH}" in workflow
-    assert (
-        "gh release upload ${{ github.ref_name }} "
-        f"release-artifacts/OpenCut-Declared-Dependency-SBOM-CycloneDX/{SBOM_PATH.rsplit('/', maxsplit=1)[-1]} --clobber"
-    ) in workflow
-    assert "OpenCut-Declared-Dependency-SBOM-CycloneDX" in workflow
-    assert "OpenCut-SBOM-CycloneDX" not in workflow
-    assert "dist/opencut-sbom.cyclonedx.json" not in workflow
+    assert "tests/test_release_sbom.py" in smoke
+    assert f"python scripts/sbom.py --format json --output {SBOM_PATH}" in docs
+    assert "dist/opencut-sbom.cyclonedx.json" not in docs

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-17T01:49:01Z",
+  "generated_at": "2026-06-28T02:45:26Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 71,
   "total_routes": 97,
@@ -511,11 +511,11 @@
       "minimum_vram_mb": 0
     },
     {
-      "feature_id": "auto.iclight",
-      "label": "Iclight",
+      "feature_id": "video.relight.iclight",
+      "label": "IC-Light v1 relight",
       "category": "video",
       "state": "available",
-      "install_hint": "see route response for dependency hint",
+      "install_hint": "pip install diffusers>=0.32 torch",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/relight/iclight",
@@ -524,9 +524,9 @@
       "check_name": "check_iclight_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "",
-      "requires_gpu": false,
-      "minimum_vram_mb": 0
+      "hardware": "gpu (>= 4 GB VRAM)",
+      "requires_gpu": true,
+      "minimum_vram_mb": 4096
     },
     {
       "feature_id": "audio.kokoro",
@@ -566,11 +566,11 @@
       "minimum_vram_mb": 0
     },
     {
-      "feature_id": "auto.latentsync",
-      "label": "Latentsync",
-      "category": "ai",
+      "feature_id": "lipsync.latentsync",
+      "label": "LatentSync diffusion lip-sync",
+      "category": "lipsync",
       "state": "available",
-      "install_hint": "see route response for dependency hint",
+      "install_hint": "pip install diffusers torch torchvision",
       "docs": "docs/MODELS.md",
       "routes": [
         "/ai/lip-sync"
@@ -578,9 +578,9 @@
       "check_name": "check_latentsync_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "",
-      "requires_gpu": false,
-      "minimum_vram_mb": 0
+      "hardware": "gpu (>= 6 GB VRAM)",
+      "requires_gpu": true,
+      "minimum_vram_mb": 6144
     },
     {
       "feature_id": "auto.lottie-import",
@@ -859,11 +859,11 @@
       "minimum_vram_mb": 0
     },
     {
-      "feature_id": "auto.sam3",
-      "label": "Sam3",
+      "feature_id": "video.sam3",
+      "label": "SAM 3 text-prompted video segmentation",
       "category": "video",
       "state": "available",
-      "install_hint": "see route response for dependency hint",
+      "install_hint": "pip install sam3 torch",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/object-remove/engines"
@@ -871,8 +871,8 @@
       "check_name": "check_sam3_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "",
-      "requires_gpu": false,
+      "hardware": "gpu",
+      "requires_gpu": true,
       "minimum_vram_mb": 0
     },
     {
@@ -910,11 +910,11 @@
       "minimum_vram_mb": 0
     },
     {
-      "feature_id": "auto.seedvr2",
-      "label": "Seedvr2",
+      "feature_id": "video.upscale.seedvr2",
+      "label": "SeedVR2 one-step diffusion VSR",
       "category": "video",
       "state": "available",
-      "install_hint": "see route response for dependency hint",
+      "install_hint": "pip install diffusers torch  # download seedvr2-3b via model manager",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/ai/upscale"
@@ -922,9 +922,9 @@
       "check_name": "check_seedvr2_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "",
-      "requires_gpu": false,
-      "minimum_vram_mb": 0
+      "hardware": "gpu (>= 8 GB VRAM)",
+      "requires_gpu": true,
+      "minimum_vram_mb": 8192
     },
     {
       "feature_id": "auto.sfx-audiogen",
@@ -1137,11 +1137,11 @@
       "minimum_vram_mb": 0
     },
     {
-      "feature_id": "auto.visual-multicam",
-      "label": "Visual Multicam",
+      "feature_id": "video.multicam.visual-cues",
+      "label": "MediaPipe visual multicam cues",
       "category": "video",
       "state": "missing_dependency",
-      "install_hint": "see route response for dependency hint",
+      "install_hint": "pip install mediapipe opencv-python-headless",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/multicam-cuts"
@@ -1149,7 +1149,7 @@
       "check_name": "check_visual_multicam_available",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
-      "hardware": "",
+      "hardware": "cpu/gpu",
       "requires_gpu": false,
       "minimum_vram_mb": 0
     },

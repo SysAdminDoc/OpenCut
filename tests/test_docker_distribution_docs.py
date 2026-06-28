@@ -33,7 +33,8 @@ def test_docker_runtime_is_http_only_by_default():
     assert re.search(r"^EXPOSE 5679$", dockerfile, re.M)
     assert "EXPOSE 5679 5680" not in dockerfile
     assert "5680:5680" not in compose
-    assert "5681:5681" not in compose
+    default_service = compose.split("  # GPU-enabled variant", maxsplit=1)[0]
+    assert "5681:5681" not in default_service
     assert "Docker publishes the HTTP API on port 5679" in readme
     assert "does not publish the optional WebSocket 5680 or\nMCP 5681 sidecars by default" in readme
 

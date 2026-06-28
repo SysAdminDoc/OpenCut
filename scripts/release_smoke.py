@@ -783,7 +783,8 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
 
 
 # Release-gate test ids that exercise the most fragile invariants. Keep the
-# list small enough to finish in seconds; the full suite still runs in CI.
+# list small enough to finish in seconds; the full suite still runs locally
+# during release validation.
 RELEASE_GATE_TESTS: List[str] = [
     "tests/test_bootstrap_check.py",
     "tests/test_node_advisories.py",
@@ -804,6 +805,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_macos_notarization.py",
     "tests/test_release_sbom.py",
     "tests/test_release_provenance_attestation.py",
+    "tests/test_local_release_policy.py",
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_text_shaping_gate.py",
@@ -817,7 +819,6 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_uxp_hybrid_package.py",
     "tests/test_uxp_i18n.py",
     "tests/test_adobe_premierepro_versions.py",
-    "tests/test_adobe_premierepro_versions_workflow.py",
     "tests/test_mcp_registry_manifest.py",
     "tests/test_mcp_sdk_pin.py",
     "tests/test_pip_audit_extras.py",
@@ -831,10 +832,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_eval_datasets.py",
     "tests/test_download_eval_dataset.py",
     "tests/test_installer_policy.py",
-    "tests/test_ci_workflow_split.py",
     "tests/test_panel_vitest_gate.py",
-    "tests/test_workflow_permissions.py",
-    "tests/test_workflow_action_pins.py",
     "tests/test_inno_installer_smoke.py",
     "tests/test_wpf_installer_ci.py",
     "tests/test_wpf_installer_test_suite.py",

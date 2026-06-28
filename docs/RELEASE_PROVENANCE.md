@@ -1,25 +1,19 @@
 # Release Provenance
 
-Tagged Release Full runs generate GitHub artifact attestations before uploading
-release assets. The attested subjects are the same file paths used by the
-release upload job:
-
-- `release-upload-artifacts/server/*`
-- `release-artifacts/OpenCut-Linux-Desktop-Packages/*`
-- `release-artifacts/OpenCut-Setup-Windows/*`
-- `release-artifacts/OpenCut-Declared-Dependency-SBOM-CycloneDX/opencut-declared-sbom.cyclonedx.json`
-
-After downloading a release asset, verify its provenance with GitHub CLI:
+Release provenance is generated and checked locally before artifacts are
+attached to a release. Run the local release smoke first, then generate the
+declared SBOM and FFmpeg provenance manifest beside the artifacts:
 
 ```bash
-gh attestation verify OpenCut-Server-Linux.tar.gz -R SysAdminDoc/OpenCut
-gh attestation verify opencut-declared-sbom.cyclonedx.json -R SysAdminDoc/OpenCut
+python scripts/release_smoke.py --json
+python scripts/sbom.py --format json --output dist/opencut-declared-sbom.cyclonedx.json
+python scripts/verify_ffmpeg_provenance.py --manifest dist/ffmpeg-provenance.json
 ```
 
-Use the local filename for the downloaded artifact you are checking. Server
-directory bundles are packaged in `release-upload-artifacts/server/` before the
-attestation step so the generated provenance matches the uploaded tarball or
-macOS ZIP rather than the transient downloaded artifact directory.
+Keep the generated manifest files with the server bundle, Linux packages, and
+Windows installer that were built from the same commit. Use the local filenames
+when verifying hashes or attaching assets with `gh release create` /
+`gh release upload`.
 
 ## Bundled FFmpeg — version + security patch level
 
