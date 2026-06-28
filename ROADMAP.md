@@ -13,13 +13,6 @@ blocked (see `Roadmap_Blocked.md`)._
 
 ## Research-Driven Additions
 
-- [ ] P0 — Restore the CEP Node advisory gate while Vite major upgrade remains blocked
-  Why: `npm run audit:check -- --json` fails on unwaived `js-yaml` and Vite advisories, so release trust is red even though production CEP does not run a Vite dev server.
-  Evidence: `extension/com.opencut.panel/scripts/check-advisories.mjs`; `docs/NODE_ADVISORIES.md`; `extension/com.opencut.panel/package-lock.json`; GHSA-h67p-54hq-rp68, GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff; blocked Vite HGFS item in `Roadmap_Blocked.md`.
-  Touches: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, `extension/com.opencut.panel/scripts/check-advisories.mjs`, `docs/NODE_ADVISORIES.md`, `tests/test_node_advisories.py`, `tests/test_panel_node_entrypoints.py`.
-  Acceptance: `npm run audit:check:win -- --json`, `npm run build:verify:win`, and `py -3.12 -m pytest tests/test_node_advisories.py tests/test_panel_node_entrypoints.py` pass; any remaining Vite waiver is documented as dev-server-only and tied to the blocked HGFS upgrade.
-  Complexity: M
-
 - [ ] P0 — Refresh bundled FFmpeg and provenance floor
   Why: The bundled binary is below OpenCut's own release provenance floor, so release security/trust is already red before packaging.
   Evidence: `ffmpeg\ffmpeg.exe -version` reports `8.0.1-essentials_build-www.gyan.dev`; `scripts\verify_ffmpeg_provenance.py` exits `RESULT: BELOW FLOOR`; `docs/RELEASE_PROVENANCE.md:38-46`; FFmpeg security advisories and LosslessCut issue #2943.

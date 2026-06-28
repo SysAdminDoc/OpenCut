@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — CEP Node advisory gate
+
+- Patched the transitive `js-yaml` advisory through an npm override and
+  restored the CEP advisory gate with explicit Vite dev-server-only waivers
+  tied to the documented HGFS-blocked major upgrade path.
+
 ### Changed — Model-card generated artifact freshness
 
 - Regenerated the model-card manifest and added cards for the optional

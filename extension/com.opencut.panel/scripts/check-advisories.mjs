@@ -33,6 +33,24 @@ const ALLOWED = new Map([
         "Path traversal in optimized-deps .map handling. Only reachable via `vite dev`/`vite preview`; this project only ships `vite build` output. Tracked in docs/NODE_ADVISORIES.md.",
     },
   ],
+  [
+    "GHSA-v6wh-96g9-6wx3",
+    {
+      package: "vite",
+      severity: "moderate",
+      reason:
+        "launch-editor UNC-path NTLM hash disclosure through Vite middleware. Only reachable through an exposed Vite dev server with the open-in-editor middleware; OpenCut never ships or exposes a Vite dev server. Tracked in docs/NODE_ADVISORIES.md.",
+    },
+  ],
+  [
+    "GHSA-fx2h-pf6j-xcff",
+    {
+      package: "vite",
+      severity: "high",
+      reason:
+        "Windows server.fs.deny bypass in Vite dev server path handling. Only reachable when `vite dev` is exposed with --host/server.host; OpenCut ships static CEP files and blocks the Vite major upgrade on the documented HGFS regression. Tracked in docs/NODE_ADVISORIES.md.",
+    },
+  ],
 ]);
 
 function runAudit() {

@@ -1,7 +1,7 @@
 """Sanity checks for the CEP panel Node advisory policy.
 
 These tests are intentionally text-based: they assert that the documented
-allow-list, the npm metadata, and the CI workflow stay in agreement without
+allow-list, the npm metadata, and the local release smoke stay in agreement without
 requiring a Node toolchain to be installed.
 """
 
@@ -17,7 +17,7 @@ PACKAGE_JSON = PANEL_DIR / "package.json"
 ADVISORIES_DOC = REPO_ROOT / "docs" / "NODE_ADVISORIES.md"
 CHECK_SCRIPT = PANEL_DIR / "scripts" / "check-advisories.mjs"
 VERIFY_SCRIPT = PANEL_DIR / "scripts" / "verify-build.mjs"
-CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build.yml"
+RELEASE_SMOKE = REPO_ROOT / "scripts" / "release_smoke.py"
 
 GHSA_PATTERN = re.compile(r"GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}", re.IGNORECASE)
 
@@ -35,6 +35,18 @@ def test_package_json_pins_esbuild_override():
     spec = overrides["esbuild"]
     assert spec.startswith("^0.25") or spec.startswith("0.25") or spec.startswith(">=0.25"), (
         f"esbuild override must be >=0.25 to close GHSA-67mh-4wv8-2f99 (got {spec!r})"
+    )
+
+
+def test_package_json_pins_js_yaml_override():
+    pkg = _load_package_json()
+
+    overrides = pkg.get("overrides", {})
+    assert "js-yaml" in overrides, "js-yaml override missing from package.json"
+
+    spec = overrides["js-yaml"]
+    assert spec.startswith("^4.2") or spec.startswith("4.2") or spec.startswith(">=4.2"), (
+        f"js-yaml override must be >=4.2.0 to close GHSA-h67p-54hq-rp68 (got {spec!r})"
     )
 
 
@@ -80,12 +92,11 @@ def test_advisories_doc_documents_every_allowed_entry():
     )
 
 
-def test_ci_workflow_runs_panel_advisory_gate_on_linux():
-    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
-    assert "npm run audit:check" in workflow, "CI must invoke npm run audit:check"
-    assert "npm run build:verify" in workflow, "CI must invoke npm run build:verify"
-    # Build runs on Linux only for now; the Windows job stops at lint/tests.
-    assert "if: runner.os == 'Linux'" in workflow
+def test_release_smoke_runs_panel_advisory_gate_locally():
+    smoke = RELEASE_SMOKE.read_text(encoding="utf-8")
+    assert "npm-advisory" in smoke, "release smoke must include the npm advisory gate"
+    assert "check-advisories.mjs" in smoke, "release smoke must invoke check-advisories.mjs"
+    assert "panel-source" in smoke, "release smoke must include the panel source verifier"
 
 
 def test_node_modules_excluded_from_repo():
