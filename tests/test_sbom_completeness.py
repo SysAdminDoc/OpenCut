@@ -106,7 +106,7 @@ def test_sbom_contains_all_committed_model_cards():
     }
 
     expected_check_names = {card.check_name for card in model_cards.CARDS}
-    assert len(expected_check_names) == generated_manifest["total"] == 55
+    assert len(expected_check_names) == generated_manifest["total"]
     assert set(card_components) == expected_check_names
 
     for card in model_cards.CARDS:

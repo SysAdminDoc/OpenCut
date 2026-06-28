@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed — Model-card generated artifact freshness
+
+- Regenerated the model-card manifest and added cards for the optional
+  AutoShot, DA3, IC-Light, LatentSync, NeMo ASR/Sortformer, OCR, SAM 3,
+  SeedVR2, pyannote diarization, and visual multicam checks so generated
+  model/license truth gates pass again.
+
 ### Changed — Installer accessibility polish
 
 - Bound installer version badges to the shared app version constant and added

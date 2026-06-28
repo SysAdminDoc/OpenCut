@@ -13,13 +13,6 @@ blocked (see `Roadmap_Blocked.md`)._
 
 ## Research-Driven Additions
 
-- [ ] P0 — Restore model-card generated artifact freshness
-  Why: Release/model-license truth is stale today and `dump_model_cards --check` fails.
-  Evidence: `py -3.12 -m opencut.tools.dump_model_cards --check`; `opencut/model_cards.py`; `opencut/tools/dump_model_cards.py`; `docs/MODELS.md`; `opencut/_generated/model_cards.json`.
-  Touches: `docs/MODELS.md`, `opencut/_generated/model_cards.json`, `tests/test_model_cards.py`, `scripts/release_smoke.py` if the guard needs tightening.
-  Acceptance: `py -3.12 -m opencut.tools.dump_model_cards --check` and `py -3.12 -m pytest tests/test_model_cards.py tests/test_sbom_completeness.py` pass with reviewed generated diffs.
-  Complexity: S
-
 - [ ] P0 — Restore the CEP Node advisory gate while Vite major upgrade remains blocked
   Why: `npm run audit:check -- --json` fails on unwaived `js-yaml` and Vite advisories, so release trust is red even though production CEP does not run a Vite dev server.
   Evidence: `extension/com.opencut.panel/scripts/check-advisories.mjs`; `docs/NODE_ADVISORIES.md`; `extension/com.opencut.panel/package-lock.json`; GHSA-h67p-54hq-rp68, GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff; blocked Vite HGFS item in `Roadmap_Blocked.md`.
