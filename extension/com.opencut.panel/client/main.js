@@ -13153,8 +13153,20 @@
             isFavorite: favoriteId ? _favorites.indexOf(favoriteId) !== -1 : false,
             isRecent: !!extras.isRecent,
             isCurrent: !!extras.isCurrent,
+            isRunnable: item.runnable !== false,
+            readiness: item.readiness || "",
+            routeValid: item.route_valid !== false,
+            readinessReason: item.readiness_reason || "",
             score: extras.score || 0
         };
+    }
+
+    function getPaletteReadinessLabel(entry) {
+        if (!entry || entry.isRunnable !== false) return "";
+        if (entry.readiness === "dependency-gated") return t("palette.badge_needs_setup", "Needs Setup");
+        if (entry.readiness === "stub") return t("palette.badge_planned", "Planned");
+        if (entry.routeValid === false) return t("palette.badge_no_route", "No Route");
+        return t("palette.badge_unavailable", "Unavailable");
     }
 
     function buildPaletteEntries(items, resolver, seen) {
@@ -13286,6 +13298,11 @@
         var itemNode = document.createElement("button");
         itemNode.type = "button";
         itemNode.className = "command-palette-item";
+        if (entry.isRunnable === false) {
+            itemNode.classList.add("is-disabled");
+            itemNode.disabled = true;
+            itemNode.setAttribute("aria-disabled", "true");
+        }
         itemNode.id = "commandPaletteOption" + idx;
         itemNode.setAttribute("role", "option");
         itemNode.setAttribute("aria-selected", "false");
@@ -13317,11 +13334,15 @@
         if (entry.isFavorite) badges.appendChild(createPaletteBadge(t("palette.badge_pinned", "Pinned"), "is-favorite"));
         if (entry.isRecent) badges.appendChild(createPaletteBadge(t("palette.badge_recent", "Recent"), "is-recent"));
         if (entry.isCurrent) badges.appendChild(createPaletteBadge(t("palette.badge_current", "Current"), "is-current"));
+        var readinessLabel = getPaletteReadinessLabel(entry);
+        if (readinessLabel) badges.appendChild(createPaletteBadge(readinessLabel, "is-unavailable"));
         top.appendChild(badges);
 
         var desc = document.createElement("div");
         desc.className = "command-palette-desc";
-        desc.textContent = entry.description;
+        desc.textContent = entry.isRunnable === false && entry.readinessReason ?
+            (entry.description + " " + entry.readinessReason) :
+            entry.description;
 
         var meta = document.createElement("div");
         meta.className = "command-palette-meta";
@@ -13334,7 +13355,9 @@
         var chevron = document.createElement("span");
         chevron.className = "command-palette-chevron";
         chevron.setAttribute("aria-hidden", "true");
-        chevron.textContent = t("palette.open", "Open");
+        chevron.textContent = entry.isRunnable === false ?
+            t("palette.unavailable", "Unavailable") :
+            t("palette.open", "Open");
         meta.appendChild(chevron);
 
         main.appendChild(top);
@@ -13503,6 +13526,10 @@
             }
         }
         if (!item) return;
+        if (item.runnable === false) {
+            showToast(item.readiness_reason || t("palette.action_unavailable", "This action is not available yet."), "warning");
+            return;
+        }
         rememberPaletteItem(item);
         closeCommandPalette();
         navigateToTab(item.tab, item.sub);

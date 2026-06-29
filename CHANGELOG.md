@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - UX feature index readiness
+
+- Enriched command-palette feature index and search results with route
+  readiness, route validity, runnable state, route methods, and disabled-state
+  explanations sourced from the generated route manifest.
+- Corrected the C2PA command action to the live `/video/c2pa/embed` route and
+  added panel launcher handling for disabled readiness metadata.
+
 ### Changed - README generated product facts
 
 - Extended the README sync check beyond badges so shipped route prose,

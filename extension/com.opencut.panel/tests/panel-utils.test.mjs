@@ -9,6 +9,16 @@ const COMMANDS = [
   { name: "Denoise", tab: "audio", sub: "aud-denoise", keywords: "denoise noise reduce clean" },
   { name: "Silence Removal", tab: "cut", sub: "silence", keywords: "silence remove cut clean" },
   { name: "Export Presets", tab: "export", sub: "exp-platform", keywords: "export youtube tiktok instagram" },
+  {
+    name: "Future Tool",
+    tab: "export",
+    sub: "exp-future",
+    keywords: "future unavailable",
+    runnable: false,
+    readiness: "missing_route",
+    route_valid: false,
+    readiness_reason: "No live route is registered.",
+  },
 ];
 
 function paletteOptions(overrides = {}) {
@@ -128,6 +138,7 @@ describe("CEP command palette indexer", () => {
       "Denoise",
       "Export Presets",
       "Silence Removal",
+      "Future Tool",
     ]);
   });
 
@@ -147,5 +158,19 @@ describe("CEP command palette indexer", () => {
       isRecent: true,
     });
     expect(sections[0].entries[0].score).toBeGreaterThan(50);
+  });
+
+  it("preserves readiness metadata for disabled command entries", () => {
+    const sections = utils.buildCommandPaletteSections(paletteOptions({
+      query: "future",
+    }));
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0].entries[0]).toMatchObject({
+      isRunnable: false,
+      readiness: "missing_route",
+      routeValid: false,
+      readinessReason: "No live route is registered.",
+    });
   });
 });
