@@ -103,6 +103,8 @@ READILY_ACCESSIBLE_FACTORS = [
 
 def token_schema() -> dict:
     """Return the canonical caption display setting token schema."""
+    from opencut.core.caption_styles import resolve_caption_font
+
     return {
         "compliance_date": FCC_COMPLIANCE_DATE,
         "sources": {
@@ -112,7 +114,14 @@ def token_schema() -> dict:
         "readily_accessible_factors": READILY_ACCESSIBLE_FACTORS,
         "defaults": DEFAULT_DISPLAY_SETTINGS.as_dict(),
         "tokens": {
-            "font": [{"id": key, "font_family": value} for key, value in FONT_TOKENS.items()],
+            "font": [
+                {
+                    "id": key,
+                    "font_family": value,
+                    "font_resolution": resolve_caption_font(value).to_dict(),
+                }
+                for key, value in FONT_TOKENS.items()
+            ],
             "size": [{"id": key, "font_size": value} for key, value in SIZE_TOKENS.items()],
             "color": [{"id": key, "hex": value} for key, value in COLOR_TOKENS.items()],
             "opacity": [{"id": key, "alpha": value} for key, value in OPACITY_TOKENS.items()],

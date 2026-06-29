@@ -73,6 +73,11 @@ class TestCepCaptionDisplaySettingsJs(unittest.TestCase):
                 self.assertIn(f'el.{select_id} = $("{select_id}")', self.js)
                 self.assertIn(f'id: "{select_id}"', self.js)
 
+    def test_font_options_surface_resolution_status(self):
+        self.assertIn("font_resolution", self.js)
+        self.assertIn('source !== "preferred_file" ? "fallback" : "resolved"', self.js)
+        self.assertIn("option.title = opt.font_resolution.warning", self.js)
+
     def test_preview_and_reset_handlers_wired(self):
         self.assertIn('addEventListener("click", refreshCaptionDisplayPreview)', self.js)
         self.assertIn('addEventListener("click", resetCaptionDisplayDefaults)', self.js)

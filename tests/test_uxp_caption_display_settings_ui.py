@@ -113,6 +113,11 @@ class TestCaptionDisplaySettingsJs(unittest.TestCase):
                 self.assertIn(f'setStatus("{key}"', self.js)
         self.assertIn('document.getElementById("fccComplianceDate")', self.js)
 
+    def test_font_options_surface_resolution_status(self):
+        self.assertIn("const fontOptionLabel", self.js)
+        self.assertIn("font_resolution?.source", self.js)
+        self.assertIn("titleFn: fontOptionTitle", self.js)
+
     def test_preview_button_handler_wired(self):
         # Look for the addEventListener pair on capDispPreviewBtn /
         # capDispResetBtn within 200 chars.
@@ -194,6 +199,9 @@ class TestBackendContractStable(unittest.TestCase):
             with self.subTest(category=cat):
                 self.assertIn(cat, payload.get("tokens", {}),
                               f"Token schema 'tokens' missing category={cat!r}")
+        first_font = payload["tokens"]["font"][0]
+        self.assertIn("font_resolution", first_font)
+        self.assertIn("source", first_font["font_resolution"])
 
 
 if __name__ == "__main__":

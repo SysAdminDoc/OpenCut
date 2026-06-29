@@ -496,6 +496,48 @@ class TestCaptionHelpers:
         assert "drawtext=" in filt
         assert "Hello" in filt
         assert "enable=" in filt
+        assert "fontfile=''" not in filt
+        assert "fontfile=" in filt or "font=" in filt
+
+    def test_build_drawtext_filter_uses_safe_font_family_when_files_missing(self, monkeypatch):
+        from opencut.core import caption_styles
+        from opencut.core.caption_styles import CaptionStyle
+
+        caption_styles.resolve_caption_font.cache_clear()
+        monkeypatch.setattr(caption_styles, "_find_font", lambda _name: None)
+        style = CaptionStyle(font_family="Bad:Font<script>", colors={"text": "#FFFFFF"})
+
+        filt = caption_styles._build_drawtext_filter(style, "Hello", 0.0, 3.0)
+
+        assert "fontfile=''" not in filt
+        assert "font='BadFontscript'" in filt
+        caption_styles.resolve_caption_font.cache_clear()
+
+    def test_cjk_text_uses_script_aware_font_file_when_available(self, monkeypatch):
+        from opencut.core import caption_styles
+        from opencut.core.caption_styles import CaptionStyle
+
+        def fake_find_font(name):
+            if name == "NotoSansCJK-Regular.ttc":
+                return "C:/Fonts/NotoSansCJK-Regular.ttc"
+            return None
+
+        caption_styles.resolve_caption_font.cache_clear()
+        monkeypatch.setattr(caption_styles, "_find_font", fake_find_font)
+        text = "\u65e5\u672c\u8a9e\u5b57\u5e55"
+        resolution = caption_styles.resolve_caption_font("Impact", text)
+        filt = caption_styles._build_drawtext_filter(
+            CaptionStyle(font_family="Impact", colors={"text": "#FFFFFF"}),
+            text,
+            0.0,
+            3.0,
+        )
+
+        assert resolution.source == "script_fallback_file"
+        assert "cjk" in resolution.scripts
+        assert "NotoSansCJK-Regular.ttc" in filt
+        assert "fontfile=''" not in filt
+        caption_styles.resolve_caption_font.cache_clear()
 
 
 class TestApplyCaptionStyle:
@@ -1225,6 +1267,8 @@ class TestEngagementRoutes:
         assert "count" in data
         assert "categories" in data
         assert data["count"] >= 50
+        assert "font_resolution" in data["styles"][0]
+        assert {"requested_family", "source", "font_path"} <= set(data["styles"][0]["font_resolution"])
 
     def test_list_caption_styles_filter_category(self, client, csrf_token):
         resp = client.get("/captions/styles?category=bold")

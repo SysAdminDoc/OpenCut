@@ -1,3 +1,9 @@
+import os
+import shutil
+import subprocess
+
+import pytest
+
 from opencut.core.caption_line_breaks import (
     all_lines_within,
     caption_layout_tokens,
@@ -113,3 +119,46 @@ def test_shot_aware_wrap_uses_unicode_line_breaker():
 
     assert "".join(wrapped.splitlines()) == text
     assert all_lines_within(wrapped.splitlines(), 8)
+
+
+def test_ffmpeg_drawtext_cjk_smoke_when_font_available(tmp_path):
+    from opencut.core.caption_styles import CaptionStyle, _build_drawtext_filter, resolve_caption_font
+    from opencut.helpers import get_ffmpeg_path
+
+    ffmpeg_cmd = get_ffmpeg_path()
+    ffmpeg = shutil.which(ffmpeg_cmd) or (ffmpeg_cmd if os.path.isfile(ffmpeg_cmd) else "")
+    if not ffmpeg:
+        pytest.skip("FFmpeg not available for CJK drawtext smoke")
+
+    text = "\u65e5\u672c\u8a9e\u5b57\u5e55"
+    style = CaptionStyle(font_family="Arial", font_size=32, colors={"text": "#FFFFFF", "shadow": "#000000"})
+    resolution = resolve_caption_font(style.font_family, text)
+    if resolution.source != "script_fallback_file" or not resolution.font_path:
+        pytest.skip("No CJK-capable font file available for drawtext smoke")
+
+    vf = _build_drawtext_filter(style, text, 0.0, 0.2, width=320, height=180)
+    output = tmp_path / "cjk-caption.png"
+    result = subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=320x180:d=0.2",
+            "-vf",
+            vf,
+            "-frames:v",
+            "1",
+            str(output),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+
+    assert "fontfile=''" not in vf
+    assert result.returncode == 0, result.stderr[-1000:]
+    assert output.exists()
+    assert output.stat().st_size > 0

@@ -10,9 +10,10 @@ import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional
+from functools import lru_cache
+from typing import Callable, Dict, List, Optional, Set
 
-from opencut.helpers import escape_drawtext, get_ffmpeg_path, output_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, escape_filter_path, get_ffmpeg_path, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -34,7 +35,9 @@ class CaptionStyle:
     position: str = "bottom"
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data["font_resolution"] = resolve_caption_font(self.font_family).to_dict()
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +336,199 @@ CATEGORIES = [
     "wave", "glow", "gradient", "box", "outline",
 ]
 
+_FONT_FAMILY_FILES: Dict[str, List[str]] = {
+    "arial": ["arial.ttf", "Arial.ttf", "ARIAL.TTF", "segoeui.ttf", "DejaVuSans.ttf"],
+    "arial black": ["ariblk.ttf", "Arial Black.ttf", "ARIBLK.TTF", "ArialBlack.ttf"],
+    "comic sans ms": ["comic.ttf", "Comic Sans MS.ttf", "comicbd.ttf"],
+    "consolas": ["consola.ttf", "Consolas.ttf", "DejaVuSansMono.ttf"],
+    "courier new": ["cour.ttf", "Courier New.ttf", "courbd.ttf", "DejaVuSansMono.ttf"],
+    "georgia": ["georgia.ttf", "Georgia.ttf", "DejaVuSerif.ttf"],
+    "helvetica": ["Helvetica.ttf", "helvetica.ttf", "Arial.ttf", "arial.ttf"],
+    "impact": ["impact.ttf", "Impact.ttf", "IMPACT.TTF"],
+    "segoe script": ["segoesc.ttf", "Segoe Script.ttf"],
+}
+
+_COMMON_FONT_FALLBACKS = [
+    "arialbd.ttf",
+    "arial.ttf",
+    "ARIALBD.TTF",
+    "ARIAL.TTF",
+    "DejaVuSans-Bold.ttf",
+    "DejaVuSans.ttf",
+    "LiberationSans-Bold.ttf",
+    "LiberationSans-Regular.ttf",
+    "segoeui.ttf",
+    "SEGOEUI.TTF",
+]
+
+_CJK_FALLBACKS = [
+    "NotoSansCJK-Regular.ttc",
+    "NotoSansCJKsc-Regular.otf",
+    "NotoSansJP-Regular.otf",
+    "NotoSansSC-Regular.otf",
+    "msgothic.ttc",
+    "SimSun.ttf",
+    "SimHei.ttf",
+    "malgun.ttf",
+    "meiryo.ttc",
+    "YuGothR.ttc",
+]
+
+_INDIC_FALLBACKS = [
+    "NotoSansDevanagari-Regular.ttf",
+    "NotoSansBengali-Regular.ttf",
+    "NotoSans-Regular.ttf",
+    "mangal.ttf",
+    "Mangal.ttf",
+    "vrinda.ttf",
+    "Vrinda.ttf",
+    "nirmala.ttf",
+    "Nirmala.ttf",
+]
+
+_RTL_FALLBACKS = [
+    "NotoSansArabic-Regular.ttf",
+    "NotoNaskhArabic-Regular.ttf",
+    "NotoSansHebrew-Regular.ttf",
+    "tahoma.ttf",
+    "Tahoma.ttf",
+]
+
+
+@dataclass(frozen=True)
+class CaptionFontResolution:
+    """Resolved font information for FFmpeg drawtext captions."""
+
+    requested_family: str
+    font_family: str
+    font_path: Optional[str]
+    source: str
+    scripts: List[str] = field(default_factory=list)
+    warning: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def _find_font(filename: str) -> Optional[str]:
+    try:
+        from opencut.core.styled_captions import find_font
+
+        return find_font(filename)
+    except Exception:  # noqa: BLE001 - font discovery must degrade to family fallback.
+        return filename if os.path.isfile(filename) else None
+
+
+def _detect_scripts(text: str) -> Set[str]:
+    try:
+        from opencut.core.styled_captions import _detect_text_scripts
+
+        return set(_detect_text_scripts(text))
+    except Exception:  # noqa: BLE001 - keep caption filters buildable without renderer extras.
+        scripts: Set[str] = set()
+        for ch in text or "":
+            code = ord(ch)
+            if 0x0590 <= code <= 0x05FF:
+                scripts.add("hebrew")
+            elif 0x0600 <= code <= 0x06FF or 0x0750 <= code <= 0x077F:
+                scripts.add("arabic")
+            elif 0x3040 <= code <= 0x30FF or 0x3400 <= code <= 0x4DBF or 0x4E00 <= code <= 0x9FFF:
+                scripts.add("cjk")
+            elif 0xAC00 <= code <= 0xD7AF:
+                scripts.add("cjk")
+            elif 0x0900 <= code <= 0x0D7F:
+                scripts.add("indic")
+        return scripts
+
+
+def _unique(values: List[str]) -> List[str]:
+    seen: Set[str] = set()
+    out: List[str] = []
+    for value in values:
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(value)
+    return out
+
+
+def _safe_font_family(font_family: str) -> str:
+    cleaned = "".join(ch for ch in str(font_family or "Arial") if ch.isalnum() or ch in " _-")
+    cleaned = " ".join(cleaned.split())
+    return cleaned or "Arial"
+
+
+def _script_font_candidates(scripts: Set[str]) -> List[str]:
+    candidates: List[str] = []
+    if "cjk" in scripts:
+        candidates.extend(_CJK_FALLBACKS)
+    if "indic" in scripts:
+        candidates.extend(_INDIC_FALLBACKS)
+    if "arabic" in scripts or "hebrew" in scripts:
+        candidates.extend(_RTL_FALLBACKS)
+    return candidates
+
+
+@lru_cache(maxsize=256)
+def resolve_caption_font(font_family: str, text_hint: str = "") -> CaptionFontResolution:
+    """Resolve a caption font to a real file or safe FFmpeg family fallback."""
+    requested = _safe_font_family(font_family)
+    scripts = _detect_scripts(text_hint)
+    script_candidates = _script_font_candidates(scripts)
+    family_candidates = _FONT_FAMILY_FILES.get(requested.lower(), [])
+    if "." in requested:
+        family_candidates = [requested, *family_candidates]
+    candidates = _unique([*script_candidates, *family_candidates, *_COMMON_FONT_FALLBACKS])
+
+    for candidate in candidates:
+        path = _find_font(candidate)
+        if not path:
+            continue
+        if candidate in script_candidates:
+            return CaptionFontResolution(
+                requested_family=requested,
+                font_family=requested,
+                font_path=path,
+                source="script_fallback_file",
+                scripts=sorted(scripts),
+                warning=f"Using script-aware font file for {', '.join(sorted(scripts)) or 'caption'} text.",
+            )
+        if candidate in family_candidates:
+            return CaptionFontResolution(
+                requested_family=requested,
+                font_family=requested,
+                font_path=path,
+                source="preferred_file",
+                scripts=sorted(scripts),
+            )
+        return CaptionFontResolution(
+            requested_family=requested,
+            font_family=requested,
+            font_path=path,
+            source="fallback_file",
+            scripts=sorted(scripts),
+            warning=f"Preferred font '{requested}' was not found; using a bundled/system fallback file.",
+        )
+
+    warning = f"No font file found for '{requested}'. FFmpeg will use the font family fallback."
+    if "cjk" in scripts:
+        warning = "No CJK font file found; install Noto Sans CJK for reliable glyph rendering."
+    return CaptionFontResolution(
+        requested_family=requested,
+        font_family=requested,
+        font_path=None,
+        source="family_fallback",
+        scripts=sorted(scripts),
+        warning=warning,
+    )
+
+
+def _drawtext_font_option(resolution: CaptionFontResolution) -> str:
+    if resolution.font_path:
+        return f"fontfile='{escape_filter_path(resolution.font_path)}'"
+    return f"font='{_escape_drawtext(resolution.font_family)}'"
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -381,10 +577,11 @@ def _build_drawtext_filter(
     text_color = style.colors.get("text", "#FFFFFF")
     shadow_color = style.colors.get("shadow", "#000000")
     bg_color = style.colors.get("background", "")
+    font_resolution = resolve_caption_font(style.font_family, text)
 
     parts = [
         f"drawtext=expansion=none:text='{escaped}'",
-        "fontfile=''",
+        _drawtext_font_option(font_resolution),
         f"fontsize={style.font_size}",
         f"fontcolor={text_color}",
         f"shadowcolor={shadow_color}",
@@ -490,9 +687,11 @@ def generate_style_preview(
     shadow_color = style.colors.get("shadow", "#000000")
     bg_color = style.colors.get("background", "")
     escaped = _escape_drawtext(sample_text)
+    font_resolution = resolve_caption_font(style.font_family, sample_text)
 
     dt_parts = [
         f"drawtext=expansion=none:text='{escaped}'",
+        _drawtext_font_option(font_resolution),
         f"fontsize={min(style.font_size, 36)}",
         f"fontcolor={text_color}",
         f"shadowcolor={shadow_color}",

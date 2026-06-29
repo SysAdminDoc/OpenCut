@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Caption font fallback
+
+- Caption burn-in filters now resolve real font files for known families and
+  script-aware CJK fallbacks, fall back to a sanitized font-family argument
+  instead of `fontfile=''`, and surface font-resolution warnings in CEP/UXP
+  caption display controls.
+
 ### Changed - Local release policy guard
 
 - Replaced stale GitHub Actions/CI wording in active installer wrappers with

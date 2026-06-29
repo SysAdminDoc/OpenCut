@@ -22,6 +22,9 @@ def test_f236_token_schema_covers_fcc_display_surface():
         "cursive",
         "small_caps",
     }
+    for item in schema["tokens"]["font"]:
+        assert "font_resolution" in item
+        assert {"requested_family", "source", "font_path"} <= set(item["font_resolution"])
     assert {item["id"] for item in schema["tokens"]["opacity"]} == {
         "solid",
         "translucent",
