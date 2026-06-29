@@ -773,7 +773,7 @@ def get_action_word_indices(
 
 _FONT_DIRS = []
 _font_cache: Dict[str, str] = {}
-_font_lock = threading.Lock()
+_font_lock = threading.RLock()
 
 _CJK_FONT_FALLBACKS = [
     "NotoSansCJK-Regular.ttc",

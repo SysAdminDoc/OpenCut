@@ -7840,17 +7840,6 @@ function initCaptionDisplaySettingsCard() {
   const card = $("captionDisplaySettingsCard");
   if (!card) return;
 
-  // Selector → token-category mapping (mirrors token_schema()).
-  const SELECT_MAP = [
-    { id: "capDispFont", category: "font", labelFn: (o) => `${o.id} (${o.font_family})` },
-    { id: "capDispSize", category: "size", labelFn: (o) => `${o.id} (${o.font_size})` },
-    { id: "capDispTextColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "text_color" },
-    { id: "capDispTextOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "text_opacity" },
-    { id: "capDispBgColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "background_color" },
-    { id: "capDispBgOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "background_opacity" },
-    { id: "capDispEdge", category: "edge_style", labelFn: (o) => `${o.id}` },
-  ];
-
   let cachedSchema = null;
 
   const formatMessage = (key, fallback, params = {}) => {
@@ -7866,8 +7855,30 @@ function initCaptionDisplaySettingsCard() {
     if (el) el.textContent = formatMessage(key, fallback, params);
   };
 
+  const fontOptionLabel = (opt) => {
+    const source = opt?.font_resolution?.source || "preferred_file";
+    const status = source === "preferred_file" ? "resolved" : "fallback";
+    return `${opt.id} (${opt.font_family}, ${status})`;
+  };
+
+  const fontOptionTitle = (opt) => {
+    const resolution = opt?.font_resolution || {};
+    return resolution.warning || `Font source: ${resolution.source || "resolved"}`;
+  };
+
   const responseData = (response) => response?.data ?? response ?? {};
   const responseError = (response) => response?.error || response?.data?.error || t("common.unknown", "unknown");
+
+  // Selector -> token-category mapping (mirrors token_schema()).
+  const SELECT_MAP = [
+    { id: "capDispFont", category: "font", labelFn: fontOptionLabel, titleFn: fontOptionTitle },
+    { id: "capDispSize", category: "size", labelFn: (o) => `${o.id} (${o.font_size})` },
+    { id: "capDispTextColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "text_color" },
+    { id: "capDispTextOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "text_opacity" },
+    { id: "capDispBgColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "background_color" },
+    { id: "capDispBgOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "background_opacity" },
+    { id: "capDispEdge", category: "edge_style", labelFn: (o) => `${o.id}` },
+  ];
 
   function populateSelects(schema) {
     cachedSchema = schema;
@@ -7882,6 +7893,7 @@ function initCaptionDisplaySettingsCard() {
         const option = document.createElement("option");
         option.value = String(opt.id);
         option.textContent = spec.labelFn(opt);
+        if (spec.titleFn) option.title = spec.titleFn(opt);
         sel.appendChild(option);
       }
       const settingKey = spec.key || spec.category;

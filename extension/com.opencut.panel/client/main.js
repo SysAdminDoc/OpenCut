@@ -7648,7 +7648,11 @@
 
     function captionDisplayOptionLabel(spec, opt) {
         var id = String(opt.id || "");
-        if (spec.category === "font" && opt.font_family) return id + " (" + opt.font_family + ")";
+        if (spec.category === "font" && opt.font_family) {
+            var source = opt.font_resolution && opt.font_resolution.source;
+            var status = source && source !== "preferred_file" ? "fallback" : "resolved";
+            return id + " (" + opt.font_family + ", " + status + ")";
+        }
         if (spec.category === "size" && opt.font_size) return id + " (" + opt.font_size + ")";
         if (spec.category === "color" && opt.hex) return id + " (" + opt.hex + ")";
         if (spec.category === "opacity" && opt.alpha !== undefined) return id + " (" + opt.alpha + ")";
@@ -7676,6 +7680,10 @@
                 var option = document.createElement("option");
                 option.value = String(opt.id || "");
                 option.textContent = captionDisplayOptionLabel(spec, opt);
+                if (spec.category === "font" && opt.font_resolution) {
+                    option.title = opt.font_resolution.warning ||
+                        ("Font source: " + (opt.font_resolution.source || "resolved"));
+                }
                 select.appendChild(option);
             }
             if (defaults[spec.key]) {
