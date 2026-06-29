@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - README generated product facts
+
+- Extended the README sync check beyond badges so shipped route prose,
+  architecture route counts, caption style counts, and root test-file prose
+  are generated from live project sources instead of drifting manually.
+
 ### Changed - CEP panel Vite 8 tooling
 
 - Upgraded the CEP panel build lockfile to Vite 8.1, removed the stale Vite 5
