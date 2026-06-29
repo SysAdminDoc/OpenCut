@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-06-17T01:48:55Z",
-  "total_routes": 1551,
-  "shipped_route_count": 1545,
+  "generated_at": "2026-06-29T14:25:19Z",
+  "total_routes": 1552,
+  "shipped_route_count": 1546,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 393,
+    "GET": 394,
     "PATCH": 1,
     "POST": 1142,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1516,
+    "implemented": 1517,
     "stub": 6
   },
   "blueprints": {
@@ -677,15 +677,15 @@
       ]
     },
     "plugins": {
-      "route_count": 7,
+      "route_count": 8,
       "method_counts": {
-        "GET": 3,
+        "GET": 4,
         "POST": 4
       },
       "sample_rules": [
-        "/plugins/install",
         "/plugins/list",
-        "/plugins/loaded"
+        "/plugins/loaded",
+        "/plugins/trust"
       ]
     },
     "preproduction_proxy": {
@@ -9480,6 +9480,15 @@
       ],
       "endpoint": "platform_infra.plugins_search",
       "blueprint": "platform_infra",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/trust",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "plugins.plugin_trust_dashboard",
+      "blueprint": "plugins",
       "readiness": "implemented"
     },
     {

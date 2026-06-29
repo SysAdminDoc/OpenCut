@@ -136,6 +136,134 @@ class TestPluginRoutes:
         data = resp.get_json()
         assert "plugins" in data
 
+    def test_plugin_trust_dashboard_summarizes_plugin_states(self, client, monkeypatch, tmp_path):
+        import opencut.core.plugins as pm
+        import opencut.routes.plugins as plugin_routes
+        from opencut.core import plugin_marketplace
+        from opencut.core.plugin_manifest import write_plugin_lock
+        from opencut.core.plugins import _loaded_plugins, _plugins_lock
+
+        plugins_dir = tmp_path / "plugins"
+        monkeypatch.setattr(pm, "PLUGINS_DIR", str(plugins_dir))
+        monkeypatch.setattr(plugin_routes, "PLUGINS_DIR", str(plugins_dir))
+        monkeypatch.setattr(plugin_marketplace, "PLUGINS_DIR", str(tmp_path / "marketplace_plugins"))
+        registry_cache = tmp_path / "plugin_registry.json"
+        monkeypatch.setattr(plugin_marketplace, "REGISTRY_CACHE", str(registry_cache))
+
+        locked_plugin = plugins_dir / "loaded-plugin"
+        locked_plugin.mkdir(parents=True)
+        locked_manifest = {
+            "name": "loaded-plugin",
+            "version": "1.0.0",
+            "description": "Loaded plugin",
+            "api_version": 1,
+            "capabilities": ["http.routes", "jobs.register"],
+            "routes": [{"path": "/sync"}],
+            "jobs": [{"id": "sync"}],
+        }
+        (locked_plugin / "plugin.json").write_text(json.dumps(locked_manifest), encoding="utf-8")
+        write_plugin_lock(locked_plugin)
+
+        missing_lock_plugin = plugins_dir / "missing-lock"
+        missing_lock_plugin.mkdir()
+        (missing_lock_plugin / "plugin.json").write_text(
+            json.dumps({
+                "name": "missing-lock",
+                "version": "1.0.0",
+                "description": "Missing lock",
+                "api_version": 1,
+                "capabilities": ["host.network", "ui.panel"],
+            }),
+            encoding="utf-8",
+        )
+
+        disabled_plugin = plugins_dir / "disabled-plugin"
+        disabled_plugin.mkdir()
+        (disabled_plugin / "plugin.json").write_text(
+            json.dumps({
+                "name": "disabled-plugin",
+                "version": "0.1.0",
+                "description": "Disabled",
+                "api_version": 1,
+                "capabilities": ["ui.panel"],
+                "enabled": False,
+            }),
+            encoding="utf-8",
+        )
+        write_plugin_lock(disabled_plugin)
+
+        bad_plugin = plugins_dir / "bad-plugin"
+        bad_plugin.mkdir()
+        (bad_plugin / "plugin.json").write_text("{not json", encoding="utf-8")
+
+        quarantine_id = "old-plugin-20260629-000000-deadbeef"
+        quarantine_dir = tmp_path / "plugins_quarantine" / quarantine_id
+        quarantine_dir.mkdir(parents=True)
+        (quarantine_dir / ".opencut-quarantine.json").write_text(
+            json.dumps({
+                "name": "old-plugin",
+                "original_path": str(plugins_dir / "old-plugin"),
+                "created_at": 1782691200,
+                "restore_route": "/plugins/quarantine/restore",
+                "delete_route": "/plugins/quarantine/delete",
+            }),
+            encoding="utf-8",
+        )
+
+        registry_cache.write_text(
+            json.dumps({
+                "plugins": [
+                    {
+                        "id": "market-demo",
+                        "name": "Market Demo",
+                        "version": "2.0.0",
+                        "author": "Tests",
+                        "description": "Cached marketplace plugin",
+                        "tags": ["captions"],
+                    }
+                ]
+            }),
+            encoding="utf-8",
+        )
+
+        with _plugins_lock:
+            _loaded_plugins["loaded-plugin"] = {
+                "info": {
+                    **locked_manifest,
+                    "author": "",
+                    "path": str(locked_plugin),
+                    "ui": None,
+                },
+                "module": None,
+                "blueprint": None,
+                "jobs": [{"id": "sync"}],
+            }
+        try:
+            resp = client.get("/plugins/trust")
+        finally:
+            with _plugins_lock:
+                _loaded_plugins.pop("loaded-plugin", None)
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        plugins = {plugin["name"]: plugin for plugin in data["plugins"]}
+        assert data["summary"]["loaded"] == 1
+        assert data["summary"]["skipped"] >= 1
+        assert data["summary"]["failed"] >= 2
+        assert data["summary"]["lock_missing"] == 1
+        assert data["summary"]["quarantined"] == 1
+        assert data["summary"]["marketplace"] == 1
+        assert plugins["loaded-plugin"]["load_status"] == "loaded"
+        assert plugins["loaded-plugin"]["trust"]["source"] == "locked"
+        assert plugins["missing-lock"]["trust"]["source"] == "lock_missing"
+        assert plugins["missing-lock"]["capability_badges"][0]["id"] == "host.network"
+        assert plugins["disabled-plugin"]["load_status"] == "skipped"
+        assert plugins["bad-plugin"]["load_status"] == "failed"
+        assert "Invalid plugin.json" in plugins["bad-plugin"]["error"]
+        assert data["quarantine"]["entries"][0]["quarantine_id"] == quarantine_id
+        assert data["actions"]["delete_quarantine"]["confirmation_required"] is True
+        assert data["marketplace"]["plugins"][0]["plugin_id"] == "market-demo"
+
     def test_loaded_plugin_mutations_inherit_csrf_guard(self, tmp_path):
         from flask import Flask
 

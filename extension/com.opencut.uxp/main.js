@@ -6176,6 +6176,7 @@ function bindEvents() {
   // ── Settings: Engine Registry ──
   document.getElementById("uxpRefreshEnginesBtn")?.addEventListener("click", uxpLoadEngines);
   document.getElementById("uxpRefreshMigrationRiskBtn")?.addEventListener("click", uxpLoadMigrationRisk);
+  document.getElementById("uxpRefreshPluginTrustBtn")?.addEventListener("click", uxpLoadPluginTrust);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -6943,6 +6944,193 @@ async function uxpLoadMigrationRisk() {
 }
 
 // ─────────────────────────────────────────────────────────────
+function pluginCountText(count, oneKey, oneFallback, manyKey, manyFallback) {
+  return formatI18n(count === 1 ? oneKey : manyKey, count === 1 ? oneFallback : manyFallback, { count });
+}
+
+function pluginTrustSourceLabel(source) {
+  return ({
+    locked: t("uxp.settings.plugin_trust_locked", "Locked"),
+    unsigned_allowed: t("uxp.settings.plugin_trust_unsigned_allowed", "Unsigned allowed"),
+    lock_missing: t("uxp.settings.plugin_trust_lock_missing", "Lock missing"),
+    lock_failed: t("uxp.settings.plugin_trust_lock_failed", "Lock failed"),
+    invalid_manifest: t("uxp.settings.plugin_trust_invalid_manifest", "Invalid manifest"),
+    failed_validation: t("uxp.settings.plugin_trust_failed_validation", "Failed validation"),
+  })[source] || source || t("uxp.settings.plugin_trust_unknown", "Unknown");
+}
+
+function pluginTrustStateClass(plugin) {
+  const trust = plugin?.trust || {};
+  if (plugin?.load_status === "failed" || trust.errors?.length) return "warning";
+  if (trust.unsigned_allowed || trust.lock_missing) return "manual";
+  if (plugin?.load_status === "loaded") return "auto";
+  return "manual";
+}
+
+function pluginCapabilityBadgesHtml(badges = []) {
+  if (!badges.length) {
+    return `<span class="oc-plugin-capability is-empty">${UIController.escapeHtml(t("uxp.settings.plugin_no_capabilities", "No capabilities"))}</span>`;
+  }
+  return badges.map((badge) => (
+    `<span class="oc-plugin-capability is-${UIController.escapeHtml(badge.kind || "unknown")}" title="${UIController.escapeHtml(badge.id || "")}">${UIController.escapeHtml(badge.label || badge.id || "")}</span>`
+  )).join("");
+}
+
+function pluginTrustRowHtml(plugin, actions) {
+  const trust = plugin?.trust || {};
+  const sourceLabel = pluginTrustSourceLabel(trust.source);
+  const statusLabel = plugin?.load_status
+    ? `${plugin.load_status.charAt(0).toUpperCase()}${plugin.load_status.slice(1)}`
+    : t("uxp.settings.plugin_status_unknown", "Unknown");
+  const messages = [...(trust.errors || []), ...(trust.warnings || [])].filter(Boolean);
+  const summary = messages.length
+    ? messages.join(" ")
+    : (plugin?.description || t("uxp.settings.plugin_no_description", "No plugin description provided."));
+  const route = actions?.uninstall?.route || "/plugins/uninstall";
+  const contract = formatI18n(
+    "uxp.settings.plugin_uninstall_contract",
+    "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.",
+    { route }
+  );
+  return `<div class="oc-engine-row oc-plugin-trust-row">
+    <div class="oc-engine-copy">
+      <div class="oc-engine-title-row">
+        <span class="oc-engine-domain">${UIController.escapeHtml(plugin?.name || t("uxp.settings.unknown_plugin", "Unknown plugin"))}</span>
+        <span class="oc-engine-state is-${UIController.escapeHtml(pluginTrustStateClass(plugin))}">${UIController.escapeHtml(sourceLabel)}</span>
+      </div>
+      <p class="oc-engine-meta">${UIController.escapeHtml(`v${plugin?.version || "0.0.0"} - ${statusLabel} - ${sourceLabel}`)}</p>
+      <p class="oc-engine-meta">${UIController.escapeHtml(summary)}</p>
+      <div class="oc-plugin-capability-row">${pluginCapabilityBadgesHtml(plugin?.capability_badges || [])}</div>
+      <p class="oc-plugin-action-contract">${UIController.escapeHtml(contract)}</p>
+    </div>
+  </div>`;
+}
+
+function pluginQuarantineRowHtml(entry, actions) {
+  const restoreRoute = actions?.restore_quarantine?.route || "/plugins/quarantine/restore";
+  const deleteRoute = actions?.delete_quarantine?.route || "/plugins/quarantine/delete";
+  const contract = formatI18n(
+    "uxp.settings.plugin_quarantine_contract",
+    "Restore uses {restore}; permanent delete previews {delete}, then requires confirm_name and confirm_token.",
+    { restore: restoreRoute, delete: deleteRoute }
+  );
+  const created = entry?.created_at
+    ? new Date(Number(entry.created_at) * 1000).toLocaleString()
+    : "";
+  return `<div class="oc-engine-row oc-plugin-trust-row is-quarantined">
+    <div class="oc-engine-copy">
+      <div class="oc-engine-title-row">
+        <span class="oc-engine-domain">${UIController.escapeHtml(entry?.name || entry?.quarantine_id || t("uxp.settings.unknown_plugin", "Unknown plugin"))}</span>
+        <span class="oc-engine-state is-warning">${UIController.escapeHtml(t("uxp.settings.quarantined", "Quarantined"))}</span>
+      </div>
+      <p class="oc-engine-meta">${UIController.escapeHtml([entry?.quarantine_id || "", created].filter(Boolean).join(" - "))}</p>
+      <p class="oc-plugin-action-contract">${UIController.escapeHtml(contract)}</p>
+    </div>
+  </div>`;
+}
+
+function pluginMarketplaceRowsHtml(marketplace, actions) {
+  const plugins = Array.isArray(marketplace?.plugins) ? marketplace.plugins : [];
+  if (!plugins.length) return "";
+  const route = actions?.marketplace?.registry_route || "/plugins/registry";
+  const rows = plugins.slice(0, 3).map((plugin) => `<div class="oc-engine-row oc-plugin-trust-row is-marketplace">
+    <div class="oc-engine-copy">
+      <div class="oc-engine-title-row">
+        <span class="oc-engine-domain">${UIController.escapeHtml(plugin.name || plugin.plugin_id || "")}</span>
+        <span class="oc-engine-state is-auto">${UIController.escapeHtml(plugin.installed ? t("uxp.settings.installed", "Installed") : t("uxp.settings.available", "Available"))}</span>
+      </div>
+      <p class="oc-engine-meta">${UIController.escapeHtml(`${plugin.plugin_id || ""} - v${plugin.version || "0.0.0"}`)}</p>
+      <p class="oc-engine-meta">${UIController.escapeHtml(plugin.description || route)}</p>
+    </div>
+  </div>`).join("");
+  return `<div class="oc-plugin-trust-subhead">${UIController.escapeHtml(t("uxp.settings.cached_marketplace", "Cached marketplace"))}</div>${rows}`;
+}
+
+function renderPluginTrustDashboard(data) {
+  const grid = document.getElementById("uxpPluginTrustGrid");
+  if (!grid) return;
+  const summary = data?.summary || {};
+  const actions = data?.actions || {};
+  const plugins = Array.isArray(data?.plugins) ? data.plugins : [];
+  const quarantine = Array.isArray(data?.quarantine?.entries) ? data.quarantine.entries : [];
+  const marketplace = data?.marketplace || {};
+  const failedUnsigned = Number(summary.failed || 0) + Number(summary.lock_missing || 0) + Number(summary.unsigned || 0);
+
+  setTextAndTitle(
+    "settingsPluginLoadedValue",
+    pluginCountText(Number(summary.loaded || 0), "uxp.settings.plugin_loaded_one", "{count} loaded", "uxp.settings.plugin_loaded_many", "{count} loaded"),
+    t("uxp.settings.plugin_loaded_title", "Plugins currently loaded by the local backend.")
+  );
+  setTextAndTitle(
+    "settingsPluginFailedValue",
+    pluginCountText(failedUnsigned, "uxp.settings.plugin_failed_one", "{count} needs review", "uxp.settings.plugin_failed_many", "{count} need review"),
+    t("uxp.settings.plugin_failed_title", "Failed, unsigned, or lock-missing plugins that need review before use.")
+  );
+  setTextAndTitle(
+    "settingsPluginQuarantineValue",
+    pluginCountText(Number(summary.quarantined || 0), "uxp.settings.plugin_quarantine_one", "{count} quarantined", "uxp.settings.plugin_quarantine_many", "{count} quarantined"),
+    t("uxp.settings.plugin_quarantine_title", "Plugins moved out of the active plugin directory.")
+  );
+  setTextAndTitle(
+    "settingsPluginMarketplaceValue",
+    pluginCountText(Number(summary.marketplace || 0), "uxp.settings.plugin_marketplace_one", "{count} cached", "uxp.settings.plugin_marketplace_many", "{count} cached"),
+    t("uxp.settings.plugin_marketplace_title", "Cached marketplace entries available without a network fetch.")
+  );
+
+  if (!plugins.length && !quarantine.length && !Number(summary.marketplace || 0)) {
+    grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugin trust"))}</div>
+      <p>${UIController.escapeHtml(t("uxp.settings.plugin_trust_empty", "No installed, cached marketplace, or quarantined plugins were found."))}</p>
+    </div>`;
+    setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_trust_empty_status", "No plugins need review right now."), "idle");
+    return;
+  }
+
+  let html = plugins.map((plugin) => pluginTrustRowHtml(plugin, actions)).join("");
+  if (quarantine.length) {
+    html += `<div class="oc-plugin-trust-subhead">${UIController.escapeHtml(t("uxp.settings.quarantine", "Quarantine"))}</div>`;
+    html += quarantine.map((entry) => pluginQuarantineRowHtml(entry, actions)).join("");
+  }
+  html += pluginMarketplaceRowsHtml(marketplace, actions);
+  grid.innerHTML = html;
+
+  const state = failedUnsigned || quarantine.length ? "warning" : "success";
+  const status = failedUnsigned
+    ? t("uxp.settings.plugin_trust_needs_review", "Plugin trust needs review: failed, unsigned, or lock-missing plugins are present.")
+    : t("uxp.settings.plugin_trust_ready", "Plugin trust is clear for the currently discovered plugins.");
+  setSettingsStatus("settingsPluginTrustStatus", status, state);
+}
+
+async function uxpLoadPluginTrust() {
+  const grid = document.getElementById("uxpPluginTrustGrid");
+  if (!grid) return;
+  setTextAndTitle("settingsPluginLoadedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_count", "Loading plugin count."));
+  setTextAndTitle("settingsPluginFailedValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_failures", "Loading failed and unsigned plugin count."));
+  setTextAndTitle("settingsPluginQuarantineValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_quarantine", "Loading plugin quarantine count."));
+  setTextAndTitle("settingsPluginMarketplaceValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_plugin_marketplace", "Loading cached marketplace count."));
+  setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.loading_plugin_trust", "Loading plugin trust dashboard..."), "working");
+  grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
+    <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust", "Plugin trust"))}</div>
+    <p>${UIController.escapeHtml(t("uxp.settings.loading_plugin_trust_hint", "Checking installed plugins, locks, quarantine, and cached marketplace entries..."))}</p>
+  </div>`;
+
+  const response = await BackendClient.get("/plugins/trust");
+  if (!response.ok || !response.data) {
+    setTextAndTitle("settingsPluginLoadedValue", t("uxp.settings.unavailable", "Unavailable"), response.error || "");
+    setTextAndTitle("settingsPluginFailedValue", t("uxp.settings.unavailable", "Unavailable"), response.error || "");
+    setTextAndTitle("settingsPluginQuarantineValue", t("uxp.settings.unavailable", "Unavailable"), response.error || "");
+    setTextAndTitle("settingsPluginMarketplaceValue", t("uxp.settings.unavailable", "Unavailable"), response.error || "");
+    setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_trust_unavailable", "Plugin trust could not be loaded. Reconnect the backend, then refresh."), "error");
+    grid.innerHTML = `<div class="oc-empty-state oc-empty-state-inline">
+      <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.plugin_trust_unavailable_title", "Plugin trust unavailable"))}</div>
+      <p>${UIController.escapeHtml(t("uxp.settings.plugin_trust_unavailable_hint", "OpenCut could not read plugin locks, quarantine, or marketplace cache right now."))}</p>
+    </div>`;
+    return;
+  }
+  renderPluginTrustDashboard(response.data);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Application init
 // ─────────────────────────────────────────────────────────────
 async function loadLlmSettings() {
@@ -7377,6 +7565,7 @@ async function initApp() {
   uxpLoadEngines();
   uxpUpdateWsStatus();
   await uxpLoadMigrationRisk();
+  await uxpLoadPluginTrust();
 
   // Initial connection check
   const alive = await checkConnection();

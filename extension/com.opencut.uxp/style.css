@@ -2616,6 +2616,71 @@ body.oc-disconnected .oc-btn-primary {
     linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.024));
 }
 
+.oc-plugin-trust-row.is-quarantined {
+  border-color: rgba(216, 184, 135, 0.24);
+  background: rgba(216, 184, 135, 0.08);
+}
+
+.oc-plugin-trust-row.is-marketplace {
+  border-color: rgba(var(--oc-accent-rgb), 0.2);
+}
+
+.oc-plugin-capability-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.oc-plugin-capability {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(171, 189, 214, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(230, 237, 246, 0.84);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.oc-plugin-capability.is-sensitive {
+  border-color: rgba(255, 138, 138, 0.24);
+  background: rgba(255, 138, 138, 0.1);
+  color: rgba(255, 226, 226, 0.92);
+}
+
+.oc-plugin-capability.is-runtime {
+  border-color: rgba(var(--oc-accent-rgb), 0.22);
+  background: rgba(var(--oc-accent-rgb), 0.1);
+}
+
+.oc-plugin-capability.is-ui {
+  border-color: rgba(82, 210, 149, 0.22);
+  background: rgba(82, 210, 149, 0.1);
+}
+
+.oc-plugin-capability.is-empty {
+  color: rgba(207, 216, 226, 0.68);
+}
+
+.oc-plugin-action-contract {
+  margin: 4px 0 0;
+  color: rgba(207, 216, 226, 0.68);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.oc-plugin-trust-subhead {
+  margin-top: 4px;
+  color: rgba(184, 197, 214, 0.72);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .oc-engine-copy {
   min-width: 0;
 }

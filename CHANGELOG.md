@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Plugin trust visibility
+
+- Added a read-only `/plugins/trust` dashboard route and surfaced loaded,
+  skipped, failed, lock-missing, quarantined, and cached marketplace plugin
+  state in CEP and UXP Settings with capability badges and destructive-action
+  confirmation contract copy.
+- Hardened CEP translation-language dropdown rendering so list-shaped backend
+  language capability payloads cannot break Settings initialization.
+
 ### Changed - Caption font fallback
 
 - Caption burn-in filters now resolve real font files for known families and
