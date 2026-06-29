@@ -10,16 +10,44 @@ Blocked items (credential/license/hardware-gated) live in
 
 ## Research-Driven Additions
 
-- [ ] P2 - Promote C2PA provenance to signed embedded export credentials
-  Why: OpenCut has C2PA sidecars and a metadata embed helper, but the documented sidecar path says real C2PA verifiers will not accept unsigned sidecars as trust credentials. Adobe Content Credentials and C2PA workflows make verifiable export provenance a differentiator for AI-assisted local editing.
-  Evidence: `opencut/core/c2pa_sidecar.py:3`, `opencut/core/c2pa_sidecar.py:21`, `opencut/core/c2pa_embed.py:229`, `opencut/registry.py:710`, `tests/test_c2pa_sidecar.py:49`.
-  Touches: `opencut/core/c2pa_sidecar.py`, `opencut/core/c2pa_embed.py`, `opencut/routes/timeline.py`, `opencut/routes/music_safety_routes.py`, `opencut/registry.py`, `tests/test_c2pa_sidecar.py`, `tests/test_c2pa_embed.py`.
-  Acceptance: export provenance can use `c2patool` or an equivalent local adapter to embed a signed manifest into supported MP4/JPEG/PNG outputs when a test key/operator key is configured; unsigned sidecar fallback remains explicit and warning-bearing; verify routes distinguish embedded, signed sidecar, unsigned sidecar, missing asset, and tampered manifest cases.
-  Complexity: L
-
 - [ ] P2 - Surface plugin trust, lock, and quarantine status in panel Settings
   Why: Plugin routes now support install, marketplace, lock validation, uninstall, quarantine, restore, and delete, but users need a visible trust dashboard before running or managing third-party code.
   Evidence: `docs/PLUGIN_AUTHORING.md:23`, `opencut/routes/plugins.py:151`, `opencut/routes/plugins.py:357`, `opencut/routes/platform_infra_routes.py:369`, `opencut/core/command_palette.py:270`.
   Touches: `opencut/routes/plugins.py`, `opencut/core/plugins.py`, `opencut/core/plugin_manifest.py`, `extension/com.opencut.panel/client/index.html`, `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.uxp/index.html`, `extension/com.opencut.uxp/main.js`, `tests/test_plugins.py`, `tests/test_uxp_plugins.py`.
   Acceptance: Settings lists loaded, skipped, failed, unsigned/lock-missing, marketplace, and quarantined plugins with capability badges; destructive plugin actions require the existing typed confirmation route contract; panel tests cover lock-missing warnings, quarantine restore/delete, and failed plugin error display.
   Complexity: M
+
+- [ ] P1 — Migrate CEP panel build tooling off unsupported Vite 5
+  Why: The CEP panel still depends on Vite 5 even though Vite marks that line unsupported, and dev-server advisory history makes this a security-maintenance liability for local panel builds.
+  Evidence: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, https://vite.dev/releases, https://github.com/advisories/GHSA-p9ff-h696-f583, https://github.com/advisories/GHSA-vg6x-rcgg-rjx6.
+  Touches: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, `extension/com.opencut.panel/scripts/check-advisories.mjs`, `extension/com.opencut.panel/scripts/check-esbuild-pin.mjs`, `docs/NODE_ADVISORIES.md`, `tests/test_esbuild_pin.py`.
+  Acceptance: `npm ci`, `npm run build`, `npm run build:verify`, `npm run audit:check`, and `npm run audit:esbuild` pass from `extension/com.opencut.panel`; lockfile Vite resolves to a supported major; advisory docs no longer carry a Vite 5 support waiver.
+  Complexity: M
+
+- [ ] P1 — Generate and enforce README product facts beyond badges
+  Why: The existing badge sync check already fails on test-count drift, and README still advertises 19 animated caption styles while the backend ships 55.
+  Evidence: `scripts/sync_badges.py --check`, `README.md:8`, `README.md:9`, `README.md:183`, `opencut/core/caption_styles.py:43`, `tests/test_engagement_content.py:342`.
+  Touches: `README.md`, `scripts/sync_badges.py`, `tests/test_sync_badges.py`, `opencut/_generated/route_manifest.json`, `opencut/core/caption_styles.py`.
+  Acceptance: A single local check verifies route badges, test badges, route-count prose/diagram text, root test-file prose, and caption-style counts; README reports the current generated values and `python scripts/sync_badges.py --check` exits 0.
+  Complexity: S
+
+- [ ] P1 — Make the UX feature index readiness-aware before exposing actions
+  Why: `/ux/feature-index` mixes shipped and speculative routes without readiness state, so command/search users can be offered non-runnable actions.
+  Evidence: `opencut/core/command_palette.py:120`, `opencut/routes/ux_intelligence_routes.py:257`, `opencut/_generated/route_manifest.json`, local check found 183 of 215 command-palette route targets absent from the generated manifest including stale `/platform/c2pa`.
+  Touches: `opencut/core/command_palette.py`, `opencut/routes/ux_intelligence_routes.py`, `opencut/registry.py`, `opencut/core/feature_readiness.py`, `extension/com.opencut.panel/client/main.js`, `tests/test_ux_intelligence.py`, `tests/test_feature_readiness_generator.py`.
+  Acceptance: `/ux/feature-index` and `/ux/search` return `readiness`, `route_valid`, and `runnable`; planned or missing-route entries are visibly disabled/explained in the panel; every `runnable=true` route exists in `opencut/_generated/route_manifest.json`; C2PA search routes to a live provenance/export route or is marked not runnable.
+  Complexity: M
+
+- [ ] P2 — Resolve caption font paths and CJK fallback for styled and burned captions
+  Why: Caption styles define fonts and CJK wrapping is tested, but the FFmpeg drawtext path emits an empty `fontfile` and does not prove CJK glyph rendering.
+  Evidence: `opencut/core/caption_styles.py:32`, `opencut/core/caption_styles.py:387`, `tests/test_caption_line_breaks.py:12`, https://github.com/OpenCut-app/OpenCut/issues/817.
+  Touches: `opencut/core/caption_styles.py`, `opencut/routes/captions.py`, `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.uxp/main.js`, `tests/test_engagement_content.py`, `tests/test_caption_line_breaks.py`.
+  Acceptance: Styled caption filters use a resolved font path or safe font-family fallback instead of `fontfile=''`; CJK sample captions render in a focused FFmpeg smoke when FFmpeg is available; panel font controls explain fallback behavior; tests cover missing preferred fonts and CJK text.
+  Complexity: M
+
+- [ ] P2 — Remove stale GitHub Actions and CI claims from active local-build docs
+  Why: Active working notes and helper text still reference non-existent workflows even though this repo's current policy and `.github` state are local-build only.
+  Evidence: `CLAUDE.md:200`, `CLAUDE.md:208`, `docs/UXP_MIGRATION.md:94`, `scripts/build_wpf_installer_ci.ps1:3`, `.github/` contains no workflow files.
+  Touches: `CLAUDE.md`, `docs/UXP_MIGRATION.md`, `scripts/build_wpf_installer_ci.ps1`, `scripts/smoke_wpf_installer.ps1`, `scripts/smoke_inno_installer.ps1`, `tests/test_release_smoke.py`.
+  Acceptance: Active docs and script descriptions say local release/smoke/build instead of GitHub Actions or CI where no workflow exists; archived research docs are exempt; a local grep/test guards against reintroducing `.github/workflows` claims outside archived files and intentionally named compatibility scripts.
+  Complexity: S
