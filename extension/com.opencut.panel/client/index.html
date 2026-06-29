@@ -3584,6 +3584,41 @@
                     <div class="oc-status-line mt-xs" id="systemStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="settings.system_status_checking">Checking local acceleration and backend details.</div>
                 </section>
 
+                <section class="card plugin-trust-card" id="pluginTrustCard" aria-labelledby="pluginTrustCardTitle">
+                    <div class="card-header">
+                        <div class="card-title" id="pluginTrustCardTitle" data-i18n="settings.plugin_trust_title">Plugin Trust</div>
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshPluginTrustBtn" title="Refresh plugin trust status" data-i18n-title="settings.plugin_trust_refresh_title">
+                            <span class="btn-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
+                            </span>
+                            <span class="btn-label" data-i18n="common.refresh">Refresh</span>
+                        </button>
+                    </div>
+                    <p class="card-desc" data-i18n="settings.plugin_trust_desc">Review installed, skipped, failed, unsigned, marketplace, and quarantined plugins before enabling third-party automation.</p>
+                    <div class="oc-inline-summary-grid" aria-label="Plugin trust summary" data-i18n-aria-label="settings.plugin_trust_summary_aria">
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label" data-i18n="settings.plugin_loaded_label">Loaded</span>
+                            <span class="oc-inline-value" id="pluginTrustLoadedValue" data-i18n="settings.plugin_trust_loading">Loading...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label" data-i18n="settings.plugin_failed_label">Failed / Unsigned</span>
+                            <span class="oc-inline-value" id="pluginTrustFailedValue" data-i18n="settings.plugin_trust_loading">Loading...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label" data-i18n="settings.plugin_quarantine_label">Quarantine</span>
+                            <span class="oc-inline-value" id="pluginTrustQuarantineValue" data-i18n="settings.plugin_trust_loading">Loading...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label" data-i18n="settings.plugin_marketplace_label">Marketplace</span>
+                            <span class="oc-inline-value" id="pluginTrustMarketplaceValue" data-i18n="settings.plugin_trust_loading">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="plugin-trust-list" id="pluginTrustList" aria-live="polite">
+                        <div class="hint" data-i18n="settings.plugin_trust_loading_hint">Loading plugin trust dashboard...</div>
+                    </div>
+                    <div class="oc-status-line mt-xs" id="pluginTrustStatusLine" data-state="working" role="status" aria-live="polite" data-i18n="settings.plugin_trust_status_loading">Checking plugin locks, quarantine, and marketplace cache.</div>
+                </section>
+
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.dep_health">Dependency Health</div>

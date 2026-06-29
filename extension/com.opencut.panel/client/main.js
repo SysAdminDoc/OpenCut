@@ -3773,11 +3773,12 @@
         // Fetch translation languages
         api("GET", "/captions/enhanced/capabilities", null, function (err, data) {
             if (err || !data || data.error) return;
-            if (data.languages && typeof data.languages === "object") {
-                var keys = Object.keys(data.languages);
+            var languageOptions = normalizeLanguageOptions(data.languages);
+            if (languageOptions && typeof languageOptions === "object") {
+                var keys = Object.keys(languageOptions);
                 if (keys.length > 0) {
-                    populateDropdown(el.translateSourceLang, data.languages, "en");
-                    populateDropdown(el.translateTargetLang, data.languages, "es");
+                    populateDropdown(el.translateSourceLang, languageOptions, "en");
+                    populateDropdown(el.translateTargetLang, languageOptions, "es");
                 }
             }
         });
@@ -3794,16 +3795,50 @@
         });
     }
 
+    function languageOptionLabel(value, fallback) {
+        if (value && typeof value === "object") {
+            return String(value.name || value.label || value.native_name || value.code || fallback || "");
+        }
+        return String(value == null ? (fallback || "") : value);
+    }
+
+    function normalizeLanguageOptions(languages) {
+        var out = {};
+        var i;
+        var item;
+        var code;
+        if (!languages || typeof languages !== "object") return out;
+        if (Array.isArray(languages)) {
+            for (i = 0; i < languages.length; i++) {
+                item = languages[i];
+                if (item && typeof item === "object") {
+                    code = item.code || item.id || item.language;
+                    if (code) out[String(code)] = languageOptionLabel(item, code);
+                } else if (typeof item === "string" && item) {
+                    out[item] = item;
+                }
+            }
+            return out;
+        }
+        var keys = Object.keys(languages);
+        for (i = 0; i < keys.length; i++) {
+            code = keys[i];
+            out[code] = languageOptionLabel(languages[code], code);
+        }
+        return out;
+    }
+
     function populateDropdown(selectEl, langMap, defaultVal) {
+        if (!selectEl) return;
         var currentVal = selectEl.value || defaultVal;
         selectEl.innerHTML = "";
         var codes = Object.keys(langMap).sort(function (a, b) {
-            return langMap[a].localeCompare(langMap[b]);
+            return languageOptionLabel(langMap[a], a).localeCompare(languageOptionLabel(langMap[b], b));
         });
         for (var i = 0; i < codes.length; i++) {
             var opt = document.createElement("option");
             opt.value = codes[i];
-            opt.textContent = langMap[codes[i]];
+            opt.textContent = languageOptionLabel(langMap[codes[i]], codes[i]);
             if (codes[i] === currentVal) opt.selected = true;
             selectEl.appendChild(opt);
         }
@@ -5680,6 +5715,211 @@
                     });
                 });
             }
+        });
+    }
+
+    function pluginCountLabel(count, oneKey, oneFallback, manyKey, manyFallback) {
+        var key = count === 1 ? oneKey : manyKey;
+        var fallback = count === 1 ? oneFallback : manyFallback;
+        return t(key, fallback).replace("{count}", count);
+    }
+
+    function pluginTrustSourceLabel(source) {
+        var labels = {
+            locked: t("settings.plugin_trust_locked", "Locked"),
+            unsigned_allowed: t("settings.plugin_trust_unsigned_allowed", "Unsigned allowed"),
+            lock_missing: t("settings.plugin_trust_lock_missing", "Lock missing"),
+            lock_failed: t("settings.plugin_trust_lock_failed", "Lock failed"),
+            invalid_manifest: t("settings.plugin_trust_invalid_manifest", "Invalid manifest"),
+            failed_validation: t("settings.plugin_trust_failed_validation", "Failed validation")
+        };
+        return labels[source] || source || t("settings.plugin_trust_unknown", "Unknown");
+    }
+
+    function pluginTrustStateClass(plugin) {
+        var trust = plugin && plugin.trust ? plugin.trust : {};
+        if ((plugin && plugin.load_status === "failed") || trust.errors && trust.errors.length) return "warning";
+        if (trust.unsigned_allowed || trust.lock_missing) return "manual";
+        if (plugin && plugin.load_status === "loaded") return "auto";
+        return "manual";
+    }
+
+    function pluginCapabilityBadgesHtml(badges) {
+        if (!badges || !badges.length) {
+            return '<span class="plugin-capability-badge is-empty">' + esc(t("settings.plugin_no_capabilities", "No capabilities")) + '</span>';
+        }
+        var html = "";
+        for (var i = 0; i < badges.length; i++) {
+            var badge = badges[i] || {};
+            html += '<span class="plugin-capability-badge is-' + esc(badge.kind || "unknown") + '" title="' +
+                esc(badge.id || "") + '">' + esc(badge.label || badge.id || "") + '</span>';
+        }
+        return html;
+    }
+
+    function pluginTrustRowHtml(plugin, actions) {
+        var trust = plugin && plugin.trust ? plugin.trust : {};
+        var stateClass = pluginTrustStateClass(plugin);
+        var statusLabel = plugin && plugin.load_status
+            ? plugin.load_status.charAt(0).toUpperCase() + plugin.load_status.slice(1)
+            : t("settings.plugin_status_unknown", "Unknown");
+        var trustLabel = pluginTrustSourceLabel(trust.source);
+        var messages = [].concat(trust.errors || [], trust.warnings || []).filter(Boolean);
+        var summary = messages.length
+            ? messages.join(" ")
+            : (plugin.description || t("settings.plugin_no_description", "No plugin description provided."));
+        var routeText = actions && actions.uninstall
+            ? t("settings.plugin_uninstall_contract", "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.")
+                .replace("{route}", actions.uninstall.route)
+            : t("settings.plugin_uninstall_contract_fallback", "Uninstall requires typed confirmation before quarantine.");
+        return '<div class="plugin-trust-row">' +
+            '<div class="engine-title-row plugin-trust-title-row">' +
+            '<div><div class="param-label engine-domain-label">' + esc(plugin.name || t("settings.plugin_unknown_name", "Unknown plugin")) + '</div>' +
+            '<div class="engine-meta">' + esc("v" + (plugin.version || "0.0.0") + " - " + statusLabel + " - " + trustLabel) + '</div></div>' +
+            '<span class="engine-state-badge is-' + esc(stateClass) + '">' + esc(trustLabel) + '</span>' +
+            '</div>' +
+            '<div class="engine-meta">' + esc(summary) + '</div>' +
+            '<div class="plugin-capability-row">' + pluginCapabilityBadgesHtml(plugin.capability_badges || []) + '</div>' +
+            '<div class="plugin-action-contract">' + esc(routeText) + '</div>' +
+            '</div>';
+    }
+
+    function pluginQuarantineRowHtml(entry, actions) {
+        var name = entry.name || entry.quarantine_id || t("settings.plugin_unknown_name", "Unknown plugin");
+        var created = entry.created_at ? formatLocalTime(entry.created_at * 1000) : "";
+        var restoreRoute = actions && actions.restore_quarantine ? actions.restore_quarantine.route : "/plugins/quarantine/restore";
+        var deleteRoute = actions && actions.delete_quarantine ? actions.delete_quarantine.route : "/plugins/quarantine/delete";
+        var contract = t(
+            "settings.plugin_quarantine_contract",
+            "Restore uses {restore}; permanent delete previews {delete}, then requires confirm_name and confirm_token."
+        ).replace("{restore}", restoreRoute).replace("{delete}", deleteRoute);
+        return '<div class="plugin-trust-row is-quarantined">' +
+            '<div class="engine-title-row plugin-trust-title-row">' +
+            '<div><div class="param-label engine-domain-label">' + esc(name) + '</div>' +
+            '<div class="engine-meta">' + esc(entry.quarantine_id || "") + (created ? " - " + esc(created) : "") + '</div></div>' +
+            '<span class="engine-state-badge is-warning">' + esc(t("settings.plugin_quarantined", "Quarantined")) + '</span>' +
+            '</div>' +
+            '<div class="plugin-action-contract">' + esc(contract) + '</div>' +
+            '</div>';
+    }
+
+    function pluginMarketplaceRowsHtml(marketplace, actions) {
+        var plugins = marketplace && marketplace.plugins ? marketplace.plugins : [];
+        if (!plugins.length) return "";
+        var route = actions && actions.marketplace ? actions.marketplace.registry_route : "/plugins/registry";
+        var html = '<div class="plugin-trust-subhead">' + esc(t("settings.plugin_marketplace_cached", "Cached marketplace")) + '</div>';
+        var limit = Math.min(plugins.length, 3);
+        for (var i = 0; i < limit; i++) {
+            var plugin = plugins[i] || {};
+            html += '<div class="plugin-trust-row is-marketplace">' +
+                '<div class="engine-title-row plugin-trust-title-row">' +
+                '<div><div class="param-label engine-domain-label">' + esc(plugin.name || plugin.plugin_id || "") + '</div>' +
+                '<div class="engine-meta">' + esc((plugin.plugin_id || "") + " - v" + (plugin.version || "0.0.0")) + '</div></div>' +
+                '<span class="engine-state-badge is-auto">' + esc(plugin.installed ? t("settings.plugin_installed", "Installed") : t("settings.plugin_available", "Available")) + '</span>' +
+                '</div>' +
+                '<div class="engine-meta">' + esc(plugin.description || route) + '</div>' +
+                '</div>';
+        }
+        return html;
+    }
+
+    function renderPluginTrustDashboard(data) {
+        var list = document.getElementById("pluginTrustList");
+        if (!list) return;
+        var summary = data && data.summary ? data.summary : {};
+        var actions = data && data.actions ? data.actions : {};
+        var plugins = data && Array.isArray(data.plugins) ? data.plugins : [];
+        var quarantine = data && data.quarantine && Array.isArray(data.quarantine.entries) ? data.quarantine.entries : [];
+        var marketplace = data && data.marketplace ? data.marketplace : {};
+        var failedUnsigned = Number(summary.failed || 0) + Number(summary.lock_missing || 0) + Number(summary.unsigned || 0);
+
+        setTextAndTitle(
+            "pluginTrustLoadedValue",
+            pluginCountLabel(Number(summary.loaded || 0), "settings.plugin_loaded_one", "{count} loaded", "settings.plugin_loaded_many", "{count} loaded"),
+            t("settings.plugin_loaded_title", "Plugins currently loaded by the local backend.")
+        );
+        setTextAndTitle(
+            "pluginTrustFailedValue",
+            pluginCountLabel(failedUnsigned, "settings.plugin_failed_one", "{count} needs review", "settings.plugin_failed_many", "{count} need review"),
+            t("settings.plugin_failed_title", "Failed, unsigned, or lock-missing plugins that need review before use.")
+        );
+        setTextAndTitle(
+            "pluginTrustQuarantineValue",
+            pluginCountLabel(Number(summary.quarantined || 0), "settings.plugin_quarantine_one", "{count} quarantined", "settings.plugin_quarantine_many", "{count} quarantined"),
+            t("settings.plugin_quarantine_title", "Plugins moved out of the active plugin directory.")
+        );
+        setTextAndTitle(
+            "pluginTrustMarketplaceValue",
+            pluginCountLabel(Number(summary.marketplace || 0), "settings.plugin_marketplace_one", "{count} cached", "settings.plugin_marketplace_many", "{count} cached"),
+            t("settings.plugin_marketplace_title", "Cached marketplace entries available without a network fetch.")
+        );
+
+        if (!plugins.length && !quarantine.length && !Number(summary.marketplace || 0)) {
+            list.innerHTML = buildEmptyHintMarkup(
+                t("settings.plugin_trust_empty_title", "No plugins installed yet"),
+                t("settings.plugin_trust_empty_body", "Install or restore a plugin to review locks, capabilities, and quarantine actions here."),
+                "info"
+            );
+            setStatusLine(
+                "pluginTrustStatusLine",
+                t("settings.plugin_trust_empty_status", "No installed, cached marketplace, or quarantined plugins were found."),
+                "idle"
+            );
+            return;
+        }
+
+        var html = "";
+        for (var i = 0; i < plugins.length; i++) {
+            html += pluginTrustRowHtml(plugins[i], actions);
+        }
+        if (quarantine.length) {
+            html += '<div class="plugin-trust-subhead">' + esc(t("settings.plugin_quarantine_heading", "Quarantine")) + '</div>';
+            for (var q = 0; q < quarantine.length; q++) {
+                html += pluginQuarantineRowHtml(quarantine[q], actions);
+            }
+        }
+        html += pluginMarketplaceRowsHtml(marketplace, actions);
+        list.innerHTML = html;
+
+        var state = failedUnsigned || quarantine.length ? "warning" : "success";
+        var status = failedUnsigned
+            ? t("settings.plugin_trust_needs_review_status", "Plugin trust needs review: failed, unsigned, or lock-missing plugins are present.")
+            : t("settings.plugin_trust_ready_status", "Plugin trust is clear for the currently discovered plugins.");
+        setStatusLine("pluginTrustStatusLine", status, state, status);
+    }
+
+    function loadPluginTrustDashboard() {
+        var list = document.getElementById("pluginTrustList");
+        if (!list) return;
+        setStatusLine(
+            "pluginTrustStatusLine",
+            t("settings.plugin_trust_status_loading", "Checking plugin locks, quarantine, and marketplace cache."),
+            "working"
+        );
+        list.innerHTML = buildEmptyHintMarkup(
+            t("settings.plugin_trust_loading_title", "Loading plugin trust..."),
+            t("settings.plugin_trust_loading_body", "Checking installed plugin locks, failed loads, quarantine, and marketplace cache."),
+            "info"
+        );
+        api("GET", "/plugins/trust", null, function (err, data) {
+            if (err || !data) {
+                setTextAndTitle("pluginTrustLoadedValue", t("settings.plugin_trust_unavailable", "Unavailable"), err && err.message ? err.message : "");
+                setTextAndTitle("pluginTrustFailedValue", t("settings.plugin_trust_unavailable", "Unavailable"), err && err.message ? err.message : "");
+                setTextAndTitle("pluginTrustQuarantineValue", t("settings.plugin_trust_unavailable", "Unavailable"), err && err.message ? err.message : "");
+                setTextAndTitle("pluginTrustMarketplaceValue", t("settings.plugin_trust_unavailable", "Unavailable"), err && err.message ? err.message : "");
+                list.innerHTML = buildEmptyHintMarkup(
+                    t("settings.plugin_trust_unavailable_title", "Plugin trust unavailable"),
+                    t("settings.plugin_trust_unavailable_body", "Reconnect the backend to review plugin locks, quarantine, and marketplace cache."),
+                    "error"
+                );
+                setStatusLine(
+                    "pluginTrustStatusLine",
+                    t("settings.plugin_trust_unavailable_status", "Couldn't read plugin trust state. Reconnect the backend and refresh."),
+                    "error"
+                );
+                return;
+            }
+            renderPluginTrustDashboard(data);
         });
     }
 
@@ -8074,6 +8314,7 @@
         refreshDeps();
         refreshModelList();
         loadEngineRegistry();
+        loadPluginTrustDashboard();
     }
 
     function installWhisper() {
@@ -16477,6 +16718,8 @@
         // Engine registry
         var refreshEnginesBtn = document.getElementById("refreshEnginesBtn");
         if (refreshEnginesBtn) refreshEnginesBtn.addEventListener("click", loadEngineRegistry);
+        var refreshPluginTrustBtn = document.getElementById("refreshPluginTrustBtn");
+        if (refreshPluginTrustBtn) refreshPluginTrustBtn.addEventListener("click", loadPluginTrustDashboard);
 
         if (el.runEnhanceBtn) el.runEnhanceBtn.addEventListener("click", runEnhance);
         if (el.previewShortsPlanBtn) el.previewShortsPlanBtn.addEventListener("click", previewShortsPlan);

@@ -14814,6 +14814,88 @@ body:not(.has-clip) #panel-settings.active::before {
     width: 100%;
 }
 
+#panel-settings .plugin-trust-list {
+    display: grid;
+    gap: 10px;
+}
+
+#panel-settings .plugin-trust-row {
+    display: grid;
+    gap: 8px;
+    padding: 13px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(171, 189, 214, 0.12);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.022));
+}
+
+#panel-settings .plugin-trust-row.is-quarantined {
+    border-color: rgba(216, 184, 135, 0.2);
+    background: rgba(216, 184, 135, 0.08);
+}
+
+#panel-settings .plugin-trust-row.is-marketplace {
+    border-color: rgba(var(--workspace-accent-rgb), 0.18);
+}
+
+#panel-settings .plugin-trust-title-row {
+    align-items: flex-start;
+}
+
+#panel-settings .plugin-capability-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+#panel-settings .plugin-capability-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(171, 189, 214, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(230, 237, 246, 0.84);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+#panel-settings .plugin-capability-badge.is-sensitive {
+    border-color: rgba(255, 138, 138, 0.22);
+    background: rgba(255, 138, 138, 0.1);
+    color: rgba(255, 226, 226, 0.92);
+}
+
+#panel-settings .plugin-capability-badge.is-runtime {
+    border-color: rgba(var(--workspace-accent-rgb), 0.22);
+    background: rgba(var(--workspace-accent-rgb), 0.1);
+}
+
+#panel-settings .plugin-capability-badge.is-ui {
+    border-color: rgba(82, 210, 149, 0.22);
+    background: rgba(82, 210, 149, 0.1);
+}
+
+#panel-settings .plugin-capability-badge.is-empty {
+    color: rgba(207, 216, 226, 0.68);
+}
+
+#panel-settings .plugin-action-contract {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: rgba(207, 216, 226, 0.66);
+}
+
+#panel-settings .plugin-trust-subhead {
+    margin-top: 4px;
+    color: rgba(184, 197, 214, 0.72);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 @media (max-width: 900px) {
     #panel-settings .settings-row-inline {
         align-items: flex-start;

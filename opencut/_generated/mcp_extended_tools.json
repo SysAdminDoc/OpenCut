@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 16,
-    "GET": 377,
+    "GET": 378,
     "PATCH": 1,
     "POST": 1053,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1449,
+  "tool_count": 1450,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -7974,6 +7974,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_plugins_search"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /plugins/trust"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /plugins/trust.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.plugin_trust_dashboard",
+        "generated": true,
+        "method": "GET",
+        "path": "/plugins/trust",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_plugins_trust"
     },
     {
       "annotations": {

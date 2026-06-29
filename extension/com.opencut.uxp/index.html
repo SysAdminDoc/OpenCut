@@ -1583,6 +1583,37 @@
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshMigrationRiskBtn" data-i18n="uxp.settings.refresh_migration_risk">Refresh Migration Risk</button>
         </div>
 
+        <div class="oc-section-title" data-i18n="uxp.settings.plugin_trust">Plugin Trust</div>
+        <div class="oc-card" id="uxpPluginTrustCard">
+          <p class="oc-hint" data-i18n="uxp.settings.plugin_trust_hint">Review plugin locks, capability requests, failed loads, marketplace cache, and quarantine before enabling third-party automation.</p>
+          <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Plugin trust summary" data-i18n-aria-label="uxp.settings.plugin_trust_summary">
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.settings.loaded">Loaded</span>
+              <span class="oc-inline-value" id="settingsPluginLoadedValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.settings.failed_unsigned">Failed / Unsigned</span>
+              <span class="oc-inline-value" id="settingsPluginFailedValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.settings.quarantine">Quarantine</span>
+              <span class="oc-inline-value" id="settingsPluginQuarantineValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.settings.marketplace">Marketplace</span>
+              <span class="oc-inline-value" id="settingsPluginMarketplaceValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+          </div>
+          <div class="oc-status-line" id="settingsPluginTrustStatus" role="status" aria-live="polite" data-i18n="uxp.settings.loading_plugin_trust">Loading plugin trust dashboard...</div>
+          <div id="uxpPluginTrustGrid" class="oc-engine-grid">
+            <div class="oc-empty-state oc-empty-state-inline">
+              <div class="oc-empty-state-kicker" data-i18n="uxp.settings.plugin_trust">Plugin trust</div>
+              <p data-i18n="uxp.settings.loading_plugin_trust_hint">Checking installed plugins, locks, quarantine, and cached marketplace entries...</p>
+            </div>
+          </div>
+          <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshPluginTrustBtn" data-i18n="uxp.settings.refresh_plugin_trust">Refresh Plugin Trust</button>
+        </div>
+
         <div class="oc-section-title" data-i18n="uxp.settings.keyboard">Fast Actions</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.keyboard_hint">High-traffic editorial actions stay visible so you do not have to hunt through tabs.</p>

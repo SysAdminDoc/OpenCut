@@ -29,6 +29,15 @@ logger = logging.getLogger("opencut")
 
 plugins_bp = Blueprint("plugins", __name__)
 
+_CAPABILITY_LABELS = {
+    "http.routes": ("HTTP routes", "runtime"),
+    "jobs.register": ("Jobs", "runtime"),
+    "host.filesystem": ("Host files", "sensitive"),
+    "host.network": ("Network", "sensitive"),
+    "models.download": ("Model downloads", "sensitive"),
+    "ui.panel": ("Panel UI", "ui"),
+}
+
 
 def _json_object_or_400():
     try:
@@ -134,6 +143,205 @@ def _list_quarantine_entries() -> list[dict]:
         entries.append(metadata if metadata is not None else {"quarantine_id": entry, "error": error})
     return entries
 
+
+def _message_contains(messages: list[str], *needles: str) -> bool:
+    joined = "\n".join(str(m).lower() for m in messages)
+    return any(needle.lower() in joined for needle in needles)
+
+
+def _capability_badges(capabilities: list[str]) -> list[dict]:
+    badges = []
+    for capability in capabilities:
+        label, kind = _CAPABILITY_LABELS.get(capability, (capability, "unknown"))
+        badges.append({
+            "id": capability,
+            "label": label,
+            "kind": kind,
+        })
+    return badges
+
+
+def _validate_plugin_trust(plugin: dict) -> dict:
+    try:
+        from opencut.core.plugin_manifest import validate_plugin_manifest
+
+        validation = validate_plugin_manifest(plugin.get("path", ""))
+        return validation.as_dict()
+    except Exception as exc:  # pragma: no cover - defensive reporting path
+        return {
+            "valid": False,
+            "errors": [f"Plugin trust validation failed: {exc}"],
+            "warnings": [],
+        }
+
+
+def _trust_source(plugin: dict, validation: dict) -> str:
+    errors = [str(e) for e in validation.get("errors") or []]
+    warnings = [str(w) for w in validation.get("warnings") or []]
+    if _message_contains(errors, "plugin.lock.json missing"):
+        return "lock_missing"
+    if _message_contains(warnings, "plugin.lock.json missing", "opencut_plugin_allow_unsigned"):
+        return "unsigned_allowed"
+    if _message_contains(errors, "plugin.lock.json", "sha-256", "lock declares", "files absent from lock"):
+        return "lock_failed"
+    if not plugin.get("valid", False) or _message_contains(errors, "plugin.json", "manifest:", "api_version", "capabilities:"):
+        return "invalid_manifest"
+    if validation.get("valid"):
+        return "locked"
+    return "failed_validation"
+
+
+def _load_status(plugin: dict, loaded: dict, validation: dict) -> str:
+    name = plugin.get("name", "")
+    if name in loaded:
+        return "loaded"
+    if not plugin.get("valid", False) or not validation.get("valid", False):
+        return "failed"
+    if not plugin.get("enabled", False):
+        return "skipped"
+    return "skipped"
+
+
+def _plugin_trust_entry(plugin: dict, loaded: dict) -> dict:
+    validation = _validate_plugin_trust(plugin)
+    capabilities = list(plugin.get("capabilities") or [])
+    source = _trust_source(plugin, validation)
+    status = _load_status(plugin, loaded, validation)
+    loaded_info = loaded.get(plugin.get("name", ""), {})
+    return {
+        "name": plugin.get("name", ""),
+        "version": plugin.get("version", ""),
+        "description": plugin.get("description", ""),
+        "author": plugin.get("author", ""),
+        "enabled": bool(plugin.get("enabled", False)),
+        "loaded": status == "loaded",
+        "load_status": status,
+        "has_routes": bool(plugin.get("routes")) or os.path.isfile(os.path.join(plugin.get("path", ""), "routes.py")),
+        "routes": list(plugin.get("routes") or []),
+        "jobs": list(plugin.get("jobs") or []),
+        "loaded_jobs": list(loaded_info.get("jobs") or []),
+        "capabilities": capabilities,
+        "capability_badges": _capability_badges(capabilities),
+        "ui": plugin.get("ui"),
+        "valid": bool(plugin.get("valid", False)),
+        "error": plugin.get("error") or "; ".join(validation.get("errors") or []),
+        "trust": {
+            "valid": bool(validation.get("valid", False)),
+            "source": source,
+            "errors": list(validation.get("errors") or []),
+            "warnings": list(validation.get("warnings") or []),
+            "lock_missing": source == "lock_missing",
+            "unsigned_allowed": source == "unsigned_allowed",
+        },
+    }
+
+
+def _marketplace_snapshot() -> dict:
+    payload = {
+        "status": "uncached",
+        "plugins": [],
+        "installed_plugins": [],
+        "total": 0,
+        "installed_total": 0,
+        "error": "",
+    }
+    try:
+        from opencut.core import plugin_marketplace as marketplace
+
+        installed = marketplace.list_installed_plugins()
+        payload["installed_plugins"] = [
+            {
+                "plugin_id": p.plugin_id,
+                "name": p.name,
+                "version": p.version,
+                "installed_version": p.installed_version or p.version,
+            }
+            for p in installed
+        ]
+        payload["installed_total"] = len(installed)
+
+        cache_path = getattr(marketplace, "REGISTRY_CACHE", "")
+        if not cache_path or not os.path.exists(cache_path):
+            return payload
+
+        with open(cache_path, "r", encoding="utf-8") as fh:
+            registry = json.load(fh)
+        plugins = marketplace._parse_registry(registry)  # noqa: SLF001 - internal route snapshot, no network fetch
+        payload["plugins"] = [
+            {
+                "plugin_id": p.plugin_id,
+                "name": p.name,
+                "version": p.version,
+                "author": p.author,
+                "description": p.description,
+                "tags": p.tags,
+                "installed": p.installed,
+                "installed_version": p.installed_version,
+            }
+            for p in plugins
+        ]
+        payload["total"] = len(plugins)
+        payload["status"] = "cached"
+    except Exception as exc:  # pragma: no cover - defensive reporting path
+        payload["status"] = "unavailable"
+        payload["error"] = str(exc)
+    return payload
+
+
+def _plugin_trust_summary(entries: list[dict], quarantine_entries: list[dict], marketplace: dict) -> dict:
+    failed = [
+        p for p in entries
+        if p.get("load_status") == "failed" or p.get("trust", {}).get("errors")
+    ]
+    skipped = [p for p in entries if p.get("load_status") == "skipped"]
+    loaded = [p for p in entries if p.get("load_status") == "loaded"]
+    lock_missing = [p for p in entries if p.get("trust", {}).get("lock_missing")]
+    unsigned = [p for p in entries if p.get("trust", {}).get("unsigned_allowed")]
+    return {
+        "total": len(entries),
+        "loaded": len(loaded),
+        "skipped": len(skipped),
+        "failed": len(failed),
+        "lock_missing": len(lock_missing),
+        "unsigned": len(unsigned),
+        "quarantined": len(quarantine_entries),
+        "marketplace": int(marketplace.get("total") or 0),
+        "marketplace_installed": int(marketplace.get("installed_total") or 0),
+    }
+
+
+def _plugin_trust_actions() -> dict:
+    return {
+        "uninstall": {
+            "route": "/plugins/uninstall",
+            "method": "POST",
+            "dry_run": True,
+            "confirmation_required": True,
+            "confirm_name": "name",
+            "confirm_token_source": "dry_run.confirm_token",
+            "result": "quarantine",
+        },
+        "restore_quarantine": {
+            "route": "/plugins/quarantine/restore",
+            "method": "POST",
+            "confirmation_required": False,
+        },
+        "delete_quarantine": {
+            "route": "/plugins/quarantine/delete",
+            "method": "POST",
+            "dry_run": True,
+            "confirmation_required": True,
+            "confirm_name": "name",
+            "confirm_token_source": "dry_run.confirm_token",
+            "result": "permanent_delete",
+        },
+        "marketplace": {
+            "registry_route": "/plugins/registry",
+            "install_route": "/plugins/marketplace/install",
+            "update_route": "/plugins/update",
+        },
+    }
+
 try:
     from ..core.plugins import (
         PLUGINS_DIR,
@@ -180,6 +388,28 @@ def list_plugins():
         "plugins_dir": PLUGINS_DIR,
         "total": len(plugins),
         "loaded": len(loaded),
+    })
+
+
+@plugins_bp.route("/plugins/trust", methods=["GET"])
+def plugin_trust_dashboard():
+    """Return a read-only trust dashboard for Settings panels."""
+    discovered = discover_plugins()
+    loaded = get_loaded_plugins()
+    plugins = [_plugin_trust_entry(plugin, loaded) for plugin in discovered]
+    quarantine_entries = _list_quarantine_entries()
+    marketplace = _marketplace_snapshot()
+    return jsonify({
+        "plugins": plugins,
+        "plugins_dir": PLUGINS_DIR,
+        "summary": _plugin_trust_summary(plugins, quarantine_entries, marketplace),
+        "quarantine": {
+            "entries": quarantine_entries,
+            "quarantine_dir": _quarantine_root(),
+            "total": len(quarantine_entries),
+        },
+        "marketplace": marketplace,
+        "actions": _plugin_trust_actions(),
     })
 
 
