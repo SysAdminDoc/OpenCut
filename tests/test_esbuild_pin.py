@@ -7,9 +7,9 @@ These Python tests pin three invariants without needing a Node toolchain:
    the >=0.25 range (parsed from the npm semver string).
 2. The script file is present, parses as valid JS, and is wired into
    the panel's `npm run audit:esbuild` script.
-3. The release-smoke step is registered and gracefully skips when
-   Node or `node_modules` is missing (the dev-VM and CI matrix
-   default state for many legs).
+3. The release-smoke step is registered and the script treats a Vite 8+
+   tree with no resolved esbuild instance as OK while retaining the
+   package override as a future transitive guard.
 """
 
 from __future__ import annotations
@@ -82,6 +82,7 @@ def test_script_carries_documented_minimum():
     # The minimums must match the F095 / F131 pin.
     assert re.search(r"MIN_MAJOR\s*=\s*0", text)
     assert re.search(r"MIN_MINOR\s*=\s*25", text)
+    assert "no resolved esbuild instances" in text
 
 
 def test_script_rejects_unparseable_versions():

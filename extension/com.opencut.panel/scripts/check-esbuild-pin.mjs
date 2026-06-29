@@ -7,7 +7,7 @@
 // back into the GHSA-67mh-4wv8-2f99 vulnerable range.
 //
 // Output:
-//   exit 0 — every resolved esbuild >=0.25.0
+//   exit 0 — no esbuild is resolved, or every resolved esbuild >=0.25.0
 //   exit 1 — at least one resolved esbuild <0.25.0 (or unparseable)
 //
 // Flags:
@@ -157,11 +157,10 @@ function main() {
 
   if (unique.length === 0) {
     console.log(
-      "[esbuild-pin] WARN: npm ls did not report any esbuild instance. " +
-        "Ensure `npm install` has run in extension/com.opencut.panel.",
+      "[esbuild-pin] OK — no resolved esbuild instances; " +
+        "package.json override remains as a future transitive guard.",
     );
-    // Treat as a soft failure — the override is unverifiable.
-    process.exit(1);
+    process.exit(0);
   }
 
   if (breached.length > 0) {

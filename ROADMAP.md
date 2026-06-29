@@ -17,13 +17,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: Settings lists loaded, skipped, failed, unsigned/lock-missing, marketplace, and quarantined plugins with capability badges; destructive plugin actions require the existing typed confirmation route contract; panel tests cover lock-missing warnings, quarantine restore/delete, and failed plugin error display.
   Complexity: M
 
-- [ ] P1 — Migrate CEP panel build tooling off unsupported Vite 5
-  Why: The CEP panel still depends on Vite 5 even though Vite marks that line unsupported, and dev-server advisory history makes this a security-maintenance liability for local panel builds.
-  Evidence: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, https://vite.dev/releases, https://github.com/advisories/GHSA-p9ff-h696-f583, https://github.com/advisories/GHSA-vg6x-rcgg-rjx6.
-  Touches: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, `extension/com.opencut.panel/scripts/check-advisories.mjs`, `extension/com.opencut.panel/scripts/check-esbuild-pin.mjs`, `docs/NODE_ADVISORIES.md`, `tests/test_esbuild_pin.py`.
-  Acceptance: `npm ci`, `npm run build`, `npm run build:verify`, `npm run audit:check`, and `npm run audit:esbuild` pass from `extension/com.opencut.panel`; lockfile Vite resolves to a supported major; advisory docs no longer carry a Vite 5 support waiver.
-  Complexity: M
-
 - [ ] P1 — Generate and enforce README product facts beyond badges
   Why: The existing badge sync check already fails on test-count drift, and README still advertises 19 animated caption styles while the backend ships 55.
   Evidence: `scripts/sync_badges.py --check`, `README.md:8`, `README.md:9`, `README.md:183`, `opencut/core/caption_styles.py:43`, `tests/test_engagement_content.py:342`.

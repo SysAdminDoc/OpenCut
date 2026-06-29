@@ -1,15 +1,13 @@
 #!/usr/bin/env node
-// Verify the panel's npm advisory surface matches the documented allow-list.
+// Verify the panel's npm advisory surface has no unwaived findings.
 //
-// The CEP panel only runs `vite build` to produce the production bundle. The
-// vite/esbuild dev-server CVEs do not apply to that workflow, but they still
-// appear in `npm audit`. This script:
+// The CEP panel only runs `vite build` to produce the production bundle. This
+// script:
 //
 //   1. Forces a fresh `npm audit --json`.
-//   2. Asserts every reported finding is on the documented allow-list with
-//      a justification.
-//   3. Exits non-zero on any unexpected advisory (high/critical, or anything
-//      we haven't explicitly waived).
+//   2. Asserts every reported finding is either on the documented allow-list
+//      with a justification or fails closed.
+//   3. Exits non-zero on any unwaived advisory.
 //
 // Allow-list entries point at docs/NODE_ADVISORIES.md so the rationale stays
 // versioned alongside the project.
@@ -23,35 +21,7 @@ const panelRoot = resolve(__dirname, "..");
 
 const JSON_MODE = process.argv.includes("--json");
 
-const ALLOWED = new Map([
-  [
-    "GHSA-4w7w-66w2-5vf9",
-    {
-      package: "vite",
-      severity: "moderate",
-      reason:
-        "Path traversal in optimized-deps .map handling. Only reachable via `vite dev`/`vite preview`; this project only ships `vite build` output. Tracked in docs/NODE_ADVISORIES.md.",
-    },
-  ],
-  [
-    "GHSA-v6wh-96g9-6wx3",
-    {
-      package: "vite",
-      severity: "moderate",
-      reason:
-        "launch-editor UNC-path NTLM hash disclosure through Vite middleware. Only reachable through an exposed Vite dev server with the open-in-editor middleware; OpenCut never ships or exposes a Vite dev server. Tracked in docs/NODE_ADVISORIES.md.",
-    },
-  ],
-  [
-    "GHSA-fx2h-pf6j-xcff",
-    {
-      package: "vite",
-      severity: "high",
-      reason:
-        "Windows server.fs.deny bypass in Vite dev server path handling. Only reachable when `vite dev` is exposed with --host/server.host; OpenCut ships static CEP files and blocks the Vite major upgrade on the documented HGFS regression. Tracked in docs/NODE_ADVISORIES.md.",
-    },
-  ],
-]);
+const ALLOWED = new Map();
 
 function runAudit() {
   const isWin = process.platform === "win32";

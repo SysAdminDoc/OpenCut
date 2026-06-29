@@ -63,7 +63,7 @@ def test_package_json_advertises_audit_and_verify_scripts():
 def test_check_advisories_script_present_and_executable_text():
     text = CHECK_SCRIPT.read_text(encoding="utf-8")
     assert "ALLOWED" in text
-    assert "GHSA-" in text
+    assert "new Map()" in text
     assert "npm audit" in text
     assert "--json" in text
     assert "JSON.stringify" in text
@@ -84,12 +84,13 @@ def test_advisories_doc_documents_every_allowed_entry():
     script_ids = set(GHSA_PATTERN.findall(script))
     doc_ids = set(GHSA_PATTERN.findall(doc))
 
-    assert script_ids, "advisory-check script should reference at least one GHSA id"
     missing = script_ids - doc_ids
     assert not missing, (
         "Every GHSA waived in check-advisories.mjs must be listed in docs/NODE_ADVISORIES.md "
         f"(missing: {sorted(missing)})"
     )
+    if not script_ids:
+        assert "No active npm advisory waivers" in doc
 
 
 def test_release_smoke_runs_panel_advisory_gate_locally():

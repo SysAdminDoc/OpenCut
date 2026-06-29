@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - CEP panel Vite 8 tooling
+
+- Upgraded the CEP panel build lockfile to Vite 8.1, removed the stale Vite 5
+  advisory waiver path, and tightened the npm advisory gate to fail closed on
+  any future unwaived panel vulnerability.
+
 ### Changed - C2PA signed provenance credentials
 
 - C2PA provenance sidecars now verify Ed25519 signatures with embedded
