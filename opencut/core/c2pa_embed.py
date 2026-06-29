@@ -182,6 +182,9 @@ def embed_c2pa(
     video_path: str,
     manifest: dict,
     output: Optional[str] = None,
+    signed_credential: bool = False,
+    credential_output: Optional[str] = None,
+    c2patool_path: str = "",
     on_progress: Optional[Callable] = None,
 ) -> dict:
     """Embed a C2PA manifest into a video file as metadata.
@@ -197,7 +200,8 @@ def embed_c2pa(
         on_progress: Optional callback(pct, msg).
 
     Returns:
-        Dict with output_path, manifest_size, source_hash.
+        Dict with output_path, manifest_size, source_hash, and optionally a
+        signed C2PA credential sidecar / embedded output summary.
     """
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -248,6 +252,32 @@ def embed_c2pa(
         f.write(manifest_str)
 
     if on_progress:
+        on_progress(85, "C2PA manifest embedded")
+
+    credential = None
+    if signed_credential:
+        from opencut.core.c2pa_sidecar import C2paAction, build_sidecar
+
+        actions = [
+            C2paAction(
+                action=str(op.get("action") or "c2pa.unknown"),
+                when=str(op.get("timestamp") or manifest.get("created") or ""),
+                parameters=op.get("parameters") or {},
+                software_agent=str(op.get("softwareAgent") or C2PA_CLAIM_GENERATOR),
+            )
+            for op in manifest.get("operations", [])
+            if isinstance(op, dict)
+        ]
+        credential = build_sidecar(
+            asset_path=out,
+            actions=actions,
+            title=str(manifest.get("title") or os.path.basename(out)),
+            embed=True,
+            embedded_output_path=credential_output,
+            c2patool_path=c2patool_path,
+        ).as_dict()
+
+    if on_progress:
         on_progress(100, "C2PA manifest embedded")
 
     return {
@@ -257,6 +287,7 @@ def embed_c2pa(
         "source_hash": source_hash,
         "instance_id": manifest.get("instance_id", ""),
         "operations_count": len(manifest.get("operations", [])),
+        "credential": credential,
     }
 
 
