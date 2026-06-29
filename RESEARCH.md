@@ -1,110 +1,87 @@
-# Research - OpenCut
+# Research — OpenCut
 
 ## Executive Summary
-
-Verified: OpenCut v1.33.1 is no longer an early feature backlog; it is a broad local-first Premiere automation system with CEP and UXP panels, a Flask backend, generated manifests, model/license cards, release smoke gates, plugin routes, and local distribution docs. Recent commits already closed the previous highest-risk findings around bundled FFmpeg provenance, CEP native dialogs, stale model cards, CEP Node advisories, UXP quick actions, and local-release policy drift.
-
-The next useful work should tighten trust and UXP migration parity instead of adding unrelated features. The highest-value additions are: add a static UXP DOM-sink safety gate; reclassify caption translation engines by license before promoting NLLB/Seamless as default commercial-safe local translation; generate UXP caption style choices from the shared 55-style backend catalog; promote C2PA from unsigned sidecars to signed embedded/export-verifiable credentials; and surface plugin trust, lock, and quarantine status in panel Settings.
-
-Assumption: the product should remain local-first, Premiere-centered, and user-installable without relying on GitHub Actions or cloud services. That matches the repo README, SECURITY, CONTRIBUTING, and current release policy.
+Verified: OpenCut v1.33.1 is a local-first Adobe Premiere Pro automation system, not a general browser editor: Python/Flask backend, CEP and UXP panels, generated route/readiness/model manifests, plugin loading, MCP, local installers, and FFmpeg-backed media workflows. The strongest current direction is trustable local automation that exposes readiness/provenance clearly before an editor runs a workflow. Highest-value opportunities: 1) move the CEP panel off unsupported Vite 5, 2) make README/product facts generated enough that badges, route counts, test counts, and caption-style claims cannot drift, 3) make `/ux/feature-index` readiness-aware so command/search surfaces do not expose dead or speculative routes as runnable, 4) resolve real caption fonts and CJK fallback for styled/burned captions, 5) finish the existing roadmap item for plugin trust/quarantine visibility in Settings, and 6) keep UXP WebView cutover gated on real Premiere UDT capture instead of static confidence.
 
 ## Product Map
-
-- Verified: the backend is Python 3.11+/Flask with route, MCP, model-card, feature-readiness, and release-smoke generators. `opencut/_generated/route_manifest.json` still records a small set of explicit stub routes, while most research items from earlier files have shipped.
-- Verified: Premiere integration is split between CEP (`extension/com.opencut.panel`) and UXP (`extension/com.opencut.uxp`). UXP is the strategic surface because Adobe is moving Premiere extensibility to UXP/WebView, while CEP remains the compatibility panel.
-- Verified: the release posture is local-first. README, SECURITY, Docker docs, and recent commits emphasize local builds, local backend binding, CSRF, path validation, optional cloud features, and no default public sidecar services.
-- Verified: model-card governance is real. `scripts/dump_model_cards.py --check` reports 66 cards across eight categories, but translation code still directly advertises and downloads NLLB/Seamless paths that are not represented as distinct model-card/gating decisions.
-- Verified: caption/style breadth exists in backend code. `opencut.core.caption_styles.BUILTIN_STYLES` currently reports 55 styles, while the UXP caption style select exposes only six fixed options.
+- Core workflows: local Premiere panel automation for cuts, captions, audio cleanup, VFX, export presets, timeline write-back, plugin routes, model readiness, and MCP/API automation.
+- User personas: Premiere editors who want local automation, social/video creators avoiding cloud usage caps, post/operations users who need predictable batch media tooling, and technical users writing plugins or scripts against REST/MCP.
+- Platforms and distribution: Python 3.11+ on Windows/macOS/Linux, Adobe Premiere CEP compatibility, Premiere UXP migration path, WPF/installer packaging, Docker/local server, MIT package `opencut-ppro`.
+- Key integrations and data flows: CEP/UXP panel -> Flask routes -> async job/history -> FFmpeg/model backends -> generated route/readiness/model-card artifacts; plugins load from `~/.opencut/plugins`; optional C2PA/content-credential work is local and signer-dependent.
 
 ## Competitive Landscape
-
-- Adobe Premiere Pro is the baseline competitor, not just the host. Media Intelligence, AI search, transcription, captioning, text-based editing, and Content Credentials raise the minimum expected experience for any Premiere automation plugin.
-- FireCut, AutoPod, AutoCut, and Timebolt compete as paid editing automation tools. Their wedge is editor-time savings, especially shorts, multicam, captions, silence removal, and assistant workflows.
-- Descript, OpusClip, Submagic, and similar cloud-first tools compete on social editing speed, caption templates, repurposing, and collaboration. Their weakness is subscription/cloud friction; OpenCut's local-first position remains useful if the UXP panel feels equally polished.
-- LosslessCut and auto-editor are strong OSS examples of focused local tooling. They win by being simple and reliable, not by having every AI feature.
-- Kdenlive, Shotcut, Remotion, and OpenTimelineIO are adjacent open ecosystems. They matter for interchange, timeline semantics, and user expectations around transparent local media processing.
-- The separate `OpenCut-app/OpenCut` project is a public open-source editor with active user issues. It is not a direct Premiere plugin, but its issue tracker is a useful signal for UX expectations: reliability, upload/media handling, and export robustness matter more than feature count.
+- Adobe Premiere Pro / UXP / Content Credentials: strong native AI search, transcript/caption, UXP distribution, and provenance expectations. Learn: UXP and content authenticity are table-stakes for trust. Avoid: relying on CEP-only or static migration claims without live host evidence.
+- FireCut, AutoPod, AutoCut, TimeBolt: paid Premiere automation succeeds by making repetitive editor actions fast and obvious. Learn: command/search surfaces must route to real, ready actions. Avoid: a huge action catalog that mixes shipped and planned routes without clear state.
+- Descript, OpusClip, Submagic: cloud-first tools lead on transcript editing, clips, captions, templates, and collaboration. Learn: caption/style/font polish and social deliverables matter. Avoid: cloud-default collaboration that conflicts with OpenCut's local-first privacy value.
+- LosslessCut and auto-editor: OSS competitors win by being local, focused, FFmpeg-backed, and reliable. Learn: simple, deterministic operations beat broad but unverified feature promises. Avoid: exposing speculative AI routes as if installed.
+- Kdenlive and Shotcut: full NLEs show the breadth of local video editing, effects, and timeline UX. Learn: clear status, export robustness, and media handling. Avoid: trying to become a full NLE inside Premiere.
+- OpenTimelineIO, Remotion, Editly: adjacent tools prove the value of interchange, declarative video, and generated outputs. Learn: schema/versioned metadata and reproducible exports are worth continuing. Avoid: license-incompatible or cloud-bound dependency expansion.
+- OpenCut-app/OpenCut and pyvideotrans: public issue signal highlights API/headless demand, auto-import, CJK fonts, translation, and install reliability. Learn: multilingual/local automation is valued. Avoid: duplicating the browser editor's full product surface.
 
 ## Security, Privacy, and Reliability
-
-- Verified: the current repo has meaningful security gates: CSRF, path validation, advisory waivers, model cards, fuzz targets, route manifests, structured errors, and FFmpeg provenance verification. `ffmpeg.exe` verifies as Gyan 8.1.2, at/after the documented 8.1.1 security floor.
-- Verified: CEP native dialogs are guarded by tests, and UXP imports an `escapeHtml` helper. Likely gap: UXP still uses many `innerHTML` assignments for backend/user-facing result markup. Most current uses escape interpolated values, but there is no dedicated static allowlist test for UXP HTML sinks comparable to the native-dialog guard.
-- Verified: C2PA exists in two forms: a tested sidecar route and a `c2pa_embed` helper that writes metadata/sidecars. Likely gap: `opencut/core/c2pa_sidecar.py` explicitly says real C2PA verifiers will not accept the unsigned sidecar as a trust credential.
-- Verified: plugin install/list/uninstall/quarantine routes exist, and install requires manifest validation. Likely gap: the panel does not clearly expose loaded, skipped, unsigned, locked, quarantined, or failed plugin state as a user trust surface.
-- Verified: translation code uses SeamlessM4T first and falls back to NLLB. Likely gap: those engines are not separately surfaced in the generated model-card list or panel copy as license-sensitive optional engines.
+- Verified risk: `extension/com.opencut.panel/package.json` still uses Vite `^5.4.21`; Vite's release page marks Vite 5 unsupported, and dev-server advisories keep this dependency class security-sensitive even if OpenCut uses local panel builds.
+- Verified risk: `scripts/sync_badges.py --check` currently fails because README has `10300+` tests while the script expects `10800+`; README also advertises `19 styles` while `opencut.core.caption_styles.BUILTIN_STYLES` has 55.
+- Verified risk: `opencut/core/command_palette.py` exposes 215 feature-index entries and 183 route targets absent from `opencut/_generated/route_manifest.json`; the C2PA action points to `/platform/c2pa` while live routes include `/provenance/c2pa` and `/video/c2pa/embed`.
+- Verified risk: styled caption definitions carry `font_family`, but `_build_drawtext_filter()` emits `fontfile=''` and does not resolve a font path or family; CJK line breaking is tested, but CJK glyph rendering can still fail at FFmpeg drawtext time.
+- Existing roadmap trust work remains valid: plugin lock/quarantine routes exist, but panel-visible plugin trust state is still the active user-facing gap.
+- Missing guardrails: supported-line dependency gate for CEP panel tooling, generated README fact checks beyond badges, readiness-aware UX feature index tests, and caption font-resolution/CJK render tests.
+- Recovery needs: generated manifests should distinguish implemented, dependency-gated, planned, and blocked actions so panels can disable or explain unsafe/unavailable actions instead of surfacing generic route failures.
 
 ## Architecture Assessment
-
-Strengths:
-
-- Verified: generated artifacts make drift visible. Route manifests, model cards, feature readiness, advisory docs, and release-smoke checks are the right direction for a repo with a very large route surface.
-- Verified: the project keeps optional heavyweight engines behind extras and availability checks instead of making every install enormous.
-- Verified: CEP and UXP coexistence lets the project migrate without breaking existing users.
-- Verified: local-first distribution docs, Docker hardening, and installer work make OpenCut more credible than a script collection.
-
-Risks:
-
-- Verified: UXP parity is now a product risk. UXP is the future panel, but current UXP controls lag backend/CEP capability in visible places such as caption styles.
-- Verified: trust features are split across backend routes and docs. Model cards, C2PA, plugin locks, quarantine, and advisories need panel-level affordances so users can see trust state before running actions.
-- Likely: translation licensing can become a release blocker if NLLB/Seamless are marketed as normal defaults without model-card entries, license copy, and opt-in behavior.
-- Likely: broad route count increases regression risk. The repo should keep favoring static gates, manifest checks, and focused parity tests over manual review.
+- `opencut/core/command_palette.py` is a hand-curated catalog that has drifted from the generated route/readiness registry. Refactor toward a generated or enriched index that carries readiness and only treats live routes as runnable.
+- README facts are partly generated but still partly hand-written. Extend the existing badge sync approach to route prose, test prose, and caption style counts instead of adding more manual edits.
+- Caption rendering has good parsing/wrapping tests but not enough font/backend evidence. Add a font resolver around `caption_styles.py` and test generated filter strings plus at least one CJK smoke render where FFmpeg is available.
+- CEP/UXP migration docs show strong static guardrails, but live WebView cutover still depends on Premiere UDT capture. Keep that as an open validation question until a real host run exists.
+- Active working notes still contain stale CI/GitHub Actions references even though this repo's current policy and `.github` state are local-build only. That is a dev-experience reliability issue for future agents.
+- Category coverage: security and upgrade strategy map to the Vite/plugin work; accessibility and i18n map to caption CJK/font rendering; observability and testing map to readiness/fact-drift guards; docs/distribution map to README and local-build cleanup; plugin ecosystem is the existing roadmap item; mobile and cloud multi-user are rejected as product misfits; offline resilience and UXP migration stay local-first and evidence-gated.
 
 ## Rejected Ideas
-
-- Rejected: "build paper edit" as a new item. Transcript/paper-edit routes and tests already exist, and this pass should not duplicate shipped work.
-- Rejected: "add more backend caption templates" as the next item. The backend already reports 55 built-in styles; the research gap is UXP/CEP/backend parity and drift prevention.
-- Rejected: "bump Vite major immediately." Vite 5 advisories are documented and waived, and the repo already records a VMware HGFS regression blocker for the major upgrade.
-- Rejected: "make cloud AI the default competitive answer." Competitors already sell cloud workflows; OpenCut's differentiated position is local-first Premiere automation with explicit opt-ins.
-- Rejected: "replace the whole plugin system." Routes, locks, validation, marketplace, and quarantine already exist. The more useful next step is exposing trust state and operations in the panel.
+- Cloud-first multi-user collaboration from Descript/OpusClip: rejected because OpenCut's differentiator is local-first Premiere automation; keep collaboration optional/review-export oriented.
+- Mobile app: rejected because the product is a desktop Premiere extension/server stack.
+- Full NLE replacement: rejected because Premiere is the host; Kdenlive/Shotcut/Olive are useful references, not a target product shape.
+- Implement every `checks.py` Tier 3 stub: rejected because broad model chasing would increase maintenance/security load without proving user value.
+- GitHub Actions as the release/build answer: rejected because current repo policy is local builds and releases from this workstation; use local smoke gates instead.
+- New caption-template expansion: rejected because backend has 55 styles; the gap is rendering fidelity, font fallback, and documentation drift.
 
 ## Sources
-
 Repository and OSS:
-
 - https://github.com/SysAdminDoc/OpenCut
 - https://github.com/OpenCut-app/OpenCut
 - https://github.com/mifi/lossless-cut
 - https://github.com/WyattBlue/auto-editor
-- https://github.com/AcademySoftwareFoundation/OpenTimelineIO
 - https://github.com/KDE/kdenlive
 - https://github.com/mltframework/shotcut
+- https://github.com/AcademySoftwareFoundation/OpenTimelineIO
 - https://github.com/remotion-dev/remotion
+- https://github.com/mifi/editly
+- https://github.com/jianchang512/pyvideotrans
 
 Commercial and platform:
-
 - https://www.adobe.com/products/premiere/ai-video-editor.html
 - https://helpx.adobe.com/premiere-pro/using/media-intelligence-and-search-panel.html
 - https://developer.adobe.com/premiere-pro/uxp/
 - https://developer.adobe.com/premiere-pro/uxp/guides/distribution/
+- https://helpx.adobe.com/creative-cloud/help/content-credentials.html
 - https://firecut.ai/
 - https://www.autopod.fm/
-- https://www.autocut.com/
 - https://www.timebolt.io/
 - https://www.descript.com/pricing
 - https://www.opus.pro/pricing
 - https://www.submagic.co/
 
-Standards, security, and distribution:
-
+Standards, dependencies, and security:
 - https://vite.dev/releases
-- https://ffmpeg.org/security.html
-- https://github.com/advisories/GHSA-fx2h-pf6j-xcff
-- https://github.com/advisories/GHSA-v6wh-96g9-6wx3
-- https://github.com/facebookresearch/seamless_communication
-- https://huggingface.co/facebook/nllb-200-distilled-600M
+- https://github.com/advisories/GHSA-p9ff-h696-f583
+- https://github.com/advisories/GHSA-vg6x-rcgg-rjx6
 - https://spec.c2pa.org/specifications/specifications/2.4/index.html
 - https://opensource.contentauthenticity.org/docs/c2patool/
-- https://helpx.adobe.com/creative-cloud/help/content-credentials.html
+- https://github.com/advisories/GHSA-v2wj-q39q-566r
 
-Community signal:
-
-- https://www.trustpilot.com/review/opus.pro
-- https://www.trustpilot.com/review/submagic.co
+Community and discovery:
+- https://github.com/wentianli/awesome-video-editing
+- https://github.com/OpenCut-app/OpenCut/issues/817
+- https://github.com/OpenCut-app/OpenCut/issues/827
 
 ## Open Questions
-
-- Should NLLB and SeamlessM4T remain installable for personal/non-commercial workflows, or should the default translation path switch to a clearly commercial-safe local engine first?
-- Which C2PA implementation should be canonical for release exports: `c2patool`, `c2pa-python`, or a thin adapter that supports both?
-- Should UXP load caption styles from a backend endpoint at runtime, a generated JSON asset, or a shared checked-in style manifest?
-- Should plugin trust state live in the Settings tab only, or should risky plugin actions also surface inline warnings in the command palette and job history?
-- Which blocked UXP live-test items need real Premiere 26.x evidence before the WebView manifest can become the default entrypoint?
+- Which signer/key workflow should be canonical for release-grade C2PA credentials? This requires a human-controlled certificate/key decision before implementation can be fully trusted.
+- When can a real Premiere 26.x UDT capture be produced for `window.OpenCutUXPUdtHarness.run({ includeMutating: true })`? Static UXP tests are not a substitute for host evidence.
