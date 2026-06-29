@@ -67,7 +67,7 @@ def test_wpf_unit_script_runs_dotnet_test_project():
 def test_wpf_smoke_script_uses_temp_profile_and_quiet_install_uninstall():
     text = _read(SMOKE_SCRIPT)
     required = [
-        "$env:CI",
+        "$env:OPENCUT_INSTALLER_SMOKE",
         "AllowLocalProfileMutation",
         "OpenCut-WPF-Setup-*.exe",
         "--install",
@@ -84,6 +84,8 @@ def test_wpf_smoke_script_uses_temp_profile_and_quiet_install_uninstall():
     ]
     for needle in required:
         assert needle in text
+    assert "$env:CI" not in text
+    assert "RUNNER_OS" not in text
 
 
 def test_release_smoke_includes_wpf_installer_contract_tests():

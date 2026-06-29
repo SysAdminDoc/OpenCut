@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-CI smoke test for the recommended WPF installer.
+Local smoke test for the recommended WPF installer.
 
 .DESCRIPTION
 Runs the built self-extracting WPF installer in quiet mode against a temporary
@@ -71,12 +71,13 @@ function Assert-Removed {
     }
 }
 
-if (($env:CI -ne "true") -and (-not $AllowLocalProfileMutation)) {
-    throw "Refusing to run outside CI. Pass -AllowLocalProfileMutation to run the WPF installer smoke intentionally."
+$automationOptIn = $env:OPENCUT_INSTALLER_SMOKE -eq "1"
+if ((-not $automationOptIn) -and (-not $AllowLocalProfileMutation)) {
+    throw "Refusing to run without explicit local smoke opt-in. Pass -AllowLocalProfileMutation or set OPENCUT_INSTALLER_SMOKE=1 for disposable release validation."
 }
 
-if ($env:RUNNER_OS -and $env:RUNNER_OS -ne "Windows") {
-    throw "smoke_wpf_installer.ps1 must run on a Windows runner"
+if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+    throw "smoke_wpf_installer.ps1 requires Windows."
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

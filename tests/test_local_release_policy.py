@@ -23,6 +23,17 @@ ACTIVE_DOCS = (
     REPO_ROOT / "docs" / "RELEASE_PROVENANCE.md",
 )
 
+OPTIONAL_ACTIVE_LOCAL_BUILD_SURFACES = (
+    REPO_ROOT / "CLAUDE.md",
+    REPO_ROOT / "docs" / "UXP_MIGRATION.md",
+)
+
+ACTIVE_LOCAL_BUILD_SCRIPTS = (
+    REPO_ROOT / "scripts" / "build_wpf_installer_ci.ps1",
+    REPO_ROOT / "scripts" / "smoke_wpf_installer.ps1",
+    REPO_ROOT / "scripts" / "smoke_inno_installer.ps1",
+)
+
 FORBIDDEN_ACTIVE_DOC_PATTERNS = {
     "GitHub Actions": re.compile(r"GitHub Actions"),
     "Dependabot": re.compile(r"Dependabot"),
@@ -30,9 +41,22 @@ FORBIDDEN_ACTIVE_DOC_PATTERNS = {
     "CI": re.compile(r"\bCI\b"),
 }
 
+FORBIDDEN_LOCAL_BUILD_PATTERNS = {
+    "GitHub Actions": re.compile(r"GitHub Actions"),
+    ".github/workflows": re.compile(r"\.github[\\/]+workflows"),
+    "CI/CD": re.compile(r"\bCI/CD\b"),
+    "$env:CI": re.compile(r"\$env:CI\b"),
+    "GITHUB_OUTPUT": re.compile(r"\bGITHUB_OUTPUT\b"),
+    "RUNNER_OS": re.compile(r"\bRUNNER_OS\b"),
+}
+
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _existing(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    return tuple(path for path in paths if path.exists())
 
 
 def test_active_docs_do_not_promise_removed_hosted_automation():
@@ -40,6 +64,21 @@ def test_active_docs_do_not_promise_removed_hosted_automation():
     for path in ACTIVE_DOCS:
         text = _read(path)
         for label, pattern in FORBIDDEN_ACTIVE_DOC_PATTERNS.items():
+            if pattern.search(text):
+                offenders.append(f"{path.relative_to(REPO_ROOT)} contains {label}")
+
+    assert offenders == []
+
+
+def test_active_local_build_surfaces_do_not_reference_removed_workflows():
+    offenders: list[str] = []
+    paths = (
+        *ACTIVE_LOCAL_BUILD_SCRIPTS,
+        *_existing(OPTIONAL_ACTIVE_LOCAL_BUILD_SURFACES),
+    )
+    for path in paths:
+        text = _read(path)
+        for label, pattern in FORBIDDEN_LOCAL_BUILD_PATTERNS.items():
             if pattern.search(text):
                 offenders.append(f"{path.relative_to(REPO_ROOT)} contains {label}")
 

@@ -20,11 +20,12 @@ def _read(path: Path) -> str:
 
 def test_inno_smoke_script_has_profile_mutation_guard():
     text = _read(SMOKE_SCRIPT)
-    assert "$env:CI" in text
+    assert "$env:OPENCUT_INSTALLER_SMOKE" in text
     assert "AllowLocalProfileMutation" in text
     assert "~/.opencut" in text
     assert "Remove-Item -LiteralPath $installFull -Recurse -Force" in text
     assert "Assert-UnderDirectory" in text
+    assert "$env:CI" not in text
 
 
 def test_inno_smoke_script_runs_silent_install_and_uninstall():
