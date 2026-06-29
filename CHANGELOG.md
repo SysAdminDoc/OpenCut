@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - C2PA signed provenance credentials
+
+- C2PA provenance sidecars now verify Ed25519 signatures with embedded
+  public keys, classify signed, unsigned, embedded, missing-asset, and
+  tampered-manifest states, and can request a `c2patool` embedded
+  MP4/JPEG/PNG credential when an operator signing key is configured.
+
 ### Changed - UXP caption style catalog
 
 - UXP caption styles now load from the backend `/captions/styles` catalog

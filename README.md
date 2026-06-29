@@ -497,6 +497,9 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |
+| `OPENCUT_C2PA_SIGNING_KEY` | unset | Ed25519 private-key PEM or path used to sign local C2PA sidecars |
+| `OPENCUT_C2PA_C2PATOOL` | `c2patool` on PATH | Optional C2PA Tool executable used for embedded MP4/JPEG/PNG credentials |
+| `OPENCUT_C2PA_SIGNING_CERT` | unset | Optional certificate path/content forwarded to C2PA Tool for operator trust chains |
 
 ## CLI Usage
 

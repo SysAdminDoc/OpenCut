@@ -30,6 +30,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
     validate_path,
 )
 
@@ -860,11 +861,27 @@ def provenance_c2pa_sidecar():
             if isinstance(item, dict)
         ]
 
+        embedded_output_path = str(
+            data.get("embedded_output_path")
+            or data.get("output_path")
+            or ""
+        ).strip()
+        if embedded_output_path:
+            embedded_output_path = validate_output_path(embedded_output_path)
+
+        c2patool_path = str(data.get("c2patool_path") or "").strip()
+        if c2patool_path:
+            c2patool_path = validate_path(c2patool_path)
+
         build_kwargs = dict(
             asset_path=asset_path,
             ingredients=ingredients,
             actions=actions,
             title=str(data.get("title") or "").strip() or None,
+            cloud_trust_list=str(data.get("cloud_trust_list") or "").strip(),
+            embed=safe_bool(data.get("embed") or data.get("embedded"), default=False),
+            embedded_output_path=embedded_output_path or None,
+            c2patool_path=c2patool_path,
         )
         claim_generator_override = str(data.get("claim_generator") or "").strip()
         if claim_generator_override:

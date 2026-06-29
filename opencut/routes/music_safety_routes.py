@@ -226,6 +226,9 @@ def route_c2pa_embed(job_id, filepath, data):
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)
+    credential_output = data.get("credential_output_path", "").strip() or None
+    if credential_output:
+        credential_output = validate_output_path(credential_output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -234,6 +237,9 @@ def route_c2pa_embed(job_id, filepath, data):
         video_path=filepath,
         manifest=manifest,
         output=out_path,
+        signed_credential=safe_bool(data.get("signed_credential") or data.get("embed_signed"), default=False),
+        credential_output=credential_output,
+        c2patool_path=str(data.get("c2patool_path") or "").strip(),
         on_progress=_on_progress,
     )
     return result

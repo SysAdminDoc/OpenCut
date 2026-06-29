@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,57 @@ def asset(tmp_path: Path) -> Path:
     path = tmp_path / "render.mp4"
     path.write_bytes(b"this is the rendered asset bytes - pretend it's a video")
     return path
+
+
+def _write_ed25519_key(tmp_path: Path) -> Path:
+    ed25519 = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
+
+    key = ed25519.Ed25519PrivateKey.generate()
+    pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    key_path = tmp_path / "opencut-c2pa-ed25519.pem"
+    key_path.write_bytes(pem)
+    return key_path
+
+
+def _write_fake_c2patool(tmp_path: Path) -> Path:
+    if os.name == "nt":
+        tool = tmp_path / "c2patool.cmd"
+        tool.write_text(
+            "@echo off\n"
+            "set SRC=%~1\n"
+            "set OUT=\n"
+            ":args\n"
+            "if \"%~1\"==\"\" goto done\n"
+            "if \"%~1\"==\"-o\" set OUT=%~2\n"
+            "shift\n"
+            "goto args\n"
+            ":done\n"
+            "if \"%OUT%\"==\"\" exit /b 2\n"
+            "copy /Y \"%SRC%\" \"%OUT%\" >nul\n"
+            "exit /b 0\n",
+            encoding="utf-8",
+        )
+    else:
+        tool = tmp_path / "c2patool"
+        tool.write_text(
+            "#!/bin/sh\n"
+            "src=\"$1\"\n"
+            "out=\"\"\n"
+            "while [ \"$#\" -gt 0 ]; do\n"
+            "  if [ \"$1\" = \"-o\" ]; then shift; out=\"$1\"; fi\n"
+            "  shift\n"
+            "done\n"
+            "[ -n \"$out\" ] || exit 2\n"
+            "cp \"$src\" \"$out\"\n",
+            encoding="utf-8",
+        )
+        tool.chmod(0o755)
+    return tool
 
 
 def test_build_sidecar_writes_manifest(asset, tmp_path):
@@ -56,6 +108,22 @@ def test_build_sidecar_emits_unsigned_when_no_key(monkeypatch, asset):
     assert "signature" not in manifest
 
 
+def test_build_sidecar_signs_and_verifies_with_operator_key(monkeypatch, asset, tmp_path):
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert result.signed is True
+    assert result.signing_algorithm == "ed25519"
+    assert verify["status"] == "signed_sidecar"
+    assert verify["signature_present"] is True
+    assert verify["signature_hash_match"] is True
+    assert verify["signature_valid"] is True
+    assert verify["signature_match"] is True
+
+
 def test_build_sidecar_paths_default_to_dotted_extension(asset):
     result = c2pa.build_sidecar(asset_path=str(asset))
     assert Path(result.sidecar_path).name == "render.mp4.c2pa.json"
@@ -93,6 +161,69 @@ def test_verify_sidecar_flags_manifest_tampering(asset):
     result = c2pa.verify_sidecar(str(sidecar))
     warnings = " ".join(result["warnings"])
     assert "unsigned" in warnings.lower()
+
+
+def test_verify_sidecar_detects_signed_manifest_tampering(monkeypatch, asset, tmp_path):
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    sidecar = Path(result.sidecar_path)
+    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    manifest["title"] = "Tampered title"
+    sidecar.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    verify = c2pa.verify_sidecar(str(sidecar))
+
+    assert verify["asset_match"] is True
+    assert verify["status"] == "tampered_manifest"
+    assert verify["signature_present"] is True
+    assert verify["signature_match"] is False
+    assert any("signed bytes hash mismatch" in w for w in verify["warnings"])
+
+
+def test_verify_sidecar_distinguishes_missing_asset(asset):
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    asset.unlink()
+
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert verify["asset_found"] is False
+    assert verify["status"] == "missing_asset"
+    assert any("not found" in w for w in verify["warnings"])
+
+
+def test_build_sidecar_warns_when_embed_requested_without_key(monkeypatch, asset):
+    monkeypatch.delenv("OPENCUT_C2PA_SIGNING_KEY", raising=False)
+
+    result = c2pa.build_sidecar(asset_path=str(asset), embed=True)
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert result.embedded is False
+    assert result.signed is False
+    assert verify["status"] == "unsigned_sidecar"
+    assert any("requires OPENCUT_C2PA_SIGNING_KEY" in w for w in result.warnings)
+
+
+def test_build_sidecar_embeds_with_c2patool_when_configured(monkeypatch, asset, tmp_path):
+    key_path = _write_ed25519_key(tmp_path)
+    fake_tool = _write_fake_c2patool(tmp_path)
+    output = tmp_path / "render.content-credentials.mp4"
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+
+    result = c2pa.build_sidecar(
+        asset_path=str(asset),
+        embed=True,
+        embedded_output_path=str(output),
+        c2patool_path=str(fake_tool),
+    )
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert result.signed is True
+    assert result.embedded is True
+    assert Path(result.embedded_path) == output
+    assert output.exists()
+    assert verify["status"] == "embedded_signed"
+    assert verify["embedded"] is True
 
 
 def test_build_sidecar_with_explicit_sidecar_path(asset, tmp_path):
@@ -139,6 +270,50 @@ def test_provenance_routes_round_trip(client, csrf_token, tmp_path):
     vp = verify.get_json()
     assert vp["asset_match"] is True
     assert vp["signature_present"] is False
+
+
+def test_provenance_route_embeds_when_tool_and_key_configured(
+    monkeypatch,
+    client,
+    csrf_token,
+    tmp_path,
+):
+    from tests.conftest import csrf_headers
+
+    key_path = _write_ed25519_key(tmp_path)
+    fake_tool = _write_fake_c2patool(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+
+    asset = tmp_path / "demo.mp4"
+    asset.write_bytes(b"video bytes here")
+    embedded = tmp_path / "demo.embedded.mp4"
+
+    resp = client.post(
+        "/provenance/c2pa",
+        json={
+            "asset_path": str(asset),
+            "title": "Demo",
+            "embed": True,
+            "embedded_output_path": str(embedded),
+            "c2patool_path": str(fake_tool),
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200, resp.get_json()
+    payload = resp.get_json()
+    assert payload["signed"] is True
+    assert payload["embedded"] is True
+    assert Path(payload["embedded_path"]) == embedded
+    assert embedded.exists()
+
+    verify = client.post(
+        "/provenance/verify",
+        json={"sidecar_path": payload["sidecar_path"]},
+        headers=csrf_headers(csrf_token),
+    )
+    assert verify.status_code == 200
+    assert verify.get_json()["status"] == "embedded_signed"
 
 
 def test_provenance_route_requires_asset_path(client, csrf_token):

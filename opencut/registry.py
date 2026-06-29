@@ -731,12 +731,12 @@ _FEATURES: List[FeatureRecord] = [
     ),
     FeatureRecord(
         feature_id="provenance.c2pa-sidecar",
-        label="C2PA provenance sidecar (unsigned by default)",
+        label="C2PA provenance sidecar and signed embedded export credential",
         category="export",
         state=STATE_AVAILABLE,
-        install_hint="bundled; pip install cryptography to enable Ed25519 signing",
+        install_hint="bundled sidecars; pip install cryptography for Ed25519 sidecar signing; install c2patool for embedded MP4/JPEG/PNG credentials",
         docs="ROADMAP.md#F110",
-        routes=["/provenance/c2pa", "/provenance/verify"],
+        routes=["/provenance/c2pa", "/provenance/verify", "/video/c2pa/embed"],
     ),
     FeatureRecord(
         feature_id="system.ai-eval-harness",
