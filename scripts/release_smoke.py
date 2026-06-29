@@ -192,7 +192,7 @@ def step_esbuild_pin(_args: argparse.Namespace) -> StepResult:
     """F131 — every resolved esbuild instance must be >=0.25.0.
 
     Skips gracefully if Node or the panel's `node_modules` tree is not
-    present (the dev VM and many CI matrix legs don't run npm).
+    present (the dev VM and minimal local release hosts don't run npm).
     """
     start = time.time()
     node = shutil.which("node")

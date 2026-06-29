@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Build the recommended WPF installer in GitHub Actions.
+    Build the recommended WPF installer for local release validation.
 .DESCRIPTION
-    F201 wrapper around installer/InstallerBuilder.ps1. The build workflow
-    runs PyInstaller first, then this script copies FFmpeg/ffprobe from PATH
-    into the repo-local ffmpeg/ payload folder and archives the WPF output in
-    installer/dist/wpf/ so the later Inno fallback build cannot overwrite it.
+    F201 compatibility wrapper around installer/InstallerBuilder.ps1. The
+    local release build runs PyInstaller first, then this script copies
+    FFmpeg/ffprobe from PATH into the repo-local ffmpeg/ payload folder and
+    archives the WPF output in installer/dist/wpf/ so the later Inno fallback
+    build cannot overwrite it.
 #>
 
 param(
@@ -31,8 +32,8 @@ function Copy-ToolFromPath([string]$ToolName, [string]$TargetDir) {
     Write-Host "[wpf-installer] copied $ToolName from $($command.Source)"
 }
 
-if ($env:RUNNER_OS -and $env:RUNNER_OS -ne "Windows") {
-    throw "build_wpf_installer_ci.ps1 must run on a Windows runner"
+if (-not [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+    throw "build_wpf_installer_ci.ps1 requires Windows."
 }
 
 $builder = Resolve-RepoPath "installer\InstallerBuilder.ps1"
@@ -70,8 +71,8 @@ New-Item -ItemType Directory -Force -Path $wpfArchiveDir | Out-Null
 $archived = Join-Path $wpfArchiveDir "OpenCut-WPF-Setup-$version.exe"
 Copy-Item -LiteralPath $installer.FullName -Destination $archived -Force
 
-if ($env:GITHUB_OUTPUT) {
-    "wpf_installer=$archived" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+if ($env:OPENCUT_WPF_INSTALLER_OUTPUT) {
+    "wpf_installer=$archived" | Out-File -FilePath $env:OPENCUT_WPF_INSTALLER_OUTPUT -Append -Encoding utf8
 }
 
 Write-Host "[wpf-installer] archived WPF installer: $archived"

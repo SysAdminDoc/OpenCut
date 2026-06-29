@@ -1,4 +1,4 @@
-"""F201 WPF installer automation wrapper tests."""
+"""F201 WPF installer local release wrapper tests."""
 
 from __future__ import annotations
 
@@ -13,17 +13,19 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def test_wpf_installer_ci_script_exists_and_wraps_builder():
+def test_wpf_installer_wrapper_exists_and_wraps_builder():
     text = _read(SCRIPT)
 
     assert "F201" in text
     assert "installer\\InstallerBuilder.ps1" in text
     assert "dist\\OpenCut-Server" in text
     assert "OpenCut-WPF-Setup-" in text
-    assert "GITHUB_OUTPUT" in text
+    assert "OPENCUT_WPF_INSTALLER_OUTPUT" in text
+    assert "GitHub Actions" not in text
+    assert "GITHUB_OUTPUT" not in text
 
 
-def test_wpf_installer_ci_script_stages_ffmpeg_from_path():
+def test_wpf_installer_wrapper_stages_ffmpeg_from_path():
     text = _read(SCRIPT)
 
     assert 'Copy-ToolFromPath "ffmpeg"' in text

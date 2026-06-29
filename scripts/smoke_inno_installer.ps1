@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-CI smoke test for the legacy Inno Setup installer.
+Local smoke test for the legacy Inno Setup installer.
 
 .DESCRIPTION
 Installs the generated OpenCut-Setup-*.exe into a temporary directory,
@@ -8,8 +8,8 @@ verifies the user-visible payload and machine-readable installer manifest,
 then runs the generated uninstaller and verifies cleanup.
 
 The Inno uninstaller removes the user's ~/.opencut directory by design.
-For that reason this script refuses to run outside CI unless
--AllowLocalProfileMutation is passed explicitly.
+For that reason this script refuses to run unless OPENCUT_INSTALLER_SMOKE=1
+is set or -AllowLocalProfileMutation is passed explicitly.
 #>
 
 [CmdletBinding()]
@@ -75,8 +75,9 @@ function Assert-Removed {
     }
 }
 
-if (($env:CI -ne "true") -and (-not $AllowLocalProfileMutation)) {
-    throw "Refusing to run outside CI because the Inno uninstaller deletes ~/.opencut. Pass -AllowLocalProfileMutation to override intentionally."
+$automationOptIn = $env:OPENCUT_INSTALLER_SMOKE -eq "1"
+if ((-not $automationOptIn) -and (-not $AllowLocalProfileMutation)) {
+    throw "Refusing to run without explicit local smoke opt-in because the Inno uninstaller deletes ~/.opencut. Pass -AllowLocalProfileMutation or set OPENCUT_INSTALLER_SMOKE=1 for disposable release validation."
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -185,4 +186,3 @@ finally {
 }
 
 Write-Host "[F213] Inno installer install/uninstall smoke passed"
-

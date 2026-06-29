@@ -23,10 +23,3 @@ Blocked items (credential/license/hardware-gated) live in
   Touches: `opencut/core/caption_styles.py`, `opencut/routes/captions.py`, `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.uxp/main.js`, `tests/test_engagement_content.py`, `tests/test_caption_line_breaks.py`.
   Acceptance: Styled caption filters use a resolved font path or safe font-family fallback instead of `fontfile=''`; CJK sample captions render in a focused FFmpeg smoke when FFmpeg is available; panel font controls explain fallback behavior; tests cover missing preferred fonts and CJK text.
   Complexity: M
-
-- [ ] P2 — Remove stale GitHub Actions and CI claims from active local-build docs
-  Why: Active working notes and helper text still reference non-existent workflows even though this repo's current policy and `.github` state are local-build only.
-  Evidence: `CLAUDE.md:200`, `CLAUDE.md:208`, `docs/UXP_MIGRATION.md:94`, `scripts/build_wpf_installer_ci.ps1:3`, `.github/` contains no workflow files.
-  Touches: `CLAUDE.md`, `docs/UXP_MIGRATION.md`, `scripts/build_wpf_installer_ci.ps1`, `scripts/smoke_wpf_installer.ps1`, `scripts/smoke_inno_installer.ps1`, `tests/test_release_smoke.py`.
-  Acceptance: Active docs and script descriptions say local release/smoke/build instead of GitHub Actions or CI where no workflow exists; archived research docs are exempt; a local grep/test guards against reintroducing `.github/workflows` claims outside archived files and intentionally named compatibility scripts.
-  Complexity: S

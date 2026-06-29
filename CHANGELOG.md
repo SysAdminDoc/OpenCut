@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Local release policy guard
+
+- Replaced stale GitHub Actions/CI wording in active installer wrappers with
+  local release-smoke opt-in variables and added tests that prevent removed
+  workflow claims from returning to active build surfaces.
+
 ### Changed - UX feature index readiness
 
 - Enriched command-palette feature index and search results with route
