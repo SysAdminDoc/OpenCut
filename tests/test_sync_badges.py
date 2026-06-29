@@ -13,7 +13,6 @@ These tests cover:
 from __future__ import annotations
 
 import importlib.util
-import os
 import shutil
 import subprocess
 import sys
@@ -23,6 +22,24 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "sync_badges.py"
+
+
+def _copy_minimal_sync_tree(tmp_path: Path) -> None:
+    tmp_path.mkdir()
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "opencut" / "_generated").mkdir(parents=True)
+    (tmp_path / "opencut" / "core").mkdir(parents=True)
+    shutil.copy2(REPO_ROOT / "README.md", tmp_path / "README.md")
+    shutil.copy2(SCRIPT, tmp_path / "scripts" / "sync_badges.py")
+    shutil.copy2(REPO_ROOT / "opencut" / "__init__.py", tmp_path / "opencut" / "__init__.py")
+    shutil.copy2(
+        REPO_ROOT / "opencut" / "core" / "caption_styles.py",
+        tmp_path / "opencut" / "core" / "caption_styles.py",
+    )
+    shutil.copy2(
+        REPO_ROOT / "opencut" / "_generated" / "route_manifest.json",
+        tmp_path / "opencut" / "_generated" / "route_manifest.json",
+    )
 
 
 def _load_module():
@@ -82,16 +99,7 @@ class TestBadgeCheckCLI(unittest.TestCase):
         """Copy the repo to a temp dir, mutate the badge, confirm --check fails."""
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp) / "opencut"
-            # Copy only what's needed: README, the script, and the manifest.
-            tmp_path.mkdir()
-            (tmp_path / "scripts").mkdir()
-            (tmp_path / "opencut" / "_generated").mkdir(parents=True)
-            shutil.copy2(REPO_ROOT / "README.md", tmp_path / "README.md")
-            shutil.copy2(SCRIPT, tmp_path / "scripts" / "sync_badges.py")
-            shutil.copy2(
-                REPO_ROOT / "opencut" / "_generated" / "route_manifest.json",
-                tmp_path / "opencut" / "_generated" / "route_manifest.json",
-            )
+            _copy_minimal_sync_tree(tmp_path)
             # tests/ optional but its presence affects test-count math; skip.
             # Mutate the route badge to a wrong number. Derive the current
             # count from the README itself so this stays correct as routes are
@@ -120,6 +128,28 @@ class TestBadgeCheckCLI(unittest.TestCase):
                 f"--check should fail on mutated badge. stderr: {result.stderr}",
             )
             self.assertIn("drift", result.stderr.lower())
+
+    def test_check_fails_on_mutated_product_fact(self):
+        """Non-badge product facts are guarded by the same --check path."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp) / "opencut"
+            _copy_minimal_sync_tree(tmp_path)
+
+            readme_path = tmp_path / "README.md"
+            readme = readme_path.read_text(encoding="utf-8")
+            mutated = readme.replace("| 55 Caption Styles |", "| 19 Caption Styles |")
+            self.assertNotEqual(mutated, readme, "Could not mutate caption style fact")
+            readme_path.write_text(mutated, encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, str(tmp_path / "scripts" / "sync_badges.py"), "--check"],
+                cwd=tmp_path,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("Caption feature style count", result.stderr)
 
 
 if __name__ == "__main__":

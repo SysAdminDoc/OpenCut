@@ -17,13 +17,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: Settings lists loaded, skipped, failed, unsigned/lock-missing, marketplace, and quarantined plugins with capability badges; destructive plugin actions require the existing typed confirmation route contract; panel tests cover lock-missing warnings, quarantine restore/delete, and failed plugin error display.
   Complexity: M
 
-- [ ] P1 — Generate and enforce README product facts beyond badges
-  Why: The existing badge sync check already fails on test-count drift, and README still advertises 19 animated caption styles while the backend ships 55.
-  Evidence: `scripts/sync_badges.py --check`, `README.md:8`, `README.md:9`, `README.md:183`, `opencut/core/caption_styles.py:43`, `tests/test_engagement_content.py:342`.
-  Touches: `README.md`, `scripts/sync_badges.py`, `tests/test_sync_badges.py`, `opencut/_generated/route_manifest.json`, `opencut/core/caption_styles.py`.
-  Acceptance: A single local check verifies route badges, test badges, route-count prose/diagram text, root test-file prose, and caption-style counts; README reports the current generated values and `python scripts/sync_badges.py --check` exits 0.
-  Complexity: S
-
 - [ ] P1 — Make the UX feature index readiness-aware before exposing actions
   Why: `/ux/feature-index` mixes shipped and speculative routes without readiness state, so command/search users can be offered non-runnable actions.
   Evidence: `opencut/core/command_palette.py:120`, `opencut/routes/ux_intelligence_routes.py:257`, `opencut/_generated/route_manifest.json`, local check found 183 of 215 command-palette route targets absent from the generated manifest including stale `/platform/c2pa`.
