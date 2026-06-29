@@ -158,6 +158,10 @@
             isFavorite: favoriteId ? ctx.favoriteIds.indexOf(favoriteId) !== -1 : false,
             isRecent: !!extras.isRecent,
             isCurrent: !!extras.isCurrent,
+            isRunnable: item.runnable !== false,
+            readiness: item.readiness || "",
+            routeValid: item.route_valid !== false,
+            readinessReason: item.readiness_reason || "",
             score: extras.score || 0
         };
     }

@@ -17,13 +17,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: Settings lists loaded, skipped, failed, unsigned/lock-missing, marketplace, and quarantined plugins with capability badges; destructive plugin actions require the existing typed confirmation route contract; panel tests cover lock-missing warnings, quarantine restore/delete, and failed plugin error display.
   Complexity: M
 
-- [ ] P1 — Make the UX feature index readiness-aware before exposing actions
-  Why: `/ux/feature-index` mixes shipped and speculative routes without readiness state, so command/search users can be offered non-runnable actions.
-  Evidence: `opencut/core/command_palette.py:120`, `opencut/routes/ux_intelligence_routes.py:257`, `opencut/_generated/route_manifest.json`, local check found 183 of 215 command-palette route targets absent from the generated manifest including stale `/platform/c2pa`.
-  Touches: `opencut/core/command_palette.py`, `opencut/routes/ux_intelligence_routes.py`, `opencut/registry.py`, `opencut/core/feature_readiness.py`, `extension/com.opencut.panel/client/main.js`, `tests/test_ux_intelligence.py`, `tests/test_feature_readiness_generator.py`.
-  Acceptance: `/ux/feature-index` and `/ux/search` return `readiness`, `route_valid`, and `runnable`; planned or missing-route entries are visibly disabled/explained in the panel; every `runnable=true` route exists in `opencut/_generated/route_manifest.json`; C2PA search routes to a live provenance/export route or is marked not runnable.
-  Complexity: M
-
 - [ ] P2 — Resolve caption font paths and CJK fallback for styled and burned captions
   Why: Caption styles define fonts and CJK wrapping is tested, but the FFmpeg drawtext path emits an empty `fontfile` and does not prove CJK glyph rendering.
   Evidence: `opencut/core/caption_styles.py:32`, `opencut/core/caption_styles.py:387`, `tests/test_caption_line_breaks.py:12`, https://github.com/OpenCut-app/OpenCut/issues/817.

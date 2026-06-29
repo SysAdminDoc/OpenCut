@@ -14,6 +14,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
+from opencut.core.feature_readiness import enrich_feature_entry
 from opencut.helpers import OPENCUT_DIR, _ensure_opencut_dir
 
 logger = logging.getLogger("opencut")
@@ -363,7 +364,7 @@ _FEATURE_DEFS: List[dict] = [
     {"id": "google_fonts", "name": "Google Fonts", "description": "Browse and use Google Fonts", "category": "platform", "aliases": ["fonts", "typography", "google fonts"], "route": "/platform/fonts", "tags": ["fonts", "google", "typography"]},
     {"id": "footage_search", "name": "Footage Search", "description": "Semantic search across footage library", "category": "platform", "aliases": ["search", "find footage", "clip search"], "route": "/search/query", "tags": ["search", "footage", "semantic"]},
     {"id": "stock_search", "name": "Stock Search", "description": "Search royalty-free stock footage", "category": "platform", "aliases": ["stock footage", "royalty free", "stock video"], "route": "/search/stock", "tags": ["stock", "footage", "royalty free"]},
-    {"id": "c2pa_embed", "name": "C2PA Embed", "description": "Embed content credentials (C2PA)", "category": "platform", "aliases": ["c2pa", "content credentials", "provenance"], "route": "/platform/c2pa", "tags": ["c2pa", "credentials", "provenance"]},
+    {"id": "c2pa_embed", "name": "C2PA Embed", "description": "Embed content credentials (C2PA)", "category": "platform", "aliases": ["c2pa", "content credentials", "provenance"], "route": "/video/c2pa/embed", "tags": ["c2pa", "credentials", "provenance"]},
     {"id": "evidence_chain", "name": "Evidence Chain", "description": "Chain of custody for forensic video", "category": "platform", "aliases": ["chain of custody", "forensic", "evidence"], "route": "/platform/evidence", "tags": ["evidence", "chain", "forensic"]},
     {"id": "license_tracker", "name": "License Tracker", "description": "Track media licenses and usage rights", "category": "platform", "aliases": ["license", "rights", "usage"], "route": "/platform/licenses", "tags": ["license", "rights", "tracker"]},
     {"id": "analytics", "name": "Analytics Dashboard", "description": "Usage analytics and productivity metrics", "category": "platform", "aliases": ["analytics", "metrics", "stats"], "route": "/platform/analytics", "tags": ["analytics", "metrics", "dashboard"]},
@@ -375,7 +376,7 @@ def build_feature_index(on_progress: Optional[Callable] = None) -> List[dict]:
     """Build (or return cached) feature index.
 
     Returns list of feature entry dicts with id, name, description,
-    category, aliases, route, and tags.
+    category, aliases, route, tags, readiness, route_valid, and runnable.
     """
     global _feature_index
 
@@ -393,7 +394,7 @@ def build_feature_index(on_progress: Optional[Callable] = None) -> List[dict]:
 
         index = []
         for feat in _FEATURE_DEFS:
-            index.append({
+            index.append(enrich_feature_entry({
                 "id": feat["id"],
                 "name": feat["name"],
                 "description": feat["description"],
@@ -401,7 +402,7 @@ def build_feature_index(on_progress: Optional[Callable] = None) -> List[dict]:
                 "aliases": list(feat.get("aliases", [])),
                 "route": feat.get("route", ""),
                 "tags": list(feat.get("tags", [])),
-            })
+            }))
 
         _feature_index = index
 
@@ -445,7 +446,7 @@ def fuzzy_search(
     for entry in index:
         score = _score_entry(query, entry)
         if score > 0.05:
-            result = dict(entry)
+            result = enrich_feature_entry(entry)
             result["score"] = round(score, 4)
             scored.append(result)
 

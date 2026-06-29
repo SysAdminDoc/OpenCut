@@ -3886,6 +3886,16 @@ input[type="range"][title] {
     color: var(--text-primary);
     transform: translateY(-1px);
 }
+.command-palette-item.is-disabled,
+.command-palette-item.is-disabled:hover,
+.command-palette-item.is-disabled.selected {
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.015);
+    border-color: rgba(236, 230, 218, 0.08);
+    color: var(--text-faint);
+    opacity: 0.72;
+    transform: none;
+}
 .command-palette-item:hover .command-palette-desc,
 .command-palette-item.selected .command-palette-desc {
     color: var(--text-secondary);
@@ -3971,6 +3981,11 @@ input[type="range"][title] {
     border-color: rgba(236, 230, 218, 0.12);
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
+}
+.command-palette-badge.is-unavailable {
+    border-color: rgba(255, 176, 118, 0.24);
+    background: rgba(255, 176, 118, 0.1);
+    color: rgba(255, 213, 176, 0.94);
 }
 .command-palette-chevron {
     color: rgba(237, 226, 203, 0.72);

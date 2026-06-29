@@ -8,12 +8,13 @@ Unit tests for UX Intelligence features:
 """
 
 import json
-import os
-import tempfile
-import time
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ROUTE_MANIFEST = REPO_ROOT / "opencut" / "_generated" / "route_manifest.json"
 
 
 # ========================================================================
@@ -36,7 +37,10 @@ class TestCommandPaletteIndex:
     def test_feature_entry_has_required_fields(self):
         from opencut.core.command_palette import build_feature_index
         index = build_feature_index()
-        required = {"id", "name", "description", "category", "aliases", "route", "tags"}
+        required = {
+            "id", "name", "description", "category", "aliases", "route", "tags",
+            "readiness", "route_valid", "runnable", "readiness_reason", "route_methods",
+        }
         for entry in index:
             assert required.issubset(entry.keys()), f"Missing fields in {entry.get('id')}"
 
@@ -57,6 +61,40 @@ class TestCommandPaletteIndex:
         assert isinstance(entry["aliases"], list)
         assert isinstance(entry["route"], str)
         assert isinstance(entry["tags"], list)
+        assert isinstance(entry["route_valid"], bool)
+        assert isinstance(entry["runnable"], bool)
+        assert isinstance(entry["route_methods"], list)
+
+    def test_feature_readiness_disables_missing_routes(self):
+        from opencut.core.command_palette import build_feature_index
+        index = build_feature_index()
+
+        missing = [entry for entry in index if entry["readiness"] == "missing_route"]
+        assert missing, "expected speculative command entries to be marked missing_route"
+        for entry in missing:
+            assert entry["route_valid"] is False
+            assert entry["runnable"] is False
+            assert "route_manifest" in entry["readiness_reason"]
+
+    def test_every_runnable_feature_route_exists_in_manifest(self):
+        from opencut.core.command_palette import build_feature_index
+
+        manifest = json.loads(ROUTE_MANIFEST.read_text(encoding="utf-8"))
+        live_rules = {route["rule"] for route in manifest["routes"]}
+
+        for entry in build_feature_index():
+            if not entry["runnable"]:
+                continue
+            assert entry["route_valid"] is True
+            assert entry["route"] in live_rules, f"{entry['id']} points at a missing route"
+
+    def test_c2pa_command_uses_live_embed_route(self):
+        from opencut.core.command_palette import build_feature_index
+
+        c2pa = next(entry for entry in build_feature_index() if entry["id"] == "c2pa_embed")
+        assert c2pa["route"] == "/video/c2pa/embed"
+        assert c2pa["route_valid"] is True
+        assert c2pa["runnable"] is True
 
     def test_feature_index_is_cached(self):
         from opencut.core.command_palette import build_feature_index
@@ -519,7 +557,6 @@ class TestSmartDefaultsAnalyze:
             call_count[0] += 1
             if "ffprobe" in str(cmd[0]):
                 return mock_probe
-            stderr = kwargs.get("capture_output", False)
             if "ebur128" in str(cmd):
                 return mock_loud
             return mock_freeze
@@ -996,6 +1033,9 @@ class TestUxIntelRoutes:
         data = resp.get_json()
         assert "results" in data
         assert "total" in data
+        if data["results"]:
+            sample = data["results"][0]
+            assert {"readiness", "route_valid", "runnable"}.issubset(sample)
 
     def test_search_empty_query(self, client, csrf_token):
         from tests.conftest import csrf_headers
@@ -1054,6 +1094,8 @@ class TestUxIntelRoutes:
         assert "features" in data
         assert "total" in data
         assert data["total"] > 0
+        sample = data["features"][0]
+        assert {"readiness", "route_valid", "runnable"}.issubset(sample)
 
     def test_smart_defaults_route(self, client, csrf_token):
         from tests.conftest import csrf_headers
