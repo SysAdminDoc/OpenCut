@@ -78,6 +78,19 @@ class TestRemoteNodeDataclasses(unittest.TestCase):
         self.assertEqual(d["url"], "http://n1")
         self.assertEqual(d["name"], "Node1")
         self.assertIn("capabilities", d)
+        self.assertFalse(d["api_key_set"])
+
+    def test_remote_node_public_dict_redacts_api_key(self):
+        from opencut.core.remote_process import REDACTED_API_KEY, RemoteNode
+
+        node = RemoteNode(url="http://n1", name="Node1", api_key="secret-key")
+        public = node.to_dict()
+        storage = node.to_storage_dict()
+
+        self.assertEqual(public["api_key"], REDACTED_API_KEY)
+        self.assertTrue(public["api_key_set"])
+        self.assertNotIn("secret-key", json.dumps(public))
+        self.assertEqual(storage["api_key"], "secret-key")
 
     def test_remote_job_defaults(self):
         from opencut.core.remote_process import RemoteJob
@@ -145,6 +158,7 @@ class TestRegistryPersistence(unittest.TestCase):
                     data = json.load(fh)
                 self.assertIn("http://test", data["nodes"])
                 self.assertEqual(data["default_node"], "http://test")
+                self.assertEqual(data["nodes"]["http://test"]["api_key"], "k1")
 
                 # Clean up module state
                 with _registry_lock:
@@ -276,6 +290,30 @@ class TestNodeRegistration(unittest.TestCase):
         finally:
             with _registry_lock:
                 _registry.nodes.pop("http://gn", None)
+
+    def test_normalize_node_url_strips_trailing_slash(self):
+        from opencut.core.remote_process import normalize_node_url
+
+        self.assertEqual(normalize_node_url("https://node.example/"), "https://node.example")
+
+    @patch("opencut.core.remote_process._make_request")
+    def test_register_node_rejects_unsafe_urls_before_health_check(self, mock_req):
+        from opencut.core.remote_process import register_node
+
+        for url in (
+            "ftp://node.example",
+            "http://user:pass@node.example",
+            "https://[::1",
+            "http://127.0.0.1",
+            "http://10.0.0.1",
+            "http://node.example:bad",
+            "https://node.example/render?target=1",
+            "https://node.example/render#frag",
+        ):
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError):
+                    register_node(url)
+        mock_req.assert_not_called()
 
 
 class TestPingNode(unittest.TestCase):
@@ -1293,14 +1331,18 @@ class TestRemoteRoutes(unittest.TestCase):
     @patch("opencut.core.remote_process._save_registry")
     def test_register_node_success(self, mock_save, mock_ping):
         mock_ping.return_value = {"status": "ok", "capabilities": ["video"]}
+        api_key = "secret-register-key"
         resp = self.client.post(
             "/remote/register-node",
-            data=json.dumps({"url": "http://testnode", "name": "T"}),
+            data=json.dumps({"url": "http://testnode", "name": "T", "api_key": api_key}),
             headers=csrf_headers(self.csrf_token),
         )
         data = resp.get_json()
         self.assertIn("node", data)
         self.assertEqual(data["node"]["name"], "T")
+        self.assertEqual(data["node"]["api_key"], "[REDACTED]")
+        self.assertTrue(data["node"]["api_key_set"])
+        self.assertNotIn(api_key, json.dumps(data))
 
         # Clean up
         from opencut.core.remote_process import _registry, _registry_lock
@@ -1308,10 +1350,48 @@ class TestRemoteRoutes(unittest.TestCase):
             _registry.nodes.pop("http://testnode", None)
 
     def test_list_nodes(self):
-        resp = self.client.get("/remote/nodes")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertIn("nodes", data)
+        from opencut.core.remote_process import RemoteNode, _registry, _registry_lock
+
+        with _registry_lock:
+            saved = dict(_registry.nodes)
+            saved_default = _registry.default_node
+            _registry.nodes.clear()
+            _registry.nodes["http://listed.example"] = RemoteNode(
+                url="http://listed.example",
+                name="Listed",
+                api_key="secret-list-key",
+            )
+            _registry.default_node = "http://listed.example"
+        try:
+            resp = self.client.get("/remote/nodes")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.get_json()
+            self.assertIn("nodes", data)
+            self.assertEqual(data["nodes"][0]["api_key"], "[REDACTED]")
+            self.assertTrue(data["nodes"][0]["api_key_set"])
+            self.assertNotIn("secret-list-key", json.dumps(data))
+        finally:
+            with _registry_lock:
+                _registry.nodes = saved
+                _registry.default_node = saved_default
+
+    def test_register_node_rejects_unsafe_url(self):
+        for url in (
+            "ftp://node.example",
+            "http://user:pass@node.example",
+            "https://[::1",
+            "http://127.0.0.1",
+            "http://10.0.0.1",
+        ):
+            with self.subTest(url=url):
+                resp = self.client.post(
+                    "/remote/register-node",
+                    data=json.dumps({"url": url}),
+                    headers=csrf_headers(self.csrf_token),
+                )
+                data = resp.get_json()
+                self.assertEqual(resp.status_code, 400)
+                self.assertEqual(data["code"], "INVALID_REMOTE_NODE_URL")
 
     def test_ping_missing_url(self):
         resp = self.client.post(
@@ -1331,6 +1411,16 @@ class TestRemoteRoutes(unittest.TestCase):
         )
         data = resp.get_json()
         self.assertEqual(data["status"], "online")
+
+    def test_ping_rejects_unsafe_url(self):
+        resp = self.client.post(
+            "/remote/ping",
+            data=json.dumps({"url": "http://127.0.0.1"}),
+            headers=csrf_headers(self.csrf_token),
+        )
+        data = resp.get_json()
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(data["code"], "INVALID_REMOTE_NODE_URL")
 
     def test_check_remote_job_not_found(self):
         resp = self.client.get("/remote/job/nonexistent")

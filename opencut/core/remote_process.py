@@ -17,6 +17,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger("opencut")
@@ -31,6 +32,7 @@ UPLOAD_TIMEOUT = 600          # seconds for file uploads
 POLL_INTERVAL = 2.0           # seconds between status polls
 MAX_POLL_DURATION = 7200      # seconds — give up after 2 hours
 USER_AGENT = "OpenCut-RemoteNode/1.0"
+REDACTED_API_KEY = "[REDACTED]"
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +49,13 @@ class RemoteNode:
     last_ping: float = 0.0        # epoch timestamp
 
     def to_dict(self) -> dict:
+        data = asdict(self)
+        data["api_key_set"] = bool(data.get("api_key"))
+        if data.get("api_key"):
+            data["api_key"] = REDACTED_API_KEY
+        return data
+
+    def to_storage_dict(self) -> dict:
         return asdict(self)
 
 
@@ -103,7 +112,7 @@ def _save_registry():
             "nodes": {},
         }
         for url, node in _registry.nodes.items():
-            payload["nodes"][url] = node.to_dict()
+            payload["nodes"][url] = node.to_storage_dict()
         with open(REGISTRY_PATH, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
     except Exception as exc:
@@ -139,6 +148,17 @@ _load_registry()
 # ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
+def normalize_node_url(url: str) -> str:
+    """Return a canonical remote-node base URL after SSRF-oriented validation."""
+    from opencut.core.url_safety import validate_public_http_url
+
+    cleaned = validate_public_http_url(url, label="Remote node URL")
+    parsed = urlparse(cleaned)
+    if parsed.query or parsed.fragment:
+        raise ValueError("Remote node URL must not include query or fragment")
+    return cleaned.rstrip("/")
+
+
 def _make_request(url: str, api_key: str = "", method: str = "GET",
                   data: bytes = None, headers: dict = None,
                   timeout: int = DEFAULT_TIMEOUT) -> dict:
@@ -226,7 +246,7 @@ def register_node(url: str, api_key: str = "", name: str = "",
         on_progress(10, f"Testing connection to {url}")
 
     # Normalise URL (strip trailing slash)
-    url = url.rstrip("/")
+    url = normalize_node_url(url)
 
     # Ping the node
     health = ping_node(url, api_key=api_key)
@@ -265,13 +285,14 @@ def list_nodes() -> List[RemoteNode]:
 
 def get_node(url: str) -> Optional[RemoteNode]:
     """Return a single node by URL, or None."""
+    url = normalize_node_url(url)
     with _registry_lock:
-        return _registry.nodes.get(url.rstrip("/"))
+        return _registry.nodes.get(url)
 
 
 def remove_node(url: str) -> bool:
     """Unregister a node.  Returns True if it existed."""
-    url = url.rstrip("/")
+    url = normalize_node_url(url)
     with _registry_lock:
         if url in _registry.nodes:
             del _registry.nodes[url]
@@ -289,7 +310,7 @@ def ping_node(url: str, api_key: str = "",
     Returns the parsed JSON health response.
     Raises ``RuntimeError`` on failure.
     """
-    url = url.rstrip("/")
+    url = normalize_node_url(url)
     if on_progress:
         on_progress(20, f"Pinging {url}")
 
@@ -328,7 +349,7 @@ def submit_remote_job(node_url: str, file_path: str, endpoint: str,
     Returns:
         ``RemoteJob`` with final status and result path.
     """
-    node_url = node_url.rstrip("/")
+    node_url = normalize_node_url(node_url)
     params = params or {}
 
     # Resolve node for API key
@@ -444,7 +465,7 @@ def download_result(node_url: str, remote_job_id: str, local_path: str,
     Returns:
         The local path of the downloaded file.
     """
-    node_url = node_url.rstrip("/")
+    node_url = normalize_node_url(node_url)
     node = get_node(node_url)
     api_key = node.api_key if node else ""
 
@@ -527,7 +548,7 @@ def auto_select_node(job_type: str = "",
 
 def set_default_node(url: str) -> bool:
     """Set the default node URL.  Returns True if the node exists."""
-    url = url.rstrip("/")
+    url = normalize_node_url(url)
     with _registry_lock:
         if url in _registry.nodes:
             _registry.default_node = url

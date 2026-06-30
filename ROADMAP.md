@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1
 
-- [ ] P1 — Redact remote render-node secrets and validate node URLs
-  Why: remote-node APIs currently return raw `api_key` values and accept arbitrary URLs before calling `<url>/health`, which weakens the local trust boundary.
-  Evidence: `opencut/core/remote_process.py`; `opencut/routes/remote_realtime_routes.py`; OWASP SSRF Prevention Cheat Sheet
-  Touches: `opencut/core/remote_process.py`, `opencut/routes/remote_realtime_routes.py`, `opencut/security.py`, `tests/test_remote_realtime.py`
-  Acceptance: register/list responses never include raw node API keys; unsupported schemes, embedded credentials, malformed hosts, and disallowed private-network targets are rejected with tests; persisted local config still works for approved nodes.
-  Complexity: M
-
 - [ ] P1 — Unify social publishing routes around real upload versus dry-run export prep
   Why: `/social/upload` uses real platform upload code, but `/publish/upload` returns the `multi_publish` stub's `pending_upload` result while README and command palette language imply direct OAuth publishing.
   Evidence: `opencut/routes/system.py:2676`; `opencut/routes/editing_workflow_routes.py:245`; `opencut/core/multi_publish.py:249`; YouTube/TikTok/Instagram publishing API docs

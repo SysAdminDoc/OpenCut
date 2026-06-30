@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Remote render-node trust boundary
+
+- Redacted remote render-node API keys from register/list responses while
+  preserving raw keys only in the local node registry file, and added remote
+  node URL validation for schemes, embedded credentials, malformed ports, and
+  local/private network targets before health checks or downloads run.
+
 ### Fixed - Resumable job invariant check
 
 - Replaced the checkpointable route test's exact decorator string matching with
