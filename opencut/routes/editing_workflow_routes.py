@@ -245,7 +245,7 @@ def publish_export(job_id, filepath, data):
 @require_csrf
 @async_job("publish_upload", filepath_required=True, filepath_param="video_path")
 def publish_upload(job_id, filepath, data):
-    """Publish/upload a video to a platform."""
+    """Prepare a platform upload handoff for multi-publish exports."""
     from opencut.core.multi_publish import PublishConfig, publish_to_platform
 
     platform = data.get("platform", "").strip().lower()
@@ -269,6 +269,8 @@ def publish_upload(job_id, filepath, data):
         filepath, platform, credentials=credentials,
         config=config, on_progress=_progress,
     )
+    result["endpoint"] = "/publish/upload"
+    result["real_upload_endpoint"] = result.get("direct_upload_route") or ""
 
     return result
 

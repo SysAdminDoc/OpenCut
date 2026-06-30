@@ -246,8 +246,11 @@ def export_for_platform(
 
 
 # ---------------------------------------------------------------------------
-# Publish (stub — real API integration is platform-specific)
+# Upload handoff prep (direct uploads live in opencut.core.social_post)
 # ---------------------------------------------------------------------------
+SOCIAL_UPLOAD_PLATFORMS = {"youtube", "tiktok", "instagram"}
+
+
 def publish_to_platform(
     video_path: str,
     platform: str,
@@ -255,10 +258,12 @@ def publish_to_platform(
     config: Optional[PublishConfig] = None,
     on_progress: Optional[Callable] = None,
 ) -> Dict[str, Any]:
-    """Publish an exported video to a platform.
+    """Prepare a platform upload handoff without calling external APIs.
 
-    This is a stub that validates inputs and simulates publishing.
-    Real implementations would use platform-specific APIs.
+    Real OAuth uploads are handled by ``opencut.core.social_post`` and the
+    ``/social/upload`` route. This helper keeps the multi-publish flow useful
+    for export validation and manual/API handoff prep, but it must not report a
+    completed platform upload.
 
     Args:
         video_path: Path to the platform-formatted video.
@@ -268,7 +273,7 @@ def publish_to_platform(
         on_progress: Optional callback(pct, msg).
 
     Returns:
-        Dict with publish result including status and URL.
+        Dict describing the pending upload handoff.
     """
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video not found: {video_path}")
@@ -281,7 +286,7 @@ def publish_to_platform(
     config = config or PublishConfig(platform=platform)
 
     if on_progress:
-        on_progress(10, f"Validating {platform} credentials...")
+        on_progress(10, f"Validating {platform} upload handoff...")
 
     # Validate file size and duration
     info = get_video_info(video_path)
@@ -293,22 +298,32 @@ def publish_to_platform(
         )
 
     if on_progress:
-        on_progress(50, f"Publishing to {platform}...")
+        on_progress(50, f"Preparing {platform} upload handoff...")
 
-    # Stub: in production, call platform API here
+    direct_upload_supported = platform in SOCIAL_UPLOAD_PLATFORMS
     result = {
         "platform": platform,
         "status": "pending_upload",
+        "dry_run": True,
+        "upload_performed": False,
+        "mode": "export_prep",
         "title": config.title or os.path.basename(video_path),
         "video_path": video_path,
         "file_size_mb": round(os.path.getsize(video_path) / (1024 * 1024), 1),
+        "direct_upload_supported": direct_upload_supported,
+        "direct_upload_route": "/social/upload" if direct_upload_supported else "",
+        "credentials_received": bool(credentials),
         "message": (
-            f"Video prepared for {platform} upload. "
-            "Connect platform API credentials to enable automatic upload."
+            f"Video prepared for {platform} upload. No platform API upload was performed. "
+            + (
+                "Use /social/upload after connecting OAuth credentials for direct upload."
+                if direct_upload_supported
+                else "Upload this exported file manually; direct OAuth upload is not available for this platform."
+            )
         ),
     }
 
     if on_progress:
-        on_progress(100, f"Publish to {platform} complete")
+        on_progress(100, f"Upload handoff prepared for {platform}")
 
     return result

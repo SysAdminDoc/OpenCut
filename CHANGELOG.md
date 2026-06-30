@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Social publish upload handoff
+
+- Made `/publish/upload` return an explicit dry-run export-prep/upload-handoff
+  response instead of implying a completed platform publish, and clarified the
+  command-palette copy so direct OAuth uploads point to the Social Post flow.
+
 ### Fixed - Remote render-node trust boundary
 
 - Redacted remote render-node API keys from register/list responses while

@@ -194,7 +194,7 @@ _FEATURE_DEFS: List[dict] = [
     {"id": "export_av1", "name": "Export AV1", "description": "Export in AV1 format for web", "category": "export", "aliases": ["av1", "web video"], "route": "/export/av1", "tags": ["export", "av1", "web"]},
     {"id": "export_gif", "name": "Export GIF", "description": "Convert video to animated GIF", "category": "export", "aliases": ["gif", "animated"], "route": "/export/gif", "tags": ["gif", "animated", "export"]},
     {"id": "export_presets", "name": "Export Presets", "description": "Platform-specific export presets", "category": "export", "aliases": ["presets", "youtube", "tiktok"], "route": "/export/presets", "tags": ["presets", "platform", "export"]},
-    {"id": "multi_publish", "name": "Multi-Platform Publish", "description": "Export and upload to multiple platforms", "category": "export", "aliases": ["publish", "upload", "distribute"], "route": "/export/multi-publish", "tags": ["publish", "upload", "multi"]},
+    {"id": "multi_publish", "name": "Multi-Platform Publish", "description": "Export platform-ready files and prepare upload handoffs; direct OAuth upload lives in Social Post", "category": "export", "aliases": ["publish", "export handoff", "distribute"], "route": "/export/multi-publish", "tags": ["publish", "handoff", "multi"]},
     {"id": "batch_transcode", "name": "Batch Transcode", "description": "Transcode multiple files in batch", "category": "export", "aliases": ["batch", "transcode", "convert"], "route": "/batch/transcode", "tags": ["batch", "transcode", "convert"]},
 
     # --- AI ---
