@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Resumable job invariant check
+
+- Replaced the checkpointable route test's exact decorator string matching with
+  decorator metadata parsing so resumable async jobs can carry additional kwargs
+  without weakening the resumable-route guard.
+
+### Fixed - CEP i18n catalog completeness
+
+- Added the missing CEP command-palette and plugin-trust locale keys,
+  restored the reverted public-gist confirmation key, and taught the i18n
+  drift gate to count dynamic plugin summary label keys so runtime fallback
+  strings cannot bypass the locale ledger.
+
 ### Changed - Plugin trust visibility
 
 - Added a read-only `/plugins/trust` dashboard route and surfaced loaded,

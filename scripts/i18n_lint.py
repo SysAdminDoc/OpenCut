@@ -63,6 +63,14 @@ JS_KEY_FIELD_RE = re.compile(
     r"""(?:\b|['"])(?:label|title|description|desc|aria|ariaLabel|placeholder|tooltip|section|group|meta|status|copy|hint)Key(?:\b|['"])\s*:\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]"""
 )
 
+# Count-label helpers take singular and plural locale keys as arguments, then
+# call t(key, fallback) dynamically. Treat those literal key arguments as live
+# consumers so plural labels cannot ship with fallback-only text.
+JS_PLUGIN_COUNT_LABEL_RE = re.compile(
+    r"""\bpluginCountLabel\s*\(\s*[^,]+,\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]\s*,\s*['"][^'"]*['"]\s*,\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]""",
+    re.DOTALL,
+)
+
 
 def _load_en_keys() -> set[str]:
     en = json.loads((LOCALES / "en.json").read_text(encoding="utf-8"))
@@ -90,7 +98,11 @@ def _scan_js_call_consumers(source: str | None = None) -> set[str]:
 def _scan_js_metadata_consumers(source: str | None = None) -> set[str]:
     if source is None:
         source = _read_main_js()
-    return set(JS_KEY_FIELD_RE.findall(source))
+    keys = set(JS_KEY_FIELD_RE.findall(source))
+    for one_key, many_key in JS_PLUGIN_COUNT_LABEL_RE.findall(source):
+        keys.add(one_key)
+        keys.add(many_key)
+    return keys
 
 
 def _scan_js_consumers_from_source(source: str) -> set[str]:
