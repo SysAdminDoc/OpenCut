@@ -22,17 +22,30 @@ remote_realtime_bp = Blueprint("remote_realtime", __name__)
 # Remote Processing — Node Management
 # ===================================================================
 
+def _invalid_remote_node_url(exc):
+    return jsonify({
+        "error": str(exc),
+        "code": "INVALID_REMOTE_NODE_URL",
+    }), 400
+
 @remote_realtime_bp.route("/remote/register-node", methods=["POST"])
 @require_csrf
 def register_node():
     """Register a remote OpenCut render node."""
     try:
-        from opencut.core.remote_process import register_node as do_register
+        from opencut.core.remote_process import (
+            normalize_node_url,
+            register_node as do_register,
+        )
 
         data = request.get_json(silent=True) or {}
         url = (data.get("url") or "").strip()
         if not url:
             return jsonify({"error": "url is required"}), 400
+        try:
+            url = normalize_node_url(url)
+        except ValueError as exc:
+            return _invalid_remote_node_url(exc)
 
         api_key = data.get("api_key", "")
         name = data.get("name", "")
@@ -60,12 +73,19 @@ def list_nodes():
 def ping_node():
     """Ping a remote node to check health."""
     try:
-        from opencut.core.remote_process import ping_node as do_ping
+        from opencut.core.remote_process import (
+            normalize_node_url,
+            ping_node as do_ping,
+        )
 
         data = request.get_json(silent=True) or {}
         url = (data.get("url") or "").strip()
         if not url:
             return jsonify({"error": "url is required"}), 400
+        try:
+            url = normalize_node_url(url)
+        except ValueError as exc:
+            return _invalid_remote_node_url(exc)
 
         api_key = data.get("api_key", "")
         result = do_ping(url=url, api_key=api_key)
@@ -124,7 +144,7 @@ def check_remote_job(job_id):
 def download_remote_result():
     """Download the result file from a completed remote job."""
     try:
-        from opencut.core.remote_process import download_result
+        from opencut.core.remote_process import download_result, normalize_node_url
 
         data = request.get_json(silent=True) or {}
         node_url = (data.get("node_url") or "").strip()
@@ -137,6 +157,10 @@ def download_remote_result():
             return jsonify({"error": "remote_job_id is required"}), 400
         if not local_path:
             return jsonify({"error": "local_path is required"}), 400
+        try:
+            node_url = normalize_node_url(node_url)
+        except ValueError as exc:
+            return _invalid_remote_node_url(exc)
 
         result_path = download_result(
             node_url=node_url,

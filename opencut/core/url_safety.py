@@ -39,6 +39,12 @@ def validate_public_http_url(url: str, *, label: str = "URL") -> str:
         raise ValueError(f"{label} is not a valid URL") from exc
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError(f"{label} must use http:// or https:// and include a host")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"{label} must not include embedded credentials")
+    try:
+        parsed.port
+    except ValueError as exc:
+        raise ValueError(f"{label} is not a valid URL") from exc
 
     hostname = (parsed.hostname or "").lower().rstrip(".")
     if not hostname:
