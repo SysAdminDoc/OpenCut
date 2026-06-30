@@ -96,6 +96,14 @@ class TestCommandPaletteIndex:
         assert c2pa["route_valid"] is True
         assert c2pa["runnable"] is True
 
+    def test_multi_publish_command_is_explicit_about_upload_handoff(self):
+        from opencut.core.command_palette import build_feature_index
+
+        multi_publish = next(entry for entry in build_feature_index() if entry["id"] == "multi_publish")
+        assert "prepare upload handoffs" in multi_publish["description"]
+        assert "direct OAuth upload lives in Social Post" in multi_publish["description"]
+        assert "upload" not in multi_publish["aliases"]
+
     def test_feature_index_is_cached(self):
         from opencut.core.command_palette import build_feature_index
         idx1 = build_feature_index()

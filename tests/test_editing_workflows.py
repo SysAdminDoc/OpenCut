@@ -296,9 +296,33 @@ class TestPublishToPlatform(unittest.TestCase):
     def test_publish_stub(self, mock_info):
         from opencut.core.multi_publish import publish_to_platform
         mock_info.return_value = {"width": 1920, "height": 1080, "fps": 30, "duration": 60}
-        result = publish_to_platform(self.tmp.name, "youtube")
+        progress = []
+        result = publish_to_platform(
+            self.tmp.name,
+            "youtube",
+            credentials={"oauth_token": "secret"},
+            on_progress=lambda pct, msg="": progress.append(msg),
+        )
         self.assertEqual(result["platform"], "youtube")
-        self.assertIn("status", result)
+        self.assertEqual(result["status"], "pending_upload")
+        self.assertTrue(result["dry_run"])
+        self.assertFalse(result["upload_performed"])
+        self.assertEqual(result["mode"], "export_prep")
+        self.assertTrue(result["direct_upload_supported"])
+        self.assertEqual(result["direct_upload_route"], "/social/upload")
+        self.assertTrue(result["credentials_received"])
+        self.assertIn("No platform API upload was performed", result["message"])
+        self.assertFalse(any("complete" in msg.lower() for msg in progress))
+
+    @patch("opencut.core.multi_publish.get_video_info")
+    def test_publish_stub_marks_manual_only_platforms(self, mock_info):
+        from opencut.core.multi_publish import publish_to_platform
+        mock_info.return_value = {"width": 1280, "height": 720, "fps": 30, "duration": 60}
+        result = publish_to_platform(self.tmp.name, "twitter")
+        self.assertFalse(result["direct_upload_supported"])
+        self.assertEqual(result["direct_upload_route"], "")
+        self.assertFalse(result["upload_performed"])
+        self.assertIn("Upload this exported file manually", result["message"])
 
     @patch("opencut.core.multi_publish.get_video_info")
     def test_publish_exceeds_duration(self, mock_info):

@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1
 
-- [ ] P1 — Unify social publishing routes around real upload versus dry-run export prep
-  Why: `/social/upload` uses real platform upload code, but `/publish/upload` returns the `multi_publish` stub's `pending_upload` result while README and command palette language imply direct OAuth publishing.
-  Evidence: `opencut/routes/system.py:2676`; `opencut/routes/editing_workflow_routes.py:245`; `opencut/core/multi_publish.py:249`; YouTube/TikTok/Instagram publishing API docs
-  Touches: `opencut/routes/editing_workflow_routes.py`, `opencut/core/multi_publish.py`, `opencut/core/social_post.py`, `opencut/core/command_palette.py`, README copy/tests
-  Acceptance: users entering any publish/upload surface either perform a real platform API upload through `social_post.py` or receive an explicit dry-run/export-prep response; no route reports publish completion for the stub path.
-  Complexity: M
-
 - [ ] P1 — Refresh MCP server docs and bridge counts from generated manifests
   Why: MCP docs and bridge comments still cite 39 curated tools and 1,325 extended tools while generated state reports newer counts.
   Evidence: `docs/MCP_SERVER.md`; `opencut/routes/mcp_bridge_routes.py`; `opencut/_generated/mcp_extended_tools.json`; `CHANGELOG.md`
