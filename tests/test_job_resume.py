@@ -1,3 +1,4 @@
+import ast
 import threading
 import time
 from concurrent.futures import Future
@@ -83,6 +84,37 @@ def _make_resume_app():
         return {"payload": data, "filepath": filepath}
 
     return app
+
+
+def _async_job_decorators(source):
+    decorators_by_type = {}
+    tree = ast.parse(source)
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            if not isinstance(decorator.func, ast.Name) or decorator.func.id != "async_job":
+                continue
+            if not decorator.args:
+                continue
+            job_type = decorator.args[0]
+            if not isinstance(job_type, ast.Constant) or not isinstance(job_type.value, str):
+                continue
+
+            kwargs = {}
+            for keyword in decorator.keywords:
+                if keyword.arg is None:
+                    continue
+                try:
+                    kwargs[keyword.arg] = ast.literal_eval(keyword.value)
+                except ValueError:
+                    kwargs[keyword.arg] = None
+            decorators_by_type.setdefault(job_type.value, []).append(kwargs)
+
+    return decorators_by_type
 
 
 def test_job_store_migrates_and_round_trips_resume_metadata(isolated_job_store):
@@ -234,28 +266,34 @@ def test_resume_requires_current_route_to_be_marked_resumable(isolated_job_store
 
 def test_checkpointable_routes_are_marked_resumable():
     expectations = {
-        "opencut/routes/captions.py": [
-            '@async_job("captions", disk_operation="transcribe", resumable=True)',
-            '@async_job("transcript", disk_operation="transcribe", resumable=True)',
-            '@async_job("whisperx", disk_operation="transcribe", resumable=True)',
-        ],
-        "opencut/routes/audio.py": [
-            '@async_job("separate", disk_operation="demucs", resumable=True)',
-        ],
-        "opencut/routes/video_core.py": [
-            '@async_job("export", disk_operation="video_export", resumable=True)',
-            '@async_job("export_preset", disk_operation="video_export", resumable=True)',
-        ],
-        "opencut/routes/video_specialty.py": [
-            '@async_job("shorts_pipeline", resumable=True)',
-        ],
-        "opencut/routes/wave_l_routes.py": [
-            '@async_job("depth_estimate_v2", resumable=True)',
-        ],
+        "opencut/routes/captions.py": {
+            "captions": {"disk_operation": "transcribe", "resumable": True},
+            "transcript": {"disk_operation": "transcribe", "resumable": True},
+            "whisperx": {"disk_operation": "transcribe", "resumable": True},
+        },
+        "opencut/routes/audio.py": {
+            "separate": {"disk_operation": "demucs", "resumable": True},
+        },
+        "opencut/routes/video_core.py": {
+            "export": {"disk_operation": "video_export", "resumable": True},
+            "export_preset": {"disk_operation": "video_export", "resumable": True},
+        },
+        "opencut/routes/video_specialty.py": {
+            "shorts_pipeline": {"resumable": True},
+        },
+        "opencut/routes/wave_l_routes.py": {
+            "depth_estimate_v2": {"resumable": True},
+        },
     }
 
     root = Path(__file__).resolve().parents[1]
-    for rel_path, snippets in expectations.items():
+    for rel_path, route_expectations in expectations.items():
         source = (root / rel_path).read_text(encoding="utf-8")
-        for snippet in snippets:
-            assert snippet in source
+        decorators = _async_job_decorators(source)
+        for job_type, expected_kwargs in route_expectations.items():
+            matches = decorators.get(job_type, [])
+            assert matches, f"{rel_path} is missing @async_job({job_type!r}, ...)"
+            assert any(
+                all(match.get(name) == value for name, value in expected_kwargs.items())
+                for match in matches
+            ), f"{rel_path} @async_job({job_type!r}) is missing {expected_kwargs!r}"

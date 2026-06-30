@@ -10,22 +10,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ## Research-Driven Additions
 
-### P0
-
-- [ ] P0 — Restore CEP i18n catalog completeness
-  Why: `scripts/i18n_lint.py --check` fails with 51 consumed-but-missing keys from recent palette and plugin trust UI work.
-  Evidence: `scripts/i18n_lint.py --check`; `tests/test_i18n_drift.py`; `extension/com.opencut.panel/i18n/en.json`; `extension/com.opencut.panel/i18n/es.json`
-  Touches: `extension/com.opencut.panel/i18n/en.json`, `extension/com.opencut.panel/i18n/es.json`, `tests/test_i18n_drift.py`
-  Acceptance: `py -3.12 scripts/i18n_lint.py --check` and `py -3.12 -m pytest tests/test_i18n_drift.py tests/test_uxp_i18n.py tests/test_i18n_hardcoded_migration.py -q` pass.
-  Complexity: S
-
-- [ ] P0 — Fix the resumable-job invariant test to recognize decorator kwargs
-  Why: `tests/test_job_resume.py` fails even though `shorts_pipeline` is marked `resumable=True`; the guard searches for an exact decorator string and misses the added `rate_limit_key`.
-  Evidence: `tests/test_job_resume.py:235`; `opencut/routes/video_specialty.py:256`
-  Touches: `tests/test_job_resume.py`, possibly `opencut/jobs.py`
-  Acceptance: `py -3.12 -m pytest tests/test_job_resume.py -q` passes, and the test still fails if `resumable=True` is removed from checkpointable routes.
-  Complexity: S
-
 ### P1
 
 - [ ] P1 — Redact remote render-node secrets and validate node URLs

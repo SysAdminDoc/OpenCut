@@ -135,6 +135,18 @@ class TestI18nDrift(unittest.TestCase):
         self.assertNotIn("provider.secret", found)
         self.assertNotIn("not.locale.metadata", found)
 
+    def test_js_metadata_includes_plugin_count_label_keys(self):
+        js = """
+        setTextAndTitle(
+            "pluginTrustLoadedValue",
+            pluginCountLabel(Number(summary.loaded || 0), "settings.plugin_loaded_one", "{count} loaded", "settings.plugin_loaded_many", "{count} loaded"),
+            t("settings.plugin_loaded_title", "Plugins currently loaded by the local backend.")
+        );
+        """
+        found = self.mod._scan_js_metadata_consumers(js)
+        self.assertIn("settings.plugin_loaded_one", found)
+        self.assertIn("settings.plugin_loaded_many", found)
+
     def test_js_consumer_union_includes_key_field_metadata(self):
         js = """
         var direct = t("audio.duck");

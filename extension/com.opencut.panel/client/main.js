@@ -17137,7 +17137,7 @@
                                         label: t("gist.public_button", "Create Public Gist"),
                                         value: true,
                                         className: "btn btn-primary",
-                                        title: t("gist.public_title", "Public gist visible to anyone with the link.")
+                                        title: t("gist.confirm_public", "Push as a PUBLIC gist? Public gists are visible to anyone with the link.")
                                     }
                                 ]
                             }, function (publicChoice) {
