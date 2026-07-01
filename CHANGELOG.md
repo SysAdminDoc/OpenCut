@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - MCP catalogue count drift guards
+
+- Refreshed the MCP server guide to match the generated 86 curated and
+  1,450 extended tool catalogues, removed stale bridge comment counts, and
+  added tests that compare public MCP docs to the generated manifests.
+
 ### Changed - Social publish upload handoff
 
 - Made `/publish/upload` return an explicit dry-run export-prep/upload-handoff

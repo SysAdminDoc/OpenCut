@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1
 
-- [ ] P1 — Refresh MCP server docs and bridge counts from generated manifests
-  Why: MCP docs and bridge comments still cite 39 curated tools and 1,325 extended tools while generated state reports newer counts.
-  Evidence: `docs/MCP_SERVER.md`; `opencut/routes/mcp_bridge_routes.py`; `opencut/_generated/mcp_extended_tools.json`; `CHANGELOG.md`
-  Touches: `docs/MCP_SERVER.md`, `opencut/routes/mcp_bridge_routes.py`, `tests/test_mcp_registry_manifest.py`, `tests/test_mcp_extended_tools.py`
-  Acceptance: curated and extended tool counts in docs/comments are generated or checked, and `py -3.12 -m opencut.tools.dump_mcp_extended_tools --check` plus the MCP manifest tests pass.
-  Complexity: S
-
 - [ ] P1 — Remove dead roadmap anchors from model-card and feature-readiness install hints
   Why: generated model docs still mention `roadmap H2.x`/`H3.x` anchors that no longer exist in the live root roadmap.
   Evidence: `opencut/model_cards.py`; `docs/MODELS.md`; `opencut/_generated/model_cards.json`; `opencut/_generated/feature_readiness.json`
