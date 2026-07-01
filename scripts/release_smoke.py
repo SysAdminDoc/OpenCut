@@ -9,21 +9,22 @@ Steps (in order):
 
 1. ``bootstrap`` — `scripts/bootstrap_check.py --json --metadata-only`
 2. ``version-sync`` — `scripts/sync_version.py --check`
-3. ``route-manifest`` — generated route manifest drift check
-4. ``api-aliases`` — generated /api alias manifest drift check
-5. ``feature-readiness`` — generated route/check readiness drift check
-6. ``model-cards`` — generated model/license card drift check
-7. ``license-gate`` — model/dependency license allow-list check
-8. ``roadmap-lint`` — roadmap citation sanity check
-9. ``text-shaping`` — FFmpeg/libass HarfBuzz/FriBidi + renderer capability gate
-10. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
-11. ``contrast-audit`` — WCAG AA contrast check for committed panel tokens
-12. ``ruff`` — lint the python package
-13. ``pytest-fast`` — focused test ids covering release gates
-14. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
-15. ``panel-unit`` — CEP/UXP panel Vitest utility tests
-16. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-17. ``panel-source`` — CEP panel source tree smoke
+3. ``generated-docs`` — README/MCP/model/readiness generated-doc drift bundle
+4. ``route-manifest`` — generated route manifest drift check
+5. ``api-aliases`` — generated /api alias manifest drift check
+6. ``feature-readiness`` — generated route/check readiness drift check
+7. ``model-cards`` — generated model/license card drift check
+8. ``license-gate`` — model/dependency license allow-list check
+9. ``roadmap-lint`` — roadmap citation sanity check
+10. ``text-shaping`` — FFmpeg/libass HarfBuzz/FriBidi + renderer capability gate
+11. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
+12. ``contrast-audit`` — WCAG AA contrast check for committed panel tokens
+13. ``ruff`` — lint the python package
+14. ``pytest-fast`` — focused test ids covering release gates
+15. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
+16. ``panel-unit`` — CEP/UXP panel Vitest utility tests
+17. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+18. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -378,6 +379,74 @@ def step_model_cards(_args: argparse.Namespace) -> StepResult:
         message="model cards in sync" if status == "ok" else "model card drift",
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
+    )
+
+
+GENERATED_DOC_CHECKS = [
+    (
+        "README badges/product facts",
+        [sys.executable, str(REPO_ROOT / "scripts" / "sync_badges.py"), "--check"],
+    ),
+    (
+        "MCP registry manifest",
+        [sys.executable, "-m", "opencut.tools.dump_mcp_registry_manifest", "--check"],
+    ),
+    (
+        "MCP extended tool catalogue",
+        [sys.executable, "-m", "opencut.tools.dump_mcp_extended_tools", "--check"],
+    ),
+    (
+        "model cards",
+        [sys.executable, "-m", "opencut.tools.dump_model_cards", "--check"],
+    ),
+    (
+        "feature readiness",
+        [sys.executable, "-m", "opencut.tools.dump_feature_readiness", "--check"],
+    ),
+]
+
+
+def step_generated_docs(_args: argparse.Namespace) -> StepResult:
+    """Grouped generated-doc drift gate for README, MCP, and model facts."""
+    start = time.time()
+    passed: List[str] = []
+    failures: List[str] = []
+
+    for label, cmd in GENERATED_DOC_CHECKS:
+        result = _run(cmd, cwd=REPO_ROOT)
+        if result.returncode == 0:
+            passed.append(label)
+            continue
+        failures.append(
+            "\n".join(
+                part
+                for part in (
+                    f"{label} failed: {' '.join(cmd)}",
+                    f"stdout:\n{_tail(result.stdout)}" if result.stdout else "",
+                    f"stderr:\n{_tail(result.stderr)}" if result.stderr else "",
+                )
+                if part
+            )
+        )
+
+    duration = int((time.time() - start) * 1000)
+    if failures:
+        return StepResult(
+            "generated-docs",
+            "fail",
+            exit_code=1,
+            duration_ms=duration,
+            message="generated-doc drift detected",
+            stdout_tail="\n".join(f"passed: {label}" for label in passed),
+            stderr_tail=_tail("\n\n".join(failures), lines=24),
+        )
+
+    return StepResult(
+        "generated-docs",
+        "ok",
+        duration_ms=duration,
+        message=f"{len(passed)} generated-doc checks passed",
+        stdout_tail="\n".join(f"passed: {label}" for label in passed),
     )
 
 
@@ -1132,6 +1201,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("badges", step_badges, "Check README badges match live counts"),
+    StepDefinition("generated-docs", step_generated_docs, "Check README/MCP/model/readiness generated docs"),
     StepDefinition("doc-sizes", step_doc_sizes, "Check documented sizes within ±15% of filesystem"),
     StepDefinition("subprocess-timeouts", step_subprocess_timeouts, "AST lint: every subprocess call must be bounded by a timeout"),
     StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
