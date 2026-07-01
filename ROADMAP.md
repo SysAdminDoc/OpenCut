@@ -14,13 +14,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P2
 
-- [ ] P2 — Make UXP locale lint warnings fail after fixing Spanish diacritics
-  Why: `scripts/lint_locales.py` currently exits cleanly while warning on Spanish UXP copy such as missing accents in `línea`, `acción`, `ejecución`, and `información`.
-  Evidence: `scripts/lint_locales.py`; `extension/com.opencut.uxp/i18n/es.json`
-  Touches: `extension/com.opencut.uxp/i18n/es.json`, `scripts/lint_locales.py`, locale lint tests
-  Acceptance: locale lint reports zero Spanish diacritic warnings and CI/local release checks fail on future warning-level locale regressions.
-  Complexity: S
-
 - [ ] P2 — Add a generated-doc drift gate for README/MCP/model capability facts
   Why: recent fixes moved several facts to generated checks, but stale MCP counts and dead model-card roadmap anchors show that docs can still drift from manifests.
   Evidence: `scripts/sync_badges.py`; `opencut/tools/dump_mcp_extended_tools.py`; `opencut/tools/dump_model_cards.py`; `docs/MCP_SERVER.md`; `docs/MODELS.md`

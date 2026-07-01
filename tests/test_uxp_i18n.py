@@ -127,7 +127,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert len(spanish) == len(english)
     assert sorted(key for key in spanish if key not in english) == []
     assert sorted(key for key in english if key not in spanish) == []
-    assert spanish["conn.online"] == "En linea"
+    assert spanish["conn.online"] == "En línea"
     assert spanish["uxp.tabs.cut"] == "Corte"
     assert sorted(key for key in english if key.startswith("uxp.cut.") and key not in spanish) == []
     assert spanish["uxp.cut.clip_input"] == "Entrada de clip"
@@ -137,7 +137,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert sorted(key for key in english if key.startswith("uxp.audio.") and key not in spanish) == []
     assert spanish["uxp.audio.denoise"] == "Reducir ruido"
     assert spanish["uxp.audio.match_loudness"] == "Igualar sonoridad"
-    assert spanish["uxp.audio.runtime.beat_detection_done"] == "Deteccion de ritmo lista - {count} ritmos."
+    assert spanish["uxp.audio.runtime.beat_detection_done"] == "Detección de ritmo lista - {count} ritmos."
     assert sorted(key for key in english if key.startswith("uxp.fcc.") and key not in spanish) == []
     assert spanish["uxp.fcc.caption_display_settings"] == "Ajustes de visualizacion de subtitulos (FCC)"
     assert spanish["uxp.fcc.preview"] == "Vista previa"
@@ -171,7 +171,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.deliverables.session_temp_folder"] == "Carpeta temporal de sesion"
     assert spanish["uxp.deliverables.session_temp_folder_title"].startswith("Los entregables se guardaran")
     assert spanish["uxp.deliverables.runtime.generated_csv_handoff_many"] == "Se generaron {count} documentos de entrega CSV."
-    assert spanish["uxp.deliverables.status_line"] == "Carga informacion de secuencia, elige un destino si hace falta y genera los documentos de entrega que necesitas."
+    assert spanish["uxp.deliverables.status_line"] == "Carga información de secuencia, elige un destino si hace falta y genera los documentos de entrega que necesitas."
     assert sorted(key for key in english if key.startswith("uxp.search.") and key not in spanish) == []
     assert spanish["uxp.search.library_index"] == "Indice de biblioteca"
     assert spanish["uxp.search.command_placeholder"] == 'p. ej. "elimina todos los silencios de mas de 1 segundo"'
@@ -206,6 +206,12 @@ def test_uxp_spanish_locale_pack_preserves_format_placeholders():
         for key in english.keys() & spanish.keys()
         if _format_placeholders(english[key]) != _format_placeholders(spanish[key])
     } == {}
+
+
+def test_uxp_spanish_locale_pack_has_no_diacritic_warnings():
+    from scripts.lint_locales import check_diacritics
+
+    assert check_diacritics(_locale(UXP_ES_LOCALE)) == []
 
 
 def test_uxp_shell_i18n_attributes_are_present_and_covered():

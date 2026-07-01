@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - UXP Spanish locale warnings
+
+- Corrected the remaining Spanish UXP locale diacritic warnings and promoted
+  locale-lint warnings to `--check` failures, with a release-gate test that
+  blocks future Spanish diacritic regressions.
+
 ### Fixed - FastAPI job WebSocket
 
 - Replaced the `/ws/jobs` "coming soon" echo with a real job snapshot and
