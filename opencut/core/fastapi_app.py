@@ -6,18 +6,30 @@ gradual migration.  Provides:
 
 - Auto-generated Pydantic models from route parameter patterns
 - ASGI wrapper for Flask via WSGIMiddleware (gradual migration)
-- WebSocket stub for real-time job updates
+- WebSocket job snapshot endpoint for real-time job updates
 - Combined OpenAPI spec at /docs
 """
 
 from __future__ import annotations
 
 import dataclasses
+import json
 import logging
 import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+try:
+    from fastapi import WebSocket, WebSocketDisconnect
+    _FASTAPI_WEBSOCKET_AVAILABLE = True
+except ImportError:
+    WebSocket = Any
+
+    class WebSocketDisconnect(Exception):
+        pass
+
+    _FASTAPI_WEBSOCKET_AVAILABLE = False
 
 logger = logging.getLogger("opencut")
 
@@ -343,8 +355,8 @@ class OpenCutFastAPI:
                 "timestamp": time.time(),
             }
 
-        # Register WebSocket stub
-        self._register_websocket_stub(app)
+        # Register job WebSocket endpoint
+        self._register_job_websocket(app)
 
         # Mount Flask if provided
         if self.flask_app is not None:
@@ -352,27 +364,120 @@ class OpenCutFastAPI:
 
         return app
 
-    def _register_websocket_stub(self, app: Any) -> None:
-        """Register a WebSocket endpoint for real-time job updates."""
+    def _job_snapshot_payload(self) -> dict:
+        """Return the current job snapshot using the shared job registry."""
         try:
-            from fastapi import WebSocket, WebSocketDisconnect  # noqa: F401
-        except ImportError:
+            from opencut.jobs import _list_jobs_copy
+
+            return {"jobs": _list_jobs_copy()}
+        except Exception as exc:
+            logger.debug("Failed to read job snapshot for FastAPI WS: %s", exc)
+            return {"jobs": []}
+
+    def _register_job_websocket(self, app: Any) -> None:
+        """Register a WebSocket endpoint for real-time job updates."""
+        if not _FASTAPI_WEBSOCKET_AVAILABLE:
             return
 
         @app.websocket("/ws/jobs")
         async def job_updates(websocket: WebSocket):
+            subscriptions: set[str] = set()
             await websocket.accept()
+            await websocket.send_json({
+                "type": "event",
+                "event": "job_snapshot",
+                "data": self._job_snapshot_payload(),
+            })
+
             try:
                 while True:
-                    data = await websocket.receive_text()
-                    # Echo back with status — stub for future implementation
+                    raw = await websocket.receive_text()
+                    try:
+                        msg = json.loads(raw)
+                    except json.JSONDecodeError:
+                        await websocket.send_json({
+                            "type": "error",
+                            "error": "Invalid JSON",
+                        })
+                        continue
+
+                    if not isinstance(msg, dict):
+                        await websocket.send_json({
+                            "type": "error",
+                            "error": "Message must be a JSON object",
+                        })
+                        continue
+
+                    msg_type = msg.get("type", "")
+                    msg_id = msg.get("id", "")
+
+                    if msg_type == "identify":
+                        await websocket.send_json({
+                            "type": "response",
+                            "id": msg_id,
+                            "data": {
+                                "client_id": "fastapi:/ws/jobs",
+                                "status": "identified",
+                            },
+                        })
+                        continue
+
+                    if msg_type != "command" and "action" not in msg:
+                        await websocket.send_json({
+                            "type": "error",
+                            "id": msg_id,
+                            "error": f"Unsupported message type: {msg_type}",
+                        })
+                        continue
+
+                    action = msg.get("action", "")
+                    params = msg.get("params", {})
+                    if not isinstance(params, dict):
+                        params = {}
+
+                    if action == "ping":
+                        data = {"pong": True, "time": time.time()}
+                    elif action == "get_jobs":
+                        data = self._job_snapshot_payload()
+                    elif action == "get_status":
+                        data = {
+                            "clients": [{
+                                "id": "fastapi:/ws/jobs",
+                                "type": msg.get("client_type", "external"),
+                            }],
+                            "count": 1,
+                        }
+                    elif action == "subscribe":
+                        events = params.get("events", [])
+                        if isinstance(events, list):
+                            subscriptions.update(
+                                str(event) for event in events
+                            )
+                        data = {"subscribed": sorted(subscriptions)}
+                    elif action == "unsubscribe":
+                        events = params.get("events", [])
+                        if isinstance(events, list):
+                            subscriptions.difference_update(
+                                str(event) for event in events
+                            )
+                        data = {"subscribed": sorted(subscriptions)}
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "id": msg_id,
+                            "error": f"Unknown action: {action}",
+                        })
+                        continue
+
                     await websocket.send_json({
-                        "type": "ack",
-                        "message": data,
-                        "info": "WebSocket job updates coming soon",
+                        "type": "response",
+                        "id": msg_id,
+                        "data": data,
                     })
-            except Exception:
-                pass  # Client disconnected
+            except WebSocketDisconnect:
+                return
+            except Exception as exc:
+                logger.debug("FastAPI jobs WebSocket disconnected: %s", exc)
 
     def register_websocket(
         self, path: str, handler: Callable
