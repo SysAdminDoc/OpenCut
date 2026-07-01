@@ -23,6 +23,7 @@ from opencut.tools import dump_mcp_registry_manifest as tool
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = REPO_ROOT / "opencut" / "_generated" / "mcp_server_registry.json"
+EXTENDED_MANIFEST = REPO_ROOT / "opencut" / "_generated" / "mcp_extended_tools.json"
 DOC = REPO_ROOT / "docs" / "MCP_SERVER.md"
 
 
@@ -43,6 +44,17 @@ def test_doc_documents_upstream_registration_steps():
         "dump_mcp_registry_manifest",
     ):
         assert keyword in text, f"docs/MCP_SERVER.md must mention {keyword!r}"
+
+
+def test_doc_tool_counts_match_generated_manifests():
+    text = DOC.read_text(encoding="utf-8")
+    curated = json.loads(MANIFEST.read_text(encoding="utf-8"))["tool_count"]
+    extended = json.loads(EXTENDED_MANIFEST.read_text(encoding="utf-8"))["tool_count"]
+
+    assert f"{curated} curated tools" in text
+    assert f"Tool catalogue ({curated} tools)" in text
+    assert f"{extended:,} generated route-level tools" in text
+    assert f"generated {extended:,} route-level set" in text
 
 
 def test_committed_manifest_shape():
@@ -98,11 +110,11 @@ def test_manifest_tool_names_are_unique_and_namespaced():
 
 
 def test_manifest_at_least_expected_minimum_tools():
-    """The MCP curated surface grew from 27 -> 39 in Pass 9 (F195).
+    """The MCP curated surface is currently broad enough for common workflows.
     Keep a floor so regressions in mcp_server.py become obvious."""
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    assert data["tool_count"] >= 39, (
-        f"Expected at least 39 curated MCP tools; got {data['tool_count']}"
+    assert data["tool_count"] >= 86, (
+        f"Expected at least 86 curated MCP tools; got {data['tool_count']}"
     )
 
 
@@ -149,4 +161,4 @@ def test_cli_writes_to_custom_path(tmp_path):
     assert result.returncode == 0
     data = json.loads(target.read_text(encoding="utf-8"))
     assert data["name"] == "opencut-mcp-server"
-    assert data["tool_count"] >= 39
+    assert data["tool_count"] >= 86

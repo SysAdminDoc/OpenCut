@@ -5,9 +5,9 @@ Every competing Premiere-Pro MCP server today is CEP-bound (HTTP +
 ExtendScript) and will break with Adobe's ~Sept-2026 CEP EOL. UXP
 panels can't easily talk JSON-RPC to a sidecar process, but they can
 hit the existing Flask app on :5679 over HTTPS/HTTP just like any
-other route. This module bridges the MCP tool surface onto that same
-HTTP server so UXP keeps the 39 curated tools (and the 1,325 opt-in
-extended tools) usable post-EOL — no transport surgery required.
+other route. This module bridges the MCP tool surface onto that same HTTP
+server so UXP keeps the live curated tools and opt-in extended route tools
+usable post-EOL — no transport surgery required.
 
 Three routes:
 
@@ -61,7 +61,7 @@ def route_mcp_tools():
     """Return the tool catalogue.
 
     Query params:
-      include_extended  bool  default true — include the 1,325 opt-in
+      include_extended  bool  default true — include the opt-in
                               auto-generated route tools.
     """
     try:

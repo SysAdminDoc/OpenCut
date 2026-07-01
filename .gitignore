@@ -55,6 +55,7 @@ content_calendar.ics
 !docs/INSTALLER_POLICY.md
 !docs/LINUX_DISTRIBUTION.md
 !docs/MACOS_NOTARIZATION.md
+!docs/MCP_SERVER.md
 !docs/NODE_ADVISORIES.md
 !docs/PYTHON_ADVISORIES.md
 !docs/RELEASE_PROVENANCE.md

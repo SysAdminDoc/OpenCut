@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +53,23 @@ def test_extended_tools_are_opt_in_and_do_not_change_curated_default(monkeypatch
 
     monkeypatch.setenv(mcp_extended_tools.EXTENDED_MCP_ENV, "1")
     assert len(mcp_server.get_mcp_tools()) == extended_count
+
+
+def test_mcp_bridge_docs_do_not_pin_stale_tool_counts():
+    from opencut.routes import mcp_bridge_routes
+
+    docs = "\n".join(
+        str(part or "")
+        for part in (
+            inspect.getdoc(mcp_bridge_routes),
+            inspect.getdoc(mcp_bridge_routes.route_mcp_tools),
+        )
+    )
+
+    assert "39 curated" not in docs
+    assert "1,325" not in docs
+    assert "live curated tools" in docs
+    assert "auto-generated route tools" in docs
 
 
 def test_extended_tool_names_are_unique_and_tagged_lower_priority():
