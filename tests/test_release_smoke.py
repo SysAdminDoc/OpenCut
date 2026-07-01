@@ -69,6 +69,48 @@ def test_step_version_sync_reports_failure_on_drift(monkeypatch):
     assert result.exit_code == 1
 
 
+def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
+    module = load_module()
+    calls = []
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "ok", "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_generated_docs(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert result.message == "5 generated-doc checks passed"
+    joined = [" ".join(cmd).replace("\\", "/") for cmd in calls]
+    assert any("scripts/sync_badges.py --check" in cmd for cmd in joined)
+    assert any("opencut.tools.dump_mcp_registry_manifest --check" in cmd for cmd in joined)
+    assert any("opencut.tools.dump_mcp_extended_tools --check" in cmd for cmd in joined)
+    assert any("opencut.tools.dump_model_cards --check" in cmd for cmd in joined)
+    assert any("opencut.tools.dump_feature_readiness --check" in cmd for cmd in joined)
+
+
+def test_step_generated_docs_reports_failed_generator(monkeypatch):
+    module = load_module()
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        joined = " ".join(cmd)
+        if "dump_mcp_extended_tools" in joined:
+            return subprocess.CompletedProcess(cmd, 1, "", "extended drift")
+        return subprocess.CompletedProcess(cmd, 0, "ok", "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_generated_docs(argparse.Namespace())
+
+    assert result.status == "fail"
+    assert result.exit_code == 1
+    assert "generated-doc drift" in result.message
+    assert "MCP extended tool catalogue failed" in result.stderr_tail
+    assert "extended drift" in result.stderr_tail
+
+
 def test_step_ruff_skips_when_binary_missing(monkeypatch):
     module = load_module()
     monkeypatch.setattr(module.shutil, "which", lambda name: None)

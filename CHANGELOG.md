@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Changed - Generated-doc release smoke gate
+
+- Added a `generated-docs` release-smoke step that groups README product facts,
+  MCP registry and extended-tool catalogues, model cards, and feature-readiness
+  checks so stale generated documentation fails before push.
+
 ### Fixed - UXP Spanish locale warnings
 
 - Corrected the remaining Spanish UXP locale diacritic warnings and promoted
