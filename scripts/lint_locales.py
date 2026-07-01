@@ -3,7 +3,7 @@
 
 Run from repo root:
     python scripts/lint_locales.py
-    python scripts/lint_locales.py --check  # non-zero exit on errors (CI mode)
+    python scripts/lint_locales.py --check  # non-zero exit on errors/warnings
 """
 import json
 import re
@@ -162,10 +162,10 @@ def main():
     if not errors and not warnings:
         print("All checks passed.")
 
-    if check_mode and errors:
+    if check_mode and (errors or warnings):
         sys.exit(1)
 
-    return len(errors)
+    return len(errors) + len(warnings)
 
 
 if __name__ == "__main__":
