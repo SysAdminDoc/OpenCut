@@ -664,7 +664,7 @@ CARDS: List[ModelCard] = [
         install_hint="pip install all-in-one-deflicker",
         privacy="local-only",
     ),
-    # ---- Roadmap stubs (still placeholder until implemented) ---------
+    # ---- Placeholder model surfaces (see generated readiness docs) ----
     ModelCard(
         check_name="check_flashvsr_available",
         feature_id="video.upscale.flashvsr",
@@ -673,9 +673,9 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/OpenImagingLab/FlashVSR",
         hardware="gpu (>= 12 GB VRAM)",
-        install_hint="pip install flashvsr (stub — roadmap H2.1)",
+        install_hint="pip install flashvsr (placeholder; see docs/MODELS.md)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub; check returns False until the implementation lands."],
+        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
     ),
     ModelCard(
         check_name="check_rose_available",
@@ -685,9 +685,9 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://rose2025-inpaint.github.io/",
         hardware="gpu",
-        install_hint="pip install rose-inpaint (stub — roadmap H2.2)",
+        install_hint="pip install rose-inpaint (placeholder; see docs/MODELS.md)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub."],
+        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
     ),
     ModelCard(
         check_name="check_sammie_available",
@@ -697,9 +697,9 @@ CARDS: List[ModelCard] = [
         license="MIT",
         upstream="https://github.com/Zarxrax/Sammie-Roto-2",
         hardware="gpu",
-        install_hint="pip install sammie-roto (stub — roadmap H2.3)",
+        install_hint="pip install sammie-roto (placeholder; see docs/MODELS.md)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub."],
+        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
     ),
     ModelCard(
         check_name="check_reezsynth_available",
@@ -709,9 +709,9 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/FuouM/ReEzSynth",
         hardware="gpu",
-        install_hint="pip install reezsynth (stub — roadmap H2.5)",
+        install_hint="pip install reezsynth (placeholder; see docs/MODELS.md)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub."],
+        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
     ),
     ModelCard(
         check_name="check_vidmuse_available",
@@ -721,9 +721,9 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://vidmuse.github.io/",
         hardware="gpu",
-        install_hint="pip install vidmuse (stub — roadmap H2.6)",
+        install_hint="pip install vidmuse (placeholder; see docs/MODELS.md)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub."],
+        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
     ),
     ModelCard(
         check_name="check_video_agent_available",
@@ -733,9 +733,9 @@ CARDS: List[ModelCard] = [
         license="MIT",
         upstream="https://github.com/HKUDS/VideoAgent",
         hardware="cpu/gpu",
-        install_hint="pip install videoagent (stub — roadmap H3.1)",
+        install_hint="pip install videoagent (placeholder; see docs/MODELS.md)",
         privacy="local + optional cloud (depends on configured LLM)",
-        advisory_notes=["Roadmap stub. LLM dependency may route through a cloud provider."],
+        advisory_notes=["Readiness placeholder. LLM dependency may route through a cloud provider."],
     ),
     ModelCard(
         check_name="check_gen_video_cloud_available",
@@ -761,7 +761,7 @@ CARDS: List[ModelCard] = [
         hardware="gpu (>= 12 GB VRAM)",
         install_hint="pip install gaussian-head-talk + fantasytalking2 (stubs)",
         privacy="local-only",
-        advisory_notes=["Roadmap stub (H3.3)."],
+        advisory_notes=["Readiness placeholder; see docs/MODELS.md for install and license status."],
     ),
     ModelCard(
         check_name="check_pyonfx_available",

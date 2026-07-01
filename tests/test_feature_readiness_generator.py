@@ -18,6 +18,14 @@ def test_generated_feature_readiness_matches_committed_json():
     assert dump_feature_readiness.diff_manifests(committed, payload) == []
 
 
+def test_generated_feature_readiness_has_no_dead_roadmap_anchors():
+    payload = dump_feature_readiness.build_manifest()
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert "roadmap H" not in encoded
+    assert "Roadmap stub" not in encoded
+
+
 def test_generator_finds_direct_route_probe_bindings():
     payload = dump_feature_readiness.build_manifest()
     records = {record["feature_id"]: record for record in payload["records"]}
