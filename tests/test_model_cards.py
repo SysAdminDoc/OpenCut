@@ -84,6 +84,12 @@ def test_card_invariants_hold():
     model_cards.assert_card_invariants()
 
 
+def test_model_cards_do_not_reference_dead_roadmap_anchors():
+    encoded = json.dumps(model_cards.manifest(), ensure_ascii=False)
+    assert "roadmap H" not in encoded
+    assert "Roadmap stub" not in encoded
+
+
 def test_manifest_matches_committed_json():
     payload = model_cards.manifest()
     committed = json.loads(JSON_PATH.read_text(encoding="utf-8"))

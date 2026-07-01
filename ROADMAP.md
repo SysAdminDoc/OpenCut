@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1
 
-- [ ] P1 — Remove dead roadmap anchors from model-card and feature-readiness install hints
-  Why: generated model docs still mention `roadmap H2.x`/`H3.x` anchors that no longer exist in the live root roadmap.
-  Evidence: `opencut/model_cards.py`; `docs/MODELS.md`; `opencut/_generated/model_cards.json`; `opencut/_generated/feature_readiness.json`
-  Touches: `opencut/model_cards.py`, `opencut/tools/dump_model_cards.py`, `opencut/tools/dump_feature_readiness.py`, `docs/MODELS.md`, generated manifests, `tests/test_model_cards.py`
-  Acceptance: generated model and feature-readiness outputs contain no dead `roadmap H*` references, replacement wording points to stable readiness/model docs, and model-card/readiness generator checks pass.
-  Complexity: S
-
 ### P2
 
 - [ ] P2 — Wire or retire the FastAPI `/ws/jobs` WebSocket stub

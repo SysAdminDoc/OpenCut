@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Model readiness placeholder anchors
+
+- Replaced dead `roadmap H*` model-card and feature-readiness install hints
+  with stable generated-doc references, regenerated model/readiness artifacts,
+  and added invariants that block future dead roadmap anchor references.
+
 ### Changed - MCP catalogue count drift guards
 
 - Refreshed the MCP server guide to match the generated 86 curated and

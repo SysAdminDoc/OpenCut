@@ -370,13 +370,13 @@
       "license": "Apache-2.0",
       "upstream": "https://github.com/OpenImagingLab/FlashVSR",
       "hardware": "gpu (>= 12 GB VRAM)",
-      "install_hint": "pip install flashvsr (stub — roadmap H2.1)",
+      "install_hint": "pip install flashvsr (placeholder; see docs/MODELS.md)",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub; check returns False until the implementation lands."
+        "Readiness placeholder; check returns False until the implementation lands."
       ],
       "license_waiver": ""
     },
@@ -514,7 +514,7 @@
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub (H3.3)."
+        "Readiness placeholder; see docs/MODELS.md for install and license status."
       ],
       "license_waiver": ""
     },
@@ -733,13 +733,13 @@
       "license": "Apache-2.0",
       "upstream": "https://github.com/FuouM/ReEzSynth",
       "hardware": "gpu",
-      "install_hint": "pip install reezsynth (stub — roadmap H2.5)",
+      "install_hint": "pip install reezsynth (placeholder; see docs/MODELS.md)",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub."
+        "Readiness placeholder; check returns False until the implementation lands."
       ],
       "license_waiver": ""
     },
@@ -783,13 +783,13 @@
       "license": "Apache-2.0",
       "upstream": "https://rose2025-inpaint.github.io/",
       "hardware": "gpu",
-      "install_hint": "pip install rose-inpaint (stub — roadmap H2.2)",
+      "install_hint": "pip install rose-inpaint (placeholder; see docs/MODELS.md)",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub."
+        "Readiness placeholder; check returns False until the implementation lands."
       ],
       "license_waiver": ""
     },
@@ -853,13 +853,13 @@
       "license": "MIT",
       "upstream": "https://github.com/Zarxrax/Sammie-Roto-2",
       "hardware": "gpu",
-      "install_hint": "pip install sammie-roto (stub — roadmap H2.3)",
+      "install_hint": "pip install sammie-roto (placeholder; see docs/MODELS.md)",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub."
+        "Readiness placeholder; check returns False until the implementation lands."
       ],
       "license_waiver": ""
     },
@@ -1038,13 +1038,13 @@
       "license": "MIT",
       "upstream": "https://github.com/HKUDS/VideoAgent",
       "hardware": "cpu/gpu",
-      "install_hint": "pip install videoagent (stub — roadmap H3.1)",
+      "install_hint": "pip install videoagent (placeholder; see docs/MODELS.md)",
       "privacy": "local + optional cloud (depends on configured LLM)",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub. LLM dependency may route through a cloud provider."
+        "Readiness placeholder. LLM dependency may route through a cloud provider."
       ],
       "license_waiver": ""
     },
@@ -1056,13 +1056,13 @@
       "license": "Apache-2.0",
       "upstream": "https://vidmuse.github.io/",
       "hardware": "gpu",
-      "install_hint": "pip install vidmuse (stub — roadmap H2.6)",
+      "install_hint": "pip install vidmuse (placeholder; see docs/MODELS.md)",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Roadmap stub."
+        "Readiness placeholder; check returns False until the implementation lands."
       ],
       "license_waiver": ""
     },

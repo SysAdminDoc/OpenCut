@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-28T14:12:39Z",
+  "generated_at": "2026-07-01T02:31:11Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 72,
   "total_routes": 98,
@@ -393,7 +393,7 @@
       "label": "FlashVSR (streaming VSR)",
       "category": "video",
       "state": "available",
-      "install_hint": "pip install flashvsr (stub — roadmap H2.1)",
+      "install_hint": "pip install flashvsr (placeholder; see docs/MODELS.md)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/upscale/flashvsr",
@@ -793,7 +793,7 @@
       "label": "ReEzSynth (Ebsynth successor)",
       "category": "video",
       "state": "missing_dependency",
-      "install_hint": "pip install reezsynth (stub — roadmap H2.5)",
+      "install_hint": "pip install reezsynth (placeholder; see docs/MODELS.md)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/style/reezsynth"
@@ -827,7 +827,7 @@
       "label": "ROSE shadow-aware inpaint",
       "category": "video",
       "state": "missing_dependency",
-      "install_hint": "pip install rose-inpaint (stub — roadmap H2.2)",
+      "install_hint": "pip install rose-inpaint (placeholder; see docs/MODELS.md)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/inpaint/rose"
@@ -897,7 +897,7 @@
       "label": "Sammie-Roto-2 (VideoMaMa)",
       "category": "video",
       "state": "missing_dependency",
-      "install_hint": "pip install sammie-roto (stub — roadmap H2.3)",
+      "install_hint": "pip install sammie-roto (placeholder; see docs/MODELS.md)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/video/matte/sammie"
@@ -1140,7 +1140,7 @@
       "label": "VidMuse video-to-music",
       "category": "audio",
       "state": "available",
-      "install_hint": "pip install vidmuse (stub — roadmap H2.6)",
+      "install_hint": "pip install vidmuse (placeholder; see docs/MODELS.md)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/audio/music/vidmuse",
