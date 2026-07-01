@@ -4,7 +4,7 @@ Tests for OpenCut Architecture Features (7.1 + 7.2).
 Covers:
   - PydanticModelFactory: model creation, caching, type mapping, fallback
   - RouteAdapter: path conversion, model name inference, blueprint adaptation
-  - OpenCutFastAPI: app creation, Flask mount, route discovery, WebSocket stub
+  - OpenCutFastAPI: app creation, Flask mount, route discovery, job WebSocket
   - FastAPI module functions: create_fastapi_app, mount_flask_app,
     generate_openapi_spec, adapt_flask_route
   - OpenAPI spec generation
@@ -353,6 +353,61 @@ class TestOpenCutFastAPI(unittest.TestCase):
         handler = MagicMock()
         wrapper.register_websocket("/ws/test", handler)
         self.assertIn("/ws/test", wrapper._websocket_handlers)
+
+    def test_jobs_websocket_is_not_placeholder_echo(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        source_path = os.path.join(root, "opencut", "core", "fastapi_app.py")
+        with open(source_path, encoding="utf-8") as handle:
+            source = handle.read()
+        self.assertNotIn("WebSocket job updates coming soon", source)
+        self.assertNotIn("_register_websocket_stub", source)
+
+    def test_jobs_websocket_returns_job_snapshot_and_commands(self):
+        try:
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("fastapi test client not installed")
+
+        from opencut.core.fastapi_app import create_fastapi_app
+
+        jobs = [{"id": "job-1", "status": "running", "type": "render"}]
+        with patch("opencut.jobs._list_jobs_copy", return_value=jobs):
+            app = create_fastapi_app()
+            client = TestClient(app)
+            with client.websocket_connect("/ws/jobs") as websocket:
+                snapshot = websocket.receive_json()
+                self.assertEqual(snapshot["type"], "event")
+                self.assertEqual(snapshot["event"], "job_snapshot")
+                self.assertEqual(snapshot["data"]["jobs"], jobs)
+
+                websocket.send_json({
+                    "type": "command",
+                    "action": "get_jobs",
+                    "id": "jobs-1",
+                })
+                response = websocket.receive_json()
+                self.assertEqual(response["type"], "response")
+                self.assertEqual(response["id"], "jobs-1")
+                self.assertEqual(response["data"]["jobs"], jobs)
+
+                websocket.send_json({
+                    "type": "command",
+                    "action": "subscribe",
+                    "params": {"events": ["progress", "job_complete"]},
+                    "id": "sub-1",
+                })
+                response = websocket.receive_json()
+                self.assertEqual(response["type"], "response")
+                self.assertEqual(response["id"], "sub-1")
+                self.assertEqual(
+                    response["data"]["subscribed"],
+                    ["job_complete", "progress"],
+                )
+
+                websocket.send_text("{not json")
+                response = websocket.receive_json()
+                self.assertEqual(response["type"], "error")
+                self.assertEqual(response["error"], "Invalid JSON")
 
 
 class TestCreateFastAPIApp(unittest.TestCase):

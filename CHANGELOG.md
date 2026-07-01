@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - FastAPI job WebSocket
+
+- Replaced the `/ws/jobs` "coming soon" echo with a real job snapshot and
+  command endpoint that mirrors the existing live-updates bridge contract for
+  `ping`, `get_jobs`, `get_status`, `subscribe`, and `unsubscribe`.
+
 ### Fixed - Model readiness placeholder anchors
 
 - Replaced dead `roadmap H*` model-card and feature-readiness install hints
