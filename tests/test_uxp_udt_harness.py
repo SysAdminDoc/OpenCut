@@ -26,10 +26,14 @@ def test_f267_harness_covers_all_direct_uxp_host_actions():
         if entry["status"] == "direct_uxp"
     ]
     manifest = build_udt_harness_manifest()
-    expected_actions = [*direct_actions, "ocGetCaptionTrackSnapshot"]
+    expected_actions = [
+        *direct_actions,
+        "ocGetCaptionTrackSnapshot",
+        "ocCreateSubsequenceFromRange",
+    ]
 
     assert manifest["f_number"] == "F267"
-    assert manifest["scenario_count"] == 15
+    assert manifest["scenario_count"] == 16
     assert manifest["actions"] == expected_actions
     assert {scenario["action"] for scenario in manifest["scenarios"]} == set(expected_actions)
     assert "ocAddNativeCaptionTrack" not in manifest["actions"]
@@ -42,7 +46,7 @@ def test_f267_scenarios_have_payloads_and_safety_boundaries():
     manifest = build_udt_harness_manifest()
 
     assert manifest["safe_default_count"] == 6
-    assert manifest["mutating_count"] == 8
+    assert manifest["mutating_count"] == 9
     assert manifest["file_write_count"] == 1
     caption_snapshot = next(
         scenario for scenario in manifest["scenarios"]
@@ -51,6 +55,23 @@ def test_f267_scenarios_have_payloads_and_safety_boundaries():
     assert "caption_api_missing" in caption_snapshot["acceptable_blockers"]
     assert caption_snapshot["safe_by_default"] is True
     assert caption_snapshot["mutates_project"] is False
+    subsequence = next(
+        scenario for scenario in manifest["scenarios"]
+        if scenario["action"] == "ocCreateSubsequenceFromRange"
+    )
+    assert subsequence["fixture"] == "disposable_active_sequence"
+    assert subsequence["payload"] == {
+        "startSeconds": 0,
+        "endSeconds": 1,
+        "ignoreTrackTargeting": True,
+    }
+    assert subsequence["expected_result_keys"] == [
+        "ok",
+        "sequenceName",
+        "rangeVerification",
+        "restoration",
+    ]
+    assert "Premiere did not restore the original sequence range" in subsequence["acceptable_blockers"]
     for scenario in manifest["scenarios"]:
         assert scenario["id"].startswith("f267-")
         assert scenario["status"] == "direct_uxp"
@@ -83,7 +104,7 @@ def test_f267_cli_check_passes_in_sync():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "15 scenarios" in result.stdout
+    assert "16 scenarios" in result.stdout
 
 
 def test_f267_panel_loads_bundled_udt_harness_runner():

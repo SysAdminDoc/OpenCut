@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Lock Premiere UXP actions on 26.3+
+
+- Sequence in/out action factories now run synchronously inside one
+  `Project.lockedAccess()` and `executeTransaction()` scope on Premiere 26.3+,
+  with an `executeTransaction()` fallback for supported hosts that do not expose
+  the lock API.
+- Subsequence creation reads back the requested range before proceeding and
+  verifies that the original range was restored. The official Adobe Premiere
+  ESLint rules, a negative lint fixture, and a disposable UDT scenario guard the
+  transaction boundary.
+
 ### Security - Enforce FFmpeg 8.1.2 across every runtime
 
 - Releases below FFmpeg 8.1.2, undated snapshots, missing binaries, and

@@ -708,7 +708,7 @@ extension/
     host/            # ExtendScript host (index.jsx ~2,736 lines)
     CSXS/            # Extension manifest
   com.opencut.uxp/
-    main.js          # UXP panel (~7,175 lines)
+    main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
 tests/               # pytest test suite (11,300+ estimated tests, 284 root test files)

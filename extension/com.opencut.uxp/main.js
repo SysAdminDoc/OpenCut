@@ -617,6 +617,7 @@ const PProBridge = (() => {
     ocBatchRenameProjectItems: "batchRenameProjectItems",
     ocCreateSmartBins: "createSmartBins",
     ocGetProjectBins: "getProjectBins",
+    ocCreateSubsequenceFromRange: "createSubsequenceFromRange",
     ocExportSequenceRange: "exportSequenceRange",
     ocRemoveSequenceMarkers: "removeSequenceMarkers",
     ocUnrenameItems: "batchRenameProjectItems",
@@ -733,16 +734,50 @@ const PProBridge = (() => {
     return { seconds: numeric, ticks: String(_secondsToTicks(numeric)) };
   }
 
-  async function _executeProjectActions(actions, undoString) {
-    const usableActions = (actions || []).filter(Boolean);
-    if (!usableActions.length) return false;
+  async function _executeSequenceRangeActions(seq, inPoint, outPoint, undoString) {
     const context = await _projectRoot();
-    if (!context?.proj?.executeTransaction) return false;
-    return Boolean(context.proj.executeTransaction((compoundAction) => {
-      for (const action of usableActions) {
-        compoundAction.addAction(action);
-      }
-    }, undoString));
+    if (!context?.proj?.executeTransaction) return { ok: false, usedLockedAccess: false };
+    let accepted = false;
+    let usedLockedAccess = false;
+    if (typeof context.proj.lockedAccess === "function") {
+      context.proj.lockedAccess(() => {
+        usedLockedAccess = true;
+        accepted = Boolean(context.proj.executeTransaction((compoundAction) => {
+          if (inPoint != null) compoundAction.addAction(seq.createSetInPointAction(inPoint));
+          if (outPoint != null) compoundAction.addAction(seq.createSetOutPointAction(outPoint));
+        }, undoString));
+      });
+    } else {
+      // Premiere 25.6-26.2 fallback: executeTransaction itself is an accepted
+      // action scope, but lockedAccess is feature-detected for 26.3+ hosts.
+      // eslint-disable-next-line @adobe/premierepro/prefer-locked-access-wrapper -- compatibility fallback when lockedAccess is absent
+      accepted = Boolean(context.proj.executeTransaction((compoundAction) => {
+        if (inPoint != null) compoundAction.addAction(seq.createSetInPointAction(inPoint));
+        if (outPoint != null) compoundAction.addAction(seq.createSetOutPointAction(outPoint));
+      }, undoString));
+    }
+    return { ok: accepted, usedLockedAccess };
+  }
+
+  async function _readSequenceRange(seq) {
+    const inPoint = await seq.getInPoint?.();
+    const outPoint = await seq.getOutPoint?.();
+    return {
+      inPoint,
+      outPoint,
+      inSeconds: _timeValueToSeconds(inPoint),
+      outSeconds: _timeValueToSeconds(outPoint),
+    };
+  }
+
+  function _sequenceRangeMatches(actual, expectedIn, expectedOut) {
+    const expectedInSeconds = _timeValueToSeconds(expectedIn);
+    const expectedOutSeconds = _timeValueToSeconds(expectedOut);
+    if (actual?.inSeconds == null || actual?.outSeconds == null ||
+        expectedInSeconds == null || expectedOutSeconds == null) return false;
+    const toleranceSeconds = 1 / 1000;
+    return Math.abs(actual.inSeconds - expectedInSeconds) <= toleranceSeconds &&
+      Math.abs(actual.outSeconds - expectedOutSeconds) <= toleranceSeconds;
   }
 
   /**
@@ -1502,40 +1537,97 @@ const PProBridge = (() => {
     if (!seq.createSubsequence) {
       return { ok: false, reason: "Sequence.createSubsequence is unavailable in this Premiere UXP runtime." };
     }
+    if (!seq.createSetInPointAction || !seq.createSetOutPointAction) {
+      return { ok: false, reason: "Sequence range action factories are unavailable in this Premiere UXP runtime." };
+    }
     const startSeconds = Number(parsed.startSeconds ?? parsed.start ?? 0);
     const endSeconds = Number(parsed.endSeconds ?? parsed.end ?? 0);
     if (!Number.isFinite(startSeconds) || !Number.isFinite(endSeconds) || endSeconds <= startSeconds) {
       return { ok: false, reason: "A valid start/end range in seconds is required." };
     }
     const ignoreTrackTargeting = parsed.ignoreTrackTargeting !== false;
-    const originalIn = await seq.getInPoint?.();
-    const originalOut = await seq.getOutPoint?.();
+    let originalRange = null;
+    try {
+      originalRange = await _readSequenceRange(seq);
+    } catch (e) {
+      return { ok: false, reason: `Could not read the original sequence range: ${e.message}` };
+    }
     const startTick = _tickTimeFromSeconds(startSeconds);
     const endTick = _tickTimeFromSeconds(endSeconds);
-    const setActions = [
-      seq.createSetInPointAction?.(startTick),
-      seq.createSetOutPointAction?.(endTick),
-    ];
-    const rangeSet = await _executeProjectActions(setActions, "OpenCut set subsequence range");
-    if (!rangeSet) return { ok: false, reason: "Premiere did not accept the sequence in/out range actions." };
-
+    let operationResult = null;
+    let rangeVerification = null;
+    let restoration = { attempted: false, verified: false, usedLockedAccess: false };
     try {
-      const subsequence = await seq.createSubsequence(ignoreTrackTargeting);
-      const name = await subsequence?.getName?.() ?? "";
-      return {
-        ok: true,
-        sequence: subsequence,
-        sequenceName: name,
-        range: { start: startSeconds, end: endSeconds },
-        ignoreTrackTargeting,
-      };
+      const rangeSet = await _executeSequenceRangeActions(
+        seq,
+        startTick,
+        endTick,
+        "OpenCut set subsequence range",
+      );
+      if (!rangeSet.ok) {
+        operationResult = { ok: false, reason: "Premiere did not accept the sequence in/out range actions." };
+      } else {
+        const appliedRange = await _readSequenceRange(seq);
+        rangeVerification = {
+          verified: _sequenceRangeMatches(appliedRange, startTick, endTick),
+          startSeconds: appliedRange.inSeconds,
+          endSeconds: appliedRange.outSeconds,
+          usedLockedAccess: rangeSet.usedLockedAccess,
+        };
+        if (!rangeVerification.verified) {
+          operationResult = { ok: false, reason: "Premiere did not apply the requested subsequence range." };
+        }
+      }
+
+      if (!operationResult) {
+        const subsequence = await seq.createSubsequence(ignoreTrackTargeting);
+        const name = await subsequence?.getName?.() ?? "";
+        operationResult = {
+          ok: true,
+          sequence: subsequence,
+          sequenceName: name,
+          range: { start: startSeconds, end: endSeconds },
+          ignoreTrackTargeting,
+        };
+      }
+    } catch (e) {
+      operationResult = { ok: false, reason: e.message };
     } finally {
-      const restoreActions = [
-        originalIn ? seq.createSetInPointAction?.(originalIn) : null,
-        originalOut ? seq.createSetOutPointAction?.(originalOut) : null,
-      ];
-      await _executeProjectActions(restoreActions, "OpenCut restore sequence range");
+      if (originalRange.inPoint != null && originalRange.outPoint != null) {
+        restoration.attempted = true;
+        try {
+          const restored = await _executeSequenceRangeActions(
+            seq,
+            originalRange.inPoint,
+            originalRange.outPoint,
+            "OpenCut restore sequence range",
+          );
+          const restoredRange = await _readSequenceRange(seq);
+          restoration = {
+            attempted: true,
+            verified: restored.ok && _sequenceRangeMatches(
+              restoredRange,
+              originalRange.inPoint,
+              originalRange.outPoint,
+            ),
+            usedLockedAccess: restored.usedLockedAccess,
+            inSeconds: restoredRange.inSeconds,
+            outSeconds: restoredRange.outSeconds,
+          };
+        } catch (e) {
+          restoration.error = e.message;
+        }
+      }
     }
+    if (operationResult?.ok && restoration.attempted && !restoration.verified) {
+      return {
+        ok: false,
+        reason: "The subsequence was created, but Premiere did not restore the original sequence range.",
+        rangeVerification,
+        restoration,
+      };
+    }
+    return { ...operationResult, rangeVerification, restoration };
   }
 
   function _encoderManager() {
@@ -1702,6 +1794,7 @@ const PProBridge = (() => {
       case "ocBatchRenameProjectItems": return batchRenameProjectItems(payload);
       case "ocCreateSmartBins": return createSmartBins(payload);
       case "ocGetProjectBins": return getProjectBins();
+      case "ocCreateSubsequenceFromRange": return createSubsequenceFromRange(payload);
       case "ocExportSequenceRange": return exportSequenceRange(payload);
       case "ocRemoveSequenceMarkers": return removeSequenceMarkers(payload);
       case "ocUnrenameItems": return batchRenameProjectItems(payload);
