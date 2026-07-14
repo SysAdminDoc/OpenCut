@@ -95,6 +95,29 @@ def test_core_dependency_security_floor_pins():
     assert deps["jinja2"] == "Jinja2>=3.1.6"
 
 
+def test_click_floor_patches_command_injection_advisory():
+    """CVE-2026-7246 / PYSEC-2026-2132 — click.edit() command injection fixed 8.3.3.
+
+    Click is a core CLI/server dependency; every declared and locked floor must
+    sit at or above the fixed release so no install lane admits the vulnerable
+    8.3.0-8.3.2 range.
+    """
+    deps = _dep_names(_pyproject()["project"]["dependencies"])
+    assert deps["click"] == "click>=8.3.3,<9"
+
+    requirements = _dep_names(_active_requirements_txt())
+    assert requirements["click"] == "click>=8.3.3,<9"
+
+    lock = {}
+    for line in (REPO_ROOT / "requirements-lock.txt").read_text(encoding="utf-8").splitlines():
+        pinned = line.strip()
+        if pinned and not pinned.startswith("#") and "==" in pinned:
+            name, version = pinned.split("==", 1)
+            lock[name.strip().lower()] = version.strip()
+    locked = tuple(int(part) for part in lock["click"].split("."))
+    assert locked >= (8, 3, 3), f"locked click {lock['click']} is below the CVE-2026-7246 fix"
+
+
 def test_transitive_web_dep_floors_match_lockfile():
     """RA-23 — clean-resolver installs cannot select vulnerable web deps.
 

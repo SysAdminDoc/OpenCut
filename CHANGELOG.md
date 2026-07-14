@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Patch Click command-injection advisory (CVE-2026-7246)
+
+- Raised the Click floor to `>=8.3.3,<9` across `pyproject.toml` and
+  `requirements.txt`, and repinned `requirements-lock.txt` from `8.3.1` to
+  `8.4.1`, closing CVE-2026-7246 / PYSEC-2026-2132 (command injection in
+  `click.edit()`). Documented the floor raise in `docs/PYTHON_ADVISORIES.md`
+  and added a `test_dependency_surface` regression asserting no lane admits the
+  vulnerable range. `pip-audit -r requirements-lock.txt` is clean.
+
 ### Changed - Generated-doc release smoke gate
 
 - Added a `generated-docs` release-smoke step that groups README product facts,

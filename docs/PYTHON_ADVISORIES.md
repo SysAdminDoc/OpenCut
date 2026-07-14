@@ -24,6 +24,7 @@ To add a new entry, update both `ALLOWED_ADVISORIES` in
 | Package | Old floor | New floor | Date | Rationale |
 |---------|-----------|-----------|------|-----------|
 | `onnxruntime` / `onnxruntime-gpu` | `>=1.25,<2` | `>=1.26,<2` | 2026-06-13 | 1.26.0 hardens multiple out-of-bounds and overflow scenarios across ML and core ops (Attention mask OOB write, MaxPoolGrad bounds, SVM/TreeEnsemble, RNN sequence_lens) and replaces unrestricted Python `setattr` configuration with an allowlist. 15+ core modules import onnxruntime via the ai/insightface/rembg stack. |
+| `click` | `>=8.0,<9` (lock `8.3.1`) | `>=8.3.3,<9` (lock `8.4.1`) | 2026-07-14 | [CVE-2026-7246](https://nvd.nist.gov/vuln/detail/CVE-2026-7246) / PYSEC-2026-2132 — command injection in `click.edit()` via the editor shell invocation; fixed in Click 8.3.3. Click is a core dependency of the CLI/server entrypoints. Floored above the fix in `pyproject.toml`, `requirements.txt`, and pinned to `8.4.1` in `requirements-lock.txt`. No waiver required. |
 
 ## Explicit Torch stack
 
