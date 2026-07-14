@@ -37,6 +37,7 @@ logger = logging.getLogger("opencut")
 
 MANIFEST_FILENAME = "plugin.json"
 LOCK_FILENAME = "plugin.lock.json"
+SIGNATURE_FILENAME = "plugin.signature.json"
 MANIFEST_VERSION = 1
 
 # Capabilities the host knows how to honour. Anything else is rejected so
@@ -55,6 +56,7 @@ SUPPORTED_CAPABILITIES = (
 _LOCK_IGNORE = frozenset(
     {
         LOCK_FILENAME,
+        SIGNATURE_FILENAME,
         "__pycache__",
         ".pytest_cache",
         ".git",

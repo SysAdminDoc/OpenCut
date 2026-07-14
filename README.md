@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1546-orange)
-![Tests](https://img.shields.io/badge/Tests-11300+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-11400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -614,6 +614,19 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 - **GPU rate limiting** prevents resource exhaustion from concurrent heavy jobs
 - **ASS subtitle injection prevention** strips override sequences from caption text
 - **OS credential vault** for OAuth tokens, API keys, node credentials, webhook signing secrets, and remote-access tokens; JSON files retain redacted metadata only
+- **Authenticated plugin installs** stage outside the active loader path, verify
+  the manifest and content lock, require exact capability consent, and activate
+  atomically with rollback. Unsigned or tampered plugins are rejected before
+  they can appear installed.
+
+Marketplace registry entries must provide `artifact_sha256`, `capabilities`,
+and `publisher: {id, public_key, signature}`. The public key and signature are
+base64 Ed25519 values; the signature covers
+`opencut-plugin-artifact-v1\n<plugin-id>\n<version>\n<sha256>\n`. Direct
+directory installs instead include `plugin.signature.json`, whose signature
+covers `opencut-plugin-directory-v1\n<name>\n<version>\n<canonical-lock-sha256>\n`.
+CEP and UXP display the full publisher fingerprint and declared capabilities
+and keep Install disabled until the operator explicitly approves both.
 
 ---
 
@@ -654,7 +667,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,300+ estimated tests across 284 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,400+ estimated tests across 285 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -715,7 +728,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,300+ estimated tests, 284 root test files)
+tests/               # pytest test suite (11,400+ estimated tests, 285 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

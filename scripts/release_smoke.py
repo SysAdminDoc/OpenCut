@@ -945,6 +945,8 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_review_bundle.py",
     "tests/test_c2pa_sidecar.py",
     "tests/test_plugin_manifest.py",
+    "tests/test_plugin_installation.py",
+    "tests/test_plugin_trust_settings_ui.py",
     "tests/test_marker_metadata.py",
     "tests/test_ai_eval_harness.py",
     "tests/test_fcp_transitions.py",

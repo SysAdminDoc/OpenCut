@@ -7329,7 +7329,33 @@ function pluginMarketplaceRowsHtml(marketplace, actions) {
   const plugins = Array.isArray(marketplace?.plugins) ? marketplace.plugins : [];
   if (!plugins.length) return "";
   const route = actions?.marketplace?.registry_route || "/plugins/registry";
-  const rows = plugins.slice(0, 3).map((plugin) => `<div class="oc-engine-row oc-plugin-trust-row is-marketplace">
+  const rows = plugins.slice(0, 3).map((plugin) => {
+    const capabilities = Array.isArray(plugin.capabilities) ? plugin.capabilities : [];
+    const capabilityText = capabilities.length
+      ? capabilities.join(", ")
+      : t("uxp.settings.plugin_no_capabilities", "No capabilities");
+    const publisherText = plugin.publisher_id && plugin.publisher_fingerprint
+      ? formatI18n(
+        "uxp.settings.plugin_publisher_identity",
+        "Publisher: {publisher} - SHA-256 {fingerprint}",
+        { publisher: plugin.publisher_id, fingerprint: plugin.publisher_fingerprint }
+      )
+      : t("uxp.settings.plugin_publisher_missing", "Publisher authentication metadata is missing.");
+    let installControls = "";
+    if (!plugin.installed && plugin.authenticated) {
+      installControls = `<label class="oc-plugin-action-contract oc-plugin-install-approval">
+        <input type="checkbox" class="oc-plugin-install-approval-checkbox" data-plugin-id="${UIController.escapeHtml(plugin.plugin_id || "")}">
+        ${UIController.escapeHtml(formatI18n(
+          "uxp.settings.plugin_install_approval",
+          "I approve this publisher fingerprint and the declared capabilities: {capabilities}",
+          { capabilities: capabilityText }
+        ))}
+      </label>
+      <button type="button" class="oc-btn oc-btn-secondary oc-plugin-install-btn" data-plugin-id="${UIController.escapeHtml(plugin.plugin_id || "")}" disabled>${UIController.escapeHtml(t("uxp.settings.plugin_install_signed", "Install verified plugin"))}</button>`;
+    } else if (!plugin.installed) {
+      installControls = `<p class="oc-plugin-action-contract">${UIController.escapeHtml(t("uxp.settings.plugin_install_auth_required", "Installation is blocked until the registry pins a digest and publisher signature."))}</p>`;
+    }
+    return `<div class="oc-engine-row oc-plugin-trust-row is-marketplace">
     <div class="oc-engine-copy">
       <div class="oc-engine-title-row">
         <span class="oc-engine-domain">${UIController.escapeHtml(plugin.name || plugin.plugin_id || "")}</span>
@@ -7337,9 +7363,48 @@ function pluginMarketplaceRowsHtml(marketplace, actions) {
       </div>
       <p class="oc-engine-meta">${UIController.escapeHtml(`${plugin.plugin_id || ""} - v${plugin.version || "0.0.0"}`)}</p>
       <p class="oc-engine-meta">${UIController.escapeHtml(plugin.description || route)}</p>
+      <p class="oc-engine-meta">${UIController.escapeHtml(publisherText)}</p>
+      <p class="oc-engine-meta">${UIController.escapeHtml(formatI18n("uxp.settings.plugin_capabilities", "Capabilities: {capabilities}", { capabilities: capabilityText }))}</p>
+      ${installControls}
     </div>
-  </div>`).join("");
+  </div>`;
+  }).join("");
   return `<div class="oc-plugin-trust-subhead">${UIController.escapeHtml(t("uxp.settings.cached_marketplace", "Cached marketplace"))}</div>${rows}`;
+}
+
+function bindPluginMarketplaceInstallActions(marketplace) {
+  const plugins = Array.isArray(marketplace?.plugins) ? marketplace.plugins : [];
+  const byId = new Map(plugins.map((plugin) => [plugin.plugin_id, plugin]));
+  document.querySelectorAll(".oc-plugin-install-approval-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const pluginId = checkbox.getAttribute("data-plugin-id");
+      const button = document.querySelector(`.oc-plugin-install-btn[data-plugin-id="${pluginId}"]`);
+      if (button) button.disabled = !checkbox.checked;
+    });
+  });
+  document.querySelectorAll(".oc-plugin-install-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const pluginId = button.getAttribute("data-plugin-id");
+      const plugin = byId.get(pluginId);
+      if (!plugin?.authenticated) return;
+      button.disabled = true;
+      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_install_starting", "Starting authenticated plugin installation..."), "working");
+      const response = await BackendClient.post("/plugins/marketplace/install", {
+        plugin_id: pluginId,
+        approved_capabilities: Array.isArray(plugin.capabilities) ? plugin.capabilities : [],
+        approve_publisher_fingerprint: plugin.publisher_fingerprint,
+      });
+      if (!response.ok) {
+        setSettingsStatus("settingsPluginTrustStatus", response.error || t("uxp.settings.plugin_install_failed", "Plugin installation could not start."), "error");
+        await uxpLoadPluginTrust();
+        return;
+      }
+      const message = response.data?.job_id
+        ? formatI18n("uxp.settings.plugin_install_queued", "Verified plugin installation queued as job {job_id}.", { job_id: response.data.job_id })
+        : t("uxp.settings.plugin_install_queued_generic", "Verified plugin installation queued.");
+      setSettingsStatus("settingsPluginTrustStatus", message, "success");
+    });
+  });
 }
 
 function renderPluginTrustDashboard(data) {
@@ -7389,6 +7454,7 @@ function renderPluginTrustDashboard(data) {
   }
   html += pluginMarketplaceRowsHtml(marketplace, actions);
   grid.innerHTML = html;
+  bindPluginMarketplaceInstallActions(marketplace);
 
   const state = failedUnsigned || quarantine.length ? "warning" : "success";
   const status = failedUnsigned

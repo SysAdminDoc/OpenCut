@@ -194,6 +194,15 @@ def test_os_credential_vault_dependency_is_core_and_locked():
     assert "keyring==25.7.0" in lock.splitlines()
 
 
+def test_plugin_signature_verifier_dependency_is_core_and_locked():
+    core = _dep_names(_pyproject()["project"]["dependencies"])
+    assert core["cryptography"] == "cryptography>=48.0.1,<49"
+    requirements = _dep_names(_active_requirements_txt())
+    assert requirements["cryptography"] == "cryptography>=48.0.1,<49"
+    lock = (REPO_ROOT / "requirements-lock.txt").read_text(encoding="utf-8")
+    assert "cryptography==48.0.1" in lock.splitlines()
+
+
 def test_optional_dependency_security_floor_pins():
     extras = _pyproject()["project"]["optional-dependencies"]
 
