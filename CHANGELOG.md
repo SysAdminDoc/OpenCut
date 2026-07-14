@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Guard URL ingest and outbound fetches against SSRF
+
+- Routed `opencut.core.url_ingest` through a shared connect-time SSRF guard in
+  `opencut.core.url_safety`: the direct-download path now rejects
+  private/loopback/link-local hosts (including numeric-encoding bypasses),
+  resolves and re-checks the host before connecting, re-validates every redirect
+  hop, honors local-only mode via `require_network_allowed`, enforces a
+  configurable byte ceiling (`OPENCUT_MAX_INGEST_BYTES`, default 8 GiB), and
+  verifies the downloaded bytes are real media (ffprobe) before caching.
+- Added `open_validated_url`, `stream_to_file`, and `build_guarded_opener`
+  helpers; webhook delivery now re-resolves the target and follows redirects
+  only through hops that pass the guard. New `test_url_ingest_ssrf` covers
+  private-IP, redirect-to-private, DNS-rebinding, oversized, non-media, and
+  local-only-blocked cases.
+
 ### Security - Patch Click command-injection advisory (CVE-2026-7246)
 
 - Raised the Click floor to `>=8.3.3,<9` across `pyproject.toml` and
