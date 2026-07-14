@@ -1003,13 +1003,22 @@ class TestWebhookSystemCore:
             def __exit__(self, exc_type, exc, tb):
                 return False
 
-        def fake_urlopen(req, timeout):
-            captured["body"] = req.data
-            captured["headers"] = dict(req.headers)
-            captured["timeout"] = timeout
-            return FakeResponse()
+        class FakeOpener:
+            def open(self, req, timeout):
+                captured["body"] = req.data
+                captured["headers"] = dict(req.headers)
+                captured["timeout"] = timeout
+                return FakeResponse()
 
-        monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+        # _send_payload now sends through the SSRF-guarded opener and re-resolves
+        # the host at send time; stub both so the test stays offline/deterministic.
+        monkeypatch.setattr(
+            "opencut.core.url_safety.build_guarded_opener", lambda: FakeOpener()
+        )
+        monkeypatch.setattr(
+            "opencut.core.url_safety.socket.getaddrinfo",
+            lambda *a, **k: [(2, 1, 6, "", ("93.184.216.34", 0))],
+        )
 
         status, ok, error = _send_payload(
             "https://example.com/hook",

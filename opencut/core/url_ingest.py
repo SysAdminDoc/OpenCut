@@ -24,6 +24,54 @@ CACHE_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "media_ingest")
 INSTALL_HINT = "pip install yt-dlp (optional; direct URLs work without it)"
 
 
+def _max_ingest_bytes() -> int:
+    """Byte ceiling for a single direct download (env-overridable)."""
+    from .url_safety import DEFAULT_MAX_DOWNLOAD_BYTES
+
+    raw = os.environ.get("OPENCUT_MAX_INGEST_BYTES", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+            if value > 0:
+                return value
+        except ValueError:
+            logger.warning("Invalid OPENCUT_MAX_INGEST_BYTES=%r — using default", raw)
+    return DEFAULT_MAX_DOWNLOAD_BYTES
+
+
+def _verify_is_media(path: str) -> bool:
+    """Return True if ffprobe recognizes at least one media stream in *path*.
+
+    The direct-download path derives its filename/extension from the (untrusted)
+    URL and never inspects the bytes, so an attacker-controlled endpoint can
+    serve HTML/JSON under a ``.mp4`` name. Rejecting non-media here keeps the
+    corrupt file out of the cache and out of the rest of the pipeline.
+    """
+    from opencut.helpers import get_ffprobe_path
+
+    cmd = [
+        get_ffprobe_path(), "-v", "error",
+        "-show_entries", "stream=codec_type",
+        "-of", "json", path,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=30)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        # ffprobe unavailable — do not block ingest solely because the probe
+        # tool is missing; the SSRF/size guards already ran.
+        logger.warning("ffprobe unavailable for media verification: %s", exc)
+        return True
+    if proc.returncode != 0:
+        return False
+    import json as _json
+
+    try:
+        streams = _json.loads(proc.stdout.decode(errors="replace")).get("streams", [])
+    except (ValueError, AttributeError):
+        return False
+    return bool(streams)
+
+
 @dataclass
 class IngestResult:
     filepath: str = ""
@@ -137,8 +185,6 @@ def _fetch_direct(
     output_dir: str,
     on_progress: Optional[Callable] = None,
 ) -> IngestResult:
-    import urllib.request
-
     key = _cache_key(url)
     ext = ".mp4"
     url_lower = url.lower().split("?")[0]
@@ -152,23 +198,31 @@ def _fetch_direct(
     if on_progress:
         on_progress(10, "Downloading file...")
 
-    req = urllib.request.Request(url, headers={"User-Agent": "OpenCut/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    from .url_safety import open_validated_url, stream_to_file
+
+    max_bytes = _max_ingest_bytes()
+
+    def _report(written: int, total: int) -> None:
+        if on_progress and total > 0:
+            pct = min(95, int(10 + 85 * written / total))
+            on_progress(pct, f"Downloaded {written // (1024*1024)} MB")
+
+    # Route through the SSRF guard: validates the URL, resolves and rejects
+    # private/loopback hosts, and re-validates every redirect hop.
+    with open_validated_url(
+        url, label="ingest URL", timeout=120,
+        headers={"User-Agent": "OpenCut/1.0"},
+    ) as resp:
         _fd, tmp_path = tempfile.mkstemp(suffix=ext, dir=output_dir)
         os.close(_fd)
         try:
-            total = int(resp.headers.get("Content-Length") or 0)
-            downloaded = 0
             with open(tmp_path, "wb") as f:
-                while True:
-                    chunk = resp.read(1024 * 256)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if on_progress and total > 0:
-                        pct = min(95, int(10 + 85 * downloaded / total))
-                        on_progress(pct, f"Downloaded {downloaded // (1024*1024)} MB")
+                stream_to_file(resp, f, max_bytes=max_bytes, on_chunk=_report)
+            if not _verify_is_media(tmp_path):
+                raise ValueError(
+                    "downloaded content is not a recognized media file "
+                    "(the URL did not return video/audio)"
+                )
             os.replace(tmp_path, output_path)
         except Exception:
             if os.path.exists(tmp_path):
@@ -206,8 +260,24 @@ def ingest_url(
         raise ValueError("url is required")
     url = url.strip()
 
+    # Cheap scheme check first so malformed input is rejected consistently even
+    # when local-only mode is active.
     if not url.startswith(("http://", "https://")):
         raise ValueError("url must be http:// or https://")
+
+    # Local-only mode disables every network egress feature; URL ingest is one.
+    from opencut.config import require_network_allowed
+
+    require_network_allowed(
+        "URL ingest", local_alternative="a local file path or the media browser"
+    )
+
+    # Structural SSRF pre-check (credentials, literal private/loopback IPs,
+    # numeric-encoding bypasses). The connect-time resolved-IP and redirect
+    # checks run again inside the direct-download path.
+    from .url_safety import validate_public_http_url
+
+    url = validate_public_http_url(url, label="ingest URL")
 
     cached = _cached_path(url)
     if cached:

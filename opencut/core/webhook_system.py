@@ -498,6 +498,9 @@ def _send_payload(
     """
     try:
         url = _validate_webhook_url(url)
+        # Connect-time resolved-IP check (partial DNS-rebinding mitigation):
+        # a hostname that validated public at registration can point private now.
+        validate_public_http_url(url, label="Webhook URL", resolve=True)
     except ValueError as exc:
         return 0, False, str(exc)
 
@@ -513,9 +516,12 @@ def _send_payload(
         headers["X-OpenCut-Signature-Algorithm"] = "HMAC-SHA256"
 
     try:
+        from opencut.core.url_safety import build_guarded_opener
+
         req = urllib.request.Request(
             url, data=body, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        # Follow redirects only through hops that pass the SSRF guard.
+        with build_guarded_opener().open(req, timeout=timeout) as resp:
             status = resp.status
             if 200 <= status < 300:
                 return status, True, ""
