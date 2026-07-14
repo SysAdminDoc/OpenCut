@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Panel timeline write-back honesty and double-click safety
+
+- CEP `applySequenceCuts` and `addBeatMarkersToSequence` now branch on the
+  ExtendScript result's `error` field **before** showing a toast, so a host-side
+  failure (no active sequence, locked track) surfaces as an error alert instead
+  of a false "Applied 0 cuts" / "Added N markers" success — matching the UXP
+  panel's existing `result.ok` handling.
+- UXP `applyTimelineCuts`/`addSequenceMarkers` disable their trigger button for
+  the duration of the awaited ripple-delete / marker-insert loop, preventing a
+  rapid second click from stacking an overlapping destructive pass.
+- Transcript search-result count routes through `t()`
+  (`transcript.search_count`) instead of hardcoded English `" match"/"es"`
+  concatenation, so it is translatable.
+
 ### Fixed - Return 400 (not 500) for malformed request bodies on three routes
 
 - `POST /api/video/suggest-workflow` no longer 500s on a non-object

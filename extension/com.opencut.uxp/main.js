@@ -4771,7 +4771,15 @@ async function applyTimelineCuts(cuts) {
 
   if (PProBridge.available()) {
   UIController.setStatus(t("uxp.timeline.runtime.applying_cuts_uxp", "Applying cuts to timeline via UXP..."));
-    const result = await PProBridge.applyCuts(cutsToApply);
+    // Disable the trigger for the duration of the ripple-delete loop so a
+    // second click cannot start an overlapping pass on the same sequence.
+    UIController.setButtonLoading("applyTimelineCutsBtn", true);
+    let result;
+    try {
+      result = await PProBridge.applyCuts(cutsToApply);
+    } finally {
+      UIController.setButtonLoading("applyTimelineCutsBtn", false);
+    }
     if (result.ok) {
       UIController.showToast(formatI18n("uxp.timeline.runtime.applied_cuts_sequence", "Applied {count} cut(s) to active sequence.", { count: result.applied }), "success");
       UIController.setStatus(formatI18n("uxp.timeline.runtime.applied_cuts_status", "Applied {count} cut(s).", { count: result.applied }));
@@ -4833,7 +4841,15 @@ async function addSequenceMarkers(markers, color) {
 
   if (PProBridge.available()) {
   UIController.setStatus(t("uxp.timeline.runtime.adding_markers_uxp", "Adding markers to sequence via UXP..."));
-    const result = await PProBridge.addMarkers(formatted);
+    // Disable the trigger while markers insert so a rapid second click cannot
+    // stack a duplicate insertion pass.
+    UIController.setButtonLoading("addBeatMarkersBtn", true);
+    let result;
+    try {
+      result = await PProBridge.addMarkers(formatted);
+    } finally {
+      UIController.setButtonLoading("addBeatMarkersBtn", false);
+    }
     if (result.ok) {
       UIController.showToast(formatI18n("uxp.timeline.runtime.added_markers_sequence", "Added {count} marker(s) to active sequence.", { count: result.count }), "success");
       UIController.setStatus(formatI18n("uxp.timeline.runtime.added_markers_status", "Added {count} marker(s).", { count: result.count }));
