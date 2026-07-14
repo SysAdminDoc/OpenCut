@@ -106,7 +106,7 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
         encoding="utf-8",
     )
     c2pa.write_text(
-        'CLAIM_GENERATOR_DEFAULT = "OpenCut/1.32.0 (sidecar; c2pa-spec 2.3)"\n',
+        'CLAIM_GENERATOR_DEFAULT = "OpenCut/1.32.0 (sidecar; c2pa-spec 2.4)"\n',
         encoding="utf-8",
     )
 
@@ -126,7 +126,7 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
     lock_text = lock.read_text(encoding="utf-8")
     c2pa_text = c2pa.read_text(encoding="utf-8")
     assert '"version": "1.33.0"' in lock_text
-    assert 'OpenCut/1.33.0 (sidecar; c2pa-spec 2.3)' in c2pa_text
+    assert 'OpenCut/1.33.0 (sidecar; c2pa-spec 2.4)' in c2pa_text
     assert '"node_modules/lightningcss": {\n      "version": "1.32.0"' in lock_text
     assert all(
         module.check_file(path, pattern, replacement, "1.33.0")

@@ -175,7 +175,7 @@ TARGETS = [
     ),
     (
         "opencut/core/c2pa_sidecar.py",
-        r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.3\)")',
+        r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.4\)")',
         r'\g<1>{v}\g<2>',
     ),
     # README.md version badge and feature-overview heading
