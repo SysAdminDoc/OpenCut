@@ -13,6 +13,12 @@ import threading
 import time
 import uuid
 
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
+
 logger = logging.getLogger("opencut")
 
 OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
@@ -420,6 +426,66 @@ def save_assistant_dismissed(sequence_key: str, dismissed_ids: list) -> None:
 # LLM Settings
 # ---------------------------------------------------------------------------
 
+
+def _load_secret_backed_settings(
+    filename: str,
+    defaults: dict,
+    *,
+    secret_field: str,
+    namespace: str,
+) -> dict:
+    saved = read_user_file(filename, default={})
+    if not isinstance(saved, dict):
+        saved = {}
+    result = dict(defaults)
+    result.update({key: value for key, value in saved.items() if key in defaults})
+    identifier = secret_id(namespace)
+
+    def persist_sanitized() -> None:
+        sanitized = dict(saved)
+        value = str(sanitized.pop(secret_field, "") or "")
+        sanitized[f"{secret_field}_set"] = bool(value)
+        sanitized["_credential_storage"] = "os_vault"
+        write_user_file(filename, sanitized)
+
+    secrets = load_and_migrate_secrets(
+        {secret_field: identifier},
+        saved,
+        persist_sanitized,
+    )
+    result[secret_field] = secrets[secret_field]
+    return result
+
+
+def _save_secret_backed_settings(
+    filename: str,
+    settings: dict,
+    *,
+    secret_field: str,
+    namespace: str,
+) -> None:
+    value = str(settings.get(secret_field) or "")
+    previous = read_user_file(filename, default={})
+    if not isinstance(previous, dict):
+        previous = {}
+
+    def persist_metadata(secure: bool) -> None:
+        data = dict(settings)
+        if secure:
+            data.pop(secret_field, None)
+            data[f"{secret_field}_set"] = bool(value)
+            data["_credential_storage"] = "os_vault"
+        else:
+            data[secret_field] = value
+            data[f"{secret_field}_set"] = bool(value)
+            data["_credential_storage"] = "plaintext-opt-in"
+        write_user_file(filename, data)
+
+    changes = {}
+    if value or previous.get(secret_field) or previous.get(f"{secret_field}_set"):
+        changes[secret_id(namespace)] = value or None
+    persist_secret_changes(changes, persist_metadata)
+
 def load_llm_settings() -> dict:
     """Load LLM provider/model/key settings."""
     defaults = {
@@ -430,15 +496,25 @@ def load_llm_settings() -> dict:
         "max_tokens": 2000,
         "temperature": 0.3,
     }
-    saved = read_user_file("llm_settings.json", default={})
-    if isinstance(saved, dict):
-        defaults.update(saved)
-    return defaults
+    return _load_secret_backed_settings(
+        "llm_settings.json",
+        defaults,
+        secret_field="api_key",
+        namespace="llm/api-key",
+    )
 
 
 def save_llm_settings(settings: dict) -> None:
     """Save LLM settings."""
-    write_user_file("llm_settings.json", settings)
+    current = load_llm_settings()
+    if isinstance(settings, dict):
+        current.update(settings)
+    _save_secret_backed_settings(
+        "llm_settings.json",
+        current,
+        secret_field="api_key",
+        namespace="llm/api-key",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -584,15 +660,15 @@ _TELEMETRY_DEFAULTS = {
 def load_telemetry_settings() -> dict:
     """Load opt-in telemetry settings.
 
-    Telemetry is disabled by default.  The app key is intentionally stored in
-    the same local user-data area as other user-provided provider keys; route
-    responses must mask it before returning settings to clients.
+    Telemetry is disabled by default. The app key is loaded from the OS
+    credential vault and route responses must mask it before returning settings.
     """
-    saved = read_user_file("telemetry_settings.json", default={})
-    result = dict(_TELEMETRY_DEFAULTS)
-    if isinstance(saved, dict):
-        result.update({k: saved.get(k, v) for k, v in _TELEMETRY_DEFAULTS.items()})
-    return result
+    return _load_secret_backed_settings(
+        "telemetry_settings.json",
+        _TELEMETRY_DEFAULTS,
+        secret_field="app_key",
+        namespace="telemetry/app-key",
+    )
 
 
 def save_telemetry_settings(settings: dict) -> None:
@@ -605,7 +681,12 @@ def save_telemetry_settings(settings: dict) -> None:
     current["include_diagnostics"] = bool(current.get("include_diagnostics"))
     current["app_key"] = str(current.get("app_key") or "").strip()[:200]
     current["base_url"] = str(current.get("base_url") or "").strip().rstrip("/")[:500]
-    write_user_file("telemetry_settings.json", current)
+    _save_secret_backed_settings(
+        "telemetry_settings.json",
+        current,
+        secret_field="app_key",
+        namespace="telemetry/app-key",
+    )
 
 
 def load_local_only_setting() -> dict:

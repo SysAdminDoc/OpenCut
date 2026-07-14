@@ -13,7 +13,7 @@ from importlib import resources
 
 from flask import Blueprint, jsonify, request, send_file
 
-from opencut import __version__
+from opencut import __version__, credential_store
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import (
@@ -706,6 +706,7 @@ def get_local_only_setting():
         from opencut.user_data import load_local_only_setting
     setting = load_local_only_setting()
     setting["active"] = is_local_only()
+    setting["credential_store"] = credential_store.status().to_dict()
     return jsonify(setting)
 
 

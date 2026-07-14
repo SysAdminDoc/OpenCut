@@ -1,16 +1,12 @@
 """Local auth + bind-address hardening (F112).
 
-The auth module persists a token under ``~/.opencut/auth.json``. Tests
-redirect the location to a per-test tmp directory so they never touch a
-real install.
+The auth module persists token metadata under ``~/.opencut/auth.json`` and
+the secret in the OS vault. Tests isolate both surfaces.
 """
 
 from __future__ import annotations
 
-import importlib
 import json
-import os
-from pathlib import Path
 
 import pytest
 
@@ -33,7 +29,9 @@ def test_ensure_token_creates_persisted_file(isolated_auth):
     assert len(token.token) >= 32  # 256-bit token urlsafe-encoded
     assert isolated_auth.AUTH_FILE.exists()
     payload = json.loads(isolated_auth.AUTH_FILE.read_text(encoding="utf-8"))
-    assert payload["token"] == token.token
+    assert "token" not in payload
+    assert payload["token_set"] is True
+    assert token.token not in json.dumps(payload)
     assert payload["label"] == "test"
 
 

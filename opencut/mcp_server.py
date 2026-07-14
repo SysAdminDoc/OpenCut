@@ -1793,7 +1793,7 @@ def run_http_server(
     if auth_required:
         print(
             "  Non-loopback bind: requests must include X-OpenCut-Auth "
-            "or ?auth= with the token from ~/.opencut/auth.json.",
+            "or ?auth= with the token shown by opencut-server --print-auth.",
             file=sys.stderr,
         )
     print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)

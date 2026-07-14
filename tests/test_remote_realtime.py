@@ -90,7 +90,8 @@ class TestRemoteNodeDataclasses(unittest.TestCase):
         self.assertEqual(public["api_key"], REDACTED_API_KEY)
         self.assertTrue(public["api_key_set"])
         self.assertNotIn("secret-key", json.dumps(public))
-        self.assertEqual(storage["api_key"], "secret-key")
+        self.assertNotIn("api_key", storage)
+        self.assertTrue(storage["api_key_set"])
 
     def test_remote_job_defaults(self):
         from opencut.core.remote_process import RemoteJob
@@ -158,7 +159,9 @@ class TestRegistryPersistence(unittest.TestCase):
                     data = json.load(fh)
                 self.assertIn("http://test", data["nodes"])
                 self.assertEqual(data["default_node"], "http://test")
-                self.assertEqual(data["nodes"]["http://test"]["api_key"], "k1")
+                self.assertNotIn("api_key", data["nodes"]["http://test"])
+                self.assertTrue(data["nodes"]["http://test"]["api_key_set"])
+                self.assertNotIn("k1", json.dumps(data))
 
                 # Clean up module state
                 with _registry_lock:

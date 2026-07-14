@@ -188,6 +188,17 @@ def safe_error(exc, context=""):
             suggestion=getattr(exc, "suggestion", ""),
         )
 
+    if getattr(exc, "code", "") in {
+        "CREDENTIAL_STORE_UNAVAILABLE",
+        "CREDENTIAL_STORE_WRITE_FAILED",
+    }:
+        return error_response(
+            getattr(exc, "code"),
+            str(exc),
+            status=getattr(exc, "status", 503),
+            suggestion=getattr(exc, "suggestion", ""),
+        )
+
     if isinstance(exc, OpenCutError):
         return exc.to_response(context=context)
 
@@ -414,8 +425,18 @@ def install_failed(package: str, detail: str = "") -> OpenCutError:
 def register_error_handlers(app):
     """Register the OpenCutError handler on a Flask app."""
 
+    from opencut.credential_store import CredentialStoreError
     from opencut.jobs import TooManyJobsError
     from opencut.network_policy import LocalOnlyNetworkError
+
+    @app.errorhandler(CredentialStoreError)
+    def handle_credential_store_error(e):
+        return error_response(
+            e.code,
+            str(e),
+            status=e.status,
+            suggestion=e.suggestion,
+        )
 
     @app.errorhandler(LocalOnlyNetworkError)
     def handle_local_only_network_error(e):

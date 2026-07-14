@@ -389,9 +389,13 @@ def check_websocket_available() -> bool:
 
 def check_social_post_available() -> bool:
     """Check if social media posting credentials exist."""
-    import os
-    creds_path = os.path.join(os.path.expanduser("~"), ".opencut", "social_credentials.json")
-    return os.path.isfile(creds_path)
+    try:
+        from opencut.core.social_post import _load_credentials
+
+        return any(auth.access_token for auth in _load_credentials().values())
+    except Exception as exc:  # noqa: BLE001 - optional integration probe
+        _record_caller_failure(exc)
+        return False
 
 
 def check_neural_interp_available() -> bool:

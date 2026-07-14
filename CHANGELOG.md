@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Move persisted secrets into the OS credential vault
+
+- Moved API keys, OAuth/refresh tokens, render-node credentials, webhook
+  signing secrets, telemetry keys, and the remote-access token into Windows
+  Credential Locker, macOS Keychain, Secret Service, or KWallet via `keyring`.
+- Startup migration now verifies each vault write before atomically removing
+  legacy plaintext. Vault or metadata failures roll back without deleting the
+  original credential, while unavailable vaults refuse new persistence unless
+  `OPENCUT_ALLOW_INSECURE_SECRET_STORAGE=1` is explicitly set.
+- Redacted JSON metadata, route-safe node/webhook responses, stable credential
+  error codes, and the `credential_store` field on `GET /settings/local-only`
+  provide non-secret diagnostics. Legacy webhook configuration now shares the
+  same store.
+
 ### Fixed - Enforce local-only mode below every integration
 
 - Installed a process-wide deny-by-default egress guard that blocks non-loopback

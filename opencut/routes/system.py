@@ -2968,11 +2968,9 @@ def engine_resolve():
 def auth_info():
     """Return non-sensitive metadata about the local auth token (F112).
 
-    The actual token is **never** included in this response — clients
-    must read it from ``~/.opencut/auth.json`` (which is created with
-    0600 mode on POSIX). This endpoint exists so the panel can render a
-    "Auth required" banner with the exact instructions when the
-    operator switches to a remote bind.
+    The actual token is **never** included in this response. Operators use
+    ``opencut-server --print-auth`` to retrieve it from their OS credential
+    vault. The JSON path contains only non-secret issuance metadata.
     """
     try:
         from opencut import auth as _auth
@@ -2987,6 +2985,8 @@ def auth_info():
                 "token_issued_at": token.issued_at if token else None,
                 "token_label": token.label if token else None,
                 "token_file": str(_auth.AUTH_FILE),
+                "metadata_file": str(_auth.AUTH_FILE),
+                "credential_storage": "os_vault",
                 "header": _auth.AUTH_HEADER,
             }
         )
@@ -3008,7 +3008,8 @@ def auth_rotate():
                 "issued_at": token.issued_at,
                 "label": token.label,
                 "token_file": str(_auth.AUTH_FILE),
-                "note": "Token written to disk; read it with the same OS user that runs the server.",
+                "credential_storage": "os_vault",
+                "note": "Token rotated in the OS vault; reveal it with opencut-server --print-auth.",
             }
         )
     except Exception as exc:

@@ -21,6 +21,11 @@ from typing import Any, Callable, Dict, List, Optional
 
 from opencut.core.url_safety import validate_public_http_url
 from opencut.core.webhook_signature import sign_webhook_body
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -212,6 +217,8 @@ def _atomic_write_json(path: str, payload: Any) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
+            fh.flush()
+            os.fsync(fh.fileno())
         os.replace(tmp_path, path)
     except BaseException:
         try:
@@ -221,8 +228,7 @@ def _atomic_write_json(path: str, payload: Any) -> None:
         raise
 
 
-def _load_configs() -> List[WebhookConfig]:
-    """Load webhook configs from disk."""
+def _read_config_metadata() -> List[Dict[str, Any]]:
     with _config_lock:
         if not os.path.isfile(_WEBHOOKS_FILE):
             return []
@@ -230,21 +236,83 @@ def _load_configs() -> List[WebhookConfig]:
             with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
             if isinstance(data, list):
-                configs = [WebhookConfig.from_dict(d) for d in data]
-                if any(cfg.enabled and not cfg.secret for cfg in configs):
-                    _write_unsigned_warning()
-                return configs
+                return [item for item in data if isinstance(item, dict)]
             return []
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Failed to load webhook configs: %s", exc)
             return []
 
 
+def _load_configs() -> List[WebhookConfig]:
+    """Load webhook metadata and signing secrets from the OS vault."""
+    stored = _read_config_metadata()
+    identifiers = {
+        item.get("id", ""): secret_id("webhook/signing-secret", item.get("id", ""))
+        for item in stored
+        if item.get("id")
+    }
+    legacy = {
+        item["id"]: str(item.get("secret") or "")
+        for item in stored
+        if item.get("id")
+    }
+
+    def persist_sanitized() -> None:
+        sanitized = []
+        for item in stored:
+            metadata = dict(item)
+            value = str(metadata.pop("secret", "") or "")
+            metadata["has_secret"] = bool(value or metadata.get("has_secret"))
+            metadata["_credential_storage"] = "os_vault"
+            sanitized.append(metadata)
+        with _config_lock:
+            _atomic_write_json(_WEBHOOKS_FILE, sanitized)
+
+    secrets = load_and_migrate_secrets(identifiers, legacy, persist_sanitized)
+    configs = []
+    for item in stored:
+        metadata = dict(item)
+        metadata["secret"] = secrets.get(item.get("id", ""), "")
+        configs.append(WebhookConfig.from_dict(metadata))
+    if any(cfg.enabled and not cfg.secret for cfg in configs):
+        _write_unsigned_warning()
+    return configs
+
+
 def _save_configs(configs: List[WebhookConfig]) -> None:
-    """Persist webhook configs to disk."""
-    with _config_lock:
-        _atomic_write_json(_WEBHOOKS_FILE, [c.to_dict(include_secret=True) for c in configs])
-        logger.debug("Saved %d webhook config(s)", len(configs))
+    """Persist webhook metadata after vault verification."""
+    old = {
+        item.get("id"): item
+        for item in _read_config_metadata()
+        if item.get("id")
+    }
+    changes: dict[str, Optional[str]] = {}
+    for config in configs:
+        previous = old.get(config.id, {})
+        if config.secret or previous.get("secret") or previous.get("has_secret"):
+            changes[secret_id("webhook/signing-secret", config.id)] = (
+                config.secret or None
+            )
+    for webhook_id, previous in old.items():
+        if (
+            webhook_id not in {config.id for config in configs}
+            and (previous.get("secret") or previous.get("has_secret"))
+        ):
+            changes[secret_id("webhook/signing-secret", webhook_id)] = None
+
+    def persist_metadata(secure: bool) -> None:
+        payload = []
+        for config in configs:
+            item = config.to_dict(include_secret=not secure)
+            item["_credential_storage"] = (
+                "os_vault" if secure else "plaintext-opt-in"
+            )
+            payload.append(item)
+        with _config_lock:
+            _atomic_write_json(_WEBHOOKS_FILE, payload)
+
+    persist_secret_changes(changes, persist_metadata)
+    logger.debug("Saved %d webhook config(s)", len(configs))
 
 
 # ---------------------------------------------------------------------------
@@ -805,9 +873,12 @@ def load_webhook_config() -> List[Dict]:
 
 def save_webhook_config(configs: List[Dict]) -> None:
     """Persist webhook configurations (legacy API)."""
+    existing = {config.id: config for config in _load_configs()}
     parsed = []
     for config in configs:
         cfg = WebhookConfig.from_dict(config)
+        if "secret" not in config and cfg.id in existing:
+            cfg.secret = existing[cfg.id].secret
         cfg.url = _validate_webhook_url(cfg.url)
         if cfg.events:
             invalid = [e for e in cfg.events if e not in VALID_EVENTS]

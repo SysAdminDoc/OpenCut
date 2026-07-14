@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import threading
 import time
 import uuid
@@ -25,6 +26,11 @@ from opencut.core.url_safety import (
     DEFAULT_MAX_DOWNLOAD_BYTES,
     transactional_download,
     validate_media_download,
+)
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
 )
 from opencut.security import validate_path
 
@@ -65,8 +71,13 @@ class RemoteNode:
             data["api_key"] = REDACTED_API_KEY
         return data
 
-    def to_storage_dict(self) -> dict:
-        return asdict(self)
+    def to_storage_dict(self, *, include_secret: bool = False) -> dict:
+        data = asdict(self)
+        api_key = data.pop("api_key", "")
+        data["api_key_set"] = bool(api_key)
+        if include_secret:
+            data["api_key"] = api_key
+        return data
 
 
 @dataclass
@@ -113,46 +124,129 @@ def _ensure_dir():
     os.makedirs(OPENCUT_DIR, exist_ok=True)
 
 
-def _save_registry():
-    """Persist registry to disk.  Caller must hold ``_registry_lock``."""
-    _ensure_dir()
-    try:
-        payload = {
-            "default_node": _registry.default_node,
-            "nodes": {},
-        }
-        for url, node in _registry.nodes.items():
-            payload["nodes"][url] = node.to_storage_dict()
-        with open(REGISTRY_PATH, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2)
-    except Exception as exc:
-        logger.warning("Failed to save node registry: %s", exc)
-
-
-def _load_registry():
-    """Load registry from disk into module state."""
-    global _registry
+def _read_registry_metadata() -> dict:
     if not os.path.isfile(REGISTRY_PATH):
-        return
+        return {"default_node": "", "nodes": {}}
     try:
         with open(REGISTRY_PATH, "r", encoding="utf-8") as fh:
             data = json.load(fh)
-        _registry.default_node = data.get("default_node", "")
-        for url, nd in data.get("nodes", {}).items():
-            _registry.nodes[url] = RemoteNode(
-                url=nd.get("url", url),
-                api_key=nd.get("api_key", ""),
-                name=nd.get("name", ""),
-                capabilities=nd.get("capabilities", []),
-                status=nd.get("status", "unknown"),
-                last_ping=nd.get("last_ping", 0.0),
-            )
-    except Exception as exc:
-        logger.warning("Failed to load node registry: %s", exc)
+        if not isinstance(data, dict) or not isinstance(data.get("nodes", {}), dict):
+            return {"default_node": "", "nodes": {}}
+        return data
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Failed to load node registry metadata: %s", exc)
+        return {"default_node": "", "nodes": {}}
+
+
+def _write_registry_metadata(payload: dict) -> None:
+    _ensure_dir()
+    directory = os.path.dirname(REGISTRY_PATH) or "."
+    fd, tmp_path = tempfile.mkstemp(
+        dir=directory,
+        prefix=os.path.basename(REGISTRY_PATH) + ".",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp_path, REGISTRY_PATH)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _save_registry() -> None:
+    """Persist registry after vault verification. Caller holds the lock."""
+    old_nodes = _read_registry_metadata().get("nodes", {})
+    changes: dict[str, Optional[str]] = {}
+    for url, node in _registry.nodes.items():
+        old = old_nodes.get(url, {})
+        if node.api_key or old.get("api_key") or old.get("api_key_set"):
+            changes[secret_id("remote-node/api-key", url)] = node.api_key or None
+    for url, old in old_nodes.items():
+        if (
+            url not in _registry.nodes
+            and (old.get("api_key") or old.get("api_key_set"))
+        ):
+            changes[secret_id("remote-node/api-key", url)] = None
+
+    def persist_metadata(secure: bool) -> None:
+        payload = {
+            "_credential_storage": "os_vault" if secure else "plaintext-opt-in",
+            "default_node": _registry.default_node,
+            "nodes": {
+                url: node.to_storage_dict(include_secret=not secure)
+                for url, node in _registry.nodes.items()
+            },
+        }
+        _write_registry_metadata(payload)
+
+    persist_secret_changes(changes, persist_metadata)
+
+
+def _load_registry(*, migrate: bool = True) -> NodeRegistry:
+    """Load registry metadata and optionally migrate legacy API keys."""
+    global _registry
+    data = _read_registry_metadata()
+    stored_nodes = data.get("nodes", {})
+    identifiers = {
+        url: secret_id("remote-node/api-key", url)
+        for url in stored_nodes
+    }
+    legacy = {
+        url: str(metadata.get("api_key") or "")
+        for url, metadata in stored_nodes.items()
+    }
+
+    def persist_sanitized() -> None:
+        nodes = {}
+        for url, metadata in stored_nodes.items():
+            item = dict(metadata)
+            value = str(item.pop("api_key", "") or "")
+            item["api_key_set"] = bool(value or item.get("api_key_set"))
+            nodes[url] = item
+        _write_registry_metadata(
+            {
+                "_credential_storage": "os_vault",
+                "default_node": data.get("default_node", ""),
+                "nodes": nodes,
+            }
+        )
+
+    if migrate:
+        secrets = load_and_migrate_secrets(identifiers, legacy, persist_sanitized)
+    else:
+        # Import-time loading must never prompt or touch the user's OS vault.
+        # create_app() calls reload_registry() during startup migrations.
+        secrets = dict(legacy)
+
+    registry = NodeRegistry(default_node=data.get("default_node", ""))
+    for url, metadata in stored_nodes.items():
+        registry.nodes[url] = RemoteNode(
+            url=metadata.get("url", url),
+            api_key=secrets.get(url, ""),
+            name=metadata.get("name", ""),
+            capabilities=metadata.get("capabilities", []),
+            status=metadata.get("status", "unknown"),
+            last_ping=metadata.get("last_ping", 0.0),
+        )
+    _registry = registry
+    return _registry
+
+
+def reload_registry() -> NodeRegistry:
+    """Reload and migrate the persisted registry at application startup."""
+    with _registry_lock:
+        return _load_registry(migrate=True)
 
 
 # Load on import
-_load_registry()
+_load_registry(migrate=False)
 
 
 # ---------------------------------------------------------------------------
@@ -258,8 +352,12 @@ def register_node(url: str, api_key: str = "", name: str = "",
     # Normalise URL (strip trailing slash)
     url = normalize_node_url(url)
 
+    with _registry_lock:
+        previous = _registry.nodes.get(url)
+        effective_api_key = api_key or (previous.api_key if previous else "")
+
     # Ping the node
-    health = ping_node(url, api_key=api_key)
+    health = ping_node(url, api_key=effective_api_key)
 
     capabilities = health.get("capabilities", [])
     if not capabilities:
@@ -268,7 +366,7 @@ def register_node(url: str, api_key: str = "", name: str = "",
 
     node = RemoteNode(
         url=url,
-        api_key=api_key,
+        api_key=effective_api_key,
         name=name or health.get("name", url),
         capabilities=capabilities,
         status="online",
@@ -276,10 +374,20 @@ def register_node(url: str, api_key: str = "", name: str = "",
     )
 
     with _registry_lock:
+        previous = _registry.nodes.get(url)
+        previous_default = _registry.default_node
         _registry.nodes[url] = node
         if not _registry.default_node:
             _registry.default_node = url
-        _save_registry()
+        try:
+            _save_registry()
+        except Exception:
+            if previous is None:
+                _registry.nodes.pop(url, None)
+            else:
+                _registry.nodes[url] = previous
+            _registry.default_node = previous_default
+            raise
 
     if on_progress:
         on_progress(100, f"Node registered: {node.name}")
@@ -305,10 +413,16 @@ def remove_node(url: str) -> bool:
     url = normalize_node_url(url)
     with _registry_lock:
         if url in _registry.nodes:
-            del _registry.nodes[url]
+            previous = _registry.nodes.pop(url)
+            previous_default = _registry.default_node
             if _registry.default_node == url:
                 _registry.default_node = next(iter(_registry.nodes), "")
-            _save_registry()
+            try:
+                _save_registry()
+            except Exception:
+                _registry.nodes[url] = previous
+                _registry.default_node = previous_default
+                raise
             return True
     return False
 

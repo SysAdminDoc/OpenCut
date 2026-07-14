@@ -19,6 +19,12 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
+
 logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
@@ -26,6 +32,7 @@ _CONFIG_FILE = os.path.join(_OPENCUT_DIR, "notion_config.json")
 _CONFIG_LOCK = threading.Lock()
 _NOTION_API_BASE = "https://api.notion.com/v1"
 _NOTION_VERSION = "2022-06-28"
+_NOTION_SECRET_ID = secret_id("notion/api-key")
 
 
 @dataclass
@@ -42,8 +49,7 @@ class NotionSyncResult:
 # Config helpers
 # ---------------------------------------------------------------------------
 
-def load_notion_config() -> Dict[str, Any]:
-    """Load Notion configuration from disk."""
+def _read_notion_metadata() -> Dict[str, Any]:
     with _CONFIG_LOCK:
         if not os.path.isfile(_CONFIG_FILE):
             return {}
@@ -54,12 +60,7 @@ def load_notion_config() -> Dict[str, Any]:
             return {}
 
 
-def save_notion_config(config: Dict[str, Any]) -> None:
-    """Persist Notion configuration to disk.
-
-    Atomic write so a crash mid-rename never leaves a zero-byte config
-    that would lock the user out of their saved Notion integration.
-    """
+def _write_notion_metadata(config: Dict[str, Any]) -> None:
     with _CONFIG_LOCK:
         os.makedirs(_OPENCUT_DIR, exist_ok=True)
         fd, tmp_path = tempfile.mkstemp(
@@ -82,6 +83,51 @@ def save_notion_config(config: Dict[str, Any]) -> None:
             except OSError:
                 pass
             raise
+
+
+def load_notion_config() -> Dict[str, Any]:
+    """Load Notion metadata plus its API key from the OS vault."""
+    saved = _read_notion_metadata()
+
+    def persist_sanitized() -> None:
+        metadata = dict(saved)
+        key = str(metadata.pop("api_key", "") or "")
+        metadata["api_key_set"] = bool(key)
+        metadata["_credential_storage"] = "os_vault"
+        _write_notion_metadata(metadata)
+
+    secrets = load_and_migrate_secrets(
+        {"api_key": _NOTION_SECRET_ID},
+        saved,
+        persist_sanitized,
+    )
+    result = dict(saved)
+    result.pop("_credential_storage", None)
+    result.pop("api_key_set", None)
+    result["api_key"] = secrets["api_key"]
+    return result
+
+
+def save_notion_config(config: Dict[str, Any]) -> None:
+    """Persist Notion metadata after verifying its OS-vault secret."""
+    value = str(config.get("api_key") or "")
+    previous = _read_notion_metadata()
+
+    def persist_metadata(secure: bool) -> None:
+        metadata = dict(config)
+        metadata["api_key_set"] = bool(value)
+        if secure:
+            metadata.pop("api_key", None)
+            metadata["_credential_storage"] = "os_vault"
+        else:
+            metadata["api_key"] = value
+            metadata["_credential_storage"] = "plaintext-opt-in"
+        _write_notion_metadata(metadata)
+
+    changes = {}
+    if value or previous.get("api_key") or previous.get("api_key_set"):
+        changes[_NOTION_SECRET_ID] = value or None
+    persist_secret_changes(changes, persist_metadata)
 
 
 # ---------------------------------------------------------------------------

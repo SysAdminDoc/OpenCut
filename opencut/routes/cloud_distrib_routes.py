@@ -98,7 +98,7 @@ def cloud_nodes_list():
 def cloud_nodes_add():
     """Add or update a render node configuration."""
     try:
-        from opencut.core.cloud_render import RenderNode, add_node
+        from opencut.core.cloud_render import RenderNode, add_node, load_nodes
 
         data = get_json_dict() or {}
         name = (data.get("name", "") or "").strip()
@@ -109,6 +109,11 @@ def cloud_nodes_add():
         if not host:
             return jsonify({"error": "Node host is required"}), 400
 
+        auth_token = data.get("auth_token") if "auth_token" in data else None
+        if auth_token is None or str(auth_token).startswith("[REDACTED]"):
+            existing = next((node for node in load_nodes() if node.name == name), None)
+            auth_token = existing.auth_token if existing else ""
+
         node = RenderNode(
             name=name,
             host=host,
@@ -117,7 +122,7 @@ def cloud_nodes_add():
             max_concurrent=safe_int(data.get("max_concurrent", 2), 2, min_val=1, max_val=100),
             enabled=data.get("enabled", True),
             priority=safe_int(data.get("priority", 0), 0, min_val=0, max_val=100),
-            auth_token=data.get("auth_token", ""),
+            auth_token=str(auth_token or ""),
         )
 
         nodes = add_node(node)
