@@ -24,6 +24,7 @@ To add a new entry, update both `ALLOWED_ADVISORIES` in
 | Package | Old floor | New floor | Date | Rationale |
 |---------|-----------|-----------|------|-----------|
 | `onnxruntime` / `onnxruntime-gpu` | `>=1.25,<2` | `>=1.26,<2` | 2026-06-13 | 1.26.0 hardens multiple out-of-bounds and overflow scenarios across ML and core ops (Attention mask OOB write, MaxPoolGrad bounds, SVM/TreeEnsemble, RNN sequence_lens) and replaces unrestricted Python `setattr` configuration with an allowlist. 15+ core modules import onnxruntime via the ai/insightface/rembg stack. |
+| `torch` / `torchvision` | `>=2.6` / `>=0.21` | `>=2.10.0` / `>=0.25.0` | 2026-07-14 | [CVE-2026-24747](https://github.com/advisories/GHSA-63cw-57p8-fm3p) — `torch.load(weights_only=True)` unpickler heap corruption / RCE on a crafted checkpoint (affected `<2.10.0`, fixed 2.10.0); torchvision floored to the matching 0.25.0 release. Applies to the `depth` and `torch-stack` extras. `model_safety.safe_torch_load` additionally scans pickle weights with picklescan before load. |
 | `click` | `>=8.0,<9` (lock `8.3.1`) | `>=8.3.3,<9` (lock `8.4.1`) | 2026-07-14 | [CVE-2026-7246](https://nvd.nist.gov/vuln/detail/CVE-2026-7246) / PYSEC-2026-2132 — command injection in `click.edit()` via the editor shell invocation; fixed in Click 8.3.3. Click is a core dependency of the CLI/server entrypoints. Floored above the fix in `pyproject.toml`, `requirements.txt`, and pinned to `8.4.1` in `requirements-lock.txt`. No waiver required. |
 
 ## Explicit Torch stack
@@ -34,9 +35,14 @@ TransNetV2, or depth models. It is not part of the default release-smoke audit
 because the live resolver can still report unwaived Torch-stack and Transformers
 advisories. The standalone `depth` extra uses `transformers>=5.3`; only
 `torch-stack` keeps the lower `transformers>=4.30` floor because of WhisperX's
-current `huggingface-hub<1.0.0` constraint. The declared Torch floor stays at
-`torch>=2.6` / `torchvision>=0.21` so known `torch.load` deserialization
-advisories from older Torch releases are not admitted by OpenCut extras. Keep
+current `huggingface-hub<1.0.0` constraint. The declared Torch floor is
+`torch>=2.10.0` / `torchvision>=0.25.0` so known `torch.load` deserialization
+advisories from older Torch releases — including CVE-2026-24747
+(GHSA-63cw-57p8-fm3p), a `weights_only=True` unpickler heap-corruption/RCE fixed
+in torch 2.10.0 — are not admitted by OpenCut extras. As defense in depth,
+`opencut.core.model_safety.safe_torch_load` scans pickle-format checkpoints with
+picklescan (`>=1.0.3`, shipped in the `ai`/`ai-gpu`/`depth`/`torch-stack`
+extras) before every load. Keep
 those packages out of `[all]` until the dedicated `torch-stack` audit command
 below returns no unallowed findings, or until each remaining finding has a
 documented project-specific waiver.

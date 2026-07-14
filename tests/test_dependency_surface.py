@@ -165,13 +165,20 @@ def test_optional_dependency_security_floor_pins():
     deps = _dep_names(extras["ai-gpu"])
     assert deps["onnxruntime-gpu"] == "onnxruntime-gpu>=1.26,<2"
 
+    # CVE-2026-24747 — torch.load weights_only RCE fixed in 2.10.0.
     torch_stack = _dep_names(extras["torch-stack"])
-    assert torch_stack["torch"] == "torch>=2.6"
-    assert torch_stack["torchvision"] == "torchvision>=0.21"
+    assert torch_stack["torch"] == "torch>=2.10.0"
+    assert torch_stack["torchvision"] == "torchvision>=0.25.0"
     assert torch_stack["transformers"] == "transformers>=4.30"
 
     depth = _dep_names(extras["depth"])
+    assert depth["torch"] == "torch>=2.10.0"
+    assert depth["torchvision"] == "torchvision>=0.25.0"
     assert depth["transformers"] == "transformers>=5.3"
+
+    # picklescan supply-chain scanner must ship in every pickle-weight lane.
+    for extra in ("ai", "ai-gpu", "depth", "torch-stack"):
+        assert _dep_names(extras[extra])["picklescan"] == "picklescan>=1.0.3"
 
 
 def test_transformers_floor_exception_is_confined_to_torch_stack():

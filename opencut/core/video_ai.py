@@ -878,7 +878,9 @@ def _denoise_basicvsr(
     # Try to load pre-trained weights
     weights_path = os.path.expanduser("~/.opencut/models/basicvsrpp_denoise.pth")
     if os.path.isfile(weights_path):
-        ckpt = torch.load(weights_path, map_location=device, weights_only=True)
+        from opencut.core.model_safety import safe_torch_load
+
+        ckpt = safe_torch_load(weights_path, map_location=device)
         model.load_state_dict(ckpt.get("params", ckpt.get("params_ema", ckpt)), strict=False)
     else:
         raise RuntimeError(
