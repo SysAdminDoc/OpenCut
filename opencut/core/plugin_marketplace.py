@@ -16,7 +16,11 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.core import archive_safety
-from opencut.core.url_safety import validate_public_http_url
+from opencut.core.url_safety import (
+    transactional_download,
+    validate_public_http_url,
+    validate_zip_download,
+)
 from opencut.helpers import OPENCUT_DIR
 from opencut.security import is_path_within
 
@@ -325,12 +329,22 @@ def install_plugin(
     download_url = _validate_download_url(
         target.download_url or f"{target.repo_url}/archive/refs/heads/main.zip"
     )
-    import urllib.request
-
-    fd, tmp_zip = tempfile.mkstemp(prefix=f"opencut_{plugin_id}_", suffix=".zip")
-    os.close(fd)
-    try:
-        urllib.request.urlretrieve(download_url, tmp_zip)
+    with tempfile.TemporaryDirectory(prefix=f"opencut_{plugin_id}_") as temp_dir:
+        tmp_zip = os.path.join(temp_dir, "plugin.zip")
+        transactional_download(
+            download_url,
+            tmp_zip,
+            max_bytes=_MAX_ARCHIVE_BYTES,
+            timeout=120,
+            validator=validate_zip_download,
+            allowed_content_types=(
+                "application/zip",
+                "application/x-zip-compressed",
+                "application/octet-stream",
+            ),
+            label="plugin archive download",
+            local_alternative="manually installed local plugins",
+        )
 
         if on_progress:
             on_progress(60, "Extracting plugin")
@@ -341,9 +355,6 @@ def install_plugin(
         except Exception:
             shutil.rmtree(plugin_dir, ignore_errors=True)
             raise
-    finally:
-        if os.path.exists(tmp_zip):
-            os.unlink(tmp_zip)
 
     if on_progress:
         on_progress(80, "Registering plugin")

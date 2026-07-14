@@ -15,14 +15,15 @@ import logging
 import os
 import subprocess
 import tempfile
-import urllib.request
 from typing import Callable, Dict, Optional
 
+from opencut.core.url_safety import transactional_download, validate_pytorch_weights
 from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
 REALESRGAN_MODELS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "models")
+_MAX_REALESRGAN_MODEL_BYTES = 1024 * 1024 * 1024
 REALESRGAN_MODEL_SPECS = {
     "RealESRGAN_x4plus": {
         "filename": "RealESRGAN_x4plus.pth",
@@ -72,25 +73,26 @@ def _resolve_realesrgan_model_path(
     spec = REALESRGAN_MODEL_SPECS[canonical_name]
     os.makedirs(REALESRGAN_MODELS_DIR, exist_ok=True)
     model_path = os.path.join(REALESRGAN_MODELS_DIR, spec["filename"])
-    if os.path.isfile(model_path) and os.path.getsize(model_path) >= 1024:
-        return model_path
+    if os.path.isfile(model_path):
+        try:
+            validate_pytorch_weights(model_path)
+            return model_path
+        except ValueError:
+            logger.warning("Existing Real-ESRGAN weights failed validation; downloading afresh")
 
     if on_progress:
         on_progress(4, f"Downloading {canonical_name} weights...")
 
-    tmp_path = f"{model_path}.download"
-    try:
-        urllib.request.urlretrieve(spec["url"], tmp_path)
-        if not os.path.isfile(tmp_path) or os.path.getsize(tmp_path) < 1024:
-            raise RuntimeError(f"Downloaded Real-ESRGAN weights are empty: {spec['url']}")
-        os.replace(tmp_path, model_path)
-    except Exception:
-        try:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
+    transactional_download(
+        spec["url"],
+        model_path,
+        max_bytes=_MAX_REALESRGAN_MODEL_BYTES,
+        timeout=600,
+        validator=validate_pytorch_weights,
+        allowed_content_types=("application/octet-stream", "application/zip"),
+        label="Real-ESRGAN model download",
+        local_alternative="a preinstalled local model file",
+    )
     return model_path
 
 # ---------------------------------------------------------------------------

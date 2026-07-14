@@ -316,11 +316,13 @@ class TestPluginMarketplace(unittest.TestCase):
                 download_url="https://example.com/plugin.zip",
             )]
 
-            def _fake_download(url, dest):
+            def _fake_download(url, dest, **_kwargs):
                 shutil.copyfile(archive_path, dest)
-                return dest, None
 
-            with patch("urllib.request.urlretrieve", side_effect=_fake_download):
+            with patch(
+                "opencut.core.plugin_marketplace.transactional_download",
+                side_effect=_fake_download,
+            ):
                 result = install_plugin("my-plugin")
 
             self.assertEqual(result.plugin_id, "my-plugin")
@@ -354,12 +356,14 @@ class TestPluginMarketplace(unittest.TestCase):
             download_url="https://example.com/unsafe.zip",
         )]
 
-        def _fake_download(url, dest):
+        def _fake_download(url, dest, **_kwargs):
             shutil.copyfile(archive_path, dest)
-            return dest, None
 
         with patch("opencut.core.plugin_marketplace.PLUGINS_DIR", self.tmp):
-            with patch("urllib.request.urlretrieve", side_effect=_fake_download):
+            with patch(
+                "opencut.core.plugin_marketplace.transactional_download",
+                side_effect=_fake_download,
+            ):
                 with self.assertRaises(ValueError):
                     install_plugin("unsafe-plugin")
 
