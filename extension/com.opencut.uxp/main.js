@@ -2099,7 +2099,11 @@ const JobPoller = (() => {
     });
   }
 
-  return { start, poll, cancel, onJobFinished };
+  function resume(jobId, onProgress, onComplete, onError) {
+    return start(`/jobs/${jobId}/resume`, {}, onProgress, onComplete, onError);
+  }
+
+  return { start, poll, cancel, resume, onJobFinished };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -5868,6 +5872,31 @@ function pad(n) { return String(n).padStart(2, "0"); }
 // Health check loop
 // ─────────────────────────────────────────────────────────────
 let _lastConnectionState = null;
+let _offeredProxyResumeJobId = "";
+
+async function loadInterruptedProxyRecovery() {
+  if (hasActiveJob()) return;
+  const response = await BackendClient.get("/jobs/interrupted");
+  if (!response.ok || !Array.isArray(response.data)) return;
+  const job = response.data
+    .filter((entry) => entry?.type === "proxy_batch" && entry?.resumable)
+    .sort((left, right) => Number(right.created || 0) - Number(left.created || 0))[0];
+  if (!job) return;
+
+  _offeredProxyResumeJobId = String(job.id || "");
+  if (!_offeredProxyResumeJobId) return;
+  const banner = document.getElementById("proxyRecoveryBanner");
+  const message = document.getElementById("proxyRecoveryMessage");
+  const resumeButton = document.getElementById("resumeProxyBatchBtn");
+  if (message) {
+    message.textContent = t(
+      "processing.proxy_resume_available",
+      "An interrupted proxy batch can resume from its last verified item."
+    );
+  }
+  if (resumeButton) resumeButton.dataset.jobId = _offeredProxyResumeJobId;
+  banner?.classList.remove("hidden");
+}
 
 async function checkConnection({ rescan = false, background = false } = {}) {
   if (rescan) {
@@ -5926,6 +5955,7 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     // Show reconnection toast when server comes back
     if (alive && wasAlive === false) {
       UIController.showToast(t("uxp.status.server_reconnected", "Server reconnected."), "success");
+      void loadInterruptedProxyRecovery();
     }
   }
 
@@ -6108,6 +6138,35 @@ function bindEvents() {
     UIController.clearButtonLoadingStates();
     UIController.hideProcessing();
     UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
+  });
+  document.getElementById("resumeProxyBatchBtn")?.addEventListener("click", async (event) => {
+    const jobId = event.currentTarget?.dataset?.jobId || _offeredProxyResumeJobId;
+    if (!jobId) return;
+    document.getElementById("proxyRecoveryBanner")?.classList.add("hidden");
+    UIController.showProcessing(t("processing.resuming_proxy_batch", "Resuming proxy batch..."));
+    await JobPoller.resume(
+      jobId,
+      (pct, msg) => {
+        UIController.setProgress(pct);
+        UIController.setProcessingMsg(msg);
+      },
+      (result) => {
+        UIController.hideProcessing();
+        _offeredProxyResumeJobId = "";
+        UIController.showToast(
+          t("processing.proxy_batch_resumed", "Proxy batch completed from its saved checkpoint."),
+          "success"
+        );
+      },
+      (message) => {
+        UIController.hideProcessing();
+        UIController.showToast(message, "error");
+        document.getElementById("proxyRecoveryBanner")?.classList.remove("hidden");
+      }
+    );
+  });
+  document.getElementById("dismissProxyRecoveryBtn")?.addEventListener("click", () => {
+    document.getElementById("proxyRecoveryBanner")?.classList.add("hidden");
   });
 
   // ── Cut & Clean ──
@@ -7716,6 +7775,7 @@ async function initApp() {
   if (alive) {
     _healthBackoff = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
+    await loadInterruptedProxyRecovery();
     await loadCaptionStyleCatalog({ silent: true });
     await loadLlmSettings();
     UIController.showToast(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");

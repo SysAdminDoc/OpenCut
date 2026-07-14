@@ -222,6 +222,19 @@ def test_job_cancel_clears_button_loading_state():
     )
 
 
+def test_proxy_batch_recovery_is_exposed_in_uxp():
+    text = _read_main_js()
+    assert 'BackendClient.get("/jobs/interrupted")' in text
+    assert 'entry?.type === "proxy_batch" && entry?.resumable' in text
+    assert "function resume(jobId, onProgress, onComplete, onError)" in text
+    assert "return start(`/jobs/${jobId}/resume`" in text
+    html = (REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    assert 'id="proxyRecoveryBanner"' in html
+    assert 'id="resumeProxyBatchBtn"' in html
+
+
 def test_job_poller_rejects_concurrent_jobs_and_locks_job_buttons():
     text = _read_main_js()
     assert "function hasActiveJob()" in text

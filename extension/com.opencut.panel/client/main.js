@@ -8864,6 +8864,30 @@
                 }
             });
             warn.appendChild(msg);
+            var resumableProxy = null;
+            for (var interruptedIndex = 0; interruptedIndex < interrupted.length; interruptedIndex++) {
+                if (interrupted[interruptedIndex].resumable && interrupted[interruptedIndex].type === "proxy_batch") {
+                    resumableProxy = interrupted[interruptedIndex];
+                    break;
+                }
+            }
+            if (resumableProxy) {
+                var resumeProxy = document.createElement("button");
+                resumeProxy.type = "button";
+                resumeProxy.className = "session-context-action session-context-interrupted-btn";
+                resumeProxy.textContent = t("history.resume_proxies", "Resume proxies");
+                resumeProxy.title = t(
+                    "history.resume_proxies_title",
+                    "Validate completed proxy/map pairs and continue from the first pending item"
+                );
+                resumeProxy.addEventListener("click", (function (job) {
+                    return function () {
+                        dismissSessionContext();
+                        startJob("/jobs/" + encodeURIComponent(job.id) + "/resume", { no_input: true });
+                    };
+                })(resumableProxy));
+                warn.appendChild(resumeProxy);
+            }
             warn.appendChild(openHistory);
             frag.appendChild(warn);
         }

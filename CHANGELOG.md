@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Make proxy batches transactional, cancellable, and resumable
+
+- Proxy batches now persist per-item pending/running/completed/failed state
+  before queueing, restore file lists larger than job-history payload limits,
+  and retry only proxy/map pairs that fail source and media validation.
+- FFmpeg writes each proxy to a same-directory partial file, promotes it with
+  an atomic replace, and registers the active process with standard job
+  cancellation so interrupted output is removed and the item remains resumable.
+- CEP and UXP now surface restart recovery for interrupted proxy batches while
+  reusing their existing progress and cancellation controls.
+
 ### Fixed - Enforce the Python 3.11 runtime floor at every entry path
 
 - Source installers and Windows, macOS, and Linux launchers now reject Python

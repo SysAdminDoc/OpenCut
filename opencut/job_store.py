@@ -416,7 +416,13 @@ def get_interrupted_jobs():
     init_db()
     conn = _get_conn()
     rows = conn.execute(
-        "SELECT * FROM jobs WHERE status = 'interrupted' ORDER BY created_at DESC"
+        "SELECT interrupted.* FROM jobs AS interrupted "
+        "WHERE interrupted.status = 'interrupted' "
+        "AND NOT EXISTS ("
+        "  SELECT 1 FROM jobs AS resumed "
+        "  WHERE resumed.resume_source_job_id = interrupted.id "
+        "  AND resumed.status IN ('running', 'complete')"
+        ") ORDER BY interrupted.created_at DESC"
     ).fetchall()
     return [_row_to_dict(r) for r in rows]
 

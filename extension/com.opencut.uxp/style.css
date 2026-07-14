@@ -76,6 +76,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   padding: 0 12px;
   height: 36px;
   background: var(--bg-secondary);
@@ -176,6 +177,28 @@ body {
 }
 
 .oc-processing-banner.hidden { display: none; }
+
+.oc-recovery-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.oc-recovery-banner.hidden { display: none; }
+
+.oc-recovery-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 .oc-processing-left {
   display: flex;

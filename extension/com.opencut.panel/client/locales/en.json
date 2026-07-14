@@ -795,6 +795,8 @@
   "history.rerun_original_title": "Re-run on the original clip with the same parameters",
   "history.rerun_same_job_title": "Run the same job again",
   "history.reveal_output_title": "Reveal output in file manager",
+  "history.resume_proxies": "Resume proxies",
+  "history.resume_proxies_title": "Validate completed proxy/map pairs and continue from the first pending item",
   "history.status_cancelled": "Cancelled",
   "history.status_complete": "Complete",
   "history.status_needs_attention": "Needs attention",
