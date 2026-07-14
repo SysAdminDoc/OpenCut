@@ -11,6 +11,7 @@ Node registry persisted at ~/.opencut/remote_nodes.json.
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -19,6 +20,13 @@ from typing import Callable, Dict, List, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+from opencut.core.url_safety import (
+    DEFAULT_MAX_DOWNLOAD_BYTES,
+    transactional_download,
+    validate_media_download,
+)
+from opencut.security import validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -33,6 +41,8 @@ POLL_INTERVAL = 2.0           # seconds between status polls
 MAX_POLL_DURATION = 7200      # seconds — give up after 2 hours
 USER_AGENT = "OpenCut-RemoteNode/1.0"
 REDACTED_API_KEY = "[REDACTED]"
+MAX_REMOTE_RESULT_BYTES = DEFAULT_MAX_DOWNLOAD_BYTES
+_REMOTE_JOB_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +463,33 @@ def list_remote_jobs() -> List[RemoteJob]:
         return list(_remote_jobs.values())
 
 
+def _remote_result_root() -> str:
+    """Return the only directory where remote artifacts may be promoted."""
+    configured = (os.environ.get("OPENCUT_OUTPUT_DIR") or "").strip()
+    root = configured or os.path.join(OPENCUT_DIR, "remote_results")
+    return validate_path(os.path.expanduser(root))
+
+
+def _resolve_remote_result_path(local_path: str) -> str:
+    """Resolve a caller-selected result path inside the approved output root."""
+    if not isinstance(local_path, str) or not local_path.strip():
+        raise ValueError("Remote result path is required")
+    try:
+        root = _remote_result_root()
+        os.makedirs(root, exist_ok=True)
+        requested = os.path.expanduser(local_path.strip())
+        candidate = requested if os.path.isabs(requested) else os.path.join(root, requested)
+        resolved = validate_path(candidate, allowed_base=root)
+        os.makedirs(os.path.dirname(resolved), exist_ok=True)
+        # Re-resolve after directory creation so a pre-existing symlink cannot
+        # become an escape only when its parent materializes.
+        return validate_path(resolved, allowed_base=root)
+    except ValueError as exc:
+        raise PermissionError(
+            "Remote result path is outside the approved output directory"
+        ) from exc
+
+
 def download_result(node_url: str, remote_job_id: str, local_path: str,
                     on_progress: Optional[Callable] = None) -> str:
     """Download the result file from a completed remote job.
@@ -466,6 +503,9 @@ def download_result(node_url: str, remote_job_id: str, local_path: str,
         The local path of the downloaded file.
     """
     node_url = normalize_node_url(node_url)
+    if not isinstance(remote_job_id, str) or not _REMOTE_JOB_ID_RE.fullmatch(remote_job_id):
+        raise PermissionError("Invalid remote job ID")
+    final_path = _resolve_remote_result_path(local_path)
     node = get_node(node_url)
     api_key = node.api_key if node else ""
 
@@ -477,31 +517,33 @@ def download_result(node_url: str, remote_job_id: str, local_path: str,
     if api_key:
         hdrs["Authorization"] = f"Bearer {api_key}"
 
-    req = Request(download_url, headers=hdrs)
-    try:
-        with urlopen(req, timeout=UPLOAD_TIMEOUT) as resp:
-            os.makedirs(os.path.dirname(os.path.abspath(local_path)), exist_ok=True)
-            with open(local_path, "wb") as fh:
-                total = int(resp.headers.get("Content-Length", 0))
-                downloaded = 0
-                while True:
-                    chunk = resp.read(65536)
-                    if not chunk:
-                        break
-                    fh.write(chunk)
-                    downloaded += len(chunk)
-                    if on_progress and total > 0:
-                        pct = 10 + int((downloaded / total) * 85)
-                        on_progress(min(pct, 95), "Downloading result")
-    except HTTPError as exc:
-        raise RuntimeError(f"Download failed: HTTP {exc.code}")
-    except URLError as exc:
-        raise RuntimeError(f"Download failed: {exc.reason}")
+    def _report_progress(written: int, total: int) -> None:
+        if on_progress and total > 0:
+            pct = 10 + int((written / total) * 85)
+            on_progress(min(pct, 95), "Downloading result")
+
+    result = transactional_download(
+        download_url,
+        final_path,
+        max_bytes=MAX_REMOTE_RESULT_BYTES,
+        timeout=UPLOAD_TIMEOUT,
+        validator=validate_media_download,
+        allowed_content_types=(
+            "video/",
+            "audio/",
+            "image/",
+            "application/octet-stream",
+        ),
+        headers=hdrs,
+        label="remote result download",
+        local_alternative="local processing",
+        on_chunk=_report_progress,
+    )
 
     if on_progress:
         on_progress(100, "Download complete")
 
-    return local_path
+    return result.path
 
 
 def auto_select_node(job_type: str = "",
