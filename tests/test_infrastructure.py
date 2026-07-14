@@ -166,21 +166,42 @@ class TestAutoUpdateCore(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertIn("Unsupported", result.message)
 
-    @patch("opencut.core.auto_update.subprocess.run")
-    def test_trigger_update_pip_success(self, mock_run):
-        from opencut.core.auto_update import trigger_update
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        with patch("opencut.core.auto_update._read_installed_version", return_value="2.0.0"):
+    def test_trigger_update_pip_success(self):
+        from opencut.core.auto_update import (
+            InstallOrigin,
+            ReleaseInfo,
+            UpdateResult,
+            trigger_update,
+        )
+        with (
+            patch(
+                "opencut.core.auto_update.detect_install_origin",
+                return_value=InstallOrigin("wheel", "pip"),
+            ),
+            patch(
+                "opencut.core.auto_update.get_latest_release",
+                return_value=ReleaseInfo(version="2.0.0"),
+            ),
+            patch("opencut.core.auto_update._read_installed_version", return_value="1.0.0"),
+            patch(
+                "opencut.core.auto_update._update_via_pip",
+                return_value=UpdateResult(True, "pip", "OK", "2.0.0"),
+            ) as update,
+        ):
             result = trigger_update(method="pip")
         self.assertTrue(result.success)
         self.assertEqual(result.method, "pip")
+        update.assert_called_once_with("2.0.0")
 
-    @patch("opencut.core.auto_update.subprocess.run")
-    def test_trigger_update_pip_failure(self, mock_run):
-        from opencut.core.auto_update import trigger_update
-        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="ERROR: something broke")
-        result = trigger_update(method="pip")
+    def test_trigger_update_pip_failure(self):
+        from opencut.core.auto_update import InstallOrigin, trigger_update
+        with patch(
+            "opencut.core.auto_update.detect_install_origin",
+            return_value=InstallOrigin("packaged", reason="Signed feed unavailable"),
+        ):
+            result = trigger_update(method="pip")
         self.assertFalse(result.success)
+        self.assertIn("Signed feed unavailable", result.message)
 
     def test_release_info_to_dict(self):
         from opencut.core.auto_update import ReleaseInfo

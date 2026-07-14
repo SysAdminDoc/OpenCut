@@ -40,9 +40,9 @@ def trigger_update():
     try:
         from opencut.core.auto_update import trigger_update as do_update
         data = request.get_json(silent=True) or {}
-        method = data.get("method", "pip")
+        method = data.get("method", "auto")
         result = do_update(method=method)
-        status_code = 200 if result.success else 500
+        status_code = 200 if result.success else 409
         return jsonify(result.to_dict()), status_code
     except Exception as exc:
         return safe_error(exc, "trigger_update")
