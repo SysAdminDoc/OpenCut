@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1546-orange)
-![Tests](https://img.shields.io/badge/Tests-10800+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-11000+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -377,7 +377,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 - **Modern JavaScript** -- ES modules, async/await, native `fetch()`
 - **Same Python backend** -- Connects to the same local server on port 5679
 - **Auto port detection** -- Scans ports 5679-5689 automatically
-- **8 tabs** -- Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables, Settings
+- **9 tabs** -- Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables, Agent, Settings
 - **Direct Premiere API** -- Uses the `premierepro` UXP module for sequence access
 - **Project media discovery** -- Scans project items via UXP API with datalist autocomplete
 - **OTIO export** -- Export timeline edits in universal format from within the panel
@@ -403,7 +403,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 +-----------+-----------+                    +-----------+-----------+
 |   Premiere Pro UXP    |                    |           |           |
 |   Panel (ES modules)  |                 +--+--+   +----+---+  +---+----+
-|   8 tabs, modern JS   |                 |FFmpeg|   |Whisper |  |PyTorch |
+|   9 tabs, modern JS   |                 |FFmpeg|   |Whisper |  |PyTorch |
 +-----------------------+                 |OpenCV|   |Demucs  |  |Models  |
             |                             +------+   +--------+  +--------+
 +-----------+-----------+                            |
@@ -614,7 +614,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-10,800+ estimated tests across 271 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,000+ estimated tests across 276 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -675,7 +675,7 @@ extension/
     main.js          # UXP panel (~7,175 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (10,800+ estimated tests, 271 root test files)
+tests/               # pytest test suite (11,000+ estimated tests, 276 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
