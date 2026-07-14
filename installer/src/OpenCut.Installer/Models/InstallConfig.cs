@@ -17,6 +17,8 @@ public class InstallConfig
     public string UserDataPath { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".opencut");
+    public bool RemoveUserData { get; set; }
+    public string UserDataBackupDirectory { get; set; } = GetDefaultUserDataBackupDirectory();
 
     public string ServerPath => Path.Combine(InstallPath, "server");
     public string FfmpegPath => Path.Combine(InstallPath, "ffmpeg");
@@ -28,4 +30,13 @@ public class InstallConfig
     public string CepTargetPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "Adobe", "CEP", "extensions", AppConstants.CepExtensionId);
+
+    private static string GetDefaultUserDataBackupDirectory()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var parent = string.IsNullOrWhiteSpace(documents)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            : documents;
+        return Path.Combine(parent, "OpenCut Backups");
+    }
 }

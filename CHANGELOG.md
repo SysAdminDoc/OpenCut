@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Preserve user data during uninstall
+
+- Both Windows uninstallers now keep `~/.opencut` during normal, quiet,
+  upgrade, and repair removal. The interactive data-removal option is separate,
+  unchecked by default, and names the settings, jobs, journals, indexes,
+  plugins, models, and project/agent state it affects.
+- Explicit data removal first writes and validates a ZIP outside the deletion
+  root. Backup failures, locked files, reparse points, unsafe roots, and failed
+  cleanup preserve recoverable source data; quiet removal requires the dedicated
+  `--remove-user-data` (WPF) or `/REMOVEUSERDATA` (Inno) flag.
+
 ### Fixed - Make proxy batches transactional, cancellable, and resumable
 
 - Proxy batches now persist per-item pending/running/completed/failed state

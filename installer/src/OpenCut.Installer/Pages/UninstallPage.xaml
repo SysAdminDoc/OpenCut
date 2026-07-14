@@ -22,8 +22,17 @@
 
         <Border Grid.Row="1" Background="{DynamicResource DangerTintBrush}" BorderBrush="{DynamicResource Surface1}"
                 BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,0,0,14">
-            <TextBlock Text="Use uninstall when you want to remove the local app, integration files, and shortcuts in one pass."
-                       Style="{StaticResource CaptionText}" Foreground="{DynamicResource TextBrush}" />
+            <StackPanel>
+                <TextBlock Text="OpenCut user data is preserved by default."
+                           Style="{StaticResource CaptionText}" Foreground="{DynamicResource TextBrush}" />
+                <CheckBox x:Name="RemoveUserDataCheckBox"
+                          Content="Also remove settings, jobs, journals, indexes, plugins, models, and project/agent state"
+                          AutomationProperties.Name="Remove OpenCut user data after backup"
+                          AutomationProperties.HelpText="Unchecked by default. Creates and validates a backup outside the OpenCut data folder before removal."
+                          Margin="0,10,0,0" />
+                <TextBlock x:Name="UserDataPathText" Style="{StaticResource CaptionText}" Margin="24,4,0,0"
+                           TextWrapping="Wrap" />
+            </StackPanel>
         </Border>
 
         <ProgressBar x:Name="ProgressBar" Grid.Row="2" Height="10"

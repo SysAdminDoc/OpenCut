@@ -139,6 +139,20 @@ those opt-in processes from a container.
 
 Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller server bundle. See `docs/LINUX_DISTRIBUTION.md` for the `io.github.sysadmindoc.opencut` Flatpak/AppImage contract and local package-build command.
 
+### Uninstall data safety
+
+Windows uninstallers remove the application and integrations but preserve
+`%USERPROFILE%\.opencut` by default, including settings, jobs, journals,
+indexes, plugins, models, and project/agent state. The separate **Also remove**
+choice is unchecked and creates a verified ZIP in `Documents\OpenCut Backups`
+before deleting data. If backup validation or deletion fails, the data is kept.
+
+Automated WPF removal must add `--remove-user-data`; the Inno uninstaller uses
+`/REMOVEUSERDATA`. Custom paths use `--user-data-dir` and
+`--user-data-backup-dir` (WPF), or `/USERDATADIR=` and
+`/USERDATABACKUPDIR=` (Inno). Quiet uninstall without the dedicated removal
+flag always preserves user data.
+
 ### Launch
 
 1. **Start the backend server** -- this must be running before the panel can connect:

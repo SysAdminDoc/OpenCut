@@ -61,6 +61,7 @@ Source: "dist\OpenCut-Server\*"; DestDir: "{app}\server"; Flags: ignoreversion r
 ; Bundled FFmpeg (ffmpeg.exe + ffprobe.exe)
 Source: "ffmpeg\ffmpeg.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
 Source: "ffmpeg\ffprobe.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
+Source: "installer\Export-OpenCutUserData.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Hidden launcher (runs server with no console window)
 Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
@@ -119,6 +120,9 @@ Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Descripti
 [Code]
 const
   EnvironmentKey = 'Environment';
+
+var
+  InteractiveRemoveUserData: Boolean;
 
 // --- Kill OpenCut server processes ---
 
@@ -281,6 +285,158 @@ end;
 
 // --- Uninstall hooks ---
 
+function HasUninstallParameter(Name: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), Name) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+function GetUninstallParameter(Prefix, DefaultValue: string): string;
+var
+  I: Integer;
+  Value: string;
+begin
+  Result := DefaultValue;
+  for I := 1 to ParamCount do
+  begin
+    Value := ParamStr(I);
+    if Pos(Uppercase(Prefix), Uppercase(Value)) = 1 then
+    begin
+      Result := Copy(Value, Length(Prefix) + 1, MaxInt);
+      Exit;
+    end;
+  end;
+end;
+
+function InitializeUninstall(): Boolean;
+var
+  OptionsForm: TSetupForm;
+  Heading, Detail: TNewStaticText;
+  RemoveCheckBox: TNewCheckBox;
+  ContinueButton, CancelButton: TNewButton;
+begin
+  InteractiveRemoveUserData := False;
+  if UninstallSilent then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  OptionsForm := CreateCustomForm(ScaleX(560), ScaleY(190), False, True);
+  try
+    OptionsForm.Caption := 'OpenCut uninstall options';
+    OptionsForm.ClientWidth := ScaleX(560);
+    OptionsForm.ClientHeight := ScaleY(190);
+
+    Heading := TNewStaticText.Create(OptionsForm);
+    Heading.Parent := OptionsForm;
+    Heading.Left := ScaleX(20);
+    Heading.Top := ScaleY(18);
+    Heading.Caption := 'OpenCut user data is preserved by default.';
+    Heading.Font.Style := [fsBold];
+
+    Detail := TNewStaticText.Create(OptionsForm);
+    Detail.Parent := OptionsForm;
+    Detail.Left := ScaleX(20);
+    Detail.Top := ScaleY(46);
+    Detail.Width := ScaleX(520);
+    Detail.Height := ScaleY(42);
+    Detail.AutoSize := False;
+    Detail.WordWrap := True;
+    Detail.Caption :=
+      'Settings, jobs, journals, indexes, plugins, models, and project/agent state remain in ' +
+      GetUninstallParameter('/USERDATADIR=', ExpandConstant('{%USERPROFILE}\.opencut')) + '.';
+
+    RemoveCheckBox := TNewCheckBox.Create(OptionsForm);
+    RemoveCheckBox.Parent := OptionsForm;
+    RemoveCheckBox.Left := ScaleX(20);
+    RemoveCheckBox.Top := ScaleY(94);
+    RemoveCheckBox.Width := ScaleX(520);
+    RemoveCheckBox.Caption := 'Also remove this data after creating and validating a backup';
+    RemoveCheckBox.Checked := False;
+
+    ContinueButton := TNewButton.Create(OptionsForm);
+    ContinueButton.Parent := OptionsForm;
+    ContinueButton.Width := ScaleX(100);
+    ContinueButton.Height := ScaleY(28);
+    ContinueButton.Left := OptionsForm.ClientWidth - ScaleX(220);
+    ContinueButton.Top := ScaleY(145);
+    ContinueButton.Caption := 'Continue';
+    ContinueButton.ModalResult := mrOk;
+    ContinueButton.Default := True;
+
+    CancelButton := TNewButton.Create(OptionsForm);
+    CancelButton.Parent := OptionsForm;
+    CancelButton.Width := ScaleX(100);
+    CancelButton.Height := ScaleY(28);
+    CancelButton.Left := OptionsForm.ClientWidth - ScaleX(110);
+    CancelButton.Top := ScaleY(145);
+    CancelButton.Caption := 'Cancel';
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.Cancel := True;
+
+    Result := OptionsForm.ShowModal() = mrOk;
+    if Result then
+      InteractiveRemoveUserData := RemoveCheckBox.Checked;
+  finally
+    OptionsForm.Free();
+  end;
+end;
+
+function RemoveUserDataRequested(): Boolean;
+begin
+  Result := HasUninstallParameter('/REMOVEUSERDATA');
+  if InteractiveRemoveUserData then
+    Result := True;
+end;
+
+function BackupAndRemoveUserData(ConfigDir: string): Boolean;
+var
+  BackupDir, ScriptPath, ResultFile, Params: string;
+  ResultLines: TArrayOfString;
+  ResultCode: Integer;
+begin
+  Result := False;
+  BackupDir := GetUninstallParameter(
+    '/USERDATABACKUPDIR=', ExpandConstant('{userdocs}\OpenCut Backups'));
+  ScriptPath := ExpandConstant('{app}\Export-OpenCutUserData.ps1');
+  ResultFile := ExpandConstant('{tmp}\OpenCut-uninstall-data-result.txt');
+  DeleteFile(ResultFile);
+
+  Params :=
+    '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ScriptPath + '"' +
+    ' -UserDataPath "' + ConfigDir + '"' +
+    ' -BackupDirectory "' + BackupDir + '"' +
+    ' -ResultFile "' + ResultFile + '" -RemoveAfterBackup';
+
+  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params,
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    if LoadStringsFromFile(ResultFile, ResultLines) and (GetArrayLength(ResultLines) > 0) then
+      Log('OpenCut user-data removal result: ' + Trim(ResultLines[0]));
+    Result := True;
+  end
+  else
+  begin
+    Log('OpenCut user data was preserved because backup/removal failed with code ' +
+      IntToStr(ResultCode) + '.');
+    if not UninstallSilent then
+      MsgBox(
+        'OpenCut user data was preserved because a verified backup could not be created or removal could not finish. ' +
+        'The application uninstall will continue.',
+        mbError, MB_OK);
+  end;
+
+  DeleteFile(ResultFile);
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ExtPath, ConfigDir, StartupShortcut: string;
@@ -299,10 +455,22 @@ begin
     // Remove FFmpeg from user PATH
     RemoveFromPath(ExpandConstant('{app}\ffmpeg'));
 
-    // Remove OpenCut config directory (~/.opencut)
-    ConfigDir := ExpandConstant('{userappdata}\..\..\.opencut');
-    if DirExists(ConfigDir) then
-      DelTree(ConfigDir, True, True, True);
+    // Preserve user data by default. Explicit removal always creates and
+    // validates a backup outside the deletion root before any delete attempt.
+    ConfigDir := GetUninstallParameter(
+      '/USERDATADIR=', ExpandConstant('{%USERPROFILE}\.opencut'));
+    if RemoveUserDataRequested() and DirExists(ConfigDir) then
+    begin
+      if UninstallSilent or
+         (MsgBox(
+            'Remove all OpenCut user data after a verified backup?' + #13#10 + #13#10 +
+            'Path: ' + ConfigDir + #13#10 +
+            'Includes settings, jobs, journals, indexes, plugins, models, and project/agent state.',
+            mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES) then
+        BackupAndRemoveUserData(ConfigDir);
+    end
+    else
+      Log('Preserving OpenCut user data at ' + ConfigDir + '.');
 
     // Remove startup shortcut (in case autostart was selected)
     StartupShortcut := ExpandConstant('{userstartup}\OpenCut.lnk');
@@ -323,8 +491,6 @@ end;
 Type: filesandordirs; Name: "{app}"
 ; CEP extension (redundant with code above, but belt-and-suspenders)
 Type: filesandordirs; Name: "{userappdata}\Adobe\CEP\extensions\com.opencut.panel"
-; Config directory
-Type: filesandordirs; Name: "{%USERPROFILE}\.opencut"
 ; Logs
 Type: filesandordirs; Name: "{app}\logs"
 ; FFmpeg

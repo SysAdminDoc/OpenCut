@@ -55,6 +55,12 @@ public sealed class InstallerCommandLineOptions
                 case "--user-data-dir":
                     config.UserDataPath = RequireValue(args, ref i, option, inlineValue);
                     break;
+                case "--remove-user-data":
+                    config.RemoveUserData = true;
+                    break;
+                case "--user-data-backup-dir":
+                    config.UserDataBackupDirectory = RequireValue(args, ref i, option, inlineValue);
+                    break;
                 case "--no-desktop-shortcut":
                     config.CreateDesktopShortcut = false;
                     break;
@@ -103,6 +109,8 @@ public sealed class InstallerCommandLineOptions
 
         if (install && uninstall)
             throw new ArgumentException("Choose either --install or --uninstall, not both.");
+        if (config.RemoveUserData && !uninstall)
+            throw new ArgumentException("--remove-user-data is valid only with --uninstall.");
 
         var mode = quiet
             ? uninstall ? InstallerCommandMode.QuietUninstall : InstallerCommandMode.QuietInstall

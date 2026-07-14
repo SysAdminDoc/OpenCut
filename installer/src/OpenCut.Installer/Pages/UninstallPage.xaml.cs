@@ -13,12 +13,34 @@ public partial class UninstallPage : Page
     {
         InitializeComponent();
         _mainWindow = mainWindow;
+        RemoveUserDataCheckBox.IsChecked = _mainWindow.Config.RemoveUserData;
+        UserDataPathText.Text =
+            $"Data path: {_mainWindow.Config.UserDataPath}. Verified backup folder: " +
+            $"{_mainWindow.Config.UserDataBackupDirectory}.";
     }
 
     private async void Uninstall_Click(object sender, RoutedEventArgs e)
     {
+        var removeUserData = RemoveUserDataCheckBox.IsChecked == true;
+        if (removeUserData)
+        {
+            var confirmation = MessageBox.Show(
+                "Remove all OpenCut user data after creating and validating a backup?\n\n" +
+                $"Data: {_mainWindow.Config.UserDataPath}\n" +
+                $"Backup: {_mainWindow.Config.UserDataBackupDirectory}\n\n" +
+                "This includes settings, jobs, journals, indexes, plugins, models, and project/agent state.",
+                "Confirm OpenCut data removal",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+        }
+
+        _mainWindow.Config.RemoveUserData = removeUserData;
         UninstallBtn.IsEnabled = false;
         CancelBtn.IsEnabled = false;
+        RemoveUserDataCheckBox.IsEnabled = false;
         ProgressBar.Visibility = Visibility.Visible;
         StatusText.Text = "Removing OpenCut…";
 

@@ -41,6 +41,20 @@ public class InstallerUserExperienceTests
         Assert.Contains("AutomationProperties.Name=\"Uninstall activity log\"", ReadSource("Pages", "UninstallPage.xaml"));
     }
 
+    [Fact]
+    public void BothUninstallersPreserveUserDataUnlessRemovalIsExplicit()
+    {
+        var wpfPage = ReadSource("Pages", "UninstallPage.xaml");
+        Assert.Contains("OpenCut user data is preserved by default", wpfPage);
+        Assert.Contains("x:Name=\"RemoveUserDataCheckBox\"", wpfPage);
+
+        var inno = File.ReadAllText(Path.Combine(RepoRoot, "OpenCut.iss"));
+        Assert.Contains("InteractiveRemoveUserData", inno);
+        Assert.Contains("HasUninstallParameter('/REMOVEUSERDATA')", inno);
+        Assert.Contains("BackupAndRemoveUserData(ConfigDir)", inno);
+        Assert.DoesNotContain("Type: filesandordirs; Name: \"{%USERPROFILE}\\.opencut\"", inno);
+    }
+
     private static string ReadSource(params string[] parts)
     {
         var pathParts = new string[parts.Length + 1];

@@ -34,7 +34,7 @@ public partial class App : Application
         }
 
         var uninstallMode = options.Mode == InstallerCommandMode.InteractiveUninstall;
-        var mainWindow = new MainWindow(uninstallMode);
+        var mainWindow = new MainWindow(uninstallMode, options.Config);
         mainWindow.Show();
     }
 
