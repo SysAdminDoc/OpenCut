@@ -11444,7 +11444,9 @@
         }
 
         if (el.transcriptSearchCount) {
-            el.transcriptSearchCount.textContent = _searchMatches.length + " match" + (_searchMatches.length !== 1 ? "es" : "");
+            el.transcriptSearchCount.textContent = t("transcript.search_count", "{count} match{plural}")
+                .replace("{count}", _searchMatches.length)
+                .replace("{plural}", _searchMatches.length === 1 ? "" : "es");
         }
 
         if (_searchMatches.length > 0) {
@@ -14501,6 +14503,13 @@
         cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
+                if (r.error) {
+                    // The bridge parsed but reported a host-side failure (no active
+                    // sequence, locked track); surface it instead of a false success.
+                    showAlert(t("timeline.apply_cuts_failed", "Error applying cuts: {error}")
+                        .replace("{error}", r.error));
+                    return;
+                }
                 showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
                     .replace("{count}", r.applied || 0), "success");
                 var statusEl = document.getElementById("tlWritebackStatus");
@@ -14571,9 +14580,15 @@
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
+                if (r.error) {
+                    // Host-side failure: report it rather than a false "Added N".
+                    showAlert(t("timeline.add_markers_failed", "Error adding markers: {error}")
+                        .replace("{error}", r.error));
+                    return;
+                }
                 showToast(t("timeline.markers_added", "Added {count} markers")
                     .replace("{count}", r.added || beatMarkerTimes.length), "success");
-                if (!r.error) {
+                {
                     // Journal the op for one-click rollback. Fingerprint each
                     // marker by its {time, comment} pair so the inverse can
                     // find+delete exactly these rows.

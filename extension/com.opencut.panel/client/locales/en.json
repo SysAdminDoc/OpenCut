@@ -2011,6 +2011,7 @@
   "transcript.copy_not_supported": "Copy not supported",
   "transcript.redo_aria": "Redo transcript edit",
   "transcript.search_aria": "Search transcript",
+  "transcript.search_count": "{count} match{plural}",
   "transcript.search_next_aria": "Next transcript search result",
   "transcript.search_placeholder": "Search transcript…",
   "transcript.search_previous_aria": "Previous transcript search result",
