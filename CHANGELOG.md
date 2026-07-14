@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Make updates origin-aware and artifact-authentic
+
+- Corrected release checks to the canonical `SysAdminDoc/OpenCut` repository
+  and Python updates to the `opencut-ppro` distribution.
+- Update checks now report the detected source/wheel/packaged origin, its only
+  supported mechanism, and an actionable disabled reason for unknown or
+  unsigned packaged installs. Caller-selected cross-origin update methods,
+  downgrades, reinstalls, dirty source checkouts, and non-canonical remotes are
+  rejected before mutation.
+- Wheel updates download an exact version into staging, verify its SHA-256
+  against PyPI release metadata, and only then invoke pip. The old unverified
+  download-URL success path is disabled until a signed installer feed exists.
+
 ### Fixed - Repair stale/broken tests and complete the UXP markup-safety gate
 
 - `test_job_metadata` now sends a CSRF token (the app enforces CSRF on every
