@@ -41,6 +41,9 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
             "marketplace.plugins",
             "confirm_name and confirm_token",
             "/plugins/quarantine/delete",
+            "plugin-install-approval-checkbox",
+            'api("POST", "/plugins/marketplace/install"',
+            "approve_publisher_fingerprint",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)
@@ -58,6 +61,7 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
             ".plugin-capability-badge",
             ".plugin-action-contract",
             ".plugin-trust-subhead",
+            ".plugin-install-approval",
         ):
             with self.subTest(selector=selector):
                 self.assertIn(selector, self.css)
@@ -94,6 +98,9 @@ class TestUxpPluginTrustSettingsUi(unittest.TestCase):
             "marketplace?.plugins",
             "confirm_name and confirm_token",
             "/plugins/quarantine/delete",
+            "oc-plugin-install-approval-checkbox",
+            'BackendClient.post("/plugins/marketplace/install"',
+            "approve_publisher_fingerprint",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)
@@ -104,6 +111,7 @@ class TestUxpPluginTrustSettingsUi(unittest.TestCase):
             ".oc-plugin-capability",
             ".oc-plugin-action-contract",
             ".oc-plugin-trust-subhead",
+            ".oc-plugin-install-approval",
         ):
             with self.subTest(selector=selector):
                 self.assertIn(selector, self.css)

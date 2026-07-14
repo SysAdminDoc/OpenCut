@@ -14887,6 +14887,23 @@ body:not(.has-clip) #panel-settings.active::before {
     color: rgba(207, 216, 226, 0.66);
 }
 
+#panel-settings .plugin-install-approval {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+}
+
+#panel-settings .plugin-install-approval input {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    accent-color: var(--neon-cyan);
+}
+
+#panel-settings .plugin-install-btn {
+    justify-self: start;
+}
+
 #panel-settings .plugin-trust-subhead {
     margin-top: 4px;
     color: rgba(184, 197, 214, 0.72);

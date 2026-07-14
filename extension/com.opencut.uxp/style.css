@@ -2695,6 +2695,23 @@ body.oc-disconnected .oc-btn-primary {
   line-height: 1.5;
 }
 
+.oc-plugin-install-approval {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.oc-plugin-install-approval input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  accent-color: var(--oc-accent);
+}
+
+.oc-plugin-install-btn {
+  justify-self: start;
+}
+
 .oc-plugin-trust-subhead {
   margin-top: 4px;
   color: rgba(184, 197, 214, 0.72);

@@ -16,6 +16,14 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.core import archive_safety
+from opencut.core.plugin_installation import (
+    PluginInstallError,
+    activate_staged_plugin,
+    create_staging_dir,
+    publisher_fingerprint,
+    validate_staged_plugin,
+    verify_artifact_publisher,
+)
 from opencut.core.url_safety import (
     transactional_download,
     validate_public_http_url,
@@ -50,6 +58,18 @@ class PluginInfo:
     installed: bool = False
     installed_version: str = ""
     updated_at: str = ""
+    artifact_sha256: str = ""
+    publisher_id: str = ""
+    publisher_public_key: str = ""
+    publisher_signature: str = ""
+    capabilities: List[str] = field(default_factory=list)
+
+    @property
+    def publisher_fingerprint(self) -> str:
+        try:
+            return publisher_fingerprint(self.publisher_public_key)
+        except PluginInstallError:
+            return ""
 
 
 def _load_installed() -> Dict[str, dict]:
@@ -261,6 +281,15 @@ def _parse_registry(data: dict) -> List[PluginInfo]:
             installed=pid in installed,
             installed_version=inst.get("version", ""),
             updated_at=entry.get("updated_at", ""),
+            artifact_sha256=entry.get("artifact_sha256", ""),
+            publisher_id=(entry.get("publisher") or {}).get("id", "")
+            if isinstance(entry.get("publisher"), dict) else "",
+            publisher_public_key=(entry.get("publisher") or {}).get("public_key", "")
+            if isinstance(entry.get("publisher"), dict) else "",
+            publisher_signature=(entry.get("publisher") or {}).get("signature", "")
+            if isinstance(entry.get("publisher"), dict) else "",
+            capabilities=entry.get("capabilities", [])
+            if isinstance(entry.get("capabilities"), list) else [],
         ))
     return plugins
 
@@ -293,6 +322,9 @@ def search_plugins(
 def install_plugin(
     plugin_id: str,
     on_progress: Optional[Callable] = None,
+    *,
+    approved_capabilities: Optional[List[str]] = None,
+    approve_publisher_fingerprint: str = "",
 ) -> PluginInfo:
     """Install a plugin from the marketplace.
 
@@ -325,10 +357,32 @@ def install_plugin(
     if os.path.exists(plugin_dir):
         raise FileExistsError(f"Plugin already exists: {plugin_id}")
 
+    return _install_marketplace_target(
+        target,
+        on_progress=on_progress,
+        approved_capabilities=approved_capabilities,
+        approve_publisher_fingerprint=approve_publisher_fingerprint,
+        replace_existing=False,
+    )
+
+
+def _install_marketplace_target(
+    target: PluginInfo,
+    *,
+    on_progress: Optional[Callable],
+    approved_capabilities: Optional[List[str]],
+    approve_publisher_fingerprint: str,
+    replace_existing: bool,
+) -> PluginInfo:
+    """Download, authenticate, stage, and atomically activate one registry entry."""
+    plugin_id = _validate_plugin_id(target.plugin_id)
+    os.makedirs(PLUGINS_DIR, exist_ok=True)
+
     # Download plugin archive
     download_url = _validate_download_url(
         target.download_url or f"{target.repo_url}/archive/refs/heads/main.zip"
     )
+    stage = ""
     with tempfile.TemporaryDirectory(prefix=f"opencut_{plugin_id}_") as temp_dir:
         tmp_zip = os.path.join(temp_dir, "plugin.zip")
         transactional_download(
@@ -346,27 +400,72 @@ def install_plugin(
             local_alternative="manually installed local plugins",
         )
 
+        publisher = verify_artifact_publisher(
+            plugin_id=plugin_id,
+            version=target.version,
+            archive_path=tmp_zip,
+            artifact_sha256=target.artifact_sha256,
+            publisher_id=target.publisher_id,
+            public_key=target.publisher_public_key,
+            signature=target.publisher_signature,
+        )
+
         if on_progress:
-            on_progress(60, "Extracting plugin")
+            on_progress(55, "Publisher verified; staging plugin")
 
         try:
-            os.makedirs(plugin_dir, exist_ok=True)
-            _extract_plugin_archive(tmp_zip, plugin_dir)
+            stage = create_staging_dir(plugin_id)
+            _extract_plugin_archive(tmp_zip, stage)
+            staged = validate_staged_plugin(
+                stage,
+                publisher=publisher,
+                approved_capabilities=approved_capabilities,
+                approve_publisher_fingerprint=approve_publisher_fingerprint,
+                expected_name=plugin_id,
+                expected_version=target.version,
+            )
         except Exception:
-            shutil.rmtree(plugin_dir, ignore_errors=True)
+            if stage:
+                shutil.rmtree(stage, ignore_errors=True)
             raise
 
     if on_progress:
-        on_progress(80, "Registering plugin")
+        on_progress(80, "Activating verified plugin")
 
     manifest = _load_installed()
-    manifest[plugin_id] = {
-        "version": target.version,
-        "name": target.name,
-        "installed_at": time.time(),
-        "path": plugin_dir,
-    }
-    _save_installed(manifest)
+    previous_entry = manifest.get(plugin_id)
+
+    def _commit_metadata(activated_path: str) -> None:
+        manifest[plugin_id] = {
+            "version": target.version,
+            "name": target.name,
+            "installed_at": time.time(),
+            "path": activated_path,
+            "artifact_sha256": target.artifact_sha256,
+            "publisher_id": publisher.publisher_id,
+            "publisher_public_key": publisher.public_key,
+            "publisher_fingerprint": publisher.fingerprint,
+            "capabilities": list(staged.capabilities),
+        }
+        try:
+            _save_installed(manifest)
+        except BaseException:
+            if previous_entry is None:
+                manifest.pop(plugin_id, None)
+            else:
+                manifest[plugin_id] = previous_entry
+            raise
+
+    try:
+        activate_staged_plugin(
+            staged,
+            PLUGINS_DIR,
+            replace_existing=replace_existing,
+            commit_metadata=_commit_metadata,
+        )
+    finally:
+        if stage and os.path.isdir(stage):
+            shutil.rmtree(stage, ignore_errors=True)
 
     target.installed = True
     target.installed_version = target.version
@@ -381,6 +480,9 @@ def install_plugin(
 def update_plugin(
     plugin_id: str,
     on_progress: Optional[Callable] = None,
+    *,
+    approved_capabilities: Optional[List[str]] = None,
+    approve_publisher_fingerprint: str = "",
 ) -> PluginInfo:
     """Update an installed plugin to the latest version.
 
@@ -402,39 +504,20 @@ def update_plugin(
         on_progress(10, "Checking for updates")
 
     old_path = manifest[plugin_id].get("path", "")
+    if old_path:
+        _validate_managed_plugin_path(old_path)
 
-    # Remove old installation ONLY right before re-install so that
-    # install_plugin's FileExistsError check passes.
-    if old_path and os.path.isdir(old_path):
-        validated_path = _validate_managed_plugin_path(old_path)
-        # Rename to a temp backup so install_plugin can proceed.
-        # If install fails, we restore the backup.
-        backup_path = validated_path + ".update-backup"
-        try:
-            os.rename(validated_path, backup_path)
-        except OSError:
-            # If rename fails, fall back to rmtree (best effort)
-            shutil.rmtree(validated_path, ignore_errors=True)
-            backup_path = None
-
-        try:
-            result = install_plugin(plugin_id, on_progress=on_progress)
-        except Exception:
-            # Restore backup on failure
-            if backup_path and os.path.isdir(backup_path):
-                try:
-                    os.rename(backup_path, validated_path)
-                except OSError:
-                    pass
-            raise
-
-        # Clean up backup on success
-        if backup_path and os.path.isdir(backup_path):
-            shutil.rmtree(backup_path, ignore_errors=True)
-        return result
-
-    # No existing path to worry about — just install
-    return install_plugin(plugin_id, on_progress=on_progress)
+    plugins = fetch_plugin_registry()
+    target = next((plugin for plugin in plugins if plugin.plugin_id == plugin_id), None)
+    if target is None:
+        raise KeyError(f"Plugin not found: {plugin_id}")
+    return _install_marketplace_target(
+        target,
+        on_progress=on_progress,
+        approved_capabilities=approved_capabilities,
+        approve_publisher_fingerprint=approve_publisher_fingerprint,
+        replace_existing=True,
+    )
 
 
 def list_installed_plugins(
@@ -457,5 +540,10 @@ def list_installed_plugins(
             repo_url="",
             installed=True,
             installed_version=info.get("version", "0.0.0"),
+            artifact_sha256=info.get("artifact_sha256", ""),
+            publisher_id=info.get("publisher_id", ""),
+            publisher_public_key=info.get("publisher_public_key", ""),
+            capabilities=info.get("capabilities", [])
+            if isinstance(info.get("capabilities"), list) else [],
         ))
     return results

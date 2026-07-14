@@ -19,6 +19,8 @@ Covers:
   - Platform infra route smoke tests
 """
 
+import base64
+import hashlib
 import json
 import os
 import shutil
@@ -28,7 +30,33 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _signed_registry_fields(archive_path, plugin_id, version):
+    from opencut.core.plugin_installation import artifact_signature_message, publisher_fingerprint
+
+    key = Ed25519PrivateKey.generate()
+    public_key = base64.b64encode(
+        key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("ascii")
+    with open(archive_path, "rb") as archive_handle:
+        digest = hashlib.sha256(archive_handle.read()).hexdigest()
+    return {
+        "artifact_sha256": digest,
+        "publisher_id": "tests.publisher",
+        "publisher_public_key": public_key,
+        "publisher_signature": base64.b64encode(
+            key.sign(artifact_signature_message(plugin_id, version, digest))
+        ).decode("ascii"),
+        "fingerprint": publisher_fingerprint(public_key),
+    }
 
 
 # ============================================================
@@ -296,15 +324,26 @@ class TestPluginMarketplace(unittest.TestCase):
                         "name": "my-plugin",
                         "version": "1.0.0",
                         "description": "Demo plugin",
+                        "api_version": 1,
+                        "capabilities": [],
                     }, fh)
                 with open(os.path.join(nested_dir, "routes.py"), "w", encoding="utf-8") as fh:
                     fh.write("# demo")
+
+                from opencut.core.plugin_manifest import write_plugin_lock
+                write_plugin_lock(nested_dir)
 
                 import zipfile
 
                 with zipfile.ZipFile(archive_path, "w") as zf:
                     zf.write(os.path.join(nested_dir, "plugin.json"), "plugin-main/plugin.json")
                     zf.write(os.path.join(nested_dir, "routes.py"), "plugin-main/routes.py")
+                    zf.write(
+                        os.path.join(nested_dir, "plugin.lock.json"),
+                        "plugin-main/plugin.lock.json",
+                    )
+
+            signed = _signed_registry_fields(archive_path, "my-plugin", "1.0.0")
 
             mock_fetch.return_value = [PluginInfo(
                 plugin_id="my-plugin",
@@ -314,6 +353,10 @@ class TestPluginMarketplace(unittest.TestCase):
                 description="Demo plugin",
                 repo_url="https://example.com/repo",
                 download_url="https://example.com/plugin.zip",
+                artifact_sha256=signed["artifact_sha256"],
+                publisher_id=signed["publisher_id"],
+                publisher_public_key=signed["publisher_public_key"],
+                publisher_signature=signed["publisher_signature"],
             )]
 
             def _fake_download(url, dest, **_kwargs):
@@ -322,8 +365,18 @@ class TestPluginMarketplace(unittest.TestCase):
             with patch(
                 "opencut.core.plugin_marketplace.transactional_download",
                 side_effect=_fake_download,
+            ), patch(
+                "opencut.core.plugin_installation.STAGING_ROOT",
+                os.path.join(self.tmp, "plugin-staging"),
+            ), patch(
+                "opencut.core.plugin_installation.TRUST_STORE_PATH",
+                os.path.join(self.tmp, "trusted-publishers.json"),
             ):
-                result = install_plugin("my-plugin")
+                result = install_plugin(
+                    "my-plugin",
+                    approved_capabilities=[],
+                    approve_publisher_fingerprint=signed["fingerprint"],
+                )
 
             self.assertEqual(result.plugin_id, "my-plugin")
             self.assertTrue(os.path.isfile(os.path.join(self.tmp, "my-plugin", "plugin.json")))
@@ -346,6 +399,8 @@ class TestPluginMarketplace(unittest.TestCase):
             }))
             zf.writestr("plugin-main/../../outside.txt", "boom")
 
+        signed = _signed_registry_fields(archive_path, "unsafe-plugin", "1.0.0")
+
         mock_fetch.return_value = [PluginInfo(
             plugin_id="unsafe-plugin",
             name="Unsafe Plugin",
@@ -354,6 +409,10 @@ class TestPluginMarketplace(unittest.TestCase):
             description="Unsafe plugin",
             repo_url="https://example.com/repo",
             download_url="https://example.com/unsafe.zip",
+            artifact_sha256=signed["artifact_sha256"],
+            publisher_id=signed["publisher_id"],
+            publisher_public_key=signed["publisher_public_key"],
+            publisher_signature=signed["publisher_signature"],
         )]
 
         def _fake_download(url, dest, **_kwargs):
@@ -363,9 +422,16 @@ class TestPluginMarketplace(unittest.TestCase):
             with patch(
                 "opencut.core.plugin_marketplace.transactional_download",
                 side_effect=_fake_download,
+            ), patch(
+                "opencut.core.plugin_installation.STAGING_ROOT",
+                os.path.join(self.tmp, "plugin-staging"),
             ):
                 with self.assertRaises(ValueError):
-                    install_plugin("unsafe-plugin")
+                    install_plugin(
+                        "unsafe-plugin",
+                        approved_capabilities=[],
+                        approve_publisher_fingerprint=signed["fingerprint"],
+                    )
 
         self.assertFalse(os.path.exists(outside_path))
 

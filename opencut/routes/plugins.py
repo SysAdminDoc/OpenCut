@@ -255,6 +255,10 @@ def _marketplace_snapshot() -> dict:
                 "name": p.name,
                 "version": p.version,
                 "installed_version": p.installed_version or p.version,
+                "artifact_sha256": p.artifact_sha256,
+                "publisher_id": p.publisher_id,
+                "publisher_fingerprint": p.publisher_fingerprint,
+                "capabilities": p.capabilities,
             }
             for p in installed
         ]
@@ -277,6 +281,16 @@ def _marketplace_snapshot() -> dict:
                 "tags": p.tags,
                 "installed": p.installed,
                 "installed_version": p.installed_version,
+                "artifact_sha256": p.artifact_sha256,
+                "publisher_id": p.publisher_id,
+                "publisher_fingerprint": p.publisher_fingerprint,
+                "capabilities": p.capabilities,
+                "authenticated": bool(
+                    p.artifact_sha256
+                    and p.publisher_id
+                    and p.publisher_fingerprint
+                    and p.publisher_signature
+                ),
             }
             for p in plugins
         ]
@@ -423,11 +437,7 @@ def loaded_plugins():
 @plugins_bp.route("/plugins/install", methods=["POST"])
 @require_csrf
 def install_plugin():
-    """Install a plugin from a directory path or archive.
-
-    For now, supports copying a plugin directory into the plugins folder.
-    Future: support .zip archives and GitHub URLs.
-    """
+    """Authenticate, approve, stage, and atomically install a local plugin."""
     data, error = _json_object_or_400()
     if error:
         return error
@@ -446,46 +456,40 @@ def install_plugin():
     if not os.path.isdir(source):
         return jsonify({"error": "source must be an existing directory"}), 400
 
-    # Check for plugin.json in source
-    manifest_path = os.path.join(source, "plugin.json")
-    if not os.path.isfile(manifest_path):
-        return jsonify({"error": "source directory must contain plugin.json"}), 400
-
     try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        return jsonify({"error": f"Invalid plugin.json: {e}"}), 400
+        from opencut.core.plugin_installation import (
+            PluginApprovalRequired,
+            PluginInstallError,
+            install_local_plugin,
+        )
 
-    name = manifest.get("name", "")
-    if not name:
-        return jsonify({"error": "Plugin manifest missing 'name' field"}), 400
-    if len(name) > 100:
-        return jsonify({"error": "Plugin name is too long"}), 400
-
-    # Sanitize
-    if not _valid_plugin_name(name):
-        return jsonify({"error": f"Invalid plugin name: {name}"}), 400
-
-    dest = os.path.join(PLUGINS_DIR, name)
-    if os.path.realpath(source) == os.path.realpath(dest):
-        return jsonify({"error": "Plugin is already installed at that location"}), 409
-    if os.path.exists(dest):
-        return jsonify({"error": f"Plugin '{name}' already installed. Remove it first."}), 409
-
-    os.makedirs(PLUGINS_DIR, exist_ok=True)
-
-    try:
-        shutil.copytree(source, dest)
+        staged = install_local_plugin(
+            source,
+            PLUGINS_DIR,
+            approved_capabilities=data.get("approved_capabilities"),
+            approve_publisher_fingerprint=data.get("approve_publisher_fingerprint", ""),
+        )
+    except PluginApprovalRequired as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "PLUGIN_APPROVAL_REQUIRED",
+            "approval": exc.preview,
+        }), 409
+    except FileExistsError as exc:
+        return jsonify({"error": str(exc), "code": "PLUGIN_ALREADY_INSTALLED"}), 409
+    except PluginInstallError as exc:
+        return jsonify({"error": str(exc), "code": "PLUGIN_INSTALL_REJECTED"}), 400
     except OSError as e:
         return safe_error(e, "install_plugin")
 
-    logger.info("Plugin installed: %s → %s", name, dest)
+    logger.info("Authenticated plugin installed: %s", staged.name)
     return jsonify({
         "success": True,
-        "name": name,
-        "version": manifest.get("version", ""),
-        "message": f"Plugin '{name}' installed. Restart server to load routes.",
+        "name": staged.name,
+        "version": staged.version,
+        "capabilities": list(staged.capabilities),
+        "publisher": staged.publisher.as_dict(),
+        "message": f"Plugin '{staged.name}' installed. Restart server to load routes.",
     })
 
 

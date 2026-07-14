@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Authenticate and stage plugin installations
+
+- Direct and marketplace installs now remain outside the active loader path
+  until their manifest, content lock, publisher identity, Ed25519 signature,
+  pinned artifact digest, and exact declared capabilities have been verified.
+- New installs activate with an atomic directory move; updates retain a staged
+  backup and restore the prior plugin if activation or metadata persistence
+  fails. Interrupted, tampered, unsigned, or invalid installs leave no active
+  plugin entry.
+- CEP and UXP show the full publisher fingerprint and capability request and
+  keep the install action disabled until the operator approves both. The
+  trusted publisher record and installed artifact provenance are persisted
+  atomically for later diagnostics.
+
 ### Added - Rendered CEP and UXP regression gate
 
 - A deterministic headless Chromium matrix now renders every top-level CEP and

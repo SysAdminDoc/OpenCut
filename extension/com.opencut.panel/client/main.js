@@ -5811,6 +5811,28 @@
         var limit = Math.min(plugins.length, 3);
         for (var i = 0; i < limit; i++) {
             var plugin = plugins[i] || {};
+            var capabilities = Array.isArray(plugin.capabilities) ? plugin.capabilities : [];
+            var capabilityText = capabilities.length
+                ? capabilities.join(", ")
+                : t("settings.plugin_no_capabilities", "No capabilities");
+            var publisherText = plugin.publisher_id && plugin.publisher_fingerprint
+                ? t("settings.plugin_publisher_identity", "Publisher: {publisher} - SHA-256 {fingerprint}")
+                    .replace("{publisher}", plugin.publisher_id)
+                    .replace("{fingerprint}", plugin.publisher_fingerprint)
+                : t("settings.plugin_publisher_missing", "Publisher authentication metadata is missing.");
+            var installControls = "";
+            if (!plugin.installed && plugin.authenticated) {
+                installControls = '<label class="plugin-action-contract plugin-install-approval">' +
+                    '<input type="checkbox" class="plugin-install-approval-checkbox" data-plugin-id="' + esc(plugin.plugin_id || "") + '"> ' +
+                    esc(t("settings.plugin_install_approval", "I approve this publisher fingerprint and the declared capabilities: {capabilities}")
+                        .replace("{capabilities}", capabilityText)) + '</label>' +
+                    '<button type="button" class="btn-outline btn-sm plugin-install-btn" data-plugin-id="' + esc(plugin.plugin_id || "") + '" disabled>' +
+                    esc(t("settings.plugin_install_signed", "Install verified plugin")) + '</button>';
+            } else if (!plugin.installed) {
+                installControls = '<div class="plugin-action-contract">' +
+                    esc(t("settings.plugin_install_auth_required", "Installation is blocked until the registry pins a digest and publisher signature.")) +
+                    '</div>';
+            }
             html += '<div class="plugin-trust-row is-marketplace">' +
                 '<div class="engine-title-row plugin-trust-title-row">' +
                 '<div><div class="param-label engine-domain-label">' + esc(plugin.name || plugin.plugin_id || "") + '</div>' +
@@ -5818,9 +5840,61 @@
                 '<span class="engine-state-badge is-auto">' + esc(plugin.installed ? t("settings.plugin_installed", "Installed") : t("settings.plugin_available", "Available")) + '</span>' +
                 '</div>' +
                 '<div class="engine-meta">' + esc(plugin.description || route) + '</div>' +
+                '<div class="engine-meta">' + esc(publisherText) + '</div>' +
+                '<div class="engine-meta">' + esc(t("settings.plugin_capabilities", "Capabilities: {capabilities}").replace("{capabilities}", capabilityText)) + '</div>' +
+                installControls +
                 '</div>';
         }
         return html;
+    }
+
+    function bindPluginMarketplaceInstallActions(marketplace) {
+        var plugins = marketplace && Array.isArray(marketplace.plugins) ? marketplace.plugins : [];
+        var byId = {};
+        for (var i = 0; i < plugins.length; i++) byId[plugins[i].plugin_id] = plugins[i];
+        var checkboxes = document.querySelectorAll(".plugin-install-approval-checkbox");
+        for (var c = 0; c < checkboxes.length; c++) {
+            checkboxes[c].addEventListener("change", function () {
+                var button = document.querySelector('.plugin-install-btn[data-plugin-id="' + this.getAttribute("data-plugin-id") + '"]');
+                if (button) button.disabled = !this.checked;
+            });
+        }
+        var buttons = document.querySelectorAll(".plugin-install-btn");
+        for (var b = 0; b < buttons.length; b++) {
+            buttons[b].addEventListener("click", function () {
+                var pluginId = this.getAttribute("data-plugin-id");
+                var plugin = byId[pluginId];
+                if (!plugin || !plugin.authenticated) return;
+                this.disabled = true;
+                setStatusLine(
+                    "pluginTrustStatusLine",
+                    t("settings.plugin_install_starting", "Starting authenticated plugin installation..."),
+                    "working"
+                );
+                api("POST", "/plugins/marketplace/install", {
+                    plugin_id: pluginId,
+                    approved_capabilities: Array.isArray(plugin.capabilities) ? plugin.capabilities : [],
+                    approve_publisher_fingerprint: plugin.publisher_fingerprint
+                }, function (err, data) {
+                    if (err) {
+                        setStatusLine(
+                            "pluginTrustStatusLine",
+                            err.message || t("settings.plugin_install_failed", "Plugin installation could not start."),
+                            "error"
+                        );
+                        loadPluginTrustDashboard();
+                        return;
+                    }
+                    setStatusLine(
+                        "pluginTrustStatusLine",
+                        data && data.job_id
+                            ? t("settings.plugin_install_queued", "Verified plugin installation queued as job {job_id}.").replace("{job_id}", data.job_id)
+                            : t("settings.plugin_install_queued_generic", "Verified plugin installation queued."),
+                        "success"
+                    );
+                });
+            });
+        }
     }
 
     function renderPluginTrustDashboard(data) {
@@ -5880,6 +5954,7 @@
         }
         html += pluginMarketplaceRowsHtml(marketplace, actions);
         list.innerHTML = html;
+        bindPluginMarketplaceInstallActions(marketplace);
 
         var state = failedUnsigned || quarantine.length ? "warning" : "success";
         var status = failedUnsigned

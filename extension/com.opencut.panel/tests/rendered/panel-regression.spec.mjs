@@ -37,8 +37,9 @@ function hostEnvironment() {
   });
 }
 
-async function preparePage(page, surface, theme) {
+async function preparePage(page, surface, theme, backendFixtures = {}) {
   const pageErrors = [];
+  const capturedRequests = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
   await page.addInitScript(
@@ -121,6 +122,24 @@ async function preparePage(page, surface, theme) {
   await page.route("http://127.0.0.1:*/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.port === "41737") return route.continue();
+    if (url.pathname === "/plugins/trust" && backendFixtures.pluginTrust) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(backendFixtures.pluginTrust),
+      });
+    }
+    if (
+      url.pathname === "/plugins/marketplace/install" &&
+      route.request().method() === "POST"
+    ) {
+      capturedRequests.push(route.request().postDataJSON());
+      return route.fulfill({
+        status: 202,
+        contentType: "application/json",
+        body: JSON.stringify({ job_id: "plugin-install-fixture" }),
+      });
+    }
     return route.fulfill({
       status: 503,
       contentType: "application/json",
@@ -131,13 +150,24 @@ async function preparePage(page, surface, theme) {
       }),
     });
   });
-  return pageErrors;
+  return { pageErrors, capturedRequests };
 }
 
-async function openSurface(page, surfaceName, theme, width) {
+async function openSurface(
+  page,
+  surfaceName,
+  theme,
+  width,
+  backendFixtures = {},
+) {
   const surface = SURFACES[surfaceName];
   await page.setViewportSize({ width, height: 900 });
-  const pageErrors = await preparePage(page, surfaceName, theme);
+  const { pageErrors, capturedRequests } = await preparePage(
+    page,
+    surfaceName,
+    theme,
+    backendFixtures,
+  );
   await page.goto(surface.url, { waitUntil: "domcontentloaded" });
   await page.addStyleTag({
     content: `
@@ -150,7 +180,7 @@ async function openSurface(page, surfaceName, theme, width) {
   });
   await expect(page.locator(surface.tabSelector).first()).toBeVisible();
   await page.waitForTimeout(150);
-  return { surface, pageErrors };
+  return { surface, pageErrors, capturedRequests };
 }
 
 async function visibleControlsWithoutNames(page) {
@@ -383,3 +413,86 @@ test("offline, empty, loading, error, permission, and confirmation states stay s
   expect(await visibleControlsWithoutNames(page)).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
+
+const PLUGIN_TRUST_FIXTURE = {
+  plugins: [],
+  summary: {
+    loaded: 0,
+    failed: 0,
+    lock_missing: 0,
+    unsigned: 0,
+    quarantined: 0,
+    marketplace: 1,
+  },
+  quarantine: { entries: [] },
+  marketplace: {
+    plugins: [
+      {
+        plugin_id: "signed-captions",
+        name: "Signed Captions",
+        version: "2.1.0",
+        description: "Caption workflow fixture",
+        installed: false,
+        authenticated: true,
+        artifact_sha256: "a".repeat(64),
+        publisher_id: "publisher.example",
+        publisher_fingerprint: "b".repeat(64),
+        capabilities: ["http.routes", "host.network"],
+      },
+    ],
+  },
+  actions: {
+    marketplace: {
+      registry_route: "/plugins/registry",
+      install_route: "/plugins/marketplace/install",
+    },
+  },
+};
+
+for (const surfaceName of ["cep", "uxp"]) {
+  test(`${surfaceName} requires explicit publisher and capability approval`, async ({
+    page,
+  }) => {
+    const width = surfaceName === "cep" ? 900 : 520;
+    const { surface, pageErrors, capturedRequests } = await openSurface(
+      page,
+      surfaceName,
+      "dark",
+      width,
+      { pluginTrust: PLUGIN_TRUST_FIXTURE },
+    );
+    await page
+      .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
+      .click();
+    const checkbox = page.locator(
+      surfaceName === "cep"
+        ? ".plugin-install-approval-checkbox"
+        : ".oc-plugin-install-approval-checkbox",
+    );
+    const button = page.locator(
+      surfaceName === "cep"
+        ? ".plugin-install-btn"
+        : ".oc-plugin-install-btn",
+    );
+    await expect(checkbox).toBeVisible();
+    await expect(button).toBeDisabled();
+    await expect(checkbox.locator("xpath=.."))
+      .toContainText("http.routes, host.network");
+    await expect(checkbox.locator("xpath=../.."))
+      .toContainText("publisher.example");
+    await expect(checkbox.locator("xpath=../.."))
+      .toContainText("b".repeat(64));
+    await checkbox.check();
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect.poll(() => capturedRequests.length).toBe(1);
+    expect(capturedRequests[0]).toEqual({
+      plugin_id: "signed-captions",
+      approved_capabilities: ["http.routes", "host.network"],
+      approve_publisher_fingerprint: "b".repeat(64),
+    });
+    await assertNoPageOverflow(page);
+    expect(await visibleControlsWithoutNames(page)).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+}

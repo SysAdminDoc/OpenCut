@@ -384,6 +384,16 @@ def plugins_registry():
                     "tags": p.tags,
                     "installed": p.installed,
                     "installed_version": p.installed_version,
+                    "artifact_sha256": p.artifact_sha256,
+                    "publisher_id": p.publisher_id,
+                    "publisher_fingerprint": p.publisher_fingerprint,
+                    "capabilities": p.capabilities,
+                    "authenticated": bool(
+                        p.artifact_sha256
+                        and p.publisher_id
+                        and p.publisher_fingerprint
+                        and p.publisher_signature
+                    ),
                 }
                 for p in plugins
             ],
@@ -408,6 +418,15 @@ def plugins_search():
                     "version": p.version,
                     "description": p.description,
                     "installed": p.installed,
+                    "publisher_id": p.publisher_id,
+                    "publisher_fingerprint": p.publisher_fingerprint,
+                    "capabilities": p.capabilities,
+                    "authenticated": bool(
+                        p.artifact_sha256
+                        and p.publisher_id
+                        and p.publisher_fingerprint
+                        and p.publisher_signature
+                    ),
                 }
                 for p in results
             ],
@@ -430,7 +449,12 @@ def plugins_install(job_id, filepath, data):
         _update_job(job_id, progress=pct, message=msg)
 
     from opencut.core.plugin_marketplace import install_plugin
-    result = install_plugin(plugin_id, on_progress=_on_progress)
+    result = install_plugin(
+        plugin_id,
+        on_progress=_on_progress,
+        approved_capabilities=data.get("approved_capabilities"),
+        approve_publisher_fingerprint=data.get("approve_publisher_fingerprint", ""),
+    )
     return {
         "plugin_id": result.plugin_id,
         "name": result.name,
@@ -453,7 +477,12 @@ def plugins_update(job_id, filepath, data):
         _update_job(job_id, progress=pct, message=msg)
 
     from opencut.core.plugin_marketplace import update_plugin
-    result = update_plugin(plugin_id, on_progress=_on_progress)
+    result = update_plugin(
+        plugin_id,
+        on_progress=_on_progress,
+        approved_capabilities=data.get("approved_capabilities"),
+        approve_publisher_fingerprint=data.get("approve_publisher_fingerprint", ""),
+    )
     return {
         "plugin_id": result.plugin_id,
         "name": result.name,

@@ -49,6 +49,9 @@ dependencies = [
     "python-json-logger>=2.0,<3",
     "psutil>=5.9",
     "keyring>=25.7,<26",
+    # Ed25519 verification for authenticated plugin artifacts. PyCA
+    # cryptography is Apache-2.0 OR BSD-3-Clause and supports Python 3.11+.
+    "cryptography>=48.0.1,<49",
     # RA-23 — Werkzeug/Jinja2 ship transitively with flask and are always
     # present. Pin the resolver floor to the same security level the lockfile
     # already holds so `pip install opencut` (no lock) cannot pull the
