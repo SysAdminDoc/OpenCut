@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added - Wire UXP batch rename and smart bins to the host bridge
+
+- The UXP timeline panel's Batch Rename and Smart Bins buttons now run their
+  already-implemented `PProBridge` host actions instead of showing a "runs
+  through CEP" handoff. Buttons enable only when the UXP host bridge is
+  available (with an honest disabled reason otherwise). Batch rename previews
+  the affected items on first click and applies on the second, records an
+  inverse rename so the same button offers a one-click undo, and reports partial
+  failures; smart bins report the number of bins created.
+- Extracted the pure rename/bin logic (`expandRenamePattern`,
+  `computeInverseRenames`, `buildSmartBinRules`, `summarizeRenamePreview`) into
+  `uxp-utils.js` with a new `uxp-batch-ops` vitest suite, and added the
+  supporting UXP locale strings (en/es).
+
 ### Fixed - Semantic project-facts documentation gate
 
 - Added `test_project_facts`, a gate that derives facts from the authoritative

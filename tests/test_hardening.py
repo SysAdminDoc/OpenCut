@@ -653,7 +653,9 @@ def test_uxp_engine_registry_escapes_dynamic_attribute_values():
     assert 'data-domain="${UIController.escapeHtml(domain)}"' in source
     assert 'value="${UIController.escapeHtml(eng.name)}"' in source
     assert 'for="${UIController.escapeHtml(domainId)}"' in source
-    assert 'import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-utils.js";' in source
+    assert "escapeHtml as escapeHtmlValue" in source
+    assert "safeDomIdSegment" in source
+    assert 'from "./uxp-utils.js"' in source
     assert "return escapeHtmlValue(str);" in source
     assert ".replace(/'/g, \"&#39;\")" in utils_source
 
