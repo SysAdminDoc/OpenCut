@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Produce and verify one C2PA 2.4 provenance contract
+
+- Unified create, sidecar, and embed manifests on `c2pa.actions.v2` plus the
+  C2PA 2.4 `c2pa.ai-disclosure` schema. AI disclosures now include required
+  `modelType` and valid oversight metadata; legacy operation names normalize to
+  standard actions while retaining the original name as namespaced metadata.
+- Removed the misleading raw-file-hash “soft binding” and invalid handcrafted
+  hard-binding assertion. Source SHA-256 remains namespaced audit evidence;
+  `c2patool` creates the authoritative asset hard binding and OpenCut requires
+  its signature and hash validation evidence before reporting success.
+- Embedded credentials now require explicit key/certificate files, build in a
+  sibling staging path, are re-read by `c2patool`, and promote atomically only
+  after validation. The former FFmpeg comment surrogate is no longer emitted,
+  C2PA 2.3 sidecars remain readable, and the release suite runs official-tool
+  conformance checks whenever `c2patool` is installed.
+
 ### Fixed - Confine and verify remote result downloads
 
 - Remote artifacts may now be written only beneath `OPENCUT_OUTPUT_DIR`, with

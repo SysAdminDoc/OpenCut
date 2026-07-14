@@ -1,55 +1,11 @@
-"""C2PA provenance sidecars and embedded export credentials (F110 + F140).
+"""C2PA 2.4 provenance sidecars and verified embedded credentials.
 
-OpenCut can always write a local sidecar — a single ``<media>.c2pa.json``
-file that carries the provenance graph (chain of edits + tool identity +
-asset hash). When the operator configures a signing key, the sidecar is
-signed and self-verifiable. When ``c2patool`` is also available, OpenCut
-can additionally ask the C2PA Tool to write a signed manifest into a
-supported export asset while keeping the sidecar as an audit trail.
-
-The fallback sidecar path is deliberately scoped:
-
-* Lives next to the rendered file (no JUMBF embedding).
-* Is signed only when the operator provides an Ed25519 private key
-  through ``OPENCUT_C2PA_SIGNING_KEY``; otherwise the manifest is
-  unsigned and the route response says so.
-* Captures the same fields C2PA tooling reads: ``claim_generator``,
-  ``title``, ``actions``, ``ingredients`` (input file hashes), and the
-  output asset hash.
-
-A real C2PA verifier won't accept the unsigned sidecar as a trust
-artifact — but it will validate the *chain* and the asset hash, which
-is what review pipelines actually use today. The route surface is
-forward-compatible with the embedded variant: when C2PA Tool signing
-is configured, ``build_sidecar(embed=True)`` returns the embedded output
-path and the verifier distinguishes embedded, signed sidecar, unsigned
-sidecar, missing asset, and tampered-manifest cases.
-
-F140 — C2PA 2.3 alignment
-=========================
-
-The manifest semantics now target the C2PA 2.3 vocabulary published
-in late 2024. Concretely:
-
-* Every emitted manifest records the **C2PA 2.3 specification version**
-  it targets in the ``c2pa_spec_version`` field, alongside our own
-  sidecar wire-format version (``manifest_spec`` field).
-* Action strings are validated against ``C2PA_ACTION_VOCABULARY`` —
-  the documented set from the C2PA 2.3 working catalogue
-  (``c2pa.created``, ``c2pa.edited``, ``c2pa.opened``, ``c2pa.placed``,
-  ``c2pa.removed``, ``c2pa.cropped``, ``c2pa.transcribed``,
-  ``c2pa.translated``, ``c2pa.captioned``, ``c2pa.published``, etc.).
-  Unknown action strings still serialise (forward compatibility) but
-  the ``warnings`` list flags them so downstream review tooling sees
-  the mismatch.
-* The optional ``cloud_trust_list`` slot is reserved for the
-  ``trust_anchor_url`` value emitted by C2PA 2.3's cloud-anchored
-  trust lists; OpenCut never resolves the URL itself but propagates
-  it from the operator config so the embedded path can pick it up
-  later.
-* Live-video provenance is supported via the ``live`` boolean on
-  ``C2paAction``; verifiers can use it to distinguish a captured
-  livestream segment from a regular cut.
+OpenCut's JSON sidecar is a local audit record bound to an asset SHA-256 and
+optionally signed with an Ed25519 key. Real Content Credentials are produced
+only through ``c2patool`` with operator-provided key/certificate files, then
+re-read to prove the claim signature, required assertions, and authoritative
+asset hard binding before the staged output is promoted. Version 2.3 sidecars
+remain readable for compatibility.
 """
 
 from __future__ import annotations
@@ -57,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import mimetypes
 import os
 import shutil
 import subprocess
@@ -65,47 +22,60 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence
 
 from opencut.openapi_registry import openapi_response_schema
 
 logger = logging.getLogger("opencut")
 
-SPEC_VERSION = "0.2-sidecar"  # OpenCut sidecar wire-format; bumped for the F140 C2PA 2.3 alignment
+SPEC_VERSION = "0.3-sidecar"
 MANIFEST_SPEC_VERSION = SPEC_VERSION  # public alias
-C2PA_SPEC_VERSION = "2.3"  # the C2PA specification version our action vocabulary follows
-CLAIM_GENERATOR_DEFAULT = "OpenCut/1.33.1 (sidecar; c2pa-spec 2.3)"
+C2PA_SPEC_VERSION = "2.4"
+CLAIM_GENERATOR_DEFAULT = "OpenCut/1.33.1 (sidecar; c2pa-spec 2.4)"
 SUPPORTED_EMBED_EXTENSIONS = {".jpg", ".jpeg", ".mp4", ".png"}
 DEFAULT_C2PATOOL_TIMEOUT_SECONDS = 120
 
 
-# F140 — C2PA 2.3 action vocabulary. This is the documented set of
+# C2PA 2.4 action vocabulary. This is the documented set of
 # action strings; unknown actions still serialise but get flagged.
 # Keep the tuple sorted so test diffs are deterministic.
 C2PA_ACTION_VOCABULARY: tuple = (
-    "c2pa.captioned",
-    "c2pa.color_adjustments",
+    "c2pa.addedText",
+    "c2pa.adjustedColor",
+    "c2pa.changedSpeed",
     "c2pa.converted",
     "c2pa.created",
     "c2pa.cropped",
+    "c2pa.deleted",
+    "c2pa.drawing",
     "c2pa.dubbed",
     "c2pa.edited",
+    "c2pa.edited.metadata",
+    "c2pa.enhanced",
     "c2pa.filtered",
+    "c2pa.mastered",
+    "c2pa.mixed",
     "c2pa.opened",
+    "c2pa.orientation",
     "c2pa.placed",
     "c2pa.published",
     "c2pa.redacted",
+    "c2pa.remixed",
     "c2pa.removed",
+    "c2pa.repackaged",
     "c2pa.resized",
+    "c2pa.resized.proportional",
     "c2pa.transcoded",
-    "c2pa.transcribed",
     "c2pa.translated",
+    "c2pa.trimmed",
     "c2pa.unknown",
+    "c2pa.watermarked.bound",
+    "c2pa.watermarked.unbound",
 )
 
 
 def is_known_c2pa_action(name: str) -> bool:
-    """Return True when *name* belongs to the C2PA 2.3 documented vocabulary."""
+    """Return True when *name* belongs to the C2PA 2.4 documented vocabulary."""
     return name in C2PA_ACTION_VOCABULARY
 
 
@@ -114,13 +84,14 @@ class C2paAction:
     action: str           # e.g. "c2pa.created", "c2pa.edited", "c2pa.cropped"
     when: str             # ISO-8601 UTC
     parameters: dict = field(default_factory=dict)
-    # F140 — C2PA 2.3 fields:
-    # ``live`` distinguishes a livestream segment from a normal cut.
-    # ``software_agent`` carries the tool identity per-action (some
-    # workflows do filler-removal in OpenCut + colour grade in a
-    # different app within the same render).
     live: bool = False
-    software_agent: str = ""
+    software_agent: Any = ""
+    digital_source_type: str = ""
+    model_type: str = ""
+    model_name: str = ""
+    model_identifier: str = ""
+    human_oversight_level: str = ""
+    scientific_domain: List[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -192,6 +163,7 @@ def _try_sign(manifest_bytes: bytes) -> Optional[dict]:
     if not key:
         return None
     try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
     except Exception:
         logger.info(
@@ -201,6 +173,12 @@ def _try_sign(manifest_bytes: bytes) -> Optional[dict]:
         return None
     try:
         priv = load_pem_private_key(key, password=None)
+        if not isinstance(priv, Ed25519PrivateKey):
+            logger.info(
+                "c2pa_sidecar: configured C2PA key is not Ed25519; "
+                "the local JSON sidecar will remain unsigned"
+            )
+            return None
         signature = priv.sign(manifest_bytes)
         public_key = priv.public_key().public_bytes(
             encoding=Encoding.PEM,
@@ -268,26 +246,44 @@ def _default_embedded_output_path(asset: Path) -> Path:
 
 def _c2patool_manifest_definition(manifest: dict) -> dict:
     """Convert OpenCut sidecar manifest data into a c2patool manifest definition."""
-    actions = []
+    from opencut.core.c2pa_embed import (
+        build_c2pa_assertions,
+        c2patool_manifest_definition,
+    )
+
+    operations = []
     for action in manifest.get("actions", []):
         if not isinstance(action, dict):
             continue
-        actions.append({
+        operations.append({
             "action": action.get("action") or "c2pa.unknown",
             "when": action.get("when") or manifest.get("generated_at"),
-            "softwareAgent": action.get("software_agent") or manifest.get("claim_generator"),
+            "softwareAgent": (
+                action.get("software_agent") or manifest.get("claim_generator")
+            ),
             "parameters": action.get("parameters") or {},
+            "digitalSourceType": action.get("digital_source_type") or "",
+            "modelType": action.get("model_type") or "",
+            "modelName": action.get("model_name") or "",
+            "modelIdentifier": action.get("model_identifier") or "",
+            "humanOversightLevel": action.get("human_oversight_level") or "",
+            "scientificDomain": action.get("scientific_domain") or [],
         })
 
-    definition: Dict[str, Any] = {
+    _, assertions = build_c2pa_assertions(
+        operations,
+        claim_generator=(
+            manifest.get("claim_generator") or CLAIM_GENERATOR_DEFAULT
+        ),
+        created=str(manifest.get("generated_at") or ""),
+    )
+    assertions.append({"label": "org.opencut.provenance", "data": manifest})
+    definition = c2patool_manifest_definition({
         "claim_generator": manifest.get("claim_generator") or CLAIM_GENERATOR_DEFAULT,
         "title": manifest.get("title") or manifest.get("asset", {}).get("title") or "OpenCut export",
         "format": manifest.get("format") or "application/octet-stream",
-        "assertions": [
-            {"label": "c2pa.actions", "data": {"actions": actions}},
-            {"label": "org.opencut.provenance", "data": manifest},
-        ],
-    }
+        "assertions": assertions,
+    })
 
     # c2patool can either use its built-in test certificate or operator-provided
     # signing material. Operators that need a real trust chain can provide the
@@ -302,6 +298,53 @@ def _c2patool_manifest_definition(manifest: dict) -> dict:
     if alg:
         definition["alg"] = alg
     return definition
+
+
+def _validate_c2patool_report(report: dict, definition: dict) -> str:
+    """Return an error when a c2patool report lacks 2.4 or binding evidence."""
+    if not isinstance(report, dict):
+        return "c2patool verification report is not a JSON object"
+    if report.get("validation_state") != "Valid":
+        return f"c2patool validation state is {report.get('validation_state') or 'missing'}"
+    active_label = str(report.get("active_manifest") or "")
+    manifests = report.get("manifests")
+    if not active_label or not isinstance(manifests, dict):
+        return "c2patool report has no active manifest"
+    active = manifests.get(active_label)
+    if not isinstance(active, dict):
+        return "c2patool active manifest is missing"
+    labels = {
+        str(assertion.get("label") or "")
+        for assertion in active.get("assertions", [])
+        if isinstance(assertion, dict)
+    }
+    if "c2pa.actions.v2" not in labels:
+        return "embedded manifest is missing c2pa.actions.v2"
+    required_labels = {
+        str(assertion.get("label") or "")
+        for assertion in definition.get("assertions", [])
+        if isinstance(assertion, dict)
+        and assertion.get("label") in {"c2pa.ai-disclosure", "org.opencut.provenance"}
+    }
+    missing = sorted(required_labels - labels)
+    if missing:
+        return f"embedded manifest is missing assertions: {', '.join(missing)}"
+
+    validation = report.get("validation_results") or {}
+    active_results = validation.get("activeManifest") or {}
+    success_codes = {
+        str(item.get("code") or "")
+        for item in active_results.get("success", [])
+        if isinstance(item, dict)
+    }
+    if "claimSignature.validated" not in success_codes:
+        return "c2patool did not validate the claim signature"
+    if not any(
+        code.startswith("assertion.") and code.endswith("Hash.match")
+        for code in success_codes
+    ):
+        return "c2patool did not validate an authoritative hard binding"
+    return ""
 
 
 def _run_c2patool_embed(
@@ -329,45 +372,119 @@ def _run_c2patool_embed(
         warnings.append("c2patool not found; wrote signed sidecar without embedded C2PA manifest")
         return False, "", "", warnings
 
+    private_key = Path(os.environ.get("OPENCUT_C2PA_SIGNING_KEY", "").strip())
+    sign_cert = Path(os.environ.get("OPENCUT_C2PA_SIGNING_CERT", "").strip())
+    if not private_key.is_file() or not sign_cert.is_file():
+        warnings.append(
+            "embedded C2PA output requires readable OPENCUT_C2PA_SIGNING_KEY "
+            "and OPENCUT_C2PA_SIGNING_CERT files"
+        )
+        return False, "", "", warnings
+
     output = Path(output_path) if output_path else _default_embedded_output_path(asset)
+    output = output.resolve()
+    asset = asset.resolve()
+    if output == asset:
+        warnings.append("C2PA output must not overwrite the source asset")
+        return False, "", "", warnings
+    if output.suffix.lower() != suffix:
+        warnings.append("C2PA output must keep the source file extension")
+        return False, "", "", warnings
     output.parent.mkdir(parents=True, exist_ok=True)
     definition = _c2patool_manifest_definition(manifest)
+    definition["private_key"] = str(private_key)
+    definition["sign_cert"] = str(sign_cert)
 
-    with tempfile.TemporaryDirectory(prefix="opencut_c2pa_") as root:
-        manifest_path = Path(root) / "manifest.json"
-        manifest_path.write_text(json.dumps(definition, indent=2, sort_keys=True), encoding="utf-8")
-        cmd = [
-            tool,
-            str(asset),
-            "-m",
-            str(manifest_path),
-            "-o",
-            str(output),
-            "-f",
-        ]
-        env = os.environ.copy()
-        raw_key = os.environ.get("OPENCUT_C2PA_SIGNING_KEY", "").strip()
-        raw_cert = os.environ.get("OPENCUT_C2PA_SIGNING_CERT", "").strip()
-        if raw_key and not Path(raw_key).exists():
-            env.setdefault("C2PA_PRIVATE_KEY", raw_key)
-        if raw_cert and not Path(raw_cert).exists():
-            env.setdefault("C2PA_SIGN_CERT", raw_cert)
-        result = subprocess.run(
-            cmd,
+    descriptor, staged_name = tempfile.mkstemp(
+        prefix=f".{output.stem}.", suffix=output.suffix, dir=str(output.parent)
+    )
+    os.close(descriptor)
+    staged = Path(staged_name)
+    try:
+        with tempfile.TemporaryDirectory(prefix="opencut_c2pa_") as root:
+            manifest_path = Path(root) / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(definition, indent=2, sort_keys=True), encoding="utf-8"
+            )
+            result = subprocess.run(
+                [tool, str(asset), "-m", str(manifest_path), "-o", str(staged), "-f"],
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_C2PATOOL_TIMEOUT_SECONDS,
+                env=os.environ.copy(),
+                check=False,
+            )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            warnings.append(
+                f"c2patool embed failed with exit {result.returncode}: {detail[-300:]}"
+            )
+            return False, "", "", warnings
+        if not staged.is_file() or staged.stat().st_size <= 0:
+            warnings.append("c2patool reported success but created no embedded output")
+            return False, "", "", warnings
+
+        verified = subprocess.run(
+            [tool, str(staged)],
             capture_output=True,
             text=True,
             timeout=DEFAULT_C2PATOOL_TIMEOUT_SECONDS,
-            env=env,
+            env=os.environ.copy(),
             check=False,
         )
+        if verified.returncode != 0:
+            detail = (verified.stderr or verified.stdout or "").strip()
+            warnings.append(
+                f"c2patool verification failed with exit {verified.returncode}: {detail[-300:]}"
+            )
+            return False, "", "", warnings
+        try:
+            report = json.loads(verified.stdout)
+        except json.JSONDecodeError as exc:
+            warnings.append(f"c2patool returned invalid verification JSON: {exc}")
+            return False, "", "", warnings
+        report_error = _validate_c2patool_report(report, definition)
+        if report_error:
+            warnings.append(report_error)
+            return False, "", "", warnings
+        os.replace(staged, output)
+        return True, "c2patool", str(output), warnings
+    finally:
+        try:
+            staged.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _verify_embedded_credential(path: Path, manifest: dict) -> tuple[bool, str]:
+    """Re-read an embedded credential; never trust sidecar status metadata."""
+    if not path.is_file():
+        return False, f"embedded credential {str(path)!r} was not found"
+    tool = _find_c2patool()
+    if not tool:
+        return False, "c2patool is unavailable; embedded credential was not re-verified"
+    try:
+        result = subprocess.run(
+            [tool, str(path)],
+            capture_output=True,
+            text=True,
+            timeout=DEFAULT_C2PATOOL_TIMEOUT_SECONDS,
+            env=os.environ.copy(),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, f"c2patool verification could not run: {exc}"
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
-        warnings.append(f"c2patool embed failed with exit {result.returncode}: {detail[-300:]}")
-        return False, "", "", warnings
-    if not output.exists():
-        warnings.append("c2patool reported success but did not create the embedded output")
-        return False, "", "", warnings
-    return True, "c2patool", str(output), warnings
+        return False, f"c2patool verification failed: {detail[-300:]}"
+    try:
+        report = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"c2patool returned invalid verification JSON: {exc}"
+    error = _validate_c2patool_report(
+        report, _c2patool_manifest_definition(manifest)
+    )
+    return (not error, error)
 
 
 def build_sidecar(
@@ -385,10 +502,10 @@ def build_sidecar(
 ) -> C2paSidecarResult:
     """Write a ``<asset>.c2pa.json`` sidecar next to ``asset_path``.
 
-    F140 — emits a C2PA 2.3-aligned manifest. Unknown action strings
+    Emits a C2PA 2.4-aligned manifest. Unknown action strings
     are tolerated but recorded under ``warnings`` so review tooling can
     surface them. ``cloud_trust_list`` is the optional URL of the
-    operator's C2PA 2.3 cloud-anchored trust list (the OpenCut signer
+    operator's cloud-anchored trust list (the OpenCut signer
     never resolves the URL — it is propagated for downstream
     verifiers).
     """
@@ -405,7 +522,7 @@ def build_sidecar(
     for act in (actions or []):
         if not is_known_c2pa_action(act.action):
             warnings.append(
-                f"action {act.action!r} is not in the C2PA 2.3 documented vocabulary"
+                f"action {act.action!r} is not in the C2PA 2.4 documented vocabulary"
             )
 
     manifest = {
@@ -416,11 +533,12 @@ def build_sidecar(
         "claim_id": "urn:uuid:" + str(uuid.uuid4()),
         "title": title or asset.name,
         "instance_id": "xmp:iid:" + str(uuid.uuid4()),
-        "format": asset.suffix.lstrip(".") or "application/octet-stream",
+        "format": mimetypes.guess_type(asset.name)[0] or "application/octet-stream",
         "generated_at": _utc_now(),
         "asset": {
             "title": asset.name,
             "sha256": asset_sha,
+            "hash_algorithm": "sha256",
             "bytes": asset.stat().st_size,
         },
         "ingredients": [ing.as_dict() for ing in (ingredients or [])],
@@ -451,6 +569,7 @@ def build_sidecar(
             "status": "embedded" if embedded else "sidecar_only",
             "method": embedding_method,
             "embedded_path": embedded_path,
+            "verified": embedded,
         }
     if warnings:
         manifest["warnings"] = warnings
@@ -462,7 +581,22 @@ def build_sidecar(
     if signature is not None:
         manifest["signature"] = signature
 
-    target.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    descriptor, staged_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
+    )
+    os.close(descriptor)
+    staged = Path(staged_name)
+    try:
+        with staged.open("w", encoding="utf-8") as file_obj:
+            file_obj.write(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+            file_obj.flush()
+            os.fsync(file_obj.fileno())
+        os.replace(staged, target)
+    finally:
+        try:
+            staged.unlink()
+        except FileNotFoundError:
+            pass
 
     return C2paSidecarResult(
         sidecar_path=str(target),
@@ -536,14 +670,26 @@ def verify_sidecar(sidecar_path: str) -> dict:
 
     embedding = manifest.get("embedding") if isinstance(manifest.get("embedding"), dict) else {}
     embedded = bool(embedding.get("status") == "embedded")
+    credential_verified = False
+    if embedded:
+        embedded_path = Path(str(embedding.get("embedded_path") or ""))
+        if not embedded_path.is_absolute():
+            embedded_path = sidecar.parent / embedded_path
+        credential_verified, credential_warning = _verify_embedded_credential(
+            embedded_path, manifest
+        )
+        if credential_warning:
+            warnings.append(credential_warning)
     if not asset_found:
         status = "missing_asset"
     elif sig and not signature_match:
         status = "tampered_manifest"
     elif not asset_match:
         status = "tampered_asset"
-    elif embedded and signature_match:
-        status = "embedded_signed"
+    elif credential_verified:
+        status = "embedded_credential"
+    elif embedded:
+        status = "embedded_unverified"
     elif signature_match:
         status = "signed_sidecar"
     else:
@@ -557,6 +703,7 @@ def verify_sidecar(sidecar_path: str) -> dict:
         "signature_valid": bool(signature_valid),
         "signature_match": bool(signature_match),
         "embedded": embedded,
+        "credential_verified": credential_verified,
         "embedded_path": str(embedding.get("embedded_path") or ""),
         "status": status,
         "warnings": warnings,

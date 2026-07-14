@@ -856,6 +856,25 @@ def provenance_c2pa_sidecar():
                 action=str(item.get("action") or "c2pa.unknown"),
                 when=str(item.get("when") or ""),
                 parameters=item.get("parameters") or {},
+                software_agent=item.get("softwareAgent") or item.get("software_agent") or "",
+                digital_source_type=str(
+                    item.get("digitalSourceType") or item.get("digital_source_type") or ""
+                ),
+                model_type=str(item.get("modelType") or item.get("model_type") or ""),
+                model_name=str(item.get("modelName") or item.get("model_name") or ""),
+                model_identifier=str(
+                    item.get("modelIdentifier") or item.get("model_identifier") or ""
+                ),
+                human_oversight_level=str(
+                    item.get("humanOversightLevel")
+                    or item.get("human_oversight_level")
+                    or ""
+                ),
+                scientific_domain=(
+                    item.get("scientificDomain")
+                    or item.get("scientific_domain")
+                    or []
+                ),
             )
             for item in actions_raw
             if isinstance(item, dict)

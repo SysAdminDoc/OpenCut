@@ -10,15 +10,15 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.helpers import (
-    FFmpegCmd,
-    run_ffmpeg,
-)
+from opencut import __version__
 from opencut.helpers import (
     output_path as _output_path,
 )
@@ -28,6 +28,9 @@ logger = logging.getLogger("opencut")
 # C2PA manifest version
 C2PA_VERSION = "2.4"
 C2PA_CLAIM_GENERATOR = "OpenCut Video Editor"
+C2PA_ACTIONS_LABEL = "c2pa.actions.v2"
+C2PA_AI_DISCLOSURE_LABEL = "c2pa.ai-disclosure"
+C2PA_DEFAULT_MODEL_TYPE = "c2pa.types.model"
 
 # IPTC digital-source-type vocabulary (C2PA 2.4 AI transparency). Fully
 # synthesized output is trainedAlgorithmicMedia; AI-assisted edits of real
@@ -39,6 +42,49 @@ _DST_COMPOSITE = "http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTr
 _AI_ACTION_KEYWORDS = ("ai", "auto", "generate", "enhance", "ml", "upscale", "relight", "synth")
 # Keywords that indicate the step fully generated new media (vs. editing real).
 _GENERATIVE_KEYWORDS = ("generate", "synth", "t2i", "t2v", "text_to")
+_HUMAN_OVERSIGHT_VALUES = {"fully_autonomous", "prompt_guided", "human_validated"}
+_ENTITY_ACTION_RE = re.compile(r"^(?:[A-Za-z0-9_-]+\.){2,}[A-Za-z0-9_-]+$")
+_C2PA_24_ACTIONS = frozenset({
+    "c2pa.addedText",
+    "c2pa.adjustedColor",
+    "c2pa.changedSpeed",
+    "c2pa.converted",
+    "c2pa.created",
+    "c2pa.cropped",
+    "c2pa.deleted",
+    "c2pa.drawing",
+    "c2pa.dubbed",
+    "c2pa.edited",
+    "c2pa.edited.metadata",
+    "c2pa.enhanced",
+    "c2pa.filtered",
+    "c2pa.mastered",
+    "c2pa.mixed",
+    "c2pa.opened",
+    "c2pa.orientation",
+    "c2pa.placed",
+    "c2pa.published",
+    "c2pa.redacted",
+    "c2pa.remixed",
+    "c2pa.removed",
+    "c2pa.repackaged",
+    "c2pa.resized",
+    "c2pa.resized.proportional",
+    "c2pa.transcoded",
+    "c2pa.translated",
+    "c2pa.trimmed",
+    "c2pa.unknown",
+    "c2pa.watermarked.bound",
+    "c2pa.watermarked.unbound",
+})
+_ACTION_ALIASES = {
+    "caption": "c2pa.addedText",
+    "c2pa.captioned": "c2pa.addedText",
+    "c2pa.color_adjustments": "c2pa.adjustedColor",
+    "c2pa.transcribed": "c2pa.addedText",
+    "export": "c2pa.published",
+    "trim": "c2pa.trimmed",
+}
 
 
 def _digital_source_type(action: str) -> str:
@@ -50,6 +96,200 @@ def _digital_source_type(action: str) -> str:
 
 def _is_ai_action(action: str) -> bool:
     return any(kw in (action or "").lower() for kw in _AI_ACTION_KEYWORDS)
+
+
+def _standard_action_name(action: str) -> str:
+    """Return a C2PA 2.4 action name, preserving the original in parameters."""
+    raw = (action or "").strip()
+    lowered = raw.lower()
+    if lowered in _ACTION_ALIASES:
+        return _ACTION_ALIASES[lowered]
+    if raw in _C2PA_24_ACTIONS or (
+        not raw.startswith("c2pa.") and _ENTITY_ACTION_RE.fullmatch(raw)
+    ):
+        return raw
+    if raw.startswith("c2pa."):
+        return "c2pa.unknown"
+    if any(keyword in lowered for keyword in _GENERATIVE_KEYWORDS):
+        return "c2pa.created"
+    if any(keyword in lowered for keyword in ("upscale", "enhance", "denoise", "relight")):
+        return "c2pa.enhanced"
+    return "c2pa.edited"
+
+
+def _software_agent(value: Any) -> dict:
+    if isinstance(value, dict) and value.get("name"):
+        return deepcopy(value)
+    text = str(value or C2PA_CLAIM_GENERATOR).strip()
+    match = re.match(r"^(?P<name>[^/]+)/(?P<version>\d+\.\d+\.\d+)", text)
+    if match:
+        return {"name": match.group("name"), "version": match.group("version")}
+    if text == C2PA_CLAIM_GENERATOR:
+        return {"name": "OpenCut", "version": __version__}
+    return {"name": text}
+
+
+def _operation_value(operation: dict, *keys: str, default: Any = "") -> Any:
+    parameters = operation.get("parameters")
+    if not isinstance(parameters, dict):
+        parameters = {}
+    for key in keys:
+        if operation.get(key) not in (None, ""):
+            return operation[key]
+        if parameters.get(key) not in (None, ""):
+            return parameters[key]
+    return default
+
+
+def build_c2pa_assertions(
+    operations: Optional[List[dict]],
+    *,
+    claim_generator: str = C2PA_CLAIM_GENERATOR,
+    created: str = "",
+    source_hash: str = "",
+) -> tuple[List[dict], List[dict]]:
+    """Build C2PA 2.4 actions/AI assertions plus OpenCut source evidence.
+
+    The source digest is deliberately namespaced metadata, not a C2PA hard
+    binding. ``c2patool`` creates and validates the authoritative hard binding
+    against the output asset when a manifest is signed.
+    """
+    action_items: List[dict] = []
+    disclosures: List[dict] = []
+    seen_disclosures = set()
+
+    for operation in operations or []:
+        if not isinstance(operation, dict):
+            continue
+        raw_action = str(operation.get("action") or "c2pa.unknown").strip()
+        action = _standard_action_name(raw_action)
+        parameters = operation.get("parameters")
+        parameters = deepcopy(parameters) if isinstance(parameters, dict) else {}
+        if action != raw_action:
+            parameters.setdefault("org.opencut.operation", raw_action)
+
+        source_type = str(
+            _operation_value(
+                operation,
+                "digitalSourceType",
+                "digital_source_type",
+                default="",
+            )
+        ).strip()
+        model_type = str(
+            _operation_value(operation, "modelType", "model_type", default="")
+        ).strip()
+        is_ai = bool(source_type or model_type or _is_ai_action(raw_action))
+        if is_ai and not source_type:
+            source_type = _digital_source_type(raw_action)
+
+        item: Dict[str, Any] = {
+            "action": action,
+            "softwareAgent": _software_agent(
+                operation.get("softwareAgent")
+                or operation.get("software_agent")
+                or claim_generator
+            ),
+        }
+        when = str(
+            operation.get("when")
+            or operation.get("timestamp")
+            or created
+            or ""
+        ).strip()
+        if when:
+            item["when"] = when
+        description = str(operation.get("description") or "").strip()
+        if description:
+            item["description"] = description
+        if parameters:
+            item["parameters"] = parameters
+        if source_type:
+            item["digitalSourceType"] = source_type
+        action_items.append(item)
+
+        if not is_ai:
+            continue
+        model_type = model_type or C2PA_DEFAULT_MODEL_TYPE
+        model_name = str(
+            _operation_value(
+                operation,
+                "modelName",
+                "model_name",
+                default="OpenCut AI Pipeline",
+            )
+        ).strip()
+        model_identifier = str(
+            _operation_value(
+                operation,
+                "modelIdentifier",
+                "model_identifier",
+                default="",
+            )
+        ).strip()
+        oversight = str(
+            _operation_value(
+                operation,
+                "humanOversightLevel",
+                "human_oversight_level",
+                default=("prompt_guided" if source_type == _DST_TRAINED else "human_validated"),
+            )
+        ).strip()
+        if oversight not in _HUMAN_OVERSIGHT_VALUES:
+            oversight = "human_validated"
+        scientific_domain = _operation_value(
+            operation, "scientificDomain", "scientific_domain", default=""
+        )
+        if isinstance(scientific_domain, str):
+            scientific_domains = [scientific_domain] if scientific_domain else []
+        elif isinstance(scientific_domain, list):
+            scientific_domains = [str(value) for value in scientific_domain if value]
+        else:
+            scientific_domains = []
+
+        disclosure: Dict[str, Any] = {
+            "modelType": model_type,
+            "contentProfile": {"humanOversightLevel": oversight},
+        }
+        if model_name:
+            disclosure["modelName"] = model_name
+        if model_identifier:
+            disclosure["modelIdentifier"] = model_identifier
+        if scientific_domains:
+            disclosure["scientificDomain"] = scientific_domains
+        disclosure_key = json.dumps(disclosure, sort_keys=True, separators=(",", ":"))
+        if disclosure_key not in seen_disclosures:
+            seen_disclosures.add(disclosure_key)
+            disclosures.append(disclosure)
+
+    assertions: List[dict] = []
+    if action_items:
+        assertions.append({
+            "label": C2PA_ACTIONS_LABEL,
+            "data": {"actions": action_items, "allActionsIncluded": False},
+        })
+    assertions.extend(
+        {"label": C2PA_AI_DISCLOSURE_LABEL, "data": disclosure}
+        for disclosure in disclosures
+    )
+    if source_hash:
+        assertions.append({
+            "label": "org.opencut.source",
+            "data": {"alg": "sha256", "hash": source_hash},
+        })
+    return action_items, assertions
+
+
+def c2patool_manifest_definition(manifest: dict) -> dict:
+    """Return the strict declarative subset accepted by ``c2patool``."""
+    claim_generator = str(manifest.get("claim_generator") or C2PA_CLAIM_GENERATOR)
+    return {
+        "claim_generator": claim_generator,
+        "claim_generator_info": [_software_agent(claim_generator)],
+        "title": str(manifest.get("title") or "OpenCut export"),
+        "format": str(manifest.get("format") or "application/octet-stream"),
+        "assertions": deepcopy(manifest.get("assertions") or []),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -111,69 +351,12 @@ def create_c2pa_manifest(
     instance_id = f"urn:uuid:{uuid.uuid4()}"
     created = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-    # Build operations list
-    manifest_ops = []
-    for op in (operations or []):
-        action = op.get("action", "unknown")
-        entry = {
-            "action": action,
-            "softwareAgent": C2PA_CLAIM_GENERATOR,
-            "parameters": op.get("parameters", {}),
-            "timestamp": op.get("timestamp", created),
-            "description": op.get("description", ""),
-        }
-        # C2PA 2.4 AI transparency: tag AI/ML steps with their IPTC
-        # digital-source-type so downstream verifiers see machine-readable
-        # disclosure on the action itself.
-        if _is_ai_action(action):
-            entry["digitalSourceType"] = _digital_source_type(action)
-        manifest_ops.append(entry)
-
-    # Build assertions
-    assertions = []
-
-    # Creative work assertion
-    assertions.append({
-        "label": "c2pa.actions",
-        "data": {"actions": manifest_ops},
-    })
-
-    # Hash assertion
-    if source_hash:
-        assertions.append({
-            "label": "c2pa.hash.data",
-            "data": {
-                "exclusions": [],
-                "name": "jumbf manifest",
-                "alg": "sha256",
-                "hash": source_hash,
-            },
-        })
-
-    # AI disclosure assertion (C2PA 2.4 machine-readable AI transparency).
-    ai_ops = [op for op in manifest_ops if _is_ai_action(op.get("action", ""))]
-    if ai_ops:
-        source_types = sorted({_digital_source_type(op["action"]) for op in ai_ops})
-        assertions.append({
-            "label": "c2pa.ai-disclosure",
-            "data": {
-                "digitalSourceType": source_types,
-                "ai_operations": [op["action"] for op in ai_ops],
-                "model_info": "OpenCut AI Pipeline",
-            },
-        })
-
-    # Durable soft-binding assertion: a content fingerprint that lets a
-    # verifier rediscover this manifest even after Premiere re-encodes/transcodes
-    # the media and the hard hash no longer matches.
-    if source_hash:
-        assertions.append({
-            "label": "c2pa.soft-binding",
-            "data": {
-                "alg": "opencut.sha256-content-fingerprint",
-                "blocks": [{"scope": {}, "value": source_hash}],
-            },
-        })
+    manifest_ops, assertions = build_c2pa_assertions(
+        operations,
+        claim_generator=C2PA_CLAIM_GENERATOR,
+        created=created,
+        source_hash=source_hash,
+    )
 
     manifest = {
         "c2pa_version": C2PA_VERSION,
@@ -186,8 +369,8 @@ def create_c2pa_manifest(
         "hash_algorithm": "sha256",
         "created": created,
         "assertions": assertions,
-        "signature": "",  # placeholder for signing
     }
+    manifest["manifest_definition"] = c2patool_manifest_definition(manifest)
 
     if on_progress:
         on_progress(50, "C2PA manifest created")
@@ -219,16 +402,16 @@ def embed_c2pa(
     video_path: str,
     manifest: dict,
     output: Optional[str] = None,
-    signed_credential: bool = False,
+    signed_credential: bool = True,
     credential_output: Optional[str] = None,
     c2patool_path: str = "",
     on_progress: Optional[Callable] = None,
 ) -> dict:
-    """Embed a C2PA manifest into a video file as metadata.
+    """Sign and embed a real C2PA manifest with ``c2patool``.
 
-    Embeds the manifest as a JSON comment in the MP4 metadata. For
-    production use, a JUMBF box would be used; this implementation
-    stores a serialized manifest in the video's comment metadata field.
+    The former FFmpeg-comment surrogate was not a Content Credential and is
+    no longer emitted. ``signed_credential`` remains for API compatibility;
+    embedding always requires a real signing key/certificate and c2patool.
 
     Args:
         video_path: Path to input video.
@@ -246,73 +429,145 @@ def embed_c2pa(
     if on_progress:
         on_progress(10, "Computing source hash")
 
-    # Compute source hash if not already present
+    if not isinstance(manifest, dict):
+        raise ValueError("C2PA manifest must be an object")
+
     source_hash = manifest.get("source_hash", "")
     if not source_hash:
         source_hash = _hash_file(video_path)
-        manifest["source_hash"] = source_hash
 
-    # Update the hash assertion
-    for assertion in manifest.get("assertions", []):
-        if assertion.get("label") == "c2pa.hash.data":
-            assertion["data"]["hash"] = source_hash
+    operations = manifest.get("operations")
+    if not isinstance(operations, list):
+        operations = []
+    if not operations:
+        for assertion in manifest.get("assertions", []):
+            if assertion.get("label") in {"c2pa.actions", C2PA_ACTIONS_LABEL}:
+                candidate = assertion.get("data", {}).get("actions", [])
+                if isinstance(candidate, list):
+                    operations = candidate
+                    break
+    existing_disclosures = [
+        deepcopy(assertion)
+        for assertion in manifest.get("assertions", [])
+        if isinstance(assertion, dict)
+        and assertion.get("label") == C2PA_AI_DISCLOSURE_LABEL
+        and isinstance(assertion.get("data"), dict)
+        and assertion["data"].get("modelType")
+    ]
+    created = str(
+        manifest.get("created")
+        or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    )
+    claim_generator = str(
+        manifest.get("claim_generator") or C2PA_CLAIM_GENERATOR
+    )
+    manifest_ops, assertions = build_c2pa_assertions(
+        operations,
+        claim_generator=claim_generator,
+        created=created,
+        source_hash=source_hash,
+    )
+    if existing_disclosures:
+        assertions = [
+            assertion
+            for assertion in assertions
+            if assertion.get("label") != C2PA_AI_DISCLOSURE_LABEL
+        ]
+        source_index = next(
+            (
+                index
+                for index, assertion in enumerate(assertions)
+                if assertion.get("label") == "org.opencut.source"
+            ),
+            len(assertions),
+        )
+        assertions[source_index:source_index] = existing_disclosures
+    manifest["c2pa_version"] = C2PA_VERSION
+    manifest["claim_generator"] = claim_generator
+    manifest["operations"] = manifest_ops
+    manifest["source_hash"] = source_hash
+    manifest["hash_algorithm"] = "sha256"
+    manifest["created"] = created
+    manifest["assertions"] = assertions
+    manifest.pop("signature", None)
+    manifest["manifest_definition"] = c2patool_manifest_definition(manifest)
 
-    # Sign the manifest (simple HMAC for now)
-    manifest_json = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
-    manifest_hash = hashlib.sha256(manifest_json.encode()).hexdigest()
-    manifest["signature"] = manifest_hash
-
-    out = output or _output_path(video_path, "_c2pa", "")
+    out = credential_output or output or _output_path(video_path, "_c2pa", "")
 
     if on_progress:
-        on_progress(40, "Embedding C2PA manifest into video")
+        on_progress(40, "Signing and embedding C2PA 2.4 manifest")
 
-    # Write manifest as a sidecar JSON (embedded via ffmpeg metadata)
+    from opencut.core.c2pa_sidecar import (
+        C2paAction,
+        _run_c2patool_embed,
+        build_sidecar,
+    )
+
+    embedded, method, embedded_path, warnings = _run_c2patool_embed(
+        asset=Path(video_path).resolve(),
+        manifest=manifest,
+        output_path=out,
+        c2patool_path=c2patool_path,
+    )
+    if not embedded:
+        detail = "; ".join(warnings) or "unknown c2patool failure"
+        raise RuntimeError(f"C2PA embedding failed: {detail}")
+
+    disclosure_data = next(
+        (
+            assertion.get("data", {})
+            for assertion in assertions
+            if assertion.get("label") == C2PA_AI_DISCLOSURE_LABEL
+        ),
+        {},
+    )
+    content_profile = disclosure_data.get("contentProfile") or {}
+    actions = [
+        C2paAction(
+            action=str(op.get("action") or "c2pa.unknown"),
+            when=str(op.get("when") or created),
+            parameters=op.get("parameters") or {},
+            software_agent=op.get("softwareAgent") or claim_generator,
+            digital_source_type=str(op.get("digitalSourceType") or ""),
+            model_type=(
+                str(disclosure_data.get("modelType") or "")
+                if op.get("digitalSourceType") else ""
+            ),
+            model_name=(
+                str(disclosure_data.get("modelName") or "")
+                if op.get("digitalSourceType") else ""
+            ),
+            model_identifier=(
+                str(disclosure_data.get("modelIdentifier") or "")
+                if op.get("digitalSourceType") else ""
+            ),
+            human_oversight_level=str(
+                content_profile.get("humanOversightLevel") or ""
+            ) if op.get("digitalSourceType") else "",
+            scientific_domain=(
+                disclosure_data.get("scientificDomain") or []
+                if op.get("digitalSourceType") else []
+            ),
+        )
+        for op in manifest_ops
+    ]
+    sidecar_result = build_sidecar(
+        asset_path=embedded_path,
+        actions=actions,
+        title=str(manifest.get("title") or os.path.basename(embedded_path)),
+    )
+    credential = sidecar_result.as_dict()
+    credential.update({
+        "embedded": True,
+        "embedding_method": method,
+        "embedded_path": embedded_path,
+        "warnings": warnings,
+    })
+    sidecar_path = sidecar_result.sidecar_path
     manifest_str = json.dumps(manifest, indent=2)
 
-    # Embed as MP4 comment metadata
-    cmd = (
-        FFmpegCmd()
-        .input(video_path)
-        .copy_streams()
-        .option("-metadata", f"comment=C2PA:{manifest_str}")
-        .option("-metadata", "description=C2PA-enabled content")
-        .faststart()
-        .output(out)
-        .build()
-    )
-    run_ffmpeg(cmd)
-
-    # Also write sidecar manifest
-    sidecar_path = out + ".c2pa.json"
-    with open(sidecar_path, "w", encoding="utf-8") as f:
-        f.write(manifest_str)
-
     if on_progress:
-        on_progress(85, "C2PA manifest embedded")
-
-    credential = None
-    if signed_credential:
-        from opencut.core.c2pa_sidecar import C2paAction, build_sidecar
-
-        actions = [
-            C2paAction(
-                action=str(op.get("action") or "c2pa.unknown"),
-                when=str(op.get("timestamp") or manifest.get("created") or ""),
-                parameters=op.get("parameters") or {},
-                software_agent=str(op.get("softwareAgent") or C2PA_CLAIM_GENERATOR),
-            )
-            for op in manifest.get("operations", [])
-            if isinstance(op, dict)
-        ]
-        credential = build_sidecar(
-            asset_path=out,
-            actions=actions,
-            title=str(manifest.get("title") or os.path.basename(out)),
-            embed=True,
-            embedded_output_path=credential_output,
-            c2patool_path=c2patool_path,
-        ).as_dict()
+        on_progress(85, "C2PA manifest embedded and verified")
 
     if on_progress:
         on_progress(100, "C2PA manifest embedded")
@@ -324,6 +579,8 @@ def embed_c2pa(
         "source_hash": source_hash,
         "instance_id": manifest.get("instance_id", ""),
         "operations_count": len(manifest.get("operations", [])),
+        "embedded": True,
+        "c2pa_spec_version": C2PA_VERSION,
         "credential": credential,
     }
 
@@ -338,7 +595,8 @@ def read_c2pa(
 ) -> dict:
     """Read a C2PA manifest from a video file's metadata.
 
-    Tries embedded metadata first, then looks for a sidecar .c2pa.json file.
+    Tries a real embedded credential through c2patool, then the legacy FFmpeg
+    comment format, then a JSON sidecar.
 
     Args:
         video_path: Path to video file.
@@ -353,10 +611,37 @@ def read_c2pa(
     if on_progress:
         on_progress(10, "Reading C2PA manifest")
 
-    # Try reading from ffprobe metadata
     try:
         import subprocess
 
+        from opencut.core.c2pa_sidecar import _find_c2patool
+
+        c2patool = _find_c2patool()
+        if c2patool:
+            result = subprocess.run(
+                [c2patool, video_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            if result.returncode == 0:
+                report = json.loads(result.stdout)
+                active_label = str(report.get("active_manifest") or "")
+                active = (report.get("manifests") or {}).get(active_label)
+                if isinstance(active, dict):
+                    manifest = deepcopy(active)
+                    manifest["embedded"] = True
+                    manifest["validation_state"] = report.get("validation_state")
+                    manifest["validation_status"] = report.get("validation_status", [])
+                    if on_progress:
+                        on_progress(100, "C2PA credential read and validated")
+                    return manifest
+    except Exception as exc:
+        logger.debug("Could not read embedded C2PA credential: %s", exc)
+
+    # Legacy compatibility: releases before 1.33.1 used an FFmpeg comment.
+    try:
         from opencut.helpers import get_ffprobe_path
         ffprobe = get_ffprobe_path()
         cmd = [
