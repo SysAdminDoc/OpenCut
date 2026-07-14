@@ -372,8 +372,32 @@ def _build_capabilities():
 
 
 def _health_should_expose_csrf_token() -> bool:
-    origin = (request.headers.get("Origin") or "").strip().lower()
-    return origin not in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS
+    """Expose the bootstrap CSRF token on an allowlist basis.
+
+    The panels fetch /health with no Origin header (same-origin/no-Origin), so
+    that case, an exact same-origin match, and explicitly configured CORS
+    origins are allowed. Any other cross-origin browser context is denied so a
+    hostile page cannot harvest the loopback mutation token.
+    """
+    from flask import current_app
+
+    origin = (request.headers.get("Origin") or "").strip()
+    if not origin:
+        return True
+    origin_l = origin.lower()
+    # The blocklist takes precedence, even over an (ill-advised) CORS entry.
+    if origin_l in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS:
+        return False
+    origin_norm = origin_l.rstrip("/")
+    host = (request.host_url or "").strip().lower().rstrip("/")
+    if host and origin_norm == host:
+        return True
+    try:
+        configured = current_app.config["OPENCUT"].cors_origins or []
+    except Exception:
+        configured = []
+    allowed = {str(o).strip().lower().rstrip("/") for o in configured}
+    return origin_norm in allowed
 
 
 @system_bp.route("/health", methods=["GET"])
