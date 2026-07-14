@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Make smart renders transactional and media-validated
+
+- Smart render now records source codec, stream-map, keyframe, frame-rate, and
+  container constraints before choosing partial re-encode. Codec-mismatched,
+  variable-frame-rate, subtitle, data-stream, and unsafe MPEG-TS combinations
+  use an explicit whole-file fallback instead of concatenating incompatible
+  segments.
+- Partial and fallback renders are built in a sibling staging file. FFprobe
+  then verifies stream counts, codec, duration/start tolerances, A/V/subtitle
+  alignment, and sampled timestamp monotonicity; FFmpeg decodes the beginning
+  and end before the staged artifact atomically replaces its destination.
+- Every failure now cleans segment/staging files and preserves both the source
+  and any existing destination. Results expose the preflight, fallback reasons,
+  and validation evidence for diagnostics.
+
 ### Fixed - Make updates origin-aware and artifact-authentic
 
 - Corrected release checks to the canonical `SysAdminDoc/OpenCut` repository
