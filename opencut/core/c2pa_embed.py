@@ -26,8 +26,30 @@ from opencut.helpers import (
 logger = logging.getLogger("opencut")
 
 # C2PA manifest version
-C2PA_VERSION = "2.0"
+C2PA_VERSION = "2.4"
 C2PA_CLAIM_GENERATOR = "OpenCut Video Editor"
+
+# IPTC digital-source-type vocabulary (C2PA 2.4 AI transparency). Fully
+# synthesized output is trainedAlgorithmicMedia; AI-assisted edits of real
+# footage are a composite with trained-algorithmic media.
+_DST_TRAINED = "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
+_DST_COMPOSITE = "http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTrainedAlgorithmicMedia"
+
+# Action keywords that indicate an AI/ML step.
+_AI_ACTION_KEYWORDS = ("ai", "auto", "generate", "enhance", "ml", "upscale", "relight", "synth")
+# Keywords that indicate the step fully generated new media (vs. editing real).
+_GENERATIVE_KEYWORDS = ("generate", "synth", "t2i", "t2v", "text_to")
+
+
+def _digital_source_type(action: str) -> str:
+    a = (action or "").lower()
+    if any(kw in a for kw in _GENERATIVE_KEYWORDS):
+        return _DST_TRAINED
+    return _DST_COMPOSITE
+
+
+def _is_ai_action(action: str) -> bool:
+    return any(kw in (action or "").lower() for kw in _AI_ACTION_KEYWORDS)
 
 
 # ---------------------------------------------------------------------------
@@ -92,13 +114,19 @@ def create_c2pa_manifest(
     # Build operations list
     manifest_ops = []
     for op in (operations or []):
+        action = op.get("action", "unknown")
         entry = {
-            "action": op.get("action", "unknown"),
+            "action": action,
             "softwareAgent": C2PA_CLAIM_GENERATOR,
             "parameters": op.get("parameters", {}),
             "timestamp": op.get("timestamp", created),
             "description": op.get("description", ""),
         }
+        # C2PA 2.4 AI transparency: tag AI/ML steps with their IPTC
+        # digital-source-type so downstream verifiers see machine-readable
+        # disclosure on the action itself.
+        if _is_ai_action(action):
+            entry["digitalSourceType"] = _digital_source_type(action)
         manifest_ops.append(entry)
 
     # Build assertions
@@ -122,19 +150,28 @@ def create_c2pa_manifest(
             },
         })
 
-    # AI disclosure assertion
-    ai_ops = [
-        op for op in manifest_ops
-        if any(kw in op.get("action", "").lower()
-               for kw in ("ai", "auto", "generate", "enhance", "ml"))
-    ]
+    # AI disclosure assertion (C2PA 2.4 machine-readable AI transparency).
+    ai_ops = [op for op in manifest_ops if _is_ai_action(op.get("action", ""))]
     if ai_ops:
+        source_types = sorted({_digital_source_type(op["action"]) for op in ai_ops})
         assertions.append({
-            "label": "c2pa.ai_disclosure",
+            "label": "c2pa.ai-disclosure",
             "data": {
+                "digitalSourceType": source_types,
                 "ai_operations": [op["action"] for op in ai_ops],
-                "ai_generated": True,
                 "model_info": "OpenCut AI Pipeline",
+            },
+        })
+
+    # Durable soft-binding assertion: a content fingerprint that lets a
+    # verifier rediscover this manifest even after Premiere re-encodes/transcodes
+    # the media and the hard hash no longer matches.
+    if source_hash:
+        assertions.append({
+            "label": "c2pa.soft-binding",
+            "data": {
+                "alg": "opencut.sha256-content-fingerprint",
+                "blocks": [{"scope": {}, "value": source_hash}],
             },
         })
 
