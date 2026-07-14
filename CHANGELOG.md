@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Confine model-download metadata paths and validate resume
+
+- `model_manager` no longer joins the attacker-controllable `model_name` into a
+  metadata filename verbatim: a new `_safe_model_key`/`_meta_path` pair collapses
+  separators, strips leading dots, and confines the result to
+  `~/.opencut/downloads`, closing an arbitrary-`.json` read/write traversal
+  reachable through the model-download API.
+- A failed metadata write is now logged instead of silently swallowed, so a full
+  disk can no longer hide a partial download that a later resume would append to.
+- Resume records the response `ETag`/`Last-Modified` and sends `If-Range`, so a
+  changed remote asset restarts cleanly (full 200) instead of stitching fresh
+  bytes onto a stale partial file. Added `test_model_manager_paths`; repaired
+  `test_quantize_pytorch_loads_weights_only` to feed the scanner a real file.
+
 ### Added - C2PA 2.4 AI-disclosure and durable soft-binding on export
 
 - Upgraded `c2pa_embed` manifests to the C2PA 2.4 profile: AI/ML actions now
