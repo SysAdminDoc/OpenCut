@@ -1257,6 +1257,26 @@ class TestContentTypeRoutes:
         )
         assert resp.status_code in (200, 403)
 
+    def test_suggest_workflow_bad_confidence_does_not_crash(self, client):
+        # A non-numeric confidence must never 500; safe_float coerces it to the
+        # default so the request completes gracefully (was an unguarded float()).
+        from opencut.security import get_csrf_token
+        resp = client.post(
+            "/api/video/suggest-workflow",
+            json={"classification": {"content_type": "vlog", "confidence": "high"}},
+            headers={"X-OpenCut-Token": get_csrf_token()},
+        )
+        assert resp.status_code == 200
+
+    def test_suggest_workflow_non_object_classification_is_client_error(self, client):
+        from opencut.security import get_csrf_token
+        resp = client.post(
+            "/api/video/suggest-workflow",
+            json={"classification": ["not", "an", "object"]},
+            headers={"X-OpenCut-Token": get_csrf_token()},
+        )
+        assert resp.status_code == 400
+
 
 class TestEstimateRoutes:
     """Smoke tests for estimation routes."""

@@ -401,8 +401,17 @@ def gaussian_splat_preview_frame():
 
         ply_path = validate_filepath(ply_path)
 
-        pos = tuple(float(v) for v in data.get("position", [0, 0, 5]))
-        rot = tuple(float(v) for v in data.get("rotation", [0, 0, 0]))
+        def _vec3(key, default):
+            raw = data.get(key, default)
+            if not isinstance(raw, (list, tuple)) or len(raw) != 3:
+                raise ValueError(f"{key} must be a 3-element [x, y, z] list")
+            try:
+                return tuple(float(v) for v in raw)
+            except (TypeError, ValueError):
+                raise ValueError(f"{key} must contain three numbers") from None
+
+        pos = _vec3("position", [0, 0, 5])
+        rot = _vec3("rotation", [0, 0, 0])
         fov = safe_float(data.get("fov", 60.0), 60.0, min_val=1.0, max_val=179.0)
         res_w = safe_int(data.get("width", 1280), 1280, min_val=64, max_val=4096)
         res_h = safe_int(data.get("height", 720), 720, min_val=64, max_val=4096)

@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Return 400 (not 500) for malformed request bodies on three routes
+
+- `POST /api/video/suggest-workflow` no longer 500s on a non-object
+  `classification` or a non-numeric `confidence`: the object shape is validated
+  (400) and `confidence` goes through `safe_float`, matching the sibling routes.
+- Education overlay/callout/spotlight workers replace bare `event["x"]`-style
+  indexing with `_req_num`/`_req_pair`, so a missing or non-numeric coordinate
+  produces a field-named error (`region requires 'x'`) instead of an opaque
+  `KeyError('x')` job failure.
+- `POST /api/splat/preview-frame` validates `position`/`rotation` are 3-element
+  numeric lists, converting a scalar/dict into a clear 400 instead of a 500.
+
 ### Fixed - Confine model-download metadata paths and validate resume
 
 - `model_manager` no longer joins the attacker-controllable `model_name` into a

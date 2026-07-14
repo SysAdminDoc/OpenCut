@@ -238,14 +238,16 @@ def suggest_workflow():
     classification_data = data.get("classification", {})
     if not classification_data:
         return jsonify({"error": "classification object is required"}), 400
+    if not isinstance(classification_data, dict):
+        return jsonify({"error": "classification must be an object"}), 400
 
     classification = ContentClassification(
         content_type=classification_data.get("content_type", "unknown"),
-        confidence=float(classification_data.get("confidence", 0)),
+        confidence=safe_float(classification_data.get("confidence", 0), 0.0, min_val=0.0, max_val=1.0),
         label=classification_data.get("label", ""),
         description=classification_data.get("description", ""),
-        scores=classification_data.get("scores", {}),
-        video_traits=classification_data.get("video_traits", {}),
+        scores=classification_data.get("scores", {}) if isinstance(classification_data.get("scores"), dict) else {},
+        video_traits=classification_data.get("video_traits", {}) if isinstance(classification_data.get("video_traits"), dict) else {},
     )
 
     result = _suggest(classification)

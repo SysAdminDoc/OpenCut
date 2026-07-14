@@ -28,6 +28,34 @@ logger = logging.getLogger("opencut")
 education_bp = Blueprint("education", __name__)
 
 
+def _req_num(mapping, key, cast, ctx):
+    """Coerce a required numeric field, raising a field-named ValueError.
+
+    Bare ``mapping[key]`` yields an opaque ``KeyError('x')`` and raw ``int()``
+    a bare ``ValueError`` — both surface to the client as an uninformative
+    failed job. This makes the missing/invalid field explicit.
+    """
+    if not isinstance(mapping, dict):
+        raise ValueError(f"{ctx} must be an object")
+    if key not in mapping:
+        raise ValueError(f"{ctx} requires '{key}'")
+    try:
+        return cast(mapping[key])
+    except (TypeError, ValueError):
+        raise ValueError(f"{ctx} field '{key}' must be numeric") from None
+
+
+def _req_pair(mapping, key, ctx):
+    """Coerce a required [x, y] integer pair with a field-named error."""
+    seq = mapping.get(key)
+    if not isinstance(seq, (list, tuple)) or len(seq) < 2:
+        raise ValueError(f"{ctx} field '{key}' must be an [x, y] pair")
+    try:
+        return (int(seq[0]), int(seq[1]))
+    except (TypeError, ValueError):
+        raise ValueError(f"{ctx} field '{key}' must be numeric coordinates") from None
+
+
 # =========================================================================
 # Feature 11.2 - Click & Keystroke Overlay
 # =========================================================================
@@ -46,9 +74,9 @@ def click_overlay(job_id, filepath, data):
     events = []
     for e in raw_events:
         events.append(ClickEvent(
-            timestamp=float(e["timestamp"]),
-            x=int(e["x"]),
-            y=int(e["y"]),
+            timestamp=_req_num(e, "timestamp", float, "click_event"),
+            x=_req_num(e, "x", int, "click_event"),
+            y=_req_num(e, "y", int, "click_event"),
             button=str(e.get("button", "left")),
             duration=float(e.get("duration", 0.4)),
         ))
@@ -80,8 +108,10 @@ def keystroke_overlay(job_id, filepath, data):
 
     events = []
     for e in raw_events:
+        if not isinstance(e, dict) or "keys" not in e:
+            raise ValueError("keystroke_event requires 'keys'")
         events.append(KeystrokeEvent(
-            timestamp=float(e["timestamp"]),
+            timestamp=_req_num(e, "timestamp", float, "keystroke_event"),
             keys=str(e["keys"]),
             duration=float(e.get("duration", 1.5)),
         ))
@@ -160,21 +190,21 @@ def generate_callout_route(job_id, filepath, data):
         if a.get("region"):
             r = a["region"]
             region = Region(
-                x=int(r["x"]), y=int(r["y"]),
-                w=int(r["w"]), h=int(r["h"]),
+                x=_req_num(r, "x", int, "region"), y=_req_num(r, "y", int, "region"),
+                w=_req_num(r, "w", int, "region"), h=_req_num(r, "h", int, "region"),
             )
 
         arrow_from = None
         arrow_to = None
         if a.get("arrow_from"):
-            arrow_from = (int(a["arrow_from"][0]), int(a["arrow_from"][1]))
+            arrow_from = _req_pair(a, "arrow_from", "annotation")
         if a.get("arrow_to"):
-            arrow_to = (int(a["arrow_to"][0]), int(a["arrow_to"][1]))
+            arrow_to = _req_pair(a, "arrow_to", "annotation")
 
         annotations.append(Annotation(
             type=str(a.get("type", "callout")),
-            start_time=float(a["start_time"]),
-            end_time=float(a["end_time"]),
+            start_time=_req_num(a, "start_time", float, "annotation"),
+            end_time=_req_num(a, "end_time", float, "annotation"),
             region=region,
             text=str(a.get("text", "")),
             number=int(a.get("number", 0)),
@@ -207,10 +237,10 @@ def create_spotlight_route(job_id, filepath, data):
         raise ValueError("No region provided")
 
     region = Region(
-        x=int(region_data["x"]),
-        y=int(region_data["y"]),
-        w=int(region_data["w"]),
-        h=int(region_data["h"]),
+        x=_req_num(region_data, "x", int, "region"),
+        y=_req_num(region_data, "y", int, "region"),
+        w=_req_num(region_data, "w", int, "region"),
+        h=_req_num(region_data, "h", int, "region"),
     )
 
     start = safe_float(data.get("start_time", 0), 0, min_val=0.0)
