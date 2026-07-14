@@ -14,17 +14,18 @@
     "ocRemoveImportedSequence",
     "ocSetSequencePlayhead",
     "ocRemoveImportedItem",
-    "ocGetCaptionTrackSnapshot"
+    "ocGetCaptionTrackSnapshot",
+    "ocCreateSubsequenceFromRange"
   ],
   "f_number": "F267",
   "file_write_count": 1,
   "harness_version": 1,
-  "mutating_count": 8,
+  "mutating_count": 9,
   "panel_manifest": "extension/com.opencut.uxp/uxp-udt-harness.json",
   "read_only_command": "await window.OpenCutUXPUdtHarness.run()",
   "run_command": "await window.OpenCutUXPUdtHarness.run({ includeMutating: true })",
   "safe_default_count": 6,
-  "scenario_count": 15,
+  "scenario_count": 16,
   "scenarios": [
     {
       "acceptable_blockers": [
@@ -462,6 +463,40 @@
       "safe_by_default": true,
       "status": "direct_uxp",
       "uxp_path": "Sequence.getCaptionTrackCount(), Sequence.getCaptionTrack(), and CaptionTrack.getTrackItems() read APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found",
+        "Sequence.createSubsequence is unavailable",
+        "Sequence range action factories are unavailable",
+        "Premiere did not apply the requested subsequence range",
+        "Premiere did not restore the original sequence range"
+      ],
+      "action": "ocCreateSubsequenceFromRange",
+      "expected_result_keys": [
+        "ok",
+        "sequenceName",
+        "rangeVerification",
+        "restoration"
+      ],
+      "fixture": "disposable_active_sequence",
+      "id": "f267-16-ocCreateSubsequenceFromRange",
+      "mutates_project": true,
+      "payload": {
+        "endSeconds": 1,
+        "ignoreTrackTargeting": true,
+        "startSeconds": 0
+      },
+      "risk": "low",
+      "role": "Create a disposable subsequence after setting, reading back, and restoring the active sequence range.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project.lockedAccess(), Project.executeTransaction(), Sequence.createSetInPointAction(), Sequence.createSetOutPointAction(), and Sequence.createSubsequence().",
       "writes_files": false
     }
   ],

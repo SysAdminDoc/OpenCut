@@ -7,7 +7,8 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint client/main.js",
+    "lint": "eslint client/main.js && npm run lint:premiere",
+    "lint:premiere": "cd ../com.opencut.uxp && eslint main.js",
     "test": "vitest run --config vitest.config.mjs",
     "audit:check": "node scripts/check-advisories.mjs",
     "audit:check:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:check",
@@ -17,7 +18,10 @@
     "build:verify:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" build:verify"
   },
   "devDependencies": {
-    "eslint": "^8.0.0",
+    "@adobe/eslint-plugin-premierepro": "26.3.0",
+    "@adobe/premierepro": "26.3.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.7.0",
     "terser": "^5.47.1",
     "vite": "^8.1.0",
     "vitest": "^4.1.6"

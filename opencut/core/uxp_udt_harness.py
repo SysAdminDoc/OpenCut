@@ -49,6 +49,11 @@ _PAYLOADS: dict[str, dict] = {
     },
     "ocCreateSmartBins": {"bins": [{"name": "OpenCut UDT Smoke"}]},
     "ocGetProjectBins": {},
+    "ocCreateSubsequenceFromRange": {
+        "startSeconds": 0,
+        "endSeconds": 1,
+        "ignoreTrackTargeting": True,
+    },
     "ocExportSequenceRange": {
         "startSeconds": 0,
         "endSeconds": 1,
@@ -89,6 +94,7 @@ _SCENARIO_SAFETY: dict[str, dict] = {
     "ocBatchRenameProjectItems": {"fixture": "project_item_named_open_cut_udt_fixture", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocCreateSmartBins": {"fixture": "open_project", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocGetProjectBins": {"fixture": "open_project", "mutates_project": False, "writes_files": False, "safe_by_default": True},
+    "ocCreateSubsequenceFromRange": {"fixture": "disposable_active_sequence", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocExportSequenceRange": {"fixture": "active_sequence_and_writable_temp_path", "mutates_project": False, "writes_files": True, "safe_by_default": False},
     "ocRemoveSequenceMarkers": {"fixture": "marker_created_by_ocAddSequenceMarkers", "mutates_project": True, "writes_files": False, "safe_by_default": False},
     "ocUnrenameItems": {"fixture": "renamed_project_item", "mutates_project": True, "writes_files": False, "safe_by_default": False},
@@ -107,6 +113,7 @@ _RESULT_KEYS: dict[str, tuple[str, ...]] = {
     "ocBatchRenameProjectItems": ("ok", "renamed"),
     "ocCreateSmartBins": ("ok", "created"),
     "ocGetProjectBins": ("ok", "bins", "count"),
+    "ocCreateSubsequenceFromRange": ("ok", "sequenceName", "rangeVerification", "restoration"),
     "ocExportSequenceRange": ("ok", "outputPath"),
     "ocRemoveSequenceMarkers": ("ok", "removed"),
     "ocUnrenameItems": ("ok", "renamed"),
@@ -133,6 +140,13 @@ def _scenario_for_entry(entry: dict, index: int) -> dict:
             "caption_api_missing",
             "caption_track_items_unavailable",
             "CaptionTrack.getTrackItems",
+        ])
+    if name == "ocCreateSubsequenceFromRange":
+        acceptable_blockers.extend([
+            "Sequence.createSubsequence is unavailable",
+            "Sequence range action factories are unavailable",
+            "Premiere did not apply the requested subsequence range",
+            "Premiere did not restore the original sequence range",
         ])
     return {
         "id": f"f267-{index:02d}-{name}",
@@ -164,6 +178,13 @@ def build_udt_harness_manifest() -> dict:
         "risk": "low",
         "status": "direct_uxp",
         "uxp_path": "Sequence.getCaptionTrackCount(), Sequence.getCaptionTrack(), and CaptionTrack.getTrackItems() read APIs.",
+    })
+    direct_entries.append({
+        "name": "ocCreateSubsequenceFromRange",
+        "role": "Create a disposable subsequence after setting, reading back, and restoring the active sequence range.",
+        "risk": "low",
+        "status": "direct_uxp",
+        "uxp_path": "Project.lockedAccess(), Project.executeTransaction(), Sequence.createSetInPointAction(), Sequence.createSetOutPointAction(), and Sequence.createSubsequence().",
     })
     scenarios = [
         _scenario_for_entry(entry, index)

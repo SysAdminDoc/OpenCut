@@ -9,7 +9,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
 PARITY_MANIFEST = REPO_ROOT / "opencut" / "_generated" / "cep_uxp_parity.json"
-UXP_ONLY_DIRECT_ACTIONS = {"ocGetCaptionTrackSnapshot"}
+UXP_ONLY_DIRECT_ACTIONS = {
+    "ocCreateSubsequenceFromRange",
+    "ocGetCaptionTrackSnapshot",
+}
 
 
 def _read_main_js() -> str:
@@ -37,7 +40,8 @@ def test_direct_action_map_matches_parity_manifest():
 
     assert _direct_action_names(source) == direct_manifest_names | UXP_ONLY_DIRECT_ACTIONS
     assert len(direct_manifest_names) == 14
-    assert len(_direct_action_names(source)) == 15
+    assert len(_direct_action_names(source)) == 16
+    assert "ocCreateSubsequenceFromRange" in _direct_action_names(source)
     assert "ocGetCaptionTrackSnapshot" in _direct_action_names(source)
     assert "ocAddNativeCaptionTrack" not in direct_manifest_names
     assert "ocQeReflect" not in direct_manifest_names
