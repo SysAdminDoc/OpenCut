@@ -1,4 +1,11 @@
-import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-utils.js";
+import {
+  escapeHtml as escapeHtmlValue,
+  safeDomIdSegment,
+  expandRenamePattern,
+  computeInverseRenames,
+  buildSmartBinRules,
+  summarizeRenamePreview,
+} from "./uxp-utils.js";
 
 /**
  * OpenCut UXP Panel — main.js
@@ -3188,14 +3195,23 @@ function updateTimelineReadiness() {
     batchExportBtn.disabled = !backendOnline || !clipPath || !outputDir || exportWindows.length === 0;
   }
 
+  // Batch rename and smart bins run directly through the UXP host bridge.
+  // Enable them when the bridge is available; keep an honest disabled reason
+  // (routes through CEP) on hosts without the bridge.
+  const cepOnlyReason = t(
+    "uxp.timeline.runtime.rename_bins_need_uxp",
+    "Available on Premiere builds with the UXP host bridge; this build routes it through the CEP panel.",
+  );
   const renameBtn = document.getElementById("runBatchRenameBtn");
   if (renameBtn && !renameBtn.classList.contains("loading")) {
-    renameBtn.disabled = true;
+    renameBtn.disabled = !bridgeReady;
+    renameBtn.title = bridgeReady ? "" : cepOnlyReason;
   }
 
   const smartBinsBtn = document.getElementById("runSmartBinsBtn");
   if (smartBinsBtn && !smartBinsBtn.classList.contains("loading")) {
-    smartBinsBtn.disabled = true;
+    smartBinsBtn.disabled = !bridgeReady;
+    smartBinsBtn.title = bridgeReady ? "" : cepOnlyReason;
   }
 
   const srtBtn = document.getElementById("runSrtImportBtn");
@@ -4904,28 +4920,139 @@ async function runBatchExport() {
 }
 
 /** ── BATCH RENAME ── */
+// Preview-before-mutation state: the first click arms + previews, the second
+// applies. After a successful rename the button offers a one-click undo that
+// applies the recorded inverse.
+let _renameArmed = null;      // { renames } pending apply
+let _renameUndo = null;       // { inverse } available to revert
+
+function _setBtnLabel(btnId, label) {
+  const el = document.getElementById(btnId);
+  if (el) el.textContent = label;
+}
+
 async function runBatchRename() {
-  const pattern = document.getElementById("renamePattern")?.value?.trim() ?? "{name}_{index:03d}";
-  UIController.showToast(t("uxp.timeline.runtime.batch_rename_cep", "Batch rename still runs through the CEP panel in this build."), "info");
+  if (!PProBridge.available()) {
+    UIController.showToast(t("uxp.timeline.runtime.rename_needs_uxp", "Batch rename needs the UXP host bridge; this Premiere build routes it through the CEP panel."), "warning");
+    return;
+  }
+
+  // Undo phase: the button is offering to revert the last rename.
+  if (_renameUndo) {
+    const inverse = _renameUndo;
+    _renameUndo = null;
+    _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
+    UIController.setButtonLoading("runBatchRenameBtn", true);
+    const res = await PProBridge.batchRenameProjectItems({ renames: inverse });
+    UIController.setButtonLoading("runBatchRenameBtn", false);
+    UIController.showToast(formatI18n("uxp.timeline.runtime.rename_undone", "Reverted {count} rename(s).", { count: res?.renamed ?? 0 }), res?.ok ? "success" : "warning");
+    return;
+  }
+
+  const pattern = document.getElementById("renamePattern")?.value?.trim() ?? "{stem}_{index:03d}{ext}";
+  const items = await PProBridge.getProjectItems();
+  if (!items.length) {
+    UIController.showToast(t("uxp.timeline.runtime.no_items_to_rename", "No project items available to rename."), "warning");
+    return;
+  }
+  const renames = expandRenamePattern(items, pattern);
+  if (!renames.length) {
+    UIController.showToast(t("uxp.timeline.runtime.rename_no_changes", "That pattern produces no changes."), "info");
+    _renameArmed = null;
+    _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
+    return;
+  }
+
+  // First click: preview + arm.
+  if (!_renameArmed) {
+    _renameArmed = { renames };
+    const preview = summarizeRenamePreview(renames);
+    _setBtnLabel("runBatchRenameBtn", formatI18n("uxp.timeline.runtime.apply_rename_n", "Apply rename to {count} item(s)", { count: preview.count }));
+    UIController.showToast(formatI18n("uxp.timeline.runtime.rename_preview", "Preview: {count} item(s) will be renamed, e.g. {example}. Click again to apply.", { count: preview.count, example: preview.sample[0] ?? "" }), "info", 8000);
+    noteTimelineAction(
+      t("uxp.timeline.runtime.rename_preview_title", "Rename preview"),
+      "warning",
+      preview.sample.join("\n"),
+      pattern,
+      formatI18n("uxp.timeline.runtime.rename_pending", "{count} rename(s) pending", { count: preview.count })
+    );
+    return;
+  }
+
+  // Second click: apply.
+  const pending = _renameArmed.renames;
+  _renameArmed = null;
+  _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
+  UIController.setButtonLoading("runBatchRenameBtn", true);
+  const result = await PProBridge.batchRenameProjectItems({ renames: pending });
+  UIController.setButtonLoading("runBatchRenameBtn", false);
+
+  const renamed = result?.renamed ?? 0;
+  if (!result?.ok && renamed === 0) {
+    UIController.showToast(formatI18n("uxp.timeline.runtime.rename_failed", "Batch rename failed: {reason}", { reason: result?.reason ?? "unknown error" }), "error");
+    return;
+  }
+
+  // Record the inverse (limited to what applied) so the next click can undo.
+  _renameUndo = computeInverseRenames(pending.slice(0, renamed));
+  _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.runtime.undo_rename", "Undo last rename"));
+
+  const partial = renamed < pending.length;
+  UIController.showToast(
+    partial
+      ? formatI18n("uxp.timeline.runtime.rename_partial", "Renamed {done} of {total} item(s); click to undo.", { done: renamed, total: pending.length })
+      : formatI18n("uxp.timeline.runtime.rename_done", "Renamed {count} item(s); click to undo.", { count: renamed }),
+    partial ? "warning" : "success"
+  );
   noteTimelineAction(
-    t("uxp.timeline.runtime.rename_via_cep_title", "Rename via CEP"),
-    "warning",
-    t("uxp.timeline.runtime.rename_via_cep_detail", "Batch rename is planned from this workspace, but execution still lives in the CEP panel today."),
+    t("uxp.timeline.runtime.rename_applied_title", "Batch rename applied"),
+    partial ? "warning" : "success",
+    formatI18n("uxp.timeline.runtime.rename_applied_detail", "Renamed {done} of {total} project item(s). An inverse rename is available via the button.", { done: renamed, total: pending.length }),
     pattern,
-    t("uxp.timeline.runtime.rename_handoff", "Rename handoff")
+    formatI18n("uxp.timeline.runtime.rename_count", "{count} renamed", { count: renamed })
   );
 }
 
 /** ── SMART BINS ── */
 async function runSmartBins() {
+  if (!PProBridge.available()) {
+    UIController.showToast(t("uxp.timeline.runtime.bins_needs_uxp", "Smart bins need the UXP host bridge; this Premiere build routes it through the CEP panel."), "warning");
+    return;
+  }
   const strategy = getSelectLabel("binStrategy", "File Type");
-  UIController.showToast(t("uxp.timeline.runtime.smart_bins_cep", "Smart bins still execute through the CEP panel in this build."), "info");
+  const items = await PProBridge.getProjectItems();
+  if (!items.length) {
+    UIController.showToast(t("uxp.timeline.runtime.no_items_for_bins", "No project items available to organize."), "warning");
+    return;
+  }
+  const rules = buildSmartBinRules(items, strategy);
+  if (!rules.length) {
+    UIController.showToast(t("uxp.timeline.runtime.bins_no_rules", "No bins to create for that strategy."), "info");
+    return;
+  }
+
+  UIController.setButtonLoading("runSmartBinsBtn", true);
+  const result = await PProBridge.createSmartBins({ bins: rules });
+  UIController.setButtonLoading("runSmartBinsBtn", false);
+
+  const created = result?.created ?? 0;
+  if (!result?.ok && created === 0) {
+    UIController.showToast(formatI18n("uxp.timeline.runtime.bins_failed", "Smart bins failed: {reason}", { reason: result?.reason ?? "unknown error" }), "error");
+    return;
+  }
+  const partial = created < rules.length;
+  UIController.showToast(
+    partial
+      ? formatI18n("uxp.timeline.runtime.bins_partial", "Created {done} of {total} bin(s).", { done: created, total: rules.length })
+      : formatI18n("uxp.timeline.runtime.bins_done", "Created {count} smart bin(s).", { count: created }),
+    partial ? "warning" : "success"
+  );
   noteTimelineAction(
-    t("uxp.timeline.runtime.smart_bins_via_cep_title", "Smart bins via CEP"),
-    "warning",
-    t("uxp.timeline.runtime.smart_bins_via_cep_detail", "Smart bin rules can be planned here, but execution still lives in the CEP panel today."),
+    t("uxp.timeline.runtime.bins_applied_title", "Smart bins created"),
+    partial ? "warning" : "success",
+    formatI18n("uxp.timeline.runtime.bins_applied_detail", "Created {done} of {total} bin(s) using the {strategy} strategy.", { done: created, total: rules.length, strategy }),
     strategy,
-    t("uxp.timeline.runtime.smart_bin_handoff", "Smart bin handoff")
+    formatI18n("uxp.timeline.runtime.bins_count", "{count} bins", { count: created })
   );
 }
 
