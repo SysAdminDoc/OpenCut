@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Guard and transact every direct asset download
+
+- Added one shared downloader that rejects local/private initial hosts and
+  redirect targets, re-resolves again in the HTTP/HTTPS connection handler to
+  catch DNS rebinding, enforces declared and streamed byte ceilings, fsyncs a
+  sibling partial, validates content, and atomically promotes it.
+- Stock media, plugin archives, Freesound previews, Google Font files, and
+  Real-ESRGAN weights now use feature-specific caps and media/ZIP/font/PyTorch
+  validators. HTML/error bodies and interrupted or oversized responses leave no
+  partial file and cannot overwrite an existing asset.
+- Google Fonts CSS metadata is also fetched through the guarded opener with a
+  2 MiB cap; invalid cached Real-ESRGAN weights are no longer trusted solely
+  because they exceed 1 KiB.
+
 ### Fixed - Make smart renders transactional and media-validated
 
 - Smart render now records source codec, stream-map, keyframe, frame-rate, and

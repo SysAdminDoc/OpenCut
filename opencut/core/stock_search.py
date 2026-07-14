@@ -8,15 +8,20 @@ preview results, download, and import into projects.
 import json
 import logging
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.url_safety import transactional_download, validate_media_download
+
 logger = logging.getLogger("opencut")
 
 SUPPORTED_SOURCES = {"pexels", "pixabay"}
+_MAX_STOCK_DOWNLOAD_BYTES = 4 * 1024 * 1024 * 1024
+_SAFE_MEDIA_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 @dataclass
@@ -347,9 +352,10 @@ def download_stock_media(
 
     if not url:
         raise ValueError("Download URL is required")
-
-    from opencut.core.url_safety import validate_public_http_url
-    url = validate_public_http_url(url, label="Stock media download URL")
+    if source not in SUPPORTED_SOURCES:
+        raise ValueError(f"Unsupported stock source: {source}")
+    if not _SAFE_MEDIA_ID_RE.fullmatch(str(media_id or "")):
+        raise ValueError("Invalid stock media_id")
 
     ext = ".mp4" if "video" in url.lower() else ".jpg"
     if ".png" in url.lower():
@@ -359,7 +365,21 @@ def download_stock_media(
     if on_progress:
         on_progress(30, "Downloading")
 
-    urllib.request.urlretrieve(url, output_path)
+    def _report(written: int, declared: int) -> None:
+        if on_progress and declared > 0:
+            on_progress(30 + min(65, int(65 * written / declared)), "Downloading")
+
+    transactional_download(
+        url,
+        output_path,
+        max_bytes=_MAX_STOCK_DOWNLOAD_BYTES,
+        timeout=300,
+        validator=validate_media_download,
+        allowed_content_types=("video/", "image/", "application/octet-stream"),
+        label="stock media download",
+        local_alternative="local media files",
+        on_chunk=_report,
+    )
 
     file_size = os.path.getsize(output_path)
 

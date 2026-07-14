@@ -18,6 +18,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.url_safety import transactional_download, validate_media_download
 from opencut.helpers import OPENCUT_DIR, FFmpegCmd, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -28,6 +29,7 @@ logger = logging.getLogger("opencut")
 SFX_CACHE_DIR = os.path.join(OPENCUT_DIR, "sfx_cache")
 SFX_INDEX_FILE = os.path.join(SFX_CACHE_DIR, "index.json")
 FREESOUND_API_BASE = "https://freesound.org/apiv2"
+_MAX_SFX_DOWNLOAD_BYTES = 256 * 1024 * 1024
 
 # Built-in SFX library (fallback when Freesound API is unavailable)
 BUILTIN_SFX = [
@@ -347,6 +349,8 @@ def download_sfx(
     # Handle Freesound SFX
     if not api_key:
         raise ValueError("Freesound API key required to download non-builtin SFX")
+    if not str(sfx_id).isdigit():
+        raise ValueError("Freesound SFX ID must be numeric")
 
     if on_progress:
         on_progress(20, "Fetching from Freesound.org...")
@@ -369,9 +373,6 @@ def download_sfx(
         if not download_url:
             raise ValueError(f"No preview URL found for Freesound sound {sfx_id}")
 
-        from opencut.core.url_safety import validate_public_http_url
-        download_url = validate_public_http_url(download_url, label="Freesound preview URL")
-
         if on_progress:
             on_progress(50, f"Downloading {name}...")
 
@@ -380,7 +381,16 @@ def download_sfx(
         out_path = os.path.join(target_dir, f"freesound_{sfx_id}_{safe_name}.mp3")
         os.makedirs(target_dir, exist_ok=True)
 
-        urllib.request.urlretrieve(download_url, out_path)
+        transactional_download(
+            download_url,
+            out_path,
+            max_bytes=_MAX_SFX_DOWNLOAD_BYTES,
+            timeout=120,
+            validator=validate_media_download,
+            allowed_content_types=("audio/", "application/octet-stream"),
+            label="Freesound preview download",
+            local_alternative="built-in or local SFX files",
+        )
 
         # Update cache
         index[sfx_id] = {

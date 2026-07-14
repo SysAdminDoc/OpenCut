@@ -853,10 +853,9 @@ class TestUpscalePro(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             upscale_pro.REALESRGAN_MODELS_DIR = tmp_dir
             try:
-                with patch("opencut.core.upscale_pro.urllib.request.urlretrieve") as mock_retrieve:
-                    def _fake_retrieve(url, target):
-                        Path(target).write_bytes(b"x" * 2048)
-                        return target, None
+                with patch("opencut.core.upscale_pro.transactional_download") as mock_retrieve:
+                    def _fake_retrieve(url, target, **_kwargs):
+                        Path(target).write_bytes(b"\x80" + b"x" * 2047)
 
                     mock_retrieve.side_effect = _fake_retrieve
                     path = upscale_pro._resolve_realesrgan_model_path("realesrgan-x4plus")

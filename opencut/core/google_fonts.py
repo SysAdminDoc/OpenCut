@@ -19,6 +19,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.url_safety import (
+    open_validated_url,
+    read_response_bytes,
+    transactional_download,
+    validate_font_download,
+)
 from opencut.helpers import OPENCUT_DIR
 
 logger = logging.getLogger("opencut")
@@ -29,6 +35,8 @@ logger = logging.getLogger("opencut")
 FONTS_DIR = os.path.join(OPENCUT_DIR, "fonts")
 FONTS_CATALOG_CACHE = os.path.join(FONTS_DIR, "catalog.json")
 FONTS_CATALOG_MAX_AGE = 86400 * 7  # 7 days cache
+_MAX_FONT_DOWNLOAD_BYTES = 64 * 1024 * 1024
+_MAX_FONT_CSS_BYTES = 2 * 1024 * 1024
 
 GOOGLE_FONTS_API_BASE = "https://www.googleapis.com/webfonts/v1/webfonts"
 GOOGLE_FONTS_DOWNLOAD_BASE = "https://fonts.google.com/download"
@@ -368,8 +376,15 @@ def download_font(
             "User-Agent": "Mozilla/5.0 (compatible; OpenCut/1.0)",
         })
 
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            css_text = resp.read().decode()
+        with open_validated_url(
+            req.full_url,
+            label="Google Fonts CSS URL",
+            timeout=15,
+            headers=dict(req.header_items()),
+        ) as resp:
+            css_text = read_response_bytes(
+                resp, max_bytes=_MAX_FONT_CSS_BYTES
+            ).decode("utf-8", errors="replace")
 
         # Extract TTF/WOFF2 URLs from CSS
         import re
@@ -386,7 +401,20 @@ def download_font(
                 filename = f"{font_name.replace(' ', '_')}_{safe_variant}_{i}{ext}"
                 filepath = os.path.join(font_dir, filename)
 
-                urllib.request.urlretrieve(url, filepath)
+                transactional_download(
+                    url,
+                    filepath,
+                    max_bytes=_MAX_FONT_DOWNLOAD_BYTES,
+                    timeout=60,
+                    validator=validate_font_download,
+                    allowed_content_types=(
+                        "font/",
+                        "application/font",
+                        "application/octet-stream",
+                    ),
+                    label="Google Font download",
+                    local_alternative="locally installed fonts",
+                )
                 downloaded_files.append(filepath)
 
                 if on_progress:
