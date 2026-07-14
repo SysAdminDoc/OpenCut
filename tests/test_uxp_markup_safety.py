@@ -35,10 +35,24 @@ EXPECTED_INNER_HTML_SINKS = Counter(
         ("renderPlan", "list"): 1,
         ("renderReview", "notes"): 1,
         ("populateSelects", "sel"): 1,
+        # Plugin-trust dashboard sinks: empty-state/loading/error branches
+        # interpolate only escaped static i18n strings; the populated grid
+        # assigns the pre-escaped `html` built by the plugin row helpers.
+        ("renderPluginTrustDashboard", "grid"): 2,
+        ("uxpLoadPluginTrust", "grid"): 2,
     }
 )
 
-EXPECTED_HTML_ACCUMULATORS = Counter({("uxpLoadEngines", "html"): 12})
+EXPECTED_HTML_ACCUMULATORS = Counter(
+    {
+        ("uxpLoadEngines", "html"): 12,
+        # Plugin-trust dashboard: every dynamic value (plugin/quarantine names,
+        # versions, status/summary text, action routes) is wrapped in
+        # UIController.escapeHtml by the pluginTrustRowHtml/pluginQuarantineRowHtml/
+        # pluginMarketplaceRowsHtml helpers before being accumulated here.
+        ("renderPluginTrustDashboard", "html"): 3,
+    }
+)
 
 REQUIRED_ESCAPED_FIELD_PATTERNS = {
     "clip names and paths": (
