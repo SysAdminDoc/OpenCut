@@ -21,6 +21,43 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ============================================================
+# Route input-validation helpers
+# ============================================================
+class TestEducationValidationHelpers(unittest.TestCase):
+    """_req_num / _req_pair give field-named errors instead of opaque KeyError."""
+
+    def test_req_num_missing_key_names_field(self):
+        from opencut.routes.education_routes import _req_num
+        with self.assertRaises(ValueError) as ctx:
+            _req_num({"y": 1}, "x", int, "region")
+        self.assertIn("x", str(ctx.exception))
+        self.assertIn("region", str(ctx.exception))
+
+    def test_req_num_non_numeric_names_field(self):
+        from opencut.routes.education_routes import _req_num
+        with self.assertRaises(ValueError) as ctx:
+            _req_num({"x": "abc"}, "x", int, "region")
+        self.assertIn("numeric", str(ctx.exception).lower())
+
+    def test_req_num_valid(self):
+        from opencut.routes.education_routes import _req_num
+        self.assertEqual(_req_num({"x": "5"}, "x", int, "region"), 5)
+
+    def test_req_num_non_dict(self):
+        from opencut.routes.education_routes import _req_num
+        with self.assertRaises(ValueError):
+            _req_num(["not", "a", "dict"], "x", int, "region")
+
+    def test_req_pair_valid_and_invalid(self):
+        from opencut.routes.education_routes import _req_pair
+        self.assertEqual(_req_pair({"a": [3, 4]}, "a", "annotation"), (3, 4))
+        with self.assertRaises(ValueError):
+            _req_pair({"a": [3]}, "a", "annotation")
+        with self.assertRaises(ValueError):
+            _req_pair({"a": "xy"}, "a", "annotation")
+
+
+# ============================================================
 # Click & Keystroke Overlay (11.2)
 # ============================================================
 class TestClickOverlayDataTypes(unittest.TestCase):
