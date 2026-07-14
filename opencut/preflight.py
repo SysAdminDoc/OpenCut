@@ -5,8 +5,8 @@ conditions that would cause it to fail mid-run: missing deps, missing
 file, insufficient disk space, unreadable media. Returns a structured
 report the panel can render as a "are you sure?" modal.
 
-Keep preflight *cheap* — no Whisper load, no probe with ffmpeg, just
-quick filesystem + module-import checks. 100ms budget.
+Keep preflight *cheap* — no Whisper load and only the shared, cached FFmpeg
+security probe plus quick filesystem/module-import checks.
 """
 
 from __future__ import annotations
@@ -75,9 +75,9 @@ def _probe_check(key: str, required) -> dict:
                 "fix": "Install with 'pip install faster-whisper' or from the Settings → Dependencies tab."
                        if not ok else ""}
     if key == "ffmpeg":
-        ok = shutil.which("ffmpeg") is not None or bool(os.environ.get("OPENCUT_FFMPEG_PATH"))
+        ok = c.ffmpeg_security_available()
         return {"ok": ok, "label": _check_name(key),
-                "fix": "Install FFmpeg or rely on the bundled binary in the installer."
+                "fix": "Install FFmpeg 8.1.2+ or rely on the verified bundled binary."
                        if not ok else ""}
     if key == "repeat_detect":
         ok = _try_import("faster_whisper") is not None or _try_import("whisper") is not None

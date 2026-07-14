@@ -42,20 +42,25 @@ def check_python():
 
 
 def check_ffmpeg():
-    if shutil.which("ffmpeg"):
-        try:
-            r = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
-            ver = r.stdout.split("\n")[0] if r.stdout else "unknown"
-            print(f"  [OK] FFmpeg found: {ver[:60]}")
-        except Exception:
-            print("  [OK] FFmpeg found on PATH")
-    else:
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
         print("  [!!] FFmpeg not found on PATH.")
-        print("       Download from https://ffmpeg.org/download.html")
-        print("       Or: winget install ffmpeg  |  brew install ffmpeg  |  apt install ffmpeg")
-        resp = input("\n  Continue without FFmpeg? (y/n): ").strip().lower()
-        if resp != "y":
-            sys.exit(1)
+        print("       Install FFmpeg 8.1.2+ from https://ffmpeg.org/download.html")
+        sys.exit(1)
+
+    from opencut.core.ffmpeg_provenance import probe_binary_security
+
+    grade = probe_binary_security(ffmpeg, timeout=5)
+    if not grade.get("ok"):
+        print(f"  [!!] FFmpeg blocked: {grade.get('version') or 'unknown'}")
+        print(f"       {grade.get('reason')}")
+        print("       CVE-2026-8461 requires FFmpeg 8.1.2+ or a dated post-fix snapshot.")
+        sys.exit(1)
+
+    print(
+        f"  [OK] FFmpeg {grade.get('version')} clears the security floor "
+        f"({grade.get('lane')} lane)"
+    )
 
 
 def install_deps():

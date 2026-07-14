@@ -9,12 +9,76 @@
 #              are separate opt-in processes, not default container ports.
 # ============================================================
 
-# Stage 1: Base with Python and system deps
-FROM python:3.12-slim AS base
+# Stage 0: build the exact CVE-floor release from upstream source. Debian's
+# distro package can lag the patched point release, so it is never accepted as
+# the container's media runtime.
+FROM python:3.12-slim-bookworm AS ffmpeg-build
 
-# System dependencies for FFmpeg, OpenCV, and audio processing
+ARG FFMPEG_VERSION=8.1.2
+ARG FFMPEG_SHA256=464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
+    build-essential \
+    ca-certificates \
+    curl \
+    libass-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libfribidi-dev \
+    libgnutls28-dev \
+    libmp3lame-dev \
+    libopus-dev \
+    libvorbis-dev \
+    libvpx-dev \
+    libx264-dev \
+    libx265-dev \
+    nasm \
+    pkg-config \
+    xz-utils \
+    yasm \
+    && curl -fsSLo /tmp/ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+    && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum --check --strict \
+    && mkdir /tmp/ffmpeg-src \
+    && tar --extract --xz --file /tmp/ffmpeg.tar.xz --directory /tmp/ffmpeg-src --strip-components=1 \
+    && cd /tmp/ffmpeg-src \
+    && ./configure \
+        --prefix=/opt/ffmpeg \
+        --disable-debug \
+        --disable-doc \
+        --disable-ffplay \
+        --enable-gpl \
+        --enable-version3 \
+        --enable-gnutls \
+        --enable-libass \
+        --enable-libfontconfig \
+        --enable-libfreetype \
+        --enable-libfribidi \
+        --enable-libmp3lame \
+        --enable-libopus \
+        --enable-libvorbis \
+        --enable-libvpx \
+        --enable-libx264 \
+        --enable-libx265 \
+    && make -j"$(nproc)" \
+    && make install
+
+# Stage 1: Base with Python and the matching runtime libraries.
+FROM python:3.12-slim-bookworm AS base
+
+# Development package names are stable across the pinned Debian base and pull
+# the corresponding runtime libraries used by the upstream-built binaries.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libass-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libfribidi-dev \
+    libgnutls28-dev \
+    libmp3lame-dev \
+    libopus-dev \
+    libvorbis-dev \
+    libvpx-dev \
+    libx264-dev \
+    libx265-dev \
     libsndfile1 \
     # libgl1 replaces libgl1-mesa-glx in Debian 12+ (bookworm). The old
     # virtual package was dropped and pulling it fails the apt step on
@@ -23,6 +87,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ffmpeg-build /opt/ffmpeg /opt/ffmpeg
+ENV PATH="/opt/ffmpeg/bin:${PATH}"
+RUN ffmpeg -version | grep -F "ffmpeg version 8.1.2" \
+    && ffprobe -version | grep -F "ffprobe version 8.1.2"
 
 WORKDIR /app
 
@@ -45,6 +114,10 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY . /app
+
+# Project-owned provenance gate records CVE-2026-8461 and both upstream fix
+# commits and fails the image build if the resolved binary is ever downgraded.
+RUN python scripts/verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg
 
 # Create non-root user and data directories
 RUN groupadd -r opencut && useradd -r -g opencut -d /home/opencut -m opencut \

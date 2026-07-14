@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
+    get_ffmpeg_path,
     get_ffprobe_path,
     get_video_info,
     output_path,
@@ -262,7 +263,7 @@ def detect_speaker_positions(
 
                     try:
                         result = subprocess.run([
-                            "ffmpeg", "-hide_banner", "-loglevel", "error",
+                            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                             "-i", first_frame,
                             "-vf", (
                                 f"crop={cell_w}:{cell_h}:{cx}:{cy},"

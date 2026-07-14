@@ -79,7 +79,7 @@ cd OpenCut
 ```
 
 Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
-1. Check for and install FFmpeg (via winget) if missing
+1. Install or upgrade FFmpeg and reject builds below 8.1.2
 2. Verify Python 3.11+ is on your PATH (unsupported versions are rejected before installation)
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
@@ -94,11 +94,11 @@ After the installer finishes, you are ready to use OpenCut -- see **Launch** bel
 
 If you prefer manual control or are on macOS/Linux, follow these steps:
 
-1. **Install FFmpeg** and make sure it is on your system PATH:
+1. **Install FFmpeg 8.1.2 or newer** and make sure it is on your system PATH. OpenCut blocks older and unparseable builds before media processing because releases before 8.1.2 are affected by CVE-2026-8461:
    - Windows: `winget install Gyan.FFmpeg` or download from https://ffmpeg.org/download.html and add the `bin` folder to your PATH
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or equivalent for your distro
-   - Verify: `ffmpeg -version` should print version info
+   - Verify: `python scripts/verify_ffmpeg_provenance.py` must report `RESULT: OK`
 
 2. **Clone and install the Python package:**
    ```bash
@@ -133,7 +133,9 @@ docker compose --profile gpu up opencut-server-gpu
 Docker publishes the HTTP API on port 5679 and persists data under
 `/home/opencut/.opencut`. It does not publish the optional WebSocket 5680 or
 MCP 5681 sidecars by default; add a dedicated service/profile before exposing
-those opt-in processes from a container.
+those opt-in processes from a container. The image builds FFmpeg 8.1.2 from
+the checksum-pinned upstream source archive and fails its build-time provenance
+gate if the binary falls below OpenCut's security floor.
 
 **Option E -- Linux desktop package:**
 
@@ -176,8 +178,8 @@ The OpenCut panel connects to a backend server running on `http://127.0.0.1:5679
 **"Module not found" errors for AI features:**
 Most AI features are optional dependencies. Open the **Settings** tab in the panel and scroll to the **Dependency Dashboard** -- it shows every optional package with its install status and the exact pip command to install missing ones. Or install all audited extras at once: `pip install -e ".[all]"`.
 
-**FFmpeg not found:**
-The server needs FFmpeg on your PATH. Run `ffmpeg -version` in a terminal to verify. If not found: Windows users can run `winget install Gyan.FFmpeg`, macOS users `brew install ffmpeg`, Linux users `sudo apt install ffmpeg`. After installing, restart your terminal and the OpenCut server.
+**FFmpeg missing or blocked:**
+The server requires FFmpeg 8.1.2+ (or a dated post-fix snapshot) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor: Windows users can run `winget upgrade --id Gyan.FFmpeg --exact`, macOS users `brew upgrade ffmpeg`, and Linux users should install an 8.1.2+ package or build from the checksum-verified upstream source. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
 
 **Python not found or wrong version:**
 OpenCut requires Python 3.11 or later. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH".
@@ -648,7 +650,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,300+ estimated tests across 283 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,300+ estimated tests across 284 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -709,7 +711,7 @@ extension/
     main.js          # UXP panel (~7,175 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,300+ estimated tests, 283 root test files)
+tests/               # pytest test suite (11,300+ estimated tests, 284 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

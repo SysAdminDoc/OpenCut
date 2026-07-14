@@ -64,6 +64,18 @@ def clear_check_failures() -> None:
         _CHECK_FAILURES.clear()
 
 
+def ffmpeg_security_available() -> bool:
+    """Return True only when the resolved FFmpeg clears the security floor."""
+    try:
+        from opencut.helpers import get_ffmpeg_path
+
+        get_ffmpeg_path()
+        return True
+    except Exception as exc:
+        record_check_failure("ffmpeg_security_floor", exc)
+        return False
+
+
 def check_demucs_available():
     """Check if demucs (audio separation) is installed."""
     return _try_import("demucs") is not None
@@ -266,8 +278,7 @@ def check_auto_zoom_available() -> bool:
 
 def check_loudness_match_available() -> bool:
     """Check if loudness matching (FFmpeg) is available."""
-    import shutil
-    return shutil.which("ffmpeg") is not None
+    return ffmpeg_security_available()
 
 
 def check_footage_search_available() -> bool:
@@ -420,8 +431,7 @@ def check_rife_cli_available() -> bool:
 
 def check_declarative_compose_available() -> bool:
     """Check if declarative JSON composition can run. Needs FFmpeg only."""
-    import shutil
-    return shutil.which("ffmpeg") is not None
+    return ffmpeg_security_available()
 
 
 # --- v1.18.0 Wave A + Wave D availability checks ---
@@ -473,9 +483,8 @@ def check_aaf_adapter_available() -> bool:
 
 
 def check_event_moments_available() -> bool:
-    """Event-moment finder uses stdlib + FFmpeg; always available."""
-    import shutil
-    return shutil.which("ffmpeg") is not None
+    """Event-moment finder is available when its FFmpeg runtime is safe."""
+    return ffmpeg_security_available()
 
 
 # --- v1.19.0 Wave A2.3 / A3.1 / A4.2 / D2 availability checks ---

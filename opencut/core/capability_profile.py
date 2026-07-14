@@ -124,13 +124,9 @@ def _resolve_ffmpeg_bin() -> Optional[str]:
 
 def _resolve_ffprobe_bin() -> Optional[str]:
     try:
-        from opencut.helpers import get_ffmpeg_path
+        from opencut.helpers import get_ffprobe_path
 
-        ff = get_ffmpeg_path()
-        if not ff:
-            return shutil.which("ffprobe")
-        probe = Path(ff).with_name("ffprobe" + (".exe" if os.name == "nt" else ""))
-        return str(probe) if probe.exists() else shutil.which("ffprobe")
+        return get_ffprobe_path()
     except Exception:
         return shutil.which("ffprobe")
 
@@ -163,7 +159,16 @@ def _ffmpeg_codecs(ffmpeg_bin: str, codec_kind: str) -> List[str]:
 def _probe_ffmpeg() -> dict:
     ffmpeg_bin = _resolve_ffmpeg_bin()
     if not ffmpeg_bin:
-        return {"available": False, "path": "", "version": "", "encoders": [], "decoders": [], "hwaccel": []}
+        return {
+            "available": False,
+            "detected": False,
+            "path": "",
+            "version": "",
+            "security": {},
+            "encoders": [],
+            "decoders": [],
+            "hwaccel": [],
+        }
 
     version_result = _run_capturing([ffmpeg_bin, "-version"])
     version = ""
@@ -180,6 +185,19 @@ def _probe_ffmpeg() -> dict:
     except Exception as exc:  # never let provenance grading break the probe
         logger.debug("capability_profile: ffmpeg security grade failed: %s", exc)
 
+    if not security.get("ok"):
+        return {
+            "available": False,
+            "detected": True,
+            "blocked_reason": "security_floor",
+            "path": ffmpeg_bin,
+            "version": version,
+            "security": security,
+            "encoders": [],
+            "decoders": [],
+            "hwaccel": [],
+        }
+
     hwaccel: List[str] = []
     hw_result = _run_capturing([ffmpeg_bin, "-hide_banner", "-hwaccels"])
     if hw_result is not None and hw_result.returncode == 0:
@@ -191,6 +209,7 @@ def _probe_ffmpeg() -> dict:
 
     return {
         "available": True,
+        "detected": True,
         "path": ffmpeg_bin,
         "version": version,
         "security": security,
@@ -205,10 +224,21 @@ def _probe_ffprobe() -> dict:
     if not bin_path:
         return {"available": False, "path": "", "version": ""}
     result = _run_capturing([bin_path, "-version"])
+    banner = (result.stdout or result.stderr or "") if result else ""
+    try:
+        from opencut.core.ffmpeg_provenance import check_security_floor
+
+        security = check_security_floor(banner)
+    except Exception as exc:
+        logger.debug("capability_profile: ffprobe security grade failed: %s", exc)
+        security = {}
     return {
-        "available": True,
+        "available": bool(security.get("ok")),
+        "detected": True,
+        "blocked_reason": "" if security.get("ok") else "security_floor",
         "path": bin_path,
-        "version": _extract_version(result.stdout) if result else "",
+        "version": _extract_version(banner),
+        "security": security,
     }
 
 
@@ -266,13 +296,28 @@ def _probe_python() -> dict:
 def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
     findings: List[CapabilityFinding] = []
     if not profile.ffmpeg.get("available"):
-        findings.append(
-            CapabilityFinding(
-                severity="error",
-                rule="ffmpeg_missing",
-                message="FFmpeg is required but was not found on PATH or bundled.",
+        security = profile.ffmpeg.get("security") or {}
+        if profile.ffmpeg.get("detected") and not security.get("ok"):
+            findings.append(
+                CapabilityFinding(
+                    severity="error",
+                    rule="ffmpeg_below_security_floor",
+                    message=(
+                        f"FFmpeg ({security.get('version') or 'unknown'}) is blocked: "
+                        f"{security.get('reason', '')}. Install FFmpeg 8.1.2+ or a dated "
+                        "post-fix snapshot before processing untrusted media "
+                        "(CVE-2026-8461)."
+                    ),
+                )
             )
-        )
+        else:
+            findings.append(
+                CapabilityFinding(
+                    severity="error",
+                    rule="ffmpeg_missing",
+                    message="FFmpeg is required but was not found on PATH or bundled.",
+                )
+            )
     else:
         security = profile.ffmpeg.get("security") or {}
         # Only flag a genuine below-floor build we could parse — an unreadable
@@ -286,8 +331,8 @@ def _derive_findings(profile: CapabilityProfile) -> List[CapabilityFinding]:
                     message=(
                         f"Bundled FFmpeg ({security.get('version') or 'unknown'}) is below the "
                         f"June-2026 security floor: {security.get('reason', '')}. Rebuild from "
-                        "gyan.dev 8.1.1 (or a git-master snapshot >= 2026-06-10) so crafted-media "
-                        "CVEs (CVE-2026-6385 et al.) are patched."
+                        "gyan.dev 8.1.2 (or a git-master snapshot >= 2026-06-10) so crafted-media "
+                        "CVEs (CVE-2026-8461 et al.) are patched."
                     ),
                 )
             )

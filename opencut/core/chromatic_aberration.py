@@ -19,6 +19,7 @@ from typing import Callable, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
+    get_ffmpeg_path,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -125,7 +126,7 @@ def _analyze_frame_ca(
                 # Test R-G alignment with this shift
                 try:
                     result = subprocess.run([
-                        "ffmpeg", "-hide_banner", "-loglevel", "error",
+                        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                         "-i", red_path, "-i", green_path,
                         "-filter_complex",
                         f"[0]scroll=h={dx}:v={dy}[shifted];[shifted][1]ssim=-",
@@ -151,7 +152,7 @@ def _analyze_frame_ca(
                 # Test B-G alignment with this shift
                 try:
                     result = subprocess.run([
-                        "ffmpeg", "-hide_banner", "-loglevel", "error",
+                        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                         "-i", blue_path, "-i", green_path,
                         "-filter_complex",
                         f"[0]scroll=h={dx}:v={dy}[shifted];[shifted][1]ssim=-",

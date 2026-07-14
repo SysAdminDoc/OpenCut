@@ -83,6 +83,41 @@ function Test-CommandExists {
     return [bool](Get-Command $Command -ErrorAction SilentlyContinue)
 }
 
+function Get-FFmpegSecurityStatus {
+    $required = "release>=8.1.2 OR git-master>=2026-06-10"
+    $command = Get-Command ffmpeg -ErrorAction SilentlyContinue
+    if (-not $command) {
+        return [pscustomobject]@{ Safe = $false; Version = "missing"; Reason = "FFmpeg was not found" }
+    }
+
+    try {
+        $banner = (& $command.Source -version 2>&1 | Select-Object -First 1) -as [string]
+    } catch {
+        return [pscustomobject]@{ Safe = $false; Version = "unknown"; Reason = "FFmpeg could not be executed: $_" }
+    }
+
+    if ($banner -notmatch "\bversion\s+([^\s]+)") {
+        return [pscustomobject]@{ Safe = $false; Version = "unknown"; Reason = "Version banner could not be parsed" }
+    }
+
+    $token = $Matches[1]
+    if ($token -match "^(\d{4}-\d{2}-\d{2})-git-[0-9a-f]{7,40}") {
+        $safe = $Matches[1] -ge "2026-06-10"
+        $reason = if ($safe) { "Post-fix snapshot lane" } else { "Snapshot predates 2026-06-10" }
+        return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
+    }
+
+    if ($token -match "^n?(\d+)\.(\d+)(?:\.(\d+))?") {
+        $patch = if ($Matches[3]) { [int]$Matches[3] } else { 0 }
+        $version = [version]::new([int]$Matches[1], [int]$Matches[2], $patch)
+        $safe = $version -ge [version]::new(8, 1, 2)
+        $reason = if ($safe) { "Release lane clears $required" } else { "Release predates 8.1.2 (CVE-2026-8461)" }
+        return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
+    }
+
+    return [pscustomobject]@{ Safe = $false; Version = $token; Reason = "Unrecognized FFmpeg build token" }
+}
+
 # ---------------------------------------------------------------------------
 # Uninstall
 # ---------------------------------------------------------------------------
@@ -278,59 +313,52 @@ if (-not $SkipCleanup) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 2: FFmpeg
+# Step 2: FFmpeg security floor
 # ---------------------------------------------------------------------------
-if (-not $SkipFFmpeg) {
-    Write-Header "Step 2/7: FFmpeg"
+Write-Header "Step 2/7: FFmpeg"
+$ffmpegStatus = Get-FFmpegSecurityStatus
+if ($ffmpegStatus.Safe) {
+    Write-Ok "FFmpeg verified: $($ffmpegStatus.Version) ($($ffmpegStatus.Reason))"
+} elseif ($SkipFFmpeg) {
+    Write-Err "-SkipFFmpeg skips auto-install only; it cannot bypass the security floor."
+    Write-Err "$($ffmpegStatus.Version): $($ffmpegStatus.Reason)"
+    exit 1
+} else {
+    Write-Warn "Existing FFmpeg is unavailable: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
+    $installed = $false
 
-    if (Test-CommandExists "ffmpeg") {
-        $ffVer = (ffmpeg -version 2>&1 | Select-Object -First 1) -replace "ffmpeg version\s+", "" -replace "\s.*", ""
-        Write-Ok "FFmpeg found: $ffVer"
-    } else {
-        Write-Step "FFmpeg not found. Installing..."
-
-        $installed = $false
-
-        # Try winget first
-        if (Test-CommandExists "winget") {
-            Write-Info "Using winget to install FFmpeg..."
-            try {
-                winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements --silent 2>$null
-                # Refresh PATH
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-                if (Test-CommandExists "ffmpeg") {
-                    Write-Ok "FFmpeg installed via winget"
-                    $installed = $true
-                }
-            } catch {
-                Write-Warn "winget install failed, trying alternate method..."
+    if (Test-CommandExists "winget") {
+        Write-Info "Installing/upgrading the verified Gyan.FFmpeg package..."
+        try {
+            winget upgrade --id Gyan.FFmpeg --exact --accept-package-agreements --accept-source-agreements --silent 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                winget install --id Gyan.FFmpeg --exact --accept-package-agreements --accept-source-agreements --silent 2>$null
             }
-        }
-
-        # Try chocolatey
-        if (-not $installed -and (Test-CommandExists "choco")) {
-            Write-Info "Using Chocolatey to install FFmpeg..."
-            try {
-                choco install ffmpeg -y 2>$null
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-                if (Test-CommandExists "ffmpeg") {
-                    Write-Ok "FFmpeg installed via Chocolatey"
-                    $installed = $true
-                }
-            } catch {
-                Write-Warn "Chocolatey install failed"
-            }
-        }
-
-        if (-not $installed) {
-            Write-Err "Could not auto-install FFmpeg."
-            Write-Err "Please install manually: https://ffmpeg.org/download.html"
-            Write-Err "Or run: winget install Gyan.FFmpeg"
-            $script:ExitCode = 1
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $installed = (Get-FFmpegSecurityStatus).Safe
+        } catch {
+            Write-Warn "winget could not install a verified FFmpeg build."
         }
     }
-} else {
-    Write-Info "Skipping FFmpeg check (--SkipFFmpeg)"
+
+    if (-not $installed -and (Test-CommandExists "choco")) {
+        Write-Info "Upgrading FFmpeg with Chocolatey..."
+        try {
+            choco upgrade ffmpeg -y 2>$null
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $installed = (Get-FFmpegSecurityStatus).Safe
+        } catch {
+            Write-Warn "Chocolatey could not install a verified FFmpeg build."
+        }
+    }
+
+    $ffmpegStatus = Get-FFmpegSecurityStatus
+    if (-not $ffmpegStatus.Safe) {
+        Write-Err "FFmpeg remains blocked: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
+        Write-Err "Install FFmpeg 8.1.2+ or a dated snapshot from https://ffmpeg.org/download.html"
+        exit 1
+    }
+    Write-Ok "FFmpeg verified after install: $($ffmpegStatus.Version)"
 }
 
 # ---------------------------------------------------------------------------
@@ -619,10 +647,10 @@ Write-Header "Step 7/7: Validation"
 $allGood = $true
 
 # Check FFmpeg
-if (Test-CommandExists "ffmpeg") {
-    Write-Ok "FFmpeg .............. OK"
+if ((Get-FFmpegSecurityStatus).Safe) {
+    Write-Ok "FFmpeg .............. OK (security floor verified)"
 } else {
-    Write-Err "FFmpeg .............. MISSING"
+    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.2+ or post-fix snapshot)"
     $allGood = $false
 }
 

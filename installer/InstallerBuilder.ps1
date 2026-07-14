@@ -74,6 +74,22 @@ if (-not (Test-Path $logoIco)) { Write-Warn "img/logo.ico not found"; $payloadRe
 if ($payloadReady) { Write-Ok "All payload sources found" }
 else { Write-Warn "Some payload sources missing - payload.zip will be incomplete" }
 
+if ($payloadReady) {
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $python) {
+        Write-Err "Python is required to verify FFmpeg provenance."
+        exit 1
+    }
+    $ffmpegExe = Join-Path $ffmpegDir "ffmpeg.exe"
+    $provenanceGate = Join-Path $RepoRoot "scripts\verify_ffmpeg_provenance.py"
+    & $python.Source $provenanceGate $ffmpegExe
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "FFmpeg payload failed the mandatory security-floor gate."
+        exit 1
+    }
+    Write-Ok "FFmpeg payload clears the mandatory security floor"
+}
+
 Write-Host ""
 
 # ── Step 2: Publish installer ─────────────────────────────────────────────

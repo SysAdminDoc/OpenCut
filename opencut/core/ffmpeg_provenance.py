@@ -15,9 +15,8 @@ This module is the single source of truth for "which bundled FFmpeg build is
 acceptable". It parses the human-readable ``ffmpeg -version`` banner into a
 structured provenance record and grades it against two acceptance lanes:
 
-* **release lane** — a tagged release ``>= 8.1.1`` (gyan.dev's current stable
-  point release; point releases carry backported security fixes). Reports
-  ``8.1.x`` so the encoder-route bump is satisfied.
+* **release lane** — a tagged release ``>= 8.1.2``. This is the first 8.1
+  release containing the MagicYUV fixes for CVE-2026-8461.
 * **snapshot lane** — a gyan.dev / BtbN git-master snapshot dated on/after
   :data:`SNAPSHOT_FLOOR_DATE`, the guaranteed-clean lane that demonstrably
   carries the June-2026 commits. The reference snapshot
@@ -43,10 +42,9 @@ logger = logging.getLogger("opencut")
 # Provenance floor — the bundled binary must clear ONE of these lanes.
 # ---------------------------------------------------------------------------
 
-# Minimum acceptable *release* version. gyan.dev currently ships 8.1.1; its
-# point releases backport the FFmpeg security branch. Satisfies the "bundle
-# 8.1.x" roadmap item.
-RELEASE_FLOOR: tuple[int, int, int] = (8, 1, 1)
+# Minimum acceptable *release* version. CVE-2026-8461 affects releases before
+# 8.1.2, so 8.1.1 must never be used to process untrusted media.
+RELEASE_FLOOR: tuple[int, int, int] = (8, 1, 2)
 
 # Minimum acceptable *git-master snapshot* date. The June-2026 fixes landed as
 # post-release master commits; gyan.dev's git-full snapshot from this date is
@@ -61,12 +59,21 @@ SNAPSHOT_FLOOR_DATE = "2026-06-10"
 REFERENCE_GIT_COMMIT = "b29bdd3715"
 REFERENCE_GIT_DATE = "2026-06-10"
 
+# Upstream MagicYUV fixes for CVE-2026-8461. The snapshot lane predates the
+# 8.1.2 tag but postdates both commits; recording them makes that assertion
+# auditable in capability and release provenance output.
+MAGICYUV_FIX_COMMITS: tuple[str, ...] = (
+    "374b726ffa878ee1cadb987bd1e1e20cc7ed8845",
+    "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1",
+)
+
 # The human-readable version string the installers pin (see AppConstants.cs /
 # OpenCut.iss). Kept here so the Python side and the C#/Inno side agree.
 PINNED_INSTALLER_VERSION = "8.1.2-essentials_build-www.gyan.dev"
 
 # The June-2026 FFmpeg advisories this floor exists to clear.
 JUNE_2026_CVES: tuple[str, ...] = (
+    "CVE-2026-8461",  # MagicYUV OOB write; releases before 8.1.2
     "CVE-2026-6385",  # GHSA-q22x-99q7-fr6w, CVSS 6.5 (confirmed)
     "CVE-2026-39210",
     "CVE-2026-39211",
@@ -163,7 +170,7 @@ def check_security_floor(banner: str) -> dict:
     """Grade an ``ffmpeg -version`` banner against the security floor.
 
     Returns ``{ok, lane, version, snapshot_date, git_commit, reason, cves}``.
-    ``ok`` is ``True`` only when the build clears the release lane (``>= 8.1.1``)
+    ``ok`` is ``True`` only when the build clears the release lane (``>= 8.1.2``)
     or the snapshot lane (git-master dated ``>= SNAPSHOT_FLOOR_DATE``). The
     grading never raises.
     """
@@ -176,6 +183,7 @@ def check_security_floor(banner: str) -> dict:
         "git_commit": rec["git_commit"],
         "reason": "",
         "cves": list(JUNE_2026_CVES),
+        "fix_commits": list(MAGICYUV_FIX_COMMITS),
     }
 
     if not rec["raw"]:
@@ -209,9 +217,9 @@ def check_security_floor(banner: str) -> dict:
             result["ok"] = True
             result["reason"] = (
                 f"release {'.'.join(map(str, rec['release']))} is at/after the "
-                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor (point releases "
-                "carry the backported June-2026 fixes; the guaranteed-clean fallback "
-                f"is git snapshot {REFERENCE_GIT_COMMIT} dated {REFERENCE_GIT_DATE})"
+                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for CVE-2026-8461; "
+                f"the post-fix snapshot fallback is {REFERENCE_GIT_COMMIT} dated "
+                f"{REFERENCE_GIT_DATE}"
             )
         else:
             result["reason"] = (
@@ -237,6 +245,7 @@ def provenance_record(banner: Optional[str] = None) -> dict:
         "required_snapshot_floor_date": SNAPSHOT_FLOOR_DATE,
         "reference_git_commit": REFERENCE_GIT_COMMIT,
         "reference_git_date": REFERENCE_GIT_DATE,
+        "required_fix_commits": list(MAGICYUV_FIX_COMMITS),
         "pinned_installer_version": PINNED_INSTALLER_VERSION,
         "cves_addressed": list(JUNE_2026_CVES),
         "bundled": None,
@@ -249,12 +258,56 @@ def provenance_record(banner: Optional[str] = None) -> dict:
 
 
 def _resolve_ffmpeg_bin() -> Optional[str]:
-    try:
-        from opencut.helpers import get_ffmpeg_path
+    # Do not call helpers.get_ffmpeg_path() here: that resolver invokes this
+    # module's fail-closed validator and would recurse.
+    return shutil.which("ffmpeg")
 
-        return get_ffmpeg_path()
-    except Exception:
-        return shutil.which("ffmpeg")
+
+class FfmpegSecurityError(RuntimeError):
+    """Raised before media processing when FFmpeg does not clear the floor."""
+
+    code = "FFMPEG_SECURITY_FLOOR"
+
+    def __init__(self, binary: str, grade: dict):
+        self.binary = binary
+        self.grade = grade
+        super().__init__(
+            f"FFmpeg is unavailable because {binary!r} does not clear the "
+            f"{'.'.join(map(str, RELEASE_FLOOR))} security floor: "
+            f"{grade.get('reason') or 'version could not be verified'}. "
+            "Install FFmpeg 8.1.2+ or a dated post-fix snapshot before processing media."
+        )
+
+
+def probe_binary_security(ffmpeg_bin: str, timeout: float = 8.0) -> dict:
+    """Run ``-version`` for one binary and return its security grade."""
+    try:
+        result = subprocess.run(
+            [ffmpeg_bin, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        grade = check_security_floor("")
+        grade["reason"] = f"could not execute the media binary: {exc}"
+        return grade
+
+    banner = result.stdout or result.stderr or ""
+    grade = check_security_floor(banner)
+    if result.returncode != 0 and grade.get("ok"):
+        grade["ok"] = False
+        grade["reason"] = f"version probe exited with status {result.returncode}"
+    return grade
+
+
+def require_security_floor(ffmpeg_bin: str) -> dict:
+    """Return a verified grade or raise :class:`FfmpegSecurityError`."""
+    grade = probe_binary_security(ffmpeg_bin)
+    if not grade.get("ok"):
+        raise FfmpegSecurityError(ffmpeg_bin, grade)
+    return grade
 
 
 def _probe_bundled_banner() -> str:

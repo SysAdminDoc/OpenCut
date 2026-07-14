@@ -15,6 +15,8 @@ def test_wpf_installer_constants_pin_bundled_ffmpeg_version():
     assert f'BundledFfmpegVersion = "{FFMPEG_VERSION}"' in constants
     assert f'BundledFfprobeVersion = "{FFMPEG_VERSION}"' in constants
     assert "BundledFfmpegSecurityFloor" in constants
+    assert "BundledFfmpegSecurityCve" in constants
+    assert "BundledFfmpegSecurityFixCommits" in constants
     assert 'InstallerManifestFile = "installer.json"' in constants
     assert "InstallerManifestPath" in config
     assert "SpecialFolder.UserProfile" in config
@@ -29,6 +31,9 @@ def test_wpf_installer_writes_ffmpeg_manifest():
     assert "bundled_ffmpeg_version" in engine
     assert "bundled_ffprobe_version" in engine
     assert "bundled_ffmpeg_security_floor" in engine
+    assert "bundled_ffmpeg_security_cve" in engine
+    assert "bundled_ffmpeg_security_fix_commits" in engine
+    assert "VerifyPayload(ffmpegSrc)" in engine
     assert "installer_kind" in engine
     assert "JsonSerializer.Serialize" in engine
 
@@ -42,6 +47,10 @@ def test_inno_installer_writes_ffmpeg_manifest():
     assert "bundled_ffmpeg_version" in inno
     assert "bundled_ffprobe_version" in inno
     assert "bundled_ffmpeg_security_floor" in inno
+    assert "bundled_ffmpeg_security_cve" in inno
+    assert "bundled_ffmpeg_security_fix_commits" in inno
+    assert "VerifyInstalledFfmpeg();" in inno
+    assert "SW_HIDE" in inno
     assert "installer.json" in inno
     assert "WriteInstallerManifest();" in inno
 
@@ -51,5 +60,6 @@ def test_pinned_installer_version_matches_provenance_module():
     from opencut.core import ffmpeg_provenance as fp
 
     assert fp.PINNED_INSTALLER_VERSION == FFMPEG_VERSION
-    # Release floor is 8.1.1 (the version the installers bundle).
-    assert fp.RELEASE_FLOOR == (8, 1, 1)
+    assert fp.RELEASE_FLOOR == (8, 1, 2)
+    assert "CVE-2026-8461" in fp.JUNE_2026_CVES
+    assert len(fp.MAGICYUV_FIX_COMMITS) == 2
