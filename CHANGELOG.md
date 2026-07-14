@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Enforce the Python 3.11 runtime floor at every entry path
+
+- Source installers and Windows, macOS, and Linux launchers now reject Python
+  below 3.11 before installing dependencies or importing OpenCut, with the
+  detected version, required version, and an actionable upgrade link.
+- A package-level early guard and dependency-surface tests keep direct source
+  launches, bootstrap diagnostics, documentation, and package metadata aligned.
+
 ### Fixed - Move persisted secrets into the OS credential vault
 
 - Moved API keys, OAuth/refresh tokens, render-node credentials, webhook

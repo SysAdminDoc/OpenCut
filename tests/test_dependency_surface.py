@@ -2,6 +2,8 @@ import re
 import tomllib
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
@@ -73,6 +75,50 @@ def test_python_floor_tracks_security_dependency_floor():
     assert "Programming Language :: Python :: 3.9" not in classifiers
     assert "Programming Language :: Python :: 3.10" not in classifiers
     assert "Programming Language :: Python :: 3.11" in classifiers
+
+
+def test_every_source_install_and_launch_surface_tracks_python_floor():
+    """Keep user-facing entry paths aligned with canonical package metadata."""
+    project_floor = _pyproject()["project"]["requires-python"].removeprefix(">=")
+    surfaces = [
+        "README.md",
+        "install.py",
+        "Install.ps1",
+        "OpenCut-Server.bat",
+        "OpenCut-Server.vbs",
+        "OpenCut-Server.sh",
+        "scripts/bootstrap_check.py",
+        "opencut/__init__.py",
+    ]
+    major, minor = project_floor.split(".", 1)
+    tuple_floor = re.compile(rf"\({major},\s*{minor}\)")
+    for relative_path in surfaces:
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        assert project_floor in text or tuple_floor.search(text), (
+            f"{relative_path} must advertise or enforce Python {project_floor}+"
+        )
+
+    executable_surfaces = surfaces[1:]
+    for relative_path in executable_surfaces:
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8").lower()
+        assert "require" in text, f"{relative_path} must state the required floor"
+        assert "python.org/downloads" in text or "install python 3.11" in text, (
+            f"{relative_path} must provide Python upgrade remediation"
+        )
+
+
+def test_runtime_guard_rejects_unsupported_python_with_actionable_error():
+    import opencut
+
+    with pytest.raises(RuntimeError) as exc_info:
+        opencut._require_supported_python((3, 10, 14))
+
+    message = str(exc_info.value)
+    assert "requires Python 3.11" in message
+    assert "detected Python 3.10.14" in message
+    assert "python.org/downloads" in message
+
+    opencut._require_supported_python((3, 11, 0))
 
 
 def test_ruff_target_tracks_python_floor():

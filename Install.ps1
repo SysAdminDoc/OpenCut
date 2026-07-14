@@ -9,7 +9,7 @@
     What this installer does:
     1. Cleans up old OpenCut installations (kills processes, removes packages)
     2. Checks/installs FFmpeg (via winget)
-    3. Checks Python 3.9+ is available
+    3. Checks Python 3.11+ is available
     4. Installs Python dependencies (click, rich, flask, flask-cors)
     5. Optionally installs Whisper for caption generation
     6. Copies the CEP extension to Adobe's extensions folder
@@ -346,15 +346,15 @@ foreach ($cmd in @("python", "python3", "py")) {
             if ($ver -match "(\d+)\.(\d+)") {
                 $major = [int]$Matches[1]
                 $minor = [int]$Matches[2]
-                # Accept any Python whose version is >= 3.9 (so a hypothetical
-                # 4.x or 3.20 still passes). Old check ``$minor -ge 9`` would
-                # reject Python 4.0 because 0 < 9.
-                if (($major -gt 3) -or ($major -eq 3 -and $minor -ge 9)) {
+                # Accept any Python whose version is >= 3.11 (so a hypothetical
+                # 4.x or 3.20 still passes). A minor-only comparison would
+                # reject Python 4.0 because 0 < 11.
+                if (($major -gt 3) -or ($major -eq 3 -and $minor -ge 11)) {
                     $pythonCmd = $cmd
-                    Write-Ok "Python found: $ver (using '$cmd')"
+                    Write-Ok "Detected $ver (using '$cmd'); required Python 3.11+"
                     break
                 } else {
-                    Write-Warn "$cmd is version $ver (need 3.9+)"
+                    Write-Warn "Detected $ver from '$cmd'; required Python 3.11+"
                 }
             }
         } catch {
@@ -364,7 +364,7 @@ foreach ($cmd in @("python", "python3", "py")) {
 }
 
 if (-not $pythonCmd) {
-    Write-Err "Python 3.9+ not found."
+    Write-Err "No supported interpreter found; OpenCut requires Python 3.11+."
     Write-Err "Install from: https://www.python.org/downloads/"
     Write-Err "Or run: winget install Python.Python.3.12"
     Write-Err ""
@@ -478,7 +478,7 @@ if (-not $SkipWhisper) {
 
     if (-not $whisperInstalled) {
         Write-Warn "Could not install Whisper automatically."
-        Write-Warn "Common fix: Update Python to 3.10-3.12, or install Rust from https://rustup.rs/"
+        Write-Warn "Common fix: Update Python to 3.11-3.13, or install Rust from https://rustup.rs/"
         Write-Warn "You can retry from the OpenCut panel in Premiere Pro."
     }
 } else {
