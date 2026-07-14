@@ -37,6 +37,7 @@ public class CommandLineOptionsTests
         Assert.False(options.Config.SetPlayerDebugMode);
         Assert.False(options.Config.UpdatePath);
         Assert.False(options.Config.RegisterUninstaller);
+        Assert.False(options.Config.RemoveUserData);
         Assert.False(options.Config.DownloadWhisperModel);
         Assert.False(options.Config.InstallOptionalDeps);
     }
@@ -70,6 +71,34 @@ public class CommandLineOptionsTests
 
         Assert.Equal(InstallerCommandMode.InteractiveUninstall, options.Mode);
         Assert.False(options.IsQuiet);
+        Assert.False(options.Config.RemoveUserData);
+    }
+
+    [Fact]
+    public void ParseQuietUninstallRequiresDedicatedDataRemovalFlag()
+    {
+        var options = InstallerCommandLineOptions.Parse(
+        [
+            "--uninstall",
+            "--quiet",
+            "--remove-user-data",
+            "--user-data-dir=C:\\Temp\\OpenCutProfile",
+            "--user-data-backup-dir=C:\\Temp\\OpenCutBackups"
+        ]);
+
+        Assert.Equal(InstallerCommandMode.QuietUninstall, options.Mode);
+        Assert.True(options.Config.RemoveUserData);
+        Assert.Equal("C:\\Temp\\OpenCutProfile", options.Config.UserDataPath);
+        Assert.Equal("C:\\Temp\\OpenCutBackups", options.Config.UserDataBackupDirectory);
+    }
+
+    [Fact]
+    public void ParseRejectsDataRemovalDuringInstall()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            InstallerCommandLineOptions.Parse(["--install", "--remove-user-data"]));
+
+        Assert.Contains("valid only with --uninstall", ex.Message);
     }
 
     [Fact]

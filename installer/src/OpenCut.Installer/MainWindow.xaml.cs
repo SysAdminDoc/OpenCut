@@ -6,12 +6,13 @@ namespace OpenCut.Installer;
 
 public partial class MainWindow : Window
 {
-    public InstallConfig Config { get; } = new();
+    public InstallConfig Config { get; }
     private readonly bool _uninstallMode;
 
-    public MainWindow(bool uninstallMode = false)
+    public MainWindow(bool uninstallMode = false, InstallConfig? config = null)
     {
         InitializeComponent();
+        Config = config ?? new InstallConfig();
         _uninstallMode = uninstallMode;
         WindowVersionText.Text = $"v{AppConstants.AppVersion}";
 

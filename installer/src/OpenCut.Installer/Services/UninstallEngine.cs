@@ -10,6 +10,7 @@ public class UninstallEngine
     private readonly RegistryManager _registryManager = new();
     private readonly ShortcutCreator _shortcutCreator = new();
     private readonly CepInstaller _cepInstaller = new();
+    private readonly UserDataRemovalService _userDataRemovalService = new();
 
     public UninstallEngine(InstallConfig config)
     {
@@ -34,8 +35,24 @@ public class UninstallEngine
         step = 1;
         _processKiller.KillOpenCutProcesses(progress, step, totalSteps);
 
-        // Step 2: Remove CEP extension from Adobe folder
+        // Step 2: Preserve user data, or back it up before explicitly requested removal.
         step = 2;
+        Report(progress, step, totalSteps, "Protecting user data",
+            _config.RemoveUserData
+                ? $"Creating a verified backup before removing {_config.UserDataPath}..."
+                : $"Preserving OpenCut user data at {_config.UserDataPath}.");
+        var dataResult = _userDataRemovalService.Apply(_config);
+        if (dataResult is not null)
+        {
+            Report(progress, step, totalSteps, "Protecting user data",
+                dataResult.SourceExisted
+                    ? $"Backed up {dataResult.FileCount} files to {dataResult.BackupPath}; user data removed."
+                    : $"No user data directory found at {_config.UserDataPath}.",
+                LogLevel.Success);
+        }
+
+        // Step 3: Remove CEP extension from Adobe folder
+        step = 3;
         Report(progress, step, totalSteps, "Removing CEP extension", "Removing Adobe extension...");
         if (_config.InstallCepExtension)
         {
@@ -48,8 +65,8 @@ public class UninstallEngine
             Report(progress, step, totalSteps, "Removing CEP extension", "Skipped (not selected).", LogLevel.Debug);
         }
 
-        // Step 3: Remove FFmpeg from PATH
-        step = 3;
+        // Step 4: Remove FFmpeg from PATH
+        step = 4;
         Report(progress, step, totalSteps, "Cleaning PATH", "Removing FFmpeg from user PATH...");
         if (_config.UpdatePath)
         {
@@ -62,8 +79,8 @@ public class UninstallEngine
             Report(progress, step, totalSteps, "Cleaning PATH", "Skipped (not selected).", LogLevel.Debug);
         }
 
-        // Step 4: Remove shortcuts
-        step = 4;
+        // Step 5: Remove shortcuts
+        step = 5;
         Report(progress, step, totalSteps, "Removing shortcuts", "Removing shortcuts...");
         if (_config.CreateDesktopShortcut || _config.CreateStartMenuShortcut || _config.CreateStartupShortcut)
         {
@@ -74,30 +91,6 @@ public class UninstallEngine
         else
         {
             Report(progress, step, totalSteps, "Removing shortcuts", "Skipped (not selected).", LogLevel.Debug);
-        }
-
-        // Step 5: Remove config directory (~/.opencut)
-        step = 5;
-        Report(progress, step, totalSteps, "Removing config", "Removing user config...");
-        var configDir = _config.UserDataPath;
-        if (Directory.Exists(configDir))
-        {
-            try
-            {
-                Directory.Delete(configDir, recursive: true);
-                Report(progress, step, totalSteps, "Removing config",
-                    "Config directory removed.", LogLevel.Success);
-            }
-            catch (Exception ex)
-            {
-                Report(progress, step, totalSteps, "Removing config",
-                    $"Could not remove config: {ex.Message}", LogLevel.Warning);
-            }
-        }
-        else
-        {
-            Report(progress, step, totalSteps, "Removing config",
-                "No config directory found.", LogLevel.Debug);
         }
 
         // Step 6: Remove registry entries
