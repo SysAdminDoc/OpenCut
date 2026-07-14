@@ -16,6 +16,8 @@ Unit tests for Color & MAM features:
 import json
 import os
 import tempfile
+from concurrent.futures import Future
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -420,34 +422,168 @@ class TestProxyGen:
         assert "quarter" in PROXY_PRESETS
         assert "720p" in PROXY_PRESETS
 
-    def test_generate_proxy(self):
+    def test_generate_proxy(self, tmp_path):
         from opencut.core.proxy_gen import generate_proxy
-        with patch("opencut.core.proxy_gen.get_video_info") as mock_info, \
-             patch("opencut.core.proxy_gen.run_ffmpeg"), \
-             patch("opencut.core.proxy_gen.os.path.getsize", return_value=1000), \
-             patch("opencut.core.proxy_gen.os.path.isfile", return_value=True), \
-             tempfile.TemporaryDirectory() as tmpdir:
-            mock_info.return_value = {"width": 3840, "height": 2160}
-            out = os.path.join(tmpdir, "proxy.mp4")
-            result = generate_proxy(
-                "/tmp/4k.mp4", output_path=out,
-                output_dir=tmpdir,
-            )
-            assert result.proxy_path == out
-            assert result.original_width == 3840
+        source = tmp_path / "4k.mp4"
+        source.write_bytes(b"source-media")
+        out = tmp_path / "proxy.mp4"
 
-    def test_batch_generate_proxies(self):
-        from opencut.core.proxy_gen import batch_generate_proxies
-        with patch("opencut.core.proxy_gen.generate_proxy") as mock_gen, \
-             patch("opencut.core.proxy_gen.os.path.isfile", return_value=True):
-            from opencut.core.proxy_gen import ProxyResult
-            mock_gen.return_value = ProxyResult(proxy_path="/tmp/p.mp4")
+        def fake_ffmpeg(cmd, **kwargs):
+            Path(cmd[-1]).write_bytes(b"proxy-media")
+
+        with patch("opencut.core.proxy_gen.get_video_info") as mock_info, \
+             patch("opencut.core.proxy_gen.run_ffmpeg", side_effect=fake_ffmpeg):
+            mock_info.side_effect = [
+                {"width": 3840, "height": 2160},
+                {"width": 1920, "height": 1080},
+            ]
+            result = generate_proxy(
+                str(source), output_path=str(out),
+                output_dir=str(tmp_path), job_id="proxy-job",
+            )
+            assert result.proxy_path == str(out)
+            assert result.original_width == 3840
+            assert out.read_bytes() == b"proxy-media"
+            assert not list(tmp_path.glob("*.partial.mp4"))
+            mapping = json.loads((tmp_path / ".opencut_proxy_map.json").read_text())
+            assert mapping[str(out.resolve())] == str(source.resolve())
+
+    def test_batch_generate_proxies(self, tmp_path, monkeypatch):
+        from opencut.core.proxy_gen import ProxyResult, _save_proxy_map, batch_generate_proxies
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        sources = [tmp_path / "a.mp4", tmp_path / "b.mp4"]
+        for source in sources:
+            source.write_bytes(b"source")
+
+        def fake_generate(video_path, output_path, **kwargs):
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"proxy")
+            _save_proxy_map(str(Path(output_path).parent), video_path, output_path)
+            return ProxyResult(
+                original_path=video_path,
+                proxy_path=output_path,
+                proxy_width=960,
+                proxy_height=540,
+                file_size_bytes=5,
+            )
+
+        with patch("opencut.core.proxy_gen.generate_proxy", side_effect=fake_generate):
             result = batch_generate_proxies(
-                ["/tmp/a.mp4", "/tmp/b.mp4"],
-                output_dir="/tmp/proxies",
+                [str(path) for path in sources],
+                output_dir=str(tmp_path / "proxies"),
             )
             assert result.total == 2
             assert result.completed == 2
+            assert Path(result.state_path).is_file()
+            state = json.loads(Path(result.state_path).read_text())
+            assert [item["status"] for item in state["items"]] == ["completed", "completed"]
+
+    def test_proxy_failure_cleans_partial_output(self, tmp_path):
+        from opencut.core.proxy_gen import generate_proxy
+        source = tmp_path / "source.mp4"
+        source.write_bytes(b"source")
+        output = tmp_path / "proxy.mp4"
+
+        def interrupted_ffmpeg(cmd, **kwargs):
+            Path(cmd[-1]).write_bytes(b"partial")
+            raise RuntimeError("cancelled")
+
+        with patch(
+            "opencut.core.proxy_gen.get_video_info",
+            return_value={"width": 1920, "height": 1080},
+        ), patch("opencut.core.proxy_gen.run_ffmpeg", side_effect=interrupted_ffmpeg):
+            with pytest.raises(RuntimeError, match="cancelled"):
+                generate_proxy(str(source), output_path=str(output), job_id="cancel-me")
+
+        assert not output.exists()
+        assert not list(tmp_path.glob("*.partial.mp4"))
+
+    def test_cancelled_batch_persists_pending_item_for_resume(self, tmp_path, monkeypatch):
+        from opencut.core.proxy_gen import batch_generate_proxies, load_proxy_batch_state
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        source = tmp_path / "source.mp4"
+        source.write_bytes(b"source")
+        cancelled = False
+
+        def cancel_during_generate(**kwargs):
+            nonlocal cancelled
+            cancelled = True
+            raise RuntimeError("FFmpeg terminated")
+
+        with patch("opencut.core.proxy_gen.generate_proxy", side_effect=cancel_during_generate):
+            result = batch_generate_proxies(
+                [str(source)],
+                output_dir=str(tmp_path / "proxies"),
+                is_cancelled=lambda: cancelled,
+                job_id="batch-job",
+            )
+
+        state = load_proxy_batch_state(result.state_path)
+        assert result.cancelled is True
+        assert state["cancelled"] is True
+        assert state["items"][0]["status"] == "pending"
+        assert "ready to resume" in state["items"][0]["error"]
+
+    def test_resume_skips_only_a_valid_proxy_map_pair(self, tmp_path, monkeypatch):
+        from opencut.core.proxy_gen import ProxyResult, _save_proxy_map, batch_generate_proxies
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        source = tmp_path / "source.mp4"
+        source.write_bytes(b"source")
+        output_dir = tmp_path / "proxies"
+
+        def fake_generate(video_path, output_path, **kwargs):
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(output_path).write_bytes(b"valid-proxy")
+            _save_proxy_map(str(Path(output_path).parent), video_path, output_path)
+            return ProxyResult(
+                original_path=video_path,
+                proxy_path=output_path,
+                proxy_width=960,
+                proxy_height=540,
+                file_size_bytes=11,
+            )
+
+        with patch("opencut.core.proxy_gen.generate_proxy", side_effect=fake_generate):
+            first = batch_generate_proxies([str(source)], output_dir=str(output_dir))
+
+        with patch(
+            "opencut.core.proxy_gen.get_video_info",
+            return_value={"width": 960, "height": 540},
+        ), patch("opencut.core.proxy_gen.generate_proxy") as generate_again:
+            resumed = batch_generate_proxies(
+                [str(source)], output_dir=str(output_dir), state_path=first.state_path,
+            )
+        generate_again.assert_not_called()
+        assert resumed.skipped == 1
+
+        (output_dir / ".opencut_proxy_map.json").write_text("{}", encoding="utf-8")
+        with patch("opencut.core.proxy_gen.generate_proxy", side_effect=fake_generate) as repaired:
+            retried = batch_generate_proxies(
+                [str(source)], output_dir=str(output_dir), state_path=first.state_path,
+            )
+        repaired.assert_called_once()
+        assert retried.completed == 1
+
+    def test_resume_restores_large_file_list_from_checkpoint(self, tmp_path, monkeypatch):
+        from opencut.routes.color_mam_routes import _prepare_proxy_batch_request
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        paths = [str(tmp_path / f"clip-{index:03d}.mp4") for index in range(250)]
+        for path in paths:
+            Path(path).write_bytes(b"source")
+        initial = {"file_paths": paths, "output_dir": str(tmp_path / "proxies")}
+        assert _prepare_proxy_batch_request(initial) is None
+
+        resumed = {
+            "file_paths": paths[:200] + [{"_items_trimmed": True}],
+            "partial_output_path": initial["partial_output_path"],
+            "resume_source_job_id": "interrupted-job",
+        }
+        assert _prepare_proxy_batch_request(resumed) is None
+        assert resumed["file_paths"] == paths
 
     def test_relink_proxy_to_original(self):
         from opencut.core.proxy_gen import relink_proxy_to_original
@@ -907,6 +1043,43 @@ class TestColorMAMRoutes:
         assert data["shape"] == "circle"
 
     # -- Proxy --
+    def test_proxy_batch_queues_large_checkpoint_without_spawning_ffmpeg(
+        self, client, csrf_token, tmp_path, monkeypatch,
+    ):
+        from opencut.jobs import jobs, job_lock
+        from tests.conftest import csrf_headers
+
+        class DeferredPool:
+            def submit(self, job_id, fn):
+                return Future()
+
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.setattr("opencut.workers.get_pool", lambda: DeferredPool())
+        sources = []
+        for index in range(225):
+            source = tmp_path / f"clip-{index:03d}.mp4"
+            source.write_bytes(b"source")
+            sources.append(str(source))
+
+        with job_lock:
+            jobs.clear()
+        response = client.post(
+            "/video/proxy/batch",
+            headers=csrf_headers(csrf_token),
+            json={"file_paths": sources, "output_dir": str(tmp_path / "proxies")},
+        )
+        body = response.get_json()
+
+        assert response.status_code == 200
+        with job_lock:
+            job = dict(jobs[body["job_id"]])
+            jobs.clear()
+        state = json.loads(Path(job["partial_output_path"]).read_text(encoding="utf-8"))
+        assert job["resumable"] is True
+        assert len(state["items"]) == 225
+        assert {item["status"] for item in state["items"]} == {"pending"}
+
     def test_proxy_relink_missing_path(self, client, csrf_token):
         from tests.conftest import csrf_headers
         resp = client.post("/video/proxy/relink",

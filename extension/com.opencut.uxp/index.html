@@ -42,6 +42,13 @@
       </div>
       <div class="oc-progress-track"><div class="oc-progress-fill" id="progressFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Processing progress" data-i18n-aria-label="processing.progress"></div></div>
     </div>
+    <div class="oc-recovery-banner hidden" id="proxyRecoveryBanner" role="region" aria-label="Proxy batch recovery" data-i18n-aria-label="processing.proxy_recovery">
+      <span id="proxyRecoveryMessage" role="status" aria-live="polite" data-i18n="processing.proxy_resume_available">An interrupted proxy batch can resume from its last verified item.</span>
+      <div class="oc-recovery-actions">
+        <button type="button" class="oc-btn oc-btn-primary oc-btn-sm" id="resumeProxyBatchBtn" data-i18n="processing.resume_proxy_batch">Resume proxies</button>
+        <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="dismissProxyRecoveryBtn" data-i18n="processing.dismiss_recovery">Dismiss</button>
+      </div>
+    </div>
 
     <!-- ===== TAB NAVIGATION ===== -->
     <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav" data-i18n-aria-label="nav.feature_tabs">

@@ -223,6 +223,10 @@ def test_resume_interrupted_job_dispatches_new_resumable_job(isolated_job_store,
     assert resumed["partial_output_path"] == partial
     assert resumed["result"]["payload"]["custom"] == "value"
     assert resumed["result"]["payload"]["resume_from_job_id"] == "interrupted-1"
+    assert all(
+        job["id"] != "interrupted-1"
+        for job in isolated_job_store.get_interrupted_jobs()
+    )
 
 
 def test_resume_rejects_non_resumable_interrupted_job(isolated_job_store):
@@ -280,6 +284,9 @@ def test_checkpointable_routes_are_marked_resumable():
         },
         "opencut/routes/video_specialty.py": {
             "shorts_pipeline": {"resumable": True},
+        },
+        "opencut/routes/color_mam_routes.py": {
+            "proxy_batch": {"resumable": True},
         },
         "opencut/routes/wave_l_routes.py": {
             "depth_estimate_v2": {"resumable": True},

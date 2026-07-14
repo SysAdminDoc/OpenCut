@@ -10,9 +10,13 @@ Auto-generate low-resolution proxy files for editing performance:
 Uses FFmpeg for transcoding to lightweight proxy formats.
 """
 
+import hashlib
 import json
 import logging
 import os
+import threading
+import time
+import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
@@ -26,6 +30,9 @@ logger = logging.getLogger("opencut")
 # ---------------------------------------------------------------------------
 PROXY_SUFFIX = "_proxy"
 PROXY_METADATA_FILE = ".opencut_proxy_map.json"
+PROXY_BATCH_SCHEMA_VERSION = 1
+PROXY_BATCH_STATE_DIR = "proxy_batches"
+_PROXY_STATE_LOCK = threading.RLock()
 
 PROXY_PRESETS = {
     "quarter": {"scale_factor": 0.25, "crf": 28, "codec": "libx264", "preset": "fast"},
@@ -83,6 +90,9 @@ class BatchProxyResult:
     skipped: int = 0
     results: List[ProxyResult] = field(default_factory=list)
     proxy_dir: str = ""
+    cancelled: bool = False
+    state_path: str = ""
+    items: List[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -142,20 +152,175 @@ def _get_proxy_path(video_path: str, proxy_dir: str = "") -> str:
     return os.path.join(directory, f"{base}{PROXY_SUFFIX}.mp4")
 
 
-def _save_proxy_map(proxy_dir: str, original: str, proxy: str):
-    """Save proxy-to-original mapping for relinking."""
-    map_path = os.path.join(proxy_dir, PROXY_METADATA_FILE)
-    mapping = {}
-    if os.path.isfile(map_path):
+def _atomic_write_json(path: str, payload: dict) -> None:
+    """Durably replace a JSON document without exposing partial contents."""
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+    temp_path = os.path.join(
+        directory,
+        f".{os.path.basename(path)}.{uuid.uuid4().hex}.tmp",
+    )
+    try:
+        with open(temp_path, "x", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
         try:
-            with open(map_path, "r", encoding="utf-8") as f:
-                mapping = json.load(f)
-        except (json.JSONDecodeError, OSError):
+            os.remove(temp_path)
+        except FileNotFoundError:
             pass
-    mapping[os.path.abspath(proxy)] = os.path.abspath(original)
-    os.makedirs(proxy_dir, exist_ok=True)
-    with open(map_path, "w", encoding="utf-8") as f:
-        json.dump(mapping, f, indent=2)
+
+
+def _load_proxy_map(proxy_dir: str) -> dict:
+    map_path = os.path.join(proxy_dir, PROXY_METADATA_FILE)
+    if not os.path.isfile(map_path):
+        return {}
+    try:
+        with open(map_path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _save_proxy_map(proxy_dir: str, original: str, proxy: str):
+    """Atomically save a proxy-to-original mapping for relinking."""
+    map_path = os.path.join(proxy_dir, PROXY_METADATA_FILE)
+    with _PROXY_STATE_LOCK:
+        mapping = _load_proxy_map(proxy_dir)
+        mapping[os.path.abspath(proxy)] = os.path.abspath(original)
+        _atomic_write_json(map_path, mapping)
+
+
+def _proxy_batch_state_root() -> str:
+    return os.path.abspath(os.path.expanduser(os.path.join("~", ".opencut", PROXY_BATCH_STATE_DIR)))
+
+
+def validate_proxy_batch_state_path(path: str) -> str:
+    """Confine caller-provided resume state to OpenCut's private state root."""
+    raw_path = str(path or "").strip()
+    if not raw_path:
+        raise ValueError("Proxy batch state path is required")
+    candidate = os.path.abspath(os.path.expanduser(raw_path))
+    root = _proxy_batch_state_root()
+    try:
+        confined = os.path.commonpath([candidate, root]) == root
+    except ValueError:
+        confined = False
+    if not confined or not candidate.endswith(".json"):
+        raise ValueError("Proxy batch state path must be inside OpenCut's proxy_batches directory")
+    return candidate
+
+
+def proxy_batch_state_path(
+    file_paths: List[str],
+    output_dir: str = "",
+    config: Optional[ProxyConfig] = None,
+) -> str:
+    """Return a stable private checkpoint path for a batch request."""
+    cfg = _resolve_config(config)
+    fingerprint = {
+        "files": [os.path.abspath(str(path)) for path in file_paths],
+        "output_dir": os.path.abspath(output_dir) if output_dir else "",
+        "config": cfg.to_dict(),
+    }
+    encoded = json.dumps(fingerprint, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    batch_id = hashlib.sha256(encoded).hexdigest()[:24]
+    return os.path.join(_proxy_batch_state_root(), f"{batch_id}.json")
+
+
+def load_proxy_batch_state(path: str) -> dict:
+    """Load and minimally validate a persisted proxy batch checkpoint."""
+    state_path = validate_proxy_batch_state_path(path)
+    with _PROXY_STATE_LOCK:
+        try:
+            with open(state_path, "r", encoding="utf-8") as handle:
+                state = json.load(handle)
+        except FileNotFoundError as exc:
+            raise ValueError("Proxy batch checkpoint is missing; start the batch again") from exc
+        except (json.JSONDecodeError, OSError) as exc:
+            raise ValueError(f"Proxy batch checkpoint is unreadable: {exc}") from exc
+    if not isinstance(state, dict) or state.get("schema_version") != PROXY_BATCH_SCHEMA_VERSION:
+        raise ValueError("Proxy batch checkpoint has an unsupported schema")
+    items = state.get("items")
+    if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
+        raise ValueError("Proxy batch checkpoint has invalid items")
+    return state
+
+
+def _source_fingerprint(path: str) -> dict:
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return {"source_size": 0, "source_mtime_ns": 0}
+    return {"source_size": stat.st_size, "source_mtime_ns": stat.st_mtime_ns}
+
+
+def _allocate_proxy_paths(file_paths: List[str], output_dir: str) -> List[str]:
+    """Allocate stable outputs, disambiguating duplicate source basenames."""
+    allocated = []
+    claimed = set()
+    for index, source in enumerate(file_paths):
+        candidate = _get_proxy_path(source, output_dir)
+        normalized = os.path.normcase(os.path.abspath(candidate))
+        if normalized in claimed:
+            base = os.path.splitext(os.path.basename(source))[0]
+            identity = f"{os.path.abspath(source)}\0{index}".encode("utf-8")
+            digest = hashlib.sha256(identity).hexdigest()[:8]
+            directory = output_dir or os.path.join(os.path.dirname(source), "proxies")
+            candidate = os.path.join(directory, f"{base}_{digest}{PROXY_SUFFIX}.mp4")
+            normalized = os.path.normcase(os.path.abspath(candidate))
+        claimed.add(normalized)
+        allocated.append(os.path.abspath(candidate))
+    return allocated
+
+
+def ensure_proxy_batch_state(
+    file_paths: List[str],
+    output_dir: str = "",
+    config: Optional[ProxyConfig] = None,
+) -> str:
+    """Create the full checkpoint before a batch is queued."""
+    cfg = _resolve_config(config)
+    sources = [os.path.abspath(path) for path in file_paths]
+    state_path = proxy_batch_state_path(sources, output_dir, cfg)
+    with _PROXY_STATE_LOCK:
+        if os.path.isfile(state_path):
+            load_proxy_batch_state(state_path)
+            return state_path
+        effective_output_dir = output_dir or cfg.proxy_dir
+        outputs = _allocate_proxy_paths(sources, effective_output_dir)
+        now = time.time()
+        items = []
+        for source, proxy in zip(sources, outputs):
+            item = {
+                "original_path": source,
+                "proxy_path": proxy,
+                "status": "pending",
+                "error": "",
+                "result": None,
+            }
+            item.update(_source_fingerprint(source))
+            items.append(item)
+        state = {
+            "schema_version": PROXY_BATCH_SCHEMA_VERSION,
+            "created_at": now,
+            "updated_at": now,
+            "output_dir": os.path.abspath(effective_output_dir) if effective_output_dir else "",
+            "config": cfg.to_dict(),
+            "cancelled": False,
+            "items": items,
+        }
+        _atomic_write_json(state_path, state)
+    return state_path
+
+
+def _save_proxy_batch_state(path: str, state: dict) -> None:
+    state["updated_at"] = time.time()
+    with _PROXY_STATE_LOCK:
+        _atomic_write_json(validate_proxy_batch_state_path(path), state)
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +332,7 @@ def generate_proxy(
     output_dir: str = "",
     config: Optional[ProxyConfig] = None,
     on_progress: Optional[Callable] = None,
+    job_id: str = "",
     **kwargs,
 ) -> ProxyResult:
     """
@@ -178,6 +344,7 @@ def generate_proxy(
         output_dir: Directory for proxy output.
         config: ProxyConfig (or dict).
         on_progress: Callback(percent, message).
+        job_id: Optional async job ID used to terminate FFmpeg on cancellation.
 
     Returns:
         ProxyResult with paths and dimensions.
@@ -211,6 +378,10 @@ def generate_proxy(
 
     vf = f"scale={pw}:{ph}:flags=bilinear"
 
+    output_path = os.path.abspath(output_path)
+    output_stem, output_ext = os.path.splitext(output_path)
+    temp_output = f"{output_stem}.{uuid.uuid4().hex}.partial{output_ext or '.mp4'}"
+
     builder = (
         FFmpegCmd()
         .input(video_path)
@@ -231,14 +402,26 @@ def generate_proxy(
         builder
         .audio_codec(cfg.audio_codec, bitrate=cfg.audio_bitrate)
         .faststart()
-        .output(output_path)
+        .output(temp_output)
     )
 
     cmd = builder.build()
-    run_ffmpeg(cmd)
-
-    # Save proxy mapping
-    _save_proxy_map(proxy_dir, video_path, output_path)
+    try:
+        run_ffmpeg(cmd, job_id=job_id)
+        if not os.path.isfile(temp_output) or os.path.getsize(temp_output) <= 0:
+            raise RuntimeError("FFmpeg did not produce a non-empty proxy")
+        proxy_info = get_video_info(temp_output)
+        actual_w = int(proxy_info.get("width") or 0)
+        actual_h = int(proxy_info.get("height") or 0)
+        if actual_w <= 0 or actual_h <= 0:
+            raise RuntimeError("Generated proxy has no decodable video stream")
+        os.replace(temp_output, output_path)
+        _save_proxy_map(proxy_dir, video_path, output_path)
+    finally:
+        try:
+            os.remove(temp_output)
+        except FileNotFoundError:
+            pass
 
     file_size = os.path.getsize(output_path) if os.path.isfile(output_path) else 0
     orig_size = os.path.getsize(video_path) if os.path.isfile(video_path) else 1
@@ -252,8 +435,8 @@ def generate_proxy(
         proxy_path=output_path,
         original_width=orig_w,
         original_height=orig_h,
-        proxy_width=pw,
-        proxy_height=ph,
+        proxy_width=actual_w,
+        proxy_height=actual_h,
         file_size_bytes=file_size,
         compression_ratio=round(ratio, 2),
     )
@@ -262,11 +445,54 @@ def generate_proxy(
 # ---------------------------------------------------------------------------
 # Batch Generate Proxies
 # ---------------------------------------------------------------------------
+def _proxy_pair_is_valid(item: dict) -> bool:
+    """Verify source identity, proxy media, and the relink map as one pair."""
+    original = os.path.abspath(str(item.get("original_path") or ""))
+    proxy = os.path.abspath(str(item.get("proxy_path") or ""))
+    if not os.path.isfile(original) or not os.path.isfile(proxy):
+        return False
+    try:
+        source_stat = os.stat(original)
+        if item.get("source_size") not in (None, source_stat.st_size):
+            return False
+        if item.get("source_mtime_ns") not in (None, source_stat.st_mtime_ns):
+            return False
+        if os.path.getsize(proxy) <= 0:
+            return False
+        mapping = _load_proxy_map(os.path.dirname(proxy))
+        if mapping.get(proxy) != original:
+            return False
+        info = get_video_info(proxy)
+        width = int(info.get("width") or 0)
+        height = int(info.get("height") or 0)
+        if width <= 0 or height <= 0:
+            return False
+        stored_result = item.get("result") or {}
+        expected_width = int(stored_result.get("proxy_width") or 0)
+        expected_height = int(stored_result.get("proxy_height") or 0)
+        if expected_width and width != expected_width:
+            return False
+        if expected_height and height != expected_height:
+            return False
+    except Exception:  # noqa: BLE001 - any probe failure means the pair is invalid
+        return False
+    return True
+
+
+def _result_from_item(item: dict) -> ProxyResult:
+    payload = item.get("result") if isinstance(item.get("result"), dict) else {}
+    allowed = ProxyResult.__dataclass_fields__
+    return ProxyResult(**{key: value for key, value in payload.items() if key in allowed})
+
+
 def batch_generate_proxies(
     file_paths: List[str],
     output_dir: str = "",
     config: Optional[ProxyConfig] = None,
     on_progress: Optional[Callable] = None,
+    state_path: str = "",
+    is_cancelled: Optional[Callable[[], bool]] = None,
+    job_id: str = "",
     **kwargs,
 ) -> BatchProxyResult:
     """
@@ -277,39 +503,117 @@ def batch_generate_proxies(
         output_dir: Shared proxy output directory.
         config: ProxyConfig applied to all files.
         on_progress: Callback(percent, message).
+        state_path: Private JSON checkpoint created before queueing.
+        is_cancelled: Callback checked before and after each FFmpeg process.
+        job_id: Async job ID used to terminate the active FFmpeg child.
 
     Returns:
         BatchProxyResult with per-file results.
     """
     cfg = _resolve_config(config, **kwargs)
-    total = len(file_paths)
-    result = BatchProxyResult(total=total, proxy_dir=output_dir)
+    sources = [os.path.abspath(path) for path in file_paths]
+    if not state_path:
+        state_path = ensure_proxy_batch_state(sources, output_dir, cfg)
+    state_path = validate_proxy_batch_state_path(state_path)
+    state = load_proxy_batch_state(state_path)
+    state_sources = [os.path.abspath(str(item.get("original_path") or "")) for item in state["items"]]
+    if sources and state_sources != sources:
+        raise ValueError("Proxy batch checkpoint does not match the requested file list")
+    if not sources:
+        sources = state_sources
+    total = len(state["items"])
+    result = BatchProxyResult(
+        total=total,
+        proxy_dir=state.get("output_dir") or output_dir,
+        state_path=state_path,
+    )
 
-    for idx, fp in enumerate(file_paths):
+    # A previous process can stop between marking an item running and starting
+    # FFmpeg. Retrying failed/running items is safe because output promotion is
+    # atomic and completed pairs are validated below.
+    for item in state["items"]:
+        if item.get("status") in {"running", "failed"}:
+            item["status"] = "pending"
+    state["cancelled"] = False
+    _save_proxy_batch_state(state_path, state)
+
+    for idx, item in enumerate(state["items"]):
+        fp = os.path.abspath(str(item.get("original_path") or ""))
+        proxy_path = os.path.abspath(str(item.get("proxy_path") or ""))
         if on_progress:
             pct = int((idx / max(1, total)) * 90) + 5
             on_progress(pct, f"Generating proxy {idx+1}/{total}...")
 
-        if not os.path.isfile(fp):
-            logger.warning("Skipping missing file: %s", fp)
+        if is_cancelled and is_cancelled():
+            state["cancelled"] = True
+            result.cancelled = True
+            _save_proxy_batch_state(state_path, state)
+            break
+
+        if _proxy_pair_is_valid(item):
+            item["status"] = "completed"
+            item["error"] = ""
+            result.results.append(_result_from_item(item))
             result.skipped += 1
+            _save_proxy_batch_state(state_path, state)
             continue
 
+        if not os.path.isfile(fp):
+            logger.warning("Skipping missing file: %s", fp)
+            item["status"] = "failed"
+            item["error"] = "Source file is missing"
+            result.skipped += 1
+            _save_proxy_batch_state(state_path, state)
+            continue
+
+        item["status"] = "running"
+        item["error"] = ""
+        _save_proxy_batch_state(state_path, state)
         try:
             pr = generate_proxy(
                 video_path=fp,
-                output_dir=output_dir,
+                output_path=proxy_path,
+                output_dir=os.path.dirname(proxy_path),
                 config=cfg,
+                job_id=job_id,
             )
             result.results.append(pr)
             result.completed += 1
+            item["status"] = "completed"
+            item["result"] = pr.to_dict()
+            item["error"] = ""
+            item.update(_source_fingerprint(fp))
+            _save_proxy_batch_state(state_path, state)
         except Exception as exc:
+            if is_cancelled and is_cancelled():
+                item["status"] = "pending"
+                item["error"] = "Cancelled; ready to resume"
+                state["cancelled"] = True
+                result.cancelled = True
+                _save_proxy_batch_state(state_path, state)
+                break
             logger.error("Proxy generation failed for %s: %s", fp, exc)
-            result.failed += 1
+            item["status"] = "failed"
+            item["error"] = str(exc)
             result.results.append(ProxyResult(original_path=fp))
+            _save_proxy_batch_state(state_path, state)
 
+        if is_cancelled and is_cancelled():
+            state["cancelled"] = True
+            result.cancelled = True
+            _save_proxy_batch_state(state_path, state)
+            break
+
+    result.failed = sum(1 for item in state["items"] if item.get("status") == "failed")
+    result.items = [dict(item) for item in state["items"]]
     if on_progress:
-        on_progress(100, f"Batch complete: {result.completed}/{total} proxies.")
+        if result.cancelled:
+            on_progress(
+                min(99, int(((result.completed + result.skipped) / max(1, total)) * 100)),
+                "Proxy batch cancelled; completed items are safe to resume.",
+            )
+        else:
+            on_progress(100, f"Batch complete: {result.completed + result.skipped}/{total} proxies.")
 
     return result
 
@@ -406,44 +710,21 @@ def auto_proxy_ingest(
     if on_progress:
         on_progress(30, f"{len(high_res)} clips need proxies, generating...")
 
-    # Check existing proxy map to skip already-proxied files
+    # Let the durable batch validator inspect both media and map entries.
+    # Map membership alone is insufficient: the proxy may be missing,
+    # truncated, stale relative to its source, or undecodable.
     proxy_dir = output_dir or os.path.join(folder_path, "proxies")
-    map_path = os.path.join(proxy_dir, PROXY_METADATA_FILE)
-    existing_originals = set()
-    if os.path.isfile(map_path):
-        try:
-            with open(map_path, "r", encoding="utf-8") as f:
-                mapping = json.load(f)
-            existing_originals = set(mapping.values())
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    to_generate = [
-        fp for fp in high_res
-        if os.path.abspath(fp) not in existing_originals
-    ]
-    skipped = len(high_res) - len(to_generate)
-
-    if not to_generate:
-        if on_progress:
-            on_progress(100, f"All {len(high_res)} clips already have proxies")
-        return BatchProxyResult(
-            total=len(high_res), skipped=len(high_res),
-            proxy_dir=proxy_dir,
-        )
 
     # Generate proxies
     cfg = ProxyConfig(preset=proxy_preset)
     result = batch_generate_proxies(
-        file_paths=to_generate,
+        file_paths=high_res,
         output_dir=proxy_dir,
         config=cfg,
         on_progress=lambda pct, msg: (
             on_progress(30 + int(pct * 0.65), msg) if on_progress else None
         ),
     )
-
-    result.skipped += skipped
 
     if on_progress:
         on_progress(100, f"Auto ingest complete: {result.completed} proxies generated")

@@ -8,11 +8,12 @@ Data Animation (26.2), and Shape Animation (26.3).
 """
 
 import logging
+import os
 
 from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
-from opencut.jobs import _update_job, async_job
+from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.security import (
     get_json_dict,
     require_csrf,
@@ -43,6 +44,66 @@ def _validated_output(data):
     """
     op = data.get("output_path")
     return validate_output_path(op) if op else None
+
+
+def _prepare_proxy_batch_request(data):
+    """Create or restore the durable checkpoint before queue admission."""
+    from opencut.core.proxy_gen import (
+        ensure_proxy_batch_state,
+        load_proxy_batch_state,
+        validate_proxy_batch_state_path,
+    )
+
+    resume_source = str(
+        data.get("resume_source_job_id") or data.get("resume_from_job_id") or ""
+    ).strip()
+    partial_path = str(data.get("partial_output_path") or "").strip()
+    if resume_source and partial_path:
+        try:
+            state = load_proxy_batch_state(validate_proxy_batch_state_path(partial_path))
+        except ValueError as exc:
+            return str(exc)
+        data["file_paths"] = [item.get("original_path", "") for item in state["items"]]
+        data["output_dir"] = state.get("output_dir") or ""
+        data["config"] = state.get("config") or {}
+        data["partial_output_path"] = partial_path
+        return None
+
+    file_paths = data.get("file_paths")
+    if not isinstance(file_paths, list) or not file_paths:
+        return "No file paths provided"
+    if not all(isinstance(path, str) and path.strip() for path in file_paths):
+        return "file_paths must contain only non-empty path strings"
+    try:
+        validated_files = [validate_filepath(path.strip()) for path in file_paths]
+    except ValueError as exc:
+        return str(exc)
+    normalized = [os.path.normcase(path) for path in validated_files]
+    if len(set(normalized)) != len(normalized):
+        return "file_paths must not contain duplicate sources"
+    output_dir = data.get("output_dir", "")
+    if output_dir is not None and not isinstance(output_dir, str):
+        return "output_dir must be a path string"
+    config = data.get("config") or {}
+    if not isinstance(config, dict):
+        return "config must be an object"
+    try:
+        if output_dir:
+            output_dir = validate_path(output_dir)
+        if config.get("proxy_dir"):
+            config = dict(config)
+            config["proxy_dir"] = validate_path(config["proxy_dir"])
+        data["file_paths"] = validated_files
+        data["output_dir"] = output_dir or ""
+        data["config"] = config
+        data["partial_output_path"] = ensure_proxy_batch_state(
+            validated_files,
+            output_dir=output_dir or "",
+            config=config or None,
+        )
+    except (TypeError, ValueError, OSError) as exc:
+        return f"Could not prepare proxy batch checkpoint: {exc}"
+    return None
 
 
 def _safe_render_width(data, default=1920):
@@ -577,13 +638,20 @@ def proxy_generate(job_id, filepath, data):
         output_dir=output_dir,
         config=config if config else None,
         on_progress=_progress,
+        job_id=job_id,
     )
     return result.to_dict()
 
 
 @color_mam_bp.route("/video/proxy/batch", methods=["POST"])
 @require_csrf
-@async_job("proxy_batch", filepath_required=False)
+@async_job(
+    "proxy_batch",
+    filepath_required=False,
+    pre_validate=_prepare_proxy_batch_request,
+    resumable=True,
+    rate_limit_key=lambda data: f"proxy-batch:{data.get('partial_output_path', '')}",
+)
 def proxy_batch(job_id, filepath, data):
     """Batch-generate proxies for multiple videos (async)."""
     from opencut.core.proxy_gen import batch_generate_proxies
@@ -606,6 +674,9 @@ def proxy_batch(job_id, filepath, data):
         output_dir=output_dir,
         config=config if config else None,
         on_progress=_progress,
+        state_path=data.get("partial_output_path", ""),
+        is_cancelled=lambda: _is_cancelled(job_id),
+        job_id=job_id,
     )
     return result.to_dict()
 
