@@ -9,21 +9,31 @@ Each platform has its own OAuth2 flow and API requirements:
 - TikTok: TikTok Login Kit + Content Posting API
 - Instagram: Facebook Graph API (Instagram Basic Display -> Content Publishing)
 
-Credentials are stored in ~/.opencut/social_credentials.json (encrypted at rest).
+OAuth tokens are stored in the OS credential vault; the JSON file contains
+only non-secret account metadata.
 """
 
 import json
 import logging
 import os
+import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
 
 logger = logging.getLogger("opencut")
 
 CREDENTIALS_PATH = os.path.join(
     os.path.expanduser("~"), ".opencut", "social_credentials.json"
 )
+_CREDENTIALS_LOCK = threading.RLock()
 
 # Platform-specific upload limits
 PLATFORM_LIMITS = {
@@ -81,52 +91,156 @@ class PlatformAuth:
         return time.time() > self.expires_at - 60  # 60s buffer
 
 
-def _load_credentials() -> Dict[str, PlatformAuth]:
-    """Load stored platform credentials."""
-    if not os.path.isfile(CREDENTIALS_PATH):
-        return {}
-    try:
-        with open(CREDENTIALS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return {
-            platform: PlatformAuth(
-                platform=platform,
-                access_token=cred.get("access_token", ""),
-                refresh_token=cred.get("refresh_token"),
-                expires_at=cred.get("expires_at", 0),
-                user_id=cred.get("user_id"),
-                username=cred.get("username"),
-            )
-            for platform, cred in data.items()
-        }
-    except Exception as e:
-        logger.warning("Failed to load social credentials: %s", e)
-        return {}
-
-
-def _save_credentials(creds: Dict[str, PlatformAuth]):
-    """Save platform credentials to disk."""
-    os.makedirs(os.path.dirname(CREDENTIALS_PATH), exist_ok=True)
-    data = {
-        platform: {
-            "access_token": auth.access_token,
-            "refresh_token": auth.refresh_token,
-            "expires_at": auth.expires_at,
-            "user_id": auth.user_id,
-            "username": auth.username,
-        }
-        for platform, auth in creds.items()
-    }
-    try:
-        with open(CREDENTIALS_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-        # Restrict file permissions on Unix
+def _read_credentials_metadata() -> dict:
+    with _CREDENTIALS_LOCK:
+        if not os.path.isfile(CREDENTIALS_PATH):
+            return {}
         try:
-            os.chmod(CREDENTIALS_PATH, 0o600)
-        except (OSError, AttributeError):
-            pass
-    except Exception as e:
-        logger.error("Failed to save social credentials: %s", e)
+            with open(CREDENTIALS_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Failed to load social credential metadata: %s", exc)
+            return {}
+
+
+def _platform_metadata(data: dict) -> dict:
+    platforms = data.get("platforms")
+    if isinstance(platforms, dict):
+        return platforms
+    return {
+        platform: value
+        for platform, value in data.items()
+        if not str(platform).startswith("_") and isinstance(value, dict)
+    }
+
+
+def _write_credentials_metadata(data: dict) -> None:
+    directory = os.path.dirname(CREDENTIALS_PATH) or "."
+    os.makedirs(directory, exist_ok=True)
+    with _CREDENTIALS_LOCK:
+        fd, tmp_path = tempfile.mkstemp(
+            dir=directory,
+            prefix=os.path.basename(CREDENTIALS_PATH) + ".",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            try:
+                os.chmod(tmp_path, 0o600)
+            except (OSError, AttributeError):
+                pass
+            os.replace(tmp_path, CREDENTIALS_PATH)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+
+
+def _load_credentials() -> Dict[str, PlatformAuth]:
+    """Load stored platform metadata and OAuth tokens from the OS vault."""
+    raw = _read_credentials_metadata()
+    platforms = _platform_metadata(raw)
+    identifiers: dict[str, str] = {}
+    legacy: dict[str, str] = {}
+    for platform, metadata in platforms.items():
+        access_field = f"{platform}:access_token"
+        refresh_field = f"{platform}:refresh_token"
+        identifiers[access_field] = secret_id("social/access-token", platform)
+        identifiers[refresh_field] = secret_id("social/refresh-token", platform)
+        legacy[access_field] = str(metadata.get("access_token") or "")
+        legacy[refresh_field] = str(metadata.get("refresh_token") or "")
+
+    def persist_sanitized() -> None:
+        sanitized = {}
+        for platform, metadata in platforms.items():
+            item = dict(metadata)
+            access = str(item.pop("access_token", "") or "")
+            refresh = str(item.pop("refresh_token", "") or "")
+            item["access_token_set"] = bool(access)
+            item["refresh_token_set"] = bool(refresh)
+            sanitized[platform] = item
+        _write_credentials_metadata(
+            {"_credential_storage": "os_vault", "platforms": sanitized}
+        )
+
+    secrets = load_and_migrate_secrets(identifiers, legacy, persist_sanitized)
+    return {
+        platform: PlatformAuth(
+            platform=platform,
+            access_token=secrets.get(f"{platform}:access_token", ""),
+            refresh_token=secrets.get(f"{platform}:refresh_token") or None,
+            expires_at=metadata.get("expires_at", 0),
+            user_id=metadata.get("user_id"),
+            username=metadata.get("username"),
+        )
+        for platform, metadata in platforms.items()
+    }
+
+
+def _save_credentials(creds: Dict[str, PlatformAuth]) -> None:
+    """Persist platform metadata after verifying OS-vault token changes."""
+    old_metadata = _platform_metadata(_read_credentials_metadata())
+    old_platforms = set(old_metadata)
+    changes: dict[str, Optional[str]] = {}
+    for platform, auth in creds.items():
+        previous = old_metadata.get(platform, {})
+        if (
+            auth.access_token
+            or previous.get("access_token")
+            or previous.get("access_token_set")
+        ):
+            changes[secret_id("social/access-token", platform)] = (
+                auth.access_token or None
+            )
+        if (
+            auth.refresh_token
+            or previous.get("refresh_token")
+            or previous.get("refresh_token_set")
+        ):
+            changes[secret_id("social/refresh-token", platform)] = (
+                auth.refresh_token or None
+            )
+    for platform in old_platforms - set(creds):
+        previous = old_metadata[platform]
+        if previous.get("access_token") or previous.get("access_token_set"):
+            changes[secret_id("social/access-token", platform)] = None
+        if previous.get("refresh_token") or previous.get("refresh_token_set"):
+            changes[secret_id("social/refresh-token", platform)] = None
+
+    def persist_metadata(secure: bool) -> None:
+        platforms = {}
+        for platform, auth in creds.items():
+            item = {
+                "expires_at": auth.expires_at,
+                "user_id": auth.user_id,
+                "username": auth.username,
+                "access_token_set": bool(auth.access_token),
+                "refresh_token_set": bool(auth.refresh_token),
+            }
+            if not secure:
+                item["access_token"] = auth.access_token
+                item["refresh_token"] = auth.refresh_token
+            platforms[platform] = item
+        _write_credentials_metadata(
+            {
+                "_credential_storage": (
+                    "os_vault" if secure else "plaintext-opt-in"
+                ),
+                "platforms": platforms,
+            }
+        )
+
+    try:
+        persist_secret_changes(changes, persist_metadata)
+    except Exception:
+        logger.exception("Failed to save social credentials")
+        raise
 
 
 def get_connected_platforms() -> List[dict]:

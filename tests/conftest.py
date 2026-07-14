@@ -51,6 +51,18 @@ def _shutdown_worker_pool():
 
 
 @pytest.fixture(autouse=True)
+def _isolate_os_credential_vault(monkeypatch):
+    """Never let tests read or write the developer's real OS credential vault."""
+    from opencut import credential_store
+
+    backend = credential_store.MemoryCredentialBackend()
+    monkeypatch.setattr(credential_store, "_backend_override", backend)
+    monkeypatch.setattr(credential_store, "_last_error", "")
+    monkeypatch.delenv(credential_store.INSECURE_OPT_IN_ENV, raising=False)
+    return backend
+
+
+@pytest.fixture(autouse=True)
 def _neutralize_machine_local_only(monkeypatch):
     """Keep tests hermetic against this machine's ``~/.opencut/local_only.json``.
 

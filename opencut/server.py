@@ -357,6 +357,22 @@ def create_app(config=None, testing=False):
 
     register_error_handlers(_app)
 
+    if not testing:
+        try:
+            from opencut.credential_store import run_startup_migrations
+
+            migration_result = run_startup_migrations()
+            if migration_result["failed"]:
+                logger.warning(
+                    "Credential migration checks failed: %s",
+                    ", ".join(migration_result["failed"]),
+                )
+        except Exception as _credential_exc:  # noqa: BLE001
+            logger.warning(
+                "Credential-vault startup migration failed: %s",
+                _credential_exc,
+            )
+
     # Per-request correlation ID middleware — must run before route
     # blueprints register so every view sees the populated ``g.request_id``.
     try:
@@ -666,8 +682,8 @@ def _install_remote_auth_middleware(app, error_response):
             "Missing or invalid X-OpenCut-Auth token",
             status=401,
             suggestion=(
-                "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
-                "~/.opencut/auth.json or rotate it via "
+                "OPENCUT_ALLOW_REMOTE=1 is enabled. Reveal the OS-vault token "
+                "with `opencut-server --print-auth` or rotate it with "
                 "`opencut-server --rotate-auth`."
             ),
         )
@@ -848,7 +864,7 @@ def main():
         parser.add_argument(
             "--rotate-auth",
             action="store_true",
-            help="Rotate the persistent API token (~/.opencut/auth.json) and exit",
+            help="Rotate the OS-vault API token and exit",
         )
         parser.add_argument(
             "--print-auth",
@@ -863,7 +879,8 @@ def main():
             token = _auth.rotate_token() if args.rotate_auth else _auth.ensure_token()
             print("")
             print(f"  OpenCut API token: {token.token}")
-            print(f"  Stored in:         {_auth.AUTH_FILE}")
+            print("  Stored in:         OS credential vault")
+            print(f"  Metadata:          {_auth.AUTH_FILE}")
             print(f"  Header to use:     {_auth.AUTH_HEADER}")
             print("  This token is only required for non-loopback requests when")
             print("  OPENCUT_ALLOW_REMOTE=1 is set.")
@@ -884,21 +901,22 @@ def main():
                     print("  127.0.0.1 unless you intentionally expose it on a trusted network.")
                     print("  Set OPENCUT_ALLOW_REMOTE=1 to allow a remote bind.")
                     return 2
-                # F112: ensure a token exists before announcing remote binding so
-                # operators can read it from ~/.opencut/auth.json on first boot.
+                # Ensure a vault token exists before announcing remote binding.
                 try:
                     from opencut import auth as _auth
 
                     issued = _auth.ensure_token()
                 except Exception as _auth_exc:  # noqa: BLE001
-                    issued = None
                     print("")
-                    print(f"  WARNING: could not initialise auth token: {_auth_exc}")
+                    print(f"  ERROR: could not initialise auth token: {_auth_exc}")
+                    print("  Configure the OS credential vault or explicitly enable")
+                    print("  OPENCUT_ALLOW_INSECURE_SECRET_STORAGE=1, then retry.")
+                    return 2
                 print("")
                 print(f"  WARNING: Binding OpenCut to non-loopback host {args.host}.")
                 print("  Non-loopback requests must carry X-OpenCut-Auth.")
                 if issued is not None:
-                    print(f"  Token file: {_auth.AUTH_FILE}")
+                    print("  Reveal with: opencut-server --print-auth")
                     print("  Rotate with: opencut-server --rotate-auth")
             run_server(host=args.host, port=args.port, debug=args.debug)
             return 0

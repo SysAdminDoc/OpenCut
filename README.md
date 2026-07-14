@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1546-orange)
-![Tests](https://img.shields.io/badge/Tests-11100+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-11300+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -497,6 +497,8 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
 | `OPENCUT_LOCAL_ONLY` | `0` | Set to `1` to deny all non-loopback outbound network access before DNS, socket, browser-launch, or network-capable subprocess I/O |
+| `OPENCUT_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-loopback bind; remote requests require the OS-vault token shown by `opencut-server --print-auth` |
+| `OPENCUT_ALLOW_INSECURE_SECRET_STORAGE` | `0` | Explicitly permit plaintext credential metadata only when no supported OS vault is available; leave unset for fail-closed persistence |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |
 | `OPENCUT_C2PA_SIGNING_KEY` | unset | Private-key file required with a certificate for embedded credentials; an Ed25519 PEM/path also signs local JSON sidecars |
 | `OPENCUT_C2PA_C2PATOOL` | `c2patool` on PATH | C2PA Tool executable used to create and verify embedded MP4/JPEG/PNG credentials |
@@ -509,6 +511,15 @@ are not implicitly trusted, so remote render nodes, SRT destinations, webhooks,
 cloud APIs, update/model/package downloads, OAuth browser launches, and similar
 egress remain blocked until local-only mode is explicitly disabled. Local files
 and already-installed models are the supported alternatives.
+
+API keys, OAuth tokens, node credentials, webhook signing secrets, and the
+remote-access token are stored through `keyring` in Windows Credential Locker,
+macOS Keychain, Linux Secret Service, or KWallet. Existing plaintext JSON is
+migrated only after the vault write is read back successfully. On Linux, install
+and unlock a Secret Service or KWallet backend before saving credentials. Check
+the `credential_store` field from `GET /settings/local-only`; without a secure
+backend, credential persistence returns `CREDENTIAL_STORE_UNAVAILABLE` unless
+the explicit insecure-storage variable above is enabled.
 
 ## CLI Usage
 
@@ -586,7 +597,7 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 - **Input bounds** on all numeric parameters (dimensions, durations, counts)
 - **GPU rate limiting** prevents resource exhaustion from concurrent heavy jobs
 - **ASS subtitle injection prevention** strips override sequences from caption text
-- **Social OAuth credentials** stored locally at `~/.opencut/social_credentials.json`
+- **OS credential vault** for OAuth tokens, API keys, node credentials, webhook signing secrets, and remote-access tokens; JSON files retain redacted metadata only
 
 ---
 
@@ -623,7 +634,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,100+ estimated tests across 279 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,300+ estimated tests across 283 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -684,7 +695,7 @@ extension/
     main.js          # UXP panel (~7,175 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,100+ estimated tests, 279 root test files)
+tests/               # pytest test suite (11,300+ estimated tests, 283 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

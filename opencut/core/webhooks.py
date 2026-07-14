@@ -29,24 +29,6 @@ def _validate_webhook_url(url: str) -> str:
     return validate_public_http_url(url, label="Webhook URL")
 
 
-def _atomic_write_json(path: str, payload: object) -> None:
-    """Atomically replace *path* with UTF-8 JSON content."""
-    import tempfile
-
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-        os.replace(tmp_path, path)
-    except BaseException:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
-
-
 def send_webhook(
     url: str,
     event_type: str,
@@ -138,19 +120,18 @@ def load_webhook_config() -> List[Dict]:
     optional ``events`` filter list.  Returns empty list if the file does
     not exist.
     """
-    with _config_lock:
-        if not os.path.isfile(_WEBHOOKS_FILE):
-            return []
+    from opencut.core import webhook_system
 
+    with _config_lock, webhook_system._config_lock:
+        old_dir = webhook_system._OPENCUT_DIR
+        old_file = webhook_system._WEBHOOKS_FILE
         try:
-            with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                return data
-            return []
-        except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Failed to load webhook config: %s", exc)
-            return []
+            webhook_system._OPENCUT_DIR = _OPENCUT_DIR
+            webhook_system._WEBHOOKS_FILE = _WEBHOOKS_FILE
+            return webhook_system.load_webhook_config()
+        finally:
+            webhook_system._OPENCUT_DIR = old_dir
+            webhook_system._WEBHOOKS_FILE = old_file
 
 
 def save_webhook_config(configs: List[Dict]) -> None:
@@ -166,6 +147,16 @@ def save_webhook_config(configs: List[Dict]) -> None:
         clean_cfg = dict(cfg)
         clean_cfg["url"] = _validate_webhook_url(clean_cfg.get("url", ""))
         sanitized.append(clean_cfg)
-    with _config_lock:
-        _atomic_write_json(_WEBHOOKS_FILE, sanitized)
+    from opencut.core import webhook_system
+
+    with _config_lock, webhook_system._config_lock:
+        old_dir = webhook_system._OPENCUT_DIR
+        old_file = webhook_system._WEBHOOKS_FILE
+        try:
+            webhook_system._OPENCUT_DIR = _OPENCUT_DIR
+            webhook_system._WEBHOOKS_FILE = _WEBHOOKS_FILE
+            webhook_system.save_webhook_config(sanitized)
+        finally:
+            webhook_system._OPENCUT_DIR = old_dir
+            webhook_system._WEBHOOKS_FILE = old_file
     logger.info("Saved %d webhook config(s)", len(sanitized))

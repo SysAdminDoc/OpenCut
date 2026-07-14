@@ -10,6 +10,7 @@ and fall back to local render when all nodes are unavailable.
 import json
 import logging
 import os
+import tempfile
 import threading
 import time
 import urllib.error
@@ -17,6 +18,11 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
 from opencut.helpers import OPENCUT_DIR, get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -54,6 +60,7 @@ class RenderNode:
     auth_token: str = ""
 
     def to_dict(self) -> dict:
+        """Return a route-safe representation with no bearer credential."""
         return {
             "name": self.name,
             "host": self.host,
@@ -62,8 +69,14 @@ class RenderNode:
             "max_concurrent": self.max_concurrent,
             "enabled": self.enabled,
             "priority": self.priority,
-            "auth_token": self.auth_token,
+            "auth_token_set": bool(self.auth_token),
         }
+
+    def to_storage_dict(self, *, include_secret: bool = False) -> dict:
+        data = self.to_dict()
+        if include_secret:
+            data["auth_token"] = self.auth_token
+        return data
 
     @classmethod
     def from_dict(cls, d: dict) -> "RenderNode":
@@ -182,29 +195,37 @@ def _ensure_config_dir():
     os.makedirs(OPENCUT_DIR, exist_ok=True)
 
 
-def load_nodes() -> List[RenderNode]:
-    """Load render nodes from persistent config file."""
+def _read_nodes_metadata() -> dict:
     with _nodes_lock:
         if not os.path.isfile(_NODES_FILE):
-            return []
+            return {"nodes": []}
         try:
             with open(_NODES_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            return [RenderNode.from_dict(d) for d in data if d.get("name")]
+            if isinstance(data, list):
+                return {"nodes": data}
+            if isinstance(data, dict) and isinstance(data.get("nodes"), list):
+                return data
+            return {"nodes": []}
         except Exception as e:
             logger.warning("Failed to load render nodes config: %s", e)
-            return []
+            return {"nodes": []}
 
 
-def save_nodes(nodes: List[RenderNode]):
-    """Save render nodes to persistent config file."""
+def _write_nodes_metadata(payload: dict) -> None:
     _ensure_config_dir()
     with _nodes_lock:
-        data = [n.to_dict() for n in nodes]
-        tmp = _NODES_FILE + ".tmp"
+        directory = os.path.dirname(_NODES_FILE) or "."
+        fd, tmp = tempfile.mkstemp(
+            dir=directory,
+            prefix=os.path.basename(_NODES_FILE) + ".",
+            suffix=".tmp",
+        )
         try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
             os.replace(tmp, _NODES_FILE)
         except Exception as e:
             logger.error("Failed to save render nodes config: %s", e)
@@ -213,6 +234,79 @@ def save_nodes(nodes: List[RenderNode]):
             except OSError:
                 pass
             raise
+
+
+def load_nodes() -> List[RenderNode]:
+    """Load render node metadata plus credentials from the OS vault."""
+    raw = _read_nodes_metadata()
+    stored_nodes = [item for item in raw["nodes"] if item.get("name")]
+    identifiers = {
+        node["name"]: secret_id("cloud-render/auth-token", node["name"])
+        for node in stored_nodes
+    }
+    legacy = {
+        node["name"]: str(node.get("auth_token") or "")
+        for node in stored_nodes
+    }
+
+    def persist_sanitized() -> None:
+        sanitized = []
+        for node in stored_nodes:
+            item = dict(node)
+            token = str(item.pop("auth_token", "") or "")
+            item["auth_token_set"] = bool(token)
+            sanitized.append(item)
+        _write_nodes_metadata(
+            {"_credential_storage": "os_vault", "nodes": sanitized}
+        )
+
+    secrets = load_and_migrate_secrets(identifiers, legacy, persist_sanitized)
+    nodes = []
+    for item in stored_nodes:
+        metadata = dict(item)
+        metadata["auth_token"] = secrets.get(item["name"], "")
+        nodes.append(RenderNode.from_dict(metadata))
+    return nodes
+
+
+def save_nodes(nodes: List[RenderNode]) -> None:
+    """Persist render nodes after verifying their OS-vault credentials."""
+    old_metadata = {
+        item.get("name"): item
+        for item in _read_nodes_metadata()["nodes"]
+        if item.get("name")
+    }
+    old_names = set(old_metadata)
+    changes = {}
+    for node in nodes:
+        previous = old_metadata.get(node.name, {})
+        if (
+            node.auth_token
+            or previous.get("auth_token")
+            or previous.get("auth_token_set")
+        ):
+            changes[secret_id("cloud-render/auth-token", node.name)] = (
+                node.auth_token or None
+            )
+    for name in old_names - {node.name for node in nodes}:
+        previous = old_metadata[name]
+        if previous.get("auth_token") or previous.get("auth_token_set"):
+            changes[secret_id("cloud-render/auth-token", name)] = None
+
+    def persist_metadata(secure: bool) -> None:
+        _write_nodes_metadata(
+            {
+                "_credential_storage": (
+                    "os_vault" if secure else "plaintext-opt-in"
+                ),
+                "nodes": [
+                    node.to_storage_dict(include_secret=not secure)
+                    for node in nodes
+                ],
+            }
+        )
+
+    persist_secret_changes(changes, persist_metadata)
 
 
 def add_node(node: RenderNode) -> List[RenderNode]:

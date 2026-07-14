@@ -4,22 +4,18 @@ OpenCut's HTTP server is single-user and ships bound to ``127.0.0.1`` by
 default. When the operator opts into a non-loopback bind via
 ``OPENCUT_ALLOW_REMOTE=1``, the surface area changes — anyone on the
 network can hit the API — so we add a second gate: a persistent API
-token stored at ``~/.opencut/auth.json``, required on every request
+token stored in the operating-system credential vault, required on every request
 when the server isn't bound to a loopback address.
 
 Design choices:
 
-* **No new dependency.** Pure stdlib (``secrets``, ``json``, ``os``).
-* **Atomic writes.** The token file is written to a sibling
-  ``auth.json.tmp`` then renamed so a crash mid-write never leaves a
-  zero-byte file.
-* **0600 file mode** on POSIX. On Windows we rely on user-profile
-  inheritance — there is no portable way to mark a file "user-only" in
-  stdlib without ``ctypes``.
+* **OS-vault secret.** ``auth.json`` contains only issuance metadata; keyring
+  selects Windows Credential Locker, macOS Keychain, Secret Service, or KWallet.
+* **Atomic metadata writes.** Vault writes are verified before the JSON metadata
+  is replaced, and both sides roll back if either step fails.
 * **Rotation is explicit.** Callers ask for ``rotate_token()``; the
   generator never silently invalidates existing tokens. If you want
-  to invalidate, delete ``~/.opencut/auth.json`` and the next read
-  returns ``None``.
+  to invalidate, call ``clear_token()`` so both vault and metadata are removed.
 * **Loopback requests bypass the gate.** The CEP/UXP panel runs in the
   same machine as the server; requiring a token in that path would
   break the single-user UX without buying any security.
@@ -41,6 +37,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
+from opencut.credential_store import (
+    load_and_migrate_secrets,
+    persist_secret_changes,
+    secret_id,
+)
 from opencut.helpers import OPENCUT_DIR
 
 logger = logging.getLogger("opencut")
@@ -48,6 +49,7 @@ logger = logging.getLogger("opencut")
 AUTH_FILE = Path(OPENCUT_DIR) / "auth.json"
 AUTH_HEADER = "X-OpenCut-Auth"
 TOKEN_BYTES = 32  # 256 bits
+_AUTH_SECRET_ID = secret_id("server/api-token")
 
 _TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
@@ -68,7 +70,11 @@ class AuthToken:
     label: str = "default"
 
     def as_dict(self) -> dict:
-        return {"token": self.token, "issued_at": self.issued_at, "label": self.label}
+        return {
+            "issued_at": self.issued_at,
+            "label": self.label,
+            "token_set": bool(self.token),
+        }
 
 
 def _restrict_windows_acl(path: Path) -> None:
@@ -93,6 +99,8 @@ def _atomic_write(path: Path, payload: dict) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2, sort_keys=True)
+            fh.flush()
+            os.fsync(fh.fileno())
         if os.name == "posix":
             try:
                 os.chmod(tmp_name, stat.S_IRUSR | stat.S_IWUSR)
@@ -109,7 +117,7 @@ def _atomic_write(path: Path, payload: dict) -> None:
         raise
 
 
-def _load() -> Optional[AuthToken]:
+def _read_metadata() -> Optional[dict]:
     if not AUTH_FILE.exists():
         return None
     try:
@@ -118,7 +126,26 @@ def _load() -> Optional[AuthToken]:
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("opencut.auth: ignoring corrupt %s: %s", AUTH_FILE, exc)
         return None
-    token = str(data.get("token") or "").strip()
+    return data if isinstance(data, dict) else None
+
+
+def _load() -> Optional[AuthToken]:
+    data = _read_metadata()
+    if data is None:
+        return None
+
+    def persist_sanitized() -> None:
+        metadata = dict(data)
+        value = str(metadata.pop("token", "") or "").strip()
+        metadata["token_set"] = bool(value)
+        metadata["_credential_storage"] = "os_vault"
+        _atomic_write(AUTH_FILE, metadata)
+
+    token = load_and_migrate_secrets(
+        {"token": _AUTH_SECRET_ID},
+        data,
+        persist_sanitized,
+    )["token"].strip()
     if not token:
         return None
     return AuthToken(
@@ -145,7 +172,7 @@ def ensure_token(label: str = "default") -> AuthToken:
             issued_at=time.time(),
             label=label,
         )
-        _atomic_write(AUTH_FILE, token.as_dict())
+        _persist_token(token)
         return token
 
 
@@ -157,18 +184,41 @@ def rotate_token(label: str = "default") -> AuthToken:
             issued_at=time.time(),
             label=label,
         )
-        _atomic_write(AUTH_FILE, token.as_dict())
+        _persist_token(token)
         return token
 
 
+def _persist_token(token: AuthToken) -> None:
+    def persist_metadata(secure: bool) -> None:
+        metadata = token.as_dict()
+        metadata["_credential_storage"] = (
+            "os_vault" if secure else "plaintext-opt-in"
+        )
+        if not secure:
+            metadata["token"] = token.token
+        _atomic_write(AUTH_FILE, metadata)
+
+    persist_secret_changes({_AUTH_SECRET_ID: token.token}, persist_metadata)
+
+
 def clear_token() -> bool:
-    """Delete the persisted token. Returns True if a file was removed."""
+    """Delete persisted token metadata and its OS-vault value."""
     with _lock:
-        try:
-            AUTH_FILE.unlink()
-            return True
-        except FileNotFoundError:
+        metadata = _read_metadata()
+        if metadata is None:
             return False
+
+        def remove_metadata(_secure: bool) -> None:
+            try:
+                AUTH_FILE.unlink()
+            except FileNotFoundError:
+                pass
+
+        changes = {}
+        if metadata.get("token") or metadata.get("token_set"):
+            changes[_AUTH_SECRET_ID] = None
+        persist_secret_changes(changes, remove_metadata)
+        return True
 
 
 def is_token_valid(candidate: Optional[str]) -> bool:

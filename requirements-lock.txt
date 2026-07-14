@@ -11,6 +11,7 @@ idna==3.16
 iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
+keyring==25.7.0
 MarkupSafe==3.0.3
 more-itertools==10.8.0
 packaging==26.0
