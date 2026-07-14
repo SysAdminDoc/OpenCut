@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Confine and verify remote result downloads
+
+- Remote artifacts may now be written only beneath `OPENCUT_OUTPUT_DIR`, with
+  `~/.opencut/remote_results` as the private fallback. Traversal, symlink
+  escapes, arbitrary absolute destinations, and path-shaped job IDs are
+  rejected before network I/O.
+- Downloads now use the shared guarded transaction: redirect/DNS validation,
+  an 8 GiB declared-and-streamed cap, sibling staging, fsync, MIME checks,
+  ffprobe media validation, and atomic promotion. Oversized, interrupted, or
+  mismatched responses preserve existing output and leave no partial file.
+
 ### Fixed - Guard and transact every direct asset download
 
 - Added one shared downloader that rejects local/private initial hosts and

@@ -531,20 +531,23 @@ class TestSubmitRemoteJob(unittest.TestCase):
 class TestDownloadResult(unittest.TestCase):
     """download_result tests."""
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_download_success(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_media_download", return_value=True)
+    @patch("opencut.core.url_safety.open_validated_url")
+    def test_download_success(self, mock_open_url, _mock_validate):
         from opencut.core.remote_process import download_result
 
         mock_resp = MagicMock()
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.headers = {"Content-Length": "5"}
+        mock_resp.headers = {"Content-Length": "5", "Content-Type": "video/mp4"}
         mock_resp.read.side_effect = [b"hello", b""]
-        mock_urlopen.return_value = mock_resp
+        mock_resp.geturl.return_value = "http://x/api/remote/download-result/j1"
+        mock_open_url.return_value = mock_resp
 
         with tempfile.TemporaryDirectory() as tmpdir:
             out = os.path.join(tmpdir, "result.mp4")
-            path = download_result("http://x", "j1", out)
+            with patch.dict(os.environ, {"OPENCUT_OUTPUT_DIR": tmpdir}):
+                path = download_result("http://x", "j1", out)
             self.assertEqual(path, out)
             self.assertTrue(os.path.isfile(out))
             with open(out, "rb") as fh:
@@ -1449,6 +1452,26 @@ class TestRemoteRoutes(unittest.TestCase):
             headers=csrf_headers(self.csrf_token),
         )
         self.assertEqual(resp.status_code, 400)
+
+    @patch("opencut.core.remote_process.transactional_download")
+    def test_download_rejects_destination_outside_output_root(self, mock_download):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = os.path.join(tmpdir, "approved")
+            outside = os.path.join(tmpdir, "outside.mp4")
+            with patch.dict(os.environ, {"OPENCUT_OUTPUT_DIR": root}):
+                resp = self.client.post(
+                    "/remote/download",
+                    data=json.dumps({
+                        "node_url": "https://node.example",
+                        "remote_job_id": "j1",
+                        "local_path": outside,
+                    }),
+                    headers=csrf_headers(self.csrf_token),
+                )
+
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.get_json()["code"], "PERMISSION_DENIED")
+        mock_download.assert_not_called()
 
 
 # =====================================================================
