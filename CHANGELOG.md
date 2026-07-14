@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added - C2PA 2.4 AI-disclosure and durable soft-binding on export
+
+- Upgraded `c2pa_embed` manifests to the C2PA 2.4 profile: AI/ML actions now
+  carry a machine-readable IPTC `digitalSourceType` (trainedAlgorithmicMedia
+  for generative steps, compositeWithTrainedAlgorithmicMedia for AI-assisted
+  edits), a spec-shaped `c2pa.ai-disclosure` assertion replaces the ad-hoc
+  `c2pa.ai_disclosure`, and a `c2pa.soft-binding` assertion embeds a content
+  fingerprint so credentials remain discoverable after Premiere re-encodes the
+  media. New `test_c2pa_embed` conformance suite covers the 2.4 shape.
+
 ### Fixed - Harden three low-cost reliability/security defaults
 
 - `/health` now exposes the bootstrap CSRF token on an allowlist basis
