@@ -134,7 +134,12 @@ def test_async_job_persists_resource_metadata(app, monkeypatch, tmp_path):
 
     app.register_blueprint(bp)
     client = app.test_client()
-    response = client.post("/n9/job-metadata", json={"mode": "test"})
+    # The app enforces CSRF on every mutating request via a global
+    # before_request guard, so fetch a live token from /health first.
+    csrf = client.get("/health").get_json().get("csrf_token", "")
+    response = client.post(
+        "/n9/job-metadata", json={"mode": "test"}, headers={"X-OpenCut-Token": csrf}
+    )
     assert response.status_code == 200
     job_id = response.get_json()["job_id"]
 

@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Repair stale/broken tests and complete the UXP markup-safety gate
+
+- `test_job_metadata` now sends a CSRF token (the app enforces CSRF on every
+  mutating request via a global before_request guard), fixing a spurious 403.
+- `test_platform_infra` waveform tests compare `_pcm_to_samples` against a list
+  (it returns `array('h')` for speed) instead of asserting array-equals-list.
+- Registered the reviewed plugin-trust `innerHTML` sinks/accumulators
+  (`renderPluginTrustDashboard`, `uxpLoadPluginTrust`) in the UXP markup-safety
+  allowlists after confirming every dynamic value is `escapeHtml`-wrapped.
+- Updated the UXP OAuth-launch test to the localized `{platform}` consent
+  message (was a stale `${platform}` template-literal assertion).
+- Removed `test_wave_f_number_ledger`: it asserted on a Wave N-T / F-number
+  ROADMAP structure that was intentionally replaced by the research-driven
+  roadmap and read a gitignored `.ai/` ledger, so it could never pass.
+
 ### Fixed - Make the test suite hermetic against machine privacy settings
 
 - Added an autouse conftest fixture that neutralizes this machine's

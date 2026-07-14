@@ -1099,11 +1099,12 @@ class TestWaveformTimeline(unittest.TestCase):
         from opencut.core.waveform_timeline import _pcm_to_samples
         pcm = struct.pack("<4h", 100, -200, 300, -400)
         samples = _pcm_to_samples(pcm)
-        self.assertEqual(samples, [100, -200, 300, -400])
+        # _pcm_to_samples returns an array('h') for speed; compare as a list.
+        self.assertEqual(list(samples), [100, -200, 300, -400])
 
     def test_pcm_to_samples_empty(self):
         from opencut.core.waveform_timeline import _pcm_to_samples
-        self.assertEqual(_pcm_to_samples(b""), [])
+        self.assertEqual(list(_pcm_to_samples(b"")), [])
 
 
 # ============================================================
