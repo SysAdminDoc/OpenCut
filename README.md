@@ -496,10 +496,19 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_PORT` | `5679` | Server port |
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
+| `OPENCUT_LOCAL_ONLY` | `0` | Set to `1` to deny all non-loopback outbound network access before DNS, socket, browser-launch, or network-capable subprocess I/O |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |
 | `OPENCUT_C2PA_SIGNING_KEY` | unset | Private-key file required with a certificate for embedded credentials; an Ed25519 PEM/path also signs local JSON sidecars |
 | `OPENCUT_C2PA_C2PATOOL` | `c2patool` on PATH | C2PA Tool executable used to create and verify embedded MP4/JPEG/PNG credentials |
 | `OPENCUT_C2PA_SIGNING_CERT` | unset | X.509 certificate-chain file required with the signing key for embedded credentials |
+
+Local-only mode permits outbound connections only to explicit loopback targets:
+`localhost`, `*.localhost`, `127.0.0.0/8`, and `::1`. This keeps local Ollama,
+OBS, GPT-SoVITS, and panel/backend traffic working. LAN/private-network targets
+are not implicitly trusted, so remote render nodes, SRT destinations, webhooks,
+cloud APIs, update/model/package downloads, OAuth browser launches, and similar
+egress remain blocked until local-only mode is explicitly disabled. Local files
+and already-installed models are the supported alternatives.
 
 ## CLI Usage
 
