@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Feature readiness proves implementation, not just dependencies
+
+- Added `opencut.core.stub_scan`, which statically (via AST) identifies
+  `opencut.core` modules whose entrypoints still raise `NotImplementedError`.
+  `FeatureRecord` gained an `impl_module` link and an implementation-aware
+  `resolved_state()`/`state_reason()`: a feature whose adapter is an unfinished
+  stub now stays `stub` even when its optional dependency is installed, so
+  readiness never advertises a route that ends in `NotImplementedError`.
+- Corrected three features that reported `available` while backed by stub
+  adapters (`captions.nemo-asr`, `video.relight.iclight`,
+  `video.upscale.seedvr2`). Panels and MCP now see the same state and reason via
+  `as_dict`. New `test_feature_impl_readiness` adds a release gate that fails if
+  any `available` feature is backed by a terminal-stub module.
+
 ### Security - Establish a model-weight supply-chain boundary (CVE-2026-24747)
 
 - Raised the Torch floor to `>=2.10.0` and torchvision to `>=0.25.0` in the

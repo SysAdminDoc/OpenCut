@@ -123,6 +123,12 @@ class FeatureRecord:
     probe: Optional[Callable[[], bool]] = None
     check_name: str = ""
     source: str = "manual"
+    # Name of the opencut.core module that implements this feature's adapter
+    # (e.g. "asr_parakeet"). When set and that module is still a terminal
+    # NotImplementedError stub, the feature stays `stub` even if its optional
+    # dependency is installed, so readiness never reports an unfinished adapter
+    # as runnable. See opencut.core.stub_scan.
+    impl_module: str = ""
     notes: str = ""
     hardware: str = ""
     requires_gpu: bool = False
@@ -131,8 +137,23 @@ class FeatureRecord:
     license: str = ""
     advisory_notes: List[str] = field(default_factory=list)
 
+    def is_stub_implementation(self) -> bool:
+        """True if this feature's adapter is still a terminal NotImplementedError."""
+        if not self.impl_module:
+            return False
+        from opencut.core.stub_scan import is_stub_module
+
+        return is_stub_module(self.impl_module)
+
     def resolved_state(self) -> ReadinessState:
-        """Return the readiness state after probing optional dependencies."""
+        """Return the readiness state after probing implementation and deps.
+
+        Implementation state is checked first: an unfinished adapter stays
+        ``stub`` even when its optional dependency is present, so readiness
+        never advertises a route that ends in ``NotImplementedError``.
+        """
+        if self.is_stub_implementation():
+            return STATE_STUB
         if self.state == STATE_AVAILABLE and self.probe is not None:
             try:
                 ok = bool(self.probe())
@@ -141,10 +162,29 @@ class FeatureRecord:
             return STATE_AVAILABLE if ok else STATE_MISSING_DEPENDENCY
         return self.state
 
+    def state_reason(self) -> str:
+        """Human-readable reason for the resolved state (shared by panels/MCP)."""
+        if self.is_stub_implementation():
+            return (
+                "Adapter is not implemented yet (entrypoint raises "
+                "NotImplementedError); installing its dependency will not make "
+                "it runnable."
+            )
+        state = self.resolved_state()
+        if state == STATE_MISSING_DEPENDENCY:
+            hint = self.install_hint or "an optional dependency"
+            return f"Install to enable: {hint}."
+        if state == STATE_STUB:
+            return "Registered as a strategic stub; not runnable yet."
+        if state == STATE_EXPERIMENTAL:
+            return "Experimental; enabled but not covered by standard gates."
+        return "Available."
+
     def as_dict(self) -> dict:
         payload = asdict(self)
         payload.pop("probe", None)
         payload["state"] = self.resolved_state()
+        payload["state_reason"] = self.state_reason()
         return payload
 
 
@@ -285,6 +325,7 @@ _FEATURES: List[FeatureRecord] = [
         docs="docs/MODELS.md#seedvr2-one-step-diffusion-vsr",
         routes=["/video/upscale/smart"],
         probe=_check("check_seedvr2_available"),
+        impl_module="upscale_seedvr2",
         hardware="gpu (>= 8 GB VRAM)",
         requires_gpu=True,
         minimum_vram_mb=8192,
@@ -425,6 +466,7 @@ _FEATURES: List[FeatureRecord] = [
         docs="docs/MODELS.md#ic-light-v1-relight",
         routes=["/video/relight/iclight", "/video/relight/iclight/capabilities"],
         probe=_check("check_iclight_available"),
+        impl_module="relight_iclight",
         hardware="gpu (>= 4 GB VRAM)",
         requires_gpu=True,
         minimum_vram_mb=4096,
@@ -538,6 +580,7 @@ _FEATURES: List[FeatureRecord] = [
         docs="docs/MODELS.md#nvidia-nemo-asr-parakeet--canary",
         routes=["/transcribe", "/captions/generate"],
         probe=_check("check_nemo_asr_available"),
+        impl_module="asr_parakeet",
         hardware="cpu/gpu",
     ),
     FeatureRecord(
@@ -792,6 +835,7 @@ _FEATURES: List[FeatureRecord] = [
         docs="docs/MODELS.md#latentsync-diffusion-lip-sync",
         routes=["/lipsync/latentsync"],
         probe=_check("check_latentsync_available"),
+        impl_module="lipsync_latentsync",
         hardware="gpu (>= 6 GB VRAM)",
         requires_gpu=True,
         minimum_vram_mb=6144,
@@ -803,6 +847,7 @@ _FEATURES: List[FeatureRecord] = [
         state=STATE_STUB,
         docs="ROADMAP.md",
         routes=["/lipsync/musetalk"],
+        impl_module="musetalk_service",
     ),
     FeatureRecord(
         feature_id="lipsync.advanced",
@@ -828,6 +873,7 @@ _FEATURES: List[FeatureRecord] = [
         state=STATE_STUB,
         docs="ROADMAP.md",
         routes=["/video/upscale/flashvsr"],
+        impl_module="upscale_flashvsr",
     ),
     FeatureRecord(
         feature_id="video.inpaint.rose",
