@@ -54,6 +54,10 @@ class WorkerPool:
 
         logger.info("WorkerPool initialized with %d max workers", max_workers)
 
+    @property
+    def max_workers(self) -> int:
+        return self._max_workers
+
     def submit(self, job_id: str, fn, *args, priority=JobPriority.NORMAL, **kwargs) -> Future:
         """Submit a job function to the pool. Returns a Future.
 
@@ -203,6 +207,13 @@ def get_pool(max_workers=10) -> WorkerPool:
             if _pool is None:
                 _pool = WorkerPool(max_workers=max_workers)
     return _pool
+
+
+def configured_max_workers(default: int = 10) -> int:
+    """Return the pool's worker count without forcing pool creation."""
+    if _pool is not None:
+        return _pool.max_workers
+    return default
 
 
 def cancel_job(job_id: str) -> bool:

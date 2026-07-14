@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Harden three low-cost reliability/security defaults
+
+- `/health` now exposes the bootstrap CSRF token on an allowlist basis
+  (no-Origin, exact same-origin, or a configured CORS origin) instead of a
+  two-value denylist, so an arbitrary cross-origin page can no longer harvest
+  the loopback mutation token.
+- `check_disk_space` now probes the nearest existing ancestor directory and
+  fails **closed** on a local-path probe error (surfacing a full/inaccessible
+  disk as a clean rejection) while still failing open for un-probeable
+  network/UNC paths.
+- Job admission is clamped to the worker-pool size, so raising
+  `OPENCUT_MAX_CONCURRENT_JOBS` above the pool's worker count can no longer
+  over-admit "running" jobs onto a queue that cannot execute them.
+
 ### Added - Wire UXP batch rename and smart bins to the host bridge
 
 - The UXP timeline panel's Batch Rename and Smart Bins buttons now run their

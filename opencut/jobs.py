@@ -174,6 +174,21 @@ def _stop_resource_sampler(sampler) -> dict:
     return {field: snapshot.get(field) for field in _JOB_RESOURCE_FIELDS}
 
 
+def _effective_concurrent_limit() -> int:
+    """Admissions are capped by both the configured limit and the worker pool
+    size — admitting more "running" jobs than the pool can execute would let
+    ``OPENCUT_MAX_CONCURRENT_JOBS`` silently over-report and starve the queue.
+    """
+    try:
+        from opencut.workers import configured_max_workers
+        pool_max = configured_max_workers()
+    except Exception:
+        pool_max = None
+    if isinstance(pool_max, int) and pool_max > 0:
+        return min(MAX_CONCURRENT_JOBS, pool_max)
+    return MAX_CONCURRENT_JOBS
+
+
 def _new_job(job_type: str, filepath: str, *,
              resumable: bool = False,
              partial_output_path: str = "",
@@ -187,7 +202,7 @@ def _new_job(job_type: str, filepath: str, *,
     job_id = uuid.uuid4().hex[:12]
     with job_lock:
         running = sum(1 for j in jobs.values() if j.get("status") == "running")
-        if running >= MAX_CONCURRENT_JOBS:
+        if running >= _effective_concurrent_limit():
             raise TooManyJobsError("Too many concurrent jobs. Please wait for existing jobs to finish.")
         jobs[job_id] = {
             "id": job_id,

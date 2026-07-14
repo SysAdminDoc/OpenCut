@@ -168,6 +168,26 @@ def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
 # ---------------------------------------------------------------------------
 # Disk Space Preflight Check
 # ---------------------------------------------------------------------------
+def _is_network_path(path: str) -> bool:
+    """Best-effort detection of a network/UNC location (fail-open eligible)."""
+    p = str(path or "")
+    return p.startswith("\\\\") or p.startswith("//")
+
+
+def _nearest_existing_dir(path: str) -> str:
+    """Walk up to the nearest existing directory so disk_usage probes the real
+    mount point even when the target output dir does not exist yet."""
+    candidate = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+    seen = set()
+    while candidate and candidate not in seen and not os.path.isdir(candidate):
+        seen.add(candidate)
+        parent = os.path.dirname(candidate)
+        if parent == candidate:
+            break
+        candidate = parent
+    return candidate or os.path.dirname(os.path.abspath(path))
+
+
 def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
     """Check available disk space at path. Returns dict with 'ok', 'free_bytes', 'free_mb'.
 
@@ -176,7 +196,7 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
         min_bytes: Minimum required free space in bytes (default 500 MB).
     """
     try:
-        check_dir = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+        check_dir = _nearest_existing_dir(path)
         usage = shutil.disk_usage(check_dir)
         return {
             "ok": usage.free >= min_bytes,
@@ -185,12 +205,17 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
             "required_mb": round(min_bytes / (1024 * 1024)),
         }
     except Exception as e:
-        logger.debug("Disk space check failed for %s: %s", path, e)
-        # Return ok=True on check failure to avoid blocking operations when
-        # disk_usage can't probe the path (network drives, restricted dirs).
-        # Log the warning so it's visible in diagnostics.
-        return {"ok": True, "free_bytes": 0, "free_mb": 0, "required_mb": 0,
-                "check_error": str(e)}
+        # Fail OPEN only for un-probeable network/UNC locations (a genuine
+        # network drive can raise even when it has space). For a local path we
+        # cannot probe, fail CLOSED so a full/inaccessible local disk surfaces
+        # as a clean rejection instead of a half-written mid-render failure.
+        network = _is_network_path(path)
+        logger.warning(
+            "Disk space check failed for %s: %s (failing %s)",
+            path, e, "open (network path)" if network else "closed (local path)",
+        )
+        return {"ok": network, "free_bytes": 0, "free_mb": 0, "required_mb": 0,
+                "check_error": str(e), "probe_failed": True}
 
 
 # ---------------------------------------------------------------------------
