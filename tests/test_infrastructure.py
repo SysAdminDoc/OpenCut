@@ -15,6 +15,7 @@ External dependencies (torch, nvidia-smi, GitHub API) are mocked.
 
 import json
 import os
+import pickle
 import sys
 import tempfile
 import time
@@ -297,10 +298,19 @@ class TestModelQuantizationCore(unittest.TestCase):
             quantization=SimpleNamespace(quantize_dynamic=lambda model, layers, dtype: model),
             save=fake_save,
         )
-        with patch.dict(sys.modules, {"torch": fake_torch}):
-            _quantize_pytorch("model.pt", "model_fp16.pt", "fp16")
+        # safe_torch_load now scans the checkpoint before loading, so the input
+        # must be a real (benign) pickle file on disk. pickle.dumps({}) is an
+        # empty, payload-free state dict that any picklescan version passes.
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as tf:
+            tf.write(pickle.dumps({}))
+            model_path = tf.name
+        try:
+            with patch.dict(sys.modules, {"torch": fake_torch}):
+                _quantize_pytorch(model_path, "model_fp16.pt", "fp16")
+        finally:
+            os.unlink(model_path)
 
-        self.assertEqual(calls["load"][0], "model.pt")
+        self.assertEqual(calls["load"][0], model_path)
         self.assertTrue(calls["load"][1]["weights_only"])
         self.assertTrue(calls["half"])
         self.assertEqual(calls["save"][1], "model_fp16.pt")

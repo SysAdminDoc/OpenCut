@@ -8,6 +8,7 @@ tracking, bandwidth throttling, and disk space estimation.
 import json
 import logging
 import os
+import re
 import shutil
 import threading
 import time
@@ -128,6 +129,10 @@ class DownloadProgress:
     status: str = "pending"  # pending, downloading, paused, completed, failed, cancelled
     error: Optional[str] = None
     output_path: str = ""
+    # Cache validator (ETag / Last-Modified) recorded so a later resume can send
+    # If-Range and detect that the remote asset changed, avoiding silent
+    # corruption from stitching new bytes onto a stale partial file.
+    etag: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -182,20 +187,51 @@ def _model_output_path(model_name: str, url: str) -> str:
     return os.path.join(MODELS_DIR, f"{safe_name}{ext}")
 
 
+_MODEL_KEY_RE = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def _safe_model_key(model_name: str) -> str:
+    """Filesystem-safe token for a model name, used for metadata filenames.
+
+    ``model_name`` is attacker-controllable via the download API, so it must
+    never reach a path join verbatim: separators and other special characters
+    are collapsed to ``_`` and leading dots are stripped so the result can be
+    neither a traversal sequence nor a hidden/dotfile.
+    """
+    key = _MODEL_KEY_RE.sub("_", model_name or "").lstrip(".")
+    return (key or "model")[:200]
+
+
+def _meta_path(model_name: str) -> str:
+    """Path to a model's download-metadata JSON, confined to DOWNLOADS_META_DIR."""
+    path = os.path.join(DOWNLOADS_META_DIR, f"{_safe_model_key(model_name)}.json")
+    base = os.path.abspath(DOWNLOADS_META_DIR)
+    resolved = os.path.abspath(path)
+    if resolved != base and not resolved.startswith(base + os.sep):
+        raise ValueError(f"Unsafe model name for metadata path: {model_name!r}")
+    return resolved
+
+
 def _save_download_meta(model_name: str, progress: DownloadProgress):
     """Persist download metadata for resume support."""
     _ensure_dirs()
-    meta_path = os.path.join(DOWNLOADS_META_DIR, f"{model_name}.json")
     try:
+        meta_path = _meta_path(model_name)
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(progress.to_dict(), f)
-    except OSError:
-        pass
+    except (OSError, ValueError) as exc:
+        # Losing resume metadata is non-fatal but must not be silent — a
+        # swallowed failure here lets a later resume append onto an unverified
+        # partial file. Surface it so the cause (full disk, bad name) is visible.
+        logger.warning("Could not persist download metadata for %r: %s", model_name, exc)
 
 
 def _load_download_meta(model_name: str) -> Optional[Dict]:
     """Load persisted download metadata."""
-    meta_path = os.path.join(DOWNLOADS_META_DIR, f"{model_name}.json")
+    try:
+        meta_path = _meta_path(model_name)
+    except ValueError:
+        return None
     if os.path.isfile(meta_path):
         try:
             with open(meta_path, encoding="utf-8") as f:
@@ -223,21 +259,34 @@ def _download_worker(
 
     # Check for partial download (resume)
     start_byte = 0
+    prior_validator = ""
     if os.path.isfile(output_path):
         start_byte = os.path.getsize(output_path)
         progress.downloaded_bytes = start_byte
+        prior = _load_download_meta(model_name)
+        if prior:
+            prior_validator = prior.get("etag") or ""
 
     headers = {
         "User-Agent": "OpenCut-ModelManager/1.0",
     }
     if start_byte > 0:
         headers["Range"] = f"bytes={start_byte}-"
+        # If the remote asset changed since the partial download, If-Range makes
+        # the server send a full 200 (handled below as a fresh restart) instead
+        # of a 206 range that would corrupt the file.
+        if prior_validator:
+            headers["If-Range"] = prior_validator
 
     req = Request(url, headers=headers)
     progress.status = "downloading"
 
     try:
         with urlopen(req, timeout=30) as resp:
+            # Record the cache validator so a future resume can send If-Range.
+            progress.etag = (
+                resp.headers.get("ETag") or resp.headers.get("Last-Modified") or prior_validator
+            )
             # Determine total size
             content_length = resp.headers.get("Content-Length")
             if content_length:
