@@ -264,7 +264,12 @@ def route_changelog_mark_seen():
 @wave_h_bp.route("/system/issue-report/bundle", methods=["GET"])
 def route_issue_report_bundle_get():
     try:
+        from opencut.config import require_network_allowed
         from opencut.core import issue_report
+        require_network_allowed(
+            "Opening a GitHub issue report",
+            "the local OpenCut logs and crash report",
+        )
         return jsonify(issue_report.bundle())
     except Exception as exc:  # noqa: BLE001
         return safe_error(exc, "issue_report_bundle_get")
@@ -274,7 +279,12 @@ def route_issue_report_bundle_get():
 @require_csrf
 def route_issue_report_bundle_post():
     try:
+        from opencut.config import require_network_allowed
         from opencut.core import issue_report
+        require_network_allowed(
+            "Opening a GitHub issue report",
+            "the local OpenCut logs and crash report",
+        )
         data = request.get_json(force=True, silent=True) or {}
         return jsonify(issue_report.bundle(
             title=str(data.get("title") or ""),

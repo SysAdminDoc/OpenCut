@@ -180,6 +180,14 @@ def safe_error(exc, context=""):
     suggestion = "Check the server logs for details."
     status = 500
 
+    if getattr(exc, "code", "") == "LOCAL_ONLY_NETWORK_BLOCKED":
+        return error_response(
+            "LOCAL_ONLY_NETWORK_BLOCKED",
+            str(exc),
+            status=getattr(exc, "status", 403),
+            suggestion=getattr(exc, "suggestion", ""),
+        )
+
     if isinstance(exc, OpenCutError):
         return exc.to_response(context=context)
 
@@ -407,6 +415,16 @@ def register_error_handlers(app):
     """Register the OpenCutError handler on a Flask app."""
 
     from opencut.jobs import TooManyJobsError
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    @app.errorhandler(LocalOnlyNetworkError)
+    def handle_local_only_network_error(e):
+        return error_response(
+            e.code,
+            str(e),
+            status=e.status,
+            suggestion=e.suggestion,
+        )
 
     @app.errorhandler(OpenCutError)
     def handle_opencut_error(e):

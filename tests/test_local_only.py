@@ -5,9 +5,15 @@ Verifies that cloud-capable modules are blocked when local-only mode is active.
 """
 
 import os
+import socket
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import requests
 
 
 @pytest.fixture
@@ -76,6 +82,159 @@ def test_require_network_allowed_blocks():
         from opencut.config import require_network_allowed
         with pytest.raises(RuntimeError, match="Local-only mode"):
             require_network_allowed("Cloud API", "local alternative")
+
+
+def test_runtime_guard_blocks_dns_before_resolution():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+        with pytest.raises(LocalOnlyNetworkError) as caught:
+            socket.getaddrinfo("example.com", 443)
+
+    assert caught.value.code == "LOCAL_ONLY_NETWORK_BLOCKED"
+    assert caught.value.target == "example.com"
+
+
+def test_runtime_guard_blocks_urllib_before_socket_io():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+        with pytest.raises(LocalOnlyNetworkError):
+            opener.open("https://example.com/opencut", timeout=0.1)
+
+
+def test_runtime_guard_blocks_requests_before_socket_io():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    session = requests.Session()
+    session.trust_env = False
+    with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+        with pytest.raises(LocalOnlyNetworkError):
+            session.get("https://example.com/opencut", timeout=0.1)
+
+
+def test_runtime_guard_blocks_network_capable_subprocess_before_spawn():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+        with pytest.raises(LocalOnlyNetworkError) as caught:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "opencut-egress-fixture"],
+                check=False,
+            )
+
+    assert caught.value.target == "pip"
+
+
+def test_runtime_guard_allows_explicit_loopback_socket():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    try:
+        with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+            client = socket.create_connection(server.getsockname(), timeout=1)
+            accepted, _address = server.accept()
+        client.close()
+        accepted.close()
+    finally:
+        server.close()
+
+
+def test_runtime_guard_blocks_lan_addresses():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+            with pytest.raises(LocalOnlyNetworkError):
+                client.connect(("192.0.2.1", 9))
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize(
+    ("host", "allowed"),
+    [
+        ("localhost", True),
+        ("renderer.localhost", True),
+        ("127.0.0.42", True),
+        ("::1", True),
+        ("::ffff:127.0.0.1", True),
+        ("192.168.1.10", False),
+        ("10.0.0.5", False),
+        ("example.com", False),
+    ],
+)
+def test_loopback_classification_is_explicit(host, allowed):
+    from opencut.network_policy import is_loopback_host
+
+    assert is_loopback_host(host) is allowed
+
+
+def test_runtime_guard_blocks_url_bearing_media_process_before_spawn():
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    with patch.dict(os.environ, {"OPENCUT_LOCAL_ONLY": "1"}):
+        with pytest.raises(LocalOnlyNetworkError) as caught:
+            subprocess.run(
+                ["opencut-ffmpeg-fixture", "-i", "clip.mp4", "srt://192.0.2.1:9000"],
+                check=False,
+            )
+
+    assert caught.value.target == "192.0.2.1"
+
+
+def test_local_only_route_error_is_stable(local_only_app):
+    @local_only_app.get("/_test/local-only-egress")
+    def _attempt_egress():
+        socket.getaddrinfo("example.com", 443)
+        return {"unexpected": True}
+
+    response = local_only_app.test_client().get("/_test/local-only-egress")
+    body = response.get_json()
+
+    assert response.status_code == 403
+    assert body["code"] == "LOCAL_ONLY_NETWORK_BLOCKED"
+    assert "localhost" in body["suggestion"]
+
+
+def test_external_browser_routes_are_blocked(local_only_client, local_only_csrf):
+    issue = local_only_client.get("/system/issue-report/bundle")
+    oauth = local_only_client.post(
+        "/social/auth-url",
+        json={"platform": "youtube"},
+        headers={"X-OpenCut-Token": local_only_csrf},
+    )
+
+    assert issue.status_code == 403
+    assert issue.get_json()["code"] == "LOCAL_ONLY_NETWORK_BLOCKED"
+    assert oauth.status_code == 403
+    assert oauth.get_json()["code"] == "LOCAL_ONLY_NETWORK_BLOCKED"
+
+
+def test_direct_egress_inventory_is_complete():
+    from opencut.network_policy import (
+        EGRESS_INVENTORY,
+        stale_egress_inventory,
+        unclassified_egress_modules,
+    )
+
+    root = Path(__file__).resolve().parents[1] / "opencut"
+    assert not unclassified_egress_modules(root), (
+        "Classify new direct network clients in EGRESS_INVENTORY: "
+        f"{sorted(unclassified_egress_modules(root))}"
+    )
+    assert not stale_egress_inventory(root), (
+        "Remove stale EGRESS_INVENTORY entries: "
+        f"{sorted(stale_egress_inventory(root))}"
+    )
+    assert set(EGRESS_INVENTORY.values()) >= {
+        "egress-guard",
+        "external-integration",
+        "loopback-client",
+        "loopback-server",
+    }
 
 
 # ---- LLM guard ----

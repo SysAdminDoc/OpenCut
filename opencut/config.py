@@ -112,6 +112,15 @@ def is_local_only() -> bool:
     if _env_bool("OPENCUT_LOCAL_ONLY", default=False):
         return True
     try:
+        from flask import current_app, has_app_context
+
+        if has_app_context():
+            app_config = current_app.config.get("OPENCUT")
+            if bool(getattr(app_config, "local_only", False)):
+                return True
+    except (ImportError, RuntimeError):
+        pass
+    try:
         from . import user_data  # noqa: E402
         settings = user_data.read_user_file(_LOCAL_ONLY_SETTING_FILE, default={})
         return bool(settings.get("enabled", False))
@@ -120,10 +129,17 @@ def is_local_only() -> bool:
 
 
 def require_network_allowed(feature: str, local_alternative: str = "") -> None:
-    """Raise RuntimeError if local-only mode blocks a cloud feature."""
+    """Raise a stable policy error if local-only mode blocks a cloud feature."""
     if not is_local_only():
         return
-    msg = f"Local-only mode is active. {feature} requires network access and is disabled."
-    if local_alternative:
-        msg += f" Use {local_alternative} instead."
-    raise RuntimeError(msg)
+    from opencut.network_policy import LocalOnlyNetworkError
+
+    raise LocalOnlyNetworkError(
+        "non-loopback network",
+        feature=feature,
+        local_alternative=(
+            f"Use {local_alternative} instead."
+            if local_alternative
+            else ""
+        ),
+    )

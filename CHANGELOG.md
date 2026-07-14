@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Enforce local-only mode below every integration
+
+- Installed a process-wide deny-by-default egress guard that blocks non-loopback
+  DNS, TCP/UDP sockets, HTTP clients and SDKs, browser launches, remote Git/Pip,
+  download tools, and URL-bearing media subprocesses before outbound I/O.
+- Localhost services remain available, while LAN targets require local-only mode
+  to be disabled explicitly. Blocked routes now expose the stable
+  `LOCAL_ONLY_NETWORK_BLOCKED` code and a local recovery suggestion.
+- Added an AST-generated inventory that forces each direct network-client module
+  to declare its role, plus live socket, urllib, Requests, subprocess, loopback,
+  LAN-denial, and Flask error-contract tests.
+
 ### Fixed - Produce and verify one C2PA 2.4 provenance contract
 
 - Unified create, sidecar, and embed manifests on `c2pa.actions.v2` plus the

@@ -797,6 +797,13 @@ def get_oauth_url(platform: str, port: int = 5679) -> Optional[str]:
     """
     import urllib.parse
 
+    from opencut.config import require_network_allowed
+
+    require_network_allowed(
+        "Social OAuth authorization",
+        "existing local credentials or local-only workflows",
+    )
+
     base_url = f"http://localhost:{port}"
 
     if platform == "youtube":
