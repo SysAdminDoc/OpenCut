@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - CEP session-status dots respect the light theme
+
+- The session-context complete/error status indicators now fill from the
+  `--neon-green`/`--neon-red` semantic tokens instead of hardcoded hex, so they
+  flip with `html.theme-light` instead of keeping dark-theme colors on a light
+  background. Remaining hardcoded text/accent literals are tracked in ROADMAP for
+  a rendered-contrast pass.
+
 ### Fixed - Panel timeline write-back honesty and double-click safety
 
 - CEP `applySequenceCuts` and `addBeatMarkersToSequence` now branch on the

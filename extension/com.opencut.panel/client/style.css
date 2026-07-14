@@ -12401,12 +12401,12 @@ body:not(.has-clip) .media-sidecar .file-info {
 }
 
 .session-context-item-status[data-status="complete"] {
-    background: #35c372;
+    background: var(--neon-green);
     box-shadow: 0 0 6px rgba(53, 195, 114, 0.55);
 }
 
 .session-context-item-status[data-status="error"] {
-    background: #e7604c;
+    background: var(--neon-red);
     box-shadow: 0 0 6px rgba(231, 96, 76, 0.55);
 }
 
