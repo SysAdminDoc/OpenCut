@@ -102,7 +102,9 @@ def enhance_faces(
                 file_name="codeformer.pth",
             )
         codeformer_net = CodeFormerArch(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, connect_list=["32", "64", "128", "256"]).to(device)
-        ckpt = torch.load(codeformer_model_path, map_location=device, weights_only=True)
+        from opencut.core.model_safety import safe_torch_load
+
+        ckpt = safe_torch_load(codeformer_model_path, map_location=device)
         codeformer_net.load_state_dict(ckpt.get("params_ema", ckpt.get("params", ckpt)), strict=False)
         codeformer_net.eval()
 

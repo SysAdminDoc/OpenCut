@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Establish a model-weight supply-chain boundary (CVE-2026-24747)
+
+- Raised the Torch floor to `>=2.10.0` and torchvision to `>=0.25.0` in the
+  `depth` and `torch-stack` extras, closing CVE-2026-24747 (GHSA-63cw-57p8-fm3p)
+  — a `torch.load(weights_only=True)` unpickler heap-corruption/RCE fixed in
+  torch 2.10.0.
+- Added `opencut.core.model_safety.safe_torch_load`, which scans pickle-format
+  checkpoints with picklescan (`>=1.0.3`, now shipped in the `ai`/`ai-gpu`/
+  `depth`/`torch-stack` extras) before loading and rejects flagged files;
+  `.safetensors` skips scanning. Wired the three `torch.load` call sites
+  (`face_swap`, `video_ai`, `model_quantization`) through it. New
+  `test_model_safety` covers scan, rejection, safetensors skip, and graceful
+  degradation when picklescan is absent.
+
 ### Security - Unify bounded, transactional archive ingestion
 
 - Added `opencut.core.archive_safety`, a shared bounded/path-safe ZIP helper:

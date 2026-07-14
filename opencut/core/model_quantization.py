@@ -369,8 +369,10 @@ def _quantize_pytorch(
     if on_progress:
         on_progress({"step": "loading_model"})
 
+    from opencut.core.model_safety import safe_torch_load
+
     try:
-        model = torch.load(model_path, map_location="cpu", weights_only=True)
+        model = safe_torch_load(model_path, map_location="cpu")
     except pickle.UnpicklingError as exc:
         raise ValueError(
             "Unsupported or unsafe PyTorch checkpoint: quantization only accepts tensor state dictionaries "
