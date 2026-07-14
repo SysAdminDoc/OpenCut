@@ -23,8 +23,9 @@ Steps (in order):
 14. ``pytest-fast`` — focused test ids covering release gates
 15. ``pip-audit`` — Python dependency advisories for requirements, lockfile, and ``pyproject[all]``
 16. ``panel-unit`` — CEP/UXP panel Vitest utility tests
-17. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-18. ``panel-source`` — CEP panel source tree smoke
+17. ``panel-rendered`` — headless Chromium panel state, accessibility, and screenshot regression tests
+18. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+19. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -1120,6 +1121,29 @@ def step_panel_unit(_args: argparse.Namespace) -> StepResult:
     return res
 
 
+def step_panel_rendered(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    if not (PANEL_DIR / "playwright.config.mjs").exists():
+        return StepResult(
+            "panel-rendered",
+            "skipped",
+            skipped_reason="playwright.config.mjs missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    if not (PANEL_DIR / "node_modules").exists():
+        return StepResult(
+            "panel-rendered",
+            "skipped",
+            skipped_reason="node_modules absent; run `npm ci` first",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    res = _npm_command("run", "test:rendered", cwd=PANEL_DIR)
+    res.name = "panel-rendered"
+    if res.status == "ok":
+        res.message = "headless CEP/UXP rendered regression suite passed"
+    return res
+
+
 def step_npm_advisory(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = PANEL_DIR / "scripts" / "check-advisories.mjs"
@@ -1224,6 +1248,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
     StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
+    StepDefinition("panel-rendered", step_panel_rendered, "Run headless CEP/UXP rendered regression tests"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
     StepDefinition("esbuild-pin", step_esbuild_pin, "Verify resolved esbuild >= 0.25 (F131)"),
     StepDefinition("panel-source", step_panel_source, "Smoke the CEP panel source tree"),

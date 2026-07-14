@@ -641,6 +641,10 @@ node tests/jsx_mock.js
 
 # CEP panel checks from Windows UNC/HGFS checkouts
 cd extension/com.opencut.panel
+npm ci
+npx playwright install chromium
+npm test
+npm run test:rendered  # headless CEP/UXP viewport, state, a11y, and screenshot gate
 npm run audit:check:win -- --json
 npm run audit:esbuild:win -- --json
 npm run build:verify:win
