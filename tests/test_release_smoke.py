@@ -201,6 +201,28 @@ def test_step_npm_advisory_requires_machine_parseable_json(monkeypatch, tmp_path
     assert result.message == "advisories on allow-list (1 allowed)"
 
 
+def test_step_panel_rendered_runs_headless_browser_script(monkeypatch, tmp_path):
+    module = load_module()
+    panel_dir = tmp_path / "panel"
+    panel_dir.mkdir()
+    (panel_dir / "playwright.config.mjs").write_text("export default {};", encoding="utf-8")
+    (panel_dir / "node_modules").mkdir()
+    monkeypatch.setattr(module, "PANEL_DIR", panel_dir)
+    calls = []
+
+    def _fake_npm(*args, cwd):  # noqa: ANN001
+        calls.append((args, cwd))
+        return module.StepResult("panel-script", "ok", exit_code=0)
+
+    monkeypatch.setattr(module, "_npm_command", _fake_npm)
+    result = module.step_panel_rendered(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert result.name == "panel-rendered"
+    assert "headless CEP/UXP" in result.message
+    assert calls == [(('run', 'test:rendered'), panel_dir)]
+
+
 def test_step_npm_advisory_fails_on_unparseable_json(monkeypatch, tmp_path):
     module = load_module()
     panel_dir = tmp_path / "panel"

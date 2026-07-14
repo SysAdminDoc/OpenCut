@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Added - Rendered CEP and UXP regression gate
+
+- A deterministic headless Chromium matrix now renders every top-level CEP and
+  UXP tab at compact, preferred, and wide panel widths across dark, light, and
+  automatic color preferences, with committed screenshot baselines.
+- The gate rejects uncaught page errors, horizontal overflow, unnamed visible
+  controls, keyboard-tab regressions, broken modal focus trapping, and invalid
+  empty, loading, error, offline, permission, or destructive-confirmation
+  states without requiring Premiere to be installed.
+- Release smoke now runs the rendered panel suite alongside the existing unit,
+  lint, and advisory checks.
+
 ### Fixed - Lock Premiere UXP actions on 26.3+
 
 - Sequence in/out action factories now run synchronously inside one

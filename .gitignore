@@ -36,6 +36,8 @@ ffmpeg/
 node_modules/
 extension/**/client/dist/
 extension/**/.vite/
+extension/**/test-results/
+extension/**/playwright-report/
 CLAUDE.md
 CODEX-CHANGELOG.md
 CLAUDE-HANDOFF-PROMPT.md

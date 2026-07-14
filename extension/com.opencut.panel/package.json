@@ -10,6 +10,8 @@
     "lint": "eslint client/main.js && npm run lint:premiere",
     "lint:premiere": "cd ../com.opencut.uxp && eslint main.js",
     "test": "vitest run --config vitest.config.mjs",
+    "test:rendered": "playwright test --config playwright.config.mjs",
+    "test:rendered:update": "playwright test --config playwright.config.mjs --update-snapshots",
     "audit:check": "node scripts/check-advisories.mjs",
     "audit:check:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:check",
     "audit:esbuild": "node scripts/check-esbuild-pin.mjs",
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@adobe/eslint-plugin-premierepro": "26.3.0",
     "@adobe/premierepro": "26.3.0",
+    "@playwright/test": "1.61.1",
     "eslint": "^9.39.5",
     "globals": "^17.7.0",
     "terser": "^5.47.1",
