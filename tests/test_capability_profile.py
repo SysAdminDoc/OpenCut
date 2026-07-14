@@ -38,7 +38,7 @@ def test_probe_ffmpeg_filters_to_allowlist(monkeypatch, tmp_path):
 
     def _fake_run(cmd, *args, **kwargs):
         if "-version" in cmd:
-            return subprocess.CompletedProcess(cmd, 0, "ffmpeg version 6.1\n", "")
+            return subprocess.CompletedProcess(cmd, 0, "ffmpeg version 8.1.2\n", "")
         if "-hwaccels" in cmd:
             return subprocess.CompletedProcess(cmd, 0, "Hardware acceleration methods:\ncuda\nvideotoolbox\n", "")
         if "-encoders" in cmd:

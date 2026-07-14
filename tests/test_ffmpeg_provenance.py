@@ -11,6 +11,10 @@ BANNER_811 = (
     "ffmpeg version 8.1.1-essentials_build-www.gyan.dev Copyright (c) 2000-2026 "
     "the FFmpeg developers"
 )
+BANNER_812 = (
+    "ffmpeg version 8.1.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 "
+    "the FFmpeg developers"
+)
 BANNER_81 = (
     "ffmpeg version 8.1-essentials_build-www.gyan.dev Copyright (c) 2000-2025 "
     "the FFmpeg developers"
@@ -63,11 +67,18 @@ def test_floor_release_801_is_below():
     assert "predates" in res["reason"]
 
 
-def test_floor_release_811_passes():
+def test_floor_release_811_is_below_cve_floor():
     res = fp.check_security_floor(BANNER_811)
+    assert res["ok"] is False
+    assert res["lane"] == "release"
+    assert "8.1.2" in res["reason"]
+
+
+def test_floor_release_812_passes():
+    res = fp.check_security_floor(BANNER_812)
     assert res["ok"] is True
     assert res["lane"] == "release"
-    assert res["version"].startswith("8.1.1")
+    assert res["version"].startswith("8.1.2")
 
 
 def test_floor_release_810_is_below():
@@ -106,16 +117,23 @@ def test_floor_unparseable_banner():
 
 
 def test_cves_listed_in_every_result():
-    res = fp.check_security_floor(BANNER_811)
+    res = fp.check_security_floor(BANNER_812)
+    assert "CVE-2026-8461" in res["cves"]
     assert "CVE-2026-6385" in res["cves"]
     assert len(res["cves"]) == len(fp.JUNE_2026_CVES)
+    assert list(fp.MAGICYUV_FIX_COMMITS) == res["fix_commits"]
+    assert fp.MAGICYUV_FIX_COMMITS == (
+        "374b726ffa878ee1cadb987bd1e1e20cc7ed8845",
+        "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1",
+    )
 
 
 def test_provenance_record_documents_floor_without_binary():
     rec = fp.provenance_record(banner="")
-    assert rec["required_release_floor"] == "8.1.1"
+    assert rec["required_release_floor"] == "8.1.2"
     assert rec["required_snapshot_floor_date"] == "2026-06-10"
     assert rec["reference_git_commit"] == "b29bdd3715"
+    assert rec["required_fix_commits"] == list(fp.MAGICYUV_FIX_COMMITS)
     assert rec["pinned_installer_version"] == fp.PINNED_INSTALLER_VERSION
     assert "CVE-2026-6385" in rec["cves_addressed"]
     assert rec["bundled"] is None
@@ -125,3 +143,16 @@ def test_provenance_record_grades_supplied_banner():
     rec = fp.provenance_record(banner=BANNER_GIT_POSTFIX)
     assert rec["bundled"] is not None
     assert rec["bundled"]["ok"] is True
+
+
+def test_require_security_floor_raises_actionable_error(monkeypatch):
+    monkeypatch.setattr(fp, "probe_binary_security", lambda _binary: fp.check_security_floor(BANNER_811))
+
+    try:
+        fp.require_security_floor("unsafe-ffmpeg")
+    except fp.FfmpegSecurityError as exc:
+        assert exc.code == "FFMPEG_SECURITY_FLOOR"
+        assert "8.1.2" in str(exc)
+        assert exc.grade["version"].startswith("8.1.1")
+    else:  # pragma: no cover - defensive
+        raise AssertionError("unsafe FFmpeg should be blocked")

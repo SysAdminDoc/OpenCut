@@ -16,6 +16,7 @@ public class InstallEngine
     private readonly CepInstaller _cepInstaller = new();
     private readonly WhisperDownloader _whisperDownloader = new();
     private readonly DependencyInstaller _dependencyInstaller = new();
+    private readonly FfmpegSecurityVerifier _ffmpegSecurityVerifier = new();
 
     public InstallEngine(InstallConfig config)
     {
@@ -38,6 +39,11 @@ public class InstallEngine
             // Step 2: Extract payload
             step = 2;
             _payloadExtractor.Extract(tempDir, progress, step, totalSteps);
+            var ffmpegSrc = Path.Combine(tempDir, "ffmpeg");
+            _ffmpegSecurityVerifier.VerifyPayload(ffmpegSrc);
+            Report(progress, step, totalSteps, "Verifying FFmpeg",
+                $"Verified {AppConstants.BundledFfmpegVersion}; {AppConstants.BundledFfmpegSecurityCve} is patched.",
+                LogLevel.Success);
 
             // Step 3: Copy server files
             step = 3;
@@ -61,10 +67,8 @@ public class InstallEngine
             // Step 4: Copy FFmpeg
             step = 4;
             Report(progress, step, totalSteps, "Copying FFmpeg", "Installing FFmpeg...");
-            var ffmpegSrc = Path.Combine(tempDir, "ffmpeg");
-            if (Directory.Exists(ffmpegSrc))
-                _fileInstaller.CopyDirectory(ffmpegSrc, _config.FfmpegPath,
-                    "Copying FFmpeg", progress, step, totalSteps);
+            _fileInstaller.CopyDirectory(ffmpegSrc, _config.FfmpegPath,
+                "Copying FFmpeg", progress, step, totalSteps);
 
             // Step 5: Copy CEP extension to install dir
             step = 5;
@@ -219,6 +223,8 @@ public class InstallEngine
             ["bundled_ffmpeg_version"] = AppConstants.BundledFfmpegVersion,
             ["bundled_ffprobe_version"] = AppConstants.BundledFfprobeVersion,
             ["bundled_ffmpeg_security_floor"] = AppConstants.BundledFfmpegSecurityFloor,
+            ["bundled_ffmpeg_security_cve"] = AppConstants.BundledFfmpegSecurityCve,
+            ["bundled_ffmpeg_security_fix_commits"] = AppConstants.BundledFfmpegSecurityFixCommits,
             ["installed_at_utc"] = DateTime.UtcNow.ToString("O"),
         };
 

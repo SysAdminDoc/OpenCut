@@ -30,30 +30,77 @@ if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
 # ---------------------------------------------------------------------------
 _ffmpeg_path = None
 _ffprobe_path = None
+_media_binary_security_cache = {}
+
+
+def _binary_identity(path: str):
+    """Return a replacement-sensitive identity for a resolved executable."""
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+def _require_safe_media_binary(binary: str) -> str:
+    """Resolve and verify an FFmpeg-family executable before first use."""
+    resolved = shutil.which(binary)
+    if not resolved and os.path.isfile(binary):
+        resolved = os.path.abspath(binary)
+    candidate = resolved or binary
+    canonical = os.path.normcase(os.path.realpath(candidate))
+    identity = _binary_identity(candidate)
+    cached = _media_binary_security_cache.get(canonical)
+    if cached is not None and cached[0] == identity:
+        return candidate
+
+    from opencut.core.ffmpeg_provenance import require_security_floor
+
+    grade = require_security_floor(candidate)
+    _media_binary_security_cache[canonical] = (identity, grade)
+    return candidate
 
 
 def get_ffmpeg_path() -> str:
-    """Return cached path to ffmpeg binary, resolving via shutil.which on first call."""
+    """Return a cached, CVE-floor-verified FFmpeg binary path.
+
+    Missing, unparseable, and pre-8.1.2 releases fail before any media command
+    is started. A cache entry is invalidated when the executable's mtime or
+    size changes, so replacing a PATH binary forces a fresh version probe.
+    """
     global _ffmpeg_path
-    if _ffmpeg_path is not None:
-        return _ffmpeg_path
-    found = shutil.which("ffmpeg")
-    if not found:
+    candidate = _ffmpeg_path or shutil.which("ffmpeg") or "ffmpeg"
+    if candidate == "ffmpeg" and not shutil.which(candidate):
         logger.warning("ffmpeg not found in PATH — subprocess calls may fail")
-    _ffmpeg_path = found if found else "ffmpeg"
+    _ffmpeg_path = _require_safe_media_binary(candidate)
     return _ffmpeg_path
 
 
 def get_ffprobe_path() -> str:
-    """Return cached path to ffprobe binary, resolving via shutil.which on first call."""
+    """Return a cached, CVE-floor-verified FFprobe binary path."""
     global _ffprobe_path
-    if _ffprobe_path is not None:
-        return _ffprobe_path
-    found = shutil.which("ffprobe")
-    if not found:
+    candidate = _ffprobe_path or shutil.which("ffprobe") or "ffprobe"
+    if candidate == "ffprobe" and not shutil.which(candidate):
         logger.warning("ffprobe not found in PATH — media probing may fail")
-    _ffprobe_path = found if found else "ffprobe"
+    _ffprobe_path = _require_safe_media_binary(candidate)
     return _ffprobe_path
+
+
+def _guard_ffmpeg_command(cmd: list) -> list:
+    """Resolve or validate the executable of an FFmpeg command list."""
+    if not cmd:
+        return cmd
+    executable = str(cmd[0])
+    basename = os.path.basename(executable).lower()
+    if basename not in {"ffmpeg", "ffmpeg.exe", "ffprobe", "ffprobe.exe"}:
+        return cmd
+    if executable.lower() in {"ffmpeg", "ffmpeg.exe"}:
+        guarded = get_ffmpeg_path()
+    elif executable.lower() in {"ffprobe", "ffprobe.exe"}:
+        guarded = get_ffprobe_path()
+    else:
+        guarded = _require_safe_media_binary(executable)
+    return [guarded, *cmd[1:]]
 
 # ---------------------------------------------------------------------------
 # OpenCut user data directory
@@ -273,8 +320,7 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
     Unregistration happens in the ``finally`` block regardless of
     whether the child exited normally, by timeout, or via cancel.
     """
-    if cmd and cmd[0] == "ffmpeg":
-        cmd = [get_ffmpeg_path()] + cmd[1:]
+    cmd = _guard_ffmpeg_command(cmd)
     request_id = _current_request_id()
     env_kwargs = _subprocess_env_kwargs(request_id)
 
@@ -833,6 +879,8 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     and the stderr drain thread is always joined before returning.
     """
     from opencut.jobs import _is_cancelled, _register_job_process, _unregister_job_process, _update_job
+
+    cmd = _guard_ffmpeg_command(cmd)
 
     full_cmd = list(cmd) + ["-progress", "pipe:1"]
     request_id = _current_request_id()

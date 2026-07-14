@@ -7,10 +7,10 @@
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
 #define BundledFfmpegVersion "8.1.2-essentials_build-www.gyan.dev"
 #define BundledFfprobeVersion "8.1.2-essentials_build-www.gyan.dev"
-; June-2026 FFmpeg zero-days (CVE-2026-6385 et al.) landed as post-release master
-; commits; guaranteed-clean fallback is a gyan.dev git-master snapshot >= 2026-06-10
-; (commit b29bdd3715). Mirrors opencut/core/ffmpeg_provenance.py.
-#define BundledFfmpegSecurityFloor "release>=8.1.1 OR git-master>=2026-06-10 (commit b29bdd3715)"
+#define BundledFfmpegSecurityFloor "release>=8.1.2 OR git-master>=2026-06-10 (commit b29bdd3715)"
+#define BundledFfmpegSecurityCve "CVE-2026-8461"
+#define BundledFfmpegFixCommit1 "374b726ffa878ee1cadb987bd1e1e20cc7ed8845"
+#define BundledFfmpegFixCommit2 "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}
@@ -180,9 +180,42 @@ begin
     '  "ffmpeg_path": "' + JsonEscape(ExpandConstant('{app}\ffmpeg')) + '",' + #13#10 +
     '  "bundled_ffmpeg_version": "' + JsonEscape('{#BundledFfmpegVersion}') + '",' + #13#10 +
     '  "bundled_ffprobe_version": "' + JsonEscape('{#BundledFfprobeVersion}') + '",' + #13#10 +
-    '  "bundled_ffmpeg_security_floor": "' + JsonEscape('{#BundledFfmpegSecurityFloor}') + '"' + #13#10 +
+    '  "bundled_ffmpeg_security_floor": "' + JsonEscape('{#BundledFfmpegSecurityFloor}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_security_cve": "' + JsonEscape('{#BundledFfmpegSecurityCve}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_security_fix_commits": ["' +
+      JsonEscape('{#BundledFfmpegFixCommit1}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit2}') + '"]' + #13#10 +
     '}' + #13#10;
   SaveStringToFile(ManifestPath, Json, False);
+end;
+
+procedure VerifyInstalledMediaBinary(BinaryPath, DisplayName: string);
+var
+  ResultCode: Integer;
+  Output: TExecOutput;
+  Banner: string;
+begin
+  if not FileExists(BinaryPath) then
+    RaiseException(DisplayName + ' is missing from the installer payload.');
+
+  if not ExecAndCaptureOutput(BinaryPath, '-version', '', SW_HIDE,
+      ewWaitUntilTerminated, ResultCode, Output) or
+     (ResultCode <> 0) or Output.Error or
+     (GetArrayLength(Output.StdOut) = 0) then
+    RaiseException(DisplayName + ' version verification failed.');
+
+  Banner := Output.StdOut[0];
+  if Pos('version 8.1.2', Lowercase(Banner)) = 0 then
+    RaiseException(
+      DisplayName + ' is below the {#BundledFfmpegSecurityFloor} floor for ' +
+      '{#BundledFfmpegSecurityCve}: ' + Banner);
+  Log(DisplayName + ' security floor verified: ' + Banner);
+end;
+
+procedure VerifyInstalledFfmpeg();
+begin
+  VerifyInstalledMediaBinary(ExpandConstant('{app}\ffmpeg\ffmpeg.exe'), 'FFmpeg');
+  VerifyInstalledMediaBinary(ExpandConstant('{app}\ffmpeg\ffprobe.exe'), 'FFprobe');
 end;
 
 procedure RemoveFromPath(Dir: string);
@@ -273,6 +306,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
+    VerifyInstalledFfmpeg();
     // Add bundled FFmpeg to user PATH
     AddToPath(ExpandConstant('{app}\ffmpeg'));
     // Write machine-readable installer manifest for support/debug tooling

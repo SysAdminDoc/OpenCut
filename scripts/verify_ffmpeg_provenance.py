@@ -86,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
           f"OR git-master>={record['required_snapshot_floor_date']} "
           f"(ref commit {record['reference_git_commit']})")
     print(f"CVEs addressed:  {', '.join(record['cves_addressed'])}")
+    print(f"required fixes:  {', '.join(record['required_fix_commits'])}")
 
     if not bundled:
         print("RESULT: UNKNOWN — no ffmpeg banner could be read.")

@@ -10,11 +10,13 @@ public static class AppConstants
     public const string AppGuid = "{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}";
     public const string BundledFfmpegVersion = "8.1.2-essentials_build-www.gyan.dev";
     public const string BundledFfprobeVersion = "8.1.2-essentials_build-www.gyan.dev";
-    // June-2026 FFmpeg zero-days (CVE-2026-6385 et al.) landed as post-release
-    // master commits, so an 8.1.x tag can predate them. The guaranteed-clean
-    // fallback is a gyan.dev git-master snapshot at/after this commit. Mirrors
-    // opencut/core/ffmpeg_provenance.py.
-    public const string BundledFfmpegSecurityFloor = "release>=8.1.1 OR git-master>=2026-06-10 (commit b29bdd3715)";
+    public const string BundledFfmpegSecurityFloor = "release>=8.1.2 OR git-master>=2026-06-10 (commit b29bdd3715)";
+    public const string BundledFfmpegSecurityCve = "CVE-2026-8461";
+    public static readonly string[] BundledFfmpegSecurityFixCommits =
+    [
+        "374b726ffa878ee1cadb987bd1e1e20cc7ed8845",
+        "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
+    ];
     public const string InstallerManifestFile = "installer.json";
 
     public const string DefaultInstallPath = @"C:\Program Files\OpenCut";

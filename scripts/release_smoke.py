@@ -877,6 +877,8 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_local_release_policy.py",
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
+    "tests/test_ffmpeg_provenance.py",
+    "tests/test_ffmpeg_runtime_guard.py",
     "tests/test_text_shaping_gate.py",
     "tests/test_contrast_audit.py",
     "tests/test_caption_line_breaks.py",

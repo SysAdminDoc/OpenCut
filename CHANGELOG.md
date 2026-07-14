@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Enforce FFmpeg 8.1.2 across every runtime
+
+- Releases below FFmpeg 8.1.2, undated snapshots, missing binaries, and
+  unparseable banners now fail closed before media processing. Capability and
+  preflight diagnostics report the blocked runtime and CVE-2026-8461 floor.
+- Source, PowerShell, WPF, Inno, Docker, and release-builder paths now verify
+  the same release/snapshot policy. Docker builds the checksum-pinned 8.1.2
+  source archive, and installer provenance records both upstream MagicYUV fix
+  commits.
+- Central FFmpeg/ffprobe resolution is replacement-sensitive, direct media
+  subprocess bypasses use the guarded resolver, and release smoke covers the
+  rejected 8.1.1, accepted 8.1.2, and dated post-fix snapshot lanes.
+
 ### Fixed - Preserve user data during uninstall
 
 - Both Windows uninstallers now keep `~/.opencut` during normal, quiet,

@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
+    get_ffmpeg_path,
     get_video_info,
     run_ffmpeg,
     write_concat_list,
@@ -738,7 +739,7 @@ def _detect_motion_regions(
                 os.path.join(tmp_dir, f"cell_{row}_{col}.txt")
                 try:
                     result = subprocess.run([
-                        "ffmpeg", "-hide_banner", "-loglevel", "error",
+                        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                         "-i", diff_file,
                         "-vf", f"crop={cell_w}:{cell_h}:{x}:{y},signalstats",
                         "-f", "null", "-",

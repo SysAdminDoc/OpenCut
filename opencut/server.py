@@ -147,8 +147,11 @@ if not _bundled_ffmpeg:
 # Pre-warm FFmpeg/FFprobe path cache now that PATH is fully configured
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path  # noqa: E402
 
-get_ffmpeg_path()
-get_ffprobe_path()
+try:
+    get_ffmpeg_path()
+    get_ffprobe_path()
+except Exception as exc:  # keep diagnostics/API available while media work is blocked
+    logger.error("  FFmpeg: BLOCKED by runtime security gate — %s", exc)
 
 
 # ---------------------------------------------------------------------------
