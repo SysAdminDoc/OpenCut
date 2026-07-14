@@ -21,6 +21,24 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P2
 
+- [ ] P2 — Migrate remaining hardcoded CEP panel colors to theme tokens
+  Why: The CEP `style.css` light theme is driven entirely by `html.theme-light`
+  token overrides, but several component literals bypass the tokens and keep
+  dark-theme values on a light background, hurting contrast. The status dots were
+  fixed; the tinted-white text-on-translucent cases need rendered contrast checks
+  before swapping (they sit on colored/alpha surfaces, not a flat background).
+  Evidence: `extension/com.opencut.panel/client/style.css` text hex at ~5119,
+  5152, 5163, 6242, 6313, 6341, 6467, 6965, 11405, 11417; `accent-color: #d4b17a`
+  at 9901/10615 (rest of the file uses `accent-color: var(--neon-cyan)`).
+  Touches: `style.css` component rules, the `--neon-*`/`--success`/`--error`/
+  `--text-*` token set, light-theme overrides.
+  Acceptance: each flagged literal is either replaced with the correct semantic
+  token or documented as an intentional on-color value verified to meet WCAG AA
+  contrast in both themes; no component keeps a dark-only color on the light
+  surface. Best landed with the rendered CEP/UXP coverage item so contrast is
+  checked automatically.
+  Complexity: M
+
 - [ ] P2 — Consolidate caption XML export and validate IMSC 1.3 conformance
   Why: OpenCut already exports EBU-TT/TTML/IMSC through two implementations, but tests assert XML shape rather than conformance to the May 2026 IMSC 1.3 Recommendation and multilingual round trips.
   Evidence: `opencut/core/broadcast_cc.py`; `opencut/core/broadcast_caption.py`; `tests/test_delivery.py`; `tests/test_subtitle_pro.py`; W3C IMSC 1.3 and WebVTT specifications.
