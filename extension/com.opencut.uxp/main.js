@@ -1865,7 +1865,8 @@ const BackendClient = (() => {
   }
 
   /**
-   * Fetch CSRF token from /csrf or /api/csrf.
+   * Fetch the CSRF token from /health (returned as `csrf_token`); it is then
+   * sent on mutating requests via the X-OpenCut-Token header.
    */
   async function fetchCsrf() {
     const r = await get("/health");

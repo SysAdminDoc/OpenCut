@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Semantic project-facts documentation gate
+
+- Added `test_project_facts`, a gate that derives facts from the authoritative
+  source and fails when a committed doc/comment contradicts it: UXP tab
+  count/names (README vs `extension/com.opencut.uxp/index.html`), the CSRF
+  endpoint/header (UXP `main.js` comment vs implementation), and the Vite major
+  (`docs/NODE_ADVISORIES.md` vs panel `package.json`).
+- Fixed the contradictions it surfaced: the README under-counted the UXP panel
+  as 8 tabs (it has 9 — the Agent tab was omitted), and the UXP `fetchCsrf`
+  comment still described a removed `/csrf` endpoint instead of the live
+  `/health` + `X-OpenCut-Token` flow. Repaired the stale `test_check_doc_sizes`
+  suite left broken by the earlier CLAUDE.md size-check removal.
+
 ### Fixed - Feature readiness proves implementation, not just dependencies
 
 - Added `opencut.core.stub_scan`, which statically (via AST) identifies

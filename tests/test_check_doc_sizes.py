@@ -46,16 +46,16 @@ class TestDocSizeRegex(unittest.TestCase):
         self.mod = _load_module()
         self.cep_re = next(
             t.regex for t in self.mod.TARGETS
-            if t.label == "CEP client/main.js lines"
+            if t.label == "README CEP panel main.js lines"
         )
 
     def test_matches_bare_form(self):
-        m = self.cep_re.search("- `client/main.js` (~7730 lines) - Frontend controller.")
+        m = self.cep_re.search("CEP panel (index.html, main.js ~7730 lines, style.css ~18495 lines)")
         self.assertIsNotNone(m)
         self.assertEqual(m.group(1), "7730")
 
     def test_matches_dated_form(self):
-        text = "- `client/main.js` (~15263 lines as of 2026-05-25; was ~7,730 lines through v1.9.x) - …"
+        text = "CEP panel (index.html, main.js ~15263 lines as of 2026-05-25; was ~7,730 lines)"
         m = self.cep_re.search(text)
         self.assertIsNotNone(m)
         # Must capture the *current* (first) number, not the historic one.
@@ -76,7 +76,7 @@ class TestDocSizeRegex(unittest.TestCase):
             for target in self.mod.TARGETS
             for doc in target.docs
         }
-        self.assertEqual(doc_names, {"CLAUDE.md", "README.md"})
+        self.assertEqual(doc_names, {"README.md"})
 
 
 class TestDocSizeCLI(unittest.TestCase):
@@ -94,10 +94,11 @@ class TestDocSizeCLI(unittest.TestCase):
         )
 
     def test_check_fails_on_mutated_doc(self):
-        """Copy CLAUDE.md to a temp file, mutate the main.js line count, run --check via importable mod."""
+        """Copy the live tree to a temp dir, mutate README's CEP main.js line
+        count, and confirm --check flags the drift."""
         mod = _load_module()
         target = next(
-            t for t in mod.TARGETS if t.label == "CEP client/main.js lines"
+            t for t in mod.TARGETS if t.label == "README CEP panel main.js lines"
         )
         live = target.live()
         # Replace the current number with one 99% smaller — guaranteed >15% drift.
@@ -116,15 +117,16 @@ class TestDocSizeCLI(unittest.TestCase):
                 REPO_ROOT / "extension/com.opencut.uxp/main.js",
                 tmp_root / "extension/com.opencut.uxp/main.js",
             )
-            # Minimal docs to satisfy the regex with a deliberately wrong number.
-            claude = (
-                "# OpenCut - CLAUDE.md\n"
-                "### Frontend (CEP Panel)\n"
-                f"- `extension/com.opencut.panel/client/main.js` (~{bogus_claim} lines) "
-                "- Frontend controller stub.\n"
+            # Copy the real README, then rewrite the CEP main.js count to a
+            # deliberately wrong value so --check must flag the drift.
+            readme_text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+            mutated = target.regex.sub(
+                lambda m: m.group(0).replace(m.group(1), str(bogus_claim)),
+                readme_text,
+                count=1,
             )
-            (tmp_root / "CLAUDE.md").write_text(claude, encoding="utf-8")
-            # Historical planning docs are not live doc-size targets.
+            self.assertNotEqual(readme_text, mutated, "README CEP main.js line not found to mutate")
+            (tmp_root / "README.md").write_text(mutated, encoding="utf-8")
 
             # Run the script with REPO_ROOT replaced via cwd-relative paths.
             script_copy = tmp_root / "check_doc_sizes.py"
