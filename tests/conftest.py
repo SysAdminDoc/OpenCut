@@ -51,6 +51,30 @@ def _shutdown_worker_pool():
 
 
 @pytest.fixture(autouse=True)
+def _neutralize_machine_local_only(monkeypatch):
+    """Keep tests hermetic against this machine's ``~/.opencut/local_only.json``.
+
+    Network-gated features call ``config.is_local_only()``, which reads a
+    user-global settings file. On a developer machine that has privacy /
+    local-only mode enabled, every test that exercises a cloud-capable feature
+    without mocking the gate would spuriously fail (stock search, external TTS,
+    etc.). Simulate a clean machine — no setting file — by default; tests still
+    opt into local-only mode via the ``OPENCUT_LOCAL_ONLY`` env var (checked
+    first, before the file) or by patching ``is_local_only`` directly.
+    """
+    from opencut import user_data
+
+    real_read = user_data.read_user_file
+
+    def _patched_read(filename, default=None):
+        if filename == "local_only.json":
+            return {} if default is None else default
+        return real_read(filename, default=default)
+
+    monkeypatch.setattr(user_data, "read_user_file", _patched_read)
+
+
+@pytest.fixture(autouse=True)
 def _isolate_global_state():
     """Reset module-level mutable state between tests.
 

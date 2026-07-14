@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Make the test suite hermetic against machine privacy settings
+
+- Added an autouse conftest fixture that neutralizes this machine's
+  `~/.opencut/local_only.json` during tests. `is_local_only()` reads that
+  user-global file, so a developer machine with privacy/local-only mode enabled
+  made every un-mocked network-gated test (stock search, external TTS, search
+  routes, `is_local_only` default) fail spuriously. Tests still opt into
+  local-only via the `OPENCUT_LOCAL_ONLY` env var or by patching `is_local_only`.
+- Updated the stale `test_music_safety` C2PA assertion to the C2PA 2.4
+  hyphenated `c2pa.ai-disclosure` label (the underscore form was renamed).
+- Re-synced README test-count badge/prose to the current suite (`sync_badges`).
+
 ### Fixed - CEP session-status dots respect the light theme
 
 - The session-context complete/error status indicators now fill from the

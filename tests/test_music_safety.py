@@ -228,9 +228,9 @@ class TestC2PA(unittest.TestCase):
         manifest = create_c2pa_manifest(
             operations=[{"action": "ai_upscale"}, {"action": "trim"}],
         )
-        # Should have AI disclosure assertion
+        # Should have AI disclosure assertion (C2PA 2.4 hyphenated label)
         labels = [a["label"] for a in manifest["assertions"]]
-        self.assertIn("c2pa.ai_disclosure", labels)
+        self.assertIn("c2pa.ai-disclosure", labels)
 
     def test_create_manifest_no_ai_disclosure(self):
         from opencut.core.c2pa_embed import create_c2pa_manifest
@@ -238,7 +238,7 @@ class TestC2PA(unittest.TestCase):
             operations=[{"action": "trim"}, {"action": "export"}],
         )
         labels = [a["label"] for a in manifest["assertions"]]
-        self.assertNotIn("c2pa.ai_disclosure", labels)
+        self.assertNotIn("c2pa.ai-disclosure", labels)
 
     def test_manifest_has_uuid_instance_id(self):
         from opencut.core.c2pa_embed import create_c2pa_manifest
