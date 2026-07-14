@@ -50,10 +50,20 @@ def info(lottie_path: str) -> Dict:
     with open(lottie_path, "rb") as f:
         header = f.read(4)
     if header[:2] == b"PK":
+        # .lottie is a ZIP; read only the animation JSON with a hard byte
+        # ceiling so a crafted archive cannot exhaust memory.
+        from opencut.core.archive_safety import ArchiveError, safe_read_member
+
         with zipfile.ZipFile(lottie_path) as zf:
             names = zf.namelist()
+            if not names:
+                raise ValueError("Lottie archive is empty")
             json_name = next((n for n in names if n.endswith(".json")), names[0])
-            data = json.loads(zf.read(json_name))
+            try:
+                raw = safe_read_member(zf, json_name, max_bytes=64 * 1024 * 1024)
+            except ArchiveError as exc:
+                raise ValueError(str(exc)) from exc
+            data = json.loads(raw)
     else:
         with open(lottie_path, encoding="utf-8") as f:
             data = json.load(f)

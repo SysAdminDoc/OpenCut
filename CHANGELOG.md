@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Unify bounded, transactional archive ingestion
+
+- Added `opencut.core.archive_safety`, a shared bounded/path-safe ZIP helper:
+  member-count, expanded-byte (zip-bomb), and per-member size ceilings;
+  path-traversal, absolute-path, and special-entry (symlink/device) rejection;
+  bounded single-member reads; and staged-then-atomic extraction.
+- `project_archive.restore_archive` now validates every member and extracts into
+  a staging directory promoted atomically, so a rejected or failed restore
+  leaves no partial destination. `lottie_import.info` reads the animation JSON
+  through a hard byte ceiling, and the plugin installer delegates to the shared
+  inspector (gaining symlink rejection it previously lacked). New
+  `test_archive_safety` covers traversal, absolute paths, oversized members,
+  compression bombs, symlink entries, cleanup, and atomic promotion.
+
 ### Security - Guard URL ingest and outbound fetches against SSRF
 
 - Routed `opencut.core.url_ingest` through a shared connect-time SSRF guard in

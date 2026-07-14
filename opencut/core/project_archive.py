@@ -8,13 +8,12 @@ archive directory.  Compress to zip.  Restore from archive.
 import json
 import logging
 import os
-import shutil
 import time
 import zipfile
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.security import is_path_within
+from opencut.core import archive_safety
 
 logger = logging.getLogger("opencut")
 
@@ -193,47 +192,33 @@ def restore_archive(
     if not zipfile.is_zipfile(archive_path):
         raise ValueError(f"Not a valid zip file: {archive_path}")
 
-    os.makedirs(dest_path, exist_ok=True)
-
+    # Read the manifest with a bounded read before touching the destination.
     manifest = {}
-    files_restored = 0
-
     with zipfile.ZipFile(archive_path, "r") as zf:
-        members = zf.namelist()
-
-        if on_progress:
-            on_progress(10, f"Extracting {len(members)} items...")
-
-        # Read manifest first
-        if _MANIFEST_NAME in members:
-            manifest_data = zf.read(_MANIFEST_NAME)
+        if _MANIFEST_NAME in zf.namelist():
+            manifest_data = archive_safety.safe_read_member(zf, _MANIFEST_NAME)
             manifest = json.loads(manifest_data.decode("utf-8"))
 
-        # Extract all files, rejecting unsafe paths
-        for i, member in enumerate(members):
-            # Security: reject absolute paths and traversal
-            if member.startswith("/") or ".." in member:
-                logger.warning("Skipping unsafe archive member: %s", member)
-                continue
+    if on_progress:
+        on_progress(10, "Extracting items...")
 
-            target = os.path.join(dest_path, member)
-            # Ensure target stays under dest_path
-            if not is_path_within(target, dest_path):
-                logger.warning("Skipping path traversal in archive: %s", member)
-                continue
+    def _cb(done: int, total: int) -> None:
+        if on_progress:
+            pct = 10 + int((done / max(1, total)) * 85)
+            on_progress(pct, f"Extracting {done}/{total}...")
 
-            if member.endswith("/"):
-                os.makedirs(target, exist_ok=True)
-            else:
-                parent = os.path.dirname(target)
-                os.makedirs(parent, exist_ok=True)
-                with zf.open(member) as src, open(target, "wb") as dst:
-                    shutil.copyfileobj(src, dst)
-                files_restored += 1
-
-            if on_progress:
-                pct = 10 + int(((i + 1) / len(members)) * 85)
-                on_progress(pct, f"Extracting {i + 1}/{len(members)}...")
+    # Validate every member, extract to a staging dir, then promote atomically:
+    # a rejected or failed restore leaves no partial destination. Project
+    # archives may legitimately carry large media, so the ceilings are generous
+    # while still bounding member count and compression-bomb expansion.
+    files_restored = archive_safety.safe_extract_all(
+        archive_path,
+        dest_path,
+        max_members=50000,
+        max_total_bytes=4 * 1024 * 1024 * 1024,
+        max_member_bytes=2 * 1024 * 1024 * 1024,
+        on_member=_cb,
+    )
 
     if on_progress:
         on_progress(100, "Archive restored")

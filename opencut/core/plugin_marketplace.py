@@ -15,6 +15,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core import archive_safety
 from opencut.core.url_safety import validate_public_http_url
 from opencut.helpers import OPENCUT_DIR
 from opencut.security import is_path_within
@@ -26,7 +27,6 @@ REGISTRY_CACHE = os.path.join(OPENCUT_DIR, "plugin_registry.json")
 REGISTRY_URL = "https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json"
 REGISTRY_TTL = 3600  # cache for 1 hour
 _PLUGIN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
-_WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
 _MAX_ARCHIVE_MEMBERS = 5000
 _MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
 
@@ -115,20 +115,6 @@ def _validate_download_url(url: str) -> str:
         raise
 
 
-def _normalize_archive_member(name: str) -> str:
-    if not isinstance(name, str) or not name:
-        raise ValueError("Archive contains an invalid entry name")
-    if name.startswith(("/", "\\")) or _WINDOWS_DRIVE_RE.match(name):
-        raise ValueError(f"Archive member uses an absolute path: {name}")
-
-    normalized = os.path.normpath(name.replace("\\", "/")).replace("\\", "/")
-    if normalized in {"", "."}:
-        return ""
-    if normalized == ".." or normalized.startswith("../") or "/../" in f"/{normalized}/":
-        raise ValueError(f"Archive member escapes target directory: {name}")
-    return normalized
-
-
 def _common_archive_root(members: List[str]) -> str:
     file_members = [m for m in members if m]
     if not file_members:
@@ -150,24 +136,19 @@ def _extract_plugin_archive(zip_path: str, plugin_dir: str) -> None:
     import zipfile
 
     with zipfile.ZipFile(zip_path, "r") as zf:
-        infos = zf.infolist()
-        if len(infos) > _MAX_ARCHIVE_MEMBERS:
-            raise ValueError("Plugin archive contains too many files")
-
-        total_bytes = 0
-        normalized_members: List[str] = []
-        for info in infos:
-            if not info.is_dir():
-                total_bytes += max(0, int(info.file_size))
-            if total_bytes > _MAX_ARCHIVE_BYTES:
-                raise ValueError("Plugin archive is too large")
-            normalized_members.append(_normalize_archive_member(info.filename))
-
-        common_root = _common_archive_root(
-            [member for member, info in zip(normalized_members, infos) if not info.is_dir()]
+        # Shared inspector enforces member count, expanded-byte, per-member size,
+        # path-traversal, and special-entry (symlink) rejection up front.
+        members = archive_safety.inspect_members(
+            zf,
+            max_members=_MAX_ARCHIVE_MEMBERS,
+            max_total_bytes=_MAX_ARCHIVE_BYTES,
         )
 
-        for info, normalized in zip(infos, normalized_members):
+        common_root = _common_archive_root(
+            [normalized for info, normalized in members if not info.is_dir()]
+        )
+
+        for info, normalized in members:
             if not normalized:
                 continue
 
