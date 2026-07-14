@@ -14,6 +14,7 @@ import subprocess
 import sys
 
 VERS = "1.33.1"
+MIN_PYTHON = (3, 11)
 CEP_EXT = "com.opencut.panel"
 WIN_CEP_DIR = os.path.expandvars(r"%APPDATA%\Adobe\CEP\extensions")
 MAC_CEP_DIR = os.path.expanduser("~/Library/Application Support/Adobe/CEP/extensions")
@@ -30,10 +31,14 @@ def banner():
 
 def check_python():
     v = sys.version_info
-    print(f"  [OK] Python {v.major}.{v.minor}.{v.micro}")
-    if v < (3, 9):
-        print("  [!!] Python 3.9+ required. Please upgrade.")
+    detected = f"{v.major}.{v.minor}.{v.micro}"
+    required = ".".join(str(part) for part in MIN_PYTHON)
+    if v < MIN_PYTHON:
+        print(f"  [!!] Detected Python {detected}; OpenCut requires Python {required}+.")
+        print("       Install a supported version from https://www.python.org/downloads/")
+        print("       Windows: winget install Python.Python.3.12")
         sys.exit(1)
+    print(f"  [OK] Python {detected} satisfies the required Python {required}+")
 
 
 def check_ffmpeg():

@@ -6,9 +6,26 @@ set "OPENCUT_HOME=%OPENCUT_HOME:~0,-1%"
 
 if exist "%OPENCUT_HOME%\python\python.exe" (
     set "PYTHON=%OPENCUT_HOME%\python\python.exe"
+    set "PYTHON_ARGS="
     set "PATH=%OPENCUT_HOME%\python;%OPENCUT_HOME%\python\Scripts;%PATH%"
 ) else (
     set "PYTHON=python"
+    set "PYTHON_ARGS="
+)
+
+set "DETECTED_PYTHON=not found"
+for /f "delims=" %%V in ('"%PYTHON%" %PYTHON_ARGS% --version 2^>^&1') do set "DETECTED_PYTHON=%%V"
+"%PYTHON%" %PYTHON_ARGS% -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo  OpenCut could not start.
+    echo  Detected: %DETECTED_PYTHON%
+    echo  Required: Python 3.11 or later
+    echo  Install a supported version from https://www.python.org/downloads/
+    echo  Windows: winget install Python.Python.3.12
+    echo.
+    pause
+    exit /b 1
 )
 
 if exist "%OPENCUT_HOME%\ffmpeg" set "PATH=%OPENCUT_HOME%\ffmpeg;%PATH%"
@@ -28,5 +45,5 @@ echo  This window shows server output for troubleshooting.
 echo  Close this window to stop the server.
 echo.
 
-"%PYTHON%" -m opencut.server
+"%PYTHON%" %PYTHON_ARGS% -m opencut.server
 pause

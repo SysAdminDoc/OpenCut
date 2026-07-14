@@ -80,7 +80,7 @@ cd OpenCut
 
 Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
 1. Check for and install FFmpeg (via winget) if missing
-2. Verify Python 3.9+ is on your PATH
+2. Verify Python 3.11+ is on your PATH (unsupported versions are rejected before installation)
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
 5. Optionally install Whisper for caption generation

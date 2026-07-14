@@ -18,12 +18,15 @@ elif command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
     PYTHON="python"
 else
-    echo "OpenCut requires Python 3.9 or later, but no python3 or python executable was found." >&2
+    echo "OpenCut requires Python 3.11 or later; no python3 or python executable was found." >&2
+    echo "Install a supported version from https://www.python.org/downloads/ and retry." >&2
     exit 1
 fi
 
-if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
-    echo "OpenCut requires Python 3.9 or later." >&2
+DETECTED_PYTHON=$("$PYTHON" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || printf 'unavailable')
+if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; then
+    echo "Detected Python $DETECTED_PYTHON; OpenCut requires Python 3.11 or later." >&2
+    echo "Install a supported version from https://www.python.org/downloads/ and retry." >&2
     exit 1
 fi
 

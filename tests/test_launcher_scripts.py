@@ -233,6 +233,23 @@ def test_posix_launchers_propagate_bundled_ffmpeg():
         )
 
 
+@pytest.mark.parametrize("launcher", [BAT_LAUNCHER, VBS_LAUNCHER, SH_LAUNCHER])
+def test_source_launchers_reject_unsupported_python_before_import(launcher):
+    """Every source launcher must enforce the canonical Python floor."""
+    text = _read(launcher).lower()
+    assert "3.11" in text
+    assert "detected" in text
+    assert "require" in text
+    assert "python.org/downloads" in text
+
+
+def test_packaged_hidden_launcher_does_not_depend_on_host_python():
+    """The installed launcher starts the frozen server, so no floor check applies."""
+    text = _read(VBS_HELPER).lower()
+    assert "opencut-server.exe" in text
+    assert "python" not in text
+
+
 # ---------------------------------------------------------------------------
 # Filesystem mode
 # ---------------------------------------------------------------------------
