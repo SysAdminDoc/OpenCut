@@ -39,7 +39,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "click>=8.0,<9",
+    # CVE-2026-7246 / PYSEC-2026-2132 — command injection in click.edit() via the
+    # editor shell invocation, fixed in Click 8.3.3. Floor above it in every lane.
+    "click>=8.3.3,<9",
     "rich>=13.0,<14",
     "flask>=3.1.3,<4",
     "flask-cors>=6.0,<7",
