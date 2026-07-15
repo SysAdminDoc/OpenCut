@@ -1,13 +1,13 @@
 """
 OpenCut CineFocus Rack Focus (L3.5)
 
-Depth-of-field bokeh using Depth Pro or Depth Anything V2 metric depth:
+Depth-of-field bokeh using Depth Anything 3 or Depth Anything V2 depth:
 keyframeable focal point, aperture shape, f-number slider, rack-focus
 animation (focus-pull from background to foreground over N frames).
 
 DaVinci Resolve 21 ships this as a premium AI feature. OpenCut ships free.
 
-Licence: Apache-2.0 (transformers) / MIT (depth-anything)
+Licence: Apache-2.0 (Depth Anything 3 and V2)
 """
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ from opencut.helpers import _try_import
 logger = logging.getLogger("opencut")
 
 INSTALL_HINT = (
-    "pip install torch transformers "
-    "(uses Depth Pro or Depth Anything V2 depth backend)"
+    "pip install opencut-ppro[depth] for Depth Anything V2; "
+    "optionally pip install depth-anything-3==0.1.1 for Depth Anything 3"
 )
 
 CINEFOCUS_PRESETS = {
@@ -65,8 +65,10 @@ class CineFocusResult:
 # ---------------------------------------------------------------------------
 
 def check_cinefocus_available() -> bool:
-    """Return True when torch + transformers are available for depth estimation."""
-    return _try_import("torch") is not None and _try_import("transformers") is not None
+    """Return True when torch and at least one depth backend are available."""
+    if _try_import("torch") is None:
+        return False
+    return _try_import("depth_anything_3") is not None or _try_import("transformers") is not None
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +77,11 @@ def check_cinefocus_available() -> bool:
 
 def _get_depth_backend() -> str:
     """Detect which depth estimation backend is available."""
+    if _try_import("depth_anything_3") is not None:
+        return "depth-anything-3"
     try:
         import transformers
-        # Check for Depth Anything V2 (preferred — faster, lighter)
+
         if hasattr(transformers, "AutoModelForDepthEstimation"):
             return "depth-anything-v2"
     except Exception:
@@ -85,10 +89,46 @@ def _get_depth_backend() -> str:
     return "unknown"
 
 
+def _load_depth_backend():
+    """Load DA3 when installed, otherwise use the Transformers DA2 adapter.
+
+    DA3 has its own inference API; it is not an
+    ``AutoModelForDepthEstimation`` architecture. Any DA3 import/model-load
+    failure therefore falls back to the stable V2 path without breaking the
+    CineFocus workflow.
+    """
+    import torch
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    try:
+        from opencut.core.depth_anything_3 import (
+            MODEL_ID,
+            check_depth_anything_3_available,
+        )
+
+        if check_depth_anything_3_available():
+            from depth_anything_3.api import DepthAnything3
+
+            model = DepthAnything3.from_pretrained(MODEL_ID).to(device=device)
+            if hasattr(model, "eval"):
+                model.eval()
+            return model, None, device, "depth-anything-3"
+    except Exception as exc:
+        logger.warning("Depth Anything 3 load failed; using V2 fallback: %s", exc)
+
+    from transformers import AutoImageProcessor, AutoModelForDepthEstimation
+
+    model_id = "depth-anything/Depth-Anything-V2-Small-hf"
+    processor = AutoImageProcessor.from_pretrained(model_id)
+    model = AutoModelForDepthEstimation.from_pretrained(model_id).to(device)
+    if hasattr(model, "eval"):
+        model.eval()
+    return model, processor, device, "depth-anything-v2"
+
+
 def _estimate_depth_frame(frame, model, processor, device):
     """Estimate depth for a single frame, returning a normalized depth map."""
     import numpy as np
-    import torch
     from PIL import Image
 
     if hasattr(frame, "shape"):  # numpy/cv2 array
@@ -96,13 +136,18 @@ def _estimate_depth_frame(frame, model, processor, device):
     else:
         img = frame
 
-    inputs = processor(images=img, return_tensors="pt").to(device)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        depth = outputs.predicted_depth
+    if processor is None:
+        prediction = model.inference([img])
+        depth = np.asarray(prediction.depth).squeeze()
+    else:
+        import torch
 
-    # Normalize to 0-1 range
-    depth = depth.squeeze().cpu().numpy()
+        inputs = processor(images=img, return_tensors="pt").to(device)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            depth = outputs.predicted_depth.squeeze().cpu().numpy()
+
+    # Normalize either backend to the 0-1 map consumed by the bokeh renderer.
     depth = (depth - depth.min()) / (depth.max() - depth.min() + 1e-8)
     return depth.astype(np.float32)
 
@@ -170,11 +215,8 @@ def preview(
         cap.release()
 
     import torch
-    from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = AutoImageProcessor.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf")
-    model = AutoModelForDepthEstimation.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf").to(device)
+    model, processor, device, backend = _load_depth_backend()
 
     depth = _estimate_depth_frame(bgr, model, processor, device)
     result_frame = _apply_bokeh(bgr, depth, focal_z, aperture_f)
@@ -192,7 +234,7 @@ def preview(
         "focal_z": focal_z,
         "aperture_f": aperture_f,
         "depth_range": [float(depth.min()), float(depth.max())],
-        "backend": _get_depth_backend(),
+        "backend": backend,
     }
 
 
@@ -230,7 +272,6 @@ def render(
 
     import cv2
     import torch
-    from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
     if not video_path or not os.path.isfile(video_path):
         raise ValueError(f"Video not found: {video_path}")
@@ -242,12 +283,7 @@ def render(
     if on_progress:
         on_progress(5, "Loading depth model...")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    backend = _get_depth_backend()
-    processor = AutoImageProcessor.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf")
-    model = AutoModelForDepthEstimation.from_pretrained(
-        "depth-anything/Depth-Anything-V2-Small-hf"
-    ).to(device)
+    model, processor, device, backend = _load_depth_backend()
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -354,6 +390,7 @@ __all__ = [
     "INSTALL_HINT",
     "CINEFOCUS_PRESETS",
     "CineFocusResult",
+    "_load_depth_backend",
     "preview",
     "render",
 ]

@@ -357,7 +357,7 @@ _FEATURES: List[FeatureRecord] = [
         label="Depth Anything 3 Small",
         category="video",
         state=STATE_AVAILABLE,
-        install_hint="pip install transformers torch",
+        install_hint="pip install depth-anything-3==0.1.1",
         docs="docs/MODELS.md#depth-anything-3-small",
         routes=["/video/depth"],
         probe=_check("check_depth_anything_3_available"),
