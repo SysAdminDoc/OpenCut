@@ -294,6 +294,7 @@ def broadcast_export(job_id, filepath, data):
         "ebu_tt": "xml",
         "ttml": "ttml",
         "imsc1": "xml",
+        "imsc1_3": "xml",
         "webvtt_pos": "vtt",
     }
     ext = ext_map.get(fmt, "txt")

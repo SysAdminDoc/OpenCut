@@ -30,6 +30,8 @@ class CaptionPreflightResult:
     caption_count: int = 0
     qc_passed: bool = True
     qc_warnings: List[str] = field(default_factory=list)
+    conformance_profile: str = ""
+    conformance_valid: bool = True
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -109,6 +111,8 @@ def run_caption_export_preflight(
     video_duration=0.0,
     host_version=None,
     force_strategy=None,
+    target_profile=None,
+    language="en",
 ) -> CaptionPreflightResult:
     """Run all caption export preflight checks.
 
@@ -118,6 +122,8 @@ def run_caption_export_preflight(
         video_duration: Source video duration in seconds.
         host_version: Premiere Pro version string from the panel.
         force_strategy: Override fallback strategy ("native", "srt_sidecar", "burnin").
+        target_profile: Optional XML target ("ttml", "imsc1", or "imsc1.3").
+        language: BCP 47 language tag used for XML conformance preflight.
 
     Returns:
         CaptionPreflightResult with readiness, strategy, and diagnostics.
@@ -172,6 +178,50 @@ def run_caption_export_preflight(
                 check="qc_gate",
                 status="warning",
                 message=f"QC check skipped: {exc}",
+            ))
+
+    if target_profile:
+        try:
+            from .caption_interchange import (
+                document_from_items,
+                normalize_profile,
+                serialize_caption_document,
+                validate_ttml,
+            )
+
+            normalized_profile = normalize_profile(target_profile)
+            if normalized_profile == "ebu_tt":
+                raise ValueError("Use the dedicated EBU-TT export for the EBU profile.")
+            result.conformance_profile = normalized_profile
+            if not segments:
+                all_diags.append(PreflightDiagnostic(
+                    check="xml_conformance",
+                    status="warning",
+                    message="XML conformance preflight requires structured segments.",
+                ))
+            else:
+                document = document_from_items(segments, language=str(language or "en"))
+                payload = serialize_caption_document(document, normalized_profile)
+                report = validate_ttml(payload, expected_profile=normalized_profile)
+                result.conformance_valid = report.valid
+                all_diags.append(PreflightDiagnostic(
+                    check="xml_conformance",
+                    status="ok" if report.valid else "error",
+                    message=(
+                        f"{normalized_profile} conformance passed for {report.cue_count} cue(s)."
+                        if report.valid
+                        else "; ".join(issue.message for issue in report.errors)
+                    ),
+                ))
+                if not report.valid:
+                    result.ready = False
+        except (TypeError, ValueError) as exc:
+            result.conformance_valid = False
+            result.ready = False
+            all_diags.append(PreflightDiagnostic(
+                check="xml_conformance",
+                status="error",
+                message=f"XML conformance preflight failed: {exc}",
             ))
 
     host_diags, host_strategy = check_host_compatibility(host_version)

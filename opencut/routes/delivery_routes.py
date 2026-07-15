@@ -566,7 +566,7 @@ def caption_ebu_tt_route(job_id, filepath, data):
 @require_csrf
 @async_job("caption_ttml", filepath_required=False)
 def caption_ttml_route(job_id, filepath, data):
-    """Export captions as TTML / IMSC1 XML."""
+    """Export captions as TTML, legacy IMSC1, or IMSC 1.3 XML."""
     from opencut.core.broadcast_cc import export_ttml
 
     captions = data.get("captions", data.get("segments", []))
@@ -581,8 +581,14 @@ def caption_ttml_route(job_id, filepath, data):
         out_path = os.path.join(tempfile.gettempdir(), "opencut_ttml.xml")
 
     profile = str(data.get("profile", "imsc1")).strip().lower()
-    if profile not in ("imsc1", "ttml"):
-        profile = "imsc1"
+    profile_aliases = {
+        "legacy": "imsc1",
+        "imsc1_3": "imsc1.3",
+        "imsc13": "imsc1.3",
+    }
+    profile = profile_aliases.get(profile, profile)
+    if profile not in ("imsc1", "imsc1.3", "ttml"):
+        raise ValueError("profile must be 'ttml', legacy 'imsc1', or 'imsc1.3'")
 
     def _progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)

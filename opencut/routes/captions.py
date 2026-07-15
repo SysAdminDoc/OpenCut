@@ -2326,7 +2326,9 @@ def captions_export_preflight():
             "srt_text": "...",
             "video_duration": 120.5,   // optional
             "host_version": "26.1",    // optional, from panel
-            "force_strategy": null     // optional override
+            "force_strategy": null,    // optional override
+            "target_profile": "imsc1.3", // optional XML conformance target
+            "language": "en"
         }
 
     Returns ``{ ready, fallback_strategy, diagnostics, caption_count, ... }``.
@@ -2343,6 +2345,8 @@ def captions_export_preflight():
             video_duration=safe_float(data.get("video_duration", 0), default=0, min_val=0),
             host_version=data.get("host_version"),
             force_strategy=data.get("force_strategy"),
+            target_profile=data.get("target_profile"),
+            language=str(data.get("language", "en")),
         )
         return jsonify(result)
     except Exception as exc:
