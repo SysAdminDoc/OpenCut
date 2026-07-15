@@ -1465,9 +1465,9 @@ def captions_enhanced_capabilities():
             TRANSLATION_LANGUAGES,
             check_nllb_available,
             check_pysubs2_available,
+            check_whisperx_available,
             get_translation_backend_info,
             translation_backends_manifest,
-            check_whisperx_available,
         )
         return jsonify({
             "whisperx": check_whisperx_available(),
