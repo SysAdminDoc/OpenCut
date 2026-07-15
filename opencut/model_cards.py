@@ -335,7 +335,7 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/ByteDance-Seed/depth-anything-3",
         hardware="gpu",
-        install_hint="pip install transformers torch  # Depth Anything 3 Small",
+        install_hint="pip install depth-anything-3==0.1.1  # optional Apache-2.0 backend",
         privacy="local-only (model downloads only)",
         latency="medium",
         quality_notes="Preferred depth backend with Depth Anything V2 retained as fallback.",

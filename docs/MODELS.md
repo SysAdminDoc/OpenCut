@@ -111,7 +111,7 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | [colour-science (CIE / vectorscope math)](https://github.com/colour-science/colour) | BSD-3-Clause | cpu | local-only | `pip install colour-science` |
 | [DDColor](https://github.com/piddnad/DDColor) | Apache-2.0 | gpu | local-only | `pip install ddcolor` |
 | [DeepFace](https://github.com/serengil/deepface) | MIT | cpu/gpu | local-only | `pip install deepface` |
-| [Depth Anything 3 Small](https://github.com/ByteDance-Seed/depth-anything-3) | Apache-2.0 | gpu | local-only (model downloads only) | `pip install transformers torch  # Depth Anything 3 Small` |
+| [Depth Anything 3 Small](https://github.com/ByteDance-Seed/depth-anything-3) | Apache-2.0 | gpu | local-only (model downloads only) | `pip install depth-anything-3==0.1.1  # optional Apache-2.0 backend` |
 | [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) | Apache-2.0 | gpu | local-only | `pip install transformers torch` |
 | [Face reshape / beauty filter](https://github.com/google-ai-edge/mediapipe) | MIT | cpu/gpu | local-only | `pip install mediapipe + opencv-python` |
 | [FlashVSR (streaming VSR)](https://github.com/OpenImagingLab/FlashVSR) | Apache-2.0 | gpu (>= 12 GB VRAM) | local-only | `pip install flashvsr (placeholder; see docs/MODELS.md)` |

@@ -809,13 +809,13 @@ record also lives in the git commit messages.
 
 ### Changed — Default depth backend upgraded to Depth Anything 3 Small
 
-- New `depth_anything_3` module + a `depth-anything/DA3-SMALL` (Apache-2.0,
-  single-transformer SOTA, ~+25% geometry) default for CineFocus bokeh/parallax,
+- New `depth_anything_3` module + the official `depth-anything/DA3-SMALL`
+  Apache-2.0 backend for CineFocus bokeh/parallax,
   with `Depth-Anything-V2-Small` retained as the automatic fallback. CineFocus
   now routes both depth-load sites through a central `_load_depth_backend()` that
   resolves DA3 first and degrades to DA2 on any load failure.
 - New `depth_anything_3` engine-registry entry (priority 85 > DA2's 80) +
-  `check_depth_anything_3_available()`, a `da3-small` model entry, and
+  `check_depth_anything_3_available()`, an auditable model card, and
   `tests/test_depth_engines.py`.
 
 ### Changed — Re-aimed the IC-Light relight engine at v1 (Apache-2.0)
