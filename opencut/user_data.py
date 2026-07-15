@@ -159,6 +159,11 @@ def write_user_file(filename: str, data):
 
 
 CONFIG_SCHEMAS: dict = {}
+_MIGRATION_BACKUP_SUFFIX = ".migration-backup"
+
+
+class ConfigSchemaVersionError(RuntimeError):
+    """Raised when a JSON config uses a schema this runtime cannot open."""
 
 
 def register_config_schema(
@@ -174,10 +179,72 @@ def register_config_schema(
         migrations: Dict of ``{target_version: fn(data) -> data}`` that
             upgrade data from ``target_version - 1`` to ``target_version``.
     """
+    _safe_user_filepath(filename)
+    if isinstance(version, bool) or not isinstance(version, int) or version < 1:
+        raise ValueError("Config schema version must be a positive integer")
+    if migrations is not None and not isinstance(migrations, dict):
+        raise TypeError("Config migrations must be a dict")
     CONFIG_SCHEMAS[filename] = {
         "version": version,
         "migrations": migrations or {},
     }
+
+
+def _migration_backup_filename(filename: str) -> str:
+    return f"{filename}{_MIGRATION_BACKUP_SUFFIX}"
+
+
+def _delete_user_file(filename: str) -> None:
+    filepath = _safe_user_filepath(filename)
+    with _get_lock(filepath):
+        try:
+            os.unlink(filepath)
+        except FileNotFoundError:
+            pass
+
+
+def _restore_migration_backup(filename: str, backup_filename: str, original: dict) -> bool:
+    backup = read_user_file(backup_filename, default=None)
+    restore_data = backup if isinstance(backup, dict) else original
+    try:
+        write_user_file(filename, restore_data)
+    except Exception as exc:
+        logger.warning(
+            "Config migration restore failed for %s; error_type=%s; backup retained",
+            filename,
+            type(exc).__name__,
+        )
+        return False
+    _delete_user_file(backup_filename)
+    return True
+
+
+def _recover_interrupted_migration(filename: str, default):
+    """Restore a durable backup only when the primary is missing/corrupt."""
+    missing = object()
+    data = read_user_file(filename, default=missing)
+    backup_filename = _migration_backup_filename(filename)
+    backup = read_user_file(backup_filename, default=missing)
+    if data is missing and isinstance(backup, dict):
+        try:
+            write_user_file(filename, backup)
+            _delete_user_file(backup_filename)
+            logger.warning(
+                "Recovered interrupted config migration for %s from its backup",
+                filename,
+            )
+            return backup
+        except Exception as exc:
+            logger.warning(
+                "Config migration recovery failed for %s; error_type=%s; backup retained",
+                filename,
+                type(exc).__name__,
+            )
+            return default
+    # When both files are valid, retain the backup until the caller determines
+    # whether every target step committed. This is the normal crash window
+    # between successful per-version promotions.
+    return default if data is missing else data
 
 
 def read_user_file_versioned(filename: str, default=None):
@@ -187,38 +254,77 @@ def read_user_file_versioned(filename: str, default=None):
     and all registered migrations are applied in order. Unknown keys
     are preserved (not stripped).
     """
-    data = read_user_file(filename, default=default)
-    if data is None or not isinstance(data, dict):
-        return data
-
     schema = CONFIG_SCHEMAS.get(filename)
     if schema is None:
-        return data
+        return read_user_file(filename, default=default)
 
-    current = data.get("_schema_version", 0)
-    target = schema["version"]
-    if current >= target:
-        return data
+    filepath = _safe_user_filepath(filename)
+    with _get_lock(filepath):
+        data = _recover_interrupted_migration(filename, default)
+        if data is None or not isinstance(data, dict):
+            return data
 
-    migrations = schema.get("migrations") or {}
-    for v in range(current + 1, target + 1):
-        fn = migrations.get(v)
-        if fn is not None:
+        current = data.get("_schema_version", 0)
+        target = schema["version"]
+        if isinstance(current, bool) or not isinstance(current, int) or current < 0:
+            raise ConfigSchemaVersionError(
+                f"{filename} has an invalid _schema_version; refusing migration"
+            )
+        if current > target:
+            raise ConfigSchemaVersionError(
+                f"{filename} schema {current} is newer than supported schema "
+                f"{target}; refusing to downgrade or open an unknown schema"
+            )
+        if current == target:
+            _delete_user_file(_migration_backup_filename(filename))
+            return data
+
+        backup_filename = _migration_backup_filename(filename)
+        prior_backup = read_user_file(backup_filename, default=None)
+        original = _json_snapshot(
+            prior_backup if isinstance(prior_backup, dict) else data
+        )
+        if not isinstance(prior_backup, dict):
             try:
-                data = fn(data)
+                write_user_file(backup_filename, original)
             except Exception as exc:
                 logger.warning(
-                    "Config migration %s v%d→v%d failed: %s",
-                    filename, v - 1, v, exc,
+                    "Config migration backup failed for %s; error_type=%s; migration skipped",
+                    filename,
+                    type(exc).__name__,
                 )
-                break
+                return original
 
-    data["_schema_version"] = target
-    try:
-        write_user_file(filename, data)
-    except Exception:
-        pass
-    return data
+        working = _json_snapshot(data)
+        migrations = schema.get("migrations") or {}
+        for version in range(current + 1, target + 1):
+            migration = migrations.get(version)
+            try:
+                candidate = _json_snapshot(working)
+                if migration is not None:
+                    candidate = migration(candidate)
+                if not isinstance(candidate, dict):
+                    raise TypeError("Config migration must return a JSON object")
+                candidate["_schema_version"] = version
+                write_user_file(filename, candidate)
+                working = candidate
+            except Exception as exc:
+                restored = _restore_migration_backup(
+                    filename, backup_filename, original
+                )
+                logger.warning(
+                    "Config migration failed for %s v%d->v%d; "
+                    "error_type=%s; original_restored=%s",
+                    filename,
+                    version - 1,
+                    version,
+                    type(exc).__name__,
+                    restored,
+                )
+                return original
+
+        _delete_user_file(backup_filename)
+        return working
 
 
 def _utc_iso(timestamp: float) -> str:

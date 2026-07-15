@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Make JSON schema migrations retry-safe
+
+- Versioned user-data migrations now copy each step, advance and atomically
+  persist its schema version only after the callback succeeds, and retain a
+  durable pre-sequence backup until the complete target version is committed.
+- Failed callbacks or promotions restore the original data without logging
+  exception payloads; interrupted runs recover or resume safely, and unknown
+  future schemas are refused without rewriting the file.
+
 ### Security - Add headless secret-file authentication
 
 - Remote container binds can now read `OPENCUT_REMOTE_AUTH_TOKEN_FILE` without
