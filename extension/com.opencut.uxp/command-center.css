@@ -67,12 +67,7 @@ body {
 }
 
 .oc-version {
-  min-height: 24px;
-  padding: 3px 8px;
-  border-color: var(--cc-border);
-  border-radius: 8px;
-  background: var(--cc-control);
-  color: var(--cc-muted);
+  display: none;
 }
 
 .oc-connection {
@@ -345,6 +340,66 @@ html.theme-light .oc-tab.active {
   height: 100%;
 }
 
+.oc-command-state-list {
+  display: grid;
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  background: var(--cc-surface-raised);
+}
+
+.oc-command-state-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.75fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 46px;
+  padding: 9px 11px;
+}
+
+.oc-command-state-row + .oc-command-state-row {
+  border-top: 1px solid var(--cc-border);
+}
+
+.oc-command-state-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--cc-text);
+  font-size: 11px;
+  font-weight: 640;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-command-state-value--code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+}
+
+.oc-command-state-value[data-state="online"],
+.oc-command-state-row[data-state="online"] .oc-command-state-value {
+  color: var(--cc-success);
+}
+
+.oc-command-state-value[data-state="disconnected"],
+.oc-command-state-value[data-state="warning"],
+.oc-command-state-row[data-state="disconnected"] .oc-command-state-value,
+.oc-command-state-row[data-state="warning"] .oc-command-state-value {
+  color: var(--cc-warning);
+}
+
+.oc-command-state-value[data-state="error"],
+.oc-command-state-row[data-state="error"] .oc-command-state-value {
+  color: var(--cc-danger);
+}
+
+.oc-command-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 #tab-settings .oc-inline-summary-grid--settings {
   gap: 7px;
 }
@@ -381,6 +436,7 @@ html.theme-light .oc-tab.active {
   .oc-header {
     grid-column: 1 / -1;
     grid-row: 1;
+    flex-wrap: nowrap;
   }
 
   .oc-tab-nav-shell {
@@ -533,6 +589,48 @@ html.theme-light .oc-tab.active {
     align-items: start;
   }
 
+  #tab-settings .oc-settings-group {
+    height: 100%;
+    gap: 11px;
+    padding: 16px;
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    background: var(--cc-surface);
+    box-shadow: var(--cc-shadow);
+  }
+
+  #tab-settings .oc-settings-group > .oc-section-title {
+    padding: 0;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  #tab-settings .oc-settings-group > .oc-card {
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #tab-settings .oc-inline-summary-grid--settings {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #tab-settings .oc-inline-summary-grid--settings .oc-inline-stat {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  #tab-settings .oc-inline-summary-grid--settings .oc-inline-value {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0;
+    text-align: left;
+  }
+
   body[data-active-tab="settings"] .oc-workspace-overview {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -571,6 +669,48 @@ html.theme-light .oc-tab.active {
 
   body[data-active-tab="settings"] .oc-workspace-guide-text {
     display: none;
+  }
+}
+
+@media (min-width: 1050px) {
+  .oc-workspace-actions {
+    position: fixed;
+    z-index: 90;
+    top: 7px;
+    right: 112px;
+    display: grid;
+    grid-template-columns: 126px 90px 90px;
+    width: auto;
+    margin: 0;
+  }
+
+  .oc-workspace-actions .oc-btn {
+    min-height: 38px;
+    padding: 6px 12px;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-overview {
+    display: block;
+    margin: 0 0 2px;
+    padding: 0 0 14px;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-copy {
+    display: block;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-kicker,
+  body[data-active-tab="settings"] .oc-workspace-meta,
+  body[data-active-tab="settings"] .oc-workspace-guide {
+    display: none;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-title {
+    margin-bottom: 5px;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-subtitle {
+    max-width: 680px;
   }
 }
 
@@ -663,6 +803,19 @@ html.theme-light .oc-tab.active {
 
   #tab-settings.active {
     gap: 10px;
+  }
+
+  .oc-settings-group--workspace {
+    display: none;
+  }
+
+  .oc-command-state-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .oc-command-state-value {
+    text-align: left;
   }
 }
 
