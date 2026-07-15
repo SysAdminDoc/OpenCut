@@ -152,6 +152,165 @@ def test_read_user_file_quarantines_corrupt_json(tmp_path):
     assert len(quarantined) == 1
 
 
+def test_json_config_migration_rolls_back_all_steps_and_retries_idempotently(
+    tmp_path, monkeypatch, caplog
+):
+    import opencut.user_data as user_data
+
+    filename = "migration-retry.json"
+    source = {"_schema_version": 0, "keep": "original"}
+    (tmp_path / filename).write_text(json.dumps(source), encoding="utf-8")
+    should_fail = {"value": True}
+    calls = []
+
+    def migrate_v1(data):
+        calls.append(1)
+        data["first_step"] = True
+        return data
+
+    def migrate_v2(data):
+        calls.append(2)
+        data["sensitive_partial"] = "must-not-persist"
+        if should_fail["value"]:
+            raise RuntimeError("secret-value-must-not-reach-logs")
+        data.pop("sensitive_partial")
+        data["second_step"] = True
+        return data
+
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    user_data.register_config_schema(
+        filename,
+        version=2,
+        migrations={1: migrate_v1, 2: migrate_v2},
+    )
+
+    failed = user_data.read_user_file_versioned(filename)
+    assert failed == source
+    assert json.loads((tmp_path / filename).read_text(encoding="utf-8")) == source
+    assert not (tmp_path / f"{filename}.migration-backup").exists()
+    assert "secret-value-must-not-reach-logs" not in caplog.text
+    assert "must-not-persist" not in caplog.text
+
+    should_fail["value"] = False
+    migrated = user_data.read_user_file_versioned(filename)
+    assert migrated == {
+        "_schema_version": 2,
+        "keep": "original",
+        "first_step": True,
+        "second_step": True,
+    }
+    calls_after_success = list(calls)
+    assert user_data.read_user_file_versioned(filename) == migrated
+    assert calls == calls_after_success
+
+
+def test_json_config_migration_recovers_interrupted_backup(tmp_path, monkeypatch):
+    import opencut.user_data as user_data
+
+    filename = "migration-recovery.json"
+    backup = tmp_path / f"{filename}.migration-backup"
+    backup.write_text(json.dumps({"_schema_version": 0, "restored": True}), encoding="utf-8")
+    (tmp_path / filename).write_text('{"partial":', encoding="utf-8")
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    user_data.register_config_schema(
+        filename,
+        version=1,
+        migrations={1: lambda data: {**data, "migrated": True}},
+    )
+
+    result = user_data.read_user_file_versioned(filename)
+
+    assert result == {
+        "_schema_version": 1,
+        "restored": True,
+        "migrated": True,
+    }
+    assert json.loads((tmp_path / filename).read_text(encoding="utf-8")) == result
+    assert not backup.exists()
+    assert len(list(tmp_path.glob(f"{filename}.corrupt-*"))) == 1
+
+
+def test_json_config_migration_resumes_after_committed_step(tmp_path, monkeypatch):
+    import opencut.user_data as user_data
+
+    filename = "migration-resume.json"
+    original = {"_schema_version": 0, "value": "original"}
+    committed_v1 = {"_schema_version": 1, "value": "original", "v1": True}
+    (tmp_path / filename).write_text(json.dumps(committed_v1), encoding="utf-8")
+    backup = tmp_path / f"{filename}.migration-backup"
+    backup.write_text(json.dumps(original), encoding="utf-8")
+    calls = []
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    user_data.register_config_schema(
+        filename,
+        version=2,
+        migrations={
+            1: lambda data: calls.append(1) or {**data, "v1": "replayed"},
+            2: lambda data: calls.append(2) or {**data, "v2": True},
+        },
+    )
+
+    result = user_data.read_user_file_versioned(filename)
+
+    assert calls == [2]
+    assert result == {**committed_v1, "_schema_version": 2, "v2": True}
+    assert not backup.exists()
+
+
+def test_json_config_migration_restores_backup_when_atomic_commit_fails(
+    tmp_path, monkeypatch
+):
+    import opencut.user_data as user_data
+
+    filename = "migration-commit-failure.json"
+    source = {"_schema_version": 0, "value": "safe"}
+    (tmp_path / filename).write_text(json.dumps(source), encoding="utf-8")
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    user_data.register_config_schema(
+        filename,
+        version=1,
+        migrations={1: lambda data: {**data, "new_value": "candidate"}},
+    )
+    real_write = user_data.write_user_file
+    failed_once = {"value": False}
+
+    def fail_commit_once(target, data):
+        if (
+            target == filename
+            and data.get("_schema_version") == 1
+            and not failed_once["value"]
+        ):
+            failed_once["value"] = True
+            raise OSError("simulated atomic promotion failure")
+        return real_write(target, data)
+
+    monkeypatch.setattr(user_data, "write_user_file", fail_commit_once)
+
+    assert user_data.read_user_file_versioned(filename) == source
+    assert json.loads((tmp_path / filename).read_text(encoding="utf-8")) == source
+    assert not (tmp_path / f"{filename}.migration-backup").exists()
+
+
+def test_json_config_migration_rejects_unknown_future_schema_without_writing(
+    tmp_path, monkeypatch
+):
+    import opencut.user_data as user_data
+
+    filename = "migration-future.json"
+    future = {"_schema_version": 99, "future_key": "preserve"}
+    path = tmp_path / filename
+    path.write_text(json.dumps(future, separators=(",", ":")), encoding="utf-8")
+    original_bytes = path.read_bytes()
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+    user_data.register_config_schema(filename, version=2, migrations={})
+
+    with pytest.raises(user_data.ConfigSchemaVersionError, match="newer than supported"):
+        user_data.read_user_file_versioned(filename)
+
+    assert path.read_bytes() == original_bytes
+    assert not (tmp_path / f"{filename}.migration-backup").exists()
+
+
 def test_workflow_save_rejects_non_object_json_body(client, csrf_token):
     resp = client.post(
         "/workflow/save",
