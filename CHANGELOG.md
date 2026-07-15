@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Improved - Keep constrained UXP workspaces oriented
+
+- The compact UXP shell keeps each workspace title, current state, and first
+  recovery action above the fold at 480x800 and 520x800 while preserving the
+  full overview at wider panel sizes.
+- The nine-workspace strip now exposes localized previous/next controls when
+  it overflows, auto-reveals the selected tab, and retains roving keyboard
+  focus. Backend connectivity is one persistent row with offline and refresh
+  details available on demand.
+- Headless rendered coverage exercises all workspaces at both constrained
+  widths in English and Spanish and preserves the 1200px detail path.
+
 ### Fixed - Keep CEP controls legible in light mode
 
 - Danger, warning, accent, action-hover, and persistent error-banner text now

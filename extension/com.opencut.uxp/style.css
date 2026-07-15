@@ -1971,6 +1971,245 @@ body {
   }
 }
 
+/* =========================================================
+   CONSTRAINED PANEL SHELL
+   One persistent connection row, explicit tab overflow, and
+   a compact workspace orientation surface below 620px.
+   ========================================================= */
+.oc-connection-details {
+  position: relative;
+  z-index: 40;
+}
+
+.oc-connection-details summary {
+  list-style: none;
+}
+
+.oc-connection-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.oc-connection-details .oc-connection {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid rgba(220, 230, 242, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+}
+
+.oc-connection-details .oc-connection:hover {
+  border-color: rgba(119, 167, 255, 0.24);
+  background: rgba(119, 167, 255, 0.08);
+}
+
+.oc-connection-chevron {
+  transition: transform var(--transition);
+}
+
+.oc-connection-details[open] .oc-connection-chevron {
+  transform: rotate(180deg);
+}
+
+.oc-connection-detail-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  width: min(340px, calc(100vw - 20px));
+  min-height: 42px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid rgba(220, 230, 242, 0.16);
+  border-radius: 8px;
+  background: rgba(10, 14, 20, 0.98);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-lg);
+}
+
+.oc-connection-detail-panel[data-state="error"] {
+  border-color: rgba(224, 113, 103, 0.3);
+}
+
+.oc-connection-detail-panel[data-state="success"] {
+  border-color: rgba(79, 214, 164, 0.24);
+}
+
+.oc-connection-detail-panel #statusText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.oc-tab-nav-shell {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 5px;
+  border-bottom: 1px solid rgba(220, 230, 242, 0.1);
+  background: linear-gradient(180deg, rgba(17, 20, 26, 0.97), rgba(10, 13, 19, 0.95));
+  flex-shrink: 0;
+}
+
+.oc-tab-nav-shell .oc-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+}
+
+.oc-tab-scroll {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid rgba(220, 230, 242, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.oc-tab-scroll[hidden] {
+  display: none;
+}
+
+.oc-tab-scroll:hover:not(:disabled) {
+  border-color: rgba(119, 167, 255, 0.28);
+  background: rgba(119, 167, 255, 0.1);
+}
+
+.oc-tab-scroll:disabled {
+  color: var(--text-disabled);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.oc-tab-scroll:focus-visible,
+.oc-connection-details .oc-connection:focus-visible {
+  outline: 2px solid rgba(119, 167, 255, 0.78);
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .oc-header {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 9px;
+  }
+
+  .oc-version {
+    display: none;
+  }
+
+  .oc-connection-details .oc-connection {
+    min-height: 28px;
+  }
+
+  .oc-tab-nav-shell {
+    gap: 3px;
+    padding: 3px 5px;
+  }
+
+  .oc-tab-scroll {
+    width: 32px;
+    min-width: 32px;
+    min-height: 34px;
+  }
+
+  .oc-tab-nav-shell .oc-tabs {
+    gap: 4px;
+  }
+
+  .oc-tab {
+    min-height: 34px;
+    min-width: 58px;
+    padding: 4px 7px;
+  }
+
+  .oc-content {
+    padding: 0 8px 14px;
+  }
+
+  .oc-workspace-overview {
+    gap: 7px;
+    margin: 6px 0 8px;
+    padding: 8px;
+  }
+
+  .oc-workspace-kicker {
+    min-height: 17px;
+    padding: 0 6px;
+    font-size: 8px;
+  }
+
+  .oc-workspace-title {
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+
+  .oc-workspace-subtitle,
+  .oc-workspace-actions,
+  .oc-workspace-meta {
+    display: none;
+  }
+
+  .oc-workspace-guide {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+  }
+
+  .oc-workspace-guide-kicker {
+    min-height: 16px;
+    padding: 0 6px;
+    font-size: 8px;
+  }
+
+  .oc-workspace-guide-title {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 3px;
+    font-size: 10.5px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .oc-workspace-guide-text {
+    display: none;
+  }
+
+  .oc-workspace-guide .oc-btn {
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+
+  .oc-tab-panel {
+    gap: 8px;
+    padding-bottom: 18px;
+  }
+
+  .oc-section-title {
+    margin-top: 0;
+    padding: 5px 0 3px;
+  }
+}
+
 @media (max-width: 400px) {
   .oc-workspace-actions {
     flex-direction: column;
@@ -4628,5 +4867,62 @@ textarea:focus-visible,
   .oc-tab:hover,
   .oc-deliv-btn:hover {
     transform: none;
+  }
+}
+
+/* Keep constrained-shell geometry authoritative after shared polish layers. */
+.oc-tab-nav-shell .oc-tabs {
+  margin: 0;
+  padding: 1px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  scroll-padding-inline: 0;
+  scroll-snap-type: none;
+}
+
+@media (max-width: 620px) {
+  .oc-header {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 9px;
+  }
+
+  .oc-header,
+  .oc-header-right {
+    align-items: center;
+  }
+
+  .oc-content {
+    gap: 8px;
+    padding: 0 8px 14px;
+  }
+
+  .oc-workspace-overview {
+    gap: 7px;
+    margin: 6px 0 8px;
+    padding: 8px;
+  }
+
+  .oc-workspace-actions,
+  .oc-workspace-meta,
+  .oc-workspace-subtitle {
+    display: none;
+  }
+
+  .oc-workspace-guide {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .oc-tab-nav-shell .oc-tabs {
+    gap: 4px;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    min-width: 58px;
+    min-height: 34px;
+    padding: 4px 7px;
   }
 }

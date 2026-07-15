@@ -40,12 +40,21 @@ function hostEnvironment() {
 async function preparePage(page, surface, theme, backendFixtures = {}) {
   const pageErrors = [];
   const capturedRequests = [];
+  const locale = backendFixtures.locale || "en-US";
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
   await page.addInitScript(
-    ({ surfaceName, selectedTheme, environment }) => {
+    ({ surfaceName, selectedTheme, environment, localeTag }) => {
       localStorage.clear();
       localStorage.setItem("opencut_debug", "0");
+      Object.defineProperty(navigator, "language", {
+        configurable: true,
+        value: localeTag,
+      });
+      Object.defineProperty(navigator, "languages", {
+        configurable: true,
+        value: [localeTag],
+      });
       if (surfaceName === "cep") {
         localStorage.setItem(
           "opencut_settings",
@@ -117,6 +126,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       surfaceName: surface,
       selectedTheme: theme,
       environment: hostEnvironment(),
+      localeTag: locale,
     },
   );
   await page.route("http://127.0.0.1:*/**", async (route) => {
@@ -172,7 +182,10 @@ async function openSurface(
   backendFixtures = {},
 ) {
   const surface = SURFACES[surfaceName];
-  await page.setViewportSize({ width, height: 900 });
+  await page.setViewportSize({
+    width,
+    height: backendFixtures.height || 900,
+  });
   const { pageErrors, capturedRequests } = await preparePage(
     page,
     surfaceName,
@@ -383,8 +396,95 @@ test("UXP keyboard tabs retain focus and selection", async ({ page }) => {
   await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("End");
   await expect(tabs.last()).toBeFocused();
+  const endGeometry = await page.evaluate(() => {
+    const nav = document.getElementById("tabNav")?.getBoundingClientRect();
+    const selected = document
+      .querySelector(".oc-tab[aria-selected='true']")
+      ?.getBoundingClientRect();
+    return nav && selected
+      ? { navLeft: nav.left, navRight: nav.right, tabLeft: selected.left, tabRight: selected.right }
+      : null;
+  });
+  expect(endGeometry).not.toBeNull();
+  expect(endGeometry.tabLeft).toBeGreaterThanOrEqual(endGeometry.navLeft - 1);
+  expect(endGeometry.tabRight).toBeLessThanOrEqual(endGeometry.navRight + 1);
   await page.keyboard.press("Home");
   await expect(tabs.first()).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
+for (const width of [480, 520]) {
+  for (const locale of ["en-US", "es-ES"]) {
+    test(`UXP constrained shell keeps orientation and action visible at ${width}px in ${locale}`, async ({
+      page,
+    }) => {
+      const { surface, pageErrors } = await openSurface(
+        page,
+        "uxp",
+        "dark",
+        width,
+        { height: 800, locale },
+      );
+      await expect(page.locator("#tabScrollPrev")).toBeVisible();
+      await expect(page.locator("#tabScrollNext")).toBeVisible();
+      if (locale === "es-ES") {
+        await expect(page.locator("#tabScrollNext")).toHaveAttribute(
+          "aria-label",
+          "Siguiente espacio",
+        );
+      }
+
+      const tabs = page.locator(surface.tabSelector);
+      for (let index = 0; index < (await tabs.count()); index += 1) {
+        const tab = tabs.nth(index);
+        await tab.click();
+        await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
+        await expect(page.locator("#workspaceGuide")).toBeVisible();
+        await expect(page.locator("#workspaceGuideAction")).toBeVisible();
+        const geometry = await page.evaluate(() => {
+          const nav = document.getElementById("tabNav")?.getBoundingClientRect();
+          const selected = document
+            .querySelector(".oc-tab[aria-selected='true']")
+            ?.getBoundingClientRect();
+          const title = document.getElementById("workspaceOverviewTitle")?.getBoundingClientRect();
+          const state = document.getElementById("workspaceGuide")?.getBoundingClientRect();
+          const action = document.getElementById("workspaceGuideAction")?.getBoundingClientRect();
+          return {
+            mainScrollTop: document.getElementById("mainContent")?.scrollTop || 0,
+            nav,
+            selected,
+            title,
+            state,
+            action,
+          };
+        });
+        expect(geometry.mainScrollTop).toBe(0);
+        expect(geometry.selected.left).toBeGreaterThanOrEqual(geometry.nav.left - 1);
+        expect(geometry.selected.right).toBeLessThanOrEqual(geometry.nav.right + 1);
+        for (const region of [geometry.title, geometry.state, geometry.action]) {
+          expect(region.top).toBeGreaterThanOrEqual(0);
+          expect(region.bottom).toBeLessThanOrEqual(800);
+        }
+      }
+
+      expect(pageErrors).toEqual([]);
+    });
+  }
+}
+
+test("UXP wide shell keeps overflow controls hidden and expands offline details", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "uxp", "dark", 1200, {
+    height: 800,
+  });
+  await expect(page.locator("#tabScrollPrev")).toBeHidden();
+  await expect(page.locator("#tabScrollNext")).toBeHidden();
+  await expect(page.locator("#connectionStatus")).toBeVisible();
+  await page.locator("#connectionStatus").click();
+  await expect(page.locator("#statusBar")).toBeVisible();
+  await expect(page.locator("#statusText")).toContainText(/backend offline/i);
+  await expect(page.locator("#refreshBtn")).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
