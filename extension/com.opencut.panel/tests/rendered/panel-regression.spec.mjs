@@ -494,6 +494,26 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
   await expect(page.locator("#statusBar")).toBeVisible();
   await expect(page.locator("#statusText")).toContainText(/backend offline/i);
   await expect(page.locator("#refreshBtn")).toBeVisible();
+  const menuGeometry = await page.evaluate(() => {
+    const detail = document.getElementById("statusBar");
+    const select = document.getElementById("silenceMode");
+    const detailStyle = getComputedStyle(detail);
+    const selectStyle = getComputedStyle(select);
+    return {
+      detailRadius: detailStyle.borderRadius,
+      detailFontSize: Number.parseFloat(getComputedStyle(document.getElementById("statusText")).fontSize),
+      selectRadius: selectStyle.borderRadius,
+      selectHeight: select.getBoundingClientRect().height,
+      selectAppearance: selectStyle.appearance,
+      selectArrow: selectStyle.backgroundImage,
+    };
+  });
+  expect(menuGeometry.detailRadius).toBe("9px");
+  expect(menuGeometry.detailFontSize).toBeGreaterThanOrEqual(12);
+  expect(menuGeometry.selectRadius).toBe("7px");
+  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(40);
+  expect(menuGeometry.selectAppearance).toBe("none");
+  expect(menuGeometry.selectArrow).toContain("data:image/svg+xml");
   expect(pageErrors).toEqual([]);
 });
 
@@ -576,6 +596,138 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   await page.locator("#settingsWorkspaceSearchBtn").click();
   await expect(page.locator(".oc-tab[data-tab='search']")).toHaveAttribute("aria-selected", "true");
   expect(uxp.pageErrors).toEqual([]);
+});
+
+test("CEP tool submenus keep every label readable behind explicit overflow controls", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "cep", "dark", 1200, {
+    height: 900,
+  });
+  await page.locator(".nav-tab[data-nav='video']").click();
+  const shell = page.locator("#panel-video .sub-tabs-shell");
+  const tablist = page.locator("#videoSubTabs");
+  const previous = shell.locator(".sub-tabs-scroll--previous");
+  const next = shell.locator(".sub-tabs-scroll--next");
+  await expect(shell).toBeVisible();
+  await expect(previous).toBeVisible();
+  await expect(previous).toBeDisabled();
+  await expect(next).toBeVisible();
+  await expect(next).toBeEnabled();
+
+  const initial = await tablist.evaluate((node) => ({
+    clientWidth: node.clientWidth,
+    scrollWidth: node.scrollWidth,
+    scrollLeft: node.scrollLeft,
+    tabTops: Array.from(node.querySelectorAll(".sub-tab")).map(
+      (tab) => tab.getBoundingClientRect().top,
+    ),
+    shellRadius: getComputedStyle(node.parentElement).borderRadius,
+  }));
+  expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
+  expect(initial.scrollLeft).toBe(0);
+  expect(Math.max(...initial.tabTops) - Math.min(...initial.tabTops)).toBeLessThan(1);
+  expect(initial.shellRadius).toBe("8px");
+  await expect(shell).toHaveScreenshot("cep-video-submenu-dark-1200.png");
+
+  await next.click();
+  await expect.poll(() => tablist.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(previous).toBeEnabled();
+  await page.locator("#videoSubTabs .sub-tab").last().click();
+  const activeGeometry = await page.evaluate(() => {
+    const list = document.getElementById("videoSubTabs")?.getBoundingClientRect();
+    const active = document.querySelector("#videoSubTabs .sub-tab.active")?.getBoundingClientRect();
+    return { list, active };
+  });
+  expect(activeGeometry.active.left).toBeGreaterThanOrEqual(activeGeometry.list.left - 1);
+  expect(activeGeometry.active.right).toBeLessThanOrEqual(activeGeometry.list.right + 1);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP listboxes and clip context menu share focus-safe menu behavior", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900, {
+    height: 900,
+  });
+  await page.locator(".nav-tab[data-nav='cut']").click();
+  const fieldTrigger = page
+    .locator(".nav-panel.active .sub-panel.active .custom-dropdown-trigger")
+    .first();
+  await fieldTrigger.scrollIntoViewIfNeeded();
+  await fieldTrigger.click();
+  const listboxId = await fieldTrigger.getAttribute("aria-controls");
+  const listbox = page.locator(`#${listboxId}`);
+  await expect(fieldTrigger).toHaveAttribute("aria-expanded", "true");
+  await expect(listbox).toBeVisible();
+  const dropdownGeometry = await listbox.evaluate((node) => ({
+    radius: getComputedStyle(node).borderRadius,
+    itemHeight: node.querySelector(".custom-dropdown-item")?.getBoundingClientRect().height || 0,
+    selectedState: node.querySelector(".custom-dropdown-item.selected")?.getAttribute("aria-selected"),
+  }));
+  expect(dropdownGeometry.radius).toBe("8px");
+  expect(dropdownGeometry.itemHeight).toBeGreaterThanOrEqual(36);
+  expect(dropdownGeometry.selectedState).toBe("true");
+  const dropdownBounds = await page.evaluate((id) => {
+    const menu = document.getElementById(id)?.getBoundingClientRect();
+    const footer = document.querySelector(".content-footer")?.getBoundingClientRect();
+    return { menuBottom: menu?.bottom || 0, footerTop: footer?.top || window.innerHeight };
+  }, listboxId);
+  expect(dropdownBounds.menuBottom).toBeLessThanOrEqual(dropdownBounds.footerTop + 1);
+  await expect(listbox).toHaveScreenshot("cep-dropdown-dark-900.png");
+  await page.keyboard.press("Escape");
+  await expect(listbox).toBeHidden();
+  await expect(fieldTrigger).toBeFocused();
+
+  await page.evaluate(() => {
+    const select = document.getElementById("clipSelect");
+    const option = document.createElement("option");
+    option.value = "C:/media/interview.mov";
+    option.textContent = "interview.mov";
+    option.selected = true;
+    select.appendChild(option);
+    select.value = option.value;
+    select._customDropdown.update();
+  });
+  const clipTrigger = page.locator(".custom-dropdown[data-for='clipSelect'] .custom-dropdown-trigger");
+  await clipTrigger.click();
+  await page.locator("#clipSelect-listbox .custom-dropdown-item").last().click();
+  await expect(page.locator("body")).toHaveClass(/has-clip/);
+  await expect(clipTrigger).toHaveAttribute("data-context-menu-target", "clip-actions");
+  await clipTrigger.dispatchEvent("contextmenu", { clientX: 240, clientY: 220 });
+  const contextMenu = page.locator("#contextMenu");
+  await expect(contextMenu).toBeVisible();
+  await expect(contextMenu.locator(".context-menu-item").first()).toBeFocused();
+  await expect(contextMenu).toHaveScreenshot("cep-context-menu-dark-900.png");
+  await page.keyboard.press("End");
+  await expect(contextMenu.locator(".context-menu-item").last()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(contextMenu).toBeHidden();
+  await expect(clipTrigger).toBeFocused();
+
+  const recentClipsButton = page.locator("#recentClipsBtn");
+  await recentClipsButton.click();
+  const recentClipsMenu = page.locator("#recentClipsDropdown");
+  await expect(recentClipsMenu).toBeVisible();
+  await expect(recentClipsButton).toHaveAttribute("aria-expanded", "true");
+  await expect(recentClipsMenu.locator(".recent-clip-item")).toHaveCount(1);
+  await expect(recentClipsMenu).toHaveScreenshot("cep-recent-clips-dark-900.png");
+  await page.keyboard.press("Escape");
+  await expect(recentClipsMenu).toBeHidden();
+  await expect(recentClipsButton).toBeFocused();
+
+  await page.mouse.move(890, 890);
+  await page.keyboard.press("Control+K");
+  const palette = page.locator(".command-palette");
+  await expect(palette).toBeVisible();
+  await expect(palette.locator(".command-palette-item.selected")).toHaveCount(1);
+  const paletteDescriptions = await palette.locator(".command-palette-desc").allTextContents();
+  expect(paletteDescriptions.length).toBeGreaterThan(0);
+  expect(paletteDescriptions.every((description) => !description.trim().startsWith("function"))).toBe(true);
+  await expect(palette).toHaveScreenshot("cep-command-palette-dark-900.png");
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+  expect(pageErrors).toEqual([]);
 });
 
 test("offline, empty, loading, error, permission, and confirmation states stay semantic", async ({

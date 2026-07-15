@@ -99,12 +99,23 @@
         _none: "Open tools across the editing workflow.",
     };
 
+    function resolveDescription(value) {
+        return typeof value === "function" ? value() : value;
+    }
+
     function descriptionForItem(item, descriptionMap) {
         var itemKey = getCommandPaletteItemKey(item);
-        if (descriptionMap && descriptionMap[itemKey]) return descriptionMap[itemKey];
-        if (!item) return (descriptionMap && descriptionMap._none) || DEFAULT_TAB_DESCRIPTIONS._none;
+        if (descriptionMap && descriptionMap[itemKey]) {
+            return resolveDescription(descriptionMap[itemKey]);
+        }
+        if (!item) {
+            return resolveDescription(descriptionMap && descriptionMap._none)
+                || DEFAULT_TAB_DESCRIPTIONS._none;
+        }
         var tabDescs = (descriptionMap && descriptionMap._tabDescriptions) || DEFAULT_TAB_DESCRIPTIONS;
-        return tabDescs[item.tab] || tabDescs._default || DEFAULT_TAB_DESCRIPTIONS._default;
+        return resolveDescription(tabDescs[item.tab])
+            || resolveDescription(tabDescs._default)
+            || DEFAULT_TAB_DESCRIPTIONS._default;
     }
 
     var DEFAULT_SECTION_LABELS = {

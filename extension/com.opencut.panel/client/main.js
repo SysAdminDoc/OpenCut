@@ -375,6 +375,7 @@
     // CUSTOM DROPDOWN SYSTEM - Inline Panel Dropdowns
     // ============================================================
     var dropdownGlobalListenersAdded = false;
+    var customDropdownId = 0;
 
     function initCustomDropdowns() {
         var selects = document.querySelectorAll('select:not(.no-custom)');
@@ -389,7 +390,10 @@
             dropdownGlobalListenersAdded = true;
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.custom-dropdown')) {
-                    closeAllDropdowns({ restoreFocus: false });
+                    closeAllDropdowns({
+                        restoreFocus: false,
+                        preserveRecentClips: !!e.target.closest('#recentClipsBtn, #recentClipsDropdown')
+                    });
                 }
             });
             document.addEventListener('keydown', function(e) {
@@ -414,6 +418,9 @@
         trigger.setAttribute("role", "combobox");
         trigger.setAttribute("aria-expanded", "false");
         trigger.setAttribute("aria-haspopup", "listbox");
+        if (select.classList.contains("clip-select")) {
+            trigger.setAttribute("data-context-menu-target", "clip-actions");
+        }
         if (select.getAttribute("aria-label")) {
             trigger.setAttribute("aria-label", select.getAttribute("aria-label"));
         } else {
@@ -435,9 +442,13 @@
         var dropdown = document.createElement('div');
         dropdown.className = 'custom-dropdown-menu';
         dropdown.setAttribute("role", "listbox");
+        dropdown.id = (select.id || ("opencut-select-" + (++customDropdownId))) + "-listbox";
+        trigger.setAttribute("aria-controls", dropdown.id);
+        var optionSerial = 0;
         
         function buildOptions() {
             dropdown.innerHTML = '';
+            optionSerial = 0;
             var hasOptgroups = select.querySelector('optgroup');
             var i, j, child;
             
@@ -447,6 +458,7 @@
                     if (child.tagName === 'OPTGROUP') {
                         var groupLabel = document.createElement('div');
                         groupLabel.className = 'custom-dropdown-group';
+                        groupLabel.setAttribute("role", "presentation");
                         groupLabel.textContent = child.label;
                         dropdown.appendChild(groupLabel);
                         
@@ -469,8 +481,10 @@
             var item = document.createElement('div');
             item.className = 'custom-dropdown-item';
             item.setAttribute("role", "option");
+            item.id = dropdown.id + "-option-" + (++optionSerial);
             if (opt.disabled) item.classList.add('disabled');
             if (opt.selected) item.classList.add('selected');
+            item.setAttribute("aria-selected", opt.selected ? "true" : "false");
             item.dataset.value = opt.value;
             item.textContent = opt.textContent;
             
@@ -495,8 +509,10 @@
                 var allItems = dropdown.querySelectorAll('.custom-dropdown-item');
                 for (var i = 0; i < allItems.length; i++) {
                     allItems[i].classList.remove('selected');
+                    allItems[i].setAttribute("aria-selected", "false");
                 }
                 item.classList.add('selected');
+                item.setAttribute("aria-selected", "true");
                 updateSelectedText();
                 closeDropdown({ restoreFocus: true });
             });
@@ -524,6 +540,8 @@
                 // Scroll to selected item
                 var selectedItem = dropdown.querySelector('.custom-dropdown-item.selected');
                 if (selectedItem) {
+                    selectedItem.classList.add('focused');
+                    trigger.setAttribute("aria-activedescendant", selectedItem.id);
                     selectedItem.scrollIntoView({ block: 'nearest' });
                 }
             }
@@ -535,6 +553,7 @@
             trigger.setAttribute("aria-expanded", "false");
             var focused = dropdown.querySelector('.custom-dropdown-item.focused');
             if (focused) focused.classList.remove('focused');
+            trigger.removeAttribute("aria-activedescendant");
             if (restoreFocus) {
                 try { trigger.focus(); } catch (e) {}
             }
@@ -545,11 +564,19 @@
             dropdown.style.top = '';
             dropdown.style.bottom = '';
             dropdown.style.maxHeight = '';
-            
+
             var rect = wrapper.getBoundingClientRect();
             var menuHeight = dropdown.scrollHeight;
             var viewportHeight = window.innerHeight;
-            var spaceBelow = viewportHeight - rect.bottom - 10;
+            var viewportBottom = viewportHeight;
+            var fixedFooter = document.querySelector('.content-footer');
+            if (fixedFooter) {
+                var footerRect = fixedFooter.getBoundingClientRect();
+                if (footerRect.top > 0 && footerRect.top < viewportHeight) {
+                    viewportBottom = footerRect.top;
+                }
+            }
+            var spaceBelow = Math.max(0, viewportBottom - rect.bottom - 10);
             var spaceAbove = rect.top - 10;
             
             // Determine if dropdown should open upward
@@ -585,6 +612,7 @@
 
             if (e.key === 'Escape') {
                 e.preventDefault();
+                e.stopPropagation();
                 closeDropdown({ restoreFocus: true });
                 return;
             }
@@ -610,6 +638,7 @@
                     focusedIdx = focusedIdx <= 0 ? items.length - 1 : focusedIdx - 1;
                 }
                 items[focusedIdx].classList.add('focused');
+                trigger.setAttribute("aria-activedescendant", items[focusedIdx].id);
                 items[focusedIdx].scrollIntoView({ block: 'nearest' });
                 return;
             }
@@ -630,6 +659,7 @@
                         var oldFocus = dropdown.querySelector('.custom-dropdown-item.focused');
                         if (oldFocus) oldFocus.classList.remove('focused');
                         items[ti].classList.add('focused');
+                        trigger.setAttribute("aria-activedescendant", items[ti].id);
                         items[ti].scrollIntoView({ block: 'nearest' });
                         break;
                     }
@@ -689,7 +719,9 @@
                 if (trig) trig.setAttribute("aria-expanded", "false");
             }
         }
-        hideRecentClipsDropdown(!!options.restoreFocus);
+        if (!options.preserveRecentClips) {
+            hideRecentClipsDropdown(!!options.restoreFocus);
+        }
         if (options.closePalette) closeCommandPalette({ restoreFocus: options.restorePaletteFocus !== false });
     }
     
@@ -3382,6 +3414,9 @@
         var maxScrollLeft;
         var canScrollLeft;
         var canScrollRight;
+        var shell;
+        var previousButton;
+        var nextButton;
         if (!container) return;
         maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
         canScrollLeft = container.scrollLeft > 6;
@@ -3389,6 +3424,22 @@
         container.classList.toggle("has-overflow", maxScrollLeft > 1);
         container.classList.toggle("overflow-left", canScrollLeft);
         container.classList.toggle("overflow-right", canScrollRight);
+        shell = container.parentElement && container.parentElement.classList.contains("sub-tabs-shell")
+            ? container.parentElement
+            : null;
+        if (shell) {
+            previousButton = shell.querySelector(".sub-tabs-scroll--previous");
+            nextButton = shell.querySelector(".sub-tabs-scroll--next");
+            shell.classList.toggle("has-overflow", maxScrollLeft > 1);
+            if (previousButton) {
+                previousButton.hidden = maxScrollLeft <= 1;
+                previousButton.disabled = !canScrollLeft;
+            }
+            if (nextButton) {
+                nextButton.hidden = maxScrollLeft <= 1;
+                nextButton.disabled = !canScrollRight;
+            }
+        }
         if (maxScrollLeft > 1) {
             container.setAttribute("data-overflow-hint", canScrollRight
                 ? t("toolbar.more_tools", "More tools")
@@ -3396,6 +3447,48 @@
         } else {
             container.removeAttribute("data-overflow-hint");
         }
+    }
+
+    function createSubTabScrollButton(container, direction) {
+        var button = document.createElement("button");
+        var isPrevious = direction < 0;
+        button.type = "button";
+        button.className = "sub-tabs-scroll " + (isPrevious
+            ? "sub-tabs-scroll--previous"
+            : "sub-tabs-scroll--next");
+        button.hidden = true;
+        button.setAttribute("aria-label", t(isPrevious
+            ? "toolbar.previous_tools"
+            : "toolbar.more_tools", isPrevious ? "Previous tools" : "More tools"));
+        button.title = button.getAttribute("aria-label");
+        if (container.id) button.setAttribute("aria-controls", container.id);
+        button.innerHTML = isPrevious
+            ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.5 3.5L6 8l4.5 4.5-1 1L4 8l5.5-5.5 1 1z"/></svg>'
+            : '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 3.5L10 8l-4.5 4.5 1 1L12 8 6.5 2.5l-1 1z"/></svg>';
+        button.addEventListener("click", function () {
+            var distance = Math.max(180, Math.round(container.clientWidth * 0.72));
+            container.scrollLeft += direction * distance;
+            updateSubTabOverflowState(container);
+        });
+        return button;
+    }
+
+    function ensureSubTabShell(container) {
+        var shell;
+        var parent;
+        if (!container) return null;
+        if (container.parentElement && container.parentElement.classList.contains("sub-tabs-shell")) {
+            return container.parentElement;
+        }
+        parent = container.parentNode;
+        if (!parent) return null;
+        shell = document.createElement("div");
+        shell.className = "sub-tabs-shell";
+        parent.insertBefore(shell, container);
+        shell.appendChild(createSubTabScrollButton(container, -1));
+        shell.appendChild(container);
+        shell.appendChild(createSubTabScrollButton(container, 1));
+        return shell;
     }
 
     function setupNavTabs() {
@@ -3444,6 +3537,7 @@
                 var btns = container.querySelectorAll(".sub-tab");
                 var parentPanel = container.closest(".nav-panel");
                 var parentTabName = getPanelTabName(parentPanel);
+                ensureSubTabShell(container);
                 container.setAttribute("aria-orientation", "horizontal");
                 if (!container._overflowTrackingBound) {
                     container._overflowTrackingBound = true;
@@ -12039,29 +12133,38 @@
     // ================================================================
     function initContextMenu() {
         if (!el.contextMenu) return;
-        // Show on clip select right-click
-        var clipSelect = document.querySelector(".clip-select");
-        if (clipSelect) {
-            clipSelect.addEventListener("contextmenu", function (e) {
-                if (!selectedPath) return;
-                e.preventDefault();
-                el.contextMenu.classList.remove("hidden");
-                var menuW = el.contextMenu.offsetWidth || 160;
-                var menuH = el.contextMenu.offsetHeight || 200;
-                var left = Math.min(e.clientX, window.innerWidth - menuW - 4);
-                var top = Math.min(e.clientY, window.innerHeight - menuH - 4);
-                el.contextMenu.style.left = Math.max(0, left) + "px";
-                el.contextMenu.style.top = Math.max(0, top) + "px";
-                var firstItem = el.contextMenu.querySelector(".context-menu-item");
-                if (firstItem) firstItem.focus();
-            });
+        var returnFocusTarget = null;
+
+        function closeContextMenu(restoreFocus) {
+            el.contextMenu.classList.add("hidden");
+            if (restoreFocus && returnFocusTarget) {
+                try { returnFocusTarget.focus(); } catch {}
+            }
         }
+
+        // Delegate from the stable document so rebuilt clip selectors keep the menu.
+        document.addEventListener("contextmenu", function (e) {
+            var contextTarget = e.target.closest("[data-context-menu-target='clip-actions']");
+            if (!contextTarget || !selectedPath) return;
+            e.preventDefault();
+            closeAllDropdowns({ restoreFocus: false });
+            returnFocusTarget = contextTarget;
+            el.contextMenu.classList.remove("hidden");
+            var menuW = el.contextMenu.offsetWidth || 160;
+            var menuH = el.contextMenu.offsetHeight || 200;
+            var left = Math.min(e.clientX, window.innerWidth - menuW - 4);
+            var top = Math.min(e.clientY, window.innerHeight - menuH - 4);
+            el.contextMenu.style.left = Math.max(0, left) + "px";
+            el.contextMenu.style.top = Math.max(0, top) + "px";
+            var firstItem = el.contextMenu.querySelector(".context-menu-item");
+            if (firstItem) firstItem.focus();
+        });
         // Handle menu item clicks
         var items = el.contextMenu.querySelectorAll(".context-menu-item");
         for (var i = 0; i < items.length; i++) {
             items[i].addEventListener("click", function () {
                 var action = this.dataset.action;
-                el.contextMenu.classList.add("hidden");
+                closeContextMenu(false);
                 if (action === "favorite") {
                     // Determine current active operation
                     var activeTab = document.querySelector(".nav-tab.active");
@@ -12089,12 +12192,28 @@
         // Hide on click outside
         document.addEventListener("click", function (e) {
             if (!e.target.closest(".context-menu")) {
-                el.contextMenu.classList.add("hidden");
+                closeContextMenu(false);
             }
         });
         document.addEventListener("keydown", function (e) {
+            if (el.contextMenu.classList.contains("hidden")) return;
+            var menuItems = Array.prototype.slice.call(el.contextMenu.querySelectorAll(".context-menu-item"));
+            var currentIndex = menuItems.indexOf(document.activeElement);
             if (e.key === "Escape") {
-                el.contextMenu.classList.add("hidden");
+                e.preventDefault();
+                closeContextMenu(true);
+            } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && menuItems.length) {
+                e.preventDefault();
+                currentIndex = e.key === "ArrowDown"
+                    ? (currentIndex + 1) % menuItems.length
+                    : (currentIndex <= 0 ? menuItems.length - 1 : currentIndex - 1);
+                menuItems[currentIndex].focus();
+            } else if (e.key === "Home" && menuItems.length) {
+                e.preventDefault();
+                menuItems[0].focus();
+            } else if (e.key === "End" && menuItems.length) {
+                e.preventDefault();
+                menuItems[menuItems.length - 1].focus();
             }
         });
     }
@@ -13241,6 +13360,7 @@
         clearBtn.type = "button";
         clearBtn.className = "recent-clips-clear";
         clearBtn.setAttribute("data-action", "clear");
+        clearBtn.setAttribute("role", "menuitem");
         clearBtn.setAttribute("aria-label", t("recent.clear_aria", "Clear recent clip history"));
         clearBtn.textContent = t("recent.clear", "Clear");
         header.appendChild(clearBtn);
@@ -13257,6 +13377,7 @@
             item.className = "recent-clip-item";
             item.setAttribute("data-path", path);
             item.setAttribute("data-name", name);
+            item.setAttribute("role", "menuitem");
             item.title = path;
             item.setAttribute("aria-label", t("recent.open_clip_aria", "Open recent clip {name}").replace("{name}", name));
             if (path === selectedPath) {
