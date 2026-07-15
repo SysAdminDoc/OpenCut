@@ -193,6 +193,8 @@ def safe_error(exc, context=""):
         "CREDENTIAL_STORE_WRITE_FAILED",
         "REMOTE_AUTH_TOKEN_FILE_INVALID",
         "REMOTE_AUTH_TOKEN_FILE_READ_ONLY",
+        "PLUGIN_WORKER_UNAVAILABLE",
+        "PLUGIN_WORKER_QUARANTINED",
     }:
         return error_response(
             getattr(exc, "code"),

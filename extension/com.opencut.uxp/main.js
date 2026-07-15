@@ -7288,6 +7288,19 @@ function pluginTrustRowHtml(plugin, actions) {
     "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.",
     { route }
   );
+  const worker = plugin?.worker;
+  const workerDetails = worker
+    ? `<p class="oc-plugin-action-contract">${UIController.escapeHtml(formatI18n(
+      "uxp.settings.plugin_worker_isolation",
+      "Worker: {state}; {crashes} crashes; last error: {error}. Supervised-process availability isolation, not an OS security sandbox.",
+      {
+        state: worker.state || "unknown",
+        crashes: Number(worker.crash_count || 0),
+        error: worker.last_error || t("uxp.settings.plugin_worker_no_error", "none"),
+      }
+    ))}</p>
+      <button type="button" class="oc-btn oc-btn-secondary oc-plugin-worker-restart" data-plugin-name="${UIController.escapeHtml(plugin?.name || "")}">${UIController.escapeHtml(t("uxp.settings.plugin_worker_restart", "Restart worker"))}</button>`
+    : "";
   return `<div class="oc-engine-row oc-plugin-trust-row">
     <div class="oc-engine-copy">
       <div class="oc-engine-title-row">
@@ -7298,6 +7311,7 @@ function pluginTrustRowHtml(plugin, actions) {
       <p class="oc-engine-meta">${UIController.escapeHtml(summary)}</p>
       <div class="oc-plugin-capability-row">${pluginCapabilityBadgesHtml(plugin?.capability_badges || [])}</div>
       <p class="oc-plugin-action-contract">${UIController.escapeHtml(contract)}</p>
+      ${workerDetails}
     </div>
   </div>`;
 }
@@ -7407,6 +7421,26 @@ function bindPluginMarketplaceInstallActions(marketplace) {
   });
 }
 
+function bindPluginWorkerActions(actions) {
+  const route = actions?.restart_worker?.route || "/plugins/workers/restart";
+  document.querySelectorAll(".oc-plugin-worker-restart").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const name = button.getAttribute("data-plugin-name");
+      if (!name) return;
+      button.disabled = true;
+      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_worker_restarting", "Restarting plugin worker..."), "working");
+      const response = await BackendClient.post(route, { name });
+      if (!response.ok) {
+        setSettingsStatus("settingsPluginTrustStatus", response.error || t("uxp.settings.plugin_worker_restart_failed", "Plugin worker could not be restarted."), "error");
+        button.disabled = false;
+        return;
+      }
+      setSettingsStatus("settingsPluginTrustStatus", t("uxp.settings.plugin_worker_restarted", "Plugin worker restarted."), "success");
+      await uxpLoadPluginTrust();
+    });
+  });
+}
+
 function renderPluginTrustDashboard(data) {
   const grid = document.getElementById("uxpPluginTrustGrid");
   if (!grid) return;
@@ -7455,6 +7489,7 @@ function renderPluginTrustDashboard(data) {
   html += pluginMarketplaceRowsHtml(marketplace, actions);
   grid.innerHTML = html;
   bindPluginMarketplaceInstallActions(marketplace);
+  bindPluginWorkerActions(actions);
 
   const state = failedUnsigned || quarantine.length ? "warning" : "success";
   const status = failedUnsigned

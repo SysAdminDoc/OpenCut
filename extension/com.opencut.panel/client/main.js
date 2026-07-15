@@ -5772,6 +5772,20 @@
             ? t("settings.plugin_uninstall_contract", "Uninstall previews {route}, then requires confirm_name and confirm_token before quarantine.")
                 .replace("{route}", actions.uninstall.route)
             : t("settings.plugin_uninstall_contract_fallback", "Uninstall requires typed confirmation before quarantine.");
+        var worker = plugin && plugin.worker;
+        var workerDetails = worker
+            ? '<div class="plugin-action-contract">' + esc(
+                t(
+                    "settings.plugin_worker_isolation",
+                    "Worker: {state}; {crashes} crashes; last error: {error}. Supervised-process availability isolation, not an OS security sandbox."
+                )
+                    .replace("{state}", worker.state || "unknown")
+                    .replace("{crashes}", Number(worker.crash_count || 0))
+                    .replace("{error}", worker.last_error || t("settings.plugin_worker_no_error", "none"))
+            ) + '</div>' +
+            '<button type="button" class="btn-outline btn-sm plugin-worker-restart" data-plugin-name="' + esc(plugin.name || "") + '">' +
+            esc(t("settings.plugin_worker_restart", "Restart worker")) + '</button>'
+            : "";
         return '<div class="plugin-trust-row">' +
             '<div class="engine-title-row plugin-trust-title-row">' +
             '<div><div class="param-label engine-domain-label">' + esc(plugin.name || t("settings.plugin_unknown_name", "Unknown plugin")) + '</div>' +
@@ -5781,6 +5795,7 @@
             '<div class="engine-meta">' + esc(summary) + '</div>' +
             '<div class="plugin-capability-row">' + pluginCapabilityBadgesHtml(plugin.capability_badges || []) + '</div>' +
             '<div class="plugin-action-contract">' + esc(routeText) + '</div>' +
+            workerDetails +
             '</div>';
     }
 
@@ -5897,6 +5912,41 @@
         }
     }
 
+    function bindPluginWorkerActions(actions) {
+        var route = actions && actions.restart_worker ? actions.restart_worker.route : "/plugins/workers/restart";
+        var buttons = document.querySelectorAll(".plugin-worker-restart");
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].addEventListener("click", function () {
+                var button = this;
+                var name = button.getAttribute("data-plugin-name");
+                if (!name) return;
+                button.disabled = true;
+                setStatusLine(
+                    "pluginTrustStatusLine",
+                    t("settings.plugin_worker_restarting", "Restarting plugin worker..."),
+                    "working"
+                );
+                api("POST", route, { name: name }, function (err) {
+                    if (err) {
+                        setStatusLine(
+                            "pluginTrustStatusLine",
+                            err.message || t("settings.plugin_worker_restart_failed", "Plugin worker could not be restarted."),
+                            "error"
+                        );
+                        button.disabled = false;
+                        return;
+                    }
+                    setStatusLine(
+                        "pluginTrustStatusLine",
+                        t("settings.plugin_worker_restarted", "Plugin worker restarted."),
+                        "success"
+                    );
+                    loadPluginTrustDashboard();
+                });
+            });
+        }
+    }
+
     function renderPluginTrustDashboard(data) {
         var list = document.getElementById("pluginTrustList");
         if (!list) return;
@@ -5955,6 +6005,7 @@
         html += pluginMarketplaceRowsHtml(marketplace, actions);
         list.innerHTML = html;
         bindPluginMarketplaceInstallActions(marketplace);
+        bindPluginWorkerActions(actions);
 
         var state = failedUnsigned || quarantine.length ? "warning" : "success";
         var status = failedUnsigned

@@ -44,6 +44,9 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
             "plugin-install-approval-checkbox",
             'api("POST", "/plugins/marketplace/install"',
             "approve_publisher_fingerprint",
+            "function bindPluginWorkerActions(actions)",
+            "/plugins/workers/restart",
+            "not an OS security sandbox",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)
@@ -101,6 +104,9 @@ class TestUxpPluginTrustSettingsUi(unittest.TestCase):
             "oc-plugin-install-approval-checkbox",
             'BackendClient.post("/plugins/marketplace/install"',
             "approve_publisher_fingerprint",
+            "function bindPluginWorkerActions(actions)",
+            "/plugins/workers/restart",
+            "not an OS security sandbox",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, self.js)

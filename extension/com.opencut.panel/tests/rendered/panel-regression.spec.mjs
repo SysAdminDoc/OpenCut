@@ -140,6 +140,17 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         body: JSON.stringify({ job_id: "plugin-install-fixture" }),
       });
     }
+    if (
+      url.pathname === "/plugins/workers/restart" &&
+      route.request().method() === "POST"
+    ) {
+      capturedRequests.push({ worker_restart: route.request().postDataJSON() });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, worker: { state: "running" } }),
+      });
+    }
     return route.fulfill({
       status: 503,
       contentType: "application/json",
@@ -449,6 +460,32 @@ const PLUGIN_TRUST_FIXTURE = {
   },
 };
 
+const PLUGIN_WORKER_TRUST_FIXTURE = {
+  plugins: [
+    {
+      name: "isolated-captions",
+      version: "1.0.0",
+      description: "Isolated caption helper",
+      load_status: "loaded",
+      trust: { source: "locked", errors: [], warnings: [] },
+      capability_badges: [{ id: "http.routes", label: "HTTP routes", kind: "network" }],
+      runtime: "supervised_process",
+      worker: {
+        state: "stopped",
+        crash_count: 1,
+        last_error: "request_timeout",
+        security_boundary: "availability isolation; not an OS sandbox",
+      },
+    },
+  ],
+  summary: { loaded: 1, failed: 0, lock_missing: 0, unsigned: 0, quarantined: 0, marketplace: 0 },
+  quarantine: { entries: [] },
+  marketplace: { plugins: [] },
+  actions: {
+    restart_worker: { route: "/plugins/workers/restart", method: "POST" },
+  },
+};
+
 for (const surfaceName of ["cep", "uxp"]) {
   test(`${surfaceName} requires explicit publisher and capability approval`, async ({
     page,
@@ -493,6 +530,37 @@ for (const surfaceName of ["cep", "uxp"]) {
     });
     await assertNoPageOverflow(page);
     expect(await visibleControlsWithoutNames(page)).toEqual([]);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+for (const surfaceName of ["cep", "uxp"]) {
+  test(`${surfaceName} shows isolated worker health and restart control`, async ({
+    page,
+  }) => {
+    const width = surfaceName === "cep" ? 900 : 520;
+    const { surface, pageErrors, capturedRequests } = await openSurface(
+      page,
+      surfaceName,
+      "dark",
+      width,
+      { pluginTrust: PLUGIN_WORKER_TRUST_FIXTURE },
+    );
+    await page
+      .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
+      .click();
+    const row = page.locator(
+      surfaceName === "cep" ? ".plugin-trust-row" : ".oc-plugin-trust-row",
+    ).first();
+    const button = page.getByRole("button", { name: "Restart worker" });
+    await expect(row).toContainText("Worker: stopped");
+    await expect(row).toContainText("not an OS security sandbox");
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect.poll(() => capturedRequests.length).toBe(1);
+    expect(capturedRequests[0]).toEqual({
+      worker_restart: { name: "isolated-captions" },
+    });
     expect(pageErrors).toEqual([]);
   });
 }

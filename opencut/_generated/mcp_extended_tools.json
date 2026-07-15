@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 16,
-    "GET": 378,
+    "GET": 379,
     "PATCH": 1,
-    "POST": 1053,
+    "POST": 1054,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1450,
+  "tool_count": 1452,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -8004,6 +8004,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_plugins_trust"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /plugins/workers"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /plugins/workers.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.plugin_workers",
+        "generated": true,
+        "method": "GET",
+        "path": "/plugins/workers",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_plugins_workers"
     },
     {
       "annotations": {
@@ -30448,6 +30478,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_plugins_update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /plugins/workers/restart"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /plugins/workers/restart.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "plugins",
+        "endpoint": "plugins.plugin_worker_restart",
+        "generated": true,
+        "method": "POST",
+        "path": "/plugins/workers/restart",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_plugins_workers_restart"
     },
     {
       "annotations": {

@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Isolate third-party plugin failures
+
+- Third-party plugin routes and jobs now import only in lazy, supervised worker
+  processes with sanitized environments, authenticated size-bounded IPC,
+  startup/request timeouts, memory monitoring, and crash-loop quarantine.
+- A crashing or hung plugin no longer executes in the Flask server process or
+  affects another plugin worker. Trusted bundled examples retain an explicit
+  compatibility lane; the isolation is documented as availability isolation,
+  not an OS security sandbox.
+- CEP and UXP now expose redacted worker health and explicit restart controls,
+  backed by worker diagnostics and CSRF-protected restart endpoints.
+
 ### Fixed - Make JSON schema migrations retry-safe
 
 - Versioned user-data migrations now copy each step, advance and atomically

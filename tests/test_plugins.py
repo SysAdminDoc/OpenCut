@@ -1,7 +1,10 @@
 """Tests for the plugin system."""
 
 import json
+import os
 import textwrap
+import threading
+import time
 from concurrent.futures import Future
 
 import pytest
@@ -521,3 +524,401 @@ class TestPluginRoutes:
 
         with _plugins_lock:
             _loaded_plugins.pop(plugin_name, None)
+
+    def test_third_party_routes_run_lazily_in_sanitized_worker(self, tmp_path, monkeypatch):
+        from flask import Flask
+
+        from opencut.core.plugin_runtime import get_supervisor
+        from opencut.core.plugins import get_loaded_plugins, load_plugin_routes, unload_plugin
+
+        plugin_name = "isolated-runtime"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                import os
+                from flask import Blueprint, jsonify
+                from opencut.core.plugins import _get_plugin_context
+
+                with open(os.path.join(os.path.dirname(__file__), "imports.txt"), "a", encoding="utf-8") as marker:
+                    marker.write(str(os.getpid()) + "\\n")
+
+                plugin_bp = Blueprint("isolated_runtime", __name__)
+
+                @plugin_bp.route("/identity", methods=["GET"])
+                def identity():
+                    context = _get_plugin_context("isolated-runtime")
+                    return jsonify({
+                        "pid": os.getpid(),
+                        "parent_secret_visible": "OPENCUT_PARENT_ONLY_SECRET" in os.environ,
+                        "capabilities": context.get("capabilities"),
+                        "data_dir_name": os.path.basename(context.get("data_dir", "")),
+                    })
+                """
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("OPENCUT_PARENT_ONLY_SECRET", "must-not-cross-worker-boundary")
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Isolation test",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes"],
+                "jobs": [],
+                "ui": None,
+            },
+        )
+        supervisor = get_supervisor(plugin_name)
+        assert supervisor is not None
+        assert supervisor.status()["state"] == "stopped"
+        import_pids = [
+            int(pid)
+            for pid in (plugin_dir / "imports.txt").read_text(encoding="utf-8").splitlines()
+        ]
+        assert import_pids
+        assert os.getpid() not in import_pids
+
+        payload = app.test_client().get(f"/plugins/{plugin_name}/identity").get_json()
+
+        assert payload["pid"] != os.getpid()
+        assert payload["parent_secret_visible"] is False
+        assert payload["capabilities"] == ["http.routes"]
+        assert payload["data_dir_name"] == "data"
+        assert supervisor.status()["state"] == "running"
+        import_pids = [
+            int(pid)
+            for pid in (plugin_dir / "imports.txt").read_text(encoding="utf-8").splitlines()
+        ]
+        assert os.getpid() not in import_pids
+        assert get_loaded_plugins()[plugin_name]["runtime"] == "supervised_process"
+        assert supervisor._token not in " ".join(supervisor._process.args)
+        unload_plugin(plugin_name)
+
+    def test_plugin_crash_loop_is_quarantined_without_harming_other_worker(self, tmp_path):
+        from flask import Flask
+
+        from opencut.core.plugin_runtime import get_supervisor
+        from opencut.core.plugins import load_plugin_routes, unload_plugin
+
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+
+        def install(name, body):
+            plugin_dir = tmp_path / name
+            plugin_dir.mkdir()
+            (plugin_dir / "routes.py").write_text(textwrap.dedent(body), encoding="utf-8")
+            assert load_plugin_routes(
+                app,
+                {
+                    "name": name,
+                    "version": "1.0.0",
+                    "description": name,
+                    "author": "tests",
+                    "path": str(plugin_dir),
+                    "capabilities": ["http.routes"],
+                    "jobs": [],
+                    "ui": None,
+                },
+            )
+
+        install(
+            "crash-loop",
+            """
+            import os
+            from flask import Blueprint
+            plugin_bp = Blueprint("crash_loop", __name__)
+            @plugin_bp.route("/crash")
+            def crash():
+                os._exit(17)
+            """,
+        )
+        install(
+            "healthy-worker",
+            """
+            from flask import Blueprint, jsonify
+            plugin_bp = Blueprint("healthy_worker", __name__)
+            @plugin_bp.route("/ok")
+            def ok():
+                return jsonify({"ok": True})
+            """,
+        )
+        client = app.test_client()
+        assert client.get("/plugins/healthy-worker/ok").get_json() == {"ok": True}
+
+        for _attempt in range(3):
+            response = client.get("/plugins/crash-loop/crash")
+            assert response.status_code == 503
+            assert response.get_json()["code"] == "PLUGIN_WORKER_UNAVAILABLE"
+
+        crashed = get_supervisor("crash-loop")
+        assert crashed is not None
+        assert crashed.status()["state"] == "quarantined"
+        assert client.get("/plugins/healthy-worker/ok").get_json() == {"ok": True}
+        unload_plugin("crash-loop")
+        unload_plugin("healthy-worker")
+
+    def test_locked_plugin_is_revalidated_before_production_worker_start(self, tmp_path):
+        from flask import Flask
+
+        from opencut.core.plugin_manifest import write_plugin_lock
+        from opencut.core.plugin_runtime import get_supervisor
+        from opencut.core.plugins import load_plugin_routes, unload_plugin
+
+        plugin_name = "locked-runtime"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        manifest = {
+            "name": plugin_name,
+            "version": "1.0.0",
+            "description": "Locked production runtime test",
+            "api_version": 1,
+            "capabilities": ["http.routes"],
+            "routes": [{"path": "/ready", "method": "GET"}],
+        }
+        (plugin_dir / "plugin.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                from flask import Blueprint, jsonify
+                plugin_bp = Blueprint("locked_runtime", __name__)
+                @plugin_bp.route("/ready")
+                def ready():
+                    return jsonify({"ready": True})
+                """
+            ),
+            encoding="utf-8",
+        )
+        write_plugin_lock(plugin_dir)
+        app = Flask(__name__)
+
+        assert load_plugin_routes(
+            app,
+            {
+                **manifest,
+                "author": "tests",
+                "path": str(plugin_dir),
+                "jobs": [],
+                "ui": None,
+            },
+        )
+        supervisor = get_supervisor(plugin_name)
+        assert supervisor is not None
+        assert supervisor.status()["state"] == "stopped"
+        assert app.test_client().get(
+            f"/plugins/{plugin_name}/ready"
+        ).get_json() == {"ready": True}
+        assert supervisor.status()["state"] == "running"
+        unload_plugin(plugin_name)
+
+    def test_hung_plugin_times_out_without_blocking_other_requests(
+        self, tmp_path, monkeypatch
+    ):
+        from flask import Flask
+
+        import opencut.core.plugin_runtime as runtime
+        from opencut.core.plugins import load_plugin_routes, unload_plugin
+
+        monkeypatch.setattr(runtime, "REQUEST_TIMEOUT_SECONDS", 0.25)
+        plugin_name = "hung-worker"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                import time
+                from flask import Blueprint
+                plugin_bp = Blueprint("hung_worker", __name__)
+                @plugin_bp.route("/hang")
+                def hang():
+                    time.sleep(5)
+                    return {"late": True}
+                """
+            ),
+            encoding="utf-8",
+        )
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Hang test",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes"],
+                "jobs": [],
+                "ui": None,
+            },
+        )
+
+        started = time.monotonic()
+        response = app.test_client().get(f"/plugins/{plugin_name}/hang")
+
+        assert response.status_code == 503
+        assert time.monotonic() - started < 2.0
+        unload_plugin(plugin_name)
+
+    def test_worker_health_stays_live_and_restart_interrupts_hung_request(
+        self, tmp_path, monkeypatch
+    ):
+        from flask import Flask
+
+        import opencut.core.plugin_runtime as runtime
+        from opencut.core.plugins import load_plugin_routes, unload_plugin
+
+        monkeypatch.setattr(runtime, "REQUEST_TIMEOUT_SECONDS", 5.0)
+        plugin_name = "restart-hung-worker"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                import time
+                from flask import Blueprint
+                plugin_bp = Blueprint("restart_hung_worker", __name__)
+                @plugin_bp.route("/hang")
+                def hang():
+                    time.sleep(10)
+                    return {"late": True}
+                """
+            ),
+            encoding="utf-8",
+        )
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Restart hung worker test",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes"],
+                "jobs": [],
+                "ui": None,
+            },
+        )
+        supervisor = runtime.get_supervisor(plugin_name)
+        assert supervisor is not None
+        result = {}
+
+        def make_request():
+            result["response"] = app.test_client().get(
+                f"/plugins/{plugin_name}/hang"
+            )
+
+        request_thread = threading.Thread(target=make_request, daemon=True)
+        request_thread.start()
+        deadline = time.monotonic() + 2.0
+        status = supervisor.status()
+        while status["state"] != "busy" and time.monotonic() < deadline:
+            time.sleep(0.02)
+            status = supervisor.status()
+
+        assert status["state"] == "busy"
+        started = time.monotonic()
+        restarted = supervisor.restart()
+        assert time.monotonic() - started < 2.0
+        assert restarted["state"] == "running"
+        request_thread.join(timeout=2.0)
+        assert not request_thread.is_alive()
+        assert result["response"].status_code == 503
+        unload_plugin(plugin_name)
+
+    def test_only_bundled_plugins_can_select_trusted_in_process_lane(self, tmp_path):
+        from opencut.core.plugins import _TRUSTED_BUILTIN_ROOT, _is_trusted_builtin
+
+        bundled = _TRUSTED_BUILTIN_ROOT / "clip-notes"
+        assert _is_trusted_builtin(
+            {
+                "path": str(bundled),
+                "runtime": "trusted-in-process",
+                "builtin": True,
+            }
+        )
+        assert not _is_trusted_builtin(
+            {
+                "path": str(tmp_path),
+                "runtime": "trusted-in-process",
+                "builtin": True,
+            }
+        )
+
+    def test_worker_health_and_restart_api_are_redacted(self, tmp_path):
+        from flask import Flask
+
+        from opencut.core.plugins import load_plugin_routes, unload_plugin
+        from opencut.routes.plugins import plugins_bp
+        from opencut.security import get_csrf_token
+
+        plugin_name = "health-api-worker"
+        plugin_dir = tmp_path / plugin_name
+        plugin_dir.mkdir()
+        (plugin_dir / "routes.py").write_text(
+            textwrap.dedent(
+                """
+                from flask import Blueprint, jsonify
+                plugin_bp = Blueprint("health_api_worker", __name__)
+                @plugin_bp.route("/ping")
+                def ping():
+                    return jsonify({"ok": True})
+                """
+            ),
+            encoding="utf-8",
+        )
+        app = Flask(__name__)
+        app.config["TESTING"] = True
+        assert load_plugin_routes(
+            app,
+            {
+                "name": plugin_name,
+                "version": "1.0.0",
+                "description": "Worker health API test",
+                "author": "tests",
+                "path": str(plugin_dir),
+                "capabilities": ["http.routes"],
+                "jobs": [],
+                "ui": None,
+            },
+        )
+        app.register_blueprint(plugins_bp)
+        client = app.test_client()
+
+        health = client.get("/plugins/workers")
+        assert health.status_code == 200
+        worker = next(
+            entry for entry in health.get_json()["workers"]
+            if entry["name"] == plugin_name
+        )
+        assert worker["state"] == "stopped"
+        assert worker["security_boundary"] == "availability isolation; not an OS sandbox"
+        serialized = json.dumps(worker)
+        assert str(plugin_dir) not in serialized
+        assert "token" not in serialized.lower()
+
+        missing_csrf = client.post(
+            "/plugins/workers/restart",
+            json={"name": plugin_name},
+        )
+        assert missing_csrf.status_code == 403
+        restarted = client.post(
+            "/plugins/workers/restart",
+            json={"name": plugin_name},
+            headers={"X-OpenCut-Token": get_csrf_token()},
+        )
+        assert restarted.status_code == 200
+        assert restarted.get_json()["worker"]["state"] == "running"
+        assert client.get(f"/plugins/{plugin_name}/ping").get_json() == {"ok": True}
+        unload_plugin(plugin_name)
