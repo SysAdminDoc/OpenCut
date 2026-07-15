@@ -173,4 +173,22 @@ describe("CEP command palette indexer", () => {
       readinessReason: "No live route is registered.",
     });
   });
+
+  it("resolves localized command descriptions supplied as lazy functions", () => {
+    const denoiseKey = utils.getCommandPaletteItemKey(COMMANDS[0]);
+    const sections = utils.buildCommandPaletteSections(paletteOptions({
+      query: "noise",
+      descriptionMap: {
+        [denoiseKey]: () => "Clean dialogue while preserving speech detail.",
+        _tabDescriptions: {
+          audio: () => "Polish dialogue and stems.",
+          _default: () => "Open this tool.",
+        },
+      },
+    }));
+
+    expect(sections[0].entries[0].description).toBe(
+      "Clean dialogue while preserving speech detail.",
+    );
+  });
 });

@@ -26,6 +26,13 @@ record also lives in the git commit messages.
   baselines cover every CEP/UXP workspace and explicit geometry tests guard
   the wide rails, responsive settings grids, overflow, keyboard navigation,
   semantic states, and WCAG AA contextual contrast.
+- CEP submenus, listboxes, clip actions, recent clips, and the command palette
+  now use one restrained menu language with explicit overflow controls,
+  consistent focus/selection states, footer-aware placement, and accessible
+  popup semantics; the Recent Clips menu no longer closes as soon as it opens.
+- UXP selects and connection details now match the same compact surface system,
+  while localized command descriptions resolve correctly instead of exposing
+  function source in palette results.
 
 ### Improved - Validate canonical caption XML interchange
 

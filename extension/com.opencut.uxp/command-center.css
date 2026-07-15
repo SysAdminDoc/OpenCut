@@ -1176,6 +1176,74 @@ body.oc-disconnected .oc-connection {
   }
 }
 
+/* Unified select and disclosure menus. */
+.oc-select {
+  appearance: none;
+  min-height: 40px;
+  padding: 0 36px 0 12px;
+  border: 1px solid var(--cc-border);
+  border-radius: 7px;
+  background-color: var(--cc-control);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23a2a9b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  color: var(--cc-text);
+  font-size: 12px;
+  font-weight: 560;
+  box-shadow: none;
+}
+
+.oc-select:hover:not(:disabled) {
+  border-color: var(--cc-border-strong);
+  background-color: var(--cc-surface-raised);
+}
+
+.oc-select:focus,
+.oc-select:focus-visible {
+  border-color: color-mix(in srgb, var(--cc-accent) 62%, transparent);
+  outline: 2px solid var(--cc-accent-soft);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.oc-select option,
+.oc-select optgroup {
+  background: var(--cc-surface-raised);
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%235e697a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.oc-connection-detail-panel {
+  top: calc(100% + 7px);
+  width: min(300px, calc(100vw - 20px));
+  min-height: 46px;
+  gap: 10px;
+  padding: 9px 10px 9px 12px;
+  border: 1px solid var(--cc-border-strong);
+  border-radius: 9px;
+  background: var(--cc-surface-raised);
+  color: var(--cc-muted);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+}
+
+.oc-connection-detail-panel #statusText {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.oc-connection-detail-panel[data-state="error"],
+.oc-connection-detail-panel[data-state="success"] {
+  border-color: var(--cc-border-strong);
+}
+
+.oc-connection-details[open] .oc-connection {
+  border-color: var(--cc-border-strong);
+  background: var(--cc-surface-raised);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .oc-tab,
   .oc-btn,

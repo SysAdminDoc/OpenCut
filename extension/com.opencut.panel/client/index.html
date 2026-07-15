@@ -241,13 +241,13 @@
                             <option value="" disabled selected data-i18n="media.loading">Loading project media…</option>
                         </select>
                         <div class="recent-clips-row">
-                            <button type="button" class="btn-sm btn-ghost utility-btn" id="recentClipsBtn" title="Recent clips" aria-expanded="false" aria-controls="recentClipsDropdown" data-i18n-title="media.recent_clips">
+                            <button type="button" class="btn-sm btn-ghost utility-btn" id="recentClipsBtn" title="Recent clips" aria-expanded="false" aria-haspopup="menu" aria-controls="recentClipsDropdown" data-i18n-title="media.recent_clips">
                                 <span class="btn-icon" aria-hidden="true">
                                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 10a6.25 6.25 0 1 0 1.83-4.42"/><path d="M3.75 4.5V8h3.5"/><path d="M10 6.5v4l2.5 1.5"/></svg>
                                 </span>
                                 <span class="btn-label" data-i18n="media.recent">Recent</span>
                             </button>
-                            <div class="recent-clips-dropdown hidden" id="recentClipsDropdown" aria-label="Recent clips" data-i18n-aria-label="media.recent_clips"></div>
+                            <div class="recent-clips-dropdown hidden" id="recentClipsDropdown" role="menu" aria-label="Recent clips" data-i18n-aria-label="media.recent_clips"></div>
                         </div>
                         <div class="context-guidance hidden" id="contextGuidanceBanner">
                             <span class="context-guidance-text" id="contextGuidanceText"></span>
@@ -4106,7 +4106,7 @@
             <button type="button" class="context-menu-item" role="menuitem" data-action="normalize" data-i18n="context.normalize_audio">Normalize Audio</button>
             <button type="button" class="context-menu-item" role="menuitem" data-action="stabilize" data-i18n="context.stabilize_video">Stabilize Video</button>
             <button type="button" class="context-menu-item" role="menuitem" data-action="export" data-i18n="context.export_preset">Export Preset</button>
-            <div class="context-menu-sep"></div>
+            <div class="context-menu-sep" role="separator"></div>
             <button type="button" class="context-menu-item" role="menuitem" data-action="favorite" data-i18n="context.add_to_favorites">Add to Favorites</button>
         </div>
 
