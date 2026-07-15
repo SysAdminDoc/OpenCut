@@ -37,7 +37,7 @@ class CanaryResult:
 
 
 def check_nemo_toolkit_available() -> bool:
-    return _try_import("nemo_toolkit") is not None
+    return _try_import("nemo") is not None or _try_import("nemo_toolkit") is not None
 
 
 def transcribe_batch(**kwargs):
