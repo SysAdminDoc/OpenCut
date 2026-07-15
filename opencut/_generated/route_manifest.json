@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-06-29T14:25:19Z",
-  "total_routes": 1552,
-  "shipped_route_count": 1546,
+  "generated_at": "2026-07-15T00:49:03Z",
+  "total_routes": 1554,
+  "shipped_route_count": 1548,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 394,
+    "GET": 395,
     "PATCH": 1,
-    "POST": 1142,
+    "POST": 1143,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1517,
+    "implemented": 1519,
     "stub": 6
   },
   "blueprints": {
@@ -677,10 +677,10 @@
       ]
     },
     "plugins": {
-      "route_count": 8,
+      "route_count": 10,
       "method_counts": {
-        "GET": 4,
-        "POST": 4
+        "GET": 5,
+        "POST": 5
       },
       "sample_rules": [
         "/plugins/list",
@@ -9507,6 +9507,24 @@
       ],
       "endpoint": "platform_infra.plugins_update",
       "blueprint": "platform_infra",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/workers",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "plugins.plugin_workers",
+      "blueprint": "plugins",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/workers/restart",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.plugin_worker_restart",
+      "blueprint": "plugins",
       "readiness": "implemented"
     },
     {

@@ -220,6 +220,8 @@ def _plugin_trust_entry(plugin: dict, loaded: dict) -> dict:
         "routes": list(plugin.get("routes") or []),
         "jobs": list(plugin.get("jobs") or []),
         "loaded_jobs": list(loaded_info.get("jobs") or []),
+        "runtime": loaded_info.get("runtime", "not_loaded"),
+        "worker": loaded_info.get("worker"),
         "capabilities": capabilities,
         "capability_badges": _capability_badges(capabilities),
         "ui": plugin.get("ui"),
@@ -311,6 +313,7 @@ def _plugin_trust_summary(entries: list[dict], quarantine_entries: list[dict], m
     loaded = [p for p in entries if p.get("load_status") == "loaded"]
     lock_missing = [p for p in entries if p.get("trust", {}).get("lock_missing")]
     unsigned = [p for p in entries if p.get("trust", {}).get("unsigned_allowed")]
+    workers = [p.get("worker") for p in entries if isinstance(p.get("worker"), dict)]
     return {
         "total": len(entries),
         "loaded": len(loaded),
@@ -321,6 +324,9 @@ def _plugin_trust_summary(entries: list[dict], quarantine_entries: list[dict], m
         "quarantined": len(quarantine_entries),
         "marketplace": int(marketplace.get("total") or 0),
         "marketplace_installed": int(marketplace.get("installed_total") or 0),
+        "workers": len(workers),
+        "workers_running": sum(1 for worker in workers if worker.get("state") == "running"),
+        "workers_quarantined": sum(1 for worker in workers if worker.get("state") == "quarantined"),
     }
 
 
@@ -353,6 +359,16 @@ def _plugin_trust_actions() -> dict:
             "registry_route": "/plugins/registry",
             "install_route": "/plugins/marketplace/install",
             "update_route": "/plugins/update",
+        },
+        "worker_health": {
+            "route": "/plugins/workers",
+            "method": "GET",
+            "isolation": "process availability isolation; not an OS security sandbox",
+        },
+        "restart_worker": {
+            "route": "/plugins/workers/restart",
+            "method": "POST",
+            "confirmation_required": False,
         },
     }
 
@@ -432,6 +448,40 @@ def loaded_plugins():
     """List only currently loaded plugins."""
     loaded = get_loaded_plugins()
     return jsonify({"plugins": loaded})
+
+
+@plugins_bp.route("/plugins/workers", methods=["GET"])
+def plugin_workers():
+    """Return supervised worker health without exposing IPC credentials."""
+    from opencut.core.plugin_runtime import worker_statuses
+
+    workers = worker_statuses()
+    return jsonify({
+        "workers": workers,
+        "total": len(workers),
+        "isolation": "process availability isolation; not an OS security sandbox",
+    })
+
+
+@plugins_bp.route("/plugins/workers/restart", methods=["POST"])
+@require_csrf
+def plugin_worker_restart():
+    """Explicitly clear crash-loop quarantine and restart one worker."""
+    data, error = _json_object_or_400()
+    if error:
+        return error
+    name = data.get("name")
+    if not isinstance(name, str) or not _valid_plugin_name(name):
+        return jsonify({"error": "A valid plugin name is required", "code": "INVALID_INPUT"}), 400
+    try:
+        from opencut.core.plugin_runtime import restart_worker
+
+        status = restart_worker(name)
+    except KeyError:
+        return jsonify({"error": "Plugin worker not found", "code": "NOT_FOUND"}), 404
+    except Exception as exc:
+        return safe_error(exc, "plugin_worker_restart")
+    return jsonify({"ok": True, "worker": status})
 
 
 @plugins_bp.route("/plugins/install", methods=["POST"])

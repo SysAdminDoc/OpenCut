@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1546-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1548-orange)
 ![Tests](https://img.shields.io/badge/Tests-11400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -224,7 +224,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.33.1 includes **1,546 shipped API routes** (implemented or dependency-gated; 6 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.33.1 includes **1,548 shipped API routes** (implemented or dependency-gated; 6 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -426,7 +426,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,546 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,548 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -608,7 +608,7 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 | Structured Errors | Error taxonomy with machine-readable codes and recovery suggestions |
 | JSON Structured Logging | File handler outputs JSON logs with job-ID correlation |
 | Workflow Engine | Chain multi-step processing with cancellation between steps |
-| Plugin System | Example plugins (timecode watermark, clip notes) with hot-reload |
+| Plugin System | Authenticated installs plus supervised workers for third-party routes and jobs |
 | Docker Support | Multi-stage Dockerfile + docker-compose with GPU variant |
 | Log Viewer | Filtered log tail endpoint for real-time debugging |
 | CSRF Protection | Token-based cross-site request forgery protection |
@@ -634,6 +634,11 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
   the manifest and content lock, require exact capability consent, and activate
   atomically with rollback. Unsigned or tampered plugins are rejected before
   they can appear installed.
+- **Third-party plugin process isolation** imports marketplace routes and jobs
+  only inside lazy, supervised worker processes with sanitized environments,
+  bounded IPC, timeouts, memory monitoring, and crash-loop quarantine. This is
+  availability isolation, not an OS security sandbox; trusted bundled example
+  plugins retain an explicitly marked compatibility lane.
 
 Marketplace registry entries must provide `artifact_sha256`, `capabilities`,
 and `publisher: {id, public_key, signature}`. The public key and signature are
@@ -643,6 +648,10 @@ directory installs instead include `plugin.signature.json`, whose signature
 covers `opencut-plugin-directory-v1\n<name>\n<version>\n<canonical-lock-sha256>\n`.
 CEP and UXP display the full publisher fingerprint and declared capabilities
 and keep Install disabled until the operator explicitly approves both.
+Their plugin trust dashboards also show worker state, safe failure diagnostics,
+and an explicit restart action. Automation can read the same redacted state at
+`GET /plugins/workers` and restart one worker with a CSRF-protected
+`POST /plugins/workers/restart` body of `{"name": "plugin-name"}`.
 
 ---
 

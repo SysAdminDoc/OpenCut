@@ -5,6 +5,7 @@ Discovers, validates, and loads plugins from ~/.opencut/plugins/.
 Each plugin is a directory with a plugin.json manifest and optional Python/JS files.
 """
 
+import base64
 import importlib
 import importlib.util
 import json
@@ -13,6 +14,7 @@ import os
 import re
 import sys
 import threading
+from pathlib import Path
 
 logger = logging.getLogger("opencut")
 
@@ -37,6 +39,7 @@ _PLUGIN_JOB_PATH_KEYS = {
     "path",
     "source_path",
 }
+_TRUSTED_BUILTIN_ROOT = Path(__file__).resolve().parents[1] / "data" / "example_plugins"
 
 
 def _install_plugin_csrf_guard(blueprint):
@@ -172,7 +175,9 @@ def plugin_job(plugin_name: str, job_id: str, *,
     if not _PLUGIN_JOB_ID_RE.fullmatch(str(job_id or "")):
         raise ValueError(f"Invalid plugin job id: {job_id!r}")
 
-    from opencut.jobs import async_job
+    worker_mode = os.environ.get("OPENCUT_PLUGIN_WORKER") == "1"
+    if not worker_mode:
+        from opencut.jobs import async_job
 
     def _combined_pre_validate(data):
         err = _validate_plugin_job_payload(plugin_name, data)
@@ -183,15 +188,20 @@ def plugin_job(plugin_name: str, job_id: str, *,
         return pre_validate(data)
 
     def decorator(func):
-        wrapped = async_job(
-            f"plugin:{plugin_name}:{job_id}",
-            filepath_required=filepath_required,
-            filepath_param=filepath_param,
-            pre_validate=_combined_pre_validate,
-            disk_operation=disk_operation,
-            disk_required_mb=disk_required_mb,
-            resumable=resumable,
-        )(func)
+        if worker_mode:
+            # The parent registers the async-job bridge; the worker retains the
+            # original callable and invokes it only through authenticated IPC.
+            wrapped = func
+        else:
+            wrapped = async_job(
+                f"plugin:{plugin_name}:{job_id}",
+                filepath_required=filepath_required,
+                filepath_param=filepath_param,
+                pre_validate=_combined_pre_validate,
+                disk_operation=disk_operation,
+                disk_required_mb=disk_required_mb,
+                resumable=resumable,
+            )(func)
         wrapped._opencut_plugin_job = {
             "plugin": plugin_name,
             "id": job_id,
@@ -317,12 +327,14 @@ def discover_plugins():
             "jobs": manifest.get("jobs", []),
             "capabilities": manifest.get("capabilities", []),
             "ui": manifest.get("ui", None),
+            "runtime": manifest.get("runtime", "isolated"),
+            "builtin": bool(manifest.get("builtin", False)),
         })
 
     return plugins
 
 
-def load_plugin_routes(app, plugin_info):
+def _load_trusted_builtin_routes(app, plugin_info):
     """Load a plugin's Flask routes into the app.
 
     Looks for a `routes.py` file in the plugin directory that defines
@@ -391,7 +403,6 @@ def load_plugin_routes(app, plugin_info):
             sys.path.remove(plugin_dir)
 
     try:
-        # Look for plugin_bp Blueprint
         bp = getattr(module, "plugin_bp", None)
         if bp is None:
             logger.warning("Plugin %s routes.py has no 'plugin_bp' Blueprint", plugin_name)
@@ -408,10 +419,7 @@ def load_plugin_routes(app, plugin_info):
             return False
 
         _install_plugin_csrf_guard(bp)
-
-        # Register under /plugins/<name>/ prefix
         app.register_blueprint(bp, url_prefix=f"/plugins/{plugin_name}")
-
         with _plugins_lock:
             _loaded_plugins[plugin_name] = {
                 "info": plugin_info,
@@ -420,15 +428,177 @@ def load_plugin_routes(app, plugin_info):
                 "jobs": module_jobs,
                 "app_id": id(app),
             }
-
-        logger.info("Loaded plugin: %s v%s", plugin_name, plugin_info["version"])
+        logger.info("Loaded trusted built-in plugin: %s v%s", plugin_name, plugin_info["version"])
         return True
-
     except Exception as e:
-        logger.error("Failed to register plugin %s: %s", plugin_name, e)
+        logger.error("Failed to register trusted built-in plugin %s: %s", plugin_name, e)
         with _plugins_lock:
             _plugin_contexts.pop(plugin_name, None)
         return False
+
+
+def _is_trusted_builtin(plugin_info: dict) -> bool:
+    if plugin_info.get("runtime") != "trusted-in-process" or not plugin_info.get("builtin"):
+        return False
+    try:
+        path = Path(plugin_info["path"]).resolve()
+        path.relative_to(_TRUSTED_BUILTIN_ROOT.resolve())
+        return True
+    except (KeyError, OSError, ValueError):
+        return False
+
+
+def _isolated_http_view(supervisor, plugin_name: str):
+    from flask import Response, jsonify, request
+
+    from opencut.core.plugin_runtime import PluginWorkerError
+
+    prefix = f"/plugins/{plugin_name}"
+
+    def proxy():
+        relative_path = request.path[len(prefix):] or "/"
+        headers = {
+            key: value
+            for key, value in request.headers.items()
+            if key.lower() in {"accept", "content-type", "if-none-match"}
+        }
+        try:
+            result = supervisor.call(
+                "http",
+                method=request.method,
+                path=relative_path,
+                query=request.query_string.decode("latin-1"),
+                headers=headers,
+                body_b64=base64.b64encode(request.get_data(cache=True)).decode("ascii"),
+            )
+            body = base64.b64decode(result.get("body_b64", ""), validate=True)
+            response = Response(body, status=int(result.get("status") or 502))
+            for key, value in (result.get("headers") or {}).items():
+                if str(key).lower() in {"cache-control", "content-type", "etag", "location"}:
+                    response.headers[str(key)] = str(value)
+            return response
+        except (PluginWorkerError, ValueError, TypeError):
+            return jsonify({
+                "error": "Plugin worker is unavailable.",
+                "code": "PLUGIN_WORKER_UNAVAILABLE",
+                "suggestion": "Review /plugins/workers and restart or quarantine the plugin.",
+            }), 503
+
+    return proxy
+
+
+def _isolated_job_view(supervisor, plugin_name: str, route: dict):
+    meta = dict(route["job"])
+    worker_endpoint = route["endpoint"]
+
+    def run_in_worker(job_id, filepath, data):
+        response = supervisor.call(
+            "job",
+            endpoint=worker_endpoint,
+            job_id=job_id,
+            filepath=filepath,
+            data=data,
+        )
+        result = response.get("result")
+        return result if isinstance(result, dict) else {"result": result}
+
+    return plugin_job(
+        plugin_name,
+        str(meta["id"]),
+        label=str(meta.get("label") or ""),
+        description=str(meta.get("description") or ""),
+        filepath_required=bool(meta.get("filepath_required", False)),
+        filepath_param=str(meta.get("filepath_param") or "filepath"),
+        resumable=bool(meta.get("resumable", False)),
+    )(run_in_worker)
+
+
+def _load_isolated_plugin_routes(app, plugin_info: dict) -> bool:
+    from opencut.core.plugin_runtime import (
+        PluginWorkerError,
+        PluginWorkerSupervisor,
+        register_supervisor,
+    )
+    from opencut.security import require_csrf
+
+    plugin_name = plugin_info["name"]
+    with _plugins_lock:
+        existing = _loaded_plugins.get(plugin_name)
+        if existing and existing.get("app_id") == id(app):
+            logger.warning("Plugin name collision: '%s' already loaded", plugin_name)
+            return False
+        _plugin_contexts[plugin_name] = {
+            "capabilities": list(plugin_info.get("capabilities") or []),
+            "data_dir": _plugin_data_dir(plugin_name, plugin_info["path"]),
+            "plugin_dir": plugin_info["path"],
+        }
+
+    runtime_info = dict(plugin_info)
+    runtime_info["_trust_required"] = not bool(app.config.get("TESTING"))
+    runtime_info["_data_dir"] = _plugin_data_dir(plugin_name, plugin_info["path"])
+    supervisor = PluginWorkerSupervisor(runtime_info)
+    try:
+        catalog = supervisor.probe_catalog()
+        routes = catalog.get("routes") or []
+        module_jobs = catalog.get("jobs") or []
+        if not isinstance(routes, list) or not isinstance(module_jobs, list):
+            raise PluginWorkerError("Plugin worker returned an invalid catalog.")
+        job_error = _validate_module_plugin_jobs(plugin_name, plugin_info, module_jobs)
+        if job_error:
+            logger.warning("Plugin %s job registration refused: %s", plugin_name, job_error)
+            with _plugins_lock:
+                _plugin_contexts.pop(plugin_name, None)
+            return False
+        seen_operations = set()
+        for route in routes:
+            if not isinstance(route, dict) or not str(route.get("rule") or "").startswith("/"):
+                raise PluginWorkerError("Plugin worker returned an invalid route catalog.")
+            methods = route.get("methods") or []
+            for method in methods:
+                operation = (str(route["rule"]), str(method).upper())
+                if operation in seen_operations:
+                    raise PluginWorkerError("Plugin worker returned duplicate routes.")
+                seen_operations.add(operation)
+
+        for index, route in enumerate(routes):
+            view = (
+                _isolated_job_view(supervisor, plugin_name, route)
+                if isinstance(route.get("job"), dict)
+                else _isolated_http_view(supervisor, plugin_name)
+            )
+            view = require_csrf(view)
+            endpoint = f"opencut_plugin_{plugin_name}_{index}"
+            app.add_url_rule(
+                f"/plugins/{plugin_name}{route['rule']}",
+                endpoint=endpoint,
+                view_func=view,
+                methods=list(route.get("methods") or ["GET"]),
+            )
+        register_supervisor(supervisor)
+        with _plugins_lock:
+            _loaded_plugins[plugin_name] = {
+                "info": plugin_info,
+                "module": None,
+                "blueprint": "isolated-proxy",
+                "jobs": module_jobs,
+                "app_id": id(app),
+                "supervisor": supervisor,
+            }
+        logger.info("Registered isolated plugin worker: %s v%s", plugin_name, plugin_info["version"])
+        return True
+    except Exception as exc:
+        supervisor.stop()
+        with _plugins_lock:
+            _plugin_contexts.pop(plugin_name, None)
+        logger.warning("Plugin %s worker registration failed: %s", plugin_name, type(exc).__name__)
+        return False
+
+
+def load_plugin_routes(app, plugin_info):
+    """Register trusted built-ins in-process and all third-party code by proxy."""
+    if _is_trusted_builtin(plugin_info):
+        return _load_trusted_builtin_routes(app, plugin_info)
+    return _load_isolated_plugin_routes(app, plugin_info)
 
 
 def load_all_plugins(app):
@@ -487,7 +657,10 @@ def load_all_plugins(app):
             if success:
                 result["loaded"].append(plugin["name"])
             else:
-                result["failed"].append({"name": plugin["name"], "error": "Blueprint not found"})
+                result["failed"].append({
+                    "name": plugin["name"],
+                    "error": "Plugin runtime registration failed",
+                })
         except Exception as e:
             result["failed"].append({"name": plugin["name"], "error": str(e)})
 
@@ -511,6 +684,16 @@ def get_loaded_plugins():
                 "has_routes": data["blueprint"] is not None,
                 "jobs": list(data.get("jobs") or []),
                 "ui": data["info"].get("ui"),
+                "runtime": (
+                    "supervised_process"
+                    if data.get("supervisor") is not None
+                    else ("trusted_in_process" if data.get("module") is not None else "manifest_only")
+                ),
+                "worker": (
+                    data["supervisor"].status()
+                    if data.get("supervisor") is not None
+                    else None
+                ),
             }
             for name, data in _loaded_plugins.items()
         }
@@ -522,9 +705,14 @@ def unload_plugin(name):
     Note: Flask doesn't support unregistering blueprints at runtime,
     so the routes remain active until server restart.
     """
+    removed = False
     with _plugins_lock:
         if name in _loaded_plugins:
             del _loaded_plugins[name]
             _plugin_contexts.pop(name, None)
-            return True
-    return False
+            removed = True
+    if removed:
+        from opencut.core.plugin_runtime import unregister_supervisor
+
+        unregister_supervisor(name)
+    return removed
