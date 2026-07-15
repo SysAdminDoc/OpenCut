@@ -8,13 +8,16 @@ record also lives in the git commit messages.
 ### Improved - Rebuild CEP and UXP as an editorial command center
 
 - CEP and UXP now share a restrained graphite command-center system with a
-  164px wide editorial rail, compact workspace header, clearer card hierarchy,
+  176px wide editorial rail, compact workspace header, clearer card hierarchy,
   consistent controls, and amber offline signaling that does not read as a
   destructive failure.
 - Wide UXP workspaces replace the crowded tab strip with the editorial rail,
   group Settings into two-column operational cards, and collapse redundant
-  active-shot context; 480-520px panels retain the discoverable horizontal
-  navigator and keep the first recovery action above the fold.
+  active-shot context; 480-520px panels use a labeled-by-tooltip icon toolbar
+  that keeps every workspace visible without a cramped scrolling menu.
+- The final visual pass raises the desktop type scale, removes nested stat-card
+  borders and decorative shadows, softens semantic colors, and stops matching
+  grid cards from stretching into empty space.
 - UXP Settings now mirrors the command-center mockup with a compact top action
   bar, card-integrated headings, Workspace/Engine and Live Updates/Diagnostics
   rows, and live source, backend, endpoint, engine, and health-check state.
