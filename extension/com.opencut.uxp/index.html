@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-i18n="uxp.document_title">OpenCut UXP</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="command-center.css">
 </head>
 <body>
   <a class="oc-skip-link" href="#mainContent" data-i18n="common.skip_to_main">Skip to workspace</a>
@@ -103,6 +104,13 @@
       <button type="button" class="oc-tab-scroll oc-tab-scroll-next" id="tabScrollNext" aria-label="Next workspace" title="Next workspace" data-i18n-aria-label="uxp.tabs.next_workspace" data-i18n-title="uxp.tabs.next_workspace" aria-controls="tabNav" hidden>
         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.646 3.646a.5.5 0 000 .708L9.293 8l-3.647 3.646a.5.5 0 00.708.708l4-4a.5.5 0 000-.708l-4-4a.5.5 0 00-.708 0z"/></svg>
       </button>
+      <div class="oc-nav-footer" aria-label="OpenCut panel version">
+        <span class="oc-nav-footer-dot" aria-hidden="true"></span>
+        <span class="oc-nav-footer-copy">
+          <strong translate="no">OpenCut</strong>
+          <span>v1.33.1</span>
+        </span>
+      </div>
     </div>
 
     <!-- ===== MAIN CONTENT ===== -->
@@ -1522,6 +1530,7 @@
       <!-- ==================== SETTINGS TAB ==================== -->
       <div class="oc-tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tabBtnSettings">
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.engine_routing">Engine Routing</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.engine_routing_hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
@@ -1548,7 +1557,9 @@
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn" data-i18n="uxp.settings.refresh_availability">Refresh Availability</button>
         </div>
+        </section>
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.live_updates_bridge">Live Updates Bridge</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.live_updates_bridge_hint">Keep progress, completion, and cancel feedback flowing into the panel while longer jobs run.</p>
@@ -1573,7 +1584,9 @@
             <button type="button" class="oc-btn oc-btn-primary" id="uxpWsConnectBtn" data-i18n="uxp.settings.connect_live_updates">Connect Live Updates</button>
           </div>
         </div>
+        </section>
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.migration_risk">Migration Risk</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.migration_risk_hint">Track CEP fallback, direct UXP, and hybrid-plugin migration status from the generated host-action catalogue.</p>
@@ -1600,7 +1613,9 @@
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshMigrationRiskBtn" data-i18n="uxp.settings.refresh_migration_risk">Refresh Migration Risk</button>
         </div>
+        </section>
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.plugin_trust">Plugin Trust</div>
         <div class="oc-card" id="uxpPluginTrustCard">
           <p class="oc-hint" data-i18n="uxp.settings.plugin_trust_hint">Review plugin locks, capability requests, failed loads, marketplace cache, and quarantine before enabling third-party automation.</p>
@@ -1631,7 +1646,9 @@
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshPluginTrustBtn" data-i18n="uxp.settings.refresh_plugin_trust">Refresh Plugin Trust</button>
         </div>
+        </section>
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.keyboard">Fast Actions</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.keyboard_hint">High-traffic editorial actions stay visible so you do not have to hunt through tabs.</p>
@@ -1666,7 +1683,9 @@
             </div>
           </div>
         </div>
+        </section>
 
+        <section class="oc-settings-group">
         <div class="oc-section-title" data-i18n="uxp.settings.about">About</div>
         <div class="oc-card">
           <div class="oc-field-row">
@@ -1678,6 +1697,7 @@
             <span data-i18n="uxp.settings.panel_premiere_uxp">UXP panel for Premiere Pro 25.6+</span>
           </div>
         </div>
+        </section>
       </div>
 
     </main>
