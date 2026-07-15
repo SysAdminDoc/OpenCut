@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Add headless secret-file authentication
+
+- Remote container binds can now read `OPENCUT_REMOTE_AUTH_TOKEN_FILE` without
+  a desktop vault. The backend rejects relative paths, symlinks/reparse points,
+  non-regular files, weak or whitespace-bearing tokens, and POSIX group/world
+  permissions, and it re-reads the file so external replacement takes effect.
+- CPU, GPU, and MCP Compose profiles require one mounted secret. A non-root
+  entrypoint normalizes Compose's file-backed mount to a private `0400` runtime
+  file without placing its value in JSON, environment variables, logs, image
+  layers, or API responses; the MCP sidecar forwards the current token.
+- Writable `0600` files rotate atomically. Read-only mounts return
+  `REMOTE_AUTH_TOKEN_FILE_READ_ONLY` with recreate guidance, and auth metadata
+  endpoints conceal the configured secret path.
+
 ### Security - Authenticate and stage plugin installations
 
 - Direct and marketplace installs now remain outside the active loader path

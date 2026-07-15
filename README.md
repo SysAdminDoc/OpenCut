@@ -126,14 +126,29 @@ Torch/Transformers advisory exposure.
 **Option D -- Docker:**
 
 ```bash
+openssl rand -hex 32 > .opencut-auth-token
+chmod 600 .opencut-auth-token
+export OPENCUT_REMOTE_AUTH_TOKEN_FILE=./.opencut-auth-token
 docker compose up opencut-server
 docker compose --profile gpu up opencut-server-gpu
+docker compose --profile mcp up opencut-mcp
 ```
 
 Docker publishes the HTTP API on port 5679 and persists data under
 `/home/opencut/.opencut`. It does not publish the optional WebSocket 5680 or
-MCP 5681 sidecars by default; add a dedicated service/profile before exposing
-those opt-in processes from a container. The image builds FFmpeg 8.1.2 from
+MCP 5681 sidecars by default; the explicit `mcp` profile publishes MCP with the
+same mounted API token. All CPU, GPU, and MCP Compose profiles require the host
+secret file and boot without a desktop credential vault or plaintext-storage
+opt-in. The image validates a private runtime copy as a regular, non-symlink
+`0400` file; the value is never placed in Compose environment variables,
+OpenCut JSON, logs, image layers, or API responses.
+
+Compose mounts are read-only by design. Rotate one by atomically replacing the
+host secret, then recreate the affected services with
+`docker compose up -d --force-recreate`; do not use `/auth/rotate` for this
+lane. A direct, owner-writable `0600` secret-file backend supports
+`opencut-server --rotate-auth`, while a `0400` file returns the explicit
+`REMOTE_AUTH_TOKEN_FILE_READ_ONLY` error. The image builds FFmpeg 8.1.2 from
 the checksum-pinned upstream source archive and fails its build-time provenance
 gate if the binary falls below OpenCut's security floor.
 
@@ -513,7 +528,8 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
 | `OPENCUT_LOCAL_ONLY` | `0` | Set to `1` to deny all non-loopback outbound network access before DNS, socket, browser-launch, or network-capable subprocess I/O |
-| `OPENCUT_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-loopback bind; remote requests require the OS-vault token shown by `opencut-server --print-auth` |
+| `OPENCUT_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-loopback bind; remote requests require the OS-vault or secure secret-file token |
+| `OPENCUT_REMOTE_AUTH_TOKEN_FILE` | unset | Absolute owner-only regular token file for headless remote binds; minimum 32 characters, no symlinks or group/world permissions |
 | `OPENCUT_ALLOW_INSECURE_SECRET_STORAGE` | `0` | Explicitly permit plaintext credential metadata only when no supported OS vault is available; leave unset for fail-closed persistence |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |
 | `OPENCUT_C2PA_SIGNING_KEY` | unset | Private-key file required with a certificate for embedded credentials; an Ed25519 PEM/path also signs local JSON sidecars |
@@ -529,7 +545,7 @@ egress remain blocked until local-only mode is explicitly disabled. Local files
 and already-installed models are the supported alternatives.
 
 API keys, OAuth tokens, node credentials, webhook signing secrets, and the
-remote-access token are stored through `keyring` in Windows Credential Locker,
+desktop remote-access token are stored through `keyring` in Windows Credential Locker,
 macOS Keychain, Linux Secret Service, or KWallet. Existing plaintext JSON is
 migrated only after the vault write is read back successfully. On Linux, install
 and unlock a Secret Service or KWallet backend before saving credentials. Check
@@ -613,7 +629,7 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 - **Input bounds** on all numeric parameters (dimensions, durations, counts)
 - **GPU rate limiting** prevents resource exhaustion from concurrent heavy jobs
 - **ASS subtitle injection prevention** strips override sequences from caption text
-- **OS credential vault** for OAuth tokens, API keys, node credentials, webhook signing secrets, and remote-access tokens; JSON files retain redacted metadata only
+- **OS credential vault** for OAuth tokens, API keys, node credentials, webhook signing secrets, and desktop remote-access tokens; headless remote tokens can instead use a validated owner-only secret file, and JSON retains no secret value
 - **Authenticated plugin installs** stage outside the active loader path, verify
   the manifest and content lock, require exact capability consent, and activate
   atomically with rollback. Unsigned or tampered plugins are rejected before

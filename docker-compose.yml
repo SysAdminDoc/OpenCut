@@ -5,10 +5,13 @@ services:
       - "5679:5679"
     volumes:
       - opencut-data:/home/opencut/.opencut
+    secrets:
+      - opencut_remote_auth_token
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
+      - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
     deploy:
       resources:
         limits:
@@ -35,10 +38,13 @@ services:
       - "5679:5679"
     volumes:
       - opencut-data:/home/opencut/.opencut
+    secrets:
+      - opencut_remote_auth_token
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
+      - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
     deploy:
       resources:
@@ -67,16 +73,18 @@ services:
   # MCP sidecar - use: docker compose --profile mcp up opencut-mcp
   opencut-mcp:
     build: .
-    entrypoint: ["python", "-m", "opencut.mcp_server"]
-    command: ["--host", "0.0.0.0", "--port", "5681"]
+    command: ["python", "-m", "opencut.mcp_server", "--http", "--http-bind", "0.0.0.0", "--http-port", "5681"]
     ports:
       - "5681:5681"
     volumes:
       - opencut-data:/home/opencut/.opencut
+    secrets:
+      - opencut_remote_auth_token
     environment:
       - OPENCUT_BUNDLED=false
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
+      - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
       - OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679
     depends_on:
       opencut-server:
@@ -97,3 +105,7 @@ services:
 
 volumes:
   opencut-data:
+
+secrets:
+  opencut_remote_auth_token:
+    file: ${OPENCUT_REMOTE_AUTH_TOKEN_FILE:?Set OPENCUT_REMOTE_AUTH_TOKEN_FILE to a token file}
