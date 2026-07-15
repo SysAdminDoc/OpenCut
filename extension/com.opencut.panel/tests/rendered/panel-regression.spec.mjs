@@ -425,14 +425,23 @@ for (const width of [480, 520]) {
         width,
         { height: 800, locale },
       );
-      await expect(page.locator("#tabScrollPrev")).toBeVisible();
-      await expect(page.locator("#tabScrollNext")).toBeVisible();
-      if (locale === "es-ES") {
-        await expect(page.locator("#tabScrollNext")).toHaveAttribute(
-          "aria-label",
-          "Siguiente espacio",
-        );
-      }
+      await expect(page.locator("#tabScrollPrev")).toBeHidden();
+      await expect(page.locator("#tabScrollNext")).toBeHidden();
+      const compactNav = await page.evaluate(() => {
+        const nav = document.getElementById("tabNav");
+        const tabs = Array.from(document.querySelectorAll(".oc-tab"));
+        return {
+          fitsWithoutScroll: !!nav && nav.scrollWidth <= nav.clientWidth + 1,
+          maxTabWidth: Math.max(...tabs.map((tab) => tab.getBoundingClientRect().width)),
+          labelsVisuallyClipped: tabs.every((tab) => {
+            const label = tab.querySelector("span");
+            return label && getComputedStyle(label).clipPath === "inset(50%)";
+          }),
+        };
+      });
+      expect(compactNav.fitsWithoutScroll).toBe(true);
+      expect(compactNav.maxTabWidth).toBeLessThanOrEqual(40.5);
+      expect(compactNav.labelsVisuallyClipped).toBe(true);
 
       const tabs = page.locator(surface.tabSelector);
       for (let index = 0; index < (await tabs.count()); index += 1) {
@@ -501,10 +510,18 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     return {
       sidebarWidth: sidebar?.width || 0,
       cardColumns: cards.length === 2 ? Math.abs(cards[0].left - cards[1].left) : 0,
+      bodyFontSize: Number.parseFloat(getComputedStyle(document.body).fontSize),
+      brandMetaDisplay: getComputedStyle(document.querySelector(".brand-meta")).display,
+      kickerDisplay: getComputedStyle(document.querySelector(".content-kicker-row")).display,
+      cardShadow: getComputedStyle(document.querySelector("#panel-settings.active > .card")).boxShadow,
     };
   });
   expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
   expect(cepGeometry.cardColumns).toBeGreaterThan(200);
+  expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(13);
+  expect(cepGeometry.brandMetaDisplay).toBe("none");
+  expect(cepGeometry.kickerDisplay).toBe("none");
+  expect(cepGeometry.cardShadow).toBe("none");
   expect(cep.pageErrors).toEqual([]);
 
   const uxp = await openSurface(page, "uxp", "dark", 1200, { height: 800 });
@@ -521,6 +538,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       railWidth: rail?.width || 0,
       tabDirection: tabs.flexDirection,
       groupColumns: groups.length === 2 ? Math.abs(groups[0].left - groups[1].left) : 0,
+      bodyFontSize: Number.parseFloat(getComputedStyle(document.body).fontSize),
+      groupShadow: getComputedStyle(document.querySelector("#tab-settings.active > .oc-settings-group")).boxShadow,
       commandBarInHeader: !!header && !!commandBar
         && commandBar.top >= header.top
         && commandBar.bottom <= header.bottom,
@@ -533,6 +552,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.groupColumns).toBeGreaterThan(200);
+  expect(uxpGeometry.bodyFontSize).toBeGreaterThanOrEqual(13);
+  expect(uxpGeometry.groupShadow).toBe("none");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual([
