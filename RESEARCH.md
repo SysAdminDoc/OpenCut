@@ -1,96 +1,117 @@
 # Research — OpenCut
+Date: 2026-07-14 — replaces all prior research.
 
 ## Executive Summary
-Verified: OpenCut v1.33.1 (`opencut-ppro`) is a local-first Premiere Pro automation system, not a standalone NLE — a Python 3.11+/Flask service with CEP and UXP panels, FFmpeg/model pipelines, and REST/MCP/CLI surfaces, plus 1,546 routes, 275 test files, generated capability manifests, recovery tooling, and local installers. Its strongest shape is breadth backed by unusually explicit privacy, readiness, provenance, and rollback controls; its highest-value direction remains making that breadth execution-truthful and hostile-input-safe rather than adding another feature wave. This cycle's newly verified priorities, in order: close the unguarded SSRF/unbounded-download in `url_ingest.py` (the one network fetch path that bypasses the project's own `validate_public_http_url`); raise the Torch floor above the 2026 `torch.load(weights_only=True)` RCE and gate downloaded weights; then the already-tracked archive/readiness/Click work. Beyond fixes, three local-achievable parity features are now well-evidenced: semantic media search (Premiere 26 Media Intelligence), script/transcript→timeline assembly with alt-takes (Resolve 20 IntelliScript), and a Parakeet-v3 + Whisper-turbo hybrid ASR router. Standards currency work (MCP 2026-07-28 spec, C2PA 2.4 AI-disclosure, IMSC 1.3 Rec) is timely and low-risk.
+
+**[Verified]** OpenCut is a local-first Adobe Premiere automation platform: a Python/Flask backend coordinates FFmpeg, optional local ML, jobs, journals, and interchange through CEP/UXP panels, REST, CLI, MCP, and plugins. Its strongest current shape is broad automation backed by explicit readiness, privacy, rollback, and release controls. The 2026-07-14 hardening sequence closed the previously verified FFmpeg floor, uninstall-data, UXP locking, container-secret, plugin-origin/isolation, migration-retry, rendered-panel, theme-token, caption-conformance, and panel-shell gaps (`75364eca` through `39e3baef`). The highest-value direction is now to simplify the oversized panel implementations and finish a small set of coherent editor workflows instead of adding more disconnected feature cards.
+
+Top opportunities, in priority order:
+
+1. **[Verified]** Decompose the CEP/UXP monoliths behind the rendered and source-contract gates that now ship.
+2. **[Verified]** Complete local semantic media search with portable sidecars, relink/invalidation behavior, ranking fixtures, and panel integration; the CLIP index and route already exist.
+3. **[Verified]** Extend the existing script-to-rough-cut planner with alternate takes, deterministic regeneration, preview, and journal-backed write-back.
+4. **[Needs live validation]** Adopt the final MCP 2026-07-28 revision for stateless discovery, long-running render tasks, MRTR prompts, and cache metadata.
+5. **[Verified]** Implement the stubbed Parakeet adapter and route supported languages between Parakeet v3 and Whisper turbo with explicit fallback.
+6. **[Verified]** Localize backend/CLI strings, add panel locales beyond en/es, and verify an RTL layout.
+7. **[Verified]** Revisit Depth Anything 3 only through an isolated runtime that preserves OpenCut's supported NumPy/OpenCV stack, allowlists permissive checkpoints, and normalizes depth direction.
 
 ## Product Map
-- Core workflows: transcript/silence/filler editing; captions, translation, and broadcast delivery; audio/video cleanup and generation; timeline write-back, smart rendering, review, multi-platform export.
-- User personas: Premiere editors automating repetitive first-cut work; privacy-sensitive creators (medical/legal/NDA footage); post-production operators running local batches; technical users integrating through CLI, REST, MCP, or plugins.
-- Platforms and distribution: Python 3.11–3.13 on Windows/macOS/Linux; CEP and Premiere 25.6+ UXP panels; bundled FFmpeg 8.1.2 on Windows; WPF/Inno Setup installers; local-only release policy, with signed/notarized/package-manager publishing held in `Roadmap_Blocked.md`.
-- Key integrations and data flows: panel/CLI/MCP request → authenticated localhost Flask route → async job/journal → FFmpeg or optional model adapter → staged output/timeline action → local history, diagnostics, review bundle, or export.
+
+- **[Verified] Core workflow — analyze:** ingest local media, transcribe, index, detect scenes/subjects/silence, evaluate quality, and generate reviewable metadata or plans.
+- **[Verified] Core workflow — edit:** create cuts, captions, effects, markers, multicam/script assemblies, and reversible Premiere timeline mutations.
+- **[Verified] Core workflow — deliver:** render or proxy through FFmpeg/AME, export captions and NLE interchange, package review artifacts, and optionally publish or dispatch to remote nodes.
+- **[Verified] Core workflow — automate:** run the same capabilities through CEP/UXP, REST, CLI, MCP, scheduled jobs, webhooks, and plugins with job/journal diagnostics.
+- **[Verified] Personas:** solo and professional editors, assistant editors, podcast/social teams, accessibility/localization operators, and technical users automating repeatable Premiere work.
+- **[Verified] Platforms and distribution:** `pyproject.toml` requires Python 3.11+ on Windows/macOS/Linux; the CEP and UXP manifests target Premiere 13+ and 25.6+ respectively; `OpenCut.iss`, `installer/`, `Dockerfile`, and `packaging/linux/` provide Windows, source, Docker, Flatpak, AppImage, and release-automation surfaces. Credential/hardware-gated notarization, store publishing, and live Premiere validation remain correctly separated in `Roadmap_Blocked.md`.
+- **[Verified] Integrations and data flows:** Premiere host APIs ↔ panel ↔ local Flask API ↔ FFmpeg/ffprobe, local/optional remote models, SQLite/JSON state under `~/.opencut`, OTIO/XML/AAF/EDL/caption files, remote render nodes, review/social APIs, MCP clients, and plugin routes.
 
 ## Competitive Landscape
-- **Adobe Premiere Pro 26 (Jan 2026)** shipped on-device **Object Mask** (marketed as privacy-preserving, no training on user data), **Media Intelligence** natural-language search over visuals/transcripts/metadata, and 20× faster shape masks. Learn: local AI is now a premium, not a compromise — match Media Intelligence with a local CLIP/embedding index; expose supported host actions directly. Avoid: cloud/Firefly-gated generative extend and claiming host parity without UDT evidence.
-- **Descript Underlord (2026)** is the closest conceptual competitor: an agentic sidebar that does jump cuts, filler removal, captions, Studio Sound, eye-contact correction, 20+‑language dubbing, and exports a timeline to Premiere via XML — all cloud-based. Learn: an offline agentic transcript editor writing back to Premiere directly undercuts the cloud model. Avoid: autonomous editorial decisions without human review.
-- **DaVinci Resolve 20 (2025→2026) IntelliScript** builds a full timeline from a script by matching transcribed takes, placing alt-takes on extra tracks; also AI Dialogue Matcher and Multicam SmartSwitch by active speaker. Learn: script→timeline assembly is squarely in OpenCut's transcript wheelhouse and is a marquee write-back feature achievable with local diarization/alignment.
-- **Submagic / OpusClip (2026)** lead on single-pass animated captions (48+ languages), silence/filler removal, contextual **B-roll insertion from a stock library**, and auto-zoom. Learn: B-roll suggestion and auto-reframe are the most-marketed gaps; keep human review and honest output state. Avoid: default cloud storage and usage caps.
-- **CapCut (2026)** runs AI features cloud-only (offline = basic filters) and pre-uploads content at import for recommendations. Learn: this is a concrete, citable privacy failure mode OpenCut's local pipeline inverts — lean on it in positioning.
-- **LosslessCut / auto-editor / Kdenlive / Shotcut** show mature media tools compete on undo, proxy/export reliability, packaging, and hostile-input handling as much as features. Learn: treat imported project/archive/URL data as untrusted; keep local execution resumable and boringly reliable.
-- **WhisperX / faster-whisper / NVIDIA Parakeet** — 2026 local ASR frontier: Parakeet TDT 0.6B v3 beats Whisper large-v3 on the Open ASR Leaderboard (~6.3% vs 7.4% avg WER) at ~3,000× realtime but covers only 25 EU languages; whisper-large-v3-turbo covers 99 languages at ~216× realtime GPU. Learn: ship both and auto-route by detected language.
+
+- **[Verified] Adobe Premiere Pro / UXP:** local Media Intelligence and portable `.prmi` sidecars make private, relinkable semantic search table-stakes, while the 26.3 changelog shows that host action contracts can change at stable release. Learn portable index metadata, per-version capability detection, and official lint rules; avoid cloud-only indexing and undocumented host assumptions.
+- **[Verified] DaVinci Resolve:** IntelliScript and alternate-take workflows keep AI output editable inside a professional timeline. Apply reviewable alternatives and reversible write-back to OpenCut's existing script-assembly row; avoid competing as a standalone NLE.
+- **[Verified] Descript:** transcript editing, filler/repetition removal, review, and export limits are presented as coherent workflows rather than isolated models. Learn visible plans, correction loops, and compatibility preflights; avoid mandatory cloud processing, credits, and proprietary project lock-in.
+- **[Verified] FireCut / TimeBolt:** commercial Premiere tools charge for reliable silence/filler removal, captions, chapters, shorts, and repeatable presets. Learn workflow packaging, saved presets, and honest progress; avoid duplicating narrow feature cards OpenCut already ships.
+- **[Verified] LosslessCut / auto-editor:** fast deterministic edits, explicit keyframe/codec limitations, keyboard accessibility, versioned edit data, and OTIO export build trust. Learn reproducible plans and boundary diagnostics; avoid a second desktop editor.
+- **[Verified] Kdenlive / Shotcut / OpenShot:** releases repeatedly prioritize proxy queues, cancellation, crash recovery, translation width, HiDPI, and relinking. Learn that queue state and rendered UI regressions are core product work; avoid mature timeline/editor duplication.
+- **[Verified] OpenCut-app / PySceneDetect / OpenTimelineIO:** integer media time, explicit migrations, waveform virtualization, rational/PTS timestamps, VFR correctness, and adapter boundaries are strong adjacent patterns. Learn stable time representations, portable sidecars, and small interchange cores; avoid browser-storage fragility and coupling optional adapters into the base install.
+- **[Verified] VS Code extension host / HandBrake queue:** isolate third-party failure domains, activate lazily, declare capabilities, disable unsupported options, and persist resumable queue state. Apply those boundaries to plugins and long media work; do not label a Python subprocess a security sandbox unless the OS enforces it.
 
 ## Security, Privacy, and Reliability
-- **Verified (new, P0):** `opencut/core/url_ingest.py::ingest_url()` → `_fetch_direct()` (lines 135–192) validates only the URL scheme, then calls `urllib.request.urlopen(url)` directly. It never calls `opencut/core/url_safety.py::validate_public_http_url` (which the webhook/model paths use), never checks `require_network_allowed`/local-only mode, follows redirects by default, and streams the body with no size ceiling. `POST /search/ingest {"url":"http://127.0.0.1:.../"}` or `http://169.254.169.254/...` is fetched by the server; the on-disk extension is taken from the attacker URL and never content-verified. This is a server-side request forgery + unbounded-download + local-only bypass on one surface.
-- **Verified (new, P1):** `validate_public_http_url` (`url_safety.py:17`) explicitly does not resolve DNS ("accept as-is") and the caller (`webhook_system.py` `_send_payload`) re-resolves and follows redirects — a TOCTOU/DNS-rebinding and redirect-into-private-range window that a hostname-only pre-check cannot close. The fix should become a shared connect-time resolved-IP guard used by both webhooks and URL ingest.
-- **Verified (new, P1):** All four `torch.load` sites (`face_swap.py:105`, `model_quantization.py:373`, `video_ai.py:881`) rely on `weights_only=True` as the safety mechanism, but that is exactly what CVE-2026-24747 (GHSA-63cw-57p8-fm3p, CVSS 9.8, torch ≤ 2.9.1) bypasses via a crafted checkpoint. `pyproject.toml` floors `torch>=2.6` with no ceiling excluding vulnerable releases, and no picklescan gate exists on downloaded weights. Confidence: Likely — confirm the GHSA range before pinning.
-- **Verified (P2):** `/health` (`opencut/routes/system.py:374–401`) is a CSRF-exempt GET that returns `csrf_token` to any Origin not in the two-value denylist `{null, file://}`. In the local single-user model this is low-blast-radius, but it is a denylist where an allowlist (same-origin/no-Origin) is cheap and correct.
-- **Verified (P2):** `opencut/helpers.py::check_disk_space` (lines 187–193) returns `{"ok": True, "free_bytes": 0}` on any `shutil.disk_usage` exception, so callers gating on `ok` proceed on a genuinely full/inaccessible local volume, converting a clean 507 into a mid-render FFmpeg failure with a half-written output. Fail open only for un-probeable network drives.
-- **Verified (P2/P3):** `jobs.py` admits up to `OPENCUT_MAX_CONCURRENT_JOBS` (max 100) as "running" onto a fixed 10-thread worker pool; raising the env var silently over-admits. Clamp effective concurrency to the pool's `max_workers`.
-- **Still open from prior cycle:** `requirements-lock.txt` pins `click==8.3.1` (CVE-2026-7246, fixed in 8.3.3); `project_archive.py`/`lottie_import.py` unbounded ZIP extraction; `registry.py::resolved_state()` marking 52 `NotImplementedError` adapters "available" once their dependency imports. These remain the correctly-tracked top fixes.
-- **Verified good:** bundled `ffmpeg/ffmpeg.exe` is 8.1.2 (newer than the June 2026 8.0.3 security line); `torch.load` already uses `weights_only=True`; Werkzeug/Jinja2 floors already patch the 2026 Windows `safe_join` device-name CVEs (CVE-2026-21860/27199, CVE-2025-66221) and the Jinja2 sandbox CVE. Recovery foundations (job resume/checkpoints, journals, disk preflight, atomic writes, support bundles, fuzz targets) already exist.
+
+- **[Verified] The audited trust gaps are closed.** `opencut/core/ffmpeg_provenance.py` now enforces FFmpeg 8.1.2; both Windows uninstall paths preserve user data by default; UXP action creation runs inside `project.lockedAccess()`; container auth accepts permission-checked secret files; plugin packages are authenticated and third-party routes execute behind a worker boundary; JSON migrations retain retryable source state. Coverage lives in the associated tests and commits `f05e5835`–`7c03216b`.
+- **[Verified] Existing network and artifact boundaries remain in force.** `opencut/core/url_safety.py` resolves and revalidates outbound targets, limits streamed downloads, and is used by URL ingestion/webhooks; update, C2PA, smart-render, remote-result, and proxy paths validate or transact their artifacts before replacement. Do not create duplicate roadmap items for these completed controls.
+- **[Verified] Recovery is now part of the product contract.** Uninstall offers separate application/data removal, migrations are retry-safe, plugin activation can roll back, plugin workers time out independently, proxy batches resume, and host-side panel failures surface instead of being silently treated as success.
+- **[Verified] Remaining roadmap work does not require a new security initiative.** Semantic search must stay local and make sidecar invalidation explicit; script assembly must preview and journal write-back; MCP tasks must preserve current auth/cancellation boundaries; ASR and localization must report optional-dependency readiness honestly. These guardrails are included in each owning roadmap item rather than duplicated as generic hardening work.
+- **[Needs live validation]** Signed/notarized/store distribution and live Premiere host acceptance still require external credentials or host hardware and remain in `Roadmap_Blocked.md`; they are not actionable `ROADMAP.md` work.
 
 ## Architecture Assessment
-- **URL/network fetch trust is duplicated and inconsistent.** `url_ingest.py`, `webhook_system.py`, and `model_manager` each make their own SSRF decision (or none). Extract one connect-time guard that resolves the host, rejects private/link-local/loopback IPs, re-validates every redirect hop, and enforces byte ceilings; route all outbound fetches through it.
-- **Model-weight loading has no supply-chain boundary.** Downloaded checkpoints are trusted to `torch.load`; there is no picklescan pass and no floor above the 2026 RCE. Treat any file under the model cache as untrusted input.
-- `opencut/registry.py`, `feature_readiness.py`, `dump_feature_readiness.py` still need an implementation-status field distinct from dependency/hardware probes (prior P1). 52 `opencut/core/` modules carry terminal `NotImplementedError` (gen-video: OpenSora/SkyReels/LTX/cloud; ASR: canary/parakeet; face/relight/TTS/music); route layer exposes ~6 honest HTTP 501 stubs (`wave_h`, `wave_k`). Catalogue growth is unjustified until this readiness defect is fixed.
-- **Panels are unrendered in automation.** 275 Python tests are strong; the JS side is 2 Node utility test files with no jsdom/Playwright, so the 18,495-line CEP `style.css` and 17,460-line CEP `main.js` (plus 8,191-line UXP `main.js`) are unverified for DOM/ARIA/focus/theme/state behavior (prior P1 covers this).
-- **i18n stops at the panels.** CEP and UXP ship English + Spanish only (`extension/*/locales/{en,es}.json`); the Python/CLI backend has no i18n framework and English-only error strings, and there is no RTL (`dir="rtl"`) support anywhere. Embedded DE/FR/JA/PT labels appear in `en.json` text without locale files.
-- **Provenance and MCP surfaces are one spec revision behind.** The repo embeds signed C2PA provenance but should target C2PA 2.4 (Apr 2026: `c2pa.ai-disclosure` assertion, durable/soft-binding credentials). The MCP server should target the 2026-07-28 revision (stateless core, Multi-Round-Trip Requests replacing elicitation, Tasks extension for long renders, cache metadata on resources).
-- `broadcast_cc.py`/`broadcast_caption.py` still duplicate EBU-TT/TTML/IMSC exporters tested for XML shape, not IMSC 1.3 (now a W3C Rec) conformance (prior P2). Panel monolith decomposition remains a later XL after rendered contracts land.
-- Coverage decision: security, accessibility, i18n/l10n, testing, docs, plugin ingestion, and a few high-fit features have retained work. Observability/offline already have proportionate local diagnostics, journals, retries, checkpoints, and support bundles. Distribution is credential/signing-gated in `Roadmap_Blocked.md`. Mobile and cloud multi-user editing conflict with the desktop local-first Premiere boundary.
+
+- **[Verified] Decompose panels by responsibility, not by visual card.** CEP `client/main.js`/`style.css` and UXP `main.js`/`style.css` remain oversized shared boundaries. Extract state, API, i18n, job, timeline, token, layout, and bootstrap responsibilities while preserving public IDs, host-action names, route payloads, and the rendered baselines added in `6a44b951`.
+- **[Verified] Treat existing implementations as the starting point.** `opencut/core/semantic_video_search.py` and `/search/semantic` already provide local CLIP search; implement portable sidecars, relink/invalidation, ranking fixtures, and panel discovery rather than a second index. `opencut/core/script_to_roughcut.py` already plans a rough cut; add alternate takes, deterministic regeneration, preview, and reversible journal write-back rather than another planner.
+- **[Verified] Keep optional model adapters execution-truthful.** `opencut/registry.py::resolved_state()` distinguishes terminal stubs from dependency readiness. `opencut/core/asr_parakeet.py` and `asr_canary.py` still raise `NotImplementedError`; implement Parakeet before routing traffic to it, keep Whisper as the coverage fallback, and test both dependency absence and language routing.
+- **[Needs live validation] Upgrade MCP at its protocol boundary.** After the 2026-07-28 final specification publishes, adapt `opencut/mcp_server.py` and `mcp_extended_tools.py` to stateless `server/discover`, Tasks, MRTR, and resource-cache metadata without leaking protocol details into render/transcode core modules; discovery and long-task conformance tests should own the compatibility contract.
+- **[Verified] Keep incompatible model stacks out of process.** `depth-anything-3==0.1.1` requires NumPy 1.x and regular `opencv-python`, while OpenCut's supported video extras resolve NumPy 2 with headless OpenCV 4.13+. Any DA3 adapter needs a separate worker environment, an Apache-2.0 Small/Base allowlist, and explicit conversion from direct depth to the near/far convention CineFocus currently consumes from DA2 disparity.
+- **[Verified] Localize through one backend boundary.** Add a backend gettext/Babel layer with English fallback, keep locale-key parity tests for CEP/UXP, and make directionality a shell/layout concern so RTL support does not fork individual components.
+- **[Verified] Tests and docs follow owning boundaries.** Rendered panel regression, IMSC 1.3 conformance, plugin isolation, UXP locking, migration retry, uninstall preservation, and FFmpeg provenance now have direct gates. Each remaining item must extend those gates and update its setup/recovery copy in the same batch; no standalone test/docs roadmap duplicate is justified.
+- **[Verified] Category disposition:** security, accessibility, observability, testing, docs, distribution/packaging, plugin isolation, offline/resilience, migration, and upgrade strategy are covered by completed controls or blocked release lanes; i18n and MCP remain actionable; mobile and hosted multi-user work remain rejected below.
 
 ## Rejected Ideas
-- Local generative video synthesis to match Firefly/Sora/OpenSora on-device (source: gen-video stubs, Submagic B-roll gen): rejected — a ~0.6–2B on-device model cannot compete on true synthesis; position OpenCut as provenance-honest local automation instead. Match locally only where small models win (ASR, masking, reframe, silence/filler, semantic search).
-- Cloud-first collaboration / hosted data plane (Descript Underlord, OpusClip, CapCut): rejected — review bundles and optional handoffs preserve the local-first privacy advantage that is the product's whole wedge.
-- Full standalone NLE parity (Kdenlive/Shotcut/OpenShot): rejected — Premiere is the host; interchange/export surfaces already exist.
-- Mobile editor (commercial creator suites): rejected — Premiere/UXP + local FFmpeg are desktop workflows.
-- More generative model adapters before honest readiness (current AI research): rejected — worsens the verified `resolved_state()` defect; classify the 52 stubs first.
-- New generic TTML/EBU or smart/lossless-cut features (LosslessCut/auto-editor): rejected — two caption implementations and `smart_render.py` keyframe snapping already ship; conformance/consolidation is the gap.
-- Immediate OpenCV 5 / Rich 14 / major-version churn: rejected — supported ranges are stable and no user-facing/security gap is verified.
-- New CI/release workflows or package-manager publishing: rejected — repo policy is local-build only; PyPI/Homebrew/winget/notarization already live in `Roadmap_Blocked.md`.
-- Prometheus/OpenTelemetry metrics export, crash-report send path: rejected for now — local-only diagnostics/journal/security-audit are proportionate to a single-user desktop tool; a network telemetry surface conflicts with the privacy narrative.
-- Eye-contact correction and full multilingual voice dubbing (Descript): under consideration, not scheduled — high model weight and quality risk on-device; revisit only if a competitive small model lands.
+
+- **[Verified] Standalone NLE or browser-editor parity — Rejected.** Kdenlive, Shotcut, OpenShot, and OpenCut-app already solve timeline editing; OpenCut's differentiated boundary is Premiere-native local automation.
+- **[Verified] Mobile editing client — Rejected.** The primary workflows require Premiere host APIs, large local media, and keyboard/timeline interaction; a remote monitor would add a second security/distribution surface without a verified core need.
+- **[Verified] Hosted simultaneous editing — Rejected.** Commercial demand exists, but mandatory server state conflicts with the single-user local-first design; OTIO, markers, review bundles, and sidecars are the fitting migration/collaboration boundary.
+- **[Verified] Cloud semantic search — Rejected.** Adobe's local `.prmi` model and OpenCut's existing local CLIP index support private portable search without upload latency or new data governance.
+- **[Verified] Bulk implementation of six HTTP stubs or 52 terminal model adapters — Rejected.** `opencut/_generated/route_manifest.json`, `opencut/_generated/feature_readiness.json`, `opencut/core/stub_scan.py`, and `opencut/tools/dump_feature_readiness.py` report these honestly; route count is not user value and optional heavyweight/licensing costs are unproven.
+- **[Verified] Capability manifests described as a Python sandbox — Rejected.** VS Code's extension-host pattern supports failure isolation, but capability declarations alone cannot stop arbitrary Python filesystem/network access; use precise trust copy and OS enforcement before claiming sandboxing.
+- **[Verified] Premiere 26.2 TrackItem-specific workaround — Under consideration, not roadmap work.** Adobe reports a save/reopen regression for video `TrackItem.createSetInPointAction`, but OpenCut's current helper mutates `Sequence` in/out points; the separate 26.3 `lockedAccess()` violation is verified and should land first.
+- **[Verified] Generic dependency bump campaign — Rejected.** `pyproject.toml`, `requirements-lock.txt`, `docs/PYTHON_ADVISORIES.md`, and `docs/NODE_ADVISORIES.md` already track the audited Flask/Click/keyring/PyInstaller and ML floors; only the concrete FFmpeg floor produces a net-new security item.
+- **[Verified] Academic generative editor/agent rewrite — Rejected.** Project Blink and newer long-video research are useful evidence for interactive review and retrieval, not justification to replace the deterministic jobs/journal/timeline architecture.
+- **[Verified] In-process Depth Anything 3 adapter — Rejected.** Official DA3 0.1.1 and OpenCut's supported OpenCV/NumPy constraints are mutually unsatisfiable, both OpenCV wheels provide `cv2`, and DA3 Large is non-commercial; only an isolated Small/Base worker is under consideration.
 
 ## Sources
-Repository and OSS:
-- https://github.com/SysAdminDoc/OpenCut
-- https://github.com/mifi/lossless-cut
-- https://github.com/WyattBlue/auto-editor
-- https://github.com/m-bain/whisperX
-- https://github.com/PixarAnimationStudios/OpenTimelineIO/releases
 
-Commercial products and 2026 releases:
-- https://blog.adobe.com/en/publish/2026/01/20/new-ai-powered-video-editing-tools-premiere-major-motion-design-upgrades-after-effects
-- https://helpx.adobe.com/premiere/desktop/add-video-effects/work-with-masks/object-masking.html
-- https://www.descript.com/underlord
-- https://www.engadget.com/apps/davinci-resolve-20s-latest-ai-feature-can-create-an-entire-timeline-based-on-a-script-120009351.html
-- https://www.ngram.com/blog/opus-clip-vs-submagic
-- https://www.capcut.com/clause/privacy-policy
+### Open source and adjacent projects
 
-MCP, provenance, captions standards:
-- https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/
-- https://stacktr.ee/blog/mcp-2026-spec-changes
+- https://github.com/mifi/lossless-cut/releases
+- https://github.com/WyattBlue/auto-editor/releases
+- https://github.com/mltframework/shotcut/releases/
+- https://github.com/OpenShot/openshot-qt/releases
+- https://github.com/Breakthrough/PySceneDetect/releases
+- https://github.com/AcademySoftwareFoundation/OpenTimelineIO/releases
+- https://github.com/OpenCut-app/OpenCut/releases
+- https://github.com/leancoderkavy/premiere-pro-mcp
+- https://handbrake.fr/docs/en/latest/technical/official-presets.html
+- https://code.visualstudio.com/api/advanced-topics/extension-host
+
+### Commercial products and platform APIs
+
+- https://helpx.adobe.com/premiere/desktop/organize-media/file-organization/media-intelligence-and-search-panel.html
+- https://helpx.adobe.com/premiere/desktop/organize-media/file-organization/manage-media-intelligence-metadata.html
+- https://developer.adobe.com/premiere-pro/uxp/changelog/
+- https://community.adobe.com/bug-reports-728/trackitem-createsetinpointaction-does-not-persist-across-save-reopen-for-video-tracks-in-uxp-in-points-revert-to-the-source-clip-s-original-in-point-audio-trackitems-unaffected-regression-in-26-2-1624188
+- https://github.com/AdobeDocs/uxp-premiere-pro-samples
+- https://www.blackmagicdesign.com/products/davinciresolve/whatsnew
+- https://www.descript.com/pricing
+- https://firecut.ai/pricing/premiere-pro/
+- https://www.timebolt.io/features
+
+### Models and package metadata
+
+- https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+- https://huggingface.co/datasets/hf-audio/open-asr-leaderboard-results
+- https://pypi.org/pypi/depth-anything-3/0.1.1/json
+- https://pypi.org/pypi/opencv-python-headless/4.13.0.92/json
+
+### Standards, research, dependencies, and security
+
+- https://www.w3.org/TR/WCAG22/
+- https://www.w3.org/TR/ttml-imsc1.3/
 - https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html
-- https://www.w3.org/news/2026/imsc-text-profile-1-3-is-now-a-w3c-recommendation/
-- https://tech.ebu.ch/publications/tech3380
-- https://www.mux.com/blog/captions-on-the-web-and-fcc-compliance
-
-ASR models 2026:
-- https://northflank.com/blog/best-open-source-speech-to-text-stt-model-in-2026-benchmarks
-- https://whispernotes.app/blog/parakeet-v3-default-mac-model
-- https://www.arunbaby.com/speech-tech/0073-whisper-vs-parakeet-asr-decision/
-
-Security advisories 2026:
-- https://github.com/advisories/GHSA-63cw-57p8-fm3p
-- https://www.sentinelone.com/vulnerability-database/cve-2026-53875/
-- https://app.opencve.io/cve/?product=werkzeug&vendor=palletsprojects
-- https://nvd.nist.gov/vuln/detail/CVE-2026-7246
-- https://peps.python.org/pep-0803/
-
-Community signal (local-first / anti-subscription):
-- https://larryjordan.com/articles/adobe-raises-prices-and-introduces-new-creative-cloud-plans/
-- https://fstoppers.com/software/real-reason-photographers-are-leaving-adobe-901527
-- https://www.hunton.com/privacy-and-cybersecurity-law-blog/data-protection-authorities-globally-highlight-privacy-issues-in-ai-image-generation
+- https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/
+- https://research.adobe.com/video/project-blink/
+- https://nvd.nist.gov/vuln/detail/CVE-2026-8461
+- https://github.com/pytorch/pytorch/security/advisories/GHSA-53q9-r3pm-6pq6
 
 ## Open Questions
-- Confirm the exact affected-version range and fixed release for CVE-2026-24747 (GHSA-63cw-57p8-fm3p) before setting the Torch floor — the fix may be a 2.9.x patch rather than a new minor.
-- No other questions block prioritization. Live Premiere/UDT acceptance and signing/notarization remain external blockers in `Roadmap_Blocked.md`, not research questions.
+
+- **[Needs live validation]** Does the final MCP 2026-07-28 specification preserve the release candidate's stateless `server/discover`, Tasks, MRTR, and cache-metadata contracts? Validate the published specification before changing OpenCut's protocol dependency or conformance tests. Packaged Docker and live Premiere acceptance are implementation verification lanes; credential/hardware-only release checks remain in `Roadmap_Blocked.md`.
