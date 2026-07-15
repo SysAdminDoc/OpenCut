@@ -353,18 +353,6 @@ _FEATURES: List[FeatureRecord] = [
         requires_gpu=True,
     ),
     FeatureRecord(
-        feature_id="video.depth.da3",
-        label="Depth Anything 3 Small",
-        category="video",
-        state=STATE_AVAILABLE,
-        install_hint="pip install depth-anything-3==0.1.1",
-        docs="docs/MODELS.md#depth-anything-3-small",
-        routes=["/video/depth"],
-        probe=_check("check_depth_anything_3_available"),
-        hardware="gpu",
-        requires_gpu=True,
-    ),
-    FeatureRecord(
         feature_id="video.scenes.detect",
         label="PySceneDetect shot boundary",
         category="video",

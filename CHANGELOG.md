@@ -625,7 +625,7 @@ record also lives in the git commit messages.
 ### Changed — Model-card generated artifact freshness
 
 - Regenerated the model-card manifest and added cards for the optional
-  AutoShot, DA3, IC-Light, LatentSync, NeMo ASR/Sortformer, OCR, SAM 3,
+  AutoShot, IC-Light, LatentSync, NeMo ASR/Sortformer, OCR, SAM 3,
   SeedVR2, pyannote diarization, and visual multicam checks so generated
   model/license truth gates pass again.
 
@@ -807,16 +807,15 @@ record also lives in the git commit messages.
 - Shipped route count rises from 1,536 to 1,541. Users no longer hit 501
   for capabilities that already have working local implementations.
 
-### Changed — Default depth backend upgraded to Depth Anything 3 Small
+### Corrected — Retracted the incompatible in-process Depth Anything 3 adapter
 
-- New `depth_anything_3` module + the official `depth-anything/DA3-SMALL`
-  Apache-2.0 backend for CineFocus bokeh/parallax,
-  with `Depth-Anything-V2-Small` retained as the automatic fallback. CineFocus
-  now routes both depth-load sites through a central `_load_depth_backend()` that
-  resolves DA3 first and degrades to DA2 on any load failure.
-- New `depth_anything_3` engine-registry entry (priority 85 > DA2's 80) +
-  `check_depth_anything_3_available()`, an auditable model card, and
-  `tests/test_depth_engines.py`.
+- Removed the ghost DA3 engine/readiness/model-card claims and kept CineFocus on
+  Depth Anything V2. The official `depth-anything-3==0.1.1` package requires
+  NumPy 1.x plus regular `opencv-python`, which cannot resolve alongside
+  OpenCut's supported NumPy 2 / `opencv-python-headless>=4.13` video stack.
+- A future DA3 integration must use an isolated runtime, allow only the
+  Apache-2.0 Small/Base checkpoints, and normalize DA3 depth versus DA2
+  disparity semantics before it can become a selectable backend.
 
 ### Changed — Re-aimed the IC-Light relight engine at v1 (Apache-2.0)
 

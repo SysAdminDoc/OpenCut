@@ -128,6 +128,22 @@ def test_dumper_check_mode_passes_against_committed_artefacts():
     assert rc == 0
 
 
+def test_da3_is_not_advertised_until_it_has_an_isolated_runtime():
+    """Do not reintroduce the NumPy/OpenCV-incompatible DA3 stack in-process."""
+    from opencut import registry
+    from opencut.core.engine_registry import get_registry
+
+    assert not hasattr(checks, "check_depth_anything_3_available")
+    assert "video.depth.da3" not in {card.feature_id for card in model_cards.CARDS}
+    assert "video.depth.da3" not in registry.FEATURES
+
+    depth_engines = {
+        engine.name for engine in get_registry().get_engines("depth_estimation")
+    }
+    assert "depth_anything_3" not in depth_engines
+    assert "depth_anything_v2" in depth_engines
+
+
 # ---------------------------------------------------------------------------
 # F177 — 2026-Q2 sweep gates
 # ---------------------------------------------------------------------------
