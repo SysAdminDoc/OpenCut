@@ -20,13 +20,20 @@
         <span class="oc-version" id="uxpHeaderVersion">v1.33.1</span>
       </div>
       <div class="oc-header-right">
-        <div class="oc-connection" id="connectionStatus" title="Backend connection status" data-i18n-title="conn.backend_status">
-          <span class="oc-conn-dot" id="connDot" aria-label="Backend offline" data-i18n-aria-label="conn.dot_disconnected"></span>
-          <span class="oc-conn-label" id="connLabel" data-i18n="conn.offline">Offline</span>
-        </div>
-        <button type="button" class="oc-icon-btn" id="refreshBtn" title="Refresh connection" aria-label="Refresh connection" data-i18n-title="conn.refresh_connection" data-i18n-aria-label="conn.refresh_connection">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
-        </button>
+        <details class="oc-connection-details" id="connectionDetails">
+          <summary class="oc-connection" id="connectionStatus" title="Backend connection status" aria-label="Backend connection details" data-i18n-title="conn.backend_status" data-i18n-aria-label="uxp.status.connection_details">
+            <span class="oc-conn-dot" id="connDot" aria-label="Backend offline" data-i18n-aria-label="conn.dot_disconnected"></span>
+            <span class="oc-conn-label" id="connLabel" data-i18n="conn.offline">Offline</span>
+            <svg class="oc-connection-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.646 6.146a.5.5 0 01.708 0L8 8.793l2.646-2.647a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 010-.708z"/></svg>
+          </summary>
+          <div class="oc-connection-detail-panel" id="statusBar" data-state="neutral">
+            <span id="statusText" role="status" aria-live="polite" data-i18n="uxp.status.ready">Ready</span>
+            <span id="statusRight" class="oc-status-right"></span>
+            <button type="button" class="oc-icon-btn" id="refreshBtn" title="Refresh connection" aria-label="Refresh connection" data-i18n-title="conn.refresh_connection" data-i18n-aria-label="conn.refresh_connection">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+            </button>
+          </div>
+        </details>
       </div>
     </header>
 
@@ -51,7 +58,11 @@
     </div>
 
     <!-- ===== TAB NAVIGATION ===== -->
-    <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav" data-i18n-aria-label="nav.feature_tabs">
+    <div class="oc-tab-nav-shell" id="tabNavShell">
+      <button type="button" class="oc-tab-scroll oc-tab-scroll-prev" id="tabScrollPrev" aria-label="Previous workspace" title="Previous workspace" data-i18n-aria-label="uxp.tabs.previous_workspace" data-i18n-title="uxp.tabs.previous_workspace" aria-controls="tabNav" hidden>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.354 3.646a.5.5 0 010 .708L6.707 8l3.647 3.646a.5.5 0 01-.708.708l-4-4a.5.5 0 010-.708l4-4a.5.5 0 01.708 0z"/></svg>
+      </button>
+      <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav" data-i18n-aria-label="nav.feature_tabs">
       <button type="button" class="oc-tab active" data-tab="cut" role="tab" aria-selected="true" aria-controls="tab-cut" id="tabBtnCut" title="Cut" aria-label="Cut" data-i18n-title="uxp.tabs.cut" data-i18n-aria-label="uxp.tabs.cut">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5z"/></svg>
         <span data-i18n="uxp.tabs.cut">Cut</span>
@@ -88,7 +99,11 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
         <span data-i18n="uxp.tabs.settings">Settings</span>
       </button>
-    </nav>
+      </nav>
+      <button type="button" class="oc-tab-scroll oc-tab-scroll-next" id="tabScrollNext" aria-label="Next workspace" title="Next workspace" data-i18n-aria-label="uxp.tabs.next_workspace" data-i18n-title="uxp.tabs.next_workspace" aria-controls="tabNav" hidden>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.646 3.646a.5.5 0 000 .708L9.293 8l-3.647 3.646a.5.5 0 00.708.708l4-4a.5.5 0 000-.708l-4-4a.5.5 0 00-.708 0z"/></svg>
+      </button>
+    </div>
 
     <!-- ===== MAIN CONTENT ===== -->
     <main class="oc-content" id="mainContent">
@@ -107,10 +122,6 @@
           <div class="oc-workspace-meta-item" role="listitem">
             <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_source">Active Shot</span>
             <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite" data-i18n="uxp.workspace.no_source_selected">No source selected</span>
-          </div>
-          <div class="oc-workspace-meta-item" role="listitem">
-            <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_backend">Backend</span>
-            <span class="oc-workspace-meta-value" id="workspaceBackendValue" aria-live="polite" data-i18n="conn.offline">Offline</span>
           </div>
           <div class="oc-workspace-meta-item" role="listitem">
             <span class="oc-workspace-meta-label" data-i18n="uxp.workspace.label_library">Media Library</span>
@@ -1673,12 +1684,6 @@
 
     <!-- ===== TOAST AREA ===== -->
     <div id="toastArea" class="oc-toast-area" aria-live="polite" aria-atomic="false"></div>
-
-    <!-- ===== STATUS BAR ===== -->
-    <footer class="oc-status-bar" id="statusBar" role="status">
-      <span id="statusText">Ready</span>
-      <span id="statusRight" class="oc-status-right"></span>
-    </footer>
 
   </div><!-- #app -->
 

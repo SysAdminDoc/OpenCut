@@ -2202,16 +2202,66 @@ const JobPoller = (() => {
 // ─────────────────────────────────────────────────────────────
 // UIController — DOM manipulation, tabs, toasts, sliders
 // ─────────────────────────────────────────────────────────────
+function syncTabOverflowControls() {
+  const nav = document.getElementById("tabNav");
+  const shell = document.getElementById("tabNavShell");
+  const previous = document.getElementById("tabScrollPrev");
+  const next = document.getElementById("tabScrollNext");
+  if (!nav || !shell || !previous || !next) return;
+  const overflowing = nav.scrollWidth > nav.clientWidth + 2;
+  shell.dataset.overflow = overflowing ? "true" : "false";
+  previous.hidden = !overflowing;
+  next.hidden = !overflowing;
+  if (!overflowing) {
+    nav.scrollLeft = 0;
+    previous.disabled = true;
+    next.disabled = true;
+    return;
+  }
+  const maxScroll = Math.max(0, nav.scrollWidth - nav.clientWidth);
+  previous.disabled = nav.scrollLeft <= 2;
+  next.disabled = nav.scrollLeft >= maxScroll - 2;
+}
+
+function revealTabButton(button) {
+  const nav = document.getElementById("tabNav");
+  if (!nav || !button) return;
+  const alignButton = () => {
+    const navBounds = nav.getBoundingClientRect();
+    const tabBounds = button.getBoundingClientRect();
+    if (tabBounds.left < navBounds.left) {
+      nav.scrollLeft -= navBounds.left - tabBounds.left + 6;
+    } else if (tabBounds.right > navBounds.right) {
+      nav.scrollLeft += tabBounds.right - navBounds.right + 6;
+    }
+    syncTabOverflowControls();
+  };
+  alignButton();
+  requestAnimationFrame(alignButton);
+}
+
+function activateRelativeTab(delta) {
+  const tabs = Array.from(document.querySelectorAll(".oc-tab"));
+  const activeIndex = tabs.findIndex((tab) => tab.classList.contains("active"));
+  if (activeIndex < 0) return;
+  const target = tabs[Math.max(0, Math.min(tabs.length - 1, activeIndex + delta))];
+  if (!target || target === tabs[activeIndex]) return;
+  UIController.switchTab(target.dataset.tab);
+  target.focus();
+}
+
 const UIController = (() => {
   // ── Tab switching ──
   function switchTab(tabId) {
     // Invalidate Premiere state cache on tab switch
     PProBridge.invalidateCache();
+    let activeButton = null;
     document.querySelectorAll(".oc-tab").forEach(btn => {
       const active = btn.dataset.tab === tabId;
       btn.classList.toggle("active", active);
       btn.setAttribute("aria-selected", active ? "true" : "false");
       btn.tabIndex = active ? 0 : -1;
+      if (active) activeButton = btn;
     });
     document.querySelectorAll(".oc-tab-panel").forEach(panel => {
       const active = panel.id === `tab-${tabId}`;
@@ -2219,10 +2269,20 @@ const UIController = (() => {
       panel.hidden = !active;
       panel.setAttribute("aria-hidden", active ? "false" : "true");
     });
+    const main = document.getElementById("mainContent");
+    if (main) main.scrollTop = 0;
+    revealTabButton(activeButton);
     updateWorkspaceOverview(tabId);
-    setStatus(
-      t("uxp.status.workspace", "{workspace} workspace").replace("{workspace}", getWorkspaceTitle(tabId))
-    );
+    if (isBackendConnected()) {
+      setStatus(
+        t("uxp.status.workspace", "{workspace} workspace").replace("{workspace}", getWorkspaceTitle(tabId))
+      );
+    } else {
+      setStatus(
+        t("uxp.status.backend_offline", "OpenCut backend offline. Start the local service to run jobs."),
+        "error"
+      );
+    }
   }
 
   // ── Processing banner ──
@@ -6163,6 +6223,16 @@ function bindEvents() {
       }
     });
   });
+  const tabNav = document.getElementById("tabNav");
+  tabNav?.addEventListener("scroll", syncTabOverflowControls, { passive: true });
+  document.getElementById("tabScrollPrev")?.addEventListener("click", () => activateRelativeTab(-1));
+  document.getElementById("tabScrollNext")?.addEventListener("click", () => activateRelativeTab(1));
+  window.addEventListener("resize", syncTabOverflowControls);
+  if (typeof ResizeObserver !== "undefined" && tabNav) {
+    const tabResizeObserver = new ResizeObserver(syncTabOverflowControls);
+    tabResizeObserver.observe(tabNav);
+  }
+  requestAnimationFrame(syncTabOverflowControls);
 
   PRIMARY_CLIP_INPUT_IDS.forEach((id) => {
     const input = document.getElementById(id);
