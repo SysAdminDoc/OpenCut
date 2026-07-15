@@ -488,6 +488,45 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
   expect(pageErrors).toEqual([]);
 });
 
+test("wide command-center shells expose editorial rails and settings grids", async ({
+  page,
+}) => {
+  const cep = await openSurface(page, "cep", "dark", 1200, { height: 800 });
+  await page.locator(".nav-tab[data-nav='settings']").click();
+  const cepGeometry = await page.evaluate(() => {
+    const sidebar = document.querySelector(".sidebar")?.getBoundingClientRect();
+    const cards = Array.from(document.querySelectorAll("#panel-settings.active > .card"))
+      .slice(0, 2)
+      .map((card) => card.getBoundingClientRect());
+    return {
+      sidebarWidth: sidebar?.width || 0,
+      cardColumns: cards.length === 2 ? Math.abs(cards[0].left - cards[1].left) : 0,
+    };
+  });
+  expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
+  expect(cepGeometry.cardColumns).toBeGreaterThan(200);
+  expect(cep.pageErrors).toEqual([]);
+
+  const uxp = await openSurface(page, "uxp", "dark", 1200, { height: 800 });
+  await page.locator(".oc-tab[data-tab='settings']").click();
+  const uxpGeometry = await page.evaluate(() => {
+    const rail = document.getElementById("tabNavShell")?.getBoundingClientRect();
+    const tabs = getComputedStyle(document.getElementById("tabNav"));
+    const groups = Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group"))
+      .slice(0, 2)
+      .map((group) => group.getBoundingClientRect());
+    return {
+      railWidth: rail?.width || 0,
+      tabDirection: tabs.flexDirection,
+      groupColumns: groups.length === 2 ? Math.abs(groups[0].left - groups[1].left) : 0,
+    };
+  });
+  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
+  expect(uxpGeometry.tabDirection).toBe("column");
+  expect(uxpGeometry.groupColumns).toBeGreaterThan(200);
+  expect(uxp.pageErrors).toEqual([]);
+});
+
 test("offline, empty, loading, error, permission, and confirmation states stay semantic", async ({
   page,
 }) => {

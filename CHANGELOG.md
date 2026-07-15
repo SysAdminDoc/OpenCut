@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Improved - Rebuild CEP and UXP as an editorial command center
+
+- CEP and UXP now share a restrained graphite command-center system with a
+  164px wide editorial rail, compact workspace header, clearer card hierarchy,
+  consistent controls, and amber offline signaling that does not read as a
+  destructive failure.
+- Wide UXP workspaces replace the crowded tab strip with the editorial rail,
+  group Settings into two-column operational cards, and collapse redundant
+  active-shot context; 480-520px panels retain the discoverable horizontal
+  navigator and keep the first recovery action above the fold.
+- The image-generated visual target is preserved at
+  `extension/design/opencut-command-center-mockup.png`. Headless visual
+  baselines cover every CEP/UXP workspace and explicit geometry tests guard
+  the wide rails, responsive settings grids, overflow, keyboard navigation,
+  semantic states, and WCAG AA contextual contrast.
+
 ### Improved - Validate canonical caption XML interchange
 
 - EBU-TT, TTML, legacy IMSC1, and IMSC 1.3 now share one canonical caption
