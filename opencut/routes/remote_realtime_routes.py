@@ -35,6 +35,8 @@ def register_node():
     try:
         from opencut.core.remote_process import (
             normalize_node_url,
+        )
+        from opencut.core.remote_process import (
             register_node as do_register,
         )
 
@@ -75,6 +77,8 @@ def ping_node():
     try:
         from opencut.core.remote_process import (
             normalize_node_url,
+        )
+        from opencut.core.remote_process import (
             ping_node as do_ping,
         )
 

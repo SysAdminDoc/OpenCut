@@ -734,6 +734,7 @@ test("offline, empty, loading, error, permission, and confirmation states stay s
   page,
 }) => {
   const { pageErrors } = await openSurface(page, "uxp", "dark", 520);
+  await expect(page.locator("#connLabel")).toHaveText(/offline|disconnected/i);
   const state = await page.evaluate(() => {
     const panel = document.querySelector(".oc-tab-panel.active");
     const fixture = document.createElement("section");
