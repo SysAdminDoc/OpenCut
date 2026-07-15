@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Fixed - Keep CEP controls legible in light mode
+
+- Danger, warning, accent, action-hover, and persistent error-banner text now
+  use semantic theme tokens instead of dark-only literals; settings and cut
+  review checkboxes use the shared focus accent.
+- The contrast release gate now audits explicit CEP light-theme overrides as
+  well as base tokens, including contextual controls and the intentional dark
+  server-error surface. Headless rendered tests verify the resolved dark/light
+  token pairs meet WCAG AA.
+
 ### Security - Isolate third-party plugin failures
 
 - Third-party plugin routes and jobs now import only in lazy, supervised worker

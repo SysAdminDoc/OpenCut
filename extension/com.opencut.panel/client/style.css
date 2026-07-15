@@ -63,11 +63,24 @@
 
     /* Text scale */
     --text-white: #ffffff;
+    --text-on-primary: #ffffff;
     --text-primary: #f4f6f8;
     --text-secondary: #b5bfca;
     --text-muted: #87919e;
     --text-faint: #697481;
     --text-disabled: #5a6470;
+
+    /* Contextual control text (audited against --bg-card) */
+    --text-danger-control: #f4c7bd;
+    --text-danger-control-hover: #fff5f2;
+    --text-accent-control: #f2d6a7;
+    --text-accent-control-hover: #fff8ee;
+    --text-warning-control-hover: #fff5e8;
+    --text-action-hover: #fff8ed;
+    /* The server-down banner remains a dark on-color surface in both themes. */
+    --text-on-danger-surface: #ffe2d9;
+    --danger-surface: #31181f;
+    --danger-surface-deep: #1f1117;
 
     /* Borders */
     --border: rgba(202, 215, 230, 0.11);
@@ -1116,7 +1129,7 @@ body.job-active .checkbox-row {
     background: var(--accent-grad-bg);
     border: none;
     border-radius: var(--r-md);
-    color: var(--text-white);
+    color: var(--text-on-primary);
     font-family: var(--font-sans);
     font-size: 12px;
     font-weight: 700;
@@ -5116,7 +5129,7 @@ textarea:focus,
 
 .fav-chip-remove:hover {
     background: rgba(167, 83, 57, 0.22);
-    color: #f4c7bd;
+    color: var(--text-danger-control);
 }
 
 .model-list {
@@ -5149,7 +5162,7 @@ textarea:focus,
     border: 1px solid rgba(208, 133, 120, 0.26);
     border-radius: 999px;
     background: rgba(132, 48, 34, 0.16);
-    color: #f4c7bd;
+    color: var(--text-danger-control);
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -5160,7 +5173,7 @@ textarea:focus,
 .model-item-delete:hover:not(:disabled) {
     background: rgba(167, 83, 57, 0.24);
     border-color: rgba(244, 199, 189, 0.32);
-    color: #fff5f2;
+    color: var(--text-danger-control-hover);
     transform: translateY(-1px);
 }
 
@@ -6239,7 +6252,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
 .modal-close-btn:hover {
     background: rgba(219, 109, 103, 0.12);
     border-color: rgba(219, 109, 103, 0.26);
-    color: #fff1ec;
+    color: var(--text-danger-control-hover);
 }
 
 .preview-modal-close,
@@ -6310,7 +6323,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
 .media-inline-btn.is-folder .btn-icon,
 .footer-toggle-btn[aria-expanded="true"] .btn-icon {
     background: rgba(198, 164, 111, 0.14);
-    color: #f2d6a7;
+    color: var(--text-accent-control);
 }
 
 .media-inline-btn .btn-icon svg,
@@ -6338,7 +6351,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
         linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.038)),
         rgba(28, 36, 50, 0.9);
     border-color: rgba(198, 164, 111, 0.22);
-    color: #fff8ee;
+    color: var(--text-accent-control-hover);
     transform: translateY(-1px);
     box-shadow:
         0 16px 28px rgba(5, 10, 16, 0.18),
@@ -6464,7 +6477,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
 .alert-dismiss.banner-dismiss-btn:hover {
     background: rgba(209, 152, 93, 0.22);
     border-color: rgba(228, 194, 138, 0.34);
-    color: #fff5e8;
+    color: var(--text-warning-control-hover);
 }
 
 .context-guidance-dismiss.banner-dismiss-btn {
@@ -6961,8 +6974,8 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     border: 1px solid rgba(255, 138, 138, 0.16);
     background:
         radial-gradient(circle at left center, rgba(255, 138, 138, 0.12), transparent 24%),
-        linear-gradient(180deg, rgba(49, 24, 31, 0.94), rgba(31, 17, 23, 0.92));
-    color: #ffe2d9;
+        linear-gradient(180deg, var(--danger-surface), var(--danger-surface-deep));
+    color: var(--text-on-danger-surface);
     font-size: 11.5px;
     letter-spacing: 0.02em;
     box-shadow:
@@ -9898,7 +9911,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings input[type="checkbox"] {
     width: 18px;
     height: 18px;
-    accent-color: #d4b17a;
+    accent-color: var(--neon-cyan);
     flex-shrink: 0;
 }
 
@@ -10612,7 +10625,7 @@ input[type="range"]::-moz-range-thumb {
     width: 18px;
     height: 18px;
     margin: 0 2px 0 0;
-    accent-color: #d4b17a;
+    accent-color: var(--neon-cyan);
 }
 
 .cut-review-time,
@@ -11402,7 +11415,7 @@ input[type="range"]::-moz-range-thumb {
     transform: translateY(-1px);
     border-color: rgba(236, 230, 218, 0.18);
     background: rgba(255, 255, 255, 0.08);
-    color: #fff8ed;
+    color: var(--text-action-hover);
 }
 
 .alert-banner .alert-dismiss.banner-dismiss-btn {
@@ -11414,7 +11427,7 @@ input[type="range"]::-moz-range-thumb {
 .alert-banner .alert-dismiss.banner-dismiss-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(236, 230, 218, 0.18);
-    color: #fff8ed;
+    color: var(--text-action-hover);
 }
 
 .alert-banner.is-info {
@@ -14616,8 +14629,8 @@ textarea:focus-visible {
     top: 0;
     z-index: 22;
     border: 1px solid rgba(255, 122, 136, 0.18);
-    background: linear-gradient(180deg, rgba(64, 28, 31, 0.98), rgba(41, 19, 23, 0.94));
-    color: #fff1ec;
+    background: linear-gradient(180deg, var(--danger-surface), var(--danger-surface-deep));
+    color: var(--text-on-danger-surface);
     box-shadow: 0 18px 32px rgba(25, 8, 10, 0.2);
 }
 
@@ -15396,7 +15409,7 @@ body:not(.has-clip) #panel-settings.active::before {
     transform: translateY(-1px);
     border-color: rgba(236, 230, 218, 0.18);
     background: rgba(255, 255, 255, 0.08);
-    color: #fff8ed;
+    color: var(--text-action-hover);
 }
 
 .job-history-apply,
@@ -16733,11 +16746,24 @@ html.theme-light {
 
     /* Text */
     --text-white:     #0f172a;
+    --text-on-primary: #ffffff;
     --text-primary:   #17202d;
     --text-secondary: #526071;
     --text-muted:     #738094;
     --text-faint:     #9ca3af;
     --text-disabled:  #d1d5db;
+
+    /* Contextual control text on light cards */
+    --text-danger-control: #b42318;
+    --text-danger-control-hover: #991b1b;
+    --text-accent-control: #78530a;
+    --text-accent-control-hover: #664308;
+    --text-warning-control-hover: #7c3f00;
+    --text-action-hover: var(--text-primary);
+    /* This banner intentionally retains a dark on-color surface. */
+    --text-on-danger-surface: #ffe2d9;
+    --danger-surface: #31181f;
+    --danger-surface-deep: #1f1117;
 
     /* Borders */
     --border:       rgba(23, 32, 45, 0.11);
@@ -16886,7 +16912,7 @@ html.theme-light .quick-action-btn:hover:not(:disabled) {
 }
 
 html.theme-light .btn-primary {
-    color: #ffffff;
+    color: var(--text-on-primary);
 }
 
 html.theme-light .utility-btn[disabled],
@@ -17369,7 +17395,7 @@ html.theme-light ::-webkit-scrollbar-track {
 .btn-primary {
     border-color: rgba(119, 167, 255, 0.42);
     background: linear-gradient(180deg, rgba(119, 167, 255, 0.95), rgba(71, 114, 219, 0.95));
-    color: #ffffff;
+    color: var(--text-on-primary);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.18),
         0 9px 22px rgba(65, 111, 214, 0.18);
@@ -17874,7 +17900,7 @@ html.theme-light .quick-action-btn:hover:not(:disabled) {
 }
 
 html.theme-light .btn-primary {
-    color: #ffffff;
+    color: var(--text-on-primary);
 }
 
 html.theme-light .wizard-footer .checkbox-row::before {

@@ -534,6 +534,57 @@ for (const surfaceName of ["cep", "uxp"]) {
   });
 }
 
+const CEP_CONTEXTUAL_CONTRAST_PAIRS = [
+  ["text-danger-control", "bg-card"],
+  ["text-danger-control-hover", "bg-card"],
+  ["text-accent-control", "bg-card"],
+  ["text-accent-control-hover", "bg-card"],
+  ["text-warning-control-hover", "bg-card"],
+  ["text-action-hover", "bg-card"],
+  ["text-on-danger-surface", "danger-surface"],
+];
+
+for (const theme of ["dark", "light"]) {
+  test(`cep contextual control tokens meet WCAG AA in ${theme}`, async ({ page }) => {
+    const { pageErrors } = await openSurface(page, "cep", theme, 900);
+    const findings = await page.evaluate((pairs) => {
+      const linearize = (channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      };
+      const luminance = ([red, green, blue]) => (
+        0.2126 * linearize(red) +
+        0.7152 * linearize(green) +
+        0.0722 * linearize(blue)
+      );
+      const parseRgb = (value) => (
+        (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number)
+      );
+      return pairs.map(([foreground, background]) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--${foreground})`;
+        probe.style.backgroundColor = `var(--${background})`;
+        document.body.appendChild(probe);
+        const style = getComputedStyle(probe);
+        const foregroundRgb = parseRgb(style.color);
+        const backgroundRgb = parseRgb(style.backgroundColor);
+        probe.remove();
+        const foregroundLum = luminance(foregroundRgb);
+        const backgroundLum = luminance(backgroundRgb);
+        const ratio = (Math.max(foregroundLum, backgroundLum) + 0.05) /
+          (Math.min(foregroundLum, backgroundLum) + 0.05);
+        return { foreground, background, ratio };
+      });
+    }, CEP_CONTEXTUAL_CONTRAST_PAIRS);
+    for (const finding of findings) {
+      expect(finding.ratio, `${finding.foreground} on ${finding.background}`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 for (const surfaceName of ["cep", "uxp"]) {
   test(`${surfaceName} shows isolated worker health and restart control`, async ({
     page,
