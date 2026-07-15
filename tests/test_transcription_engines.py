@@ -40,6 +40,19 @@ def test_nemo_check_handles_missing_dependency():
     assert isinstance(check_nemo_asr_available(), bool)
 
 
+def test_nemo_engine_modules_accept_the_installed_import_namespace(monkeypatch):
+    from opencut.core import asr_canary, asr_parakeet
+
+    def import_probe(name):
+        return object() if name == "nemo" else None
+
+    monkeypatch.setattr(asr_canary, "_try_import", import_probe)
+    monkeypatch.setattr(asr_parakeet, "_try_import", import_probe)
+
+    assert asr_canary.check_nemo_toolkit_available() is True
+    assert asr_parakeet.check_nemo_toolkit_available() is True
+
+
 def test_parakeet_and_canary_have_model_catalog_entries():
     from opencut.core.model_manager import KNOWN_MODELS
 
