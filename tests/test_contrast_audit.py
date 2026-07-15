@@ -66,6 +66,22 @@ def test_contrast_audit_fails_low_contrast_fixture(tmp_path):
     assert finding["ratio"] < contrast_audit.AA_NORMAL_TEXT
 
 
+def test_contrast_audit_includes_explicit_light_theme_tokens(tmp_path):
+    css = tmp_path / "style.css"
+    css.write_text(
+        ":root { --fg: #ffffff; --bg: #111111; }\n"
+        "html.theme-light { --fg: #eeeeee; --bg: #ffffff; }\n",
+        encoding="utf-8",
+    )
+
+    report = contrast_audit.build_contrast_report((_target(css),), repo_root=tmp_path)
+
+    assert report["status"] == "fail"
+    assert report["summary"]["audited_pairs"] == 2
+    assert report["summary"]["failures"] == 1
+    assert report["findings"][1]["selector"] == "html.theme-light[1]"
+
+
 def test_default_cep_and_uxp_theme_tokens_pass_wcag_gate():
     report = contrast_audit.build_contrast_report()
 
@@ -73,6 +89,33 @@ def test_default_cep_and_uxp_theme_tokens_pass_wcag_gate():
     assert report["summary"]["targets"] == 2
     assert report["summary"]["audited_pairs"] >= 30
     assert report["summary"]["failures"] == 0
+
+
+def test_flagged_cep_control_colors_use_semantic_tokens():
+    css = (
+        REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "style.css"
+    ).read_text(encoding="utf-8")
+
+    for literal in (
+        "color: #f4c7bd",
+        "color: #fff5f2",
+        "color: #fff1ec",
+        "color: #f2d6a7",
+        "color: #fff8ee",
+        "color: #fff5e8",
+        "color: #ffe2d9",
+        "color: #fff8ed",
+        "accent-color: #d4b17a",
+    ):
+        assert literal not in css
+    for token in (
+        "--text-danger-control",
+        "--text-accent-control",
+        "--text-warning-control-hover",
+        "--text-action-hover",
+        "--text-on-danger-surface",
+    ):
+        assert css.count(token) >= 3
 
 
 def test_release_smoke_runs_contrast_audit_gate(monkeypatch):

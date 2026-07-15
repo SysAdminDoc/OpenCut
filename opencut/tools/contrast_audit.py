@@ -2,8 +2,9 @@
 
 The CEP and UXP panels are not browser-rendered during PR-fast, but their
 foreground/background design tokens are committed CSS and can be checked
-deterministically. This gate audits curated token pairs that represent normal
-panel text, secondary text, muted UI chrome, and accent-button foregrounds.
+deterministically. This gate audits both the base ``:root`` tokens and CEP's
+``html.theme-light`` overrides for normal text, muted UI chrome, contextual
+controls, on-color status surfaces, and accent-button foregrounds.
 
 Usage::
 
@@ -69,7 +70,7 @@ PANEL_PAIRS = (
     ContrastPair("text-primary", "bg-void", usage="CEP body text"),
     ContrastPair("text-primary", "bg-card", usage="CEP card text"),
     ContrastPair("text-secondary", "bg-card", usage="CEP secondary card text"),
-    ContrastPair("text-white", "neon-cyan-dark", usage="CEP primary button text"),
+    ContrastPair("text-on-primary", "neon-cyan-dark", usage="CEP primary button text"),
     ContrastPair("bg-void", "neon-cyan", usage="CEP accent button text"),
     ContrastPair("bg-void", "neon-green", usage="CEP success badge text"),
     ContrastPair("bg-void", "neon-orange", usage="CEP warning badge text"),
@@ -78,6 +79,29 @@ PANEL_PAIRS = (
         "bg-elevated",
         minimum_ratio=AA_LARGE_OR_NON_TEXT,
         usage="CEP muted metadata and non-primary UI chrome",
+    ),
+    ContrastPair("text-danger-control", "bg-card", usage="CEP danger control text"),
+    ContrastPair(
+        "text-danger-control-hover",
+        "bg-card",
+        usage="CEP danger control hover text",
+    ),
+    ContrastPair("text-accent-control", "bg-card", usage="CEP accent control text"),
+    ContrastPair(
+        "text-accent-control-hover",
+        "bg-card",
+        usage="CEP accent control hover text",
+    ),
+    ContrastPair(
+        "text-warning-control-hover",
+        "bg-card",
+        usage="CEP warning control hover text",
+    ),
+    ContrastPair("text-action-hover", "bg-card", usage="CEP action hover text"),
+    ContrastPair(
+        "text-on-danger-surface",
+        "danger-surface",
+        usage="CEP persistent server-error banner text",
     ),
 )
 
@@ -102,7 +126,10 @@ DEFAULT_TARGETS = (
     ),
 )
 
-ROOT_BLOCK_RE = re.compile(r"(?P<selector>:root)\s*\{", re.MULTILINE)
+TOKEN_BLOCK_RE = re.compile(
+    r"(?P<selector>:root|html\.theme-light)\s*\{",
+    re.MULTILINE,
+)
 TOKEN_RE = re.compile(r"--(?P<name>[\w-]+)\s*:\s*(?P<value>[^;]+);")
 HEX_RE = re.compile(r"#(?P<hex>[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b")
 RGB_RE = re.compile(
@@ -125,10 +152,11 @@ def _find_matching_brace(text: str, open_index: int) -> int:
 
 
 def parse_root_token_blocks(path: Path) -> List[TokenBlock]:
-    """Parse ``:root`` CSS custom-property blocks from a stylesheet."""
+    """Parse base and explicit light-theme CSS custom-property blocks."""
     text = path.read_text(encoding="utf-8", errors="replace")
     blocks: List[TokenBlock] = []
-    for index, match in enumerate(ROOT_BLOCK_RE.finditer(text), start=1):
+    selector_counts: Dict[str, int] = {}
+    for match in TOKEN_BLOCK_RE.finditer(text):
         close = _find_matching_brace(text, match.end() - 1)
         body = text[match.end():close]
         tokens: Dict[str, str] = {}
@@ -136,11 +164,13 @@ def parse_root_token_blocks(path: Path) -> List[TokenBlock]:
             tokens[token_match.group("name")] = token_match.group("value").strip()
         if not tokens:
             continue
+        selector = match.group("selector")
+        selector_counts[selector] = selector_counts.get(selector, 0) + 1
         line = text.count("\n", 0, match.start()) + 1
         blocks.append(
             TokenBlock(
                 path=path,
-                selector=f":root[{index}]",
+                selector=f"{selector}[{selector_counts[selector]}]",
                 line=line,
                 tokens=tokens,
             )
