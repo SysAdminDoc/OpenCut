@@ -238,7 +238,6 @@ def _register_builtin_engines(reg: EngineRegistry):
         check_crisper_whisper_available,
         check_deepface_available,
         check_demucs_available,
-        check_depth_anything_3_available,
         check_depth_available,
         check_diarization_available,
         check_edge_tts_available,
@@ -450,18 +449,6 @@ def _register_builtin_engines(reg: EngineRegistry):
     ))
 
     # --- Depth Estimation ---
-    reg.register(EngineInfo(
-        name="depth_anything_3",
-        domain="depth_estimation",
-        display_name="Depth Anything 3 (Small)",
-        description="Single-transformer SOTA monocular depth (Apache-2.0); default, falls back to V2",
-        check_fn=check_depth_anything_3_available,
-        priority=85,  # preferred over V2 (80) — DA2 retained as fallback
-        vram_mb=900,
-        speed_rating="medium",
-        quality_rating="high",
-        tags=["apache-2.0", "default"],
-    ))
     reg.register(EngineInfo(
         name="depth_anything_v2",
         domain="depth_estimation",

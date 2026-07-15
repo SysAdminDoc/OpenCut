@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "total": 68,
+  "total": 67,
   "cards": [
     {
       "check_name": "check_acestep_available",
@@ -224,22 +224,6 @@
       "privacy": "local-only",
       "latency": "~0.3x realtime on CPU; near-real on RTX 3060",
       "quality_notes": "Strong baseline; superseded by BS-RoFormer in newer benches.",
-      "requires_checkpoint_env": null,
-      "advisory_notes": [],
-      "license_waiver": ""
-    },
-    {
-      "check_name": "check_depth_anything_3_available",
-      "feature_id": "video.depth.da3",
-      "label": "Depth Anything 3 Small",
-      "category": "video",
-      "license": "Apache-2.0",
-      "upstream": "https://github.com/ByteDance-Seed/depth-anything-3",
-      "hardware": "gpu",
-      "install_hint": "pip install depth-anything-3==0.1.1  # optional Apache-2.0 backend",
-      "privacy": "local-only (model downloads only)",
-      "latency": "medium",
-      "quality_notes": "Preferred depth backend with Depth Anything V2 retained as fallback.",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
       "license_waiver": ""

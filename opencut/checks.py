@@ -180,20 +180,6 @@ def check_iclight_available() -> bool:
         return False
 
 
-def check_depth_anything_3_available() -> bool:
-    """Check if the Depth Anything 3 (Apache-2.0) depth stack is installed.
-
-    Re-exports the core module's own check so the depth routes and engine
-    registry share one import. Never raises.
-    """
-    try:
-        from opencut.core.depth_anything_3 import check_depth_anything_3_available as _c
-
-        return bool(_c())
-    except Exception:
-        return False
-
-
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None
