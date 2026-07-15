@@ -318,7 +318,7 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
           } else {
             await expect(
               activePanel
-                .locator("h1, h2, .oc-section-title, .oc-workspace-title")
+                .locator("h1:visible, h2:visible, .oc-section-title:visible, .oc-workspace-title:visible")
                 .first(),
             ).toBeVisible();
           }
@@ -512,6 +512,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   const uxpGeometry = await page.evaluate(() => {
     const rail = document.getElementById("tabNavShell")?.getBoundingClientRect();
     const tabs = getComputedStyle(document.getElementById("tabNav"));
+    const header = document.querySelector(".oc-header")?.getBoundingClientRect();
+    const commandBar = document.querySelector(".oc-workspace-actions")?.getBoundingClientRect();
     const groups = Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group"))
       .slice(0, 2)
       .map((group) => group.getBoundingClientRect());
@@ -519,11 +521,39 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       railWidth: rail?.width || 0,
       tabDirection: tabs.flexDirection,
       groupColumns: groups.length === 2 ? Math.abs(groups[0].left - groups[1].left) : 0,
+      commandBarInHeader: !!header && !!commandBar
+        && commandBar.top >= header.top
+        && commandBar.bottom <= header.bottom,
+      guideDisplay: getComputedStyle(document.getElementById("workspaceGuide")).display,
+      groupTitles: Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group > .oc-section-title"))
+        .slice(0, 4)
+        .map((title) => title.textContent?.trim()),
     };
   });
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.groupColumns).toBeGreaterThan(200);
+  expect(uxpGeometry.commandBarInHeader).toBe(true);
+  expect(uxpGeometry.guideDisplay).toBe("none");
+  expect(uxpGeometry.groupTitles).toEqual([
+    "Workspace",
+    "Engine Routing",
+    "Live Updates",
+    "Diagnostics",
+  ]);
+  await expect(page.locator("#workspaceChooseClipBtn")).toBeEnabled();
+  await expect(page.locator("#settingsWorkspaceBackendValue")).toHaveText("Offline");
+  await expect(page.locator("#settingsDiagnosticsBackendValue")).toHaveText("Offline");
+  await expect(page.locator("#settingsDiagnosticsEndpointValue")).toContainText("127.0.0.1");
+  await expect(page.locator("#settingsDiagnosticsLastCheckValue")).toHaveText("Just now");
+  await page.locator("#settingsDiagnosticsDetailsBtn").click();
+  await expect(page.locator("#connectionDetails")).toHaveAttribute("open", "");
+  await page.locator(".oc-tab[data-tab='cut']").click();
+  await page.locator("#clipPathCut").fill("C:/media/interview.mov");
+  await page.locator(".oc-tab[data-tab='settings']").click();
+  await expect(page.locator("#settingsWorkspaceSourceValue")).toHaveText("interview.mov");
+  await page.locator("#settingsWorkspaceSearchBtn").click();
+  await expect(page.locator(".oc-tab[data-tab='search']")).toHaveAttribute("aria-selected", "true");
   expect(uxp.pageErrors).toEqual([]);
 });
 

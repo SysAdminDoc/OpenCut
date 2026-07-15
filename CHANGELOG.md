@@ -15,6 +15,9 @@ record also lives in the git commit messages.
   group Settings into two-column operational cards, and collapse redundant
   active-shot context; 480-520px panels retain the discoverable horizontal
   navigator and keep the first recovery action above the fold.
+- UXP Settings now mirrors the command-center mockup with a compact top action
+  bar, card-integrated headings, Workspace/Engine and Live Updates/Diagnostics
+  rows, and live source, backend, endpoint, engine, and health-check state.
 - The image-generated visual target is preserved at
   `extension/design/opencut-command-center-mockup.png`. Headless visual
   baselines cover every CEP/UXP workspace and explicit geometry tests guard

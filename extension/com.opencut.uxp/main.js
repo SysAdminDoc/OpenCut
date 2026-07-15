@@ -140,7 +140,7 @@ const WORKSPACE_META   = {
     titleKey: "uxp.tabs.settings",
     title: "Settings",
     subtitleKey: "uxp.workspace.settings_subtitle",
-    subtitle: "Tune engine routing, realtime connections, and shared defaults across the studio.",
+    subtitle: "Tune engine routing, realtime connections, and shared defaults.",
     sourceIds: [],
   },
 };
@@ -3443,6 +3443,11 @@ function handleWorkspaceAction(action) {
     focusControl("applyTimelineCutsBtn");
     return;
   }
+  if (action === "open-settings") {
+    UIController.switchTab("settings");
+    document.getElementById("settingsWorkspaceChooseBtn")?.focus();
+    return;
+  }
   if (action === "refresh-backend") {
     document.getElementById("refreshBtn")?.click();
     return;
@@ -3509,6 +3514,66 @@ function setWorkspaceClip(pathValue, options = {}) {
   }
   _syncingWorkspaceClip = false;
   updateWorkspaceOverview(options.tabId);
+}
+
+function setCommandCenterStateValue(id, text, state = "") {
+  const value = document.getElementById(id);
+  if (!value) return;
+  value.textContent = text;
+  value.title = text;
+  if (state) {
+    value.dataset.state = state;
+    value.closest(".oc-command-state-row")?.setAttribute("data-state", state);
+  }
+}
+
+function syncCommandCenterSettings({ connectionChecked = false } = {}) {
+  const activeTab = getWorkspaceTabId();
+  const sourcePath = getWorkspaceSource(activeTab);
+  const clipCount = Array.isArray(_projectClips) ? _projectClips.length : 0;
+  const connectionState = document.getElementById("connectionStatus")?.dataset.state || "disconnected";
+  const backendOnline = connectionState === "connected";
+  const backendLabel = t(CONNECTION_LABEL_KEYS[connectionState] || "conn.offline", "Offline");
+  const libraryLabel = (clipCount === 1
+    ? t("uxp.workspace.library_clip_count_one", "{count} clip")
+    : t("uxp.workspace.library_clip_count_many", "{count} clips")
+  ).replace("{count}", String(clipCount));
+  const engineCoverage = document.getElementById("settingsEngineCoverageValue");
+  const engineStatus = document.getElementById("settingsEngineStatus")?.dataset.state || "neutral";
+
+  setCommandCenterStateValue(
+    "settingsWorkspaceSourceValue",
+    formatWorkspaceSource(sourcePath),
+    sourcePath ? "ready" : "empty"
+  );
+  setCommandCenterStateValue(
+    "settingsWorkspaceLibraryValue",
+    libraryLabel,
+    clipCount ? "ready" : "empty"
+  );
+  setCommandCenterStateValue(
+    "settingsWorkspaceBackendValue",
+    backendLabel,
+    backendOnline ? "online" : connectionState
+  );
+  setCommandCenterStateValue(
+    "settingsDiagnosticsBackendValue",
+    backendLabel,
+    backendOnline ? "online" : connectionState
+  );
+  setCommandCenterStateValue("settingsDiagnosticsEndpointValue", BACKEND || "—", "neutral");
+  setCommandCenterStateValue(
+    "settingsDiagnosticsEngineValue",
+    engineCoverage?.textContent?.trim() || t("uxp.settings.loading", "Loading..."),
+    engineStatus
+  );
+  if (connectionChecked) {
+    setCommandCenterStateValue(
+      "settingsDiagnosticsLastCheckValue",
+      t("uxp.settings.checked_just_now", "Just now"),
+      backendOnline ? "online" : "warning"
+    );
+  }
 }
 
 function updateWorkspaceOverview(tabId) {
@@ -3592,6 +3657,7 @@ function updateWorkspaceOverview(tabId) {
   updateTimelineReadiness();
   updateDeliverablesSummary();
   syncSearchPanelState();
+  syncCommandCenterSettings();
 }
 
 function getDeliverablesOutputSummary() {
@@ -6089,7 +6155,7 @@ async function checkConnection({ rescan = false, background = false } = {}) {
   // Toggle all action buttons based on connection state
   if (wasAlive !== alive) {
     _lastConnectionState = alive;
-    document.querySelectorAll(".oc-btn-primary").forEach(btn => {
+    document.querySelectorAll(".oc-btn-primary:not([data-offline-enabled='true'])").forEach(btn => {
       // Don't override buttons already disabled for other reasons (loading state)
       if (!btn.classList.contains("loading")) {
         btn.disabled = !alive;
@@ -6113,6 +6179,7 @@ async function checkConnection({ rescan = false, background = false } = {}) {
   }
 
   updateWorkspaceOverview();
+  syncCommandCenterSettings({ connectionChecked: true });
   return alive;
 }
 
@@ -6288,8 +6355,16 @@ function bindEvents() {
     });
   });
   document.getElementById("workspaceChooseClipBtn")?.addEventListener("click", () => handleWorkspaceAction("choose-clip"));
-  document.getElementById("workspaceSearchBtn")?.addEventListener("click", () => handleWorkspaceAction("open-search"));
-  document.getElementById("workspaceTimelineBtn")?.addEventListener("click", () => handleWorkspaceAction("open-timeline"));
+  document.querySelectorAll("[data-workspace-command]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      handleWorkspaceAction(event.currentTarget?.dataset?.workspaceCommand || "");
+    });
+  });
+  document.getElementById("settingsDiagnosticsDetailsBtn")?.addEventListener("click", () => {
+    const details = document.getElementById("connectionDetails");
+    if (details) details.open = true;
+    document.getElementById("connectionStatus")?.focus();
+  });
   document.getElementById("workspaceGuideAction")?.addEventListener("click", (event) => {
     handleWorkspaceAction(event.currentTarget?.dataset?.action || "");
   });
@@ -7010,6 +7085,7 @@ async function uxpLoadEngines() {
         <div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.settings.engine_data_unavailable", "Engine data unavailable"))}</div>
         <p>${UIController.escapeHtml(t("uxp.settings.engine_data_unavailable_hint", "OpenCut could not load engine availability right now. Refresh the backend and try again."))}</p>
       </div>`;
+    syncCommandCenterSettings();
     return;
   }
 
@@ -7168,6 +7244,7 @@ async function uxpLoadEngines() {
       "ready"
     );
   }
+  syncCommandCenterSettings();
 
   grid.querySelectorAll(".oc-engine-sel").forEach(sel => {
     sel.addEventListener("change", async () => {

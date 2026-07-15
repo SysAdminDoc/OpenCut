@@ -121,9 +121,9 @@
           <h1 class="oc-workspace-title" id="workspaceOverviewTitle" data-i18n="uxp.workspace.cut_title">Cut &amp; Clean</h1>
           <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle" data-i18n="uxp.workspace.cut_subtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
           <div class="oc-workspace-actions" role="group" aria-label="Workspace actions" data-i18n-aria-label="uxp.workspace.shortcuts">
-            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn" data-i18n="uxp.workspace.choose_media">Choose Media</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSearchBtn" data-i18n="uxp.workspace.search_library">Search Library</button>
-            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceTimelineBtn" data-i18n="uxp.workspace.timeline_tools">Timeline Tools</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn" data-offline-enabled="true" data-i18n="uxp.workspace.choose_media">Choose Media</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceRefreshBtn" data-workspace-command="refresh-backend" data-i18n="common.refresh">Refresh</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSettingsBtn" data-workspace-command="open-settings" data-i18n="uxp.tabs.settings">Settings</button>
           </div>
         </div>
         <div class="oc-workspace-meta" role="list" aria-label="Current workspace context" data-i18n-aria-label="uxp.workspace.current_context">
@@ -1530,7 +1530,33 @@
       <!-- ==================== SETTINGS TAB ==================== -->
       <div class="oc-tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tabBtnSettings">
 
-        <section class="oc-settings-group">
+        <section class="oc-settings-group oc-settings-group--workspace">
+        <div class="oc-section-title" data-i18n="uxp.settings.workspace">Workspace</div>
+        <div class="oc-card oc-command-card">
+          <p class="oc-hint" data-i18n="uxp.settings.workspace_hint">Confirm the active shot, library, and backend before moving into a focused editing tool.</p>
+          <div class="oc-command-state-list" role="list" aria-label="Current workspace context" data-i18n-aria-label="uxp.workspace.current_context">
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.workspace.label_source">Active Shot</span>
+              <strong class="oc-command-state-value" id="settingsWorkspaceSourceValue" data-i18n="uxp.workspace.no_source_selected">No source selected</strong>
+            </div>
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.workspace.label_library">Media Library</span>
+              <strong class="oc-command-state-value" id="settingsWorkspaceLibraryValue" data-i18n="uxp.workspace.library_zero">0 clips</strong>
+            </div>
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.workspace.label_backend">Backend</span>
+              <strong class="oc-command-state-value" id="settingsWorkspaceBackendValue" data-state="offline" data-i18n="conn.offline">Offline</strong>
+            </div>
+          </div>
+          <div class="oc-btn-row oc-command-card-actions">
+            <button type="button" class="oc-btn oc-btn-primary" id="settingsWorkspaceChooseBtn" data-offline-enabled="true" data-workspace-command="choose-clip" data-i18n="uxp.workspace.choose_media">Choose Media</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="settingsWorkspaceSearchBtn" data-workspace-command="open-search" data-i18n="uxp.workspace.search_library">Search Library</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="settingsWorkspaceTimelineBtn" data-workspace-command="open-timeline" data-i18n="uxp.workspace.timeline_tools">Timeline Tools</button>
+          </div>
+        </div>
+        </section>
+
+        <section class="oc-settings-group oc-settings-group--engines">
         <div class="oc-section-title" data-i18n="uxp.settings.engine_routing">Engine Routing</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.engine_routing_hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
@@ -1559,8 +1585,8 @@
         </div>
         </section>
 
-        <section class="oc-settings-group">
-        <div class="oc-section-title" data-i18n="uxp.settings.live_updates_bridge">Live Updates Bridge</div>
+        <section class="oc-settings-group oc-settings-group--live-updates">
+        <div class="oc-section-title" title="Live Updates Bridge" data-i18n="uxp.settings.live_updates" data-i18n-title="uxp.settings.live_updates_bridge">Live Updates</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.live_updates_bridge_hint">Keep progress, completion, and cancel feedback flowing into the panel while longer jobs run.</p>
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Live updates bridge summary" data-i18n-aria-label="uxp.settings.live_updates_bridge_summary">
@@ -1583,6 +1609,32 @@
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStopBtn" data-i18n="uxp.settings.stop_bridge">Stop Bridge</button>
             <button type="button" class="oc-btn oc-btn-primary" id="uxpWsConnectBtn" data-i18n="uxp.settings.connect_live_updates">Connect Live Updates</button>
           </div>
+        </div>
+        </section>
+
+        <section class="oc-settings-group oc-settings-group--diagnostics">
+        <div class="oc-section-title" data-i18n="uxp.settings.diagnostics">Diagnostics</div>
+        <div class="oc-card oc-command-card">
+          <p class="oc-hint" data-i18n="uxp.settings.diagnostics_hint">Check the local services that power processing before troubleshooting an editing workflow.</p>
+          <div class="oc-command-state-list" role="list" aria-label="Backend connection details" data-i18n-aria-label="uxp.status.connection_details">
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.workspace.label_backend">Backend</span>
+              <strong class="oc-command-state-value" id="settingsDiagnosticsBackendValue" data-state="offline" data-i18n="conn.offline">Offline</strong>
+            </div>
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.settings.api_endpoint">API Endpoint</span>
+              <strong class="oc-command-state-value oc-command-state-value--code" id="settingsDiagnosticsEndpointValue">http://127.0.0.1:8420</strong>
+            </div>
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.settings.engine_availability">Engine Availability</span>
+              <strong class="oc-command-state-value" id="settingsDiagnosticsEngineValue" data-i18n="uxp.settings.loading">Loading...</strong>
+            </div>
+            <div class="oc-command-state-row" role="listitem">
+              <span class="oc-label" data-i18n="uxp.settings.last_check">Last Check</span>
+              <strong class="oc-command-state-value" id="settingsDiagnosticsLastCheckValue" data-i18n="uxp.settings.not_checked_yet">Not checked yet</strong>
+            </div>
+          </div>
+          <button type="button" class="oc-btn oc-btn-secondary" id="settingsDiagnosticsDetailsBtn" data-i18n="uxp.settings.show_connection_details">Show Connection Details</button>
         </div>
         </section>
 
