@@ -256,6 +256,14 @@ OpenCut v1.33.1 includes **1,548 shipped API routes** (implemented or dependency
 | Transcript Editor | Edit segments in-panel with undo/redo and search | Built-in |
 | YouTube Chapters | LLM-powered topic change detection for chapter timestamps | Ollama / OpenAI / Anthropic |
 | SRT to Native Captions | Import any SRT file as a native Premiere Pro caption track | ExtendScript |
+| Caption XML Interchange | EBU-TT, TTML, legacy IMSC1, and validated IMSC 1.3 with multilingual/RTL/vertical round trips | W3C TTML / IMSC |
+
+Caption XML profiles are explicit: `/delivery/caption/ttml` accepts `ttml`,
+legacy `imsc1` (the compatibility default), or `imsc1.3`; Subtitle Pro uses
+`imsc1_3` for the 1.3 profile. Unknown profiles, invalid timing, unresolved
+style/region references, unsafe XML, and unrepresentable text now fail with a
+migration error instead of writing a document that claims unsupported
+conformance.
 
 ### Audio Processing
 
@@ -692,7 +700,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,400+ estimated tests across 285 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,400+ estimated tests across 286 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -753,7 +761,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,400+ estimated tests, 285 root test files)
+tests/               # pytest test suite (11,400+ estimated tests, 286 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

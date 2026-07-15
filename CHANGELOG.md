@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Improved - Validate canonical caption XML interchange
+
+- EBU-TT, TTML, legacy IMSC1, and IMSC 1.3 now share one canonical caption
+  model, atomic serializer, safe importer, and structural/profile validator.
+- IMSC 1.3 exports use the 2026-05-21 W3C profile designator and preserve UTF-8
+  text, language, timing, named regions/styles, RTL direction, and vertical
+  writing through export/import round trips.
+- Caption preflight can validate a requested XML profile before export. The
+  conformance corpus rejects malformed/unsafe XML, invalid timing and layout,
+  duplicate IDs, and unresolved style or region references while legacy
+  `imsc1` callers retain an explicit compatibility profile.
+
 ### Improved - Keep constrained UXP workspaces oriented
 
 - The compact UXP shell keeps each workspace title, current state, and first

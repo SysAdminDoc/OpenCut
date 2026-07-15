@@ -11,9 +11,14 @@ against the relevant specification.
 
 import logging
 import os
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
+
+from opencut.core.caption_interchange import (
+    ConformanceReport,
+    document_from_items,
+    export_caption_document,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -45,7 +50,12 @@ SUPPORTED_FORMATS = {
         "max_lines": 2,
     },
     "imsc1": {
-        "description": "IMSC1 (Internet Media Subtitles and Captions)",
+        "description": "IMSC1 legacy text profile (Internet Media Subtitles and Captions)",
+        "max_chars_per_line": 42,
+        "max_lines": 2,
+    },
+    "imsc1_3": {
+        "description": "IMSC 1.3 Text Profile (W3C Recommendation 2026-05-21)",
         "max_chars_per_line": 42,
         "max_lines": 2,
     },
@@ -69,6 +79,10 @@ class CaptionSegment:
     column: int = 0
     style: str = ""
     channel: int = 1
+    region: str = ""
+    language: str = ""
+    writing_mode: str = ""
+    direction: str = ""
 
 
 @dataclass
@@ -221,6 +235,57 @@ def _validate_segments(
                 f"({seg.start} >= {seg.end})"
             )
     return errors
+
+
+def _export_xml_segments(
+    segments: List[CaptionSegment],
+    output_path: str,
+    *,
+    profile: str,
+    lang: str,
+    max_chars: int,
+    max_lines: int,
+    on_progress: Optional[Callable],
+) -> ConformanceReport:
+    items = []
+    for index, segment in enumerate(segments, start=1):
+        text = "\n".join(_truncate_lines(segment.text, max_chars, max_lines))
+        region = segment.region or ("top" if segment.row <= 4 else "bottom")
+        items.append(
+            {
+                "id": f"caption{segment.index or index}",
+                "start": segment.start,
+                "end": segment.end,
+                "text": text,
+                "region": region,
+                "style": segment.style if segment.style in {"italic", "bold"} else "default",
+                "language": segment.language,
+                "writing_mode": segment.writing_mode,
+                "direction": segment.direction,
+            }
+        )
+    document = document_from_items(items, language=lang)
+    if profile == "ebu_tt":
+        document.styles["default"].properties.update(
+            {
+                "fontFamily": "monospaceSansSerif",
+                "fontSize": "80%",
+                "backgroundColor": "black",
+            }
+        )
+    if on_progress:
+        on_progress(75)
+    report = export_caption_document(document, output_path, profile=profile)
+    if on_progress:
+        on_progress(100)
+    return report
+
+
+def _report_messages(report: ConformanceReport) -> tuple[List[str], List[str]]:
+    return (
+        [issue.message for issue in report.errors],
+        [issue.message for issue in report.warnings],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -412,75 +477,18 @@ def export_ebu_tt(
 ) -> CaptionExportResult:
     """Export to EBU-TT (XML format for European broadcasting)."""
     fmt = SUPPORTED_FORMATS["ebu_tt"]
-    max_chars = fmt["max_chars_per_line"]
-    max_lines_limit = fmt["max_lines"]
     errors = _validate_segments(segments, fmt)
-    warnings: List[str] = []
-
-    ns = "http://www.w3.org/ns/ttml"
-    ns_ttp = "http://www.w3.org/ns/ttml#parameter"
-    ns_tts = "http://www.w3.org/ns/ttml#styling"
-    ns_ebuttm = "urn:ebu:tt:metadata"
-
-    root = ET.Element("tt")
-    root.set("xmlns", ns)
-    root.set("xmlns:ttp", ns_ttp)
-    root.set("xmlns:tts", ns_tts)
-    root.set("xmlns:ebuttm", ns_ebuttm)
-    root.set("xml:lang", lang)
-    root.set("ttp:timeBase", "media")
-
-    # Head with styling
-    head = ET.SubElement(root, "head")
-    styling = ET.SubElement(head, "styling")
-    style = ET.SubElement(styling, "style")
-    style.set("xml:id", "defaultStyle")
-    style.set("tts:fontFamily", "monospaceSansSerif")
-    style.set("tts:fontSize", "80%")
-    style.set("tts:color", "white")
-    style.set("tts:backgroundColor", "black")
-    style.set("tts:textAlign", "center")
-
-    layout = ET.SubElement(head, "layout")
-    region = ET.SubElement(layout, "region")
-    region.set("xml:id", "bottom")
-    region.set("tts:origin", "10% 80%")
-    region.set("tts:extent", "80% 20%")
-    region.set("tts:displayAlign", "after")
-
-    # Metadata
-    metadata = ET.SubElement(head, "metadata")
-    doc_meta = ET.SubElement(metadata, "ebuttm:documentMetadata")
-    ET.SubElement(doc_meta, "ebuttm:documentEbuttVersion").text = "v1.0"
-
-    # Body
-    body = ET.SubElement(root, "body")
-    div = ET.SubElement(body, "div")
-    div.set("style", "defaultStyle")
-
-    for i, seg in enumerate(segments):
-        text_lines = _truncate_lines(seg.text, max_chars, max_lines_limit)
-        p = ET.SubElement(div, "p")
-        p.set("xml:id", f"sub{seg.index}")
-        p.set("begin", _seconds_to_ttml(seg.start))
-        p.set("end", _seconds_to_ttml(seg.end))
-        p.set("region", "bottom")
-        for j, tl in enumerate(text_lines):
-            if j > 0:
-                ET.SubElement(p, "br")
-            span = ET.SubElement(p, "span")
-            span.text = tl
-
-        if on_progress:
-            on_progress(int(((i + 1) / len(segments)) * 90))
-
-    tree = ET.ElementTree(root)
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    ET.indent(tree, space="  ")
-    tree.write(output_path, encoding="utf-8", xml_declaration=True)
-
-    if on_progress:
-        on_progress(100)
+    report = _export_xml_segments(
+        segments,
+        output_path,
+        profile="ebu_tt",
+        lang=lang,
+        max_chars=fmt["max_chars_per_line"],
+        max_lines=fmt["max_lines"],
+        on_progress=on_progress,
+    )
+    conformance_errors, warnings = _report_messages(report)
+    errors.extend(conformance_errors)
 
     return CaptionExportResult(
         output_path=output_path,
@@ -502,65 +510,18 @@ def export_ttml(
 ) -> CaptionExportResult:
     """Export to W3C TTML (Timed Text Markup Language)."""
     fmt = SUPPORTED_FORMATS["ttml"]
-    max_chars = fmt["max_chars_per_line"]
-    max_lines_limit = fmt["max_lines"]
     errors = _validate_segments(segments, fmt)
-    warnings: List[str] = []
-
-    ns = "http://www.w3.org/ns/ttml"
-    ns_ttp = "http://www.w3.org/ns/ttml#parameter"
-    ns_tts = "http://www.w3.org/ns/ttml#styling"
-
-    root = ET.Element("tt")
-    root.set("xmlns", ns)
-    root.set("xmlns:ttp", ns_ttp)
-    root.set("xmlns:tts", ns_tts)
-    root.set("xml:lang", lang)
-    root.set("ttp:timeBase", "media")
-
-    head = ET.SubElement(root, "head")
-    styling = ET.SubElement(head, "styling")
-    style = ET.SubElement(styling, "style")
-    style.set("xml:id", "default")
-    style.set("tts:fontFamily", "sansSerif")
-    style.set("tts:fontSize", "100%")
-    style.set("tts:color", "white")
-    style.set("tts:textAlign", "center")
-
-    layout = ET.SubElement(head, "layout")
-    region = ET.SubElement(layout, "region")
-    region.set("xml:id", "bottom")
-    region.set("tts:origin", "10% 80%")
-    region.set("tts:extent", "80% 20%")
-    region.set("tts:displayAlign", "after")
-
-    body = ET.SubElement(root, "body")
-    div = ET.SubElement(body, "div")
-
-    for i, seg in enumerate(segments):
-        text_lines = _truncate_lines(seg.text, max_chars, max_lines_limit)
-        p = ET.SubElement(div, "p")
-        p.set("xml:id", f"caption{seg.index}")
-        p.set("begin", _seconds_to_ttml(seg.start))
-        p.set("end", _seconds_to_ttml(seg.end))
-        p.set("region", "bottom")
-        p.set("style", "default")
-        for j, tl in enumerate(text_lines):
-            if j > 0:
-                ET.SubElement(p, "br")
-            span = ET.SubElement(p, "span")
-            span.text = tl
-
-        if on_progress:
-            on_progress(int(((i + 1) / len(segments)) * 90))
-
-    tree = ET.ElementTree(root)
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    ET.indent(tree, space="  ")
-    tree.write(output_path, encoding="utf-8", xml_declaration=True)
-
-    if on_progress:
-        on_progress(100)
+    report = _export_xml_segments(
+        segments,
+        output_path,
+        profile="ttml",
+        lang=lang,
+        max_chars=fmt["max_chars_per_line"],
+        max_lines=fmt["max_lines"],
+        on_progress=on_progress,
+    )
+    conformance_errors, warnings = _report_messages(report)
+    errors.extend(conformance_errors)
 
     return CaptionExportResult(
         output_path=output_path,
@@ -580,81 +541,54 @@ def export_imsc1(
     lang: str = "en",
     on_progress: Optional[Callable] = None,
 ) -> CaptionExportResult:
-    """Export to IMSC1 (subset of TTML for streaming).
-
-    IMSC1 constrains TTML to a profile suitable for internet streaming,
-    with specific restrictions on styling and layout.
-    """
+    """Export to the explicit legacy IMSC1 text profile."""
     fmt = SUPPORTED_FORMATS["imsc1"]
-    max_chars = fmt["max_chars_per_line"]
-    max_lines_limit = fmt["max_lines"]
     errors = _validate_segments(segments, fmt)
-    warnings: List[str] = []
-
-    ns = "http://www.w3.org/ns/ttml"
-    ns_ttp = "http://www.w3.org/ns/ttml#parameter"
-    ns_tts = "http://www.w3.org/ns/ttml#styling"
-    ns_ittp = "http://www.w3.org/ns/ttml/profile/imsc1#parameter"
-
-    root = ET.Element("tt")
-    root.set("xmlns", ns)
-    root.set("xmlns:ttp", ns_ttp)
-    root.set("xmlns:tts", ns_tts)
-    root.set("xmlns:ittp", ns_ittp)
-    root.set("xml:lang", lang)
-    root.set("ttp:timeBase", "media")
-    root.set("ttp:cellResolution", "32 15")
-    root.set("ittp:aspectRatio", "16 9")
-
-    head = ET.SubElement(root, "head")
-
-    # IMSC1 profile declaration
-    styling = ET.SubElement(head, "styling")
-    style = ET.SubElement(styling, "style")
-    style.set("xml:id", "default")
-    style.set("tts:fontFamily", "proportionalSansSerif")
-    style.set("tts:fontSize", "100%")
-    style.set("tts:color", "white")
-    style.set("tts:backgroundColor", "rgba(0,0,0,0.8)")
-    style.set("tts:textAlign", "center")
-
-    layout = ET.SubElement(head, "layout")
-    region = ET.SubElement(layout, "region")
-    region.set("xml:id", "bottom")
-    region.set("tts:origin", "10% 80%")
-    region.set("tts:extent", "80% 20%")
-    region.set("tts:displayAlign", "after")
-
-    body = ET.SubElement(root, "body")
-    div = ET.SubElement(body, "div")
-
-    for i, seg in enumerate(segments):
-        text_lines = _truncate_lines(seg.text, max_chars, max_lines_limit)
-        p = ET.SubElement(div, "p")
-        p.set("begin", _seconds_to_ttml(seg.start))
-        p.set("end", _seconds_to_ttml(seg.end))
-        p.set("region", "bottom")
-        p.set("style", "default")
-        for j, tl in enumerate(text_lines):
-            if j > 0:
-                ET.SubElement(p, "br")
-            span = ET.SubElement(p, "span")
-            span.text = tl
-
-        if on_progress:
-            on_progress(int(((i + 1) / len(segments)) * 90))
-
-    tree = ET.ElementTree(root)
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    ET.indent(tree, space="  ")
-    tree.write(output_path, encoding="utf-8", xml_declaration=True)
-
-    if on_progress:
-        on_progress(100)
+    report = _export_xml_segments(
+        segments,
+        output_path,
+        profile="imsc1",
+        lang=lang,
+        max_chars=fmt["max_chars_per_line"],
+        max_lines=fmt["max_lines"],
+        on_progress=on_progress,
+    )
+    conformance_errors, warnings = _report_messages(report)
+    errors.extend(conformance_errors)
 
     return CaptionExportResult(
         output_path=output_path,
         format="imsc1",
+        segments_exported=len(segments),
+        validation_errors=errors,
+        warnings=warnings,
+    )
+
+
+def export_imsc13(
+    segments: List[CaptionSegment],
+    output_path: str,
+    lang: str = "en",
+    on_progress: Optional[Callable] = None,
+) -> CaptionExportResult:
+    """Export to the W3C IMSC 1.3 Text Profile."""
+
+    fmt = SUPPORTED_FORMATS["imsc1_3"]
+    errors = _validate_segments(segments, fmt)
+    report = _export_xml_segments(
+        segments,
+        output_path,
+        profile="imsc1.3",
+        lang=lang,
+        max_chars=fmt["max_chars_per_line"],
+        max_lines=fmt["max_lines"],
+        on_progress=on_progress,
+    )
+    conformance_errors, warnings = _report_messages(report)
+    errors.extend(conformance_errors)
+    return CaptionExportResult(
+        output_path=output_path,
+        format="imsc1_3",
         segments_exported=len(segments),
         validation_errors=errors,
         warnings=warnings,
@@ -743,7 +677,8 @@ def export_broadcast(
     Args:
         segments: Caption segments to export.
         output_path: Output file path.
-        fmt: Format name (cea608, cea708, ebu_tt, ttml, imsc1, webvtt_pos).
+        fmt: Format name (cea608, cea708, ebu_tt, ttml, imsc1,
+            imsc1_3, webvtt_pos).
         lang: Language code for XML formats.
         service_channel: Service channel for CEA-708.
         on_progress: Progress callback.
@@ -766,6 +701,7 @@ def export_broadcast(
         "ebu_tt": lambda: export_ebu_tt(segments, output_path, lang, on_progress),
         "ttml": lambda: export_ttml(segments, output_path, lang, on_progress),
         "imsc1": lambda: export_imsc1(segments, output_path, lang, on_progress),
+        "imsc1_3": lambda: export_imsc13(segments, output_path, lang, on_progress),
         "webvtt_pos": lambda: export_webvtt_positioned(
             segments, output_path, on_progress,
         ),
@@ -796,7 +732,13 @@ def segments_from_dicts(dicts: List[Dict]) -> List[CaptionSegment]:
             end=float(d.get("end", 0)),
             text=str(d.get("text", "")),
             row=int(d.get("row", 15)),
+            column=int(d.get("column", 0)),
+            style=str(d.get("style", "")),
             channel=int(d.get("channel", 1)),
+            region=str(d.get("region", "")),
+            language=str(d.get("language", "")),
+            writing_mode=str(d.get("writing_mode", d.get("writingMode", ""))),
+            direction=str(d.get("direction", "")),
         ))
     return result
 
