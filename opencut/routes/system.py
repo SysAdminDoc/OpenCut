@@ -2970,7 +2970,7 @@ def auth_info():
 
     The actual token is **never** included in this response. Operators use
     ``opencut-server --print-auth`` to retrieve it from their OS credential
-    vault. The JSON path contains only non-secret issuance metadata.
+    vault. Secret-file deployments never expose their configured path.
     """
     try:
         from opencut import auth as _auth
@@ -2984,9 +2984,9 @@ def auth_info():
                 "token_issued": token is not None,
                 "token_issued_at": token.issued_at if token else None,
                 "token_label": token.label if token else None,
-                "token_file": str(_auth.AUTH_FILE),
-                "metadata_file": str(_auth.AUTH_FILE),
-                "credential_storage": "os_vault",
+                "token_file": None if _auth.using_token_file() else str(_auth.AUTH_FILE),
+                "metadata_file": None if _auth.using_token_file() else str(_auth.AUTH_FILE),
+                "credential_storage": _auth.credential_storage(),
                 "header": _auth.AUTH_HEADER,
             }
         )
@@ -3007,9 +3007,13 @@ def auth_rotate():
                 "ok": True,
                 "issued_at": token.issued_at,
                 "label": token.label,
-                "token_file": str(_auth.AUTH_FILE),
-                "credential_storage": "os_vault",
-                "note": "Token rotated in the OS vault; reveal it with opencut-server --print-auth.",
+                "token_file": None if _auth.using_token_file() else str(_auth.AUTH_FILE),
+                "credential_storage": _auth.credential_storage(),
+                "note": (
+                    "Token rotated in the configured secret file; its value is not returned."
+                    if _auth.using_token_file()
+                    else "Token rotated in the OS vault; reveal it with opencut-server --print-auth."
+                ),
             }
         )
     except Exception as exc:

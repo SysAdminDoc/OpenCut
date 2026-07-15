@@ -119,10 +119,14 @@ COPY . /app
 # commits and fails the image build if the resolved binary is ever downgraded.
 RUN python scripts/verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg
 
-# Create non-root user and data directories
-RUN groupadd -r opencut && useradd -r -g opencut -d /home/opencut -m opencut \
-    && mkdir -p /home/opencut/.opencut/packages /home/opencut/.opencut/models /home/opencut/.opencut/plugins \
+# Create a stable non-root identity and a private runtime-secret directory.
+# The fixed IDs make Compose secret ownership deterministic across hosts.
+RUN groupadd --gid 10001 opencut && useradd --uid 10001 --gid 10001 -d /home/opencut -m opencut \
+    && mkdir -p /home/opencut/.opencut/packages /home/opencut/.opencut/models /home/opencut/.opencut/plugins /run/opencut-secrets \
+    && chmod 0700 /run/opencut-secrets \
     && chown -R opencut:opencut /home/opencut /app
+RUN chown opencut:opencut /run/opencut-secrets \
+    && chmod 0755 /app/scripts/docker-entrypoint.sh
 
 # Expose the HTTP API. WebSocket and MCP sidecars are not published by default.
 EXPOSE 5679
@@ -142,6 +146,7 @@ ENV HOME=/home/opencut
 # Run as non-root
 USER opencut
 
-# Entrypoint
-ENTRYPOINT ["python", "-m", "opencut.server"]
-CMD ["--host", "0.0.0.0", "--port", "5679"]
+# Entrypoint validates and normalizes a mounted Compose secret without ever
+# copying its value into an environment variable or image layer.
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
+CMD ["python", "-m", "opencut.server", "--host", "0.0.0.0", "--port", "5679"]

@@ -49,6 +49,39 @@ def test_docker_remote_bind_explicitly_opts_into_auth_gate():
     assert re.search(r"opencut-server-gpu:\s+.*?OPENCUT_ALLOW_REMOTE=1", compose, re.S)
 
 
+def test_every_remote_compose_profile_mounts_the_required_secret_file():
+    compose = _read("docker-compose.yml")
+
+    assert "file: ${OPENCUT_REMOTE_AUTH_TOKEN_FILE:?" in compose
+    assert "OPENCUT_ALLOW_INSECURE_SECRET_STORAGE" not in compose
+    for service in ["opencut-server", "opencut-server-gpu", "opencut-mcp"]:
+        block = compose.split(f"  {service}:", maxsplit=1)[1]
+        block = re.split(r"\n  [a-zA-Z][\w-]*:", block, maxsplit=1)[0]
+        assert "- opencut_remote_auth_token" in block
+        assert "OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token" in block
+
+
+def test_container_entrypoint_normalizes_secret_without_exporting_value():
+    dockerfile = _read("Dockerfile")
+    entrypoint = _read("scripts/docker-entrypoint.sh")
+
+    assert 'ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]' in dockerfile
+    assert "USER opencut" in dockerfile
+    assert "chmod 0400" in entrypoint
+    assert '[ -L "$source_path" ]' in entrypoint
+    assert 'export OPENCUT_REMOTE_AUTH_TOKEN_FILE="$runtime_path"' in entrypoint
+    assert "export OPENCUT_REMOTE_AUTH_TOKEN=" not in entrypoint
+
+
+def test_mcp_compose_profile_uses_supported_http_arguments_and_backend_url():
+    compose = _read("docker-compose.yml")
+    mcp_block = compose.split("  opencut-mcp:", maxsplit=1)[1].split("\nvolumes:", maxsplit=1)[0]
+
+    assert '"--http", "--http-bind", "0.0.0.0", "--http-port", "5681"' in mcp_block
+    assert "OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679" in mcp_block
+    assert 'entrypoint: ["python", "-m", "opencut.mcp_server"]' not in mcp_block
+
+
 def test_documented_compose_override_files_exist():
     docs = "\n".join(_read(path) for path in ["README.md", "Dockerfile"])
     referenced = set(re.findall(r"docker compose -f\s+([^\s]+)", docs))

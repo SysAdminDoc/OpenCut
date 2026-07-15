@@ -1,4 +1,5 @@
 import re
+from types import SimpleNamespace
 
 from opencut import mcp_server
 
@@ -123,6 +124,49 @@ def test_mcp_http_auth_accepts_header_or_query_token(monkeypatch):
         "/tools",
         auth_required=False,
     )
+
+
+def test_remote_backend_requests_read_and_forward_current_secret(monkeypatch):
+    captured = []
+    values = iter(["a" * 64, "b" * 64])
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    monkeypatch.setattr(mcp_server, "BACKEND_URL", "http://opencut-server:5679")
+    monkeypatch.setattr(mcp_server, "_csrf_is_fresh", lambda: True)
+    monkeypatch.setattr(
+        mcp_server._auth,
+        "current_token",
+        lambda: SimpleNamespace(token=next(values)),
+    )
+    monkeypatch.setattr(
+        mcp_server.urllib.request,
+        "urlopen",
+        lambda request, timeout: captured.append(request) or Response(),
+    )
+
+    assert mcp_server._api("GET", "/system/feature-state") == {"ok": True}
+    assert mcp_server._api("GET", "/system/feature-state") == {"ok": True}
+    assert captured[0].get_header("X-opencut-auth") == "a" * 64
+    assert captured[1].get_header("X-opencut-auth") == "b" * 64
+
+
+def test_mcp_backend_url_honors_container_service_environment(monkeypatch):
+    monkeypatch.setenv("OPENCUT_MCP_BACKEND_URL", "http://opencut-server:5679/")
+    monkeypatch.setattr(mcp_server.sys, "argv", ["opencut-mcp-server"])
+    monkeypatch.setattr(mcp_server, "run_mcp_stdio", lambda: None)
+
+    mcp_server.main()
+
+    assert mcp_server.BACKEND_URL == "http://opencut-server:5679"
 
 
 def test_f195_simple_tools_dispatch_to_backend(monkeypatch):

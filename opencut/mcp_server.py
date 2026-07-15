@@ -66,6 +66,26 @@ def _refresh_csrf():
         logger.warning("CSRF refresh failed: %s", exc)
 
 
+def _backend_requires_auth() -> bool:
+    parsed = urllib.parse.urlsplit(BACKEND_URL)
+    host = (parsed.hostname or "").strip().lower()
+    if host == "localhost":
+        return False
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True
+
+
+def _apply_backend_auth(headers: dict[str, str]) -> None:
+    """Attach the current secret without caching it across file rotations."""
+    if not _backend_requires_auth():
+        return
+    token = _auth.current_token()
+    if token is not None:
+        headers[_auth.AUTH_HEADER] = token.token
+
+
 def _api(method, path, data=None):
     """Call the OpenCut Flask backend."""
     global _csrf_token
@@ -77,6 +97,7 @@ def _api(method, path, data=None):
     headers = {"Content-Type": "application/json"}
     if _csrf_token:
         headers["X-OpenCut-Token"] = _csrf_token
+    _apply_backend_auth(headers)
 
     body = json.dumps(data).encode() if data else None
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
@@ -89,6 +110,7 @@ def _api(method, path, data=None):
         if e.code == 403 and _csrf_token:
             _refresh_csrf()
             headers["X-OpenCut-Token"] = _csrf_token
+            _apply_backend_auth(headers)
             req2 = urllib.request.Request(url, data=body, headers=headers, method=method)
             try:
                 with urllib.request.urlopen(req2, timeout=120) as resp2:
@@ -1865,9 +1887,13 @@ def main() -> None:
         stream=sys.stderr,
     )
 
-    # Override global backend URL from --port
+    # An explicit service URL lets the containerized sidecar reach the backend;
+    # --port remains the ergonomic local default.
     global BACKEND_URL
-    BACKEND_URL = f"http://127.0.0.1:{args.port}"
+    BACKEND_URL = (
+        os.environ.get("OPENCUT_MCP_BACKEND_URL", "").strip().rstrip("/")
+        or f"http://127.0.0.1:{args.port}"
+    )
     if args.extended_tools:
         os.environ[mcp_extended_tools.EXTENDED_MCP_ENV] = "1"
 

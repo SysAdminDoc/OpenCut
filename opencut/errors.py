@@ -191,6 +191,8 @@ def safe_error(exc, context=""):
     if getattr(exc, "code", "") in {
         "CREDENTIAL_STORE_UNAVAILABLE",
         "CREDENTIAL_STORE_WRITE_FAILED",
+        "REMOTE_AUTH_TOKEN_FILE_INVALID",
+        "REMOTE_AUTH_TOKEN_FILE_READ_ONLY",
     }:
         return error_response(
             getattr(exc, "code"),

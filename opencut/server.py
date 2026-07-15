@@ -684,11 +684,7 @@ def _install_remote_auth_middleware(app, error_response):
             "AUTH_REQUIRED",
             "Missing or invalid X-OpenCut-Auth token",
             status=401,
-            suggestion=(
-                "OPENCUT_ALLOW_REMOTE=1 is enabled. Reveal the OS-vault token "
-                "with `opencut-server --print-auth` or rotate it with "
-                "`opencut-server --rotate-auth`."
-            ),
+            suggestion=_auth.auth_recovery_suggestion(),
         )
 
 
@@ -867,12 +863,12 @@ def main():
         parser.add_argument(
             "--rotate-auth",
             action="store_true",
-            help="Rotate the OS-vault API token and exit",
+            help="Rotate the writable API-token backend and exit",
         )
         parser.add_argument(
             "--print-auth",
             action="store_true",
-            help="Print the persisted API token (creating one on first call) and exit",
+            help="Print the OS-vault API token (secret-file values are never echoed)",
         )
         args = parser.parse_args()
 
@@ -881,9 +877,15 @@ def main():
 
             token = _auth.rotate_token() if args.rotate_auth else _auth.ensure_token()
             print("")
-            print(f"  OpenCut API token: {token.token}")
-            print("  Stored in:         OS credential vault")
-            print(f"  Metadata:          {_auth.AUTH_FILE}")
+            if _auth.using_token_file():
+                action = "rotated" if args.rotate_auth else "validated"
+                print(f"  OpenCut API token: {action}; value intentionally not displayed")
+                print("  Stored in:         externally managed secret file")
+                print("  Rotation:          replace the external secret and restart if read-only")
+            else:
+                print(f"  OpenCut API token: {token.token}")
+                print("  Stored in:         OS credential vault")
+                print(f"  Metadata:          {_auth.AUTH_FILE}")
             print(f"  Header to use:     {_auth.AUTH_HEADER}")
             print("  This token is only required for non-loopback requests when")
             print("  OPENCUT_ALLOW_REMOTE=1 is set.")
@@ -912,15 +914,19 @@ def main():
                 except Exception as _auth_exc:  # noqa: BLE001
                     print("")
                     print(f"  ERROR: could not initialise auth token: {_auth_exc}")
-                    print("  Configure the OS credential vault or explicitly enable")
-                    print("  OPENCUT_ALLOW_INSECURE_SECRET_STORAGE=1, then retry.")
+                    print("  Configure a secure OS credential vault or mount a locked-down")
+                    print("  token file through OPENCUT_REMOTE_AUTH_TOKEN_FILE, then retry.")
                     return 2
                 print("")
                 print(f"  WARNING: Binding OpenCut to non-loopback host {args.host}.")
                 print("  Non-loopback requests must carry X-OpenCut-Auth.")
                 if issued is not None:
-                    print("  Reveal with: opencut-server --print-auth")
-                    print("  Rotate with: opencut-server --rotate-auth")
+                    if _auth.using_token_file():
+                        print("  Token source: externally managed secret file (value not displayed)")
+                        print("  Rotate read-only mounts by replacing the secret and recreating the service.")
+                    else:
+                        print("  Reveal with: opencut-server --print-auth")
+                        print("  Rotate with: opencut-server --rotate-auth")
             run_server(host=args.host, port=args.port, debug=args.debug)
             return 0
     except Exception as _fatal:
