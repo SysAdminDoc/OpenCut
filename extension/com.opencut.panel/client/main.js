@@ -611,6 +611,9 @@
             }
 
             if (e.key === 'Escape') {
+                // Only swallow Escape when this dropdown is actually open; otherwise
+                // let it propagate to outer surfaces (e.g. recent-clips menu).
+                if (!isOpen) return;
                 e.preventDefault();
                 e.stopPropagation();
                 closeDropdown({ restoreFocus: true });
@@ -3417,6 +3420,7 @@
         var shell;
         var previousButton;
         var nextButton;
+        var focusFallback;
         if (!container) return;
         maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
         canScrollLeft = container.scrollLeft > 6;
@@ -3433,10 +3437,27 @@
             shell.classList.toggle("has-overflow", maxScrollLeft > 1);
             if (previousButton) {
                 previousButton.hidden = maxScrollLeft <= 1;
+                // Disabling the focused button would drop keyboard focus to <body>.
+                if (!canScrollLeft && document.activeElement === previousButton) {
+                    focusFallback = (nextButton && canScrollRight)
+                        ? nextButton
+                        : (container.querySelector(".sub-tab.active") || container.querySelector(".sub-tab"));
+                    if (focusFallback) {
+                        try { focusFallback.focus(); } catch (e) {}
+                    }
+                }
                 previousButton.disabled = !canScrollLeft;
             }
             if (nextButton) {
                 nextButton.hidden = maxScrollLeft <= 1;
+                if (!canScrollRight && document.activeElement === nextButton) {
+                    focusFallback = (previousButton && canScrollLeft)
+                        ? previousButton
+                        : (container.querySelector(".sub-tab.active") || container.querySelector(".sub-tab"));
+                    if (focusFallback) {
+                        try { focusFallback.focus(); } catch (e) {}
+                    }
+                }
                 nextButton.disabled = !canScrollRight;
             }
         }
@@ -5964,8 +5985,16 @@
         var checkboxes = document.querySelectorAll(".plugin-install-approval-checkbox");
         for (var c = 0; c < checkboxes.length; c++) {
             checkboxes[c].addEventListener("change", function () {
-                var button = document.querySelector('.plugin-install-btn[data-plugin-id="' + this.getAttribute("data-plugin-id") + '"]');
-                if (button) button.disabled = !this.checked;
+                // Iterate instead of building a selector: plugin ids containing
+                // quotes/backslashes would make querySelector throw.
+                var targetId = this.getAttribute("data-plugin-id");
+                if (!targetId) return;
+                var installButtons = document.querySelectorAll(".plugin-install-btn");
+                for (var bi = 0; bi < installButtons.length; bi++) {
+                    if (installButtons[bi].getAttribute("data-plugin-id") === targetId) {
+                        installButtons[bi].disabled = !this.checked;
+                    }
+                }
             });
         }
         var buttons = document.querySelectorAll(".plugin-install-btn");
@@ -12138,7 +12167,7 @@
         function closeContextMenu(restoreFocus) {
             el.contextMenu.classList.add("hidden");
             if (restoreFocus && returnFocusTarget) {
-                try { returnFocusTarget.focus(); } catch {}
+                try { returnFocusTarget.focus(); } catch (e) {}
             }
         }
 

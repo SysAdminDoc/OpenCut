@@ -451,6 +451,12 @@ textarea,
     transform: none;
 }
 
+/* Light theme paints .btn-primary text white; hover needs a dark-enough blue for 4.5:1. */
+html.theme-light .btn-primary:hover:not(:disabled) {
+    border-color: #3a5cbe;
+    background: #3a5cbe;
+}
+
 .btn-secondary,
 .btn-outline,
 .btn-ghost,
@@ -897,7 +903,7 @@ html body.has-clip .workspace-stage-actions {
     overflow: hidden;
     border: 1px solid var(--cc-border);
     border-radius: 8px;
-    background: color-mix(in srgb, var(--cc-sidebar) 94%, transparent);
+    background: var(--cc-sidebar);
     box-shadow: none;
 }
 
@@ -954,6 +960,10 @@ html body.has-clip .workspace-stage-actions {
     border-bottom-color: var(--cc-border-strong);
     background: rgba(255, 255, 255, 0.035);
     color: var(--cc-text);
+}
+
+html.theme-light .sub-tab:hover {
+    background: rgba(24, 33, 50, 0.06);
 }
 
 .sub-tab.active {
@@ -1024,9 +1034,9 @@ select:hover,
 
 .custom-dropdown.open .custom-dropdown-trigger,
 .custom-dropdown-trigger:focus-visible {
-    border-color: color-mix(in srgb, var(--cc-accent) 62%, transparent);
+    border-color: var(--cc-accent);
     background: var(--cc-control);
-    outline: 2px solid var(--cc-accent-soft);
+    outline: 2px solid var(--cc-accent);
     outline-offset: 1px;
     box-shadow: none;
 }
@@ -1063,7 +1073,7 @@ select:hover,
 .custom-dropdown-item:hover,
 .custom-dropdown-item.focused {
     padding-left: 34px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--cc-accent-soft);
     color: var(--cc-text);
 }
 
