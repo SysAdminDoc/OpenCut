@@ -3,6 +3,93 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.34.0] — 2026-07-17 — Deep audit: honest readiness, host-safe panels, hardened installers
+
+### Fixed - Stop advertising unimplemented AI engines and routes as ready
+
+- Engines whose adapter is still a terminal `NotImplementedError` stub (Parakeet,
+  Canary, SeedVR2, LatentSync, Sortformer, IC-Light, ...) stay listed as
+  coming-soon but never report available or resolve as the active engine — the
+  transcription domain no longer selects a stub over working Faster-Whisper.
+- `FeatureRecord` adapters can be listed together so `captions.nemo-asr` no
+  longer masks Canary's stub behind Parakeet; readiness now re-probes
+  dependency-gated features so they flip to available the moment their optional
+  dependency is installed, without waiting for a regenerated artifact.
+- The route-manifest classifier marks a handler as a stub only when it calls a
+  terminal-stub core entrypoint *without* a fallback; 21 genuine Wave Q/R/S
+  stub routes (parakeet, canary, mochi, seedvr2, iclight, ...) now report
+  honestly, while defensively-guarded routes like `/video/ai/upscale`
+  (SeedVR2 → Real-ESRGAN fallback) stay implemented. Advertised route count
+  corrected to 1,527.
+- Parakeet/Canary `/info` endpoints report their real stub status instead of
+  `available: true` with a fabricated latency.
+
+### Fixed - Caption interchange, CineFocus, and long renders
+
+- IMSC/TTML export validates `ttp:frameRate`: integer rates pass through,
+  NTSC-family fractional rates (29.97, 59.94, ...) emit an integer rate plus
+  `ttp:frameRateMultiplier="1000 1001"`, and unrepresentable rates are rejected
+  as conformance errors; `/delivery/caption/ttml` clamps caller-supplied rates.
+- CineFocus fails loudly when its video writer or frame writer cannot open
+  (previously produced a silently empty file reported as success), forces an
+  MP4 container for the mp4v codec, and cleans up the GPU on the preview path.
+- `/video/cinefocus` runs as a cancellable background job with progress instead
+  of blocking a request worker on a full-video neural depth render.
+
+### Security - Trust anchors, header-only auth, rebinding parity
+
+- C2PA sidecar verification supports a pinned trust anchor
+  (`OPENCUT_C2PA_TRUSTED_PUBKEYS`, auto-derived from the local signing key);
+  a re-signed sidecar no longer passes as authentic, and the result carries an
+  explicit `key_trust` field. `/video/c2pa/read` reports a distinct `valid`
+  flag from c2patool's validation state rather than conflating "credential
+  found" with "credential valid".
+- Auth tokens are accepted only via the `X-OpenCut-Auth` header; the `?auth=`
+  query-string fallback (which leaks into logs, history, and `Referer`) is
+  removed from the Flask middleware and MCP HTTP server.
+- Remote-node control-plane requests go through the guarded opener with
+  connect-time re-resolution, closing the DNS-rebinding asymmetry with the
+  download path. MCP array path parameters get the same control-character and
+  reserved-device checks as scalar paths.
+
+### Fixed - Host-safe CEP/UXP panels
+
+- Removed the single optional-catch-binding that parse-crashed the entire CEP
+  panel on CEP 9 (Premiere 2019) hosts, and dropped `color-mix()` — unsupported
+  in every CEP Chromium — which had left the sticky sub-tab rail transparent and
+  the dropdown focus ring invisible.
+- Light-theme fixes: readable primary-button hover, visible dropdown item
+  hover/keyboard-focus highlight, and sub-tab hover state. Escape on a closed
+  dropdown trigger no longer swallows the event; plugin-install button lookups
+  no longer throw on quoted ids; sub-tab scroll buttons hand off focus before
+  disabling.
+- UXP toast headings, dismiss label, and processing fallback are localized with
+  CEP-aligned vocabulary (en + es parity); backend-offline and job locks no
+  longer clobber each other's disabled state; the diagnostics card shows the
+  real default endpoint.
+
+### Fixed - Installers fail honestly and stop corrupting PATH
+
+- `install.py` writes PlayerDebugMode to the real `CSXS.<n>` integer registry
+  keys — the previous `.0`-suffixed keys were never read by Premiere, so
+  python-installed CEP panels silently failed to load.
+- `Install.ps1` pip and validation steps now set a non-zero exit code and print
+  MISSING/FAILED instead of unconditional success. `OpenCut.iss` writes PATH as
+  `REG_EXPAND_SZ` and matches full `;`-delimited segments (preserving `%VAR%`
+  entries and sibling directories), and broadcasts `WM_SETTINGCHANGE` instead of
+  leaving a stray environment variable. The Dockerfile's documented run command
+  mounts the required auth-token file instead of crash-looping.
+- `requirements-lock.txt` regains the missing core pins (`rich`,
+  `python-json-logger`) and drops dev-only tools; `release_smoke --strict`
+  fails when critical gate steps silently self-skip.
+
+### Fixed - Test reliability
+
+- Thread-local SQLite caches (footage index, journal, pipeline health) discard
+  and reopen a stale connection when the database path changes or the handle is
+  closed — the root cause of order-dependent search-route test failures that
+  passed only in isolation.
+
 ## [Unreleased]
 
 ### Improved - Rebuild CEP and UXP as an editorial command center
