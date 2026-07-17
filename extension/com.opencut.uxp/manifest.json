@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "com.opencut.uxp",
   "name": "OpenCut UXP",
-  "version": "1.33.1",
+  "version": "1.34.0",
   "main": "index.html",
   "host": [
     {
