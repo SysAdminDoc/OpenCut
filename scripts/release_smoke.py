@@ -1294,8 +1294,20 @@ def run_release_smoke(
     return results
 
 
-def overall_status(results: List[StepResult]) -> str:
+# Steps whose silent self-skip (missing tool/module) can mask a real release
+# gate. Under ``--strict`` a skip of any of these fails the run instead of
+# letting the matrix report "ok" without ever exercising them.
+CRITICAL_STEP_NAMES = frozenset({"ruff", "pip-audit", "panel-unit", "panel-rendered"})
+
+
+def skipped_critical_steps(results: List[StepResult]) -> List[str]:
+    return [r.name for r in results if r.status == "skipped" and r.name in CRITICAL_STEP_NAMES]
+
+
+def overall_status(results: List[StepResult], *, strict: bool = False) -> str:
     if any(r.status == "fail" for r in results):
+        return "fail"
+    if strict and skipped_critical_steps(results):
         return "fail"
     if not results:
         return "skipped"
@@ -1320,6 +1332,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=[],
         help="extra args appended to the pytest-fast invocation",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "fail the run when a critical step ("
+            + ", ".join(sorted(CRITICAL_STEP_NAMES))
+            + ") self-skips because its tool is missing, instead of reporting ok"
+        ),
+    )
     parser.add_argument("--list", action="store_true", help="list available steps and exit")
     args = parser.parse_args(argv)
 
@@ -1329,10 +1350,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     results = run_release_smoke(args, only=args.only or None, skip=args.skip or None)
-    status = overall_status(results)
+    strict = getattr(args, "strict", False)
+    status = overall_status(results, strict=strict)
+    skipped_critical = skipped_critical_steps(results)
 
     if args.json:
-        payload = {"status": status, "steps": [asdict(r) for r in results]}
+        payload = {
+            "status": status,
+            "strict": strict,
+            "skipped_critical_steps": skipped_critical,
+            "steps": [asdict(r) for r in results],
+        }
         json.dump(payload, sys.stdout, indent=2)
         sys.stdout.write("\n")
     else:
@@ -1341,6 +1369,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             if r.status == "fail" and r.stderr_tail:
                 for line in r.stderr_tail.splitlines():
                     print(f"        {line}")
+        if skipped_critical:
+            severity = "FAIL (--strict)" if strict else "WARNING"
+            print(
+                f"\n{severity}: critical steps skipped without running: "
+                + ", ".join(skipped_critical)
+            )
         print(f"\nresult: {status.upper()}")
 
     return 0 if status != "fail" else 1

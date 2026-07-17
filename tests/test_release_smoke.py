@@ -249,6 +249,61 @@ def test_overall_status_handles_mixed_results():
     assert module.overall_status([]) == "skipped"
 
 
+def test_overall_status_strict_fails_on_skipped_critical_steps():
+    module = load_module()
+    make = module.StepResult
+    results = [make("a", "ok"), make("ruff", "skipped", skipped_reason="ruff missing")]
+
+    # Default behavior unchanged: skips never fail the run.
+    assert module.overall_status(results) == "ok"
+    # Strict mode: a skipped critical step is a failure.
+    assert module.overall_status(results, strict=True) == "fail"
+    # Strict mode with non-critical skips only: still ok.
+    assert module.overall_status([make("a", "ok"), make("b", "skipped")], strict=True) == "ok"
+    assert module.skipped_critical_steps(results) == ["ruff"]
+
+
+def test_critical_step_names_exist_in_step_matrix():
+    module = load_module()
+    step_names = {step.name for step in module.STEPS}
+    assert module.CRITICAL_STEP_NAMES <= step_names
+
+
+def test_main_json_lists_skipped_critical_steps_and_strict_fails(monkeypatch, capsys):
+    module = load_module()
+
+    def _skipping_runner(_args):
+        return module.StepResult("pip-audit", "skipped", skipped_reason="pip-audit missing")
+
+    def _ok_runner(_args):
+        return module.StepResult("noop", "ok", message="fine")
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [
+            module.StepDefinition("noop", _ok_runner),
+            module.StepDefinition("pip-audit", _skipping_runner),
+        ],
+    )
+
+    # Default: skip is prominent in JSON but does not fail the run.
+    rc = module.main(["--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["status"] == "ok"
+    assert payload["strict"] is False
+    assert payload["skipped_critical_steps"] == ["pip-audit"]
+
+    # Strict: the same skip fails the run.
+    rc = module.main(["--json", "--strict"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert payload["status"] == "fail"
+    assert payload["strict"] is True
+    assert payload["skipped_critical_steps"] == ["pip-audit"]
+
+
 def test_run_release_smoke_honours_only_filter(monkeypatch):
     module = load_module()
     sentinel: List[str] = []

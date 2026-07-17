@@ -146,7 +146,11 @@ def enable_unsigned_extensions_windows():
     """Set PlayerDebugMode registry key for unsigned CEP extensions."""
     try:
         import winreg
-        versions = ["11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.0"]
+        # Adobe CEP reads HKCU\Software\Adobe\CSXS.<integer> (e.g. CSXS.11) —
+        # dotted keys like "CSXS.11.0" are never consulted and the unsigned
+        # panel silently fails to load. Cover CSXS 7 (CC 2014) through 18
+        # (PPro 2025+), mirroring Install.ps1 and OpenCut.iss.
+        versions = [str(v) for v in range(7, 19)]
         key_base = r"SOFTWARE\Adobe\CSXS"
         count = 0
         for ver in versions:
