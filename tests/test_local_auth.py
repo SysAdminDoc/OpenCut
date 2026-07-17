@@ -89,22 +89,28 @@ def test_request_requires_auth_disabled_without_remote_opt_in(isolated_auth, mon
     assert isolated_auth.request_requires_auth_token("192.168.1.5") is False
 
 
-def test_extract_request_token_prefers_header(isolated_auth):
+def test_extract_request_token_reads_header(isolated_auth):
     class HeadersStub:
         def get(self, key, default=None):
             return {"X-OpenCut-Auth": "from-header"}.get(key, default)
 
-    token = isolated_auth.extract_request_token(HeadersStub(), {"auth": "from-query"})
+    token = isolated_auth.extract_request_token(HeadersStub())
     assert token == "from-header"
 
 
-def test_extract_request_token_falls_back_to_query(isolated_auth):
+def test_extract_request_token_has_no_query_fallback(isolated_auth):
+    """``?auth=`` was removed: query tokens leak into logs/history/Referer."""
+    import inspect
+
     class HeadersStub:
         def get(self, key, default=None):
             return default
 
-    token = isolated_auth.extract_request_token(HeadersStub(), {"auth": "from-query"})
-    assert token == "from-query"
+    token = isolated_auth.extract_request_token(HeadersStub())
+    assert token == ""
+    # Guard against the fallback quietly returning via a new signature.
+    params = inspect.signature(isolated_auth.extract_request_token).parameters
+    assert list(params) == ["headers"]
 
 
 # ----- HTTP middleware behaviour ---------------------------------------
@@ -142,6 +148,13 @@ def test_remote_request_requires_token(monkeypatch, tmp_path, client):
         environ_overrides={"REMOTE_ADDR": "192.168.1.5"},
     )
     assert resp.status_code == 200
+
+    # A valid token in the query string must NOT authorize (log-leak vector).
+    resp = client.get(
+        f"/system/feature-state?auth={token.token}",
+        environ_overrides={"REMOTE_ADDR": "192.168.1.5"},
+    )
+    assert resp.status_code == 401
 
 
 def test_health_remains_exempt_for_remote_clients(monkeypatch, tmp_path, client):

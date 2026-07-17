@@ -138,19 +138,14 @@ def _mcp_http_bind_requires_auth(bind: str) -> bool:
         return True
 
 
-def _mcp_http_request_token(headers, path: str) -> str:
-    token = _auth.extract_request_token(headers)
-    if token:
-        return token
-    query = urllib.parse.parse_qs(urllib.parse.urlsplit(path).query)
-    values = query.get("auth") or []
-    return values[0].strip() if values else ""
-
-
-def _mcp_http_request_is_authorized(headers, path: str, *, auth_required: bool) -> bool:
+def _mcp_http_request_is_authorized(headers, *, auth_required: bool) -> bool:
+    # Tokens are accepted from the X-OpenCut-Auth header only. A ?auth=
+    # query fallback used to exist but leaked tokens into access logs and
+    # history; MCP HTTP clients are plain JSON-RPC callers (no SSE), so
+    # they can always set headers.
     if not auth_required:
         return True
-    return _auth.is_token_valid(_mcp_http_request_token(headers, path))
+    return _auth.is_token_valid(_auth.extract_request_token(headers))
 
 
 # ---------------------------------------------------------------------------
@@ -1486,12 +1481,15 @@ def _validate_mcp_path_arguments(arguments, *, prefix=""):
             continue
         label = _mcp_path_key(prefix, key)
         for i, item in enumerate(arguments[key]):
-            if not isinstance(item, str) or not item or "\x00" in item \
-                    or item.startswith("\\\\") or item.startswith("//"):
-                return f"Invalid path in {label}[{i}]: empty, null byte, or UNC path detected"
-            parts = item.replace("\\", "/").split("/")
-            if ".." in parts:
-                return f"Invalid path in {label}[{i}]: path traversal component detected"
+            # Route each item through the scalar validator so arrays get the
+            # same control-character and reserved-device-name checks as
+            # scalar filepath arguments (not just null-byte/UNC/traversal).
+            if not _validate_mcp_filepath({key: item}, key, allow_empty=False):
+                return (
+                    f"Invalid path in {label}[{i}]: empty, path traversal, "
+                    "null byte, control character, UNC path, or reserved "
+                    "device name detected"
+                )
 
     for key in _NESTED_MCP_PATH_CONTAINERS:
         value = arguments.get(key)
@@ -1745,7 +1743,6 @@ def run_http_server(
         def _authorize(self) -> bool:
             if _mcp_http_request_is_authorized(
                 self.headers,
-                self.path,
                 auth_required=auth_required,
             ):
                 return True
@@ -1814,8 +1811,8 @@ def run_http_server(
     print(f"OpenCut MCP HTTP server on http://{bind}:{port}", file=sys.stderr)
     if auth_required:
         print(
-            "  Non-loopback bind: requests must include X-OpenCut-Auth "
-            "or ?auth= with the token shown by opencut-server --print-auth.",
+            "  Non-loopback bind: requests must include the X-OpenCut-Auth "
+            "header with the token shown by opencut-server --print-auth.",
             file=sys.stderr,
         )
     print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)

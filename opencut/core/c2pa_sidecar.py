@@ -11,6 +11,7 @@ remain readable for compatibility.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
 import mimetypes
@@ -195,8 +196,100 @@ def _try_sign(manifest_bytes: bytes) -> Optional[dict]:
         return None
 
 
-def _verify_signature(sig: dict, canonical: bytes, warnings: List[str]) -> tuple[bool, bool]:
-    """Return ``(hash_match, signature_valid)`` for sidecar signature metadata."""
+def _iter_pem_public_key_blocks(text: str) -> List[str]:
+    """Extract every ``-----BEGIN PUBLIC KEY-----`` block from *text*."""
+    begin_marker = "-----BEGIN PUBLIC KEY-----"
+    end_marker = "-----END PUBLIC KEY-----"
+    blocks: List[str] = []
+    cursor = 0
+    while True:
+        begin = text.find(begin_marker, cursor)
+        if begin < 0:
+            break
+        end = text.find(end_marker, begin)
+        if end < 0:
+            break
+        end += len(end_marker)
+        blocks.append(text[begin:end])
+        cursor = end
+    return blocks
+
+
+def _load_trusted_public_keys() -> Optional[List[bytes]]:
+    """Return raw Ed25519 public keys pinned as the sidecar trust anchor.
+
+    ``OPENCUT_C2PA_TRUSTED_PUBKEYS`` may be a path to a PEM file or one or
+    more literal ``PUBLIC KEY`` PEM blocks. When it is unset but
+    ``OPENCUT_C2PA_SIGNING_KEY`` is configured, the local signing key's
+    public half becomes the default trust anchor, so sidecars produced by
+    this install verify as ``pinned`` out of the box.
+
+    Returns ``None`` when no trust anchor is configured (verification is
+    then self-asserted), or a possibly-empty list when one is configured
+    (an empty list fails closed: no embedded key can match).
+    """
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,
+            Ed25519PublicKey,
+        )
+        from cryptography.hazmat.primitives.serialization import (
+            Encoding,
+            PublicFormat,
+            load_pem_private_key,
+            load_pem_public_key,
+        )
+    except Exception:  # pragma: no cover - cryptography absent
+        return None
+
+    raw = os.environ.get("OPENCUT_C2PA_TRUSTED_PUBKEYS", "").strip()
+    if raw:
+        candidate = Path(raw)
+        text = raw
+        if candidate.exists():
+            try:
+                text = candidate.read_text(encoding="utf-8")
+            except OSError as exc:
+                logger.warning(
+                    "c2pa_sidecar: cannot read trusted-key file %s: %s", candidate, exc
+                )
+                return []  # configured but unreadable: fail closed
+        keys: List[bytes] = []
+        for block in _iter_pem_public_key_blocks(text):
+            try:
+                pub = load_pem_public_key(block.encode("utf-8"))
+            except Exception as exc:
+                logger.warning("c2pa_sidecar: skipping unparseable trusted key: %s", exc)
+                continue
+            if isinstance(pub, Ed25519PublicKey):
+                keys.append(pub.public_bytes(Encoding.Raw, PublicFormat.Raw))
+            else:
+                logger.warning("c2pa_sidecar: skipping non-Ed25519 trusted key")
+        return keys
+
+    # No explicit anchor: derive one from the local signing key when present.
+    signing_key = _load_signing_key()
+    if signing_key:
+        try:
+            priv = load_pem_private_key(signing_key, password=None)
+            if isinstance(priv, Ed25519PrivateKey):
+                return [
+                    priv.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+                ]
+        except Exception:  # pragma: no cover - malformed signing key
+            pass
+    return None
+
+
+def _verify_signature(sig: dict, canonical: bytes, warnings: List[str]) -> tuple[bool, bool, str]:
+    """Return ``(hash_match, signature_valid, key_trust)`` for sidecar signature metadata.
+
+    ``key_trust`` is ``"pinned"`` when the embedded public key matches an
+    operator trust anchor, ``"untrusted"`` when an anchor is configured but
+    the key does not match it, and ``"self_asserted"`` when no anchor exists
+    (the signature then proves internal consistency only — anyone can re-sign
+    an edited manifest with their own key).
+    """
     signed_hash = str(sig.get("signed_bytes_sha256") or "")
     current_hash = hashlib.sha256(canonical).hexdigest()
     hash_match = signed_hash == current_hash
@@ -208,23 +301,48 @@ def _verify_signature(sig: dict, canonical: bytes, warnings: List[str]) -> tuple
     value = str(sig.get("value") or "")
     if not public_key_pem:
         warnings.append("signature public key is missing")
-        return hash_match, False
+        return hash_match, False, ""
     if not value:
         warnings.append("signature value is missing")
-        return hash_match, False
+        return hash_match, False, ""
+    key_trust = ""
     try:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        from cryptography.hazmat.primitives.serialization import load_pem_public_key
+        from cryptography.hazmat.primitives.serialization import (
+            Encoding,
+            PublicFormat,
+            load_pem_public_key,
+        )
 
         pub = load_pem_public_key(public_key_pem.encode("utf-8"))
         if not isinstance(pub, Ed25519PublicKey):
             warnings.append("signature public key is not Ed25519")
-            return hash_match, False
+            return hash_match, False, ""
+
+        trusted = _load_trusted_public_keys()
+        if trusted is None:
+            key_trust = "self_asserted"
+            warnings.append(
+                "signature key is self-asserted (no OPENCUT_C2PA_TRUSTED_PUBKEYS "
+                "or OPENCUT_C2PA_SIGNING_KEY trust anchor); the signature proves "
+                "internal consistency, not authenticity"
+            )
+        else:
+            raw_pub = pub.public_bytes(Encoding.Raw, PublicFormat.Raw)
+            if any(hmac.compare_digest(raw_pub, anchor) for anchor in trusted):
+                key_trust = "pinned"
+            else:
+                key_trust = "untrusted"
+                warnings.append(
+                    "signature public key does not match any pinned trust anchor - "
+                    "the manifest may have been re-signed by another party"
+                )
+
         pub.verify(bytes.fromhex(value), canonical)
         signature_valid = True
     except Exception as exc:
         warnings.append(f"signature verification failed: {exc}")
-    return hash_match, signature_valid
+    return hash_match, signature_valid, key_trust
 
 
 def _canonical_manifest(manifest: dict) -> bytes:
@@ -658,13 +776,21 @@ def verify_sidecar(sidecar_path: str) -> dict:
     signature_match = False
     signature_hash_match = False
     signature_valid = False
+    key_trust = ""
     if sig:
         # Reconstruct the canonical bytes the way build_sidecar wrote them.
         # We must drop the signature field before hashing.
         rebuilt = {k: v for k, v in manifest.items() if k != "signature"}
         canonical = _canonical_manifest(rebuilt)
-        signature_hash_match, signature_valid = _verify_signature(sig, canonical, warnings)
-        signature_match = signature_hash_match and signature_valid
+        signature_hash_match, signature_valid, key_trust = _verify_signature(
+            sig, canonical, warnings
+        )
+        # A cryptographically valid signature from a key outside the operator
+        # trust anchor must not report as a match: an attacker can always
+        # re-sign an edited manifest with their own key.
+        signature_match = (
+            signature_hash_match and signature_valid and key_trust != "untrusted"
+        )
     else:
         warnings.append("manifest is unsigned (operator did not configure OPENCUT_C2PA_SIGNING_KEY)")
 
@@ -682,6 +808,8 @@ def verify_sidecar(sidecar_path: str) -> dict:
             warnings.append(credential_warning)
     if not asset_found:
         status = "missing_asset"
+    elif sig and signature_hash_match and signature_valid and key_trust == "untrusted":
+        status = "untrusted_signature"
     elif sig and not signature_match:
         status = "tampered_manifest"
     elif not asset_match:
@@ -702,6 +830,7 @@ def verify_sidecar(sidecar_path: str) -> dict:
         "signature_hash_match": bool(signature_hash_match),
         "signature_valid": bool(signature_valid),
         "signature_match": bool(signature_match),
+        "key_trust": key_trust,
         "embedded": embedded,
         "credential_verified": credential_verified,
         "embedded_path": str(embedding.get("embedded_path") or ""),

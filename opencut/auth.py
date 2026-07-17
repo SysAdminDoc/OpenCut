@@ -437,11 +437,14 @@ def request_requires_auth_token(remote_addr: Optional[str]) -> bool:
     return not _request_is_loopback(remote_addr)
 
 
-def extract_request_token(headers: Iterable, args: Optional[dict] = None) -> str:
-    """Extract a token from the headers (preferred) or ``?auth=`` query."""
+def extract_request_token(headers: Iterable) -> str:
+    """Extract the auth token from the ``X-OpenCut-Auth`` header.
+
+    Tokens are deliberately NOT accepted via a ``?auth=`` query parameter:
+    query strings leak into server access logs, proxy logs, browser history,
+    and Referer headers. No shipped client uses query auth — the extension's
+    SSE streams connect from loopback, which never requires a token.
+    """
     if hasattr(headers, "get"):
-        header_token = (headers.get(AUTH_HEADER) or "").strip()
-        if header_token:
-            return header_token
-    args = args or {}
-    return str(args.get("auth", "") or "").strip()
+        return (headers.get(AUTH_HEADER) or "").strip()
+    return ""

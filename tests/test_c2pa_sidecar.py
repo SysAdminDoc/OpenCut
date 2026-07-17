@@ -132,6 +132,7 @@ def test_build_sidecar_emits_unsigned_when_no_key(monkeypatch, asset):
 def test_build_sidecar_signs_and_verifies_with_operator_key(monkeypatch, asset, tmp_path):
     key_path = _write_ed25519_key(tmp_path)
     monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    monkeypatch.delenv("OPENCUT_C2PA_TRUSTED_PUBKEYS", raising=False)
 
     result = c2pa.build_sidecar(asset_path=str(asset))
     verify = c2pa.verify_sidecar(result.sidecar_path)
@@ -143,6 +144,116 @@ def test_build_sidecar_signs_and_verifies_with_operator_key(monkeypatch, asset, 
     assert verify["signature_hash_match"] is True
     assert verify["signature_valid"] is True
     assert verify["signature_match"] is True
+    # The signing key's public half is the default trust anchor.
+    assert verify["key_trust"] == "pinned"
+
+
+def _public_pem_for(key_path: Path) -> str:
+    serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
+
+    priv = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
+    return priv.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+
+
+def _resign_with_attacker_key(sidecar: Path) -> None:
+    """Re-sign the (possibly edited) manifest with a fresh attacker key."""
+    import hashlib
+
+    ed25519 = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
+
+    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    manifest.pop("signature", None)
+    canonical = c2pa._canonical_manifest(manifest)
+    attacker = ed25519.Ed25519PrivateKey.generate()
+    manifest["signature"] = {
+        "algorithm": "ed25519",
+        "value": attacker.sign(canonical).hex(),
+        "signed_bytes_sha256": hashlib.sha256(canonical).hexdigest(),
+        "public_key": attacker.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("utf-8"),
+    }
+    sidecar.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+
+
+def test_verify_sidecar_key_trust_self_asserted_without_anchor(monkeypatch, asset, tmp_path):
+    """Without a trust anchor the signature only proves internal consistency."""
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    result = c2pa.build_sidecar(asset_path=str(asset))
+
+    # The verifying machine has neither a signing key nor pinned keys.
+    monkeypatch.delenv("OPENCUT_C2PA_SIGNING_KEY", raising=False)
+    monkeypatch.delenv("OPENCUT_C2PA_TRUSTED_PUBKEYS", raising=False)
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert verify["key_trust"] == "self_asserted"
+    assert verify["signature_valid"] is True
+    assert verify["signature_match"] is True
+    assert any("self-asserted" in w for w in verify["warnings"])
+
+
+def test_verify_sidecar_rejects_resigned_manifest_with_untrusted_key(monkeypatch, asset, tmp_path):
+    """An attacker who edits + re-signs with their own key must not verify."""
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    sidecar = Path(result.sidecar_path)
+
+    # Attacker edits the manifest and re-signs with a key they control.
+    manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    manifest["title"] = "Laundered title"
+    sidecar.write_text(json.dumps(manifest), encoding="utf-8")
+    _resign_with_attacker_key(sidecar)
+
+    # Operator pins the legitimate key (literal PEM in the env var).
+    monkeypatch.setenv("OPENCUT_C2PA_TRUSTED_PUBKEYS", _public_pem_for(key_path))
+    verify = c2pa.verify_sidecar(str(sidecar))
+
+    assert verify["signature_hash_match"] is True
+    assert verify["signature_valid"] is True  # cryptographically consistent...
+    assert verify["key_trust"] == "untrusted"  # ...but not from a trusted key
+    assert verify["signature_match"] is False
+    assert verify["status"] == "untrusted_signature"
+    assert any("trust anchor" in w for w in verify["warnings"])
+
+
+def test_verify_sidecar_pins_trusted_keys_from_pem_file(monkeypatch, asset, tmp_path):
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    result = c2pa.build_sidecar(asset_path=str(asset))
+
+    trust_file = tmp_path / "trusted-keys.pem"
+    trust_file.write_text(_public_pem_for(key_path), encoding="utf-8")
+    monkeypatch.delenv("OPENCUT_C2PA_SIGNING_KEY", raising=False)
+    monkeypatch.setenv("OPENCUT_C2PA_TRUSTED_PUBKEYS", str(trust_file))
+
+    verify = c2pa.verify_sidecar(result.sidecar_path)
+
+    assert verify["key_trust"] == "pinned"
+    assert verify["signature_match"] is True
+    assert verify["status"] == "signed_sidecar"
+
+
+def test_verify_sidecar_signing_key_anchor_rejects_foreign_signature(monkeypatch, asset, tmp_path):
+    """With only OPENCUT_C2PA_SIGNING_KEY set, foreign keys are untrusted."""
+    key_path = _write_ed25519_key(tmp_path)
+    monkeypatch.setenv("OPENCUT_C2PA_SIGNING_KEY", str(key_path))
+    monkeypatch.delenv("OPENCUT_C2PA_TRUSTED_PUBKEYS", raising=False)
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    sidecar = Path(result.sidecar_path)
+    _resign_with_attacker_key(sidecar)
+
+    verify = c2pa.verify_sidecar(str(sidecar))
+
+    assert verify["key_trust"] == "untrusted"
+    assert verify["signature_match"] is False
+    assert verify["status"] == "untrusted_signature"
 
 
 def test_build_sidecar_paths_default_to_dotted_extension(asset):

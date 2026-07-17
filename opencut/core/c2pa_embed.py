@@ -632,10 +632,21 @@ def read_c2pa(
                 if isinstance(active, dict):
                     manifest = deepcopy(active)
                     manifest["embedded"] = True
-                    manifest["validation_state"] = report.get("validation_state")
+                    validation_state = report.get("validation_state")
+                    manifest["validation_state"] = validation_state
                     manifest["validation_status"] = report.get("validation_status", [])
+                    # c2patool exits 0 even when the credential fails
+                    # validation (e.g. "Invalid"). ``embedded`` means "a
+                    # credential was found"; ``valid`` means it actually
+                    # passed C2PA validation.
+                    manifest["valid"] = validation_state == "Valid"
                     if on_progress:
-                        on_progress(100, "C2PA credential read and validated")
+                        on_progress(
+                            100,
+                            "C2PA credential read and validated"
+                            if manifest["valid"]
+                            else "C2PA credential read (validation failed)",
+                        )
                     return manifest
     except Exception as exc:
         logger.debug("Could not read embedded C2PA credential: %s", exc)
