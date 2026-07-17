@@ -14,8 +14,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FEATURES_MD = REPO_ROOT / "features.md"
+
+# features.md is a local working artefact excluded from git (the repo
+# .gitignore only tracks README/CHANGELOG/ROADMAP/RESEARCH* markdown), so a
+# clean checkout legitimately lacks it. Pin the banner only when it exists.
+pytestmark = pytest.mark.skipif(
+    not FEATURES_MD.is_file(),
+    reason="features.md is a gitignored local artefact absent on clean checkouts",
+)
 
 
 def test_features_md_starts_with_banner():
