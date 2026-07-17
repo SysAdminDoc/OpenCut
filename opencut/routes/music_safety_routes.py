@@ -272,7 +272,7 @@ def route_c2pa_read(job_id, filepath, data):
     return {
         "manifest": manifest,
         "has_c2pa": bool(manifest),
-        "valid": bool(manifest.get("valid")) if isinstance(manifest, dict) else False,
+        "valid": safe_bool(manifest.get("valid"), False) if isinstance(manifest, dict) else False,
     }
 
 

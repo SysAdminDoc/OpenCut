@@ -63,7 +63,10 @@ class TestSilenceVAD(unittest.TestCase):
         mock_result = MagicMock()
         mock_result.returncode = 1
         mock_result.stderr = "error: bad input"
-        with patch("shutil.which", return_value="/usr/bin/ffmpeg"):
+        # Patch discovery at the module seam (get_ffmpeg_path now runs a
+        # security-floor provenance probe that would consume the mocked
+        # subprocess.run), so only the extraction run sees the mock.
+        with patch("opencut.core.silence.get_ffmpeg_path", return_value="/usr/bin/ffmpeg"):
             with patch("subprocess.run", return_value=mock_result):
                 with self.assertRaises(RuntimeError) as ctx:
                     _extract_audio_wav("/fake/input.mp4", "/tmp/out.wav")

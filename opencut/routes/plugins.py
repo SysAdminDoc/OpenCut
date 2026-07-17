@@ -208,16 +208,17 @@ def _plugin_trust_entry(plugin: dict, loaded: dict) -> dict:
     source = _trust_source(plugin, validation)
     status = _load_status(plugin, loaded, validation)
     loaded_info = loaded.get(plugin.get("name", ""), {})
+    routes = list(plugin.get("routes") or [])
     return {
         "name": plugin.get("name", ""),
         "version": plugin.get("version", ""),
         "description": plugin.get("description", ""),
         "author": plugin.get("author", ""),
-        "enabled": bool(plugin.get("enabled", False)),
+        "enabled": safe_bool(plugin.get("enabled"), False),
         "loaded": status == "loaded",
         "load_status": status,
-        "has_routes": bool(plugin.get("routes")) or os.path.isfile(os.path.join(plugin.get("path", ""), "routes.py")),
-        "routes": list(plugin.get("routes") or []),
+        "has_routes": bool(routes) or os.path.isfile(os.path.join(plugin.get("path", ""), "routes.py")),
+        "routes": routes,
         "jobs": list(plugin.get("jobs") or []),
         "loaded_jobs": list(loaded_info.get("jobs") or []),
         "runtime": loaded_info.get("runtime", "not_loaded"),
@@ -225,10 +226,10 @@ def _plugin_trust_entry(plugin: dict, loaded: dict) -> dict:
         "capabilities": capabilities,
         "capability_badges": _capability_badges(capabilities),
         "ui": plugin.get("ui"),
-        "valid": bool(plugin.get("valid", False)),
+        "valid": safe_bool(plugin.get("valid"), False),
         "error": plugin.get("error") or "; ".join(validation.get("errors") or []),
         "trust": {
-            "valid": bool(validation.get("valid", False)),
+            "valid": safe_bool(validation.get("valid"), False),
             "source": source,
             "errors": list(validation.get("errors") or []),
             "warnings": list(validation.get("warnings") or []),
