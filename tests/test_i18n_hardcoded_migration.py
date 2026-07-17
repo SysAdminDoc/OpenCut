@@ -126,7 +126,7 @@ HTML_STATIC_SHELL_CALLS = (
     ("workspace.awaiting_media", "data-i18n"),
     ("workspace.label_suite", "data-i18n"),
     ("workspace.label_status", "data-i18n"),
-    ("workspace.backend_offline", "data-i18n"),
+    ("workspace.status_backend_offline", "data-i18n"),
     # Ninety-seventh batch (workspace stage/media shell HTML).
     ("workspace.action_choose_media", "data-i18n"),
     ("media.use_selection", "data-i18n"),
