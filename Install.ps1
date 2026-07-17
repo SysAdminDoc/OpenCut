@@ -412,10 +412,22 @@ Write-Step "Installing core dependencies..."
 $reqFile = Join-Path $script:InstallDir "requirements.txt"
 if (Test-Path $reqFile) {
     & $pythonCmd -m pip install -r $reqFile --quiet 2>&1 | Out-Null
-    Write-Ok "Core packages installed from requirements.txt"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "Core packages installed from requirements.txt"
+    } else {
+        Write-Err "pip install -r requirements.txt failed (exit code $LASTEXITCODE)."
+        Write-Err "Check your network connection, then re-run: $pythonCmd -m pip install -r `"$reqFile`""
+        $script:ExitCode = 1
+    }
 } else {
     & $pythonCmd -m pip install click rich flask flask-cors --quiet 2>&1 | Out-Null
-    Write-Ok "Core packages installed (click, rich, flask, flask-cors)"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "Core packages installed (click, rich, flask, flask-cors)"
+    } else {
+        Write-Err "pip install of core packages failed (exit code $LASTEXITCODE)."
+        Write-Err "Check your network connection, then re-run: $pythonCmd -m pip install click rich flask flask-cors"
+        $script:ExitCode = 1
+    }
 }
 
 # Install OpenCut package
@@ -423,7 +435,13 @@ Write-Step "Installing OpenCut package..."
 $opencutDir = Join-Path $script:InstallDir "."
 if (Test-Path (Join-Path $opencutDir "pyproject.toml")) {
     & $pythonCmd -m pip install $opencutDir --quiet 2>&1 | Out-Null
-    Write-Ok "OpenCut package installed"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "OpenCut package installed"
+    } else {
+        Write-Err "OpenCut package install failed (exit code $LASTEXITCODE)."
+        Write-Err "Re-run manually to see the full error: $pythonCmd -m pip install `"$opencutDir`""
+        $script:ExitCode = 1
+    }
 } else {
     Write-Err "pyproject.toml not found in $opencutDir"
     Write-Err "Make sure you're running this from the OpenCut project folder."
@@ -663,32 +681,30 @@ if ($pythonCmd) {
 }
 
 # Check OpenCut
-try {
-    $ocVer = & $pythonCmd -c "import opencut; print(opencut.__version__)" 2>&1
+# NOTE: native commands do not throw in PS 5.1, so try/catch never sees an
+# import failure — each probe must test $LASTEXITCODE instead.
+$ocVer = & $pythonCmd -c "import opencut; print(opencut.__version__)" 2>&1
+if ($LASTEXITCODE -eq 0) {
     Write-Ok "OpenCut package ..... OK (v$ocVer)"
-} catch {
+} else {
     Write-Err "OpenCut package ..... MISSING"
     $allGood = $false
 }
 
 # Check Flask
-try {
-    & $pythonCmd -c "import flask" 2>&1 | Out-Null
+& $pythonCmd -c "import flask" 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
     Write-Ok "Flask server ........ OK"
-} catch {
+} else {
     Write-Err "Flask server ........ MISSING"
     $allGood = $false
 }
 
 # Check Whisper
-try {
-    $whisperCheck = & $pythonCmd -c "from faster_whisper import WhisperModel; print('ok')" 2>&1
-    if ($whisperCheck -eq "ok") {
-        Write-Ok "Whisper (captions) .. OK (faster-whisper)"
-    } else {
-        Write-Warn "Whisper (captions) .. NOT INSTALLED (optional)"
-    }
-} catch {
+$whisperCheck = & $pythonCmd -c "from faster_whisper import WhisperModel; print('ok')" 2>&1
+if ($LASTEXITCODE -eq 0 -and "$whisperCheck" -match "ok") {
+    Write-Ok "Whisper (captions) .. OK (faster-whisper)"
+} else {
     Write-Warn "Whisper (captions) .. NOT INSTALLED (optional)"
 }
 
@@ -710,7 +726,10 @@ if (-not $extCheck) {
 # Summary
 # ---------------------------------------------------------------------------
 Write-Host ""
-if ($allGood -or $script:ExitCode -eq 0) {
+if (-not $allGood) {
+    $script:ExitCode = 1
+}
+if ($script:ExitCode -eq 0) {
     Write-Host "  ========================================" -ForegroundColor Green
     Write-Host "  Installation Complete!" -ForegroundColor Green
     Write-Host "  ========================================" -ForegroundColor Green
@@ -725,12 +744,13 @@ if ($allGood -or $script:ExitCode -eq 0) {
     Write-Host ""
     Write-Host "  CLI is also available: opencut silence video.mp4" -ForegroundColor DarkGray
 } else {
-    Write-Host "  ========================================" -ForegroundColor Yellow
-    Write-Host "  Installation completed with warnings." -ForegroundColor Yellow
-    Write-Host "  ========================================" -ForegroundColor Yellow
+    Write-Host "  ========================================" -ForegroundColor Red
+    Write-Host "  Installation FAILED." -ForegroundColor Red
+    Write-Host "  ========================================" -ForegroundColor Red
     Write-Host ""
-    Write-Host "  Some components may need manual installation." -ForegroundColor Gray
-    Write-Host "  See messages above for details." -ForegroundColor Gray
+    Write-Host "  One or more required components failed to install or validate." -ForegroundColor Gray
+    Write-Host "  Review the error messages above, fix the issue, and re-run Install.ps1." -ForegroundColor Gray
+    Write-Host "  Exit code: $script:ExitCode" -ForegroundColor Gray
 }
 
 Write-Host ""

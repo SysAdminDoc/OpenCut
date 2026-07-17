@@ -3,8 +3,15 @@
 # Multi-stage build for minimal final image
 #
 # Build:       docker build -t opencut .
-# Run (CPU):   docker run -d -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
-# Run (GPU):   docker run -d --gpus all -p 5679:5679 -v opencut-data:/home/opencut/.opencut opencut
+# Run (CPU):   the image bakes OPENCUT_ALLOW_REMOTE=1, so the server requires a
+#              mounted auth-token file and exits otherwise (fail-closed):
+#                docker run -d -p 5679:5679 \
+#                  -e OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut-token \
+#                  -v ./opencut-token:/run/secrets/opencut-token:ro \
+#                  -v opencut-data:/home/opencut/.opencut opencut
+# Run (GPU):   add --gpus all to the command above
+# Compose:     docker compose up opencut-server (mounts the same token via the
+#              opencut_remote_auth_token secret; see docker-compose.yml)
 # Runtime:     publishes the HTTP API only. Optional WebSocket/MCP sidecars
 #              are separate opt-in processes, not default container ports.
 # ============================================================

@@ -120,9 +120,27 @@ Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Descripti
 [Code]
 const
   EnvironmentKey = 'Environment';
+  WM_SETTINGCHANGE = $001A;
+  SMTO_ABORTIFHUNG = $0002;
 
 var
   InteractiveRemoveUserData: Boolean;
+
+// Broadcast WM_SETTINGCHANGE so running apps pick up environment changes
+// without a logoff. Setup broadcasts automatically (ChangesEnvironment=yes)
+// but the uninstaller does not, so RemoveFromPath needs this explicitly.
+function SendMessageTimeout(Wnd: HWND; Msg: LongInt; wParam: LongInt;
+  lParam: string; fuFlags: LongInt; uTimeout: LongInt;
+  var lpdwResult: LongInt): LongInt;
+  external 'SendMessageTimeoutW@user32.dll stdcall';
+
+procedure RefreshEnvironment();
+var
+  MsgResult: LongInt;
+begin
+  SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment',
+    SMTO_ABORTIFHUNG, 5000, MsgResult);
+end;
 
 // --- Kill OpenCut server processes ---
 
@@ -142,17 +160,52 @@ end;
 
 // --- PATH management for bundled FFmpeg ---
 
+// True when Dir matches a full semicolon-delimited segment of PathValue
+// (case-insensitive, trimmed). Substring matching would false-positive on
+// sibling directories and corrupt unrelated PATH entries on removal.
+function PathContainsDir(const PathValue, Dir: string): Boolean;
+var
+  Remaining, Segment: string;
+  P: Integer;
+begin
+  Result := False;
+  Remaining := PathValue;
+  while Remaining <> '' do
+  begin
+    P := Pos(';', Remaining);
+    if P > 0 then
+    begin
+      Segment := Copy(Remaining, 1, P - 1);
+      Delete(Remaining, 1, P);
+    end
+    else
+    begin
+      Segment := Remaining;
+      Remaining := '';
+    end;
+    if CompareText(Trim(Segment), Trim(Dir)) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
 procedure AddToPath(Dir: string);
 var
   OldPath: string;
 begin
   if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', OldPath) then
     OldPath := '';
-  if Pos(Uppercase(Dir), Uppercase(OldPath)) = 0 then
+  if not PathContainsDir(OldPath, Dir) then
   begin
     if OldPath <> '' then
       OldPath := OldPath + ';';
-    RegWriteStringValue(HKCU, EnvironmentKey, 'Path', OldPath + Dir);
+    // Write REG_EXPAND_SZ: the user Path is commonly REG_EXPAND_SZ and
+    // RegWriteStringValue would silently rewrite it as REG_SZ, breaking
+    // every existing %VAR% entry. REG_EXPAND_SZ is also safe when the
+    // original value was plain REG_SZ (literal paths expand to themselves).
+    RegWriteExpandStringValue(HKCU, EnvironmentKey, 'Path', OldPath + Dir);
   end;
 end;
 
@@ -220,25 +273,43 @@ end;
 
 procedure RemoveFromPath(Dir: string);
 var
-  OldPath, UpperDir, UpperPath: string;
+  OldPath, NewPath, Remaining, Segment: string;
   P: Integer;
+  Removed: Boolean;
 begin
   if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', OldPath) then
     Exit;
-  UpperDir := Uppercase(Dir);
-  UpperPath := Uppercase(OldPath);
-  P := Pos(UpperDir, UpperPath);
-  if P > 0 then
+  // Rebuild the value from full semicolon-delimited segments so only exact
+  // matches are dropped — the old substring Delete() could truncate an
+  // unrelated longer entry (e.g. "...\OpenCut\ffmpeg-extras").
+  NewPath := '';
+  Removed := False;
+  Remaining := OldPath;
+  while Remaining <> '' do
   begin
-    Delete(OldPath, P, Length(Dir));
-    while Pos(';;', OldPath) > 0 do
-      StringChangeEx(OldPath, ';;', ';', True);
-    if (Length(OldPath) > 0) and (OldPath[1] = ';') then
-      Delete(OldPath, 1, 1);
-    if (Length(OldPath) > 0) and (OldPath[Length(OldPath)] = ';') then
-      Delete(OldPath, Length(OldPath), 1);
-    RegWriteStringValue(HKCU, EnvironmentKey, 'Path', OldPath);
+    P := Pos(';', Remaining);
+    if P > 0 then
+    begin
+      Segment := Copy(Remaining, 1, P - 1);
+      Delete(Remaining, 1, P);
+    end
+    else
+    begin
+      Segment := Remaining;
+      Remaining := '';
+    end;
+    if CompareText(Trim(Segment), Trim(Dir)) = 0 then
+      Removed := True
+    else if Trim(Segment) <> '' then
+    begin
+      if NewPath <> '' then
+        NewPath := NewPath + ';';
+      NewPath := NewPath + Segment;
+    end;
   end;
+  if Removed then
+    // REG_EXPAND_SZ — see AddToPath. Never downgrade the value type.
+    RegWriteExpandStringValue(HKCU, EnvironmentKey, 'Path', NewPath);
 end;
 
 // --- CEP extension copy ---
@@ -474,7 +545,6 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ExtPath, ConfigDir, StartupShortcut: string;
-  ResultCode: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
@@ -515,8 +585,11 @@ begin
     if FileExists(ExpandConstant('{autodesktop}\OpenCut.lnk')) then
       DeleteFile(ExpandConstant('{autodesktop}\OpenCut.lnk'));
 
-    // Broadcast environment change so PATH update takes effect immediately
-    Exec('cmd.exe', '/c setx OPENCUT_UNINSTALLED ""', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // Broadcast environment change so the PATH removal takes effect
+    // immediately. (The previous `setx OPENCUT_UNINSTALLED ""` hack left a
+    // permanent stray env var behind and setx rejects empty values on some
+    // Windows builds.)
+    RefreshEnvironment();
   end;
 end;
 
