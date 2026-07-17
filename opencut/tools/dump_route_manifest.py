@@ -21,10 +21,12 @@ dict orderings, and methods are sorted alphabetically with the standard
 from __future__ import annotations
 
 import argparse
+import ast
 import inspect
 import json
 import logging
 import re
+import textwrap
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -55,20 +57,81 @@ _DEPENDENCY_MARKERS = ("_stub_503(", "missing_dependency(", "MISSING_DEPENDENCY"
 # still a terminal ``raise NotImplementedError`` stub (e.g. the Wave Q/R/S
 # ``raise RuntimeError(INSTALL_HINT)`` pattern over asr_parakeet.transcribe)
 # are stubs too: installing the dependency only swaps the error class.
+#
+# A route that calls a stub entrypoint *defensively* — inside a ``try`` whose
+# handler catches the stub's own error and falls back to a working engine
+# (e.g. ``video_ai_upscale`` prefers SeedVR2 then falls back to Real-ESRGAN) —
+# is NOT a stub; only an unguarded stub call with no fallback makes the whole
+# route terminal.
 _CORE_IMPORT_RE = re.compile(
     r"^\s*from opencut\.core import (?P<names>[\w ,]+)$", re.MULTILINE
 )
+_FALLBACK_EXC_NAMES = {"NotImplementedError", "RuntimeError", "Exception", "BaseException"}
+
+
+def _imported_core_modules(source: str) -> set:
+    modules = set()
+    for match in _CORE_IMPORT_RE.finditer(source):
+        for module in (name.strip() for name in match.group("names").split(",")):
+            if module:
+                modules.add(module)
+    return modules
+
+
+def _handler_catches_fallback(try_node: ast.Try) -> bool:
+    """True when a ``try`` block catches a stub-style error (so it can fall back)."""
+    for handler in try_node.handlers:
+        exc = handler.type
+        if exc is None:  # bare ``except:``
+            return True
+        names = exc.elts if isinstance(exc, ast.Tuple) else [exc]
+        for name in names:
+            if isinstance(name, ast.Name) and name.id in _FALLBACK_EXC_NAMES:
+                return True
+    return False
 
 
 def _delegates_to_stub_entrypoint(source: str) -> bool:
-    """True when *source* calls a terminal-stub function of a core module."""
+    """True when *source* calls a terminal-stub core entrypoint with no fallback.
+
+    A stub call guarded by a ``try/except`` that catches its error is treated as
+    a defensive delegation with a fallback, not a terminal stub.
+    """
     from opencut.core.stub_scan import stub_functions
 
-    for match in _CORE_IMPORT_RE.finditer(source):
-        for module in (name.strip() for name in match.group("names").split(",")):
-            for fn in stub_functions(module):
-                if re.search(rf"\b{re.escape(module)}\.{fn}\s*\(", source):
-                    return True
+    modules = _imported_core_modules(source)
+    stub_calls = {
+        f"{module}.{fn}"
+        for module in modules
+        for fn in stub_functions(module)
+    }
+    if not stub_calls:
+        return False
+
+    try:
+        tree = ast.parse(textwrap.dedent(source))
+    except SyntaxError:
+        # Fall back to the coarse textual check when the source can't be parsed.
+        return any(
+            re.search(rf"\b{re.escape(call.split('.')[0])}\.{call.split('.')[1]}\s*\(", source)
+            for call in stub_calls
+        )
+
+    guarded_lines: set = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Try) and _handler_catches_fallback(node):
+            for child in ast.walk(node):
+                if isinstance(child, ast.Call):
+                    guarded_lines.add(getattr(child, "lineno", -1))
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name)):
+            continue
+        if f"{func.value.id}.{func.attr}" in stub_calls and node.lineno not in guarded_lines:
+            return True
     return False
 
 

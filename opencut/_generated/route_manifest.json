@@ -1,8 +1,8 @@
 {
   "version": 3,
-  "generated_at": "2026-07-17T14:44:59Z",
+  "generated_at": "2026-07-17T15:22:35Z",
   "total_routes": 1554,
-  "shipped_route_count": 1508,
+  "shipped_route_count": 1527,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
@@ -12,9 +12,9 @@
     "PUT": 2
   },
   "readiness_counts": {
-    "dependency-gated": 12,
-    "implemented": 1496,
-    "stub": 46
+    "dependency-gated": 29,
+    "implemented": 1498,
+    "stub": 27
   },
   "blueprints": {
     "<app>": {
@@ -1733,7 +1733,7 @@
       ],
       "endpoint": "ai_editing.ai_lip_sync",
       "blueprint": "ai_editing",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/ai/mood-presets",
@@ -5171,7 +5171,7 @@
       ],
       "endpoint": "wave_k.route_sfx_audiogen",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/audio/singing/vevo2",
@@ -5180,7 +5180,7 @@
       ],
       "endpoint": "wave_k.route_singing_vevo2",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/audio/sound-design",
@@ -7878,7 +7878,7 @@
       ],
       "endpoint": "wave_k.route_gen_video_ltx",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/generate/ltxv/extend",
@@ -7941,7 +7941,7 @@
       ],
       "endpoint": "wave_k.route_gen_video_opensora",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/generate/opensora2",
@@ -12317,7 +12317,7 @@
       ],
       "endpoint": "wave_k.route_tts_amphion",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/tts/cosyvoice2",
@@ -12326,7 +12326,7 @@
       ],
       "endpoint": "wave_k.route_tts_cosyvoice2",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/tts/gptsovits",
@@ -12335,7 +12335,7 @@
       ],
       "endpoint": "wave_k.route_tts_gptsovits",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/tts/gptsovits/voices",
@@ -12578,7 +12578,7 @@
       ],
       "endpoint": "video_ai.video_ai_upscale",
       "blueprint": "video_ai",
-      "readiness": "stub",
+      "readiness": "implemented",
       "workflow": {
         "label": "Upscaling video"
       }
@@ -12617,7 +12617,7 @@
       ],
       "endpoint": "wave_k.route_audio_reactive_fx",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/audio-reactive/presets",
@@ -13112,7 +13112,7 @@
       ],
       "endpoint": "wave_k.route_deblur_motion",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/deblur/backends",
@@ -13139,7 +13139,7 @@
       ],
       "endpoint": "wave_k.route_depth_flow",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/depth/bokeh",
@@ -13157,7 +13157,7 @@
       ],
       "endpoint": "wave_k.route_depth_depthpro",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/depth/depthpro/backends",
@@ -13571,7 +13571,7 @@
       ],
       "endpoint": "wave_k.route_flow_searaft",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/fx/apply",
@@ -14459,7 +14459,7 @@
       ],
       "endpoint": "wave_k.route_restore_diffbir",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/restore/vrt",
@@ -14672,7 +14672,7 @@
       ],
       "endpoint": "wave_k.route_stabilize_gyroflow",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/stream/srt/info",
@@ -14747,7 +14747,7 @@
       ],
       "endpoint": "wave_k.route_style_tokenflow",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/tag-face",
@@ -14861,7 +14861,7 @@
       ],
       "endpoint": "wave_k.route_track_cutie",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/track/deva",
@@ -14870,7 +14870,7 @@
       ],
       "endpoint": "wave_k.route_track_deva",
       "blueprint": "wave_k",
-      "readiness": "stub"
+      "readiness": "dependency-gated"
     },
     {
       "rule": "/video/trailer/generate",
