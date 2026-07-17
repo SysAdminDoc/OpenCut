@@ -35,6 +35,21 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P3
 
+- [ ] P3 — Verify model-download integrity before use (catalog-wide, `.nemo` first)
+  Why: `model_manager.KNOWN_MODELS` entries have no checksum field and `_download_worker` performs no hash/picklescan validation; the new Parakeet/Canary `.nemo` rows (2.4/4.2 GB) are the first pickle-format payloads in the catalogue, a strictly worse tamper class than the existing safetensors/onnx downloads. HTTPS + official HF namespaces are the only current integrity guarantee.
+  Where: `opencut/core/model_manager.py` (`KNOWN_MODELS`, `_download_worker`); `picklescan` already ships in the `depth` extra.
+  Acceptance: catalogue rows carry a `sha256`; `_download_worker` verifies it (and picklescans pickle-format payloads) before the file is marked available; a mismatch fails closed with a structured error.
+
+- [ ] P3 — Run installer user-area file operations as the invoking user
+  Why: With `PrivilegesRequired=admin`, a standard user elevating with a separate admin account gets the CEP panel, installer manifest, and ffmpeg PATH written into the admin's profile while PlayerDebugMode (correctly written via `runasoriginaluser`) targets the invoking user; uninstall then backs up the wrong (usually empty) `.opencut`. Data preservation errs safe (wrong profile → NOT_FOUND → real data untouched), so P3.
+  Where: `OpenCut.iss:170` (`WriteInstallerManifest`), `:283` (`InstallCEPExtension`), `:311` (`AddToPath`), `:494-495` (uninstall `ConfigDir`).
+  Acceptance: user-area copies run via a `runasoriginaluser` helper (as reg.exe already does), so per-user artifacts land in the invoking user's profile regardless of the elevation account.
+
+- [ ] P3 — Flatten the CEP command-center stylesheet into a single layer
+  Why: `command-center.css` is three stacked authoring passes; the second `:root` block fully redefines the first and ~500 lines (sidebar width, radius, title sizing, duplicated media queries) are overridden wholesale later in file order. Future edits must reason through the dead cascade, and the `html.theme-light` token block only stays coherent by luck.
+  Where: `extension/com.opencut.panel/client/command-center.css`.
+  Acceptance: one token layer and one rule per selector; rendered CEP/UXP visual baselines and geometry/contrast tests still pass unchanged.
+
 - [ ] P3 — Prepare for the MCP 2026-07-28 revision
   Why: The release candidate removes the stateful initialize handshake, replaces elicitation with Multi-Round-Trip Requests, adds Tasks for long-running work, and adds resource-cache metadata; long renders/transcodes map directly onto Tasks. The final specification needs live validation on or after 2026-07-28.
   Evidence: `opencut/mcp_server.py`, `opencut/mcp_extended_tools.py` (pinned `mcp>=1.26,<2`); MCP 2026-07-28 RC (blog.modelcontextprotocol.io); RESEARCH.md Architecture Assessment.
