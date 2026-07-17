@@ -370,6 +370,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/search/ingest",
     # Multimodal index (transcript + OCR + audio tags)
     "/search/multimodal-index",
+    # CineFocus rack focus — promoted from sync handler to async_job
+    "/video/cinefocus",
 })
 
 

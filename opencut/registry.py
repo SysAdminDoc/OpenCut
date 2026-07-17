@@ -123,11 +123,12 @@ class FeatureRecord:
     probe: Optional[Callable[[], bool]] = None
     check_name: str = ""
     source: str = "manual"
-    # Name of the opencut.core module that implements this feature's adapter
-    # (e.g. "asr_parakeet"). When set and that module is still a terminal
-    # NotImplementedError stub, the feature stays `stub` even if its optional
-    # dependency is installed, so readiness never reports an unfinished adapter
-    # as runnable. See opencut.core.stub_scan.
+    # Name(s) of the opencut.core module(s) that implement this feature's
+    # adapter (e.g. "asr_parakeet", or comma-separated "asr_parakeet,asr_canary"
+    # when one feature row covers several adapters). When set and ANY listed
+    # module is still a terminal NotImplementedError stub, the feature stays
+    # `stub` even if its optional dependency is installed, so readiness never
+    # reports an unfinished adapter as runnable. See opencut.core.stub_scan.
     impl_module: str = ""
     notes: str = ""
     hardware: str = ""
@@ -137,13 +138,17 @@ class FeatureRecord:
     license: str = ""
     advisory_notes: List[str] = field(default_factory=list)
 
+    def impl_module_names(self) -> List[str]:
+        """Adapter module stems declared on this record (may be several)."""
+        return [name.strip() for name in self.impl_module.split(",") if name.strip()]
+
     def is_stub_implementation(self) -> bool:
-        """True if this feature's adapter is still a terminal NotImplementedError."""
+        """True if any of this feature's adapters is still a terminal stub."""
         if not self.impl_module:
             return False
         from opencut.core.stub_scan import is_stub_module
 
-        return is_stub_module(self.impl_module)
+        return any(is_stub_module(name) for name in self.impl_module_names())
 
     def resolved_state(self) -> ReadinessState:
         """Return the readiness state after probing implementation and deps.
@@ -151,10 +156,18 @@ class FeatureRecord:
         Implementation state is checked first: an unfinished adapter stays
         ``stub`` even when its optional dependency is present, so readiness
         never advertises a route that ends in ``NotImplementedError``.
+
+        A live probe overrides both ``available`` and ``missing_dependency``
+        declarations so a feature flips to available as soon as the user
+        installs its dependency (and back when it is removed), without waiting
+        for the generated readiness artifact to be rebuilt.
         """
         if self.is_stub_implementation():
             return STATE_STUB
-        if self.state == STATE_AVAILABLE and self.probe is not None:
+        if (
+            self.state in (STATE_AVAILABLE, STATE_MISSING_DEPENDENCY)
+            and self.probe is not None
+        ):
             try:
                 ok = bool(self.probe())
             except Exception:  # pragma: no cover - defensive against probe errors
@@ -566,9 +579,9 @@ _FEATURES: List[FeatureRecord] = [
         state=STATE_AVAILABLE,
         install_hint='pip install "nemo_toolkit[asr]"',
         docs="docs/MODELS.md#nvidia-nemo-asr-parakeet--canary",
-        routes=["/transcribe", "/captions/generate"],
+        routes=["/audio/transcribe/parakeet", "/audio/transcribe/canary"],
         probe=_check("check_nemo_asr_available"),
-        impl_module="asr_parakeet",
+        impl_module="asr_parakeet,asr_canary",
         hardware="cpu/gpu",
     ),
     FeatureRecord(

@@ -1780,7 +1780,7 @@ def captions_translate(job_id, filepath, data):
         "backend": backend,
         "backend_label": backend_info.get("label", backend),
         "backend_license": backend_info.get("license", ""),
-        "backend_commercial_safe": bool(backend_info.get("commercial_safe")),
+        "backend_commercial_safe": safe_bool(backend_info.get("commercial_safe"), False),
         "restricted_license_accepted": restricted_accepted,
         "license_notice": backend_info.get("notice", ""),
         "redistribution": backend_info.get("redistribution", ""),

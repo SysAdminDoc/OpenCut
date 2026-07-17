@@ -32,7 +32,7 @@ def test_release_gate_no_available_feature_is_a_terminal_stub():
     module whose entrypoint raises NotImplementedError."""
     offenders = []
     for record in registry.list_features():
-        if record.impl_module and stub_scan.is_stub_module(record.impl_module):
+        if record.is_stub_implementation():
             if record.resolved_state() == registry.STATE_AVAILABLE:
                 offenders.append(record.feature_id)
     assert offenders == [], f"stub-backed features reported available: {offenders}"

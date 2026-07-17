@@ -1,8 +1,8 @@
 {
   "version": 3,
-  "generated_at": "2026-07-15T00:49:03Z",
+  "generated_at": "2026-07-17T14:44:59Z",
   "total_routes": 1554,
-  "shipped_route_count": 1548,
+  "shipped_route_count": 1508,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
@@ -12,9 +12,9 @@
     "PUT": 2
   },
   "readiness_counts": {
-    "dependency-gated": 29,
-    "implemented": 1519,
-    "stub": 6
+    "dependency-gated": 12,
+    "implemented": 1496,
+    "stub": 46
   },
   "blueprints": {
     "<app>": {
@@ -1733,7 +1733,7 @@
       ],
       "endpoint": "ai_editing.ai_lip_sync",
       "blueprint": "ai_editing",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/ai/mood-presets",
@@ -1994,7 +1994,7 @@
       ],
       "endpoint": "wave_qrs.route_internvl3_analyze",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/analyze/video/internvl3/info",
@@ -2039,7 +2039,7 @@
       ],
       "endpoint": "wave_qrs.route_qwen3vl_analyze",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/analyze/video/qwen3vl/info",
@@ -4721,7 +4721,7 @@
       ],
       "endpoint": "wave_qrs.route_ezaudio_foley",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/foley/ezaudio/info",
@@ -4997,7 +4997,7 @@
       ],
       "endpoint": "wave_qrs.route_heartmula",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/music/heartmula/info",
@@ -5171,7 +5171,7 @@
       ],
       "endpoint": "wave_k.route_sfx_audiogen",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/singing/vevo2",
@@ -5180,7 +5180,7 @@
       ],
       "endpoint": "wave_k.route_singing_vevo2",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/sound-design",
@@ -5369,7 +5369,7 @@
       ],
       "endpoint": "wave_qrs.route_canary_transcribe",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/transcribe/canary/info",
@@ -5405,7 +5405,7 @@
       ],
       "endpoint": "wave_qrs.route_parakeet_transcribe",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/transcribe/parakeet/info",
@@ -5441,7 +5441,7 @@
       ],
       "endpoint": "wave_qrs.route_cosyvoice_tts",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/tts/cosyvoice/info",
@@ -5552,7 +5552,7 @@
       ],
       "endpoint": "wave_qrs.route_maskgct_tts",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/audio/tts/maskgct/info",
@@ -7878,7 +7878,7 @@
       ],
       "endpoint": "wave_k.route_gen_video_ltx",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/ltxv/extend",
@@ -7923,7 +7923,7 @@
       ],
       "endpoint": "wave_qrs.route_mochi",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/mochi/info",
@@ -7941,7 +7941,7 @@
       ],
       "endpoint": "wave_k.route_gen_video_opensora",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/opensora2",
@@ -7977,7 +7977,7 @@
       ],
       "endpoint": "wave_qrs.route_skyreels2_t2v",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/skyreels3/avatar",
@@ -7986,7 +7986,7 @@
       ],
       "endpoint": "wave_qrs.route_skyreels3_avatar",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/skyreels3/info",
@@ -8004,7 +8004,7 @@
       ],
       "endpoint": "wave_qrs.route_stepvideo",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/stepvideo/info",
@@ -8022,7 +8022,7 @@
       ],
       "endpoint": "wave_qrs.route_videox_fun",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/generate/videox-fun/info",
@@ -8310,7 +8310,7 @@
       ],
       "endpoint": "wave_qrs.route_omnigen2",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/image/generate/omnigen2/info",
@@ -8625,7 +8625,7 @@
       ],
       "endpoint": "wave_qrs.route_musetalk_lipsync",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/lipsync/musetalk/info",
@@ -12317,7 +12317,7 @@
       ],
       "endpoint": "wave_k.route_tts_amphion",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/tts/cosyvoice2",
@@ -12326,7 +12326,7 @@
       ],
       "endpoint": "wave_k.route_tts_cosyvoice2",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/tts/gptsovits",
@@ -12335,7 +12335,7 @@
       ],
       "endpoint": "wave_k.route_tts_gptsovits",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/tts/gptsovits/voices",
@@ -12578,7 +12578,7 @@
       ],
       "endpoint": "video_ai.video_ai_upscale",
       "blueprint": "video_ai",
-      "readiness": "implemented",
+      "readiness": "stub",
       "workflow": {
         "label": "Upscaling video"
       }
@@ -12617,7 +12617,7 @@
       ],
       "endpoint": "wave_k.route_audio_reactive_fx",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/audio-reactive/presets",
@@ -13004,7 +13004,7 @@
       ],
       "endpoint": "wave_qrs.route_vace_compose",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/compose/vace/info",
@@ -13112,7 +13112,7 @@
       ],
       "endpoint": "wave_k.route_deblur_motion",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/deblur/backends",
@@ -13139,7 +13139,7 @@
       ],
       "endpoint": "wave_k.route_depth_flow",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/depth/bokeh",
@@ -13157,7 +13157,7 @@
       ],
       "endpoint": "wave_k.route_depth_depthpro",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/depth/depthpro/backends",
@@ -13487,7 +13487,7 @@
       ],
       "endpoint": "wave_qrs.route_face_reage",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/face/reage/info",
@@ -13571,7 +13571,7 @@
       ],
       "endpoint": "wave_k.route_flow_searaft",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/fx/apply",
@@ -14324,7 +14324,7 @@
       ],
       "endpoint": "wave_qrs.route_diffrenderer",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/relight/diffrenderer/info",
@@ -14342,7 +14342,7 @@
       ],
       "endpoint": "wave_qrs.route_iclight_relight",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/relight/iclight/info",
@@ -14360,7 +14360,7 @@
       ],
       "endpoint": "wave_qrs.route_lav_relight",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/relight/lav/info",
@@ -14459,7 +14459,7 @@
       ],
       "endpoint": "wave_k.route_restore_diffbir",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/restore/vrt",
@@ -14672,7 +14672,7 @@
       ],
       "endpoint": "wave_k.route_stabilize_gyroflow",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/stream/srt/info",
@@ -14747,7 +14747,7 @@
       ],
       "endpoint": "wave_k.route_style_tokenflow",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/tag-face",
@@ -14861,7 +14861,7 @@
       ],
       "endpoint": "wave_k.route_track_cutie",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/track/deva",
@@ -14870,7 +14870,7 @@
       ],
       "endpoint": "wave_k.route_track_deva",
       "blueprint": "wave_k",
-      "readiness": "dependency-gated"
+      "readiness": "stub"
     },
     {
       "rule": "/video/trailer/generate",
@@ -14969,7 +14969,7 @@
       ],
       "endpoint": "wave_qrs.route_seedvr2_upscale",
       "blueprint": "wave_qrs",
-      "readiness": "implemented"
+      "readiness": "stub"
     },
     {
       "rule": "/video/upscale/seedvr2/info",

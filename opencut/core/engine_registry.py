@@ -27,9 +27,12 @@ import importlib.util
 import logging
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("opencut")
+
+_CORE_DIR = Path(__file__).resolve().parent
 
 
 @dataclass
@@ -45,9 +48,29 @@ class EngineInfo:
     speed_rating: str = "medium" # "fast", "medium", "slow"
     quality_rating: str = "medium"  # "low", "medium", "high"
     tags: List[str] = field(default_factory=list)
+    # Stem of the ``opencut.core`` module that implements this engine's
+    # adapter (e.g. "asr_parakeet"). When set and that module is still a
+    # terminal NotImplementedError stub (or does not exist yet), the engine
+    # stays listed as coming-soon but never reports available / resolves as
+    # active — a dependency check alone does not prove the adapter works.
+    impl_module: Optional[str] = None
+
+    @property
+    def is_stub(self) -> bool:
+        """True while the engine's adapter is an unimplemented placeholder."""
+        if not self.impl_module:
+            return False
+        from opencut.core.stub_scan import is_stub_module
+        if is_stub_module(self.impl_module):
+            return True
+        # An adapter module that has not been written yet is equally
+        # unimplemented (e.g. sortformer has no core adapter at all).
+        return not (_CORE_DIR / f"{self.impl_module}.py").exists()
 
     @property
     def is_available(self) -> bool:
+        if self.is_stub:
+            return False
         try:
             return self.check_fn()
         except Exception:
@@ -183,6 +206,7 @@ class EngineRegistry:
                     "name": e.name,
                     "display_name": e.display_name,
                     "available": e.is_available,
+                    "stub": e.is_stub,
                     "priority": e.priority,
                     "vram_mb": e.vram_mb,
                     "speed": e.speed_rating,
@@ -313,6 +337,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="fast",
         quality_rating="high",
         tags=["streaming", "nemo", "multilingual"],
+        impl_module="asr_parakeet",  # terminal stub — listed but never active
     ))
     reg.register(EngineInfo(
         name="canary_1b_flash",
@@ -325,6 +350,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="fast",
         quality_rating="high",
         tags=["batch", "nemo", "translation"],
+        impl_module="asr_canary",  # terminal stub — listed but never active
     ))
 
     # --- Background Removal ---
@@ -453,7 +479,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         name="depth_anything_v2",
         domain="depth_estimation",
         display_name="Depth Anything V2",
-        description="Monocular depth estimation for effects (fallback)",
+        description="Monocular depth estimation for effects",
         check_fn=check_depth_available,
         priority=80,
         vram_mb=800,
@@ -473,6 +499,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="medium",
         quality_rating="high",
         tags=["diffusion", "apache-2.0", "vsr"],
+        impl_module="upscale_seedvr2",  # terminal stub — listed but never active
     ))
     reg.register(EngineInfo(
         name="realesrgan",
@@ -512,6 +539,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="slow",
         quality_rating="high",
         tags=["diffusion", "opt-in", "dubbing"],
+        impl_module="lipsync_latentsync",  # terminal stub — listed but never active
     ))
 
     # --- Speaker Diarization ---
@@ -552,6 +580,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="medium",
         quality_rating="high",
         tags=["nemo", "optional"],
+        impl_module="diarize_sortformer",  # adapter not written yet — never active
     ))
 
     # --- Relighting ---
@@ -569,6 +598,7 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="slow",
         quality_rating="high",
         tags=["diffusion", "apache-2.0"],
+        impl_module="relight_iclight",  # terminal stub — listed but never active
     ))
 
     # --- Object Removal ---

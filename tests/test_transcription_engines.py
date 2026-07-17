@@ -21,16 +21,35 @@ def test_parakeet_and_canary_registered_in_transcription_domain():
 
 
 def test_nemo_engines_gated_by_availability_check():
-    from opencut.checks import check_nemo_asr_available
     from opencut.core.engine_registry import get_registry
 
     reg = get_registry()
     for name in ("parakeet_tdt", "canary_1b_flash"):
         engine = reg.get_engine("transcription", name)
         assert engine is not None
-        # The engine's availability mirrors the NeMo check — when NeMo is
-        # absent it must report unavailable rather than crash.
-        assert engine.is_available == check_nemo_asr_available()
+        # The adapters are terminal NotImplementedError stubs, so the engines
+        # must never report available — even when NeMo itself is installed.
+        # They stay listed (coming-soon) but are not selectable as active.
+        assert engine.is_stub is True
+        assert engine.is_available is False
+
+
+def test_stub_engines_never_resolve_as_active():
+    from opencut.core.engine_registry import get_registry
+
+    reg = get_registry()
+    reg.clear_cache()
+    for domain, stub_names in (
+        ("transcription", {"parakeet_tdt", "canary_1b_flash"}),
+        ("diarization", {"sortformer"}),
+        ("upscaling", {"seedvr2"}),
+        ("lip_sync", {"latentsync"}),
+    ):
+        available = {e.name for e in reg.get_available_engines(domain)}
+        assert not (available & stub_names), (domain, available & stub_names)
+        resolved = reg.resolve_engine(domain)
+        if resolved is not None:
+            assert resolved.name not in stub_names, (domain, resolved.name)
 
 
 def test_nemo_check_handles_missing_dependency():

@@ -40,18 +40,10 @@ def _raises_not_implemented(node: ast.AST) -> bool:
     return any(_is_not_implemented_raise(stmt) for stmt in node.body)
 
 
-def _module_is_terminal_stub(source: str) -> bool:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return False
-    return any(_raises_not_implemented(node) for node in ast.walk(tree))
-
-
 @functools.lru_cache(maxsize=1)
-def terminal_stub_modules() -> frozenset[str]:
-    """Return the set of ``opencut.core`` module stems that are terminal stubs."""
-    found = set()
+def _terminal_stub_function_map() -> dict:
+    """Map ``opencut.core`` module stems to their terminal-stub function names."""
+    found: dict = {}
     for path in _CORE_DIR.glob("*.py"):
         if path.name in {"__init__.py", "stub_scan.py"}:
             continue
@@ -59,9 +51,28 @@ def terminal_stub_modules() -> frozenset[str]:
             source = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        if _module_is_terminal_stub(source):
-            found.add(path.stem)
-    return frozenset(found)
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            continue
+        names = frozenset(
+            node.name for node in ast.walk(tree) if _raises_not_implemented(node)
+        )
+        if names:
+            found[path.stem] = names
+    return found
+
+
+def terminal_stub_modules() -> frozenset[str]:
+    """Return the set of ``opencut.core`` module stems that are terminal stubs."""
+    return frozenset(_terminal_stub_function_map())
+
+
+def stub_functions(module_stem: str) -> frozenset[str]:
+    """Return the terminal-stub function names defined by *module_stem*."""
+    if not module_stem:
+        return frozenset()
+    return _terminal_stub_function_map().get(module_stem, frozenset())
 
 
 def is_stub_module(module_stem: str) -> bool:

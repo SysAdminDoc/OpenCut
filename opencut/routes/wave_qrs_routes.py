@@ -42,9 +42,9 @@ import logging
 
 from flask import Blueprint, jsonify
 
-from opencut.errors import safe_error
+from opencut.errors import safe_error, too_many_items
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 wave_qrs_bp = Blueprint("wave_qrs", __name__)
@@ -594,12 +594,25 @@ def route_parakeet_transcribe(job_id, filepath, data):
 def route_parakeet_info():
     try:
         from opencut.core import asr_parakeet
-        return jsonify({
-            "available": asr_parakeet.check_nemo_toolkit_available(),
+        from opencut.core.stub_scan import is_stub_module
+        stub = is_stub_module("asr_parakeet")
+        payload = {
+            # A terminal-stub adapter is never available, even with NeMo
+            # installed — installing the dependency only swaps the error class.
+            "available": False if stub else asr_parakeet.check_nemo_toolkit_available(),
             "licence": "Apache-2.0 (code); CC-BY-4.0 (model)",
-            "latency_ms": 200,
             "install_hint": asr_parakeet.INSTALL_HINT,
-        })
+        }
+        if stub:
+            payload["status"] = "stub"
+            payload["note"] = (
+                "Adapter not implemented yet; the route fails until the "
+                "Parakeet integration ships. Use /transcribe (Whisper) instead."
+            )
+        else:
+            payload["status"] = "implemented"
+            payload["latency_ms"] = 200
+        return jsonify(payload)
     except Exception as exc:
         return safe_error(exc, "parakeet_info")
 
@@ -613,8 +626,12 @@ def route_canary_transcribe(job_id, filepath, data):
     from opencut.core import asr_canary
     if not asr_canary.check_nemo_toolkit_available():
         raise RuntimeError("NeMo toolkit not installed. " + asr_canary.INSTALL_HINT)
+    audio_paths = list(data.get("audio_paths") or [filepath])
+    if len(audio_paths) > 64:
+        raise too_many_items("audio_paths", 64)
+    audio_paths = [validate_filepath(str(p)) for p in audio_paths]
     result = asr_canary.transcribe_batch(
-        audio_paths=list(data.get("audio_paths") or [filepath]),
+        audio_paths=audio_paths,
         language=str(data.get("language") or "en"),
         on_progress=_prog_factory(job_id),
     )
@@ -625,11 +642,24 @@ def route_canary_transcribe(job_id, filepath, data):
 def route_canary_info():
     try:
         from opencut.core import asr_canary
-        return jsonify({
-            "available": asr_canary.check_nemo_toolkit_available(),
+        from opencut.core.stub_scan import is_stub_module
+        stub = is_stub_module("asr_canary")
+        payload = {
+            # A terminal-stub adapter is never available, even with NeMo
+            # installed — installing the dependency only swaps the error class.
+            "available": False if stub else asr_canary.check_nemo_toolkit_available(),
             "licence": "Apache-2.0 (code); CC-BY-4.0 (model)",
             "install_hint": asr_canary.INSTALL_HINT,
-        })
+        }
+        if stub:
+            payload["status"] = "stub"
+            payload["note"] = (
+                "Adapter not implemented yet; the route fails until the "
+                "Canary integration ships. Use /transcribe (Whisper) instead."
+            )
+        else:
+            payload["status"] = "implemented"
+        return jsonify(payload)
     except Exception as exc:
         return safe_error(exc, "canary_info")
 

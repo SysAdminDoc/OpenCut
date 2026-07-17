@@ -173,16 +173,21 @@ def preview(
     processor = AutoImageProcessor.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf")
     model = AutoModelForDepthEstimation.from_pretrained("depth-anything/Depth-Anything-V2-Small-hf").to(device)
 
-    depth = _estimate_depth_frame(bgr, model, processor, device)
-    result_frame = _apply_bokeh(bgr, depth, focal_z, aperture_f)
+    try:
+        depth = _estimate_depth_frame(bgr, model, processor, device)
+        result_frame = _apply_bokeh(bgr, depth, focal_z, aperture_f)
 
-    fd, preview_path = tempfile.mkstemp(suffix=".jpg", prefix="opencut_cinefocus_")
-    os.close(fd)
-    cv2.imwrite(preview_path, result_frame)
-
-    del model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+        fd, preview_path = tempfile.mkstemp(suffix=".jpg", prefix="opencut_cinefocus_")
+        os.close(fd)
+        if not cv2.imwrite(preview_path, result_frame):
+            raise RuntimeError(
+                f"Failed to write CineFocus preview image: {preview_path}. "
+                "Check disk space and write permissions for the temp directory."
+            )
+    finally:
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     return {
         "preview_path": preview_path,
@@ -259,12 +264,23 @@ def render(
         focal_frame_end = total_frames - 1
 
     if not output:
-        ext = os.path.splitext(video_path)[1] or ".mp4"
-        fd, output = tempfile.mkstemp(suffix=ext, prefix="opencut_cinefocus_")
+        # The writer uses the mp4v codec, so the container must be MP4 — never
+        # inherit a source extension like .mkv/.avi that mismatches the fourcc.
+        fd, output = tempfile.mkstemp(suffix=".mp4", prefix="opencut_cinefocus_")
         os.close(fd)
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(output, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        raise RuntimeError(
+            f"Cannot open video writer for {output} "
+            f"({w}x{h} @ {fps:.2f} fps, codec mp4v). Use an .mp4 output path "
+            "and check that the directory exists and is writable."
+        )
     notes: List[str] = []
     notes.append(f"Backend: {backend}")
     notes.append(f"Aperture: f/{aperture_f}")
