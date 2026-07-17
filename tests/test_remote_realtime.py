@@ -582,84 +582,120 @@ class TestMultipartBuilder(unittest.TestCase):
 
 
 class TestMakeRequest(unittest.TestCase):
-    """_make_request HTTP helper."""
+    """_make_request HTTP helper (SSRF-guarded opener)."""
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_get_request(self, mock_urlopen):
-        from opencut.core.remote_process import _make_request
-
+    @staticmethod
+    def _mock_response(body: bytes) -> MagicMock:
         mock_resp = MagicMock()
         mock_resp.__enter__ = MagicMock(return_value=mock_resp)
         mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.read.return_value = b'{"ok": true}'
-        mock_urlopen.return_value = mock_resp
+        mock_resp.read.return_value = body
+        return mock_resp
+
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_get_request(self, mock_opener, mock_validate):
+        from opencut.core.remote_process import _make_request
+
+        mock_opener.return_value.open.return_value = self._mock_response(b'{"ok": true}')
 
         result = _make_request("http://test/health")
         self.assertTrue(result["ok"])
+        mock_validate.assert_called_once_with(
+            "http://test/health", label="Remote node URL", resolve=True
+        )
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_request_with_api_key(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_request_with_api_key(self, mock_opener, mock_validate):
         from opencut.core.remote_process import _make_request
 
-        mock_resp = MagicMock()
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.read.return_value = b'{}'
-        mock_urlopen.return_value = mock_resp
+        mock_opener.return_value.open.return_value = self._mock_response(b"{}")
 
         _make_request("http://test/health", api_key="secret")
-        req = mock_urlopen.call_args[0][0]
+        req = mock_opener.return_value.open.call_args[0][0]
         self.assertIn("Bearer secret", req.get_header("Authorization"))
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_empty_response(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_empty_response(self, mock_opener, mock_validate):
         from opencut.core.remote_process import _make_request
 
-        mock_resp = MagicMock()
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.read.return_value = b""
-        mock_urlopen.return_value = mock_resp
+        mock_opener.return_value.open.return_value = self._mock_response(b"")
 
         result = _make_request("http://test/health")
         self.assertEqual(result, {})
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_http_error(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_http_error(self, mock_opener, mock_validate):
         from urllib.error import HTTPError
 
         from opencut.core.remote_process import _make_request
 
         err = HTTPError("http://x", 500, "err", {}, io.BytesIO(b"fail"))
-        mock_urlopen.side_effect = err
+        mock_opener.return_value.open.side_effect = err
         with self.assertRaises(RuntimeError) as ctx:
             _make_request("http://x")
         self.assertIn("500", str(ctx.exception))
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_url_error(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_url_error(self, mock_opener, mock_validate):
         from urllib.error import URLError
 
         from opencut.core.remote_process import _make_request
 
-        mock_urlopen.side_effect = URLError("conn refused")
+        mock_opener.return_value.open.side_effect = URLError("conn refused")
         with self.assertRaises(RuntimeError) as ctx:
             _make_request("http://x")
         self.assertIn("Cannot reach", str(ctx.exception))
 
-    @patch("opencut.core.remote_process.urlopen")
-    def test_invalid_json(self, mock_urlopen):
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_invalid_json(self, mock_opener, mock_validate):
         from opencut.core.remote_process import _make_request
 
-        mock_resp = MagicMock()
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_resp.read.return_value = b"not json"
-        mock_urlopen.return_value = mock_resp
+        mock_opener.return_value.open.return_value = self._mock_response(b"not json")
 
         with self.assertRaises(RuntimeError) as ctx:
             _make_request("http://x")
         self.assertIn("invalid JSON", str(ctx.exception))
+
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    @patch(
+        "opencut.core.remote_process.validate_public_http_url",
+        side_effect=ValueError("Remote node URL resolves to localhost (127.0.0.1)"),
+    )
+    def test_connect_time_ssrf_rejection(self, mock_validate, mock_opener):
+        """DNS-rebinding guard: resolve-time rejection never opens a socket."""
+        from opencut.core.remote_process import _make_request
+
+        with self.assertRaises(RuntimeError) as ctx:
+            _make_request("http://rebinder.example/health")
+        self.assertIn("Cannot reach remote node", str(ctx.exception))
+        mock_opener.return_value.open.assert_not_called()
+
+    @patch("opencut.core.remote_process.validate_public_http_url")
+    @patch("opencut.core.remote_process.build_guarded_opener")
+    def test_redirect_hop_rejection_maps_to_runtime_error(self, mock_opener, mock_validate):
+        """A mid-request guard rejection (redirect hop) keeps RuntimeError semantics."""
+        from opencut.core.remote_process import _make_request
+
+        mock_opener.return_value.open.side_effect = ValueError(
+            "redirect target must not target localhost"
+        )
+        with self.assertRaises(RuntimeError) as ctx:
+            _make_request("http://test/health")
+        self.assertIn("Cannot reach remote node", str(ctx.exception))
+
+    def test_make_request_rejects_private_targets_for_real(self):
+        """No mocks: a literal private IP is refused before any connection."""
+        from opencut.core.remote_process import _make_request
+
+        with self.assertRaises(RuntimeError) as ctx:
+            _make_request("http://127.0.0.1:5679/health")
+        self.assertIn("Cannot reach remote node", str(ctx.exception))
 
 
 # =====================================================================

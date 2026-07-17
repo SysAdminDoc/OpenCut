@@ -255,6 +255,47 @@ class TestC2PA(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             read_c2pa("/nonexistent/video.mp4")
 
+    def _read_c2pa_with_fake_report(self, validation_state):
+        """Run read_c2pa against a stubbed c2patool report."""
+        import subprocess as _subprocess
+        from unittest.mock import MagicMock
+
+        from opencut.core.c2pa_embed import read_c2pa
+
+        report = {
+            "active_manifest": "urn:c2pa:test",
+            "manifests": {"urn:c2pa:test": {"assertions": []}},
+            "validation_state": validation_state,
+            "validation_status": [],
+        }
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.stdout = json.dumps(report)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as f:
+            f.write(b"fake video bytes")
+            video = f.name
+        try:
+            with patch("opencut.core.c2pa_sidecar._find_c2patool",
+                       return_value="c2patool"), \
+                 patch.object(_subprocess, "run", return_value=proc):
+                return read_c2pa(video)
+        finally:
+            os.unlink(video)
+
+    def test_read_c2pa_marks_valid_credential(self):
+        manifest = self._read_c2pa_with_fake_report("Valid")
+        self.assertTrue(manifest["embedded"])
+        self.assertTrue(manifest["valid"])
+        self.assertEqual(manifest["validation_state"], "Valid")
+
+    def test_read_c2pa_flags_invalid_credential_as_found_but_not_valid(self):
+        """c2patool exits 0 even for failed validation — ``embedded`` means
+        "credential found", ``valid`` means it actually passed validation."""
+        manifest = self._read_c2pa_with_fake_report("Invalid")
+        self.assertTrue(manifest["embedded"])
+        self.assertFalse(manifest["valid"])
+        self.assertEqual(manifest["validation_state"], "Invalid")
+
     def test_hash_file_helper(self):
         from opencut.core.c2pa_embed import _hash_file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:

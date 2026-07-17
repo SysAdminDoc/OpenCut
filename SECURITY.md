@@ -107,8 +107,9 @@ render host on a private VLAN), the threat surface changes:
   clients on the same network.
 
 The local auth token closes that gap: non-loopback callers must include
-the token in the `X-OpenCut-Auth` header (a `?auth=` query string is
-also accepted for tools that can't set headers). `/health` and
+the token in the `X-OpenCut-Auth` header. Query-string tokens are not
+accepted — URLs leak into access logs, browser history, and `Referer`
+headers, so the header is the only credential channel. `/health` and
 `/auth/info` remain exempt so panels can bootstrap connectivity and
 render a "Authentication required" hint.
 

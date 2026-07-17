@@ -101,27 +101,19 @@ def test_mcp_http_auth_required_only_for_non_loopback_binds():
     assert mcp_server._mcp_http_bind_requires_auth("")
 
 
-def test_mcp_http_auth_accepts_header_or_query_token(monkeypatch):
+def test_mcp_http_auth_accepts_header_token_only(monkeypatch):
     monkeypatch.setattr(mcp_server._auth, "is_token_valid", lambda token: token == "secret")
 
     assert mcp_server._mcp_http_request_is_authorized(
         {"X-OpenCut-Auth": "secret"},
-        "/tools",
-        auth_required=True,
-    )
-    assert mcp_server._mcp_http_request_is_authorized(
-        {},
-        "/tools?auth=secret",
         auth_required=True,
     )
     assert not mcp_server._mcp_http_request_is_authorized(
         {},
-        "/tools",
         auth_required=True,
     )
     assert mcp_server._mcp_http_request_is_authorized(
         {},
-        "/tools",
         auth_required=False,
     )
 

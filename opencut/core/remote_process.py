@@ -20,12 +20,14 @@ from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from opencut.core.url_safety import (
     DEFAULT_MAX_DOWNLOAD_BYTES,
+    build_guarded_opener,
     transactional_download,
     validate_media_download,
+    validate_public_http_url,
 )
 from opencut.credential_store import (
     load_and_migrate_secrets,
@@ -254,8 +256,6 @@ _load_registry(migrate=False)
 # ---------------------------------------------------------------------------
 def normalize_node_url(url: str) -> str:
     """Return a canonical remote-node base URL after SSRF-oriented validation."""
-    from opencut.core.url_safety import validate_public_http_url
-
     cleaned = validate_public_http_url(url, label="Remote node URL")
     parsed = urlparse(cleaned)
     if parsed.query or parsed.fragment:
@@ -266,9 +266,14 @@ def normalize_node_url(url: str) -> str:
 def _make_request(url: str, api_key: str = "", method: str = "GET",
                   data: bytes = None, headers: dict = None,
                   timeout: int = DEFAULT_TIMEOUT) -> dict:
-    """Issue an HTTP request and return parsed JSON response.
+    """Issue an HTTP request through the SSRF guard and return parsed JSON.
 
-    Raises ``RuntimeError`` on HTTP/network errors.
+    The URL is re-resolved immediately before connecting and every redirect
+    hop is re-validated (``build_guarded_opener``), matching the guarded
+    download path so a public-looking node hostname cannot rebind to a
+    private/loopback address between validation and connection.
+
+    Raises ``RuntimeError`` on HTTP/network/SSRF errors.
     """
     hdrs = {
         "User-Agent": USER_AGENT,
@@ -278,9 +283,14 @@ def _make_request(url: str, api_key: str = "", method: str = "GET",
     if headers:
         hdrs.update(headers)
 
+    try:
+        validate_public_http_url(url, label="Remote node URL", resolve=True)
+    except ValueError as exc:
+        raise RuntimeError(f"Cannot reach remote node: {exc}")
+
     req = Request(url, data=data, headers=hdrs, method=method)
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with build_guarded_opener().open(req, timeout=timeout) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             if not body:
                 return {}
@@ -298,6 +308,10 @@ def _make_request(url: str, api_key: str = "", method: str = "GET",
         raise RuntimeError(f"Cannot reach remote node: {exc.reason}")
     except json.JSONDecodeError:
         raise RuntimeError("Remote server returned invalid JSON")
+    except ValueError as exc:
+        # Raised by the guarded opener when a redirect hop or the re-resolved
+        # host fails SSRF validation mid-request.
+        raise RuntimeError(f"Cannot reach remote node: {exc}")
 
 
 def _build_multipart(file_path: str, params: dict) -> tuple:

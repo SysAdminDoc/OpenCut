@@ -675,7 +675,7 @@ def _install_remote_auth_middleware(app, error_response):
             return None
         if not _auth.request_requires_auth_token(request.remote_addr):
             return None
-        token = _auth.extract_request_token(request.headers, request.args)
+        token = _auth.extract_request_token(request.headers)
         if _auth.is_token_valid(token):
             return None
         from opencut.security_audit import record_auth_token_rejection

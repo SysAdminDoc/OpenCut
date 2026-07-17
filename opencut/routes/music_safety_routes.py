@@ -266,7 +266,14 @@ def route_c2pa_read(job_id, filepath, data):
         video_path=filepath,
         on_progress=_on_progress,
     )
-    return {"manifest": manifest, "has_c2pa": bool(manifest)}
+    # ``has_c2pa`` means a credential/manifest was found; ``valid`` means an
+    # embedded credential also passed c2patool validation ("Valid" state).
+    # Legacy comment/sidecar manifests are never c2patool-validated.
+    return {
+        "manifest": manifest,
+        "has_c2pa": bool(manifest),
+        "valid": bool(manifest.get("valid")) if isinstance(manifest, dict) else False,
+    }
 
 
 # ===========================================================================
