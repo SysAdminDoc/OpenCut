@@ -7,6 +7,7 @@ broadcast exporters.  It intentionally has no optional runtime dependency.
 
 from __future__ import annotations
 
+import math
 import os
 import re
 import tempfile
@@ -263,7 +264,10 @@ def serialize_caption_document(document: CaptionDocument, profile: str) -> bytes
     root = ET.Element(_q(TT_NS, "tt"))
     root.set(_q(XML_NS, "lang"), document.language)
     root.set(_q(TTP_NS, "timeBase"), "media")
-    root.set(_q(TTP_NS, "frameRate"), _format_number(document.frame_rate))
+    frame_rate_value, frame_rate_multiplier = _frame_rate_attributes(document.frame_rate)
+    root.set(_q(TTP_NS, "frameRate"), frame_rate_value)
+    if frame_rate_multiplier:
+        root.set(_q(TTP_NS, "frameRateMultiplier"), frame_rate_multiplier)
 
     if normalized_profile in {PROFILE_IMSC_LEGACY, PROFILE_IMSC_13}:
         root.set(_q(TTP_NS, "cellResolution"), "32 15")
@@ -423,7 +427,27 @@ def validate_ttml(
 
     styles = _collect_named_elements(root, "style", report)
     regions = _collect_named_elements(root, "region", report)
-    frame_rate = _parse_positive_float(root.get(_q(TTP_NS, "frameRate")), 30.0)
+    frame_rate_raw = root.get(_q(TTP_NS, "frameRate"))
+    if frame_rate_raw is not None and not _FRAME_RATE_INT_RE.fullmatch(frame_rate_raw.strip()):
+        report.issues.append(
+            ConformanceIssue(
+                "framerate.invalid",
+                "ttp:frameRate must be a positive integer; express fractional "
+                "rates with ttp:frameRateMultiplier.",
+                "/tt/@ttp:frameRate",
+            )
+        )
+    multiplier_raw = root.get(_q(TTP_NS, "frameRateMultiplier"))
+    if multiplier_raw is not None and not _FRAME_RATE_MULTIPLIER_RE.fullmatch(multiplier_raw.strip()):
+        report.issues.append(
+            ConformanceIssue(
+                "framerate.multiplier.invalid",
+                "ttp:frameRateMultiplier must be two positive integers "
+                "(numerator denominator), e.g. '1000 1001'.",
+                "/tt/@ttp:frameRateMultiplier",
+            )
+        )
+    frame_rate = _effective_frame_rate(root)
     cue_ids: set[str] = set()
     cues = root.findall(f".//{{{TT_NS}}}p")
     report.cue_count = len(cues)
@@ -517,7 +541,7 @@ def parse_ttml(
         details = "; ".join(issue.message for issue in report.errors)
         raise CaptionInterchangeError(f"Caption XML is not conformant: {details}")
     root = _parse_xml(payload)
-    frame_rate = _parse_positive_float(root.get(_q(TTP_NS, "frameRate")), 30.0)
+    frame_rate = _effective_frame_rate(root)
     styles: dict[str, CaptionStyle] = {}
     for style_el in root.findall(f".//{{{TT_NS}}}styling/{{{TT_NS}}}style"):
         style_id = style_el.get(_q(XML_NS, "id"), "")
@@ -804,6 +828,16 @@ def _validate_direction(
 def _validate_model(document: CaptionDocument) -> None:
     if not document.cues:
         raise CaptionInterchangeError("At least one caption cue is required.")
+    try:
+        frame_rate = float(document.frame_rate)
+    except (TypeError, ValueError):
+        frame_rate = float("nan")
+    if not math.isfinite(frame_rate) or frame_rate <= 0:
+        raise CaptionInterchangeError(
+            f"Invalid frame rate: {document.frame_rate!r} (must be a positive number)."
+        )
+    # Fail fast on rates that cannot be expressed as TTML integer + multiplier.
+    _frame_rate_attributes(frame_rate)
     if not _LANGUAGE_RE.fullmatch(document.language):
         raise CaptionInterchangeError(f"Invalid document language: {document.language!r}.")
     for region in document.regions.values():
@@ -897,6 +931,46 @@ def _parse_positive_float(value: str | None, default: float) -> float:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+_FRAME_RATE_INT_RE = re.compile(r"[1-9]\d*")
+_FRAME_RATE_MULTIPLIER_RE = re.compile(r"([1-9]\d*)\s+([1-9]\d*)")
+
+
+def _frame_rate_attributes(rate: float) -> tuple[str, str | None]:
+    """Return TTML ``(ttp:frameRate, ttp:frameRateMultiplier)`` for *rate*.
+
+    TTML requires ``ttp:frameRate`` to be a positive integer; fractional
+    NTSC-family rates (23.976, 29.97, 59.94, ...) are expressed as the integer
+    rate plus a ``1000 1001`` multiplier. Any other fractional rate cannot be
+    represented and raises a conformance error.
+    """
+    rate = float(rate)
+    if not math.isfinite(rate) or rate <= 0:
+        raise CaptionInterchangeError(
+            f"Invalid frame rate: {rate!r} (must be a positive number)."
+        )
+    if rate.is_integer():
+        return str(int(rate)), None
+    ntsc_base = rate * 1001.0 / 1000.0
+    if abs(ntsc_base - round(ntsc_base)) < 1e-3 and round(ntsc_base) > 0:
+        return str(int(round(ntsc_base))), "1000 1001"
+    raise CaptionInterchangeError(
+        f"Unsupported fractional frame rate {rate!r}: TTML requires an integer "
+        "ttp:frameRate (fractional rates are only supported for the NTSC "
+        "1000/1001 family, e.g. 23.976 / 29.97 / 59.94)."
+    )
+
+
+def _effective_frame_rate(root: ET.Element) -> float:
+    """Frame rate for ``f`` time expressions: integer rate x multiplier."""
+    frame_rate = _parse_positive_float(root.get(_q(TTP_NS, "frameRate")), 30.0)
+    multiplier = root.get(_q(TTP_NS, "frameRateMultiplier"))
+    if multiplier:
+        match = _FRAME_RATE_MULTIPLIER_RE.fullmatch(multiplier.strip())
+        if match:
+            frame_rate *= int(match.group(1)) / int(match.group(2))
+    return frame_rate
 
 
 def _format_number(value: float) -> str:

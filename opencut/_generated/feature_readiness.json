@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-01T02:31:11Z",
+  "generated_at": "2026-07-17T14:45:20Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 72,
   "total_routes": 98,
@@ -64,7 +64,7 @@
       "feature_id": "auto.audio-reactive-fx",
       "label": "Audio Reactive Fx",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -183,7 +183,7 @@
       "feature_id": "auto.cosyvoice2",
       "label": "Cosyvoice2",
       "category": "audio",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -217,7 +217,7 @@
       "feature_id": "auto.deblur-motion",
       "label": "Deblur Motion",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -251,7 +251,7 @@
       "feature_id": "auto.depth-depthpro",
       "label": "Depth Depthpro",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -268,7 +268,7 @@
       "feature_id": "auto.depth-flow",
       "label": "Depth Flow",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -285,7 +285,7 @@
       "feature_id": "auto.diffbir",
       "label": "Diffbir",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -445,7 +445,7 @@
       "feature_id": "auto.gen-video-ltx",
       "label": "Gen Video Ltx",
       "category": "generate",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -462,7 +462,7 @@
       "feature_id": "auto.gen-video-opensora",
       "label": "Gen Video Opensora",
       "category": "generate",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -497,7 +497,7 @@
       "feature_id": "auto.gyroflow",
       "label": "Gyroflow",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -569,7 +569,7 @@
       "feature_id": "lipsync.latentsync",
       "label": "LatentSync diffusion lip-sync",
       "category": "lipsync",
-      "state": "available",
+      "state": "stub",
       "install_hint": "pip install diffusers torch torchvision",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -913,7 +913,7 @@
       "feature_id": "auto.searaft",
       "label": "Searaft",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -930,7 +930,7 @@
       "feature_id": "video.upscale.seedvr2",
       "label": "SeedVR2 one-step diffusion VSR",
       "category": "video",
-      "state": "available",
+      "state": "stub",
       "install_hint": "pip install diffusers torch  # download seedvr2-3b via model manager",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -947,7 +947,7 @@
       "feature_id": "auto.sfx-audiogen",
       "label": "Sfx Audiogen",
       "category": "audio",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1071,7 +1071,7 @@
       "feature_id": "auto.tokenflow",
       "label": "Tokenflow",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1088,7 +1088,7 @@
       "feature_id": "auto.track-cutie",
       "label": "Track Cutie",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1105,7 +1105,7 @@
       "feature_id": "auto.track-deva",
       "label": "Track Deva",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [
@@ -1122,7 +1122,7 @@
       "feature_id": "auto.vevo2",
       "label": "Vevo2",
       "category": "audio",
-      "state": "missing_dependency",
+      "state": "stub",
       "install_hint": "see route response for dependency hint",
       "docs": "docs/MODELS.md",
       "routes": [

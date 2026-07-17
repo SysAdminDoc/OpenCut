@@ -370,11 +370,26 @@ class TestWaveHRoutes(unittest.TestCase):
         self.assertFalse(body["available"])
         self.assertEqual(set(body["backends"]), {"hailuo", "seedance"})
 
-    def test_tier3_agent_search_returns_501(self):
+    def test_agent_search_is_implemented_async_job(self):
+        """/agent/search-footage graduated from a 501 stub to a real async
+        job (semantic CLIP footage search). A request without clip_paths is
+        accepted as a job and then errors with a clear validation message."""
+        import time
+
         r = self.client.post("/agent/search-footage",
                              json={"query": "foo"}, headers=self._h())
-        self.assertEqual(r.status_code, 501)
-        self.assertEqual(r.get_json().get("code"), "ROUTE_STUBBED")
+        self.assertEqual(r.status_code, 200)
+        job_id = (r.get_json() or {}).get("job_id", "")
+        self.assertTrue(job_id)
+        error = ""
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            status = self.client.get(f"/status/{job_id}").get_json() or {}
+            error = str(status.get("error") or "")
+            if error:
+                break
+            time.sleep(0.1)
+        self.assertIn("clip_paths", error)
 
     def test_tier2_flashvsr_returns_503(self):
         r = self.client.post("/video/upscale/flashvsr",

@@ -573,6 +573,14 @@ def caption_ttml_route(job_id, filepath, data):
     if not captions:
         raise ValueError("No caption data provided. Pass 'captions' in the request body.")
 
+    # Clamp any caller-supplied frame rate the same way /delivery/caption/ebu-tt
+    # does — it flows into ttp:frameRate and must stay in the broadcast range.
+    if isinstance(captions, dict) and "frame_rate" in captions:
+        captions = dict(captions)
+        captions["frame_rate"] = safe_float(
+            captions.get("frame_rate", 30.0), 30.0, min_val=23.0, max_val=60.0
+        )
+
     out_path = data.get("output_path", "")
     if out_path:
         out_path = validate_output_path(out_path)

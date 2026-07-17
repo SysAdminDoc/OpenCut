@@ -164,6 +164,47 @@ def test_invalid_conformance_corpus_is_rejected(payload, code):
     assert code in {issue.code for issue in report.errors}
 
 
+def test_fractional_ntsc_frame_rate_emits_integer_rate_with_multiplier():
+    document = _multilingual_document()  # frame_rate=29.97
+    payload = serialize_caption_document(document, "imsc1.3")
+    root = ET.fromstring(payload)
+    assert root.get(f"{{{TTP_NS}}}frameRate") == "30"
+    assert root.get(f"{{{TTP_NS}}}frameRateMultiplier") == "1000 1001"
+    report = validate_ttml(payload, expected_profile="imsc1.3")
+    assert report.valid, report.to_dict()
+    parsed = parse_ttml(payload, expected_profile="imsc1.3")
+    assert parsed.frame_rate == pytest.approx(29.97, abs=1e-2)
+
+
+def test_integer_frame_rate_has_no_multiplier():
+    document = _multilingual_document()
+    document.frame_rate = 25.0
+    payload = serialize_caption_document(document, "ttml")
+    root = ET.fromstring(payload)
+    assert root.get(f"{{{TTP_NS}}}frameRate") == "25"
+    assert root.get(f"{{{TTP_NS}}}frameRateMultiplier") is None
+
+
+@pytest.mark.parametrize("bad_rate", [0, -24, float("nan"), float("inf"), 25.5])
+def test_unrepresentable_frame_rates_are_rejected(bad_rate):
+    document = _multilingual_document()
+    document.frame_rate = bad_rate
+    with pytest.raises(CaptionInterchangeError, match="frame rate"):
+        serialize_caption_document(document, "ttml")
+
+
+def test_validate_ttml_flags_non_integer_frame_rate_attribute():
+    payload = _corpus_xml(root_attrs='ttp:frameRate="29.97"')
+    report = validate_ttml(payload, expected_profile="imsc1.3")
+    assert not report.valid
+    assert any(issue.code == "framerate.invalid" for issue in report.errors)
+
+    payload = _corpus_xml(root_attrs='ttp:frameRate="30" ttp:frameRateMultiplier="1000 0"')
+    report = validate_ttml(payload, expected_profile="imsc1.3")
+    assert not report.valid
+    assert any(issue.code == "framerate.multiplier.invalid" for issue in report.errors)
+
+
 def test_profile_mismatch_is_reported():
     payload = serialize_caption_document(_multilingual_document(), "ttml")
     report = validate_ttml(payload, expected_profile="imsc1.3")

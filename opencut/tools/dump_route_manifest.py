@@ -24,6 +24,7 @@ import argparse
 import inspect
 import json
 import logging
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -50,6 +51,26 @@ READINESS_STUB = "stub"
 _STUB_MARKERS = ("_stub_501(", "ROUTE_STUBBED")
 _DEPENDENCY_MARKERS = ("_stub_503(", "missing_dependency(", "MISSING_DEPENDENCY")
 
+# Handlers that delegate to an ``opencut.core`` adapter whose entrypoint is
+# still a terminal ``raise NotImplementedError`` stub (e.g. the Wave Q/R/S
+# ``raise RuntimeError(INSTALL_HINT)`` pattern over asr_parakeet.transcribe)
+# are stubs too: installing the dependency only swaps the error class.
+_CORE_IMPORT_RE = re.compile(
+    r"^\s*from opencut\.core import (?P<names>[\w ,]+)$", re.MULTILINE
+)
+
+
+def _delegates_to_stub_entrypoint(source: str) -> bool:
+    """True when *source* calls a terminal-stub function of a core module."""
+    from opencut.core.stub_scan import stub_functions
+
+    for match in _CORE_IMPORT_RE.finditer(source):
+        for module in (name.strip() for name in match.group("names").split(",")):
+            for fn in stub_functions(module):
+                if re.search(rf"\b{re.escape(module)}\.{fn}\s*\(", source):
+                    return True
+    return False
+
 
 def _classify_readiness(view_func) -> str:
     """Classify a Flask view function as implemented / dependency-gated / stub.
@@ -68,6 +89,8 @@ def _classify_readiness(view_func) -> str:
         return READINESS_IMPLEMENTED
 
     if any(marker in source for marker in _STUB_MARKERS):
+        return READINESS_STUB
+    if _delegates_to_stub_entrypoint(source):
         return READINESS_STUB
     if any(marker in source for marker in _DEPENDENCY_MARKERS):
         return READINESS_DEPENDENCY_GATED

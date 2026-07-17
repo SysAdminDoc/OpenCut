@@ -13,7 +13,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 
-from opencut.errors import error_response, safe_error
+from opencut.errors import error_response, missing_dependency, safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
@@ -836,24 +836,28 @@ def route_audio_reactive_presets():
 
 @wave_k_bp.route("/video/cinefocus", methods=["POST"])
 @require_csrf
-def route_cinefocus():
-    try:
-        from opencut.core import cinefocus
-        if not cinefocus.check_cinefocus_available():
-            return _stub_503("CineFocus", cinefocus.INSTALL_HINT)
-        data = request.get_json(force=True, silent=True) or {}
-        result = cinefocus.render(
-            validate_filepath(str(data.get("video_path") or "")),
-            focal_z_start=safe_float(data.get("focal_z_start"), default=0.5),
-            focal_z_end=safe_float(data.get("focal_z_end"), default=0.5),
-            focal_frame_start=safe_int(data.get("focal_frame_start"), default=0),
-            focal_frame_end=safe_int(data.get("focal_frame_end"), default=0),
-            aperture_f=safe_float(data.get("aperture_f"), default=2.8),
-            output=str(data.get("output") or "") or None,
-        )
-        return jsonify({"output": result.output, "notes": result.notes})
-    except Exception as exc:
-        return safe_error(exc, "cinefocus")
+@async_job("cinefocus", filepath_required=True, filepath_param="video_path")
+def route_cinefocus(job_id, filepath, data):
+    """Full-video neural depth render — runs as a background job, never in
+    the request thread (matches the neighbouring heavy-render routes)."""
+    from opencut.core import cinefocus
+    if not cinefocus.check_cinefocus_available():
+        raise missing_dependency("CineFocus (Depth Anything V2)", extra="depth")
+
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=int(pct), message=str(msg))
+
+    result = cinefocus.render(
+        filepath,
+        focal_z_start=safe_float(data.get("focal_z_start"), default=0.5),
+        focal_z_end=safe_float(data.get("focal_z_end"), default=0.5),
+        focal_frame_start=safe_int(data.get("focal_frame_start"), default=0),
+        focal_frame_end=safe_int(data.get("focal_frame_end"), default=0),
+        aperture_f=safe_float(data.get("aperture_f"), default=2.8),
+        output=str(data.get("output") or "") or None,
+        on_progress=_on_progress,
+    )
+    return {"output": result.output, "notes": result.notes}
 
 
 # =============================================================
