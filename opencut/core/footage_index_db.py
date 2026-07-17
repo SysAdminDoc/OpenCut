@@ -49,9 +49,45 @@ def _prune_dead_connections() -> None:
             del _ALL_CONNECTIONS[tid]
 
 
+def _connection_is_usable(conn) -> bool:
+    """Return True when a cached SQLite connection is still open."""
+    if conn is None:
+        return False
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.Error:
+        return False
+    return True
+
+
+def _discard_cached_conn(conn) -> None:
+    """Drop a stale thread-local connection from the registry and close it."""
+    with _CONN_LOCK:
+        for tid, tracked in list(_ALL_CONNECTIONS.items()):
+            if tracked is conn:
+                _ALL_CONNECTIONS.pop(tid, None)
+    try:
+        conn.close()
+    except sqlite3.Error:
+        pass
+    _thread_local.conn = None
+    _thread_local.conn_path = None
+
+
 def _get_conn():
-    """Get a thread-local SQLite connection."""
+    """Get a thread-local SQLite connection.
+
+    Mirrors ``job_store._get_conn``: the cached connection is discarded and
+    reopened when ``_DB_PATH`` changed since it was created (tests repoint
+    the path) or when it was closed behind our back (``close_all_connections``
+    from another thread), so a stale handle never outlives the path it was
+    opened against.
+    """
     conn = getattr(_thread_local, "conn", None)
+    conn_path = getattr(_thread_local, "conn_path", None)
+    if conn is not None and (conn_path != _DB_PATH or not _connection_is_usable(conn)):
+        _discard_cached_conn(conn)
+        conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
         conn = sqlite3.connect(_DB_PATH, timeout=10)
@@ -59,6 +95,7 @@ def _get_conn():
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.row_factory = sqlite3.Row
         _thread_local.conn = conn
+        _thread_local.conn_path = _DB_PATH
         with _CONN_LOCK:
             _ALL_CONNECTIONS[threading.get_ident()] = conn
     _prune_dead_connections()
@@ -82,6 +119,7 @@ def close_all_connections():
     try:
         if getattr(_thread_local, "conn", None) is not None:
             _thread_local.conn = None
+            _thread_local.conn_path = None
     except Exception:
         pass
 

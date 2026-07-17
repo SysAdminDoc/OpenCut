@@ -154,9 +154,34 @@ class PipelineHealthResult:
 # ---------------------------------------------------------------------------
 # SQLite connection helpers
 # ---------------------------------------------------------------------------
+def _connection_is_usable(conn) -> bool:
+    """Return True when a cached SQLite connection is still open."""
+    if conn is None:
+        return False
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.Error:
+        return False
+    return True
+
+
 def _get_conn() -> sqlite3.Connection:
-    """Thread-local SQLite connection."""
+    """Thread-local SQLite connection, path-aware like ``job_store``.
+
+    The cached connection is discarded and reopened when ``_DB_PATH`` changed
+    since it was created (tests repoint the path) or when it was closed, so a
+    stale handle never outlives the path it was opened against.
+    """
     conn = getattr(_LOCAL, "health_conn", None)
+    conn_path = getattr(_LOCAL, "health_conn_path", None)
+    if conn is not None and (conn_path != _DB_PATH or not _connection_is_usable(conn)):
+        try:
+            conn.close()
+        except sqlite3.Error:
+            pass
+        _LOCAL.health_conn = None
+        _LOCAL.health_conn_path = None
+        conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
         conn = sqlite3.connect(_DB_PATH, timeout=10)
@@ -164,6 +189,7 @@ def _get_conn() -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         _LOCAL.health_conn = conn
+        _LOCAL.health_conn_path = _DB_PATH
     return conn
 
 

@@ -86,10 +86,16 @@ class LocalOnlyNetworkError(RuntimeError):
         self.target = str(target or "unknown destination")
         self.feature = str(feature or "Outbound network access")
         self.suggestion = str(local_alternative or DEFAULT_LOCAL_ALTERNATIVE)
-        super().__init__(
+        message = (
             f"{ERROR_CODE}: Local-only mode blocked {self.feature.lower()} "
             f"to {self.target}."
         )
+        if local_alternative:
+            # Surface the feature-specific alternative in the message so logs
+            # and plain RuntimeError consumers see the remediation, not just
+            # structured-field readers.
+            message += f" {self.suggestion}"
+        super().__init__(message)
 
 
 def _local_only_active() -> bool:
