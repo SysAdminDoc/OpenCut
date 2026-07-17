@@ -577,9 +577,14 @@ function setJobActionsLocked(locked) {
 
   _jobLockedButtonStates.forEach((wasDisabled, btn) => {
     if (!btn || !document.contains(btn)) return;
-    btn.removeAttribute("aria-disabled");
     delete btn.dataset.jobLocked;
-    if (btn.dataset.backendLocked !== "true") btn.removeAttribute("title");
+    if (btn.dataset.backendLocked === "true") {
+      // Backend is offline: keep the button disabled with the offline title
+      // until checkConnection() re-enables it on reconnect.
+      return;
+    }
+    btn.removeAttribute("aria-disabled");
+    btn.removeAttribute("title");
     if (!btn.classList.contains("loading")) {
       btn.disabled = wasDisabled;
     }
@@ -2047,7 +2052,7 @@ const JobPoller = (() => {
         const job = JSON.parse(event.data);
         const status = job.status ?? "running";
         const pct    = typeof job.progress === "number" ? job.progress : 0;
-        const msg    = job.message ?? job.msg ?? "Processing…";
+        const msg    = job.message ?? job.msg ?? t("processing.processing", "Processing...");
 
         onProgress(pct, msg);
 
@@ -2112,7 +2117,7 @@ const JobPoller = (() => {
     const job = r.data;
     const status  = job.status ?? "running";
     const pct     = typeof job.progress === "number" ? job.progress : 0;
-    const msg     = job.message ?? job.msg ?? "Processing…";
+    const msg     = job.message ?? job.msg ?? t("processing.processing", "Processing...");
 
     onProgress(pct, msg);
 
@@ -2218,9 +2223,13 @@ function syncTabOverflowControls() {
     next.disabled = true;
     return;
   }
-  const maxScroll = Math.max(0, nav.scrollWidth - nav.clientWidth);
-  previous.disabled = nav.scrollLeft <= 2;
-  next.disabled = nav.scrollLeft >= maxScroll - 2;
+  // The buttons move the ACTIVE tab (activateRelativeTab), not the scroll
+  // position, so derive disabled state from the active tab index — scroll
+  // position can be changed manually and would desync from the action.
+  const tabs = Array.from(nav.querySelectorAll(".oc-tab"));
+  const activeIndex = tabs.findIndex((tab) => tab.classList.contains("active"));
+  previous.disabled = activeIndex <= 0;
+  next.disabled = activeIndex < 0 || activeIndex >= tabs.length - 1;
 }
 
 function revealTabButton(button) {
@@ -2286,7 +2295,7 @@ const UIController = (() => {
   }
 
   // ── Processing banner ──
-  function showProcessing(msg = "Processing…") {
+  function showProcessing(msg = t("processing.processing", "Processing...")) {
     const banner = document.getElementById("processingBanner");
     if (banner) banner.classList.remove("hidden");
     document.getElementById("mainContent")?.setAttribute("aria-busy", "true");
@@ -2391,13 +2400,25 @@ const UIController = (() => {
   }
 
   // ── Toast notifications ──
-  function getToastHeading(type) {
-    switch (type) {
-      case "success": return "Ready";
-      case "warning": return "Needs attention";
-      case "error": return "Action failed";
-      default: return "Status update";
+  function getToastHeading(type, message) {
+    const lower = String(message || "").toLowerCase();
+    if (type === "success") {
+      return /(saved|loaded|opened|exported|copied|ready)/.test(lower)
+        ? t("uxp.toast.heading_ready", "Ready")
+        : t("uxp.toast.heading_done", "Done");
     }
+    if (type === "warning") {
+      return /(select|choose|enter|required)/.test(lower)
+        ? t("uxp.toast.heading_action_needed", "Action needed")
+        : t("uxp.toast.heading_heads_up", "Heads up");
+    }
+    if (type === "error") {
+      return t("uxp.toast.heading_needs_attention", "Needs attention");
+    }
+    if (/(step \d+\/\d+|installing|reinstalling|restarting|loading|checking|processing|transcribing|translating|burning|indexing)/.test(lower)) {
+      return t("uxp.toast.heading_in_progress", "In progress");
+    }
+    return t("uxp.toast.heading_status_update", "Status update");
   }
 
   function getToastDuration(type, explicitDuration) {
@@ -2421,7 +2442,7 @@ const UIController = (() => {
     const tone = payload.type || type || "info";
     const text = String(payload.message ?? payload.text ?? "").trim()
       || String(message ?? "").trim();
-    const title = String(payload.title ?? getToastHeading(tone)).trim() || getToastHeading(tone);
+    const title = String(payload.title ?? getToastHeading(tone, text)).trim() || getToastHeading(tone, text);
     const detail = String(payload.detail ?? "").trim();
 
     const icons = {
@@ -2443,7 +2464,7 @@ const UIController = (() => {
         <span class="oc-toast-msg">${escapeHtml(text || title)}</span>
         ${detail ? `<span class="oc-toast-detail">${escapeHtml(detail)}</span>` : ""}
       </span>
-      <button type="button" class="oc-toast-dismiss" aria-label="Dismiss notification">&times;</button>`;
+      <button type="button" class="oc-toast-dismiss" aria-label="${escapeHtml(t("uxp.toast.dismiss", "Dismiss notification"))}">&times;</button>`;
 
     area.appendChild(toast);
 
@@ -3580,13 +3601,10 @@ function updateWorkspaceOverview(tabId) {
   const activeTab = getWorkspaceTabId(tabId);
   const meta = WORKSPACE_META[activeTab] || WORKSPACE_META.cut;
   const sourcePath = getWorkspaceSource(activeTab);
-  const connectionState = document.getElementById("connectionStatus")?.dataset.state || "disconnected";
-  const backendLabel = t(CONNECTION_LABEL_KEYS[connectionState] || "conn.offline", "Offline");
   const backendOnline = isBackendConnected();
   const overviewTitle = document.getElementById("workspaceOverviewTitle");
   const overviewSubtitle = document.getElementById("workspaceOverviewSubtitle");
   const sourceValue = document.getElementById("workspaceSourceValue");
-  const backendValue = document.getElementById("workspaceBackendValue");
   const libraryValue = document.getElementById("workspaceLibraryValue");
 
   applyWorkspaceShellState(activeTab, backendOnline, sourcePath);
@@ -3597,10 +3615,6 @@ function updateWorkspaceOverview(tabId) {
     sourceValue.textContent = formatWorkspaceSource(sourcePath);
     sourceValue.title = sourcePath || t("uxp.workspace.choose_source_title", "Choose a clip or paste a path to start");
     sourceValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", sourcePath ? "ready" : "empty");
-  }
-  if (backendValue) {
-    backendValue.textContent = backendLabel;
-    backendValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", backendOnline ? "online" : "offline");
   }
   if (libraryValue) {
     const count = Array.isArray(_projectClips) ? _projectClips.length : 0;
@@ -6158,15 +6172,23 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     document.querySelectorAll(".oc-btn-primary:not([data-offline-enabled='true'])").forEach(btn => {
       // Don't override buttons already disabled for other reasons (loading state)
       if (!btn.classList.contains("loading")) {
-        btn.disabled = !alive;
         if (!alive) {
+          btn.disabled = true;
           btn.dataset.backendLocked = "true";
           btn.setAttribute("aria-disabled", "true");
           btn.title = t("uxp.status.backend_offline_action_title", "Start or reconnect the OpenCut backend before running this action.");
-        } else if (btn.dataset.backendLocked === "true") {
+        } else if (btn.dataset.jobLocked === "true") {
+          // A running job owns this button: clear the backend lock but keep
+          // it disabled with the job-lock title until the job finishes.
           delete btn.dataset.backendLocked;
-          btn.removeAttribute("aria-disabled");
-          btn.removeAttribute("title");
+          btn.title = t("uxp.status.job_running_action_title", "Another OpenCut job is running. Wait for it to finish or cancel it first.");
+        } else {
+          btn.disabled = false;
+          if (btn.dataset.backendLocked === "true") {
+            delete btn.dataset.backendLocked;
+            btn.removeAttribute("aria-disabled");
+            btn.removeAttribute("title");
+          }
         }
       }
     });
@@ -6463,7 +6485,6 @@ function bindEvents() {
   document.getElementById("runMulticamBtn")?.addEventListener("click",   runMulticamCuts);
 
   // ── Timeline ──
-  document.getElementById("browseCutsJson")?.addEventListener("click",   () => browseFile("cutsJsonPath", { types: ["json"] }));
   document.getElementById("browseExportDir")?.addEventListener("click",  () => browseFolder("exportDir"));
   document.getElementById("browseSrtFile")?.addEventListener("click",    () => browseFile("srtFilePath", { types: ["srt"] }));
   document.getElementById("applyTimelineCutsBtn")?.addEventListener("click", () => applyTimelineCuts(lastCuts));
@@ -7539,7 +7560,8 @@ function bindPluginMarketplaceInstallActions(marketplace) {
   document.querySelectorAll(".oc-plugin-install-approval-checkbox").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const pluginId = checkbox.getAttribute("data-plugin-id");
-      const button = document.querySelector(`.oc-plugin-install-btn[data-plugin-id="${pluginId}"]`);
+      const button = Array.from(document.querySelectorAll(".oc-plugin-install-btn"))
+        .find((candidate) => candidate.getAttribute("data-plugin-id") === pluginId) || null;
       if (button) button.disabled = !checkbox.checked;
     });
   });
@@ -7564,6 +7586,19 @@ function bindPluginMarketplaceInstallActions(marketplace) {
         ? formatI18n("uxp.settings.plugin_install_queued", "Verified plugin installation queued as job {job_id}.", { job_id: response.data.job_id })
         : t("uxp.settings.plugin_install_queued_generic", "Verified plugin installation queued.");
       setSettingsStatus("settingsPluginTrustStatus", message, "success");
+      const jobId = response.data?.job_id;
+      if (jobId) {
+        try {
+          await JobPoller.poll(jobId);
+        } catch (err) {
+          setSettingsStatus(
+            "settingsPluginTrustStatus",
+            String(err?.message || err) || t("uxp.settings.plugin_install_failed", "Plugin installation could not start."),
+            "error"
+          );
+        }
+      }
+      await uxpLoadPluginTrust();
     });
   });
 }

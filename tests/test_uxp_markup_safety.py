@@ -16,6 +16,14 @@ INNER_HTML_ASSIGNMENT_RE = re.compile(
     re.DOTALL,
 )
 HTML_ACCUMULATOR_RE = re.compile(r"\bhtml\s*\+=\s*(?P<rhs>.*?);", re.DOTALL)
+INSERT_ADJACENT_HTML_RE = re.compile(
+    r"\.insertAdjacentHTML\s*\(\s*(?:\"[^\"]*\"|'[^']*')\s*,\s*(?P<rhs>.*?)\)\s*;",
+    re.DOTALL,
+)
+OUTER_HTML_ASSIGNMENT_RE = re.compile(
+    r"(?P<target>[A-Za-z0-9_.$?]+)\.outerHTML\s*=\s*(?P<rhs>.*?);",
+    re.DOTALL,
+)
 TEMPLATE_EXPR_RE = re.compile(r"\$\{(?P<expr>[^{}]*(?:\{[^{}]*\}[^{}]*)*)\}")
 FUNCTION_RE = re.compile(r"(?:async\s+)?function\s+(?P<name>[A-Za-z0-9_]+)\s*\(")
 
@@ -109,7 +117,6 @@ SAFE_TEMPLATE_EXPR_PATTERNS = (
     "escapeHtml(",
     "formatTimecode(",
     "formatCompactDuration(",
-    "JSON.stringify(",
 )
 SAFE_EXACT_TEMPLATE_EXPRS = {
     "icons[tone] ?? icons.info",
@@ -223,6 +230,33 @@ def test_uxp_html_accumulators_escape_dynamic_template_values():
         if unsafe:
             failures.append(
                 f"line {line}: unescaped accumulator expression(s): {', '.join(unsafe)}"
+            )
+
+    assert not failures, "\n".join(failures)
+
+
+def test_uxp_insert_adjacent_and_outer_html_sinks_are_escaped():
+    """Fail-closed guard for the non-innerHTML markup sinks.
+
+    The UXP panel currently has zero insertAdjacentHTML/outerHTML sinks; any
+    future addition is scanned here and must escape every dynamic template
+    expression (same safelist as the innerHTML guard).
+    """
+    source = _source()
+    sinks = list(INSERT_ADJACENT_HTML_RE.finditer(source)) + list(
+        OUTER_HTML_ASSIGNMENT_RE.finditer(source)
+    )
+
+    failures: list[str] = []
+    for match in sinks:
+        line = _line_for(source, match.start())
+        rhs = match.group("rhs")
+        if _is_empty_assignment(rhs):
+            continue
+        unsafe = _unsafe_expressions(rhs)
+        if unsafe:
+            failures.append(
+                f"line {line}: unescaped markup sink expression(s): {', '.join(unsafe)}"
             )
 
     assert not failures, "\n".join(failures)
