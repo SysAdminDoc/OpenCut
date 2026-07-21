@@ -3,6 +3,22 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.36.0] — 2026-07-21 — CEP monolith decomposition (first module)
+
+### Changed - Extract pure formatting helpers from the CEP main.js monolith
+
+- Moved seven provably-pure, closure-independent helpers (`safeFixed`,
+  `escSingleQuote`, `extractWordSegments`, `fmtDur`, `formatTimecode`,
+  `getStepPrecision`, `formatNumberForInput`) out of the 17.7k-line
+  `client/main.js` into a new UMD module `client/format-utils.js`
+  (`window.OpenCutFormat`), mirroring the existing `panel-utils.js` pattern.
+  `main.js` now aliases them; ~80 call sites are unchanged. The
+  injection-critical `escSingleQuote` (ExtendScript single-quote escaping) is
+  ported byte-for-byte and covered by a focused vitest contract test.
+- Verified equivalent: node syntax check, vitest (incl. new format-utils
+  suite), Vite panel build, the 35-screenshot rendered regression gate (no page
+  errors, identical rendering), and unchanged eslint baseline.
+
 ## [1.35.0] — 2026-07-20 — Roadmap drain: download integrity
 
 ### Added - Verify model-download integrity before use

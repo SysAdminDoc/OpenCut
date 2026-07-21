@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.34.0
+   OpenCut CEP Panel - Main Controller v1.36.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -12,6 +12,14 @@
     var HEALTH_MS = 4000;
     var SSE_OK = typeof EventSource !== "undefined";
     var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {};
+    var OpenCutFormat = (typeof window !== "undefined" && window.OpenCutFormat) ? window.OpenCutFormat : {};
+    var safeFixed = OpenCutFormat.safeFixed,
+        escSingleQuote = OpenCutFormat.escSingleQuote,
+        extractWordSegments = OpenCutFormat.extractWordSegments,
+        fmtDur = OpenCutFormat.fmtDur,
+        formatTimecode = OpenCutFormat.formatTimecode,
+        getStepPrecision = OpenCutFormat.getStepPrecision,
+        formatNumberForInput = OpenCutFormat.formatNumberForInput;
 
     // ---- Core State ----
     var cs = null;
@@ -1164,22 +1172,7 @@
         ).replace(/\s+/g, " ").trim();
     }
 
-    function getStepPrecision(step) {
-        var stepText = String(step || "");
-        var decimalPoint = stepText.indexOf(".");
-        return decimalPoint === -1 ? 0 : (stepText.length - decimalPoint - 1);
-    }
 
-    function formatNumberForInput(value, precision) {
-        var text;
-        if (!isFinite(value)) return "";
-        if (precision > 0) {
-            text = value.toFixed(precision).replace(/\.?0+$/, "");
-            return text === "-0" ? "0" : text;
-        }
-        text = String(Math.round(value));
-        return text === "-0" ? "0" : text;
-    }
 
     function normalizeNumberInputValue(input) {
         var raw;
@@ -10364,7 +10357,6 @@
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
-    function safeFixed(v, digits) { var n = Number(v); return isFinite(n) ? n.toFixed(digits) : "0"; }
     
     // Escape for use inside JSX string arguments (handles Windows paths)
     function escPath(s) {
@@ -10382,36 +10374,8 @@
     // which failed on literal newlines/CR/Unicode line separators — breaking
     // the JSX string and raising a cs.evalScript error on markers/chapters
     // whose names contained those chars.
-    function escSingleQuote(s) {
-        if (s === undefined || s === null) return "";
-        return String(s)
-            .replace(/\\/g, "\\\\")
-            .replace(/'/g, "\\'")
-            .replace(/\n/g, "\\n")
-            .replace(/\r/g, "\\r")
-            .replace(/\t/g, "\\t")
-            .replace(/\u2028/g, "\\u2028")
-            .replace(/\u2029/g, "\\u2029");
-    }
 
-    function extractWordSegments(segments) {
-        var words = [];
-        for (var i = 0; i < segments.length; i++) {
-            if (segments[i].words) {
-                for (var j = 0; j < segments[i].words.length; j++) {
-                    words.push(segments[i].words[j]);
-                }
-            }
-        }
-        return words;
-    }
 
-    function fmtDur(s) {
-        if (!s && s !== 0) return "--";
-        var m = Math.floor(s / 60);
-        var sec = Math.floor(s % 60);
-        return m + ":" + (sec < 10 ? "0" : "") + sec;
-    }
 
     // ================================================================
     // Cut Review Panel (Phase 3.3 — Preview Before Commit)
@@ -10422,15 +10386,6 @@
     /**
      * Format seconds as MM:SS.s (e.g. "01:23.4")
      */
-    function formatTimecode(seconds) {
-        if (!seconds && seconds !== 0) return "00:00.0";
-        var totalTenths = Math.round(Math.abs(Number(seconds) || 0) * 10);
-        var totalSec = Math.floor(totalTenths / 10);
-        var tenths = totalTenths % 10;
-        var m = Math.floor(totalSec / 60);
-        var sec = totalSec % 60;
-        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec + "." + tenths;
-    }
 
     /**
      * Update the summary text showing how many cuts are selected.
