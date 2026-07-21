@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
 
+### Changed - Extract pure data-shape helpers from the CEP main.js monolith
+
+- Moved six provably-pure, closure-independent helpers
+  (`normalizeWorkspaceState`, `normalizeNavScrollState`, `languageOptionLabel`,
+  `normalizeLanguageOptions`, `getTranscriptTotalDuration`,
+  `polishStepsFromResult`) out of `client/main.js` into a new UMD module
+  `client/data-shape-utils.js` (`window.OpenCutDataShape`), mirroring the
+  existing `format-utils`/`job-meta-utils`/`classify-utils` extractions.
+  `main.js` now aliases them at the top; all ~20 call sites are unchanged, and
+  the module is registered in the Vite classic-script preservation list and
+  loaded before `main.js` in `index.html`.
+- Added a focused vitest contract test (`tests/data-shape-utils.test.mjs`, 8
+  cases) covering the state/normalization/label/duration/index behaviours.
+
 ### Changed - Collapse `command-center.css` into a single token + rule layer
 
 - Re-synthesised `extension/com.opencut.panel/client/command-center.css` from
