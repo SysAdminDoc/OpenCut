@@ -5,6 +5,15 @@ import {
   computeInverseRenames,
   buildSmartBinRules,
   summarizeRenamePreview,
+  formatTimecode,
+  formatCompactDuration,
+  formatBytes,
+  humanizeDomain,
+  shortsBundleFileNameUxp,
+  normalizeHttpsExternalUrl,
+  isTimeoutError,
+  getSearchResultPath,
+  getSearchResultPreview,
 } from "./uxp-utils.js";
 
 /**
@@ -404,10 +413,6 @@ function isBackendConnected() {
   return document.getElementById("connectionStatus")?.dataset.state === "connected";
 }
 
-function isTimeoutError(err) {
-  const message = String(err?.message || err || "");
-  return err?.name === "AbortError" || /timed out|abort/i.test(message);
-}
 
 function showSelectClipWarning() {
   UIController.showToast(t("uxp.runtime.select_clip_first", "Select a clip first."), "warning");
@@ -436,17 +441,6 @@ async function copyTextToClipboard(text, { successLabel = t("uxp.runtime.output"
   }
 }
 
-function normalizeHttpsExternalUrl(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "https:" ? parsed.href : null;
-  } catch (_) {
-    return null;
-  }
-}
 
 async function openHttpsExternalUrl(value, developerText) {
   const url = normalizeHttpsExternalUrl(value);
@@ -2656,17 +2650,6 @@ function getSelectLabel(selectId, fallback = "") {
   return (option?.textContent || option?.label || option?.value || fallback).trim();
 }
 
-function getSearchResultPath(item) {
-  const candidate = [
-    item?.path,
-    item?.file,
-    item?.filepath,
-    item?.source_path,
-    item?.clip_path,
-    item?.asset_path,
-  ].find((value) => typeof value === "string" && value.trim());
-  return candidate ? candidate.trim() : "";
-}
 
 function getSearchResultKindLabel(item) {
   const raw = String(item?.kind ?? item?.type ?? item?.modality ?? item?.match_type ?? "").toLowerCase();
@@ -2706,21 +2689,6 @@ function getSearchResultTimeLabel(item) {
   return "";
 }
 
-function getSearchResultPreview(item) {
-  const preview = [
-    item?.preview,
-    item?.snippet,
-    item?.segment_text,
-    item?.text,
-    item?.transcript,
-    item?.description,
-    item?.reason,
-    item?.caption,
-  ].find((value) => typeof value === "string" && value.trim());
-  if (!preview) return "";
-  const compact = preview.replace(/\s+/g, " ").trim();
-  return compact.length > 156 ? `${compact.slice(0, 153)}…` : compact;
-}
 
 function getSearchResultScoreLabel(item, index) {
   const raw = Number(item?.score ?? item?.confidence ?? item?.similarity);
@@ -6024,32 +5992,6 @@ async function socialConnectUxp() {
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-function formatTimecode(seconds) {
-  if (typeof seconds !== "number" || isNaN(seconds)) return "—";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const f = Math.floor((seconds % 1) * 100);
-  return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(f)}`;
-}
-
-function formatCompactDuration(seconds) {
-  if (typeof seconds !== "number" || isNaN(seconds) || seconds <= 0) return "0 s";
-  if (seconds < 1) return `${Math.round(seconds * 1000)} ms`;
-  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 1 : 2)} s`;
-  const minutes = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${minutes}m ${secs}s`;
-}
-
-function humanizeDomain(domain) {
-  return String(domain || "")
-    .split("_")
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function formatLocaleTime(value) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return t("uxp.runtime.just_now", "just now");
@@ -6072,18 +6014,6 @@ function formatRelativeTime(value) {
   return formatter.format(Math.round(diffMs / 86400000), "day");
 }
 
-function formatBytes(bytes) {
-  if (typeof bytes !== "number" || !isFinite(bytes) || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  let value = bytes;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
 function setTextAndTitle(id, text, title) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -6098,8 +6028,6 @@ function setStatusPill(id, text, state, title) {
   el.dataset.state = state;
   el.title = title || text;
 }
-
-function pad(n) { return String(n).padStart(2, "0"); }
 
 // ─────────────────────────────────────────────────────────────
 // Health check loop
@@ -7999,9 +7927,6 @@ async function previewShortsPlanUxp() {
   }
 }
 
-function shortsBundleFileNameUxp(path) {
-  return String(path || "").split(/[\\/]/).pop() || "output";
-}
 
 function renderShortsBundleSummaryUxp(result) {
   const bundle = result?.magic_clips_bundle;

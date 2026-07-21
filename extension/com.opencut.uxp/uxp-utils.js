@@ -107,3 +107,108 @@ export function summarizeRenamePreview(renames, limit = 5) {
   const sample = list.slice(0, limit).map((r) => `${r.oldName} -> ${r.newName}`);
   return { count: list.length, sample };
 }
+
+// ── Pure formatting / normalization helpers ──────────────────────────
+// Extracted from the UXP controller so they can be unit-tested without a
+// live Premiere/UXP host. All are deterministic (argument-only) with no DOM,
+// host API, i18n, or Date/locale access.
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+/** Seconds → HH:MM:SS.ff timecode, or "—" for non-numbers. */
+export function formatTimecode(seconds) {
+  if (typeof seconds !== "number" || isNaN(seconds)) return "—";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const f = Math.floor((seconds % 1) * 100);
+  return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(f)}`;
+}
+
+/** Seconds → compact human duration ("450 ms", "12.5 s", "3m 4s"). */
+export function formatCompactDuration(seconds) {
+  if (typeof seconds !== "number" || isNaN(seconds) || seconds <= 0) return "0 s";
+  if (seconds < 1) return `${Math.round(seconds * 1000)} ms`;
+  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 1 : 2)} s`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s`;
+}
+
+/** Byte count → human size ("0 B", "512 KB", "1.5 GB"). */
+export function formatBytes(bytes) {
+  if (typeof bytes !== "number" || !isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+/** Title-case an underscore-delimited domain ("silence_cut" → "Silence Cut"). */
+export function humanizeDomain(domain) {
+  return String(domain || "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+/** Basename of a path across / or \\ separators, defaulting to "output". */
+export function shortsBundleFileNameUxp(path) {
+  return String(path || "").split(/[\\/]/).pop() || "output";
+}
+
+/** Return a validated https:// href, or null for anything else. */
+export function normalizeHttpsExternalUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/** True when an error represents an abort/timeout. */
+export function isTimeoutError(err) {
+  const message = String(err?.message || err || "");
+  return err?.name === "AbortError" || /timed out|abort/i.test(message);
+}
+
+/** First non-empty path-like field on a search result item. */
+export function getSearchResultPath(item) {
+  const candidate = [
+    item?.path,
+    item?.file,
+    item?.filepath,
+    item?.source_path,
+    item?.clip_path,
+    item?.asset_path,
+  ].find((value) => typeof value === "string" && value.trim());
+  return candidate ? candidate.trim() : "";
+}
+
+/** First non-empty preview/snippet field, whitespace-collapsed and truncated. */
+export function getSearchResultPreview(item) {
+  const preview = [
+    item?.preview,
+    item?.snippet,
+    item?.segment_text,
+    item?.text,
+    item?.transcript,
+    item?.description,
+    item?.reason,
+    item?.caption,
+  ].find((value) => typeof value === "string" && value.trim());
+  if (!preview) return "";
+  const compact = preview.replace(/\s+/g, " ").trim();
+  return compact.length > 156 ? `${compact.slice(0, 153)}…` : compact;
+}
