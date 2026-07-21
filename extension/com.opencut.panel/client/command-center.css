@@ -1,23 +1,4 @@
 /* OpenCut command-center shell — generated mockup implementation layer. */
-:root {
-    --cc-bg: #0a0d12;
-    --cc-header: rgba(10, 13, 18, 0.96);
-    --cc-sidebar: #0c1016;
-    --cc-surface: #11161e;
-    --cc-surface-raised: #151b24;
-    --cc-control: #1a212c;
-    --cc-border: rgba(196, 210, 230, 0.13);
-    --cc-border-strong: rgba(196, 210, 230, 0.22);
-    --cc-text: #f3f6fb;
-    --cc-muted: #aab4c3;
-    --cc-accent: #7da2ff;
-    --cc-accent-soft: rgba(125, 162, 255, 0.14);
-    --cc-success: #63c7a5;
-    --cc-warning: #e8b44d;
-    --cc-danger: #e37972;
-    --cc-radius: 12px;
-    --cc-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
-}
 
 html.theme-light {
     --cc-bg: #edf1f6;
@@ -99,11 +80,6 @@ body {
     font-weight: 680;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-}
-
-.nav-tabs {
-    gap: 5px;
-    padding: 14px 0;
 }
 
 .nav-tab {
@@ -260,10 +236,6 @@ html.theme-light .nav-tab.active {
     box-shadow: var(--cc-shadow);
 }
 
-.workspace-stage {
-    padding: 18px;
-}
-
 .workspace-stage-primary {
     display: grid;
     grid-template-columns: minmax(250px, 1.15fr) minmax(280px, 0.85fr);
@@ -343,11 +315,6 @@ html body.has-clip .workspace-stage-actions {
     box-shadow: none;
 }
 
-.workspace-stage-session-item {
-    min-height: 62px;
-    padding: 11px 13px;
-}
-
 .workspace-stage-session-item::before {
     background: var(--cc-accent);
 }
@@ -367,10 +334,6 @@ html body.has-clip .workspace-stage-actions {
 
 .workspace-stage-card {
     padding: 14px;
-}
-
-.card {
-    padding: 16px;
 }
 
 .card:hover,
@@ -516,21 +479,12 @@ html.theme-light .btn-primary:hover:not(:disabled) {
         grid-template-areas: "kicker" "title" "copy" "actions" "session";
     }
 
-    .workspace-stage-session {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
     #panel-settings.active {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 700px) {
-    .sidebar {
-        width: 64px;
-        min-width: 64px;
-        padding: 10px 8px;
-    }
 
     .sidebar-brand,
     .sidebar-footer {
@@ -550,32 +504,9 @@ html.theme-light .btn-primary:hover:not(:disabled) {
         padding: 0;
     }
 
-    .content-header {
-        min-height: 58px;
-        padding: 9px 12px;
-    }
-
     .content-kicker-row,
     .content-subtitle {
         display: none;
-    }
-
-    .content-title {
-        font-size: 21px;
-    }
-
-    .main {
-        padding: 10px 10px 76px;
-    }
-
-    .workspace-stage,
-    .card,
-    #panel-settings .card {
-        padding: 13px;
-    }
-
-    .workspace-stage-title {
-        font-size: 18px;
     }
 
     html body .workspace-stage-actions,
