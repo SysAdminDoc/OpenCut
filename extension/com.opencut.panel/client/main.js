@@ -54,6 +54,9 @@
         findSelectOptionByValue = OpenCutLookup.findSelectOptionByValue,
         getPanelTabName = OpenCutLookup.getPanelTabName,
         getSelectOptionLabel = OpenCutLookup.getSelectOptionLabel;
+    var OpenCutI18n = (typeof window !== "undefined" && window.OpenCutI18n) ? window.OpenCutI18n : {};
+    var translate = OpenCutI18n.translate,
+        mergeLocale = OpenCutI18n.mergeLocale;
 
     // ---- Core State ----
     var cs = null;
@@ -12863,7 +12866,7 @@
     var _i18n = {};
 
     function t(key, fallback) {
-        return (_i18n && _i18n[key]) || fallback || key;
+        return translate(_i18n, key, fallback);
     }
 
     function applyI18nToDOM() {
@@ -12939,9 +12942,7 @@
             _loadJson(lang, function (localeData) {
                 if (localeData) {
                     // Merge locale over English base so missing keys fall back to English
-                    for (var k in localeData) {
-                        if (localeData.hasOwnProperty(k)) _i18n[k] = localeData[k];
-                    }
+                    _i18n = mergeLocale(_i18n, localeData);
                     _currentLang = lang;
                 } else {
                     _currentLang = "en";

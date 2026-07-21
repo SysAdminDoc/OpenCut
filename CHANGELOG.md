@@ -3,7 +3,21 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## [1.40.0] — 2026-07-21 — Extract the UXP i18n core behind tests
+## [1.40.0] — 2026-07-21 — Extract the CEP + UXP i18n cores behind tests
+
+### Changed - Move the CEP i18n lookup + locale merge into a pure, tested core
+
+- Extracted the CEP `t()` resolution and the `loadLocale` overlay-merge logic
+  out of `client/main.js` into a new UMD module `client/i18n-utils.js`
+  (`window.OpenCutI18n`) exposing `translate(map, key, fallback)` and
+  `mergeLocale(base, overlay)`. `t()` now delegates to `translate`, and
+  `loadLocale` replaces its in-place merge loop with a non-mutating
+  `mergeLocale` call. Registered in the Vite classic-script list and loaded
+  before `main.js`; behaviour (English base + locale overlay, key fallback) is
+  unchanged.
+- Added a focused vitest contract test (`tests/i18n-utils.test.mjs`, 4 cases)
+  covering key/fallback resolution and own-keys-only, non-mutating locale
+  merge.
 
 ### Changed - Move the UXP i18n lookup + interpolation into a pure, tested core
 
