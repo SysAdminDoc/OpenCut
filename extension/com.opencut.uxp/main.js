@@ -19,6 +19,8 @@ import {
   pluginTrustStateClass,
   normalizeLocaleTag,
   getLocaleCandidates,
+  translate,
+  interpolateI18n,
 } from "./uxp-utils.js";
 
 /**
@@ -267,16 +269,11 @@ let _currentLang = UXP_DEFAULT_LOCALE;
 let _i18n = {};
 
 function t(key, fallback) {
-  return (_i18n && _i18n[key]) || fallback || key;
+  return translate(_i18n, key, fallback);
 }
 
 function formatI18n(key, fallback, values = {}) {
-  let text = t(key, fallback);
-  Object.keys(values).forEach((name) => {
-    const val = String(values[name]);
-    text = text.replace(new RegExp(`\\{${name}\\}`, "g"), () => val);
-  });
-  return text;
+  return interpolateI18n(t(key, fallback), values);
 }
 
 function formatCountI18n(count, oneKey, oneFallback, manyKey, manyFallback, values = {}) {

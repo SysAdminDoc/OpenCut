@@ -269,3 +269,26 @@ export function getLocaleCandidates(lang, defaultLocale = "en") {
   if (defaultLocale !== normalized && defaultLocale !== base) candidates.push(defaultLocale);
   return candidates;
 }
+
+// ── i18n lookup + interpolation (pure core) ──────────────────────────
+// The controller's `t()` / `formatI18n()` bind these to the live translation
+// map; the resolution and placeholder-substitution logic itself is pure and
+// unit-tested here.
+
+/** Look up a key in a translation map, falling back to `fallback` then `key`. */
+export function translate(map, key, fallback) {
+  return (map && map[key]) || fallback || key;
+}
+
+/**
+ * Replace `{name}` placeholders in `text` with values[name] (all occurrences,
+ * treated literally so `$`-sequences in values are not special).
+ */
+export function interpolateI18n(text, values = {}) {
+  let out = String(text ?? "");
+  Object.keys(values || {}).forEach((name) => {
+    const val = String(values[name]);
+    out = out.replace(new RegExp(`\\{${name}\\}`, "g"), () => val);
+  });
+  return out;
+}
