@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
+## [1.38.0] — 2026-07-21 — Decompose the UXP panel monolith
 
 ### Changed - Extract pure catalog/classifier/locale helpers from UXP main.js
 
@@ -33,6 +33,8 @@ record also lives in the git commit messages.
   covering the timecode/duration/byte formatters, domain humanizer, basename
   helper, the https-only URL guard, the abort/timeout predicate, and the
   search-result path/preview coalescers.
+
+## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
 
 ### Changed - Extract pure string/path helpers from the CEP main.js monolith
 
