@@ -14,6 +14,11 @@ import {
   isTimeoutError,
   getSearchResultPath,
   getSearchResultPreview,
+  normalizeCaptionStyleCatalog,
+  migrationStateClass,
+  pluginTrustStateClass,
+  normalizeLocaleTag,
+  getLocaleCandidates,
 } from "./uxp-utils.js";
 
 /**
@@ -321,10 +326,6 @@ function applyI18nToDOM(root = document) {
   });
 }
 
-function normalizeLocaleTag(lang = UXP_DEFAULT_LOCALE) {
-  return String(lang || UXP_DEFAULT_LOCALE).trim().toLowerCase().replace(/_/g, "-") || UXP_DEFAULT_LOCALE;
-}
-
 function getLocaleOverride() {
   try {
     if (typeof window !== "undefined" && window.location) {
@@ -348,15 +349,6 @@ function getPreferredLocale() {
     if (first) return normalizeLocaleTag(first);
   }
   return UXP_DEFAULT_LOCALE;
-}
-
-function getLocaleCandidates(lang) {
-  const normalized = normalizeLocaleTag(lang);
-  const base = normalized.split("-")[0];
-  const candidates = [normalized];
-  if (base && base !== normalized) candidates.push(base);
-  if (UXP_DEFAULT_LOCALE !== normalized && UXP_DEFAULT_LOCALE !== base) candidates.push(UXP_DEFAULT_LOCALE);
-  return candidates;
 }
 
 async function fetchLocaleJson(path) {
@@ -2714,25 +2706,6 @@ function buildSearchResultCard(item, index) {
     preview: getSearchResultPreview(item),
     scoreLabel: getSearchResultScoreLabel(item, index),
   };
-}
-
-function normalizeCaptionStyleCatalog(styles) {
-  if (!Array.isArray(styles)) return [];
-  const seen = new Set();
-  const out = [];
-  styles.forEach((style) => {
-    const id = String(style?.id || "").trim();
-    if (!id || seen.has(id)) return;
-    seen.add(id);
-    out.push({
-      id,
-      name: String(style?.name || id).trim() || id,
-      category: String(style?.category || "uncategorized").trim() || "uncategorized",
-      description: String(style?.preview_description || "").trim(),
-      animation: String(style?.animation_type || "").trim(),
-    });
-  });
-  return out;
 }
 
 function captionStyleGroupLabel(category) {
@@ -7236,12 +7209,6 @@ function migrationStatusLabel(status) {
   })[status] || status;
 }
 
-function migrationStateClass(row) {
-  if (row.risk === "high" || row.status === "cep_only") return "warning";
-  if (row.status === "partial_uxp" || row.risk === "medium") return "manual";
-  return "auto";
-}
-
 async function uxpLoadMigrationRisk() {
   const grid = document.getElementById("uxpMigrationRiskGrid");
   if (!grid) return;
@@ -7349,14 +7316,6 @@ function pluginTrustSourceLabel(source) {
     invalid_manifest: t("uxp.settings.plugin_trust_invalid_manifest", "Invalid manifest"),
     failed_validation: t("uxp.settings.plugin_trust_failed_validation", "Failed validation"),
   })[source] || source || t("uxp.settings.plugin_trust_unknown", "Unknown");
-}
-
-function pluginTrustStateClass(plugin) {
-  const trust = plugin?.trust || {};
-  if (plugin?.load_status === "failed" || trust.errors?.length) return "warning";
-  if (trust.unsigned_allowed || trust.lock_missing) return "manual";
-  if (plugin?.load_status === "loaded") return "auto";
-  return "manual";
 }
 
 function pluginCapabilityBadgesHtml(badges = []) {

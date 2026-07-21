@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
 
+### Changed - Extract pure catalog/classifier/locale helpers from UXP main.js
+
+- Moved five more pure, host-independent helpers
+  (`normalizeCaptionStyleCatalog`, `migrationStateClass`,
+  `pluginTrustStateClass`, `normalizeLocaleTag`, `getLocaleCandidates`) out of
+  `com.opencut.uxp/main.js` into `uxp-utils.js`. The two locale helpers now
+  take the default locale as a `defaultLocale = "en"` parameter (equal to the
+  controller's `UXP_DEFAULT_LOCALE`), removing their last module-level
+  dependency so they are fully pure without changing any call site.
+- Added a focused vitest contract test (`tests/uxp-catalog-locale.test.mjs`, 6
+  cases) covering catalog dedupe/coercion, the migration/plugin trust-badge
+  classifiers, and locale-tag normalization + fallback-candidate ordering.
+
 ### Changed - Extract pure formatting helpers from the UXP main.js monolith
 
 - Moved nine provably-pure, host-independent helpers (`formatTimecode`,

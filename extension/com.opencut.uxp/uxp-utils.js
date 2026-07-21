@@ -212,3 +212,60 @@ export function getSearchResultPreview(item) {
   const compact = preview.replace(/\s+/g, " ").trim();
   return compact.length > 156 ? `${compact.slice(0, 153)}…` : compact;
 }
+
+// ── Pure catalog / classifier / locale helpers ───────────────────────
+// Deterministic, host-independent logic extracted from the UXP controller.
+// The locale helpers take the default locale as a parameter (its "en"
+// default matches the controller's UXP_DEFAULT_LOCALE), so call sites need
+// no changes.
+
+/** Dedupe + coerce a caption-style catalog to a fixed display shape. */
+export function normalizeCaptionStyleCatalog(styles) {
+  if (!Array.isArray(styles)) return [];
+  const seen = new Set();
+  const out = [];
+  styles.forEach((style) => {
+    const id = String(style?.id || "").trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    out.push({
+      id,
+      name: String(style?.name || id).trim() || id,
+      category: String(style?.category || "uncategorized").trim() || "uncategorized",
+      description: String(style?.preview_description || "").trim(),
+      animation: String(style?.animation_type || "").trim(),
+    });
+  });
+  return out;
+}
+
+/** Map a migration row's risk/status to a trust-badge class. */
+export function migrationStateClass(row) {
+  if (row.risk === "high" || row.status === "cep_only") return "warning";
+  if (row.status === "partial_uxp" || row.risk === "medium") return "manual";
+  return "auto";
+}
+
+/** Map a plugin's trust/load state to a trust-badge class. */
+export function pluginTrustStateClass(plugin) {
+  const trust = plugin?.trust || {};
+  if (plugin?.load_status === "failed" || trust.errors?.length) return "warning";
+  if (trust.unsigned_allowed || trust.lock_missing) return "manual";
+  if (plugin?.load_status === "loaded") return "auto";
+  return "manual";
+}
+
+/** Normalize a locale tag to lowercase BCP-47-ish form (e.g. "en-US" → "en-us"). */
+export function normalizeLocaleTag(lang, defaultLocale = "en") {
+  return String(lang || defaultLocale).trim().toLowerCase().replace(/_/g, "-") || defaultLocale;
+}
+
+/** Ordered fallback locale candidates: [full, base, default]. */
+export function getLocaleCandidates(lang, defaultLocale = "en") {
+  const normalized = normalizeLocaleTag(lang, defaultLocale);
+  const base = normalized.split("-")[0];
+  const candidates = [normalized];
+  if (base && base !== normalized) candidates.push(base);
+  if (defaultLocale !== normalized && defaultLocale !== base) candidates.push(defaultLocale);
+  return candidates;
+}
