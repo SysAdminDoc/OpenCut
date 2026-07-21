@@ -19,6 +19,11 @@ record also lives in the git commit messages.
   `sessionCtxResultPath`, `getJobHistorySourcePath`, `getJobHistorySourceName`)
   into `client/job-meta-utils.js` (`window.OpenCutJobMeta`), also aliased in
   `main.js` and covered by a vitest contract test.
+- Extracted three pure engine/plugin classifiers (`humanizeEngineDomain`,
+  `engineTemplateText`, `pluginTrustStateClass`) into `client/classify-utils.js`
+  (`window.OpenCutClassify`), aliased in `main.js` with a vitest contract test.
+  The `t()`-dependent neighbors (`engineCountText`, plugin badge HTML) stay in
+  `main.js` — only closure-independent leaves were moved.
 - Verified equivalent for each extraction: node syntax check, vitest (incl. the
   new format-utils and job-meta suites), Vite panel build, the 35-screenshot
   rendered regression gate (no page errors, identical rendering), and unchanged

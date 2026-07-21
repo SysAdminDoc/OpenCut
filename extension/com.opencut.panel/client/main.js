@@ -25,6 +25,10 @@
         _sessionCtxResultPath = OpenCutJobMeta.sessionCtxResultPath,
         getJobHistorySourcePath = OpenCutJobMeta.getJobHistorySourcePath,
         getJobHistorySourceName = OpenCutJobMeta.getJobHistorySourceName;
+    var OpenCutClassify = (typeof window !== "undefined" && window.OpenCutClassify) ? window.OpenCutClassify : {};
+    var humanizeEngineDomain = OpenCutClassify.humanizeEngineDomain,
+        engineTemplateText = OpenCutClassify.engineTemplateText,
+        pluginTrustStateClass = OpenCutClassify.pluginTrustStateClass;
 
     // ---- Core State ----
     var cs = null;
@@ -5602,13 +5606,6 @@
     }
 
     // ---- Engine Registry UI ----
-    function humanizeEngineDomain(domain) {
-        return String(domain || "")
-            .split("_")
-            .filter(Boolean)
-            .map(function (part) { return part.charAt(0).toUpperCase() + part.slice(1); })
-            .join(" ");
-    }
 
     function engineCountText(template, count) {
         var verb = count === 1 ? t("engines.verb_is", "is") : t("engines.verb_are", "are");
@@ -5618,15 +5615,6 @@
             .replace("{verb}", verb);
     }
 
-    function engineTemplateText(template, values) {
-        var text = template;
-        for (var key in values) {
-            if (Object.prototype.hasOwnProperty.call(values, key)) {
-                text = text.replace("{" + key + "}", values[key]);
-            }
-        }
-        return text;
-    }
 
     function loadEngineRegistry() {
         var grid = document.getElementById("engineRegistryGrid");
@@ -5849,13 +5837,6 @@
         return labels[source] || source || t("settings.plugin_trust_unknown", "Unknown");
     }
 
-    function pluginTrustStateClass(plugin) {
-        var trust = plugin && plugin.trust ? plugin.trust : {};
-        if ((plugin && plugin.load_status === "failed") || trust.errors && trust.errors.length) return "warning";
-        if (trust.unsigned_allowed || trust.lock_missing) return "manual";
-        if (plugin && plugin.load_status === "loaded") return "auto";
-        return "manual";
-    }
 
     function pluginCapabilityBadgesHtml(badges) {
         if (!badges || !badges.length) {
