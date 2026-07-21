@@ -444,6 +444,10 @@ def semantic_index_route(job_id, filepath, data):
     frames_per_clip = safe_int(data.get("frames_per_clip"), 12, 1, 100)
     force_rebuild = safe_bool(data.get("force_rebuild"), False)
     engine = (data.get("engine") or "clip-vit-b32").strip()
+    # Optional portable sidecar: persist/reuse embeddings under the project so
+    # moved or relinked media is deterministically reused across machines.
+    project_dir = data.get("project_dir") or ""
+    project_dir = validate_path(project_dir) if project_dir else None
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -454,6 +458,7 @@ def semantic_index_route(job_id, filepath, data):
         force_rebuild=force_rebuild,
         engine=engine,
         on_progress=_progress,
+        project_dir=project_dir,
     )
 
     return result
