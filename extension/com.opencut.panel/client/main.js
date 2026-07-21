@@ -29,6 +29,13 @@
     var humanizeEngineDomain = OpenCutClassify.humanizeEngineDomain,
         engineTemplateText = OpenCutClassify.engineTemplateText,
         pluginTrustStateClass = OpenCutClassify.pluginTrustStateClass;
+    var OpenCutDataShape = (typeof window !== "undefined" && window.OpenCutDataShape) ? window.OpenCutDataShape : {};
+    var normalizeWorkspaceState = OpenCutDataShape.normalizeWorkspaceState,
+        normalizeNavScrollState = OpenCutDataShape.normalizeNavScrollState,
+        languageOptionLabel = OpenCutDataShape.languageOptionLabel,
+        normalizeLanguageOptions = OpenCutDataShape.normalizeLanguageOptions,
+        getTranscriptTotalDuration = OpenCutDataShape.getTranscriptTotalDuration,
+        _polishStepsFromResult = OpenCutDataShape.polishStepsFromResult;
 
     // ---- Core State ----
     var cs = null;
@@ -216,30 +223,6 @@
                 break;
         }
         return shortcut.label || "";
-    }
-
-    function normalizeWorkspaceState(saved) {
-        return {
-            activeNav: saved && typeof saved.activeNav === "string" ? saved.activeNav : "cut",
-            activeSubs: saved && saved.activeSubs && typeof saved.activeSubs === "object" ? saved.activeSubs : {},
-            selectedPath: saved && typeof saved.selectedPath === "string" ? saved.selectedPath : "",
-            selectedName: saved && typeof saved.selectedName === "string" ? saved.selectedName : ""
-        };
-    }
-
-    function normalizeNavScrollState(saved) {
-        var normalized = {};
-        var key;
-        if (!saved || typeof saved !== "object") return normalized;
-        for (key in saved) {
-            if (Object.prototype.hasOwnProperty.call(saved, key) &&
-                typeof saved[key] === "number" &&
-                isFinite(saved[key]) &&
-                saved[key] >= 0) {
-                normalized[key] = Math.round(saved[key]);
-            }
-        }
-        return normalized;
     }
 
     function loadWorkspaceState() {
@@ -3912,39 +3895,6 @@
         });
     }
 
-    function languageOptionLabel(value, fallback) {
-        if (value && typeof value === "object") {
-            return String(value.name || value.label || value.native_name || value.code || fallback || "");
-        }
-        return String(value == null ? (fallback || "") : value);
-    }
-
-    function normalizeLanguageOptions(languages) {
-        var out = {};
-        var i;
-        var item;
-        var code;
-        if (!languages || typeof languages !== "object") return out;
-        if (Array.isArray(languages)) {
-            for (i = 0; i < languages.length; i++) {
-                item = languages[i];
-                if (item && typeof item === "object") {
-                    code = item.code || item.id || item.language;
-                    if (code) out[String(code)] = languageOptionLabel(item, code);
-                } else if (typeof item === "string" && item) {
-                    out[item] = item;
-                }
-            }
-            return out;
-        }
-        var keys = Object.keys(languages);
-        for (i = 0; i < keys.length; i++) {
-            code = keys[i];
-            out[code] = languageOptionLabel(languages[code], code);
-        }
-        return out;
-    }
-
     function populateDropdown(selectEl, langMap, defaultVal) {
         if (!selectEl) return;
         var currentVal = selectEl.value || defaultVal;
@@ -7613,15 +7563,6 @@
     }
     var _playheadSyncWarned = false;
 
-    function getTranscriptTotalDuration(data) {
-        var segments = data && data.segments ? data.segments : [];
-        var maxEnd = 0;
-        for (var i = 0; i < segments.length; i++) {
-            maxEnd = Math.max(maxEnd, Number(segments[i].end || segments[i].start || 0));
-        }
-        return maxEnd;
-    }
-
     function renderTranscriptTimelineMeta(data) {
         if (!el.transcriptTimelineMeta) return;
         var segments = data && data.segments ? data.segments : [];
@@ -9621,15 +9562,6 @@
             frag.appendChild(_polishStepRow(def, status, detail));
         }
         el.polishSteps.appendChild(frag);
-    }
-
-    function _polishStepsFromResult(result) {
-        var map = {};
-        var steps = (result && result.steps) || [];
-        for (var i = 0; i < steps.length; i++) {
-            map[steps[i].key] = steps[i];
-        }
-        return map;
     }
 
     function _renderPolishRunning() {
