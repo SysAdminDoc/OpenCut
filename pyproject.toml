@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 # ("OpenCut"), the import package (`opencut`), the CLI commands, and the CEP/UXP
 # extension IDs are unchanged. See README "Naming & distribution".
 name = "opencut-ppro"
-version = "1.35.0"
+version = "1.36.0"
 description = "OpenCut for Premiere Pro - local AI video editing automation (captions, audio, VFX) for Adobe Premiere Pro via CEP/UXP, CLI, REST, and MCP"
 readme = "README.md"
 license = {text = "MIT"}

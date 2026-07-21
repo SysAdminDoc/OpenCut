@@ -20,7 +20,7 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 const clientRoot = resolve(__dirname, "client");
-const classicScriptPlaceholders = ["CSInterface.js", "panel-utils.js", "feature-state.js", "main.js"];
+const classicScriptPlaceholders = ["CSInterface.js", "panel-utils.js", "feature-state.js", "format-utils.js", "main.js"];
 
 function preserveCepClassicScripts() {
   return {
