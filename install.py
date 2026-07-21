@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 
-VERS = "1.39.0"
+VERS = "1.40.0"
 MIN_PYTHON = (3, 11)
 CEP_EXT = "com.opencut.panel"
 WIN_CEP_DIR = os.path.expandvars(r"%APPDATA%\Adobe\CEP\extensions")
