@@ -3,6 +3,24 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.39.0] — 2026-07-21 — Continue CEP panel monolith decomposition
+
+### Changed - Extract pure lookup/parse helpers from the CEP main.js monolith
+
+- Moved eight provably-pure helpers (`getTranscriptCacheKey`,
+  `parseToUnixSeconds`, `getOutputItemPath`, `normalizeJobOptions`,
+  `matchesShortcut`, `findSelectOptionByValue`, `getPanelTabName`,
+  `getSelectOptionLabel`) out of `client/main.js` into a new UMD module
+  `client/lookup-utils.js` (`window.OpenCutLookup`), aliased in `main.js` with
+  all call sites unchanged. These read only their arguments (including
+  passed-in DOM objects/events) with no `document`, globals, i18n, shared
+  state, or mutation. Registered in the Vite classic-script list and loaded
+  before `main.js`.
+- Added a focused vitest contract test (`tests/lookup-utils.test.mjs`, 8
+  cases) covering the cache-key slugifier, the numeric/string unix-seconds
+  parser, the job-options normalizer, the keyboard-shortcut matcher, and the
+  `<select>`/panel/output lookups against plain mock objects.
+
 ## [1.38.0] — 2026-07-21 — Decompose the UXP panel monolith
 
 ### Changed - Extract pure catalog/classifier/locale helpers from UXP main.js

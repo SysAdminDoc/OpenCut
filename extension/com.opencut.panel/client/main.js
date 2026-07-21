@@ -45,6 +45,15 @@
         inferNotificationTone = OpenCutStringUtils.inferNotificationTone,
         getNotificationIconSvg = OpenCutStringUtils.getNotificationIconSvg,
         wsFormatListenerCount = OpenCutStringUtils.wsFormatListenerCount;
+    var OpenCutLookup = (typeof window !== "undefined" && window.OpenCutLookup) ? window.OpenCutLookup : {};
+    var getTranscriptCacheKey = OpenCutLookup.getTranscriptCacheKey,
+        parseToUnixSeconds = OpenCutLookup.parseToUnixSeconds,
+        getOutputItemPath = OpenCutLookup.getOutputItemPath,
+        normalizeJobOptions = OpenCutLookup.normalizeJobOptions,
+        matchesShortcut = OpenCutLookup.matchesShortcut,
+        findSelectOptionByValue = OpenCutLookup.findSelectOptionByValue,
+        getPanelTabName = OpenCutLookup.getPanelTabName,
+        getSelectOptionLabel = OpenCutLookup.getSelectOptionLabel;
 
     // ---- Core State ----
     var cs = null;
@@ -304,25 +313,12 @@
         persistWorkspaceState();
     }
 
-    function findSelectOptionByValue(select, value) {
-        if (!select || !value) return null;
-        for (var i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === value) return select.options[i];
-        }
-        return null;
-    }
-
     function syncClipSelectValue(path) {
         if (!el.clipSelect) return null;
         var option = path ? findSelectOptionByValue(el.clipSelect, path) : null;
         el.clipSelect.value = option ? path : "";
         if (el.clipSelect._customDropdown) el.clipSelect._customDropdown.updateText();
         return option;
-    }
-
-    function getPanelTabName(panel) {
-        if (!panel || !panel.id) return "";
-        return panel.id.indexOf("panel-") === 0 ? panel.id.substring(6) : panel.id;
     }
 
     function getVisibleTabButtons(container, selector) {
@@ -343,27 +339,6 @@
         if (nextIndex >= buttons.length) nextIndex = 0;
         buttons[nextIndex].focus();
         buttons[nextIndex].click();
-    }
-
-    function matchesShortcut(e, keysStr) {
-        var parts = keysStr.split("+");
-        var needCtrl = false, needShift = false, needAlt = false, needMeta = false;
-        var keyPart = "";
-        for (var i = 0; i < parts.length; i++) {
-            var p = parts[i].trim().toLowerCase();
-            if (p === "ctrl") needCtrl = true;
-            else if (p === "shift") needShift = true;
-            else if (p === "alt") needAlt = true;
-            else if (p === "meta" || p === "cmd") needMeta = true;
-            else keyPart = p;
-        }
-        if (e.ctrlKey !== needCtrl) return false;
-        if (e.shiftKey !== needShift) return false;
-        if (e.altKey !== needAlt) return false;
-        if (e.metaKey !== needMeta) return false;
-        var eventKey = e.key.toLowerCase();
-        if (keyPart === "escape") return eventKey === "escape";
-        return eventKey === keyPart;
     }
 
     var _shortcutActions = {
@@ -2938,10 +2913,6 @@
         }
     }
 
-    function getTranscriptCacheKey(filepath) {
-        return "opencut_transcript_" + filepath.replace(/[^a-zA-Z0-9]/g, "_");
-    }
-
     function cacheTranscriptSegments(filepath, segments) {
         try {
             var key = getTranscriptCacheKey(filepath);
@@ -3966,13 +3937,6 @@
     // Job Execution & Tracking
     // ================================================================
     var jobStarting = false;
-
-    function normalizeJobOptions(options) {
-        if (typeof options === "function") {
-            return { onComplete: options };
-        }
-        return options || {};
-    }
 
     function runStartJobErrorHook(options, detail) {
         if (options && typeof options.onStartError === "function") {
@@ -6437,12 +6401,6 @@
     }
 
     // --- BATCH PROCESSING ---
-    function getSelectOptionLabel(selectEl, fallback) {
-        if (!selectEl) return fallback || "";
-        var opt = selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
-        return opt ? opt.textContent : (fallback || "");
-    }
-
     function updateBatchSummary(statusMessage, statusState, statusTitle) {
         var queuedCount = (_batchFiles && _batchFiles.length) || 0;
         var availableCount = Array.isArray(projectMedia) ? projectMedia.length : 0;
@@ -12096,10 +12054,6 @@
     // ================================================================
     var _outputBrowserOpen = false;
 
-    function getOutputItemPath(item) {
-        return (item && item.path) || "";
-    }
-
     function getOutputItemName(item) {
         var path = getOutputItemPath(item);
         if (item && item.name) return item.name;
@@ -15305,17 +15259,6 @@
         } catch (e) {
             return "";
         }
-    }
-
-    function parseToUnixSeconds(value) {
-        if (value == null || value === "") return 0;
-        if (typeof value === "number") {
-            if (value > 1000000000000) return Math.floor(value / 1000);
-            if (value > 10000000000) return Math.floor(value / 1000);
-            return Math.floor(value);
-        }
-        var parsed = Date.parse(value);
-        return isNaN(parsed) ? 0 : Math.floor(parsed / 1000);
     }
 
     function getDeliverablesOutputSummary() {
