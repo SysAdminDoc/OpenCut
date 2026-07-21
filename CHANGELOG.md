@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
 
+### Changed - Extract pure formatting helpers from the UXP main.js monolith
+
+- Moved nine provably-pure, host-independent helpers (`formatTimecode`,
+  `formatCompactDuration`, `formatBytes`, `humanizeDomain`,
+  `shortsBundleFileNameUxp`, `normalizeHttpsExternalUrl`, `isTimeoutError`,
+  `getSearchResultPath`, `getSearchResultPreview`, plus the internal `pad`)
+  out of `com.opencut.uxp/main.js` into the existing ES module
+  `com.opencut.uxp/uxp-utils.js`, imported at the top of `main.js` with all
+  call sites unchanged — the first decomposition pass on the UXP half of the
+  panel monolith (the CEP half already has format/job-meta/classify/data-shape/
+  string modules).
+- Added a focused vitest contract test (`tests/uxp-format.test.mjs`, 9 cases)
+  covering the timecode/duration/byte formatters, domain humanizer, basename
+  helper, the https-only URL guard, the abort/timeout predicate, and the
+  search-result path/preview coalescers.
+
 ### Changed - Extract pure string/path helpers from the CEP main.js monolith
 
 - Moved eight provably-pure, closure-independent helpers (`humanizeControlId`,
