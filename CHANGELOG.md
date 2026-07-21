@@ -15,9 +15,14 @@ record also lives in the git commit messages.
   `main.js` now aliases them; ~80 call sites are unchanged. The
   injection-critical `escSingleQuote` (ExtendScript single-quote escaping) is
   ported byte-for-byte and covered by a focused vitest contract test.
-- Verified equivalent: node syntax check, vitest (incl. new format-utils
-  suite), Vite panel build, the 35-screenshot rendered regression gate (no page
-  errors, identical rendering), and unchanged eslint baseline.
+- Extracted four more pure job/session-metadata accessors (`sessionCtxOpText`,
+  `sessionCtxResultPath`, `getJobHistorySourcePath`, `getJobHistorySourceName`)
+  into `client/job-meta-utils.js` (`window.OpenCutJobMeta`), also aliased in
+  `main.js` and covered by a vitest contract test.
+- Verified equivalent for each extraction: node syntax check, vitest (incl. the
+  new format-utils and job-meta suites), Vite panel build, the 35-screenshot
+  rendered regression gate (no page errors, identical rendering), and unchanged
+  eslint baseline.
 
 ## [1.35.0] — 2026-07-20 — Roadmap drain: download integrity
 
