@@ -19,13 +19,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: shared responsibility boundaries are extracted without changing public IDs, host-action names, route payloads, or visual baselines; entrypoints contain bootstrap/orchestration rather than feature implementations; state/API/i18n/job/timeline modules have focused tests; panel build, parity, browser, i18n, and release-smoke gates pass.
   Complexity: XL
 
-- [ ] P2 — Complete local semantic media search with portable sidecars
-  Why: The local CLIP index and `/search/semantic` routes already work, but Premiere's portable `.prmi` workflow highlights OpenCut's remaining relink/invalidation and panel-discovery gap.
-  Evidence: `opencut/core/semantic_video_search.py`; `opencut/routes/object_intel_routes.py`; `tests/test_object_intel.py`; Premiere Media Intelligence metadata docs; RESEARCH.md Competitive Landscape.
-  Touches: semantic-search cache/sidecar persistence, project relink/invalidation, CEP/UXP search UI, model-readiness copy, ranking fixtures.
-  Acceptance: project embeddings persist in a portable versioned sidecar; moved/relinked or changed media is deterministically reused or invalidated; CEP and UXP expose ranked natural-language results; all computation remains local; readiness, ranking, relink, and invalidation paths are tested.
-  Complexity: L
-
 ### P3
 
 - [ ] P3 — Run installer user-area file operations as the invoking user

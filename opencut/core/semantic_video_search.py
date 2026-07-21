@@ -214,6 +214,165 @@ def clear_clip_cache():
 
 
 # ---------------------------------------------------------------------------
+# Portable project sidecar
+# ---------------------------------------------------------------------------
+# The global cache above is keyed by path+size+mtime, so it is neither portable
+# (absolute paths) nor move-stable (mtime changes on copy). The project sidecar
+# is a portable, versioned store that travels with the project: embeddings are
+# keyed by a *content signature* so moved/relinked media is deterministically
+# reused, and content changes deterministically invalidate the old entry.
+SIDECAR_DIRNAME = ".opencut_index"
+SIDECAR_VERSION = 1
+# Bytes sampled from head/middle/tail for the content signature (fast, stable).
+_SIGNATURE_SAMPLE_BYTES = 1 << 20  # 1 MiB per region
+
+
+def content_signature(filepath: str) -> str:
+    """Return a move-stable content signature for *filepath*.
+
+    Hashes file size plus sampled head/middle/tail regions rather than the full
+    file — fast on multi-GB media, identical after a move/rename/copy, and
+    different once the bytes change. This is the portable identity used by the
+    project sidecar (unlike :func:`_clip_file_hash`, which is path/mtime bound).
+    """
+    h = hashlib.sha256()
+    try:
+        size = os.path.getsize(filepath)
+        h.update(str(size).encode())
+        with open(filepath, "rb") as f:
+            if size <= _SIGNATURE_SAMPLE_BYTES * 3:
+                h.update(f.read())
+            else:
+                f.seek(0)
+                h.update(f.read(_SIGNATURE_SAMPLE_BYTES))
+                f.seek(size // 2)
+                h.update(f.read(_SIGNATURE_SAMPLE_BYTES))
+                f.seek(size - _SIGNATURE_SAMPLE_BYTES)
+                h.update(f.read(_SIGNATURE_SAMPLE_BYTES))
+    except OSError:
+        return hashlib.sha256(os.path.basename(filepath).encode()).hexdigest()[:32]
+    return h.hexdigest()[:32]
+
+
+def _sidecar_engine_dir(project_dir: str, engine: str = DEFAULT_ENGINE) -> str:
+    eng = SEARCH_ENGINES.get(engine, SEARCH_ENGINES[DEFAULT_ENGINE])
+    schema_v = eng.get("schema_version", 1)
+    return os.path.join(project_dir, SIDECAR_DIRNAME, f"{engine}_v{schema_v}")
+
+
+def _sidecar_npz(project_dir: str, signature: str, engine: str = DEFAULT_ENGINE) -> str:
+    return os.path.join(_sidecar_engine_dir(project_dir, engine), f"clip_{signature}.npz")
+
+
+def _sidecar_manifest_path(project_dir: str) -> str:
+    return os.path.join(project_dir, SIDECAR_DIRNAME, "manifest.json")
+
+
+def _read_sidecar_manifest(project_dir: str) -> Dict:
+    path = _sidecar_manifest_path(project_dir)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"version": SIDECAR_VERSION, "entries": []}
+
+
+def _write_sidecar_manifest(project_dir: str, manifest: Dict) -> None:
+    path = _sidecar_manifest_path(project_dir)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    os.replace(tmp, path)
+
+
+def save_sidecar_embeddings(
+    project_dir: str, clip_path: str, data: Dict, engine: str = DEFAULT_ENGINE
+) -> str:
+    """Persist a clip's embeddings to the portable project sidecar.
+
+    Keyed by content signature so the entry is reusable after the media moves.
+    Updates the versioned manifest. Returns the NPZ path.
+    """
+    signature = content_signature(clip_path)
+    path = _sidecar_npz(project_dir, signature, engine)
+    import numpy as np
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    metadata = {key: value for key, value in data.items() if key != "embeddings"}
+    metadata["signature"] = signature
+    metadata["clip_name"] = os.path.basename(clip_path)
+    embeddings = data.get("embeddings")
+    if embeddings is None:
+        embeddings = np.zeros((0, 512), dtype="float32")
+    np.savez_compressed(path, metadata=json.dumps(metadata), embeddings=embeddings)
+
+    manifest = _read_sidecar_manifest(project_dir)
+    manifest["version"] = SIDECAR_VERSION
+    entries = [e for e in manifest.get("entries", []) if e.get("signature") != signature]
+    entries.append(
+        {
+            "signature": signature,
+            "clip_name": os.path.basename(clip_path),
+            "engine": engine,
+            "frame_count": int(metadata.get("frame_count", 0) or 0),
+        }
+    )
+    manifest["entries"] = entries
+    _write_sidecar_manifest(project_dir, manifest)
+    return path
+
+
+def load_sidecar_embeddings(
+    project_dir: str, clip_path: str, engine: str = DEFAULT_ENGINE
+) -> Optional[Dict]:
+    """Load a clip's embeddings from the portable sidecar by content signature.
+
+    Returns the cached data (deterministic reuse) when the current file's
+    content matches a stored signature — even if the clip was moved/renamed.
+    Returns ``None`` when the content changed or was never indexed (the caller
+    then re-indexes, deterministically invalidating the stale entry on save).
+    """
+    signature = content_signature(clip_path)
+    path = _sidecar_npz(project_dir, signature, engine)
+    if not os.path.isfile(path):
+        return None
+    try:
+        import numpy as np
+
+        with np.load(path, allow_pickle=False) as cache:
+            metadata = json.loads(str(cache["metadata"].item()))
+            metadata["embeddings"] = cache["embeddings"]
+            return metadata
+    except Exception as e:
+        logger.warning("Failed to load sidecar entry %s: %s", path, e)
+        return None
+
+
+def sidecar_relink_status(
+    project_dir: str, clip_path: str, engine: str = DEFAULT_ENGINE
+) -> str:
+    """Classify how *clip_path* relates to the sidecar.
+
+    - ``"reused"`` — current content matches a stored entry (portable hit).
+    - ``"invalidated"`` — a clip of this name was indexed but the content changed.
+    - ``"missing"`` — never indexed under this project/engine.
+    """
+    signature = content_signature(clip_path)
+    if os.path.isfile(_sidecar_npz(project_dir, signature, engine)):
+        return "reused"
+    manifest = _read_sidecar_manifest(project_dir)
+    name = os.path.basename(clip_path)
+    for entry in manifest.get("entries", []):
+        if entry.get("clip_name") == name and entry.get("engine", engine) == engine:
+            return "invalidated"
+    return "missing"
+
+
+# ---------------------------------------------------------------------------
 # Frame extraction
 # ---------------------------------------------------------------------------
 def _extract_key_frames(
@@ -420,6 +579,7 @@ def build_clip_index(
     force_rebuild: bool = False,
     engine: str = DEFAULT_ENGINE,
     on_progress: Optional[Callable] = None,
+    project_dir: Optional[str] = None,
 ) -> dict:
     """Build or update a visual embedding index for a set of video clips.
 
@@ -432,9 +592,14 @@ def build_clip_index(
         force_rebuild: Force re-index even if cache exists.
         engine: Search engine ID from SEARCH_ENGINES registry.
         on_progress: Progress callback(pct, msg).
+        project_dir: When set, embeddings are also persisted to (and reused from)
+            a portable, versioned sidecar under ``<project_dir>/.opencut_index``.
+            The sidecar is keyed by content signature, so a clip that was moved
+            or relinked is deterministically reused without re-indexing.
 
     Returns:
-        Dict with clip_count, total_frames, cached_count, rebuilt_count, engine.
+        Dict with clip_count, total_frames, cached_count, rebuilt_count, engine,
+        and (when a project_dir is given) relinked_count.
     """
     if engine not in SEARCH_ENGINES:
         engine = DEFAULT_ENGINE
@@ -454,6 +619,7 @@ def build_clip_index(
 
     cached_count = 0
     rebuilt_count = 0
+    relinked_count = 0
     total_frames = 0
 
     for ci, clip_path in enumerate(valid_paths):
@@ -468,6 +634,19 @@ def build_clip_index(
                     pct = 5 + int(90 * (ci + 1) / len(valid_paths))
                     on_progress(pct, f"Clip {ci+1}/{len(valid_paths)} (cached)")
                 continue
+
+            # Portable sidecar: a content-signature hit means the clip was moved
+            # or relinked — reuse the embeddings and repopulate the local cache.
+            if project_dir:
+                relinked = load_sidecar_embeddings(project_dir, clip_path, engine)
+                if relinked is not None:
+                    relinked_count += 1
+                    total_frames += relinked.get("frame_count", 0)
+                    _save_cached_embeddings(clip_hash, relinked, engine)
+                    if on_progress:
+                        pct = 5 + int(90 * (ci + 1) / len(valid_paths))
+                        on_progress(pct, f"Clip {ci+1}/{len(valid_paths)} (relinked)")
+                    continue
 
         work_dir = tempfile.mkdtemp(prefix=f"clipidx_{ci}_")
         try:
@@ -502,6 +681,10 @@ def build_clip_index(
                 "engine": engine,
             }
             _save_cached_embeddings(clip_hash, cache_data, engine)
+            if project_dir:
+                # Persist to the portable sidecar; this both records the entry
+                # and, when the content changed, overwrites the stale signature.
+                save_sidecar_embeddings(project_dir, clip_path, cache_data, engine)
 
             rebuilt_count += 1
             total_frames += len(frames)
@@ -521,6 +704,7 @@ def build_clip_index(
         "total_frames": total_frames,
         "cached_count": cached_count,
         "rebuilt_count": rebuilt_count,
+        "relinked_count": relinked_count,
         "engine": engine,
     }
 

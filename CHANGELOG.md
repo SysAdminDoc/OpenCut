@@ -42,6 +42,19 @@ record also lives in the git commit messages.
   carries `preview`, `alternate_takes`, and `journal_entry_id`. Matching, plan
   generation, alternates, preview, and journal write-back are fixture-tested.
 
+### Added - Portable semantic-search sidecar (move-stable relink/invalidation)
+
+- `semantic_video_search` gains a portable, versioned project sidecar under
+  `<project_dir>/.opencut_index`. Embeddings are keyed by a move-stable
+  **content signature** (sampled head/mid/tail hash), so a clip that is
+  relocated or relinked is deterministically reused, while changed content is
+  deterministically invalidated. New helpers: `content_signature`,
+  `save_sidecar_embeddings`, `load_sidecar_embeddings`, `sidecar_relink_status`.
+- `build_clip_index` accepts `project_dir` (persists to and reuses from the
+  sidecar; reports `relinked_count`); `/search/semantic/index` accepts
+  `project_dir`. All computation stays local; relink and invalidation paths are
+  unit-tested.
+
 ## [1.34.0] — 2026-07-17 — Deep audit: honest readiness, host-safe panels, hardened installers
 
 ### Fixed - Stop advertising unimplemented AI engines and routes as ready
