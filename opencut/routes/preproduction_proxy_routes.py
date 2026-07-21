@@ -216,6 +216,11 @@ def rough_cut_from_script(job_id, filepath, data):
     match_threshold = safe_float(data.get("match_threshold", 0.4), 0.4,
                                  min_val=0.1, max_val=1.0)
     fps = safe_float(data.get("fps", 24.0), 24.0, min_val=1.0, max_val=120.0)
+    max_alternates = safe_int(data.get("max_alternates", 2), 2, min_val=0, max_val=5)
+    # preview=True returns the reviewable plan (alternates included) without
+    # writing a timeline or recording a journal entry; the panel commits by
+    # re-calling with preview=False (the default write-back path).
+    write_back = not safe_bool(data.get("preview", False), False)
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -230,6 +235,8 @@ def rough_cut_from_script(job_id, filepath, data):
         match_threshold=match_threshold,
         fps=fps,
         on_progress=_p,
+        max_alternates=max_alternates,
+        write_back=write_back,
     )
 
     return result.to_dict()

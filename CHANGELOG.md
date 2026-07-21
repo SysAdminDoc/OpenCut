@@ -29,6 +29,19 @@ record also lives in the git commit messages.
   seam through `plan_transcription_engine()`. Routing decisions, fallbacks, and
   the implementation-state gate are unit-tested.
 
+### Added - Script-to-timeline: alternate takes, preview, reversible write-back
+
+- `script_to_roughcut` now attaches ranked **alternate takes** (distinct clips)
+  to each script line and lays them out on separate video tracks (V2, V3, ...)
+  in both the FCP-XML and OTIO exports, aligned to the primary V1 pick.
+- `assemble_rough_cut` gains a **preview** mode (`write_back=False`) that returns
+  the reviewable plan without writing any timeline or touching the journal, plus
+  `max_alternates`. On write-back it records a revertible `import_sequence`
+  operation-journal entry (`record_write_back`) so the host import can be undone.
+- `/rough-cut/from-script` accepts `preview` and `max_alternates`; the response
+  carries `preview`, `alternate_takes`, and `journal_entry_id`. Matching, plan
+  generation, alternates, preview, and journal write-back are fixture-tested.
+
 ## [1.34.0] — 2026-07-17 — Deep audit: honest readiness, host-safe panels, hardened installers
 
 ### Fixed - Stop advertising unimplemented AI engines and routes as ready

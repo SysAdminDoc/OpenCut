@@ -26,13 +26,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: project embeddings persist in a portable versioned sidecar; moved/relinked or changed media is deterministically reused or invalidated; CEP and UXP expose ranked natural-language results; all computation remains local; readiness, ranking, relink, and invalidation paths are tested.
   Complexity: L
 
-- [ ] P2 — Complete script-to-timeline assembly with alt-takes
-  Why: `script_to_roughcut.py` already plans ordered matches, while Resolve 20 IntelliScript shows the remaining value is reviewable alternate takes and reversible host write-back.
-  Evidence: `opencut/core/script_to_roughcut.py`; `opencut/routes/preproduction_proxy_routes.py`; Resolve 20 IntelliScript; RESEARCH.md Competitive Landscape.
-  Touches: existing planner/matching core, deterministic regeneration, timeline write-back + journal, review/preview UI, CEP/UXP handoff, tests.
-  Acceptance: given a script and clip transcripts, OpenCut produces an ordered timeline plan mapping script lines to best-matching takes with alternates on separate tracks; the plan is previewable and reversible via the journal before write-back; matching and plan generation are tested against fixtures.
-  Complexity: L
-
 ### P3
 
 - [ ] P3 — Run installer user-area file operations as the invoking user
