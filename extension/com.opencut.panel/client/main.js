@@ -20,6 +20,11 @@
         formatTimecode = OpenCutFormat.formatTimecode,
         getStepPrecision = OpenCutFormat.getStepPrecision,
         formatNumberForInput = OpenCutFormat.formatNumberForInput;
+    var OpenCutJobMeta = (typeof window !== "undefined" && window.OpenCutJobMeta) ? window.OpenCutJobMeta : {};
+    var _sessionCtxOpText = OpenCutJobMeta.sessionCtxOpText,
+        _sessionCtxResultPath = OpenCutJobMeta.sessionCtxResultPath,
+        getJobHistorySourcePath = OpenCutJobMeta.getJobHistorySourcePath,
+        getJobHistorySourceName = OpenCutJobMeta.getJobHistorySourceName;
 
     // ---- Core State ----
     var cs = null;
@@ -9026,17 +9031,7 @@
         return parts[parts.length - 1] || path;
     }
 
-    function _sessionCtxOpText(job) {
-        var t = (job.type || "unknown").replace(/[_-]/g, " ");
-        return t.charAt(0).toUpperCase() + t.slice(1);
-    }
 
-    function _sessionCtxResultPath(job) {
-        var r = job.result;
-        if (!r || typeof r !== "object") return "";
-        return r.output_path || r.xml_path || r.overlay_path || r.srt_path ||
-               (Array.isArray(r.output_paths) && r.output_paths[0]) || "";
-    }
 
     function showSessionContext() {
         if (_sessionCtxLoaded) return;
@@ -10606,17 +10601,7 @@
         return t("history.status_complete", "Complete");
     }
 
-    function getJobHistorySourcePath(entry) {
-        if (!entry) return "";
-        return entry.sourcePath || (entry.payload && entry.payload.filepath) || entry.filepath || "";
-    }
 
-    function getJobHistorySourceName(entry) {
-        var path = getJobHistorySourcePath(entry);
-        if (!path) return "";
-        var parts = path.split(/[\\/]/);
-        return parts[parts.length - 1] || path;
-    }
 
     function getJobHistoryOutputPath(entry) {
         return (entry && (entry.outputPath || _sessionCtxResultPath(entry))) || "";
