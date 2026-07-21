@@ -45,13 +45,6 @@ Blocked items (credential/license/hardware-gated) live in
   Where: `extension/com.opencut.panel/client/command-center.css`.
   Acceptance: one token layer and one rule per selector; rendered CEP/UXP visual baselines and geometry/contrast tests still pass unchanged.
 
-- [ ] P3 — Prepare for the MCP 2026-07-28 revision
-  Why: The release candidate removes the stateful initialize handshake, replaces elicitation with Multi-Round-Trip Requests, adds Tasks for long-running work, and adds resource-cache metadata; long renders/transcodes map directly onto Tasks. The final specification needs live validation on or after 2026-07-28.
-  Evidence: `opencut/mcp_server.py`, `opencut/mcp_extended_tools.py` (pinned `mcp>=1.26,<2`); MCP 2026-07-28 RC (blog.modelcontextprotocol.io); RESEARCH.md Architecture Assessment.
-  Touches: `opencut/mcp_server.py`, `mcp_extended_tools.py`, MCP catalogue/generated docs, MCP dependency pin, MCP conformance tests.
-  Acceptance: after final-spec validation, the server accepts `MCP-Protocol-Version: 2026-07-28`, exposes stateless `server/discover` without `initialize`/`initialized` session state, uses Tasks for long-running tools, emits resource cache metadata (`ttlMs`/`cacheScope`), and uses MRTR (`InputRequiredResult`) for user prompts; conformance tests cover discovery and a Tasks round trip.
-  Complexity: M
-
 - [ ] P3 — Add a Parakeet-v3 + Whisper-turbo hybrid ASR router
   Why: NVIDIA's model card and Open ASR results show strong batched multilingual throughput across 25 European languages, while Whisper covers a wider language set; auto-routing can improve local throughput without sacrificing coverage, and the Parakeet adapter is currently a stub.
   Evidence: `opencut/core/asr_parakeet.py`, `opencut/core/asr_canary.py` (terminal `NotImplementedError`); faster-whisper engine already present; `https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3`; `https://huggingface.co/datasets/hf-audio/open-asr-leaderboard-results`.
