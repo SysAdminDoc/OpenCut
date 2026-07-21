@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
 
+### Changed - Extract pure string/path helpers from the CEP main.js monolith
+
+- Moved eight provably-pure, closure-independent helpers (`humanizeControlId`,
+  `journalClipName`, `shortsBundleFileName`, `parseTimeToSec`,
+  `captionDisplayOptionLabel`, `inferNotificationTone`,
+  `getNotificationIconSvg`, `wsFormatListenerCount`) out of `client/main.js`
+  into a new UMD module `client/string-utils.js` (`window.OpenCutStringUtils`),
+  aliased in `main.js` with all call sites unchanged. Registered in the Vite
+  classic-script list and loaded before `main.js`.
+- Added a focused vitest contract test (`tests/string-utils.test.mjs`, 8
+  cases) covering the id-humanizer, basename helpers, timecode parser, caption
+  label builder, notification tone/icon classifiers, and listener-count
+  template.
+
 ### Changed - Extract pure data-shape helpers from the CEP main.js monolith
 
 - Moved six provably-pure, closure-independent helpers
