@@ -2,14 +2,14 @@
 
 ## Supported Versions
 
-OpenCut ships rapidly. We actively support the **latest minor** (`1.39.x`) and the one immediately preceding it (`1.38.x`). Older minors receive security-only backports for 90 days after they're superseded.
+OpenCut ships rapidly. We actively support the **latest minor** (`1.40.x`) and the one immediately preceding it (`1.39.x`). Older minors receive security-only backports for 90 days after they're superseded.
 
 | Version | Supported         | Security fixes until |
 |---------|-------------------|----------------------|
-| 1.39.x  | ✅ Active         | —                    |
-| 1.38.x  | ✅ Previous       | +90 days after 1.39  |
-| 1.37.x  | ⚠️ Critical only  | +30 days after 1.39  |
-| ≤ 1.36  | ❌ End of life    | n/a                  |
+| 1.40.x  | ✅ Active         | —                    |
+| 1.39.x  | ✅ Previous       | +90 days after 1.40  |
+| 1.38.x  | ⚠️ Critical only  | +30 days after 1.40  |
+| ≤ 1.37  | ❌ End of life    | n/a                  |
 
 Version numbers ship in [`opencut/__init__.py`](opencut/__init__.py) and are kept in sync by [`scripts/sync_version.py`](scripts/sync_version.py).
 
