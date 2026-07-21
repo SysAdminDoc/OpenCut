@@ -21,26 +21,8 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P3
 
-- [ ] P3 — Run installer user-area file operations as the invoking user
-  Why: With `PrivilegesRequired=admin`, a standard user elevating with a separate admin account gets the CEP panel, installer manifest, and ffmpeg PATH written into the admin's profile while PlayerDebugMode (correctly written via `runasoriginaluser`) targets the invoking user; uninstall then backs up the wrong (usually empty) `.opencut`. Data preservation errs safe (wrong profile → NOT_FOUND → real data untouched), so P3.
-  Where: `OpenCut.iss:170` (`WriteInstallerManifest`), `:283` (`InstallCEPExtension`), `:311` (`AddToPath`), `:494-495` (uninstall `ConfigDir`).
-  Acceptance: user-area copies run via a `runasoriginaluser` helper (as reg.exe already does), so per-user artifacts land in the invoking user's profile regardless of the elevation account.
-
 - [ ] P3 — Flatten the CEP command-center stylesheet into a single layer
   Why: `command-center.css` is three stacked authoring passes; the second `:root` block fully redefines the first and ~500 lines (sidebar width, radius, title sizing, duplicated media queries) are overridden wholesale later in file order. Future edits must reason through the dead cascade, and the `html.theme-light` token block only stays coherent by luck.
   Where: `extension/com.opencut.panel/client/command-center.css`.
   Acceptance: one token layer and one rule per selector; rendered CEP/UXP visual baselines and geometry/contrast tests still pass unchanged.
 
-- [ ] P3 — Isolate Depth Anything 3 behind a compatible worker
-  Why: The official DA3 package requires NumPy 1.x and regular `opencv-python`, which cannot resolve in OpenCut's supported NumPy 2 / `opencv-python-headless>=4.13` process; an isolated runtime is required before DA3 can be advertised safely.
-  Evidence: `pyproject.toml`; `https://pypi.org/pypi/depth-anything-3/0.1.1/json` (dependencies and official model-license table); `https://pypi.org/pypi/opencv-python-headless/4.13.0.92/json`; `opencut/core/cinefocus.py`.
-  Touches: a DA3 worker/venv boundary, lifecycle and IPC, depth engine registry/model cards, CineFocus depth conversion, optional-runtime setup, license/dependency/regression tests.
-  Acceptance: OpenCut and the DA3 runtime resolve independently with no duplicate `cv2` wheels; only Apache-2.0 Small/Base checkpoints are selectable; DA3 depth is converted to the same near/far convention consumed from DA2 disparity; cancellation, worker failure, and DA2 fallback are deterministic; generated readiness/model artifacts and an end-to-end isolated fixture pass before DA3 can become a default.
-  Complexity: L
-
-- [ ] P3 — Localize the Python/CLI backend and add panel locales beyond en/es
-  Why: The CEP and UXP panels ship English + Spanish only while the Python/CLI backend has no i18n framework (English-only error strings) and no RTL support anywhere, despite DE/FR/JA/PT labels already appearing untranslated in `en.json`.
-  Evidence: `extension/com.opencut.panel/client/locales/`, `extension/com.opencut.uxp/locales/` (only `en`/`es`); no gettext/babel in `opencut/`; no `dir="rtl"` in panel HTML.
-  Touches: a backend i18n layer (gettext/babel), CLI/route/core user-facing strings, new panel locale files, RTL layout handling, locale-lint/release tests.
-  Acceptance: backend user-facing strings are translatable with an English fallback; at least one additional panel locale beyond en/es ships and passes the existing locale-lint gate; an RTL locale renders without layout breakage; a test guards locale-key parity across languages.
-  Complexity: L
