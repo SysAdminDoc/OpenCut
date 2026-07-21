@@ -194,7 +194,7 @@ Write-Host "  \___/| .__/ \___|_| |_|\____\__,_|\__|" -ForegroundColor Cyan
 Write-Host "       |_|                               " -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Open Source Video Editing Automation" -ForegroundColor DarkGray
-Write-Host "  Installer v1.34.0" -ForegroundColor DarkGray
+Write-Host "  Installer v1.35.0" -ForegroundColor DarkGray
 
 $isAdmin = Test-IsAdmin
 if ($isAdmin) {

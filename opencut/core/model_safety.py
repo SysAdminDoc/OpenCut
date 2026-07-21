@@ -20,8 +20,14 @@ logger = logging.getLogger("opencut")
 
 # safetensors carries tensors only — no executable payload — so it needs no scan.
 _SAFE_SUFFIXES = (".safetensors",)
-# Pickle-backed formats can execute code on load.
-_PICKLE_SUFFIXES = (".pt", ".pth", ".ckpt", ".bin", ".pkl", ".pickle")
+# Pickle-backed formats can execute code on load. NeMo ``.nemo`` archives are
+# tarballs that wrap a pickle-format checkpoint, so they belong to this class.
+_PICKLE_SUFFIXES = (".pt", ".pth", ".ckpt", ".bin", ".pkl", ".pickle", ".nemo")
+
+
+def is_pickle_format(path: str) -> bool:
+    """True when *path* is a pickle-backed (code-executing) checkpoint format."""
+    return path.lower().endswith(_PICKLE_SUFFIXES)
 
 
 class ModelSecurityError(RuntimeError):

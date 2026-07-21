@@ -3,6 +3,21 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.35.0] — 2026-07-20 — Roadmap drain: download integrity
+
+### Added - Verify model-download integrity before use
+
+- `model_manager._download_worker` now verifies a freshly downloaded model
+  before it is marked available: a per-row `sha256` (optional, since most
+  catalogue URLs resolve to mutable upstream refs) is checked, and pickle-format
+  payloads — including the new Parakeet/Canary `.nemo` checkpoints, a strictly
+  worse tamper class than safetensors/onnx — are picklescanned via
+  `model_safety.scan_model_file`. Any failure fails closed, quarantines
+  (deletes) the file, and surfaces a structured `ModelIntegrityError`, so a
+  tampered or corrupt download is never treated as installed.
+- `model_safety` recognizes `.nemo` as a pickle-backed format and exposes
+  `is_pickle_format()`.
+
 ## [1.34.0] — 2026-07-17 — Deep audit: honest readiness, host-safe panels, hardened installers
 
 ### Fixed - Stop advertising unimplemented AI engines and routes as ready
