@@ -18,6 +18,17 @@ record also lives in the git commit messages.
 - `model_safety` recognizes `.nemo` as a pickle-backed format and exposes
   `is_pickle_format()`.
 
+### Added - Hybrid ASR engine router (Parakeet + Whisper turbo)
+
+- New `opencut/core/asr_router.py` routes each transcription request by language:
+  NVIDIA Parakeet TDT v3 for its 25 supported European languages (Canary via
+  explicit override) and Whisper `large-v3-turbo` for the long tail. Selection
+  is honest — an engine is chosen only when the shared engine registry reports it
+  available, so a terminal-stub NeMo adapter always falls back to Whisper and is
+  surfaced as coming-soon via `asr_engine_readiness()`. `captions.py` exposes the
+  seam through `plan_transcription_engine()`. Routing decisions, fallbacks, and
+  the implementation-state gate are unit-tested.
+
 ## [1.34.0] — 2026-07-17 — Deep audit: honest readiness, host-safe panels, hardened installers
 
 ### Fixed - Stop advertising unimplemented AI engines and routes as ready

@@ -45,13 +45,6 @@ Blocked items (credential/license/hardware-gated) live in
   Where: `extension/com.opencut.panel/client/command-center.css`.
   Acceptance: one token layer and one rule per selector; rendered CEP/UXP visual baselines and geometry/contrast tests still pass unchanged.
 
-- [ ] P3 — Add a Parakeet-v3 + Whisper-turbo hybrid ASR router
-  Why: NVIDIA's model card and Open ASR results show strong batched multilingual throughput across 25 European languages, while Whisper covers a wider language set; auto-routing can improve local throughput without sacrificing coverage, and the Parakeet adapter is currently a stub.
-  Evidence: `opencut/core/asr_parakeet.py`, `opencut/core/asr_canary.py` (terminal `NotImplementedError`); faster-whisper engine already present; `https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3`; `https://huggingface.co/datasets/hf-audio/open-asr-leaderboard-results`.
-  Touches: ASR engine registry, `asr_parakeet.py`, a language-detection/router module, caption pipeline, readiness registry, tests.
-  Acceptance: caption generation detects language and routes supported languages to Parakeet and the rest to Whisper turbo, with an explicit override; each engine reports honest readiness when its model/dependency is absent; routing decisions and fallbacks are tested against the implementation-state gate shipped in commit `2c746b51`.
-  Complexity: M
-
 - [ ] P3 — Isolate Depth Anything 3 behind a compatible worker
   Why: The official DA3 package requires NumPy 1.x and regular `opencv-python`, which cannot resolve in OpenCut's supported NumPy 2 / `opencv-python-headless>=4.13` process; an isolated runtime is required before DA3 can be advertised safely.
   Evidence: `pyproject.toml`; `https://pypi.org/pypi/depth-anything-3/0.1.1/json` (dependencies and official model-license table); `https://pypi.org/pypi/opencv-python-headless/4.13.0.92/json`; `opencut/core/cinefocus.py`.

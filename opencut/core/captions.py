@@ -369,6 +369,20 @@ def check_whisper_available() -> Tuple[bool, str]:
     return False, "none"
 
 
+def plan_transcription_engine(language=None, override=None):
+    """Route a caption/transcription request to the best engine for *language*.
+
+    Delegates to :func:`opencut.core.asr_router.route_asr`: NVIDIA Parakeet for
+    its supported European languages (Canary via explicit override) and Whisper
+    ``large-v3-turbo`` for the long tail. The decision is honest about stub
+    engines, so today it resolves to Whisper until the NeMo adapters/models are
+    installed locally. Returns an ``ASRRoute``.
+    """
+    from opencut.core.asr_router import route_asr
+
+    return route_asr(language=language, override=override)
+
+
 def remap_captions_to_segments(
     captions: "TranscriptionResult",
     speech_segments: list,
