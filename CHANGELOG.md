@@ -3,6 +3,27 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.37.0] — 2026-07-21 — Flatten the CEP command-center stylesheet
+
+### Changed - Collapse `command-center.css` into a single token + rule layer
+
+- Re-synthesised `extension/com.opencut.panel/client/command-center.css` from
+  its resolved cascade so every selector is declared once. The two stacked
+  authoring passes (a first `html.theme-light`/base pass fully overridden by a
+  later `:root`/base pass) are merged: there is now one `:root` dark-token
+  block, one `html.theme-light` light-token block, and one rule per selector.
+- The four responsive `@media` blocks (`980px`, `700px`, `620px`,
+  `prefers-reduced-motion`) now carry only the properties that actually change
+  at each breakpoint; the dead, wholesale-overridden cascade (duplicated
+  sidebar/nav/header/workspace geometry and redundant media overrides) was
+  dropped.
+- The rewrite is provably render-equivalent: the effective declaration map of
+  every selector was diffed against the original at every viewport band
+  (1400/981/980/900/701/700/660/621/620/480/320px, with and without
+  reduced-motion) and is identical, and the 35-test rendered Playwright
+  regression gate (CEP/UXP screenshots across dark/light/auto at 480/900/1200)
+  plus the contrast/geometry/a11y suites pass unchanged.
+
 ## [1.36.0] — 2026-07-21 — CEP monolith decomposition (first module)
 
 ### Changed - Extract pure formatting helpers from the CEP main.js monolith

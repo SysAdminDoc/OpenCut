@@ -19,10 +19,3 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: shared responsibility boundaries are extracted without changing public IDs, host-action names, route payloads, or visual baselines; entrypoints contain bootstrap/orchestration rather than feature implementations; state/API/i18n/job/timeline modules have focused tests; panel build, parity, browser, i18n, and release-smoke gates pass.
   Complexity: XL
 
-### P3
-
-- [ ] P3 — Flatten the CEP command-center stylesheet into a single layer
-  Why: `command-center.css` is three stacked authoring passes; the second `:root` block fully redefines the first and ~500 lines (sidebar width, radius, title sizing, duplicated media queries) are overridden wholesale later in file order. Future edits must reason through the dead cascade, and the `html.theme-light` token block only stays coherent by luck.
-  Where: `extension/com.opencut.panel/client/command-center.css`.
-  Acceptance: one token layer and one rule per selector; rendered CEP/UXP visual baselines and geometry/contrast tests still pass unchanged.
-
