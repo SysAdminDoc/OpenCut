@@ -63,7 +63,13 @@ class MatchResult:
 
 @dataclass
 class RoughCutSegment:
-    """A segment selected for the rough cut."""
+    """A segment selected for the rough cut.
+
+    ``alternates`` holds the runner-up takes for this same script line (distinct
+    clips, ranked). They are laid out on separate video tracks (V2, V3, ...) in
+    the exported timeline so an editor can audition them against the primary V1
+    pick without re-running the match.
+    """
     index: int = 0
     clip_path: str = ""
     in_point: float = 0.0
@@ -71,6 +77,7 @@ class RoughCutSegment:
     script_text: str = ""
     character: str = ""
     similarity: float = 0.0
+    alternates: List[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -78,7 +85,12 @@ class RoughCutSegment:
 
 @dataclass
 class RoughCutResult:
-    """Complete rough cut assembly result."""
+    """Complete rough cut assembly result.
+
+    When ``timeline_path`` is empty the result is a *preview plan* (no files
+    written, no host write-back). ``journal_entry_id`` is set once the plan is
+    written back through the reversible operation journal.
+    """
     segments: List[RoughCutSegment] = field(default_factory=list)
     total_segments: int = 0
     matched_segments: int = 0
@@ -86,6 +98,9 @@ class RoughCutResult:
     total_duration: float = 0.0
     timeline_path: str = ""
     format: str = ""
+    preview: bool = False
+    alternate_takes: int = 0
+    journal_entry_id: Optional[int] = None
 
     def to_dict(self) -> dict:
         return {
@@ -95,6 +110,9 @@ class RoughCutResult:
             "total_duration": round(self.total_duration, 2),
             "timeline_path": self.timeline_path,
             "format": self.format,
+            "preview": self.preview,
+            "alternate_takes": self.alternate_takes,
+            "journal_entry_id": self.journal_entry_id,
             "segments": [s.to_dict() for s in self.segments],
         }
 
@@ -352,9 +370,61 @@ def select_best_takes(
     return result
 
 
+def _alternate_from_match(match: "MatchResult") -> dict:
+    ts = match.transcript_segment
+    return {
+        "clip_path": ts.clip_path,
+        "in_point": ts.start_time,
+        "out_point": ts.end_time,
+        "similarity": match.similarity,
+        "combined_score": match.combined_score,
+    }
+
+
+def select_takes_with_alternates(
+    matches: Dict[int, List[MatchResult]],
+    script_segments: List[ScriptSegment],
+    max_alternates: int = 2,
+) -> List[RoughCutSegment]:
+    """Select the best take per script segment plus ranked alternate takes.
+
+    Identical primary selection to :func:`select_best_takes`, but each segment
+    also carries up to ``max_alternates`` runner-up takes drawn from *distinct*
+    clips (so V2/V3 never just repeat V1's clip). Alternates are exported on
+    separate video tracks for review.
+    """
+    result = select_best_takes(matches, script_segments)
+    if max_alternates <= 0:
+        return result
+
+    dialogue_action = [
+        ss for ss in script_segments if ss.segment_type in ("dialogue", "action")
+    ]
+    for seg, ss in zip(result, dialogue_action):
+        ranked = matches.get(ss.index) or []
+        if not seg.clip_path or len(ranked) < 2:
+            continue
+        seen_clips = {seg.clip_path}
+        alternates: List[dict] = []
+        for match in ranked[1:]:
+            clip = match.transcript_segment.clip_path
+            if clip in seen_clips:
+                continue
+            seen_clips.add(clip)
+            alternates.append(_alternate_from_match(match))
+            if len(alternates) >= max_alternates:
+                break
+        seg.alternates = alternates
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Timeline Export
 # ---------------------------------------------------------------------------
+def _alternate_tracks(segments: List[RoughCutSegment]) -> int:
+    """How many alternate video tracks the segment list needs (V2, V3, ...)."""
+    return max((len(s.alternates) for s in segments if s.clip_path), default=0)
 def export_xml_timeline(
     segments: List[RoughCutSegment],
     output_path: str,
@@ -386,29 +456,45 @@ def export_xml_timeline(
 
     media = ET.SubElement(sequence, "media")
     video = ET.SubElement(media, "video")
-    track = ET.SubElement(video, "track")
 
-    timeline_pos = 0
-    for seg in segments:
-        if not seg.clip_path:
-            continue
-
-        clip_el = ET.SubElement(track, "clipitem")
-        ET.SubElement(clip_el, "name").text = os.path.basename(seg.clip_path)
-
-        dur_frames = int((seg.out_point - seg.in_point) * fps)
+    def _add_clipitem(track_el, clip_path, in_point, out_point, timeline_pos):
+        clip_el = ET.SubElement(track_el, "clipitem")
+        ET.SubElement(clip_el, "name").text = os.path.basename(clip_path)
+        dur_frames = int((out_point - in_point) * fps)
         ET.SubElement(clip_el, "start").text = str(timeline_pos)
         ET.SubElement(clip_el, "end").text = str(timeline_pos + dur_frames)
-        ET.SubElement(clip_el, "in").text = str(int(seg.in_point * fps))
-        ET.SubElement(clip_el, "out").text = str(int(seg.out_point * fps))
-
+        ET.SubElement(clip_el, "in").text = str(int(in_point * fps))
+        ET.SubElement(clip_el, "out").text = str(int(out_point * fps))
         file_el = ET.SubElement(clip_el, "file")
-        ET.SubElement(file_el, "pathurl").text = f"file:///{seg.clip_path.replace(os.sep, '/')}"
-
+        ET.SubElement(file_el, "pathurl").text = f"file:///{clip_path.replace(os.sep, '/')}"
         clip_rate = ET.SubElement(clip_el, "rate")
         ET.SubElement(clip_rate, "timebase").text = str(int(fps))
+        return dur_frames
 
-        timeline_pos += dur_frames
+    # Primary track (V1). Record each segment's timeline start so alternate
+    # tracks can align their takes to the same position.
+    primary_track = ET.SubElement(video, "track")
+    starts: List[int] = []
+    timeline_pos = 0
+    for seg in segments:
+        starts.append(timeline_pos)
+        if not seg.clip_path:
+            continue
+        timeline_pos += _add_clipitem(
+            primary_track, seg.clip_path, seg.in_point, seg.out_point, timeline_pos
+        )
+
+    # Alternate tracks (V2, V3, ...): each ranked alternate on its own track,
+    # aligned to the primary segment's start position.
+    for rank in range(_alternate_tracks(segments)):
+        alt_track = ET.SubElement(video, "track")
+        for seg, start in zip(segments, starts):
+            if not seg.clip_path or rank >= len(seg.alternates):
+                continue
+            alt = seg.alternates[rank]
+            _add_clipitem(
+                alt_track, alt["clip_path"], alt["in_point"], alt["out_point"], start
+            )
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space="  ")
@@ -438,42 +524,63 @@ def export_otio_timeline(
     """
     try:
         import opentimelineio as otio
-        timeline = otio.schema.Timeline(name=name)
-        track = otio.schema.Track(name="V1")
 
-        for seg in segments:
+        def _slot_frames(seg) -> int:
+            """Timeline width (frames) a segment occupies on V1."""
             if not seg.clip_path:
-                # Gap for unmatched segments
-                dur = otio.opentime.RationalTime(24, fps)  # 1 second gap
-                gap = otio.schema.Gap(
-                    source_range=otio.opentime.TimeRange(
-                        start_time=otio.opentime.RationalTime(0, fps),
-                        duration=dur,
-                    )
-                )
-                track.append(gap)
-                continue
+                return int(fps)  # 1-second gap for unmatched segments
+            return max(0, int((seg.out_point - seg.in_point) * fps))
 
-            dur_secs = seg.out_point - seg.in_point
-            if dur_secs <= 0:
-                continue
-
-            ref = otio.schema.ExternalReference(target_url=seg.clip_path)
-            clip = otio.schema.Clip(
-                name=os.path.basename(seg.clip_path),
+        def _gap(frames):
+            return otio.schema.Gap(
                 source_range=otio.opentime.TimeRange(
-                    start_time=otio.opentime.RationalTime(
-                        int(seg.in_point * fps), fps
-                    ),
-                    duration=otio.opentime.RationalTime(
-                        int(dur_secs * fps), fps
-                    ),
-                ),
-                media_reference=ref,
+                    start_time=otio.opentime.RationalTime(0, fps),
+                    duration=otio.opentime.RationalTime(frames, fps),
+                )
             )
-            track.append(clip)
 
+        def _clip(clip_path, in_point, frames):
+            return otio.schema.Clip(
+                name=os.path.basename(clip_path),
+                source_range=otio.opentime.TimeRange(
+                    start_time=otio.opentime.RationalTime(int(in_point * fps), fps),
+                    duration=otio.opentime.RationalTime(frames, fps),
+                ),
+                media_reference=otio.schema.ExternalReference(target_url=clip_path),
+            )
+
+        timeline = otio.schema.Timeline(name=name)
+
+        # Primary track (V1).
+        track = otio.schema.Track(name="V1")
+        for seg in segments:
+            frames = _slot_frames(seg)
+            if not seg.clip_path or frames <= 0:
+                track.append(_gap(max(frames, int(fps))))
+                continue
+            track.append(_clip(seg.clip_path, seg.in_point, frames))
         timeline.tracks.append(track)
+
+        # Alternate tracks (V2, V3, ...): each rank on its own track, every slot
+        # padded to the primary segment's width so alternates stay time-aligned.
+        for rank in range(_alternate_tracks(segments)):
+            alt_track = otio.schema.Track(name=f"V{rank + 2}")
+            for seg in segments:
+                slot = _slot_frames(seg)
+                if not seg.clip_path or rank >= len(seg.alternates):
+                    alt_track.append(_gap(max(slot, 1)))
+                    continue
+                alt = seg.alternates[rank]
+                alt_frames = max(0, int((alt["out_point"] - alt["in_point"]) * fps))
+                take = min(alt_frames, slot) if slot > 0 else alt_frames
+                if take <= 0:
+                    alt_track.append(_gap(max(slot, 1)))
+                    continue
+                alt_track.append(_clip(alt["clip_path"], alt["in_point"], take))
+                if slot > take:
+                    alt_track.append(_gap(slot - take))
+            timeline.tracks.append(alt_track)
+
         otio.adapters.write_to_file(timeline, output_path)
         return output_path
 
@@ -481,6 +588,45 @@ def export_otio_timeline(
         logger.info("opentimelineio not available, falling back to XML export")
         xml_path = output_path.replace(".otio", ".xml")
         return export_xml_timeline(segments, xml_path, fps, name)
+
+
+# ---------------------------------------------------------------------------
+# Reversible write-back (operation journal)
+# ---------------------------------------------------------------------------
+def record_write_back(result: RoughCutResult, sequence_name: str = "OpenCut Rough Cut") -> Optional[int]:
+    """Record the rough-cut write-back in the reversible operation journal.
+
+    The rough cut is imported into the host as a sequence, which the panel can
+    revert (``import_sequence`` is a revertible action). We store the timeline
+    path and a plan summary as the inverse payload so the panel can dispatch the
+    ExtendScript inverse. Best-effort: a journal failure never breaks assembly.
+
+    Returns the journal entry id, or ``None`` if nothing was recorded.
+    """
+    if not result.timeline_path:
+        return None
+    try:
+        from opencut import journal
+
+        entry = journal.record(
+            action="import_sequence",
+            label=f"Rough cut: {sequence_name} ({result.matched_segments}/{result.total_segments} matched)",
+            inverse_payload={
+                "sequence_name": sequence_name,
+                "timeline_path": result.timeline_path,
+                "format": result.format,
+                "clip_count": result.matched_segments,
+                "alternate_takes": result.alternate_takes,
+            },
+            forward_payload={
+                "endpoint": "/rough-cut/from-script",
+                "timeline_path": result.timeline_path,
+            },
+        )
+        return entry.get("id") if isinstance(entry, dict) else None
+    except Exception as exc:  # pragma: no cover - durability is best-effort
+        logger.warning("Could not record rough-cut journal entry: %s", exc)
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +641,9 @@ def assemble_rough_cut(
     match_threshold: float = 0.4,
     fps: float = 24.0,
     on_progress: Optional[Callable] = None,
+    max_alternates: int = 2,
+    write_back: bool = True,
+    record_journal: bool = True,
 ) -> RoughCutResult:
     """
     Assemble a rough cut from script and footage.
@@ -503,8 +652,8 @@ def assemble_rough_cut(
     1. Parse script into segments
     2. Load/generate transcripts for each clip
     3. Fuzzy-match transcript to script
-    4. Select best take per segment
-    5. Export as timeline
+    4. Select best take per segment (plus ranked alternates)
+    5. Export as timeline (unless preview) and record a reversible journal entry
 
     Args:
         script_text: The screenplay/script text.
@@ -516,9 +665,17 @@ def assemble_rough_cut(
         match_threshold: Minimum similarity for matching.
         fps: Timeline frame rate.
         on_progress: Callback(pct, msg).
+        max_alternates: How many runner-up takes to attach per segment (0 = none).
+            Alternates are laid out on separate video tracks in the export.
+        write_back: When False, produce a previewable plan only — no timeline is
+            written and no journal entry is recorded, so the caller can review
+            (and the user approve) before committing.
+        record_journal: When True (and writing back), record the write-back in
+            the reversible operation journal.
 
     Returns:
-        RoughCutResult with segments and timeline path.
+        RoughCutResult with segments, alternates, and (when written back) the
+        timeline path and journal entry id.
     """
     if not script_text or not script_text.strip():
         raise ValueError("script_text cannot be empty")
@@ -574,37 +731,53 @@ def assemble_rough_cut(
         threshold=match_threshold,
     )
 
-    # Phase 4: Select best takes
+    # Phase 4: Select best takes (with ranked alternates)
     if on_progress:
         on_progress(70, "Selecting best takes...")
 
-    rough_segments = select_best_takes(matches, script_segments)
+    rough_segments = select_takes_with_alternates(
+        matches, script_segments, max_alternates=max_alternates
+    )
     result.segments = rough_segments
     result.matched_segments = sum(1 for s in rough_segments if s.clip_path)
     result.unmatched_segments = len(rough_segments) - result.matched_segments
     result.total_duration = sum(
         (s.out_point - s.in_point) for s in rough_segments if s.clip_path
     )
+    result.alternate_takes = sum(len(s.alternates) for s in rough_segments)
 
-    # Phase 5: Export timeline
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-
+    # Phase 5: Preview or write back. A preview returns the plan without writing
+    # any timeline or touching the reversible journal, so it can be reviewed and
+    # approved before committing.
+    if not write_back or not output_dir:
+        result.preview = True
         if on_progress:
-            on_progress(85, f"Exporting {output_format.upper()} timeline...")
+            on_progress(100, f"Rough cut plan ready (preview): "
+                             f"{result.matched_segments}/{result.total_segments} segments matched")
+        return result
 
-        if output_format == "otio":
-            timeline_path = os.path.join(output_dir, "rough_cut.otio")
-            result.timeline_path = export_otio_timeline(
-                rough_segments, timeline_path, fps=fps,
-            )
-            result.format = "otio"
-        else:
-            timeline_path = os.path.join(output_dir, "rough_cut.xml")
-            result.timeline_path = export_xml_timeline(
-                rough_segments, timeline_path, fps=fps,
-            )
-            result.format = "xml"
+    os.makedirs(output_dir, exist_ok=True)
+    if on_progress:
+        on_progress(85, f"Exporting {output_format.upper()} timeline...")
+
+    if output_format == "otio":
+        timeline_path = os.path.join(output_dir, "rough_cut.otio")
+        result.timeline_path = export_otio_timeline(
+            rough_segments, timeline_path, fps=fps,
+        )
+        result.format = "otio"
+    else:
+        timeline_path = os.path.join(output_dir, "rough_cut.xml")
+        result.timeline_path = export_xml_timeline(
+            rough_segments, timeline_path, fps=fps,
+        )
+        result.format = "xml"
+
+    # Record the reversible write-back so the panel can undo the import.
+    if record_journal:
+        if on_progress:
+            on_progress(95, "Recording reversible journal entry...")
+        result.journal_entry_id = record_write_back(result)
 
     if on_progress:
         on_progress(100, f"Rough cut assembled: {result.matched_segments}/{result.total_segments} segments matched")
