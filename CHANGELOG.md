@@ -3,6 +3,23 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [1.40.0] — 2026-07-21 — Extract the UXP i18n core behind tests
+
+### Changed - Move the UXP i18n lookup + interpolation into a pure, tested core
+
+- Extracted the translation-resolution and `{name}`-placeholder substitution
+  logic out of `com.opencut.uxp/main.js` into two pure functions in
+  `uxp-utils.js` — `translate(map, key, fallback)` and
+  `interpolateI18n(text, values)`. The controller's `t()` and `formatI18n()`
+  (the latter used at 276 call sites) now delegate to them, keeping only the
+  binding to the live `_i18n` translation map. Behaviour is unchanged,
+  including the literal (`$`-safe) replacement of every placeholder occurrence.
+- Added a focused vitest contract test (`tests/uxp-i18n.test.mjs`, 5 cases)
+  covering key/fallback resolution, repeated and unknown placeholders, value
+  coercion, `$`-sequence safety, and empty/non-string inputs — satisfying the
+  roadmap's "i18n module has focused tests" acceptance criterion for the UXP
+  surface.
+
 ## [1.39.0] — 2026-07-21 — Continue CEP panel monolith decomposition
 
 ### Changed - Extract pure lookup/parse helpers from the CEP main.js monolith
