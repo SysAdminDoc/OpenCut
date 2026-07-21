@@ -35,11 +35,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P3
 
-- [ ] P3 — Verify model-download integrity before use (catalog-wide, `.nemo` first)
-  Why: `model_manager.KNOWN_MODELS` entries have no checksum field and `_download_worker` performs no hash/picklescan validation; the new Parakeet/Canary `.nemo` rows (2.4/4.2 GB) are the first pickle-format payloads in the catalogue, a strictly worse tamper class than the existing safetensors/onnx downloads. HTTPS + official HF namespaces are the only current integrity guarantee.
-  Where: `opencut/core/model_manager.py` (`KNOWN_MODELS`, `_download_worker`); `picklescan` already ships in the `depth` extra.
-  Acceptance: catalogue rows carry a `sha256`; `_download_worker` verifies it (and picklescans pickle-format payloads) before the file is marked available; a mismatch fails closed with a structured error.
-
 - [ ] P3 — Run installer user-area file operations as the invoking user
   Why: With `PrivilegesRequired=admin`, a standard user elevating with a separate admin account gets the CEP panel, installer manifest, and ffmpeg PATH written into the admin's profile while PlayerDebugMode (correctly written via `runasoriginaluser`) targets the invoking user; uninstall then backs up the wrong (usually empty) `.opencut`. Data preservation errs safe (wrong profile → NOT_FOUND → real data untouched), so P3.
   Where: `OpenCut.iss:170` (`WriteInstallerManifest`), `:283` (`InstallCEPExtension`), `:311` (`AddToPath`), `:494-495` (uninstall `ConfigDir`).

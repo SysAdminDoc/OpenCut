@@ -5,6 +5,7 @@ Background download queue with HTTP Range resume support, progress
 tracking, bandwidth throttling, and disk space estimation.
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -244,6 +245,54 @@ def _load_download_meta(model_name: str) -> Optional[Dict]:
 # ---------------------------------------------------------------------------
 # Download worker
 # ---------------------------------------------------------------------------
+class ModelIntegrityError(RuntimeError):
+    """Raised when a freshly downloaded model fails integrity verification."""
+
+
+def _sha256_of_file(path: str) -> str:
+    """Stream *path* through SHA-256 without loading it fully into memory."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _verify_download(model_name: str, output_path: str, expected_sha256: Optional[str]) -> None:
+    """Verify a completed download before it is marked available.
+
+    Two independent, defense-in-depth checks:
+
+    - **Checksum** — when the catalogue row carries a ``sha256`` the downloaded
+      bytes are hashed and compared; any mismatch fails closed. Most catalogue
+      URLs resolve to *mutable* upstream refs (``resolve/main``/``master``), so a
+      pinned hash is optional per-row rather than mandatory — a fixed hash there
+      would false-alarm on legitimate upstream republishes.
+    - **Pickle scan** — pickle-format payloads (``.nemo``/``.pt``/``.pth``/
+      ``.ckpt``/``.bin``) can execute code on load, a strictly worse tamper class
+      than safetensors/onnx. They are scanned with picklescan (via
+      :func:`opencut.core.model_safety.scan_model_file`) and rejected if flagged.
+
+    Raises :class:`ModelIntegrityError` on any failure. The caller quarantines
+    the file so a tampered payload is never treated as installed.
+    """
+    if expected_sha256:
+        want = expected_sha256.split(":", 1)[-1].strip().lower()
+        got = _sha256_of_file(output_path).lower()
+        if got != want:
+            raise ModelIntegrityError(
+                f"Checksum mismatch for {model_name!r}: expected sha256 {want}, got {got}"
+            )
+
+    from opencut.core.model_safety import ModelSecurityError, is_pickle_format, scan_model_file
+
+    if is_pickle_format(output_path):
+        try:
+            scan_model_file(output_path)
+        except ModelSecurityError as exc:
+            raise ModelIntegrityError(str(exc)) from exc
+
+
 def _download_worker(
     model_name: str,
     url: str,
@@ -251,6 +300,7 @@ def _download_worker(
     throttle_kbps: int,
     cancel_event: threading.Event,
     on_progress: Optional[Callable],
+    expected_sha256: Optional[str] = None,
 ):
     """Background worker that downloads a model with resume support."""
     progress = _downloads.get(model_name)
@@ -344,6 +394,25 @@ def _download_worker(
                         if actual_time < expected_time:
                             time.sleep(expected_time - actual_time)
 
+        # Verify integrity before the file is treated as installed. A failure
+        # here quarantines (deletes) the payload so a tampered/corrupt download
+        # is never advertised as available.
+        try:
+            _verify_download(model_name, output_path, expected_sha256)
+        except ModelIntegrityError as exc:
+            progress.status = "failed"
+            progress.percent = 0.0
+            progress.error = str(exc)
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
+            _save_download_meta(model_name, progress)
+            if on_progress:
+                on_progress(progress.to_dict())
+            logger.error("Model integrity check failed: %s -- %s", model_name, exc)
+            return
+
         progress.status = "completed"
         progress.percent = 100.0
         progress.output_path = output_path
@@ -386,6 +455,7 @@ def queue_download(
     _ensure_dirs()
 
     # Resolve URL from registry if not provided
+    expected_sha256: Optional[str] = None
     if url is None:
         info = KNOWN_MODELS.get(model_name)
         if info is None:
@@ -396,6 +466,7 @@ def queue_download(
             )
             return prog
         url = info["url"]
+        expected_sha256 = info.get("sha256")
     else:
         # User-supplied URL — validate it blocks file://, private IPs, and
         # other non-public targets before handing it to urllib.
@@ -434,7 +505,7 @@ def queue_download(
 
     thread = threading.Thread(
         target=_download_worker,
-        args=(model_name, url, output_path, throttle_kbps, cancel_event, on_progress),
+        args=(model_name, url, output_path, throttle_kbps, cancel_event, on_progress, expected_sha256),
         daemon=True,
         name=f"opencut-dl-{model_name}",
     )
