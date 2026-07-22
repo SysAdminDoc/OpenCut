@@ -16480,6 +16480,21 @@ input[type="range"]::-webkit-slider-thumb:hover {
     min-width: 84px;
 }
 
+.wizard-overlay.server-backed-onboarding {
+    align-items: center;
+}
+
+.wizard-overlay.server-backed-onboarding .oc-onboarding-card {
+    display: block;
+    width: min(440px, calc(100vw - 32px));
+    max-width: 440px;
+    padding: 24px 28px;
+}
+
+.wizard-overlay.server-backed-onboarding .oc-onboarding-title:focus {
+    outline: none;
+}
+
 @media (max-width: 520px) {
     .oc-onboarding-card {
         padding: 18px 20px;
@@ -16489,6 +16504,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
     }
     .oc-onboarding-btn {
         flex: 1 1 auto;
+    }
+}
+
+@media (max-height: 520px) {
+    .wizard-overlay.server-backed-onboarding {
+        align-items: flex-start;
     }
 }
 

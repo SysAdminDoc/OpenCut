@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Unify CEP first-run onboarding
+
+- Replaced the competing local and server-backed first-run tours with one
+  server-backed state machine that persists step, dismissal, completion, and
+  restart behavior through the existing onboarding API.
+- Reused the shared modal focus contract for initial focus, tab containment,
+  Escape dismissal, and focus restoration, with explicit retry and continue
+  paths when the backend is unavailable.
+- Added state-machine unit coverage and rendered first-run, restart, offline,
+  keyboard, responsive-layout, and visual baselines.
+
 ### Fixed - Follow Premiere's live UXP theme
 
 - Synchronized the UXP shell with Premiere Pro's Light, Dark, and Darkest host

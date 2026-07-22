@@ -43,6 +43,12 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   const destructiveTokens = new Map();
   const destructivePreviewCounts = new Map();
   let queueTokenExpired = false;
+  const onboardingState = {
+    seen: true,
+    step: 0,
+    updated_at: 0,
+    ...(backendFixtures.onboardingState || {}),
+  };
   const locale = backendFixtures.locale || "en-US";
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
@@ -63,7 +69,6 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           "opencut_settings",
           JSON.stringify({
             theme: selectedTheme,
-            wizardDismissed: true,
           }),
         );
         const callbacks = new Map();
@@ -160,6 +165,33 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   await page.route("http://127.0.0.1:*/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.port === "41737") return route.continue();
+    if (url.pathname === "/settings/onboarding") {
+      const method = route.request().method();
+      capturedRequests.push({
+        onboarding: method,
+        body: method === "POST" ? route.request().postDataJSON() || {} : null,
+      });
+      if (backendFixtures.onboardingUnavailable) {
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "Rendered fixture: onboarding state unavailable",
+            code: "BACKEND_OFFLINE",
+          }),
+        });
+      }
+      if (method === "POST") {
+        const body = route.request().postDataJSON() || {};
+        if (typeof body.seen === "boolean") onboardingState.seen = body.seen;
+        if (Number.isFinite(Number(body.step))) onboardingState.step = Number(body.step);
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(onboardingState),
+      });
+    }
     if (backendFixtures.boundaryReview) {
       const method = route.request().method();
       if (url.pathname === "/health" && method === "GET") {
@@ -682,6 +714,81 @@ test("UXP follows live Premiere theme updates with legible tokens and cleanup", 
   await expect.poll(
     () => page.evaluate(() => window.__opencutThemeHarness.listenerCount()),
   ).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP first run uses one accessible server-backed onboarding dialog", async ({
+  page,
+}) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    480,
+    { onboardingState: { seen: false, step: 0 } },
+  );
+  const dialog = page.locator("#wizardOverlay");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName("Welcome to OpenCut");
+  await expect(page.locator("[role='dialog']:visible")).toHaveCount(1);
+  await expect.poll(
+    () => page.evaluate(() => document.activeElement?.id),
+  ).toBe("ocOnboardingTitle");
+  await expect(page).toHaveScreenshot("cep-onboarding-first-run-480.png");
+
+  const actions = dialog.locator(".oc-onboarding-actions button");
+  await expect(actions).toHaveCount(2);
+  await actions.last().focus();
+  await page.keyboard.press("Tab");
+  await expect(actions.first()).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("#stageChooseMediaBtn")).toBeFocused();
+  await expect.poll(() => capturedRequests.some(
+    (request) => request.onboarding === "POST" && request.body?.seen === true,
+  )).toBe(true);
+
+  await page.locator(".nav-tab[data-nav='settings']").click();
+  const restart = page.locator("#ocWaveHRestartTour");
+  await restart.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName("Welcome to OpenCut");
+  await expect.poll(() => capturedRequests.some(
+    (request) => request.onboarding === "POST" &&
+      request.body?.seen === false && request.body?.step === 0,
+  )).toBe(true);
+  await dialog.getByRole("button", { name: "Skip" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(restart).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP onboarding exposes explicit backend-offline recovery", async ({ page }) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    480,
+    { onboardingUnavailable: true },
+  );
+  const dialog = page.locator("#wizardOverlay");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName("Tour unavailable");
+  await expect(dialog).toContainText("local backend");
+  await expect(page.locator("[role='dialog']:visible")).toHaveCount(1);
+  await expect(page).toHaveScreenshot("cep-onboarding-offline-480.png");
+
+  const retry = dialog.getByRole("button", { name: "Retry" });
+  await retry.click();
+  await expect(dialog).toHaveAccessibleName("Tour unavailable");
+  await expect.poll(() => capturedRequests.filter(
+    (request) => request.onboarding === "GET",
+  ).length).toBeGreaterThanOrEqual(2);
+
+  await dialog.getByRole("button", { name: "Continue without tour" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("#stageChooseMediaBtn")).toBeFocused();
   expect(pageErrors).toEqual([]);
 });
 

@@ -9,6 +9,7 @@ const { createBackendClient } = require("../client/backend-client.js");
 const { createJobRuntime, isTerminalStatus } = require("../client/job-runtime.js");
 const components = require("../client/component-utils.js");
 const timeline = require("../client/timeline-utils.js");
+const onboarding = require("../client/onboarding-state.js");
 const bootstrap = require("../client/bootstrap.js");
 
 function requestHarness() {
@@ -190,6 +191,39 @@ describe("CEP timeline payloads", () => {
   });
 });
 
+describe("CEP onboarding state machine", () => {
+  it("loads server state and clamps resume steps", () => {
+    const machine = onboarding.createOnboardingState({ stepCount: 5 });
+    expect(machine.transition("load").status).toBe(onboarding.STATUS.LOADING);
+    expect(machine.transition("loaded", { seen: false, step: 99 })).toEqual({
+      status: onboarding.STATUS.ACTIVE,
+      step: 4,
+      seen: false,
+      error: "",
+      stepCount: 5,
+    });
+    expect(machine.transition("back").step).toBe(3);
+    expect(machine.transition("next").step).toBe(4);
+  });
+
+  it("models unavailable, completed, and restart recovery states", () => {
+    const changes = [];
+    const machine = onboarding.createOnboardingState({
+      stepCount: 3,
+      onChange: (state) => changes.push(state),
+    });
+    expect(machine.transition("failed", { error: "offline" }).status)
+      .toBe(onboarding.STATUS.UNAVAILABLE);
+    expect(machine.transition("completed").seen).toBe(true);
+    expect(machine.transition("restart")).toMatchObject({
+      status: onboarding.STATUS.ACTIVE,
+      step: 0,
+      seen: false,
+    });
+    expect(Object.isFrozen(changes[0])).toBe(true);
+  });
+});
+
 describe("CEP bootstrap", () => {
   it("keeps ordered steps moving after an isolated failure", () => {
     const order = [];
@@ -215,12 +249,15 @@ describe("CEP source ownership", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
     expect(main).toContain("OpenCutBackendClient.createBackendClient");
     expect(main).toContain("OpenCutJobRuntime.createJobRuntime");
+    expect(main).toContain("OpenCutOnboardingState.createOnboardingState");
     expect(main).toContain("OpenCutBootstrap.onReady");
     expect(main).not.toContain("var _inflightRequests");
     expect(main).not.toContain("function rememberButtonText(");
     expect(main).not.toContain("document.addEventListener(\"DOMContentLoaded\"");
     expect(main).not.toContain("var currentJob =");
     expect(main).not.toContain("var jobStarting =");
+    expect(main).not.toContain("wizardDismissed");
+    expect(main).not.toContain("function initWizard(");
   });
 
   it("keeps token and shell layout rules in their ordered CSS owners", () => {
@@ -231,6 +268,9 @@ describe("CEP source ownership", () => {
     expect(tokens).toContain(":root {");
     expect(layout).toContain(".app {");
     expect(components).not.toContain(":root {");
+    expect(index.match(/id="wizardOverlay"/g)).toHaveLength(1);
+    expect(index).not.toContain("ocOnboardingOverlay");
+    expect(index.indexOf("onboarding-state.js")).toBeLessThan(index.indexOf("main.js"));
     expect(index.indexOf("command-center-tokens.css")).toBeLessThan(index.indexOf("command-center-layout.css"));
     expect(index.indexOf("command-center-layout.css")).toBeLessThan(index.indexOf("command-center.css"));
   });
