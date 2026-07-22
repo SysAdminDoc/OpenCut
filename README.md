@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1534-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1541-orange)
 ![Tests](https://img.shields.io/badge/Tests-11800+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -254,7 +254,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.41.0 includes **1,534 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.41.0 includes **1,541 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -473,7 +473,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,534 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,541 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -681,6 +681,7 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 | Engine Registry | Swappable AI backends per feature domain (18+ engines, 12 domains) |
 | Job Persistence | SQLite-backed job history survives server restarts |
 | Job Recovery | Detects and reports interrupted jobs on startup |
+| Operation Checkpoints | CEP and UXP persist a preview and recovery plan before multi-step Premiere writes, detect interrupted work after restart, restore verified inverses, and export diagnostics for manual recovery |
 | Structured Errors | Error taxonomy with machine-readable codes and recovery suggestions |
 | JSON Structured Logging | File handler outputs JSON logs with job-ID correlation |
 | Workflow Engine | Chain multi-step processing with cancellation between steps |

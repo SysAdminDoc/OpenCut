@@ -1195,7 +1195,9 @@ function importCaptionOverlay(overlayPath) {
         if (overlayItem) {
             return JSON.stringify({
                 success: true,
-                message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video."
+                message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video.",
+                nodeId: overlayItem.nodeId || "",
+                path: overlayPath
             });
         }
 
@@ -1218,7 +1220,9 @@ function importCaptionOverlay(overlayPath) {
         if (overlayItem) {
             return JSON.stringify({
                 success: true,
-                message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video."
+                message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video.",
+                nodeId: overlayItem.nodeId || "",
+                path: overlayPath
             });
         }
 

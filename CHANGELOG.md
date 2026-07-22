@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Recover interrupted Premiere host writes
+
+- Promoted the SQLite operation journal to schema-v3 checkpoints that persist a
+  named transaction, affected clips/items/settings, and recovery diagnostics
+  before Premiere is mutated, then atomically attach the inverse and completion
+  state after the host reports success.
+- CEP and UXP now detect interrupted checkpoints after restart, preview their
+  scope, restore verified marker, rename, sequence, and overlay inverses in one
+  action, and export diagnostics when automatic recovery is unavailable.
+- Added legacy-schema migration, subprocess crash injection, tamper detection,
+  bounded retention, orphan-spill cleanup, route validation, and direct-host
+  boundary tests; incomplete checkpoints survive normal history cleanup.
+
 ### Added - Preflight targetable OpenTimelineIO exports
 
 - Added live adapter discovery and explicit current or `OTIO_CORE` legacy

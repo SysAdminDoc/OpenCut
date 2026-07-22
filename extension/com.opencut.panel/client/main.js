@@ -2322,37 +2322,11 @@
     };
 
     // ================================================================
-    // Operation Journal (v1.9.28) — frontend record + rollback
+    // Operation Journal — durable pre-host checkpoints + rollback
     // ================================================================
-    // Every ExtendScript operation that mutates the Premiere project calls
-    // journalRecord() after success. The Journal sub-tab under Settings
-    // renders the history and dispatches inverse calls via PremiereBridge.
-    function journalRecord(action, label, inversePayload, clipPath, forwardPayload) {
-        if (!connected) return;
-        var body = {
-            action: action,
-            label: label || "",
-            clip_path: clipPath || "",
-            inverse: inversePayload || {}
-        };
-        // v1.10.3 (N): include forward {endpoint, payload} so journal
-        // rows can later expose "Apply to selection".
-        if (forwardPayload) body.forward = forwardPayload;
-        api("POST", "/journal/record", body, function (err) {
-            if (err) {
-                // Never surface journal-record failures to the user — the
-                // forward operation already succeeded.
-                try { console.warn("journal record failed:", err); } catch (_) {}
-                return;
-            }
-            // Nudge the journal tab if it's currently visible.
-            if (typeof renderJournalList === "function" && el.journalList &&
-                el.journalList.offsetParent !== null) {
-                renderJournalList();
-            }
-        });
-    }
-
+    // Host mutations must create a checkpoint before the first ExtendScript
+    // write. A crash between begin and complete leaves a recovery row that is
+    // discovered when either panel reconnects.
     // Helpers to extract the label/inverse from a forward-operation result.
     function _journalLabelForMarkers(count, clipName) {
         var n = count | 0;
@@ -4547,56 +4521,65 @@
             // XML edit list (silence removal, filler removal, etc.)
             var xmlPath = job.result.xml_path;
             if (xmlPath) {
-                PremiereBridge.importXML(xmlPath, function (result) {
-                    try {
-                        var r = JSON.parse(result);
-                        if (r.error) {
-                            showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
-                        } else if (r.sequence_name) {
-                            showAlert(t("toast.opened_sequence", "Opened: {name}").replace("{name}", r.sequence_name));
-                            journalRecord(
-                                "import_sequence",
-                                _sessionCtxOpText(job) + " → '" + r.sequence_name + "'",
-                                { name: r.sequence_name },
-                                selectedPath,
-                                // Forward replay = re-run the same job type
-                                // (silence / full / etc) on a different clip.
-                                job.endpoint && job.payload
-                                    ? { endpoint: job.endpoint, payload: job.payload }
-                                    : null
-                            );
-                        }
-                    } catch (e) { console.error("XML import parse error:", e); }
+                journalCheckpointedHostWrite({
+                    action: "import_sequence",
+                    label: _sessionCtxOpText(job) + " → Premiere sequence",
+                    clipPath: selectedPath,
+                    forward: job.endpoint && job.payload
+                        ? { endpoint: job.endpoint, payload: job.payload }
+                        : null,
+                    preview: {
+                        clips: selectedName ? [selectedName] : [],
+                        settings: { artifact: xmlPath, source: "auto_import" }
+                    },
+                    inverseFromResult: function (r) { return r.sequence_name ? { name: r.sequence_name } : {}; }
+                }, function (cb) {
+                    PremiereBridge.importXML(xmlPath, cb);
+                }, function (r) {
+                    if (r.error) {
+                        showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
+                    } else if (r.sequence_name) {
+                        showAlert(t("toast.opened_sequence", "Opened: {name}").replace("{name}", r.sequence_name));
+                    }
                 });
             }
 
             // Styled caption overlay video (.mov with alpha)
             var overlayPath = job.result.overlay_path;
             if (overlayPath) {
-                PremiereBridge.importOverlay(overlayPath, function (result) {
-                    try {
-                        var r = JSON.parse(result);
-                        if (r.error) {
-                            showAlert(t("toast.overlay_import_error", "Overlay import error: {error}").replace("{error}", r.error));
-                        } else if (r.message) {
-                            showAlert(r.message);
-                        }
-                    } catch (e) { console.error("Overlay import parse error:", e, result); }
+                journalCheckpointedHostWrite({
+                    action: "import_overlay",
+                    label: t("journal.import_overlay_label", "Import generated caption overlay"),
+                    clipPath: selectedPath,
+                    preview: { clips: selectedName ? [selectedName] : [], settings: { artifact: overlayPath } },
+                    inverseFromResult: function (r) { return r.nodeId ? { nodeId: r.nodeId } : {}; }
+                }, function (cb) {
+                    PremiereBridge.importOverlay(overlayPath, cb);
+                }, function (r) {
+                    if (r.error) {
+                        showAlert(t("toast.overlay_import_error", "Overlay import error: {error}").replace("{error}", r.error));
+                    } else if (r.message) {
+                        showAlert(r.message);
+                    }
                 });
             }
 
             // Multiple output files (stem separation)
             var outputPaths = job.result.output_paths;
             if (outputPaths && outputPaths.length > 0) {
-                PremiereBridge.importFiles(outputPaths, t("premiere.bin_stems", "OpenCut Stems"), function (result) {
-                    try {
-                        var r = JSON.parse(result);
-                        if (r.error) {
-                            showAlert(t("toast.stem_import_error", "Stem import error: {error}").replace("{error}", r.error));
-                        } else if (r.message) {
-                            showAlert(r.message);
-                        }
-                    } catch (e) { console.error("Stem import parse error:", e, result); }
+                journalCheckpointedHostWrite({
+                    action: "import_media",
+                    label: t("journal.import_stems_label", "Import generated stems"),
+                    clipPath: selectedPath,
+                    preview: { clips: selectedName ? [selectedName] : [], settings: { artifacts: outputPaths } }
+                }, function (cb) {
+                    PremiereBridge.importFiles(outputPaths, t("premiere.bin_stems", "OpenCut Stems"), cb);
+                }, function (r) {
+                    if (r.error) {
+                        showAlert(t("toast.stem_import_error", "Stem import error: {error}").replace("{error}", r.error));
+                    } else if (r.message) {
+                        showAlert(r.message);
+                    }
                 });
             }
 
@@ -4611,29 +4594,37 @@
                 }
                 // Caption files (SRT, VTT, ASS) - import to caption track
                 if (ext === "srt" || ext === "vtt" || ext === "ass") {
-                    PremiereBridge.importCaptions(outputPath, function (result) {
-                        try {
-                            var r = JSON.parse(result);
-                            if (r.error) {
-                                showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
-                            } else if (r.message) {
-                                showAlert(r.message);
-                            }
-                        } catch (e) { console.error("Caption import parse error:", e, result); }
+                    journalCheckpointedHostWrite({
+                        action: "import_captions",
+                        label: t("journal.import_captions_label", "Import generated captions"),
+                        clipPath: selectedPath,
+                        preview: { clips: selectedName ? [selectedName] : [], settings: { artifact: outputPath } }
+                    }, function (cb) {
+                        PremiereBridge.importCaptions(outputPath, cb);
+                    }, function (r) {
+                        if (r.error) {
+                            showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
+                        } else if (r.message) {
+                            showAlert(r.message);
+                        }
                     });
                 }
                 // Audio/video files - generic import to project
                 else if (ext === "wav" || ext === "mp3" || ext === "flac" || ext === "aac" || ext === "ogg" ||
                          ext === "mp4" || ext === "mov" || ext === "avi" || ext === "mkv" || ext === "webm" || ext === "png" || ext === "jpg") {
-                    PremiereBridge.importFile(outputPath, t("premiere.bin_output", "OpenCut Output"), function (result) {
-                        try {
-                            var r = JSON.parse(result);
-                            if (r.error) {
-                                showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
-                            } else if (r.message) {
-                                showAlert(r.message);
-                            }
-                        } catch (e) { console.error("File import parse error:", e, result); }
+                    journalCheckpointedHostWrite({
+                        action: "import_media",
+                        label: t("journal.import_media_label", "Import generated media"),
+                        clipPath: selectedPath,
+                        preview: { clips: selectedName ? [selectedName] : [], settings: { artifact: outputPath } }
+                    }, function (cb) {
+                        PremiereBridge.importFile(outputPath, t("premiere.bin_output", "OpenCut Output"), cb);
+                    }, function (r) {
+                        if (r.error) {
+                            showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
+                        } else if (r.message) {
+                            showAlert(r.message);
+                        }
                     });
                 }
             }
@@ -4641,15 +4632,19 @@
             // SRT path from full pipeline (separate from output_path)
             var srtPath = job.result.srt_path;
             if (srtPath && srtPath !== outputPath) {
-                PremiereBridge.importCaptions(srtPath, function (result) {
-                    try {
-                        var r = JSON.parse(result);
-                        if (r.error) {
-                            showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
-                        } else if (r.message) {
-                            showAlert(r.message);
-                        }
-                    } catch (e) { console.error("Caption import parse error:", e, result); }
+                journalCheckpointedHostWrite({
+                    action: "import_captions",
+                    label: t("journal.import_captions_label", "Import generated captions"),
+                    clipPath: selectedPath,
+                    preview: { clips: selectedName ? [selectedName] : [], settings: { artifact: srtPath } }
+                }, function (cb) {
+                    PremiereBridge.importCaptions(srtPath, cb);
+                }, function (r) {
+                    if (r.error) {
+                        showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
+                    } else if (r.message) {
+                        showAlert(r.message);
+                    }
                 });
             }
 
@@ -9276,17 +9271,21 @@
             import_sequence:   t("journal.action_import_sequence", "Import sequence"),
             import_overlay:    t("journal.action_import_overlay", "Import overlay"),
             import_captions:   t("journal.action_import_captions", "Import captions"),
-            create_smart_bins: t("journal.action_create_smart_bins", "Create bins")
+            create_smart_bins: t("journal.action_create_smart_bins", "Create bins"),
+            import_media:      t("journal.action_import_media", "Import media"),
+            apply_cuts:        t("journal.action_apply_cuts", "Apply cuts")
         })[action] || action;
     }
 
     function updateJournalSummary(entries, statusMessage, statusState, statusTitle) {
         var recentCount = Array.isArray(entries) ? entries.length : 0;
         var revertibleCount = 0;
+        var recoveryCount = 0;
         var latestTime = "";
         if (recentCount) {
             for (var i = 0; i < entries.length; i++) {
                 if (entries[i] && entries[i].revertible && !entries[i].reverted) revertibleCount++;
+                if (entries[i] && entries[i].incomplete) recoveryCount++;
             }
             latestTime = _sessionCtxRelativeTime(entries[0].created_at);
         }
@@ -9319,6 +9318,15 @@
                     ? t("journal.context_only_title", "The recent journal entries are recorded for context, but none can be reverted automatically.")
                     : t("journal.rollback_waiting_title", "Automatic rollback will appear here when supported actions are recorded."))
         );
+        setTextAndTitle(
+            "journalRecoverySummary",
+            recoveryCount
+                ? t("journal.recovery_count", "{count} interrupted").replace("{count}", recoveryCount)
+                : t("journal.recovery_clear", "No interrupted writes"),
+            recoveryCount
+                ? t("journal.recovery_count_title", "{count} host write checkpoint(s) need review or recovery.").replace("{count}", recoveryCount)
+                : t("journal.recovery_clear_title", "Every recent host write reached an atomic completion record.")
+        );
 
         if (statusMessage) {
             setStatusLine("journalStatusLine", statusMessage, statusState || "idle", statusTitle || statusMessage);
@@ -9330,6 +9338,13 @@
                 "journalStatusLine",
                 t("journal.empty_status", "Run an action that writes to Premiere and it will appear here with any available rollback support."),
                 "idle"
+            );
+        } else if (recoveryCount) {
+            setStatusLine(
+                "journalStatusLine",
+                t("journal.recovery_status", "{count} interrupted host write(s) need review. Restore from the saved inverse when available, or export diagnostics for manual recovery.")
+                    .replace("{count}", recoveryCount),
+                "warning"
             );
         } else if (revertibleCount) {
             setStatusLine(
@@ -9393,7 +9408,8 @@
 
     function _buildJournalRow(entry) {
         var row = document.createElement("div");
-        row.className = "journal-row" + (entry.reverted ? " journal-row-reverted" : "");
+        row.className = "journal-row" + (entry.reverted ? " journal-row-reverted" : "") +
+            (entry.incomplete ? " journal-row-incomplete" : "");
         row.setAttribute("data-id", entry.id);
 
         var copy = document.createElement("div");
@@ -9413,12 +9429,46 @@
 
         copy.appendChild(title);
         copy.appendChild(meta);
+        var previewText = _journalPreviewText(entry);
+        if (previewText) {
+            var preview = document.createElement("div");
+            preview.className = "journal-row-preview";
+            preview.textContent = previewText;
+            copy.appendChild(preview);
+        }
         row.appendChild(copy);
 
         var actions = document.createElement("div");
         actions.className = "journal-row-actions";
 
-        if (entry.reverted) {
+        if (entry.incomplete) {
+            var interruptedPill = document.createElement("span");
+            interruptedPill.className = "journal-pill journal-pill-interrupted";
+            interruptedPill.textContent = entry.status === "recovery_failed"
+                ? t("journal.recovery_failed", "Recovery failed")
+                : t("journal.interrupted", "Interrupted");
+            interruptedPill.title = entry.recovery_error || t("journal.interrupted_title", "This host write began but did not record atomic completion.");
+            actions.appendChild(interruptedPill);
+
+            if (entry.automatic_recovery_available) {
+                var restoreBtn = document.createElement("button");
+                restoreBtn.type = "button";
+                restoreBtn.className = "btn btn-primary btn-sm journal-revert-btn";
+                restoreBtn.textContent = t("journal.restore", "Restore");
+                restoreBtn.addEventListener("click", function () {
+                    _journalRevert(entry, restoreBtn);
+                });
+                actions.appendChild(restoreBtn);
+            }
+            var diagnosticsBtn = document.createElement("button");
+            diagnosticsBtn.type = "button";
+            diagnosticsBtn.className = "btn btn-ghost btn-sm";
+            diagnosticsBtn.textContent = t("journal.export_diagnostics", "Export diagnostics");
+            diagnosticsBtn.addEventListener("click", function () {
+                _journalExportDiagnostics(entry);
+            });
+            actions.appendChild(diagnosticsBtn);
+        } else if (entry.reverted) {
             var pill = document.createElement("span");
             pill.className = "journal-pill journal-pill-reverted";
             pill.textContent = t("journal.reverted", "Reverted");
@@ -9466,6 +9516,47 @@
         return row;
     }
 
+    function _journalPreviewText(entry) {
+        var preview = entry && entry.preview;
+        if (!preview || typeof preview !== "object") return "";
+        var parts = [];
+        if (Array.isArray(preview.clips) && preview.clips.length) {
+            parts.push(t("journal.affected_clips", "Affected clips: {clips}")
+                .replace("{clips}", preview.clips.slice(0, 3).join(", ")));
+        }
+        if (Array.isArray(preview.items) && preview.items.length) {
+            parts.push(t("journal.affected_items", "Affected items: {count}")
+                .replace("{count}", preview.items.length));
+        }
+        if (preview.settings && typeof preview.settings === "object") {
+            var settings = Object.keys(preview.settings);
+            if (settings.length) {
+                parts.push(t("journal.saved_settings", "Saved plan: {settings}")
+                    .replace("{settings}", settings.slice(0, 5).join(", ")));
+            }
+        }
+        return parts.join(" · ");
+    }
+
+    function _journalExportDiagnostics(entry) {
+        if (!entry || !entry.transaction_id) return;
+        api("GET", "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "/diagnostics", null, function (err, data) {
+            if (err || !data) {
+                showAlert(t("journal.diagnostics_failed", "Could not export recovery diagnostics: {error}")
+                    .replace("{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                return;
+            }
+            var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement("a");
+            link.href = url;
+            link.download = "opencut-recovery-" + entry.transaction_id.replace(/[^a-zA-Z0-9_-]/g, "_") + ".json";
+            link.click();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+            showToast(t("journal.diagnostics_exported", "Recovery diagnostics exported"), "success");
+        });
+    }
+
     function _journalApplyToSelection(entry) {
         var fwd = entry && entry.forward;
         if (!fwd) return;
@@ -9479,19 +9570,23 @@
             var markers = (fwd.payload && fwd.payload.markers) || [];
             if (!markers.length) { showAlert(t("toast.no_markers_to_replay", "No markers to replay.")); return; }
             var payload = JSON.stringify(markers);
-            cs.evalScript(
-                "ocAddSequenceMarkers('" +
-                escSingleQuote(payload) + "')",
-                function (result) {
-                    try {
-                        var r = JSON.parse(result || "{}");
-                        if (r.error) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", r.error)); return; }
-                        showToast(t("toast.markers_readded", "Re-added {count} markers on '{target}'")
-                            .replace("{count}", markers.length)
-                            .replace("{target}", selectedName || t("toast.selection_target", "selection")), "success");
-                    } catch (e) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", result || e.message)); }
-                }
-            );
+            var inverseMarkers = markers.map(function (marker) {
+                return { time: marker.time, comment: marker.name || marker.label || "" };
+            });
+            journalCheckpointedHostWrite({
+                action: "add_markers",
+                label: _journalLabelForMarkers(markers.length, selectedName),
+                inverse: { markers: inverseMarkers },
+                clipPath: selectedPath,
+                preview: { clips: selectedName ? [selectedName] : [], settings: { markers: inverseMarkers } }
+            }, function (cb) {
+                cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
+            }, function (r) {
+                if (r.error) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", r.error)); return; }
+                showToast(t("toast.markers_readded", "Re-added {count} markers on '{target}'")
+                    .replace("{count}", markers.length)
+                    .replace("{target}", selectedName || t("toast.selection_target", "selection")), "success");
+            });
             return;
         }
         // HTTP endpoints: replace filepath with the current selection
@@ -9508,7 +9603,27 @@
         if (!entry.revertible) { return; }
 
         btn.disabled = true;
-        btn.textContent = t("journal.reverting", "Reverting…");
+        btn.textContent = entry.incomplete
+            ? t("journal.restoring", "Restoring…")
+            : t("journal.reverting", "Reverting…");
+
+        if (entry.incomplete && entry.transaction_id) {
+            api("GET", "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "?resolve=1", null, function (err, resolved) {
+                if (err || !resolved) {
+                    btn.disabled = false;
+                    btn.textContent = t("journal.restore", "Restore");
+                    showAlert(t("journal.recovery_payload_failed", "Could not verify the saved recovery payload: {error}")
+                        .replace("{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                    return;
+                }
+                _journalDispatchRevert(resolved, btn);
+            });
+            return;
+        }
+        _journalDispatchRevert(entry, btn);
+    }
+
+    function _journalDispatchRevert(entry, btn) {
 
         var dispatch = {
             add_markers:     function (p, cb) { PremiereBridge.removeSequenceMarkers(p, cb); },
@@ -9519,7 +9634,7 @@
 
         if (!dispatch) {
             btn.disabled = false;
-            btn.textContent = t("journal.revert", "Revert");
+            btn.textContent = entry.incomplete ? t("journal.restore", "Restore") : t("journal.revert", "Revert");
             showAlert(t("toast.action_not_revertible", "This action can't be reverted automatically."));
             return;
         }
@@ -9529,16 +9644,28 @@
             try { r = JSON.parse(result || "{}"); } catch (e) { r = { error: result || t("toast.parse_error", "Parse error") }; }
             if (r.error) {
                 btn.disabled = false;
-                btn.textContent = t("journal.revert", "Revert");
+                btn.textContent = entry.incomplete ? t("journal.restore", "Restore") : t("journal.revert", "Revert");
+                if (entry.incomplete && entry.transaction_id) {
+                    api("POST", "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "/recovery-failed", {
+                        error: r.error,
+                        diagnostics: { host_result: r }
+                    }, function () { renderJournalList(); });
+                }
                 showAlert(t("toast.revert_failed", "Revert failed: {error}").replace("{error}", r.error));
                 return;
             }
             // Mark server-side so the UI reflects the new state.
-            api("POST", "/journal/mark-reverted/" + entry.id, {}, function (err) {
+            var markUrl = entry.incomplete && entry.transaction_id
+                ? "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "/recovered"
+                : "/journal/mark-reverted/" + entry.id;
+            api("POST", markUrl, {}, function (err) {
                 if (err) {
                     showToast(t("toast.journal_revert_update_failed", "Reverted in Premiere but couldn't update the journal"), "warn");
                 } else {
-                    showToast(t("toast.reverted_action", "Reverted: {action}").replace("{action}", _journalActionLabel(entry.action)), "success");
+                    var feedback = entry.incomplete
+                        ? t("journal.restored_action", "Restored interrupted action: {action}")
+                        : t("toast.reverted_action", "Reverted: {action}");
+                    showToast(feedback.replace("{action}", _journalActionLabel(entry.action)), "success");
                 }
                 renderJournalList();
             });
@@ -9669,17 +9796,17 @@
             importBtn.className = "btn btn-primary btn-sm";
             importBtn.textContent = t("output.import_to_premiere", "Import to Premiere");
             importBtn.addEventListener("click", function () {
-                PremiereBridge.importXML(r.xml_path, function (result) {
-                    try {
-                        var jr = JSON.parse(result);
-                        if (jr.error) { showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", jr.error)); return; }
-                        showToast(t("toast.imported_sequence", "Imported '{name}'").replace("{name}", jr.sequence_name || r.sequence_name), "success");
-                        if (jr.sequence_name) {
-                            journalRecord("import_sequence",
-                                "Interview Polish → '" + jr.sequence_name + "'",
-                                { name: jr.sequence_name }, selectedPath);
-                        }
-                    } catch (e) { showAlert(t("toast.import_failed", "Import failed: {error}").replace("{error}", result || e.message)); }
+                journalCheckpointedHostWrite({
+                    action: "import_sequence",
+                    label: t("journal.interview_polish_import_label", "Import Interview Polish sequence"),
+                    clipPath: selectedPath,
+                    preview: { clips: selectedName ? [selectedName] : [], settings: { artifact: r.xml_path } },
+                    inverseFromResult: function (jr) { return jr.sequence_name ? { name: jr.sequence_name } : {}; }
+                }, function (cb) {
+                    PremiereBridge.importXML(r.xml_path, cb);
+                }, function (jr) {
+                    if (jr.error) { showAlert(t("toast.import_failed", "Import failed: {error}").replace("{error}", jr.error)); return; }
+                    showToast(t("toast.imported_sequence", "Imported '{name}'").replace("{name}", jr.sequence_name || r.sequence_name), "success");
                 });
             });
             actions.appendChild(importBtn);
@@ -11545,6 +11672,72 @@
             }
             if (el.recoverQueueBtn) el.recoverQueueBtn.classList.toggle("hidden", interrupted === 0);
             if (el.clearQueueBtn) el.clearQueueBtn.disabled = count === 0;
+        });
+    }
+
+    function journalCheckpointedHostWrite(spec, writeHost, done) {
+        if (!connected) {
+            showAlert(t("journal.checkpoint_backend_required", "The backend must be connected before Premiere can be changed safely."));
+            if (done) done({ error: "backend unavailable" }, "", null);
+            return;
+        }
+        var body = {
+            action: spec.action,
+            label: spec.label || "",
+            clip_path: spec.clipPath || "",
+            inverse: spec.inverse || {},
+            preview: spec.preview || {}
+        };
+        if (spec.forward) body.forward = spec.forward;
+        api("POST", "/journal/checkpoints", body, function (checkpointErr, checkpoint) {
+            if (checkpointErr || !checkpoint || !checkpoint.transaction_id) {
+                var checkpointMessage = (checkpointErr && (checkpointErr.error || checkpointErr.message)) ||
+                    t("journal.checkpoint_unknown_error", "unknown checkpoint error");
+                showAlert(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.")
+                    .replace("{error}", checkpointMessage));
+                if (done) done({ error: checkpointMessage }, "", null);
+                return;
+            }
+
+            var settled = false;
+            function settleHostResult(result) {
+                if (settled) return;
+                settled = true;
+                var parsed;
+                try { parsed = JSON.parse(result || "{}"); }
+                catch (parseErr) { parsed = { error: result || parseErr.message }; }
+                var txid = checkpoint.transaction_id;
+                if (parsed.error) {
+                    api("POST", "/journal/checkpoints/" + encodeURIComponent(txid) + "/recovery-failed", {
+                        error: parsed.error,
+                        diagnostics: { host_result: parsed }
+                    }, function () {
+                        if (done) done(parsed, result, checkpoint);
+                        renderJournalList();
+                    });
+                    return;
+                }
+                var inverse = spec.inverse || {};
+                if (typeof spec.inverseFromResult === "function") {
+                    inverse = spec.inverseFromResult(parsed) || inverse;
+                }
+                api("POST", "/journal/checkpoints/" + encodeURIComponent(txid) + "/complete", {
+                    inverse: inverse,
+                    diagnostics: { host_result: parsed }
+                }, function (completeErr) {
+                    if (completeErr) {
+                        showToast(t("journal.checkpoint_completion_failed", "Premiere changed, but the recovery checkpoint could not be completed. It remains available for review."), "warn");
+                    }
+                    if (done) done(parsed, result, checkpoint);
+                    if (typeof renderJournalList === "function") renderJournalList();
+                });
+            }
+
+            try {
+                writeHost(settleHostResult);
+            } catch (hostErr) {
+                settleHostResult(JSON.stringify({ error: hostErr.message || String(hostErr) }));
+            }
         });
     }
 
@@ -14733,26 +14926,26 @@
 
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
-        var payload = JSON.stringify(OpenCutTimeline.cloneCuts(cuts));
-        cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
-            try {
-                var r = JSON.parse(result);
-                if (r.error) {
-                    // The bridge parsed but reported a host-side failure (no active
-                    // sequence, locked track); surface it instead of a false success.
-                    showAlert(t("timeline.apply_cuts_failed", "Error applying cuts: {error}")
-                        .replace("{error}", r.error));
-                    return;
-                }
-                showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
-                    .replace("{count}", r.applied || 0), "success");
-                var statusEl = document.getElementById("tlWritebackStatus");
-                if (statusEl) statusEl.textContent = t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
-                    .replace("{count}", r.applied || 0);
-            } catch (e) {
+        var cutPlan = OpenCutTimeline.cloneCuts(cuts);
+        var payload = JSON.stringify(cutPlan);
+        journalCheckpointedHostWrite({
+            action: "apply_cuts",
+            label: t("journal.apply_cuts_label", "Apply reviewed timeline cuts"),
+            clipPath: selectedPath,
+            preview: { clips: selectedName ? [selectedName] : [], settings: { cuts: cutPlan } }
+        }, function (cb) {
+            cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
+        }, function (r) {
+            if (r.error) {
                 showAlert(t("timeline.apply_cuts_failed", "Error applying cuts: {error}")
-                    .replace("{error}", result || e.message));
+                    .replace("{error}", r.error));
+                return;
             }
+            showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
+                .replace("{count}", r.applied || 0), "success");
+            var statusEl = document.getElementById("tlWritebackStatus");
+            if (statusEl) statusEl.textContent = t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
+                .replace("{count}", r.applied || 0);
         });
     }
 
@@ -14809,43 +15002,30 @@
             t("timeline.chapter_marker_name", "Chapter")
         );
         var payload = JSON.stringify(markers);
-        cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
-            try {
-                var r = JSON.parse(result);
-                if (r.error) {
-                    // Host-side failure: report it rather than a false "Added N".
-                    showAlert(t("timeline.add_markers_failed", "Error adding markers: {error}")
-                        .replace("{error}", r.error));
-                    return;
-                }
-                showToast(t("timeline.markers_added", "Added {count} markers")
-                    .replace("{count}", r.added || beatMarkerTimes.length), "success");
-                {
-                    // Journal the op for one-click rollback. Fingerprint each
-                    // marker by its {time, comment} pair so the inverse can
-                    // find+delete exactly these rows.
-                    var fingerprints = [];
-                    for (var k = 0; k < markers.length; k++) {
-                        fingerprints.push({
-                            time: markers[k].time,
-                            comment: markers[k].name || t("timeline.beat_marker_name", "Beat")
-                        });
-                    }
-                    journalRecord(
-                        "add_markers",
-                        _journalLabelForMarkers(markers.length, selectedName),
-                        { markers: fingerprints },
-                        selectedPath,
-                        // Forward op: re-add the same beat markers on a
-                        // different clip. endpoint dispatches to ExtendScript.
-                        { endpoint: "__jsx_add_markers__",
-                          payload: { markers: markers } }
-                    );
-                }
-            } catch (e) {
+        var fingerprints = [];
+        for (var k = 0; k < markers.length; k++) {
+            fingerprints.push({
+                time: markers[k].time,
+                comment: markers[k].name || t("timeline.beat_marker_name", "Beat")
+            });
+        }
+        journalCheckpointedHostWrite({
+            action: "add_markers",
+            label: _journalLabelForMarkers(markers.length, selectedName),
+            inverse: { markers: fingerprints },
+            clipPath: selectedPath,
+            forward: { endpoint: "__jsx_add_markers__", payload: { markers: markers } },
+            preview: { clips: selectedName ? [selectedName] : [], settings: { markers: fingerprints } }
+        }, function (cb) {
+            cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
+        }, function (r) {
+            if (r.error) {
                 showAlert(t("timeline.add_markers_failed", "Error adding markers: {error}")
-                    .replace("{error}", result || e.message));
+                    .replace("{error}", r.error));
+                return;
             }
+            showToast(t("timeline.markers_added", "Added {count} markers")
+                .replace("{count}", r.added || beatMarkerTimes.length), "success");
         });
     }
 
@@ -15050,46 +15230,39 @@
             }
             if (!inPremiere) { showToast(t("timeline.rename_validated_no_premiere", "Rename validated (no Premiere connection)"), "info"); return; }
             var payload = JSON.stringify(renames);
-            cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", function (result) {
-                try {
-                    var r = JSON.parse(result);
-                    showToast(t("timeline.renamed_items", "Renamed {count} items")
-                        .replace("{count}", r.renamed || renames.length), "success");
-                    if (!r.error) {
-                        // Journal each (nodeId -> oldName) pair so Unrename
-                        // can restore the previous names.
-                        var reverseList = [];
-                        for (var k = 0; k < renames.length; k++) {
-                            var idx = -1;
-                            for (var j = 0; j < renameItemsData.length; j++) {
-                                if ((renameItemsData[j].nodeId || renameItemsData[j].id ||
-                                     renameItemsData[j].path) === renames[k].nodeId) {
-                                    idx = j; break;
-                                }
-                            }
-                            if (idx >= 0) {
-                                reverseList.push({
-                                    nodeId: renames[k].nodeId,
-                                    oldName: renameItemsData[idx].name,
-                                    currentName: renames[k].newName
-                                });
-                            }
-                        }
-                        journalRecord(
-                            "batch_rename",
-                            _journalLabelForRename(reverseList.length),
-                            { renames: reverseList },
-                            "",
-                            // Forward replay isn't meaningful for rename —
-                            // the nodeIds are project-scoped and the "new"
-                            // names were project-specific.
-                            null
-                        );
+            // The inverse is built before the first host write so a partial
+            // batch can be repaired after a Premiere or panel crash.
+            var reverseList = [];
+            for (var k = 0; k < renames.length; k++) {
+                var idx = -1;
+                for (var j = 0; j < renameItemsData.length; j++) {
+                    if ((renameItemsData[j].nodeId || renameItemsData[j].id ||
+                         renameItemsData[j].path) === renames[k].nodeId) {
+                        idx = j; break;
                     }
-                } catch (e) {
-                    showAlert(t("timeline.action_failed", "Error: {error}")
-                        .replace("{error}", result || e.message));
                 }
+                if (idx >= 0) {
+                    reverseList.push({
+                        nodeId: renames[k].nodeId,
+                        oldName: renameItemsData[idx].name,
+                        currentName: renames[k].newName
+                    });
+                }
+            }
+            journalCheckpointedHostWrite({
+                action: "batch_rename",
+                label: _journalLabelForRename(reverseList.length),
+                inverse: { renames: reverseList },
+                preview: { items: reverseList }
+            }, function (cb) {
+                cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", cb);
+            }, function (r) {
+                if (r.error) {
+                    showAlert(t("timeline.action_failed", "Error: {error}").replace("{error}", r.error));
+                    return;
+                }
+                showToast(t("timeline.renamed_items", "Renamed {count} items")
+                    .replace("{count}", r.renamed || renames.length), "success");
             });
         });
     }
@@ -15185,15 +15358,19 @@
             if (!inPremiere) { showToast(t("timeline.rules_validated_no_premiere", "Rules validated (no Premiere connection)"), "info"); return; }
             var jsxRules = OpenCutTimeline.buildSmartBinHostRules(smartBinRules);
             var payload = JSON.stringify(jsxRules);
-            cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", function (result) {
-                try {
-                    var r = JSON.parse(result);
-                    showToast(t("timeline.bins_created", "Created {count} bins")
-                        .replace("{count}", r.created || smartBinRules.length), "success");
-                } catch (e) {
-                    showAlert(t("timeline.action_failed", "Error: {error}")
-                        .replace("{error}", result || e.message));
+            journalCheckpointedHostWrite({
+                action: "create_smart_bins",
+                label: t("journal.create_bins_label", "Create smart bins"),
+                preview: { settings: { rules: jsxRules } }
+            }, function (cb) {
+                cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", cb);
+            }, function (r) {
+                if (r.error) {
+                    showAlert(t("timeline.action_failed", "Error: {error}").replace("{error}", r.error));
+                    return;
                 }
+                showToast(t("timeline.bins_created", "Created {count} bins")
+                    .replace("{count}", r.created || smartBinRules.length), "success");
             });
         });
     }
@@ -15311,15 +15488,24 @@
             };
         });
         var payload = JSON.stringify(markers);
-        cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
-            try {
-                var r = JSON.parse(result);
-                showToast(t("captions.chapter_markers_added", "Added {count} chapter markers")
-                    .replace("{count}", r.added || chaptersData.length), "success");
-            } catch (e) {
-                showAlert(t("captions.action_failed", "Error: {error}")
-                    .replace("{error}", result || e.message));
+        var inverseMarkers = markers.map(function (marker) {
+            return { time: marker.time, comment: marker.name };
+        });
+        journalCheckpointedHostWrite({
+            action: "add_markers",
+            label: _journalLabelForMarkers(markers.length, selectedName),
+            inverse: { markers: inverseMarkers },
+            clipPath: selectedPath,
+            preview: { clips: selectedName ? [selectedName] : [], settings: { markers: inverseMarkers } }
+        }, function (cb) {
+            cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
+        }, function (r) {
+            if (r.error) {
+                showAlert(t("captions.action_failed", "Error: {error}").replace("{error}", r.error));
+                return;
             }
+            showToast(t("captions.chapter_markers_added", "Added {count} chapter markers")
+                .replace("{count}", r.added || chaptersData.length), "success");
         });
     }
 
@@ -15339,17 +15525,23 @@
                 return;
             }
             var payload = JSON.stringify(segments);
-            cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", function (result) {
-                try {
-                    var r = JSON.parse(result);
-                    var importedCount = r.captions_added || segments.length;
-                    var placement = r.placement_mode ? " (" + r.placement_mode.replace(/_/g, " ") + ")" : "";
-                    showToast(t("captions.imported_captions", "Imported {count} captions")
-                        .replace("{count}", importedCount) + placement, "success");
-                } catch (e) {
+            journalCheckpointedHostWrite({
+                action: "import_captions",
+                label: t("journal.import_captions_label", "Import generated captions"),
+                clipPath: selectedPath,
+                preview: { clips: selectedName ? [selectedName] : [], settings: { source: path, segments: segments.length } }
+            }, function (cb) {
+                cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", cb);
+            }, function (r) {
+                if (r.error) {
                     showAlert(t("captions.action_failed", "Error: {error}")
-                        .replace("{error}", result || e.message));
+                        .replace("{error}", r.error));
+                    return;
                 }
+                var importedCount = r.captions_added || segments.length;
+                var placement = r.placement_mode ? " (" + r.placement_mode.replace(/_/g, " ") + ")" : "";
+                showToast(t("captions.imported_captions", "Imported {count} captions")
+                    .replace("{count}", importedCount) + placement, "success");
             });
             var statusEl = document.getElementById("srtImportStatus");
             setHintState(statusEl, t("captions.imported_segments", "Imported {count} caption segments.")
