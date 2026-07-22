@@ -24,6 +24,7 @@ from opencut.jobs import (
 from opencut.queue_store import (
     QUEUE_SCHEMA_VERSION,
     QueueDocumentError,
+    QueueSchemaVersionError,
 )
 from opencut.queue_store import (
     build_document as build_queue_document,
@@ -525,17 +526,54 @@ def _validate_queue_replay(entry, app, *, check_output=True):
     return None
 
 
+def _quarantine_corrupt_queue_file():
+    """Move a structurally corrupt job_queue.json aside, preserving its bytes.
+
+    Returns the quarantine path, or ``None`` when the rename failed (a
+    genuine I/O problem the caller should fail closed on).
+    """
+    from opencut.queue_store import QUEUE_FILE
+    from opencut.user_data import OPENCUT_DIR
+
+    source = os.path.join(OPENCUT_DIR, QUEUE_FILE)
+    if not os.path.isfile(source):
+        return None
+    target = f"{source}.corrupt"
+    try:
+        os.replace(source, target)  # overwrites any previous .corrupt file
+    except OSError as exc:
+        logger.error("Could not quarantine corrupt queue file %s: %s", source, exc)
+        return None
+    return target
+
+
 def initialize_job_queue(app, *, start_processing=True):
     """Load the durable queue and recover in-flight entries after a restart."""
     global _queue_app, _queue_persistence_enabled, _queue_storage_error
 
     try:
         stored_entries, migrated = load_persisted_queue()
-    except QueueDocumentError as exc:
+    except QueueSchemaVersionError as exc:
+        # A newer schema likely holds real work from a newer OpenCut: fail
+        # closed instead of quarantining the file.
         logger.error("Job queue was not loaded: %s", exc)
         _queue_persistence_enabled = False
         _queue_storage_error = str(exc)
         return {"loaded": 0, "interrupted": 0, "invalid": 0, "error": str(exc)}
+    except QueueDocumentError as exc:
+        quarantined = _quarantine_corrupt_queue_file()
+        if quarantined is None:
+            logger.error("Job queue was not loaded: %s", exc)
+            _queue_persistence_enabled = False
+            _queue_storage_error = str(exc)
+            return {"loaded": 0, "interrupted": 0, "invalid": 0, "error": str(exc)}
+        logger.warning(
+            "Corrupt job queue file quarantined to %s (%s); continuing with "
+            "an empty queue",
+            quarantined,
+            exc,
+        )
+        stored_entries, migrated = [], False
     except Exception as exc:  # noqa: BLE001 - startup remains available for recovery
         logger.error("Job queue storage could not be read: %s", exc)
         _queue_persistence_enabled = False
@@ -655,7 +693,8 @@ def queue_add():
             return jsonify({
                 "error": "Could not save the queued job",
                 "code": "QUEUE_STORAGE_ERROR",
-                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+                "suggestion": f"Queue persistence failed: {exc}. Check that "
+                              "the OpenCut data directory is writable, then retry.",
             }), 503
     _process_queue(current_app._get_current_object())
     return jsonify({"queue_id": entry["id"], "position": position})
@@ -708,7 +747,8 @@ def queue_clear():
             return jsonify({
                 "error": "Could not save the cleared queue",
                 "code": "QUEUE_STORAGE_ERROR",
-                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+                "suggestion": f"Queue persistence failed: {exc}. Check that "
+                              "the OpenCut data directory is writable, then retry.",
             }), 503
     return jsonify({"success": True, "dry_run": False, "removed": removed, "plan": plan})
 
@@ -803,7 +843,8 @@ def queue_import():
             return jsonify({
                 "error": "Could not save the imported queue",
                 "code": "QUEUE_STORAGE_ERROR",
-                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+                "suggestion": f"Queue persistence failed: {exc}. Check that "
+                              "the OpenCut data directory is writable, then retry.",
             }), 503
 
     if any(entry["status"] == "queued" for entry in candidates):
@@ -855,7 +896,8 @@ def queue_replay(queue_id):
             return jsonify({
                 "error": "Could not save the replayed queue entry",
                 "code": "QUEUE_STORAGE_ERROR",
-                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+                "suggestion": f"Queue persistence failed: {exc}. Check that "
+                              "the OpenCut data directory is writable, then retry.",
             }), 503
 
     _process_queue(app)

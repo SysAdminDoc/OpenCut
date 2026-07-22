@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -100,9 +101,55 @@ def test_newer_queue_schema_fails_closed_instead_of_accepting_ephemeral_work(
         headers=csrf_headers(csrf_token),
     )
     assert response.status_code == 503
-    assert response.get_json()["code"] == "QUEUE_STORAGE_ERROR"
+    body = response.get_json()
+    assert body["code"] == "QUEUE_STORAGE_ERROR"
+    assert "Unsupported queue schema version" in body["suggestion"]
     with jobs_routes.job_queue_lock:
         assert jobs_routes.job_queue == []
+    # A newer-schema file is never quarantined: it likely holds real work
+    # written by a newer OpenCut.
+    assert (tmp_path / QUEUE_FILE).is_file()
+    assert not (tmp_path / f"{QUEUE_FILE}.corrupt").exists()
+
+
+def test_structurally_corrupt_queue_file_is_quarantined_and_queue_recovers(
+    app, client, csrf_token, monkeypatch, tmp_path
+):
+    from opencut import user_data
+    from opencut.queue_store import QUEUE_FILE
+
+    jobs_routes = _use_temp_queue_store(monkeypatch, tmp_path)
+    corrupt_document = {"schema_version": 1, "entries": "not-a-list"}
+    user_data.write_user_file(QUEUE_FILE, corrupt_document)
+
+    result = jobs_routes.initialize_job_queue(app, start_processing=False)
+
+    assert result == {"loaded": 0, "interrupted": 0, "invalid": 0}
+    quarantine = tmp_path / f"{QUEUE_FILE}.corrupt"
+    assert quarantine.is_file()
+    assert json.loads(quarantine.read_text(encoding="utf-8")) == corrupt_document
+    assert not (tmp_path / QUEUE_FILE).exists()
+
+    # Persistence stays enabled: queue mutations work without a restart.
+    monkeypatch.setattr(jobs_routes, "_process_queue", lambda app=None: None)
+    response = client.post(
+        "/queue/add",
+        json={"endpoint": "/silence", "payload": {}},
+        headers=csrf_headers(csrf_token),
+    )
+    assert response.status_code == 200
+    with jobs_routes.job_queue_lock:
+        assert len(jobs_routes.job_queue) == 1
+    persisted = user_data.read_user_file(QUEUE_FILE)
+    assert len(persisted["entries"]) == 1
+
+    # A pre-existing .corrupt file is overwritten by the next quarantine.
+    second_corrupt = {"schema_version": None}
+    with jobs_routes.job_queue_lock:
+        jobs_routes.job_queue.clear()
+    user_data.write_user_file(QUEUE_FILE, second_corrupt)
+    jobs_routes.initialize_job_queue(app, start_processing=False)
+    assert json.loads(quarantine.read_text(encoding="utf-8")) == second_corrupt
 
 
 def test_queue_import_export_round_trip_preserves_ids_without_duplicates(

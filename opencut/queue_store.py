@@ -15,6 +15,15 @@ class QueueDocumentError(ValueError):
     """Raised when a queue document cannot be safely loaded or imported."""
 
 
+class QueueSchemaVersionError(QueueDocumentError):
+    """Raised for an unsupported schema version.
+
+    Kept distinct from structural corruption: a *newer* schema likely holds
+    real work written by a newer OpenCut, so startup fails closed instead of
+    quarantining the file.
+    """
+
+
 def build_document(entries: list[dict]) -> dict:
     """Return a detached, versioned queue document."""
     return {
@@ -36,7 +45,12 @@ def parse_document(data, *, allow_legacy: bool = False) -> tuple[list[dict], boo
     if not isinstance(data, dict):
         raise QueueDocumentError("Queue document must be a JSON object")
     version = data.get("schema_version")
-    if isinstance(version, bool) or not isinstance(version, int) or version != QUEUE_SCHEMA_VERSION:
+    if isinstance(version, int) and not isinstance(version, bool) and version != QUEUE_SCHEMA_VERSION:
+        raise QueueSchemaVersionError(
+            f"Unsupported queue schema version: {version!r}; "
+            f"expected {QUEUE_SCHEMA_VERSION}"
+        )
+    if isinstance(version, bool) or not isinstance(version, int):
         raise QueueDocumentError(
             f"Unsupported queue schema version: {version!r}; "
             f"expected {QUEUE_SCHEMA_VERSION}"
