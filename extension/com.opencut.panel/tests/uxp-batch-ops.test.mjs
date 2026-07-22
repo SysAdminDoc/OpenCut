@@ -49,10 +49,14 @@ describe("expandRenamePattern", () => {
 });
 
 describe("computeInverseRenames (undo)", () => {
-  it("swaps old and new names so applying it reverts the batch", () => {
+  it("emits the canonical journal inverse shape shared with the CEP host restore", () => {
     const renames = expandRenamePattern(ITEMS, "{stem}_{index:03d}{ext}");
     const inverse = computeInverseRenames(renames);
-    expect(inverse[0]).toMatchObject({ oldName: "clip a_001.mp4", newName: "clip a.mp4" });
+    // Canonical shape consumed by ocUnrenameItems: oldName = the ORIGINAL
+    // name to restore, currentName = the applied name. Legacy pre-canonical
+    // entries are detected by the absence of currentName.
+    expect(inverse[0]).toMatchObject({ oldName: "clip a.mp4", currentName: "clip a_001.mp4" });
+    expect(inverse[0]).not.toHaveProperty("newName");
     expect(inverse).toHaveLength(renames.length);
   });
 });

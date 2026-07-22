@@ -64,13 +64,18 @@ export function expandRenamePattern(items, pattern) {
   return renames;
 }
 
-/** Inverse rename entries (newName → oldName) for a one-click undo. */
+/** Inverse rename entries for a one-click undo / journal checkpoint.
+ * Canonical journal inverse shape shared with the CEP host restore
+ * (ocUnrenameItems in host/index.jsx): oldName is the ORIGINAL name to
+ * restore, currentName is the name the rename applied. Consumers detect
+ * legacy pre-canonical entries by the absence of `currentName` (those
+ * stored {oldName: applied, newName: original}). */
 export function computeInverseRenames(renames) {
   return (Array.isArray(renames) ? renames : []).map((r) => ({
-    oldName: r.newName,
-    newName: r.oldName,
-    path: r.path,
     nodeId: r.nodeId,
+    path: r.path,
+    oldName: r.oldName,
+    currentName: r.newName,
   }));
 }
 

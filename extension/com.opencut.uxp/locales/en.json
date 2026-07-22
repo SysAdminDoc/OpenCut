@@ -1568,6 +1568,7 @@
   "uxp.journal.restore_failed": "Restore failed",
   "uxp.journal.restore_failed_detail": "Restore failed: {error}",
   "uxp.journal.restore_mark_failed": "Premiere was restored, but the checkpoint state could not be updated.",
+  "uxp.journal.restore_markers_missing": "No matching markers were found in the active sequence ({count} expected), so nothing was restored.",
   "uxp.journal.saved_checkpoint": "Saved host-write checkpoint",
   "uxp.journal.saved_plan": "Saved plan: {settings}",
   "uxp.journal.unknown_action": "Unknown action"

@@ -33,11 +33,17 @@ export function expandRenamePattern(items, pattern) {
 }
 
 export function computeInverseRenames(renames) {
+  // Canonical journal inverse shape shared with the CEP host restore
+  // (ocUnrenameItems in host/index.jsx): oldName is the ORIGINAL name to
+  // restore, currentName is the name the rename applied. Both panels read
+  // the same journal DB, so the persisted inverse must use this one shape;
+  // consumers detect legacy pre-canonical entries by the absence of
+  // `currentName` (those stored {oldName: applied, newName: original}).
   return (Array.isArray(renames) ? renames : []).map((item) => ({
-    oldName: item.newName,
-    newName: item.oldName,
-    path: item.path,
     nodeId: item.nodeId,
+    path: item.path,
+    oldName: item.oldName,
+    currentName: item.newName,
   }));
 }
 

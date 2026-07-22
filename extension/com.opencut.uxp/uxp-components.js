@@ -1,16 +1,15 @@
 /** DOM-safe component helpers used by both the controller and focused tests. */
 export function escapeHtml(value) {
-  const div = typeof document !== "undefined" ? document.createElement("div") : null;
-  if (!div) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-  div.textContent = String(value ?? "");
-  return div.innerHTML;
+  // Always escape via the full replacement chain. The previous DOM-based
+  // branch (div.textContent -> innerHTML) left quotes unescaped, which is
+  // unsafe when callers interpolate the result into quoted HTML attributes
+  // (e.g. loadJournalRecoveryUxp's data-transaction-id="...").
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export function safeDomIdSegment(value) {
