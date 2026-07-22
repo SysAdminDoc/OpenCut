@@ -270,9 +270,13 @@ def test_resume_requires_current_route_to_be_marked_resumable(isolated_job_store
 
 def test_checkpointable_routes_are_marked_resumable():
     expectations = {
-        "opencut/routes/captions.py": {
+        "opencut/routes/caption_generation_routes.py": {
             "captions": {"disk_operation": "transcribe", "resumable": True},
+        },
+        "opencut/routes/caption_transcript_routes.py": {
             "transcript": {"disk_operation": "transcribe", "resumable": True},
+        },
+        "opencut/routes/caption_enhancement_routes.py": {
             "whisperx": {"disk_operation": "transcribe", "resumable": True},
         },
         "opencut/routes/audio.py": {

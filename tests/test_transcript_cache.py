@@ -133,7 +133,7 @@ def test_transcribe_respects_disabled_cache(monkeypatch, tmp_path):
 
 def test_generate_captions_honors_force_retranscribe(monkeypatch, tmp_path):
     import opencut.core.captions as core_captions
-    import opencut.routes.captions as captions_routes
+    import opencut.routes.caption_generation_routes as captions_routes
 
     source = tmp_path / "clip.wav"
     source.write_bytes(b"audio")

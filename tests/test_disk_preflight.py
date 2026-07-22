@@ -147,11 +147,19 @@ def test_async_job_disk_preflight_ok_still_creates_job(tmp_path, monkeypatch):
 
 def test_high_impact_routes_enable_disk_preflight():
     expectations = {
-        "opencut/routes/captions.py": [
+        "opencut/routes/caption_generation_routes.py": [
             '@async_job("captions", disk_operation="transcribe", resumable=True)',
+        ],
+        "opencut/routes/caption_transcript_routes.py": [
             '@async_job("transcript", disk_operation="transcribe", resumable=True)',
+        ],
+        "opencut/routes/caption_pipeline_routes.py": [
             '@async_job("full", disk_operation="full_pipeline")',
+        ],
+        "opencut/routes/caption_enhancement_routes.py": [
             '@async_job("whisperx", disk_operation="transcribe", resumable=True)',
+        ],
+        "opencut/routes/caption_render_routes.py": [
             '@async_job("burnin", disk_operation="video_export")',
         ],
         "opencut/routes/audio.py": [
