@@ -8,7 +8,8 @@ def test_interview_polish_uses_export_module_srt(monkeypatch, tmp_path):
     import opencut.core.repeat_detect as repeat_detect
     import opencut.export.srt as srt_export
     import opencut.polish_state as polish_state
-    import opencut.routes.captions as captions_routes
+    import opencut.routes.caption_interview_routes as captions_routes
+    import opencut.routes.captions as caption_contract
 
     source_path = tmp_path / "input.wav"
     source_path.write_bytes(b"RIFF")
@@ -37,7 +38,7 @@ def test_interview_polish_uses_export_module_srt(monkeypatch, tmp_path):
         lambda sequence_name="": SimpleNamespace(sequence_name=sequence_name),
     )
     monkeypatch.setattr(
-        captions_routes,
+        caption_contract,
         "_probe_media",
         lambda filepath: SimpleNamespace(duration=1.0),
     )
