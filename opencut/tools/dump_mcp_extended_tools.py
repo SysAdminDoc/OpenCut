@@ -21,6 +21,16 @@ _SPECIAL_CURATED_ROUTES = {
     ("GET", "/search/ai/index/status"),
 }
 
+# Queue recovery and interchange stay REST/CLI-only. Export exposes complete
+# persisted payloads (including local media paths), while import/replay mutate
+# durable recovery state without the MCP registry's destructive confirmation
+# contract. Agents can still use the established add/list/clear queue tools.
+_REST_ONLY_ROUTES = {
+    ("GET", "/queue/export"),
+    ("POST", "/queue/import"),
+    ("POST", "/queue/replay/<queue_id>"),
+}
+
 
 def curated_route_keys() -> set[tuple[str, str]]:
     return {
@@ -29,8 +39,13 @@ def curated_route_keys() -> set[tuple[str, str]]:
     } | set(_SPECIAL_CURATED_ROUTES)
 
 
+def excluded_route_keys() -> set[tuple[str, str]]:
+    """Return curated and intentionally REST-only route keys."""
+    return curated_route_keys() | _REST_ONLY_ROUTES
+
+
 def build_manifest() -> dict:
-    return extended.build_manifest(excluded_route_keys=curated_route_keys())
+    return extended.build_manifest(excluded_route_keys=excluded_route_keys())
 
 
 def write_manifest(manifest: dict, path: Path = MANIFEST_PATH) -> Path:

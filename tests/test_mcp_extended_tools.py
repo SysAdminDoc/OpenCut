@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import inspect
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -53,6 +53,19 @@ def test_extended_tools_are_opt_in_and_do_not_change_curated_default(monkeypatch
 
     monkeypatch.setenv(mcp_extended_tools.EXTENDED_MCP_ENV, "1")
     assert len(mcp_server.get_mcp_tools()) == extended_count
+
+
+def test_queue_recovery_interchange_stays_rest_only():
+    route_keys = {
+        (entry["metadata"]["method"], entry["metadata"]["path"])
+        for entry in mcp_extended_tools.get_extended_tools()
+    }
+
+    assert route_keys.isdisjoint({
+        ("GET", "/queue/export"),
+        ("POST", "/queue/import"),
+        ("POST", "/queue/replay/<queue_id>"),
+    })
 
 
 def test_mcp_bridge_docs_do_not_pin_stale_tool_counts():

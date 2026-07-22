@@ -2089,6 +2089,7 @@
         // Job queue
         el.jobQueueBar = $("jobQueueBar");
         el.queueStatusText = $("queueStatusText");
+        el.recoverQueueBtn = $("recoverQueueBtn");
         el.clearQueueBtn = $("clearQueueBtn");
 
         // Transcript search
@@ -11360,16 +11361,17 @@
     // ================================================================
     // Job Queue UI
     // ================================================================
+    var _interruptedQueueEntries = [];
+
     function initQueue() {
-        if (!el.clearQueueBtn) return;
-        el.clearQueueBtn.addEventListener("click", function () {
+        if (el.clearQueueBtn) el.clearQueueBtn.addEventListener("click", function () {
             runDestructiveAction({
                 method: "POST",
                 path: "/queue/clear",
                 payload: {},
                 trigger: el.clearQueueBtn,
                 title: t("destructive.clear_queue_title", "Clear queued jobs?"),
-                message: t("destructive.clear_queue_message", "Review every queued job that will be removed. Running jobs are not affected."),
+                message: t("destructive.clear_queue_message", "Review every queued or interrupted job that will be removed. Running jobs are not affected."),
                 confirmLabel: t("destructive.clear_queue_confirm", "Clear Queue"),
                 onSuccess: function (data) {
                     showAlert(t("queue.cleared", "Queue cleared: {count} jobs removed.")
@@ -11378,6 +11380,34 @@
                 }
             });
         });
+        if (el.recoverQueueBtn) el.recoverQueueBtn.addEventListener("click", function () {
+            var entries = _interruptedQueueEntries.slice();
+            if (!entries.length) return;
+            el.recoverQueueBtn.disabled = true;
+            var recovered = 0;
+            var failed = 0;
+            function replayNext(index) {
+                if (index >= entries.length) {
+                    el.recoverQueueBtn.disabled = false;
+                    showToast(
+                        failed
+                            ? t("queue.recover_partial", "Recovered {count} job(s); {failed} need attention")
+                                .replace("{count}", recovered).replace("{failed}", failed)
+                            : t("queue.recovered", "Recovered {count} interrupted job(s)")
+                                .replace("{count}", recovered),
+                        failed ? "warning" : "success"
+                    );
+                    refreshQueueStatus();
+                    return;
+                }
+                api("POST", "/queue/replay/" + encodeURIComponent(entries[index].id), {}, function (err) {
+                    if (err) failed += 1;
+                    else recovered += 1;
+                    replayNext(index + 1);
+                });
+            }
+            replayNext(0);
+        });
         refreshQueueStatus();
     }
 
@@ -11385,18 +11415,38 @@
         api("GET", "/queue/list", null, function (err, data) {
             if (err || !data) return;
             var count = data.length;
+            var queued = 0;
+            var interrupted = 0;
+            _interruptedQueueEntries = [];
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].status === "interrupted") {
+                    interrupted += 1;
+                    _interruptedQueueEntries.push(data[i]);
+                } else {
+                    queued += 1;
+                }
+            }
             if (el.jobQueueBar) {
                 if (count > 0) {
                     el.jobQueueBar.classList.remove("hidden");
                     if (el.queueStatusText) {
-                        el.queueStatusText.textContent = t("queue.status", "Queue: {count} job{plural}")
-                            .replace("{count}", count)
-                            .replace("{plural}", count !== 1 ? "s" : "");
+                        // Once live queue data arrives, keep later locale
+                        // application from restoring the static zero-state.
+                        el.queueStatusText.removeAttribute("data-i18n");
+                        el.queueStatusText.textContent = interrupted
+                            ? t("queue.status_interrupted", "Queue: {queued} active, {interrupted} interrupted")
+                                .replace("{queued}", queued)
+                                .replace("{interrupted}", interrupted)
+                            : t("queue.status", "Queue: {count} job{plural}")
+                                .replace("{count}", count)
+                                .replace("{plural}", count !== 1 ? "s" : "");
                     }
                 } else {
                     el.jobQueueBar.classList.add("hidden");
                 }
             }
+            if (el.recoverQueueBtn) el.recoverQueueBtn.classList.toggle("hidden", interrupted === 0);
+            if (el.clearQueueBtn) el.clearQueueBtn.disabled = count === 0;
         });
     }
 

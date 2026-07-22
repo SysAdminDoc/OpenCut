@@ -18538,3 +18538,27 @@ kbd {
         justify-self: stretch;
     }
 }
+
+.job-queue-bar .queue-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.job-queue-bar .queue-info {
+    min-width: 0;
+}
+
+@media (max-width: 620px) {
+    .job-queue-bar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .job-queue-bar .queue-actions {
+        justify-content: flex-start;
+    }
+}
