@@ -37,12 +37,22 @@ def _review_title(review: Dict[str, Any], review_id: str) -> str:
     return str(review.get("title") or os.path.basename(str(review.get("video_path") or "")) or review_id)
 
 
+def _version_data(review: Dict[str, Any], version_id: str = "") -> Dict[str, Any]:
+    selected_id = version_id or str(review.get("current_version_id") or "")
+    for version in review.get("versions", []) or []:
+        if isinstance(version, dict) and version.get("version_id") == selected_id:
+            return version
+    return review
+
+
 def _review_event(review_id: str, review: Dict[str, Any]) -> Dict[str, Any]:
-    status = str(review.get("status") or "pending")
-    updated_at = float(review.get("status_updated_at") or review.get("created_at") or time.time())
+    version_id = str(review.get("current_version_id") or "")
+    version = _version_data(review, version_id)
+    status = str(version.get("status") or "pending")
+    updated_at = float(version.get("status_updated_at") or version.get("created_at") or time.time())
     title = _review_title(review, review_id)
     return {
-        "id": f"urn:opencut:review:{review_id}:status:{status}:{int(updated_at)}",
+        "id": f"urn:opencut:review:{review_id}:{version_id}:status:{status}:{int(updated_at)}",
         "event_type": "review.status_changed",
         "review_id": review_id,
         "project_id": _project_id(review),
@@ -50,7 +60,8 @@ def _review_event(review_id: str, review: Dict[str, Any]) -> Dict[str, Any]:
         "summary": f"Review status is {status}.",
         "updated_at": updated_at,
         "status": status,
-        "video_basename": os.path.basename(str(review.get("video_path") or "")),
+        "version_id": version_id,
+        "video_basename": os.path.basename(str(version.get("video_path") or "")),
     }
 
 
@@ -61,22 +72,26 @@ def _comment_event(review_id: str, review: Dict[str, Any], comment: Dict[str, An
     title = _review_title(review, review_id)
     timestamp = float(comment.get("timestamp") or 0.0)
     text = str(comment.get("text") or "")
+    version_id = str(comment.get("version_id") or review.get("current_version_id") or "")
+    version = _version_data(review, version_id)
     return {
-        "id": f"urn:opencut:review:{review_id}:comment:{comment_id or int(updated_at)}",
+        "id": f"urn:opencut:review:{review_id}:{version_id}:comment:{comment_id or int(updated_at)}",
         "event_type": "review.comment_added",
         "review_id": review_id,
         "project_id": _project_id(review),
         "title": f"Comment from {author} on {title}",
         "summary": f"{timestamp:.2f}s - {text}",
         "updated_at": updated_at,
-        "status": str(review.get("status") or "pending"),
-        "video_basename": os.path.basename(str(review.get("video_path") or "")),
+        "status": str(version.get("status") or "pending"),
+        "version_id": version_id,
+        "video_basename": os.path.basename(str(version.get("video_path") or "")),
         "comment": {
             "comment_id": comment_id,
             "timestamp": timestamp,
             "text": text,
             "author": author,
             "created_at": updated_at,
+            "version_id": version_id,
         },
     }
 
@@ -112,19 +127,23 @@ def build_review_webhook_details(
     event_type: str,
     comment: Dict[str, Any] | None = None,
     status: str = "",
+    version_id: str = "",
 ) -> Dict[str, Any]:
     """Build the review-specific details object sent through webhook_system."""
     reviews = _load_reviews()
     review = reviews.get(review_id)
     if not isinstance(review, dict):
         raise KeyError(f"Review not found: {review_id}")
+    selected_version_id = version_id or str(review.get("current_version_id") or "")
+    version = _version_data(review, selected_version_id)
     details: Dict[str, Any] = {
         "event_type": event_type,
         "review_id": review_id,
         "project_id": _project_id(review),
         "title": _review_title(review, review_id),
-        "status": status or str(review.get("status") or "pending"),
-        "video_basename": os.path.basename(str(review.get("video_path") or "")),
+        "status": status or str(version.get("status") or "pending"),
+        "version_id": selected_version_id,
+        "video_basename": os.path.basename(str(version.get("video_path") or "")),
     }
     if comment:
         details["comment"] = {
@@ -133,6 +152,7 @@ def build_review_webhook_details(
             "text": str(comment.get("text") or ""),
             "author": str(comment.get("author") or "Anonymous"),
             "created_at": float(comment.get("created_at") or time.time()),
+            "version_id": str(comment.get("version_id") or selected_version_id),
         }
     return details
 

@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Version review artifacts under stable identities
+
+- Snapshot each review render into immutable, SHA-256-identified local storage
+  while retaining one stable review ID across rerenders.
+- Bound comments and approval state to explicit render versions, exposed
+  selectable version metadata through the existing review APIs, and added a
+  signed guest-link allowlist with side-by-side portal playback.
+- Added atomic review persistence, lossless legacy migration with an automatic
+  pre-versioning export, rollback/export helpers, and migration, tamper,
+  retention, route, and rendered comparison coverage.
+
 ### Changed - Retarget the Windows installer to .NET 10 LTS
 
 - Retargeted the WPF installer and its xUnit contracts from .NET 9 to
