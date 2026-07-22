@@ -409,8 +409,18 @@ Write-Header "Step 4/7: Python Dependencies"
 
 Write-Step "Installing core dependencies..."
 & $pythonCmd -m pip install --upgrade pip --quiet 2>$null
+$releaseLock = Join-Path $script:InstallDir "requirements-release-lock.txt"
 $reqFile = Join-Path $script:InstallDir "requirements.txt"
-if (Test-Path $reqFile) {
+if (Test-Path $releaseLock) {
+    & $pythonCmd -m pip install --require-hashes -r $releaseLock --quiet 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "Core packages installed from the hash-locked release set"
+    } else {
+        Write-Err "Hash-locked dependency install failed (exit code $LASTEXITCODE)."
+        Write-Err "Check your network connection, then re-run: $pythonCmd -m pip install --require-hashes -r `"$releaseLock`""
+        $script:ExitCode = 1
+    }
+} elseif (Test-Path $reqFile) {
     & $pythonCmd -m pip install -r $reqFile --quiet 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
         Write-Ok "Core packages installed from requirements.txt"

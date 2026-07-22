@@ -35,6 +35,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # downstream scanners (cyclonedx-bom, syft, etc.).
 ALLOWED_LICENSES = (
     "MIT",
+    "MIT-0",
+    "MIT-CMU",
+    "BSD",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "Apache-2.0",
@@ -44,12 +47,15 @@ ALLOWED_LICENSES = (
     "PSF-2.0",
     "PostgreSQL",
     "MPL-2.0",  # file-level copyleft, ok with attribution
+    "ZPL-2.1",
 )
 
 WARNING_LICENSES = (
     "CC-BY-4.0",
     "LGPL-2.1",
+    "LGPL-2.1-or-later",
     "LGPL-3.0",
+    "LGPL-3.0-or-later",
     "EPL-2.0",
     "AGPL-3.0",  # surfaces but doesn't block — operator decides
 )
@@ -229,13 +235,92 @@ def _read_requirements(path: Path) -> List[str]:
     return out
 
 
-def lint(root: Path = REPO_ROOT) -> LicenseReport:
+def _requirement_name(spec: str) -> str:
+    match = re.match(r"^([A-Za-z0-9_.-]+)", spec)
+    return re.sub(r"[-_.]+", "-", match.group(1).lower()) if match else ""
+
+
+def _check_requirement_lock(root: Path) -> List[LicenseFinding]:
+    """Ensure every shipped requirement reaches the resolved license gate."""
+    findings: List[LicenseFinding] = []
+    requirements = _read_requirements(root / "requirements.txt")
+    lock_paths = [root / "requirements-release-lock.txt"]
+    locked_names = {
+        lock_path.name: {
+            re.sub(r"[-_.]+", "-", match.group(1).lower())
+            for match in re.finditer(
+                r"(?m)^([A-Za-z0-9_.-]+)==[^\s]+\s+\\",
+                lock_path.read_text(encoding="utf-8") if lock_path.exists() else "",
+            )
+        }
+        for lock_path in lock_paths
+    }
+    for requirement in requirements:
+        name = _requirement_name(requirement)
+        missing_lanes = [lock_name for lock_name, names in locked_names.items() if not name or name not in names]
+        admitted = not missing_lanes
+        findings.append(
+            LicenseFinding(
+                surface="requirements",
+                name=name or requirement,
+                license_text="resolved release evidence",
+                severity="info" if admitted else "error",
+                message=(
+                    "hash-locked; exact license is gated from resolved metadata"
+                    if admitted
+                    else "missing from " + ", ".join(missing_lanes)
+                ),
+            )
+        )
+    return findings
+
+
+def _check_resolved_composition(path: Path) -> List[LicenseFinding]:
+    findings: List[LicenseFinding] = []
+    try:
+        composition = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [
+            LicenseFinding(
+                surface="resolved_artifact",
+                name=str(path),
+                license_text="",
+                severity="error",
+                message=f"could not read release composition: {exc}",
+            )
+        ]
+    for component in composition.get("python", {}).get("components") or []:
+        license_text = str(component.get("license") or "")
+        bucket = classify_license(license_text)
+        severity = "info" if bucket == "allowed" else "warning" if bucket == "warning" else "error"
+        findings.append(
+            LicenseFinding(
+                surface="resolved_artifact",
+                name=f"{component.get('name')}=={component.get('version')}",
+                license_text=license_text,
+                severity=severity,
+                message=(
+                    "resolved permissive license"
+                    if bucket == "allowed"
+                    else "resolved license requires release review"
+                    if bucket == "warning"
+                    else "resolved license is denied or unknown"
+                ),
+            )
+        )
+    return findings
+
+
+def lint(root: Path = REPO_ROOT, composition_path: Optional[Path] = None) -> LicenseReport:
     """Run the license allowlist check across every surface we know about."""
     report = LicenseReport()
     report.findings.extend(_check_model_cards())
+    report.findings.extend(_check_requirement_lock(root))
+    if composition_path is not None:
+        report.findings.extend(_check_resolved_composition(composition_path))
 
     # Surfaces summary — useful for the panel readout.
-    surfaces = {"model_cards": 0, "requirements": 0}
+    surfaces = {"model_cards": 0, "requirements": 0, "resolved_artifact": 0}
     for f in report.findings:
         surfaces[f.surface] = surfaces.get(f.surface, 0) + 1
     report.surfaces = surfaces
@@ -245,6 +330,7 @@ def lint(root: Path = REPO_ROOT) -> LicenseReport:
 def cli(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="emit machine-readable output")
+    parser.add_argument("--composition", type=Path, help="gate exact licenses from release-composition.json")
     parser.add_argument(
         "--strict-warnings",
         action="store_true",
@@ -253,7 +339,7 @@ def cli(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    report = lint()
+    report = lint(composition_path=args.composition) if args.composition is not None else lint()
 
     if args.json:
         json.dump(report.as_dict(), sys.stdout, indent=2)

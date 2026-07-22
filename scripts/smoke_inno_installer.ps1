@@ -75,6 +75,19 @@ function Assert-Removed {
     }
 }
 
+function Wait-Removed {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Label,
+        [int]$TimeoutSeconds = 30
+    )
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ((Test-Path -LiteralPath $Path) -and ([DateTime]::UtcNow -lt $deadline)) {
+        Start-Sleep -Milliseconds 250
+    }
+    Assert-Removed -Path $Path -Label $Label
+}
+
 $automationOptIn = $env:OPENCUT_INSTALLER_SMOKE -eq "1"
 if ((-not $automationOptIn) -and (-not $AllowLocalProfileMutation)) {
     throw "Refusing to run without explicit local smoke opt-in because the Inno uninstaller deletes ~/.opencut. Pass -AllowLocalProfileMutation or set OPENCUT_INSTALLER_SMOKE=1 for disposable release validation."
@@ -130,6 +143,11 @@ try {
         "server\OpenCut-Server.exe",
         "ffmpeg\ffmpeg.exe",
         "ffmpeg\ffprobe.exe",
+        "release-metadata\release-composition.json",
+        "release-metadata\opencut-artifact-sbom.cyclonedx.json",
+        "release-metadata\THIRD-PARTY-NOTICES.txt",
+        "release-metadata\ffmpeg-provenance.json",
+        "LICENSE",
         "OpenCut-Launcher.vbs",
         "extension\com.opencut.panel",
         "logo.ico"
@@ -173,10 +191,12 @@ try {
     )
     Invoke-CheckedProcess -FilePath $uninstaller.FullName -Arguments $uninstallArgs -Label "Uninstalling OpenCut with Inno"
 
-    Assert-Removed (Join-Path $installFull "server") "Installed server directory"
-    Assert-Removed (Join-Path $installFull "ffmpeg") "Installed FFmpeg directory"
-    Assert-Removed $registryPath "OpenCut HKCU registry key"
-    Assert-Removed $manifestPath "Inno installer manifest"
+    # Inno's first-phase uninstaller can exit before its elevated second phase
+    # finishes. Wait for observable cleanup instead of racing that hand-off.
+    Wait-Removed (Join-Path $installFull "server") "Installed server directory"
+    Wait-Removed (Join-Path $installFull "ffmpeg") "Installed FFmpeg directory"
+    Wait-Removed $registryPath "OpenCut HKCU registry key"
+    Wait-Removed $manifestPath "Inno installer manifest"
 }
 finally {
     if ((-not $KeepArtifacts) -and (Test-Path -LiteralPath $installFull)) {

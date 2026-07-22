@@ -17,6 +17,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -30,6 +31,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 REQUIREMENTS_PATH = REPO_ROOT / "requirements.txt"
 LOCKFILE_PATH = REPO_ROOT / "requirements-lock.txt"
+RELEASE_LOCKFILE_PATH = REPO_ROOT / "requirements-release-lock.txt"
+BUILD_LOCKFILE_PATH = REPO_ROOT / "requirements-build-lock.txt"
 DEFAULT_EXTRAS = ("all",)
 
 
@@ -126,11 +129,24 @@ def load_requirements(requirements_path: Path) -> List[str]:
     return _clean_requirement_lines(requirements_path.read_text(encoding="utf-8").splitlines())
 
 
+def load_hashed_lock_requirements(lockfile_path: Path) -> List[str]:
+    """Reduce a pip-compile hash lock to exact ``name==version`` audit rows."""
+    return [
+        f"{match.group(1)}=={match.group(2)}"
+        for match in re.finditer(
+            r"(?m)^([A-Za-z0-9_.-]+)==([^\s\\]+)\s+\\",
+            lockfile_path.read_text(encoding="utf-8"),
+        )
+    ]
+
+
 def build_targets(
     *,
     pyproject_path: Path = PYPROJECT_PATH,
     requirements_path: Path = REQUIREMENTS_PATH,
     lockfile_path: Path = LOCKFILE_PATH,
+    release_lockfile_path: Path = RELEASE_LOCKFILE_PATH,
+    build_lockfile_path: Path = BUILD_LOCKFILE_PATH,
     extras: Iterable[str] = DEFAULT_EXTRAS,
     include_requirements: bool = True,
     include_lockfile: bool = True,
@@ -152,6 +168,24 @@ def build_targets(
                 kind="lockfile",
                 requirements=load_requirements(lockfile_path),
                 source=str(lockfile_path.relative_to(REPO_ROOT)),
+                no_deps=True,
+            )
+        )
+        targets.append(
+            AuditTarget(
+                name="requirements-release-lock.txt",
+                kind="lockfile",
+                requirements=load_hashed_lock_requirements(release_lockfile_path),
+                source=str(release_lockfile_path.relative_to(REPO_ROOT)),
+                no_deps=True,
+            )
+        )
+        targets.append(
+            AuditTarget(
+                name="requirements-build-lock.txt",
+                kind="lockfile",
+                requirements=load_hashed_lock_requirements(build_lockfile_path),
+                source=str(build_lockfile_path.relative_to(REPO_ROOT)),
                 no_deps=True,
             )
         )
@@ -272,7 +306,7 @@ def _audit_target(
         if vulnerability_service:
             cmd.extend(["--vulnerability-service", vulnerability_service])
         if target.no_deps:
-            cmd.append("--no-deps")
+            cmd.extend(["--no-deps", "--disable-pip"])
         env = {**os.environ, "PIP_CACHE_DIR": str(cache_path)}
         try:
             result = _run(cmd, cwd=REPO_ROOT, timeout=process_timeout, env=env)
@@ -407,7 +441,7 @@ def cli(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--no-lockfile",
         action="store_true",
-        help="skip the committed requirements-lock.txt audit target",
+        help="skip both committed Python lockfile audit targets",
     )
     parser.add_argument(
         "--no-extras",
