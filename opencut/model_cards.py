@@ -244,7 +244,7 @@ CARDS: List[ModelCard] = [
         hardware="cpu/gpu",
         install_hint='pip install "nemo_toolkit[asr]"',
         privacy="local-only (model downloads only)",
-        latency="sub-realtime on supported GPU; CPU varies by model",
+        latency="unbenchmarked by OpenCut; NVIDIA GPU recommended",
         advisory_notes=[
             "Parakeet and Canary are selectable ASR engines; verify each downloaded model card before redistributing weights.",
         ],

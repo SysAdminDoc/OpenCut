@@ -18,6 +18,8 @@ from typing import Callable, Dict, List, Optional
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from opencut.core.asr_nemo_models import CANARY_SPEC, PARAKEET_SPEC
+
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
@@ -58,15 +60,17 @@ KNOWN_MODELS: Dict[str, Dict] = {
         "category": "transcription",
     },
     "parakeet-tdt-0.6b-v3": {
-        "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/resolve/main/parakeet-tdt-0.6b-v3.nemo",
-        "size_mb": 2440,
-        "description": "NVIDIA Parakeet TDT 0.6B v3 -- streaming ASR, 25 EU languages (NeMo)",
+        "url": PARAKEET_SPEC.download_url,
+        "sha256": PARAKEET_SPEC.sha256,
+        "size_mb": PARAKEET_SPEC.size_mb,
+        "description": "Pinned NVIDIA Parakeet TDT 0.6B v3 multilingual ASR (NeMo)",
         "category": "transcription",
     },
     "canary-1b-flash": {
-        "url": "https://huggingface.co/nvidia/canary-1b-flash/resolve/main/canary-1b-flash.nemo",
-        "size_mb": 4200,
-        "description": "NVIDIA Canary 1B Flash -- batch ASR + translation, RTFx 1000+ (NeMo)",
+        "url": CANARY_SPEC.download_url,
+        "sha256": CANARY_SPEC.sha256,
+        "size_mb": CANARY_SPEC.size_mb,
+        "description": "Pinned NVIDIA Canary 1B Flash batch ASR and translation (NeMo)",
         "category": "transcription",
     },
     "whisper-large-v3": {

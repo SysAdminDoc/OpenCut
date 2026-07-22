@@ -38,6 +38,16 @@ def test_platform_specific_gpu_support_is_explicit():
     assert "win32, linux" in mac["reason"]
 
 
+def test_nemo_asr_support_is_explicitly_linux_only():
+    linux = dependency_support.extra_support("nemo-asr", platform_name="linux")
+    assert linux["supported"] is True
+    assert linux["install_hint"] == 'python -m pip install -e ".[nemo-asr]"'
+    for platform_name in ("win32", "darwin"):
+        status = dependency_support.extra_support("nemo-asr", platform_name=platform_name)
+        assert status["supported"] is False
+        assert "supports linux" in status["reason"]
+
+
 def test_macos_python_314_caption_wheel_gap_is_explicit():
     for extra in ("standard", "captions"):
         status = dependency_support.extra_support(
@@ -100,6 +110,11 @@ def test_dependency_dashboard_uses_canonical_support_contract(client):
         assert payload["pyannote.audio"]["install_hint"] == (
             'python -m pip install -e ".[diarize]"'
         )
+    nemo_support = dependency_support.extra_support("nemo-asr")
+    assert payload["nemo-toolkit"]["supported"] is nemo_support["supported"]
+    assert payload["nemo-toolkit"]["support_reason"] == nemo_support["reason"]
+    if not nemo_support["supported"]:
+        assert payload["nemo-toolkit"].get("install_hint", "") == ""
 
 
 def test_matrix_script_reports_machine_readable_contract(capsys):

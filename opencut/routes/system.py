@@ -769,6 +769,7 @@ def check_dependencies():
         "edge-tts": 'pip install "opencut-ppro[tts]"',
         "scenedetect": 'pip install "opencut-ppro[video]"',
         "pyannote.audio": 'pip install "opencut-ppro[diarize]"',
+        "nemo-toolkit": 'python -m pip install -e ".[nemo-asr]"',
         "mediapipe": 'pip install "opencut-ppro[reframe]"',
         "torch": 'pip install "opencut-ppro[torch-stack]"',
         "onnxruntime": 'pip install "opencut-ppro[ai]"',
@@ -795,6 +796,7 @@ def check_dependencies():
         "audiocraft": "audiocraft",
         "scenedetect": "scenedetect",
         "pyannote.audio": "pyannote.audio.pipelines",
+        "nemo-toolkit": "nemo",
         "mediapipe": "mediapipe",
         "torch": "torch",
         "onnxruntime": "onnxruntime",
@@ -818,7 +820,11 @@ def check_dependencies():
                 "version": None,
                 "supported": support["supported"],
                 "support_reason": support["reason"],
-                "install_hint": support["install_hint"] or _DEP_INSTALL_HINTS.get(name, ""),
+                "install_hint": (
+                    (support.get("install_hint") or _DEP_INSTALL_HINTS.get(name, ""))
+                    if support["supported"]
+                    else ""
+                ),
             }
 
     # Check FFmpeg

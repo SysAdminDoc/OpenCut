@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1531-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1533-orange)
 ![Tests](https://img.shields.io/badge/Tests-11700+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -254,7 +254,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.41.0 includes **1,531 shipped API routes** (implemented or dependency-gated; 27 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.41.0 includes **1,533 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -472,7 +472,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,531 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,533 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -557,6 +557,7 @@ For the larger Torch-backed stack, install the explicit extra or narrower featur
 ```bash
 python -m pip install -e ".[all,torch-stack]"
 python -m pip install -e ".[diarize]"  # pyannote speaker diarization
+python -m pip install -e ".[nemo-asr]"  # Parakeet/Canary ASR; Linux only
 ```
 
 `torch-stack` includes Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2,
@@ -565,12 +566,18 @@ AudioCraft/MusicGen, and Resemble Enhance are not advertised install lanes:
 their published releases require obsolete Torch families below OpenCut's
 security floor.
 
-| Platform | Python | CPU extras | `ai-gpu` |
-|----------|--------|------------|----------|
-| Windows | 3.11-3.14 | Supported | Supported |
-| Linux | 3.11-3.14 | Supported | Supported |
-| macOS | 3.11-3.13 | Supported except `ai` and `all` | Not supported |
-| macOS | 3.14 | Supported except `standard`, `captions`, `ai`, and `all` | Not supported |
+The NeMo lane pins toolkit 2.7.3 and immutable Parakeet/Canary checkpoint
+revisions. OpenCut verifies each multi-gigabyte checkpoint with SHA-256 and
+`picklescan` before loading it. NVIDIA does not support this NeMo release on
+Windows or macOS, so cached NeMo transcripts remain readable there but new
+inference is Linux-only.
+
+| Platform | Python | CPU extras | `ai-gpu` | `nemo-asr` |
+|----------|--------|------------|----------|------------|
+| Windows | 3.11-3.14 | Supported | Supported | Not supported |
+| Linux | 3.11-3.14 | Supported | Supported | Supported; NVIDIA GPU recommended |
+| macOS | 3.11-3.13 | Supported except `ai` and `all` | Not supported | Not supported |
+| macOS | 3.14 | Supported except `standard`, `captions`, `ai`, and `all` | Not supported | Not supported |
 
 ### GPU Acceleration
 
@@ -763,7 +770,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,700+ estimated tests across 293 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,700+ estimated tests across 294 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -824,7 +831,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,700+ estimated tests, 293 root test files)
+tests/               # pytest test suite (11,700+ estimated tests, 294 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

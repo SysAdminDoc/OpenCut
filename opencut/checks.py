@@ -303,11 +303,15 @@ def check_seamless_m4t_available() -> bool:
 def check_nemo_asr_available() -> bool:
     """Check if NVIDIA NeMo ASR (Parakeet / Canary engines) is available.
 
-    NeMo installs the ``nemo`` import package via the ``nemo_toolkit[asr]``
-    distribution; accept either name so the check matches the install hint.
-    Never raises -- returns False when the optional dependency is absent.
+    OpenCut supports its pinned NeMo 2.7 runtime on Linux. Never raises and
+    stays false on platforms that NVIDIA does not support for this release.
     """
-    return _try_import("nemo") is not None or _try_import("nemo_toolkit") is not None
+    try:
+        from opencut.core.asr_nemo import nemo_runtime_available
+
+        return nemo_runtime_available()
+    except Exception:  # noqa: BLE001 - optional readiness checks never raise
+        return False
 
 
 def check_sam2_available() -> bool:

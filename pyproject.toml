@@ -124,6 +124,14 @@ ai-gpu = [
 diarize = [
     "pyannote.audio>=4.0,<5",
 ]
+nemo-asr = [
+    # NeMo 2.7.3 publishes Linux as its supported OpenCut runtime lane.
+    # Keep this heavyweight/model-loading stack separate from [all].
+    "nemo_toolkit[asr]>=2.7.3,<2.8; sys_platform == 'linux'",
+    "torch>=2.10.0; sys_platform == 'linux'",
+    "huggingface-hub>=0.36,<1; sys_platform == 'linux'",
+    "picklescan>=1.0.3; sys_platform == 'linux'",
+]
 auto-edit = [
     "auto-editor>=29.3,<30",
 ]

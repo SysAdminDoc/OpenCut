@@ -10,21 +10,38 @@ from opencut.core import stub_scan
 
 def test_stub_scanner_detects_known_terminal_stubs():
     stubs = stub_scan.terminal_stub_modules()
-    for known in ("asr_parakeet", "asr_canary", "relight_iclight", "upscale_seedvr2"):
+    for known in ("relight_iclight", "upscale_seedvr2"):
         assert stub_scan.is_stub_module(known), known
     # Real, implemented modules must not be flagged.
-    for real in ("silence", "scene_detect", "archive_safety", "url_safety"):
+    for real in (
+        "silence",
+        "scene_detect",
+        "archive_safety",
+        "url_safety",
+        "asr_parakeet",
+        "asr_canary",
+    ):
         assert not stub_scan.is_stub_module(real), real
     assert not stub_scan.is_stub_module("")
     assert len(stubs) > 0
 
 
 def test_stub_backed_features_resolve_to_stub():
-    for fid in ("captions.nemo-asr", "video.relight.iclight", "video.upscale.seedvr2"):
+    for fid in ("video.relight.iclight", "video.upscale.seedvr2"):
         record = registry.get_feature(fid)
         assert record is not None, fid
         assert record.resolved_state() == registry.STATE_STUB, fid
         assert "not implemented" in record.state_reason().lower()
+
+
+def test_nemo_feature_is_implemented_and_runtime_gated():
+    record = registry.get_feature("captions.nemo-asr")
+    assert record is not None
+    assert not record.is_stub_implementation()
+    assert record.resolved_state() in {
+        registry.STATE_AVAILABLE,
+        registry.STATE_MISSING_DEPENDENCY,
+    }
 
 
 def test_release_gate_no_available_feature_is_a_terminal_stub():
