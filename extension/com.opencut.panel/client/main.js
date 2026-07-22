@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.42.0
+   OpenCut CEP Panel - Main Controller v1.42.1
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -2400,10 +2400,22 @@
     var healthBackoff = HEALTH_MS;
     var HEALTH_MAX_MS = 60000;
 
+    // Startup probes that failed while the backend was offline re-run after
+    // a successful (re)connect — e.g. the onboarding tour check, which stays
+    // silent while offline instead of opening its modal.
+    function notifyBackendReconnectHooks() {
+        try {
+            if (window.OpenCutWaveH && typeof window.OpenCutWaveH.onBackendConnected === "function") {
+                window.OpenCutWaveH.onBackendConnected();
+            }
+        } catch (e) {}
+    }
+
     function checkHealth() {
         api("GET", "/health", null, function (err, data) {
             var ok = !err && data && data.status === "ok";
             if (ok) {
+                var wasDisconnected = !connected;
                 // Reset backoff on success
                 if (healthBackoff !== HEALTH_MS) {
                     healthBackoff = HEALTH_MS;
@@ -2415,6 +2427,7 @@
                     showToast(t("toast.server_reconnected", "Server reconnected"), "success");
                 }
                 setConnected(true);
+                if (wasDisconnected) notifyBackendReconnectHooks();
                 setConnectionBadge("online", t("conn.connected", "Connected"));
                 if (data.csrf_token) setCsrfToken(data.csrf_token);
                 if (data.capabilities) capabilities = data.capabilities;
@@ -2509,6 +2522,7 @@
                             // or the status bar and media-scan silently stop
                             // until the panel is fully reloaded.
                             try { if (typeof startBackgroundPollers === "function") startBackgroundPollers(); } catch (e) {}
+                            notifyBackendReconnectHooks();
                             portScanPending = false;
                         }
                     } catch (e) {}
@@ -4706,11 +4720,12 @@
             var provenance = r.asr_provenance;
             var revision = String(provenance.model_revision || "unknown");
             if (revision.length > 12) revision = revision.slice(0, 12);
-            stats += (stats ? "<br>" : "") + "ASR: "
-                + esc(provenance.engine || "unknown") + " · "
-                + esc(provenance.model_id || "unknown") + " @ " + esc(revision)
-                + " · " + esc(provenance.alignment_mode || "none")
-                + " · " + esc(provenance.language_decision || "unknown");
+            stats += (stats ? "<br>" : "") + t("progress.result_asr_provenance", "ASR: {engine} · {model} @ {revision} · {alignment} · {language}")
+                .replace("{engine}", esc(provenance.engine || "unknown"))
+                .replace("{model}", esc(provenance.model_id || "unknown"))
+                .replace("{revision}", esc(revision))
+                .replace("{alignment}", esc(provenance.alignment_mode || "none"))
+                .replace("{language}", esc(provenance.language_decision || "unknown"));
         }
         if (r.caption_segments !== undefined) {
             var captionCount = Number(r.caption_segments);
@@ -16422,12 +16437,17 @@
                         : "";
                     var otioError = t("timeline.otio_error", "Error: {error}")
                         .replace("{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
-                    setHintState(
-                        otioRes,
-                        t("timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}")
-                            .replace("{error}", otioError) + lossDetail,
-                        "error"
-                    );
+                    // Only genuine preflight blocks (the backend tags them
+                    // with code OTIO_PREFLIGHT_FAILED plus a preflight
+                    // report) get the preflight wording; every other failure
+                    // (validation, adapter, IO) shows the generic message.
+                    var otioBlocked = !!(data && data.code === "OTIO_PREFLIGHT_FAILED");
+                    var otioMessage = otioBlocked
+                        ? t("timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}")
+                            .replace("{error}", otioError)
+                        : t("timeline.otio_export_failed", "OTIO export failed: {error}")
+                            .replace("{error}", otioError);
+                    setHintState(otioRes, otioMessage + lossDetail, "error");
                     return;
                 }
                 showToast(t("timeline.otio_exported", "OTIO exported: {name}")
@@ -17739,6 +17759,25 @@
                 stepCount: ONBOARDING_STEPS.length
             });
             var onboardingReturnFocus = null;
+            // Local tour-seen cache: once the server reports seen=true (or the
+            // user completes/skips the tour) the startup probe never interrupts
+            // again — even while the backend is offline.
+            var ONBOARDING_SEEN_KEY = "opencut_onboarding_seen";
+            // Set when the startup auto-probe could not reach the backend; the
+            // probe re-runs silently after the next successful health connect
+            // instead of opening the focus-trapped "Tour unavailable" modal.
+            var onboardingAutoPending = false;
+
+            function hasLocalOnboardingSeen() {
+                try { return localStorage.getItem(ONBOARDING_SEEN_KEY) === "1"; } catch (e) { return false; }
+            }
+
+            function setLocalOnboardingSeen(seen) {
+                try {
+                    if (seen) localStorage.setItem(ONBOARDING_SEEN_KEY, "1");
+                    else localStorage.removeItem(ONBOARDING_SEEN_KEY);
+                } catch (e) { /* localStorage may be unavailable in CEP */ }
+            }
 
             function onboardingOverlay() {
                 var overlay = el.wizardOverlay || document.getElementById("wizardOverlay");
@@ -17828,10 +17867,27 @@
             }
 
             function maybeRunOnboarding(returnFocus) {
+                // Automatic startup probe: never interrupt a user who has
+                // already seen the tour, and never open the offline modal
+                // while the backend is unreachable — that card is reserved
+                // for explicit restart-tour clicks (and endpoint errors on an
+                // otherwise reachable backend).
+                if (hasLocalOnboardingSeen()) return;
                 onboardingReturnFocus = returnFocus || onboardingReturnFocus || el.stageChooseMediaBtn;
                 onboardingState.transition("load");
                 api("GET", "/settings/onboarding", null, function (err, data) {
                     if (err || !data) {
+                        if (!connected) {
+                            // Backend unreachable (panel opened before the
+                            // backend started): stay silent and retry after
+                            // the next successful health connect instead of
+                            // trapping focus in the "Tour unavailable" modal.
+                            onboardingState.transition("failed", { error: "backend unavailable" });
+                            onboardingAutoPending = true;
+                            return;
+                        }
+                        // Backend reachable but the onboarding endpoint is
+                        // erroring — surface the recovery card with a retry.
                         showOnboardingUnavailable(function () {
                             maybeRunOnboarding(onboardingReturnFocus);
                         }, onboardingReturnFocus);
@@ -17839,11 +17895,21 @@
                     }
                     var state = onboardingState.transition("loaded", data);
                     if (state.seen) {
+                        setLocalOnboardingSeen(true);
                         closeOnboardingOverlay();
                         return;
                     }
                     renderOnboardingStep(state.step);
                 });
+            }
+
+            // Re-runs the deferred startup probe once the backend health
+            // check succeeds (called from checkHealth/scanForServer via
+            // window.OpenCutWaveH).
+            function onBackendConnected() {
+                if (!onboardingAutoPending) return;
+                onboardingAutoPending = false;
+                maybeRunOnboarding();
             }
 
             function persistOnboardingStep(nextStep) {
@@ -17876,6 +17942,7 @@
                         return;
                     }
                     onboardingState.transition("completed");
+                    setLocalOnboardingSeen(true);
                     closeOnboardingOverlay();
                     if (completed) {
                         showToast(t("onboarding.ready", "Ready to go — explore any tab"), "success");
@@ -17945,6 +18012,7 @@
                         return;
                     }
                     onboardingState.transition("restart");
+                    setLocalOnboardingSeen(false);
                     renderOnboardingStep(0);
                 });
             }
@@ -18051,6 +18119,8 @@
 
             return {
                 init: init,
+                // Startup probes deferred while offline re-run on reconnect.
+                onBackendConnected: onBackendConnected,
                 // Exposed for command palette / manual triggers.
                 tryDemo: tryDemo,
                 sendLog: sendLog,

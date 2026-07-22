@@ -773,6 +773,15 @@ test("CEP onboarding exposes explicit backend-offline recovery", async ({ page }
     { onboardingUnavailable: true },
   );
   const dialog = page.locator("#wizardOverlay");
+  // The startup probe still runs, but it must stay silent while the backend
+  // is unreachable — the focus-trapped recovery card is reserved for
+  // explicit restart-tour actions.
+  await expect.poll(() => capturedRequests.filter(
+    (request) => request.onboarding === "GET",
+  ).length).toBeGreaterThanOrEqual(1);
+  await expect(dialog).toBeHidden();
+
+  await page.evaluate(() => window.OpenCutWaveH.restartOnboarding());
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleName("Tour unavailable");
   await expect(dialog).toContainText("local backend");
@@ -783,7 +792,7 @@ test("CEP onboarding exposes explicit backend-offline recovery", async ({ page }
   await retry.click();
   await expect(dialog).toHaveAccessibleName("Tour unavailable");
   await expect.poll(() => capturedRequests.filter(
-    (request) => request.onboarding === "GET",
+    (request) => request.onboarding === "POST",
   ).length).toBeGreaterThanOrEqual(2);
 
   await dialog.getByRole("button", { name: "Continue without tour" }).click();
