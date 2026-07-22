@@ -7,7 +7,7 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint client/main.js client/panel-state.js client/backend-client.js client/job-runtime.js client/component-utils.js client/timeline-utils.js client/bootstrap.js && npm run lint:premiere",
+    "lint": "eslint client/main.js client/panel-state.js client/backend-client.js client/job-runtime.js client/component-utils.js client/timeline-utils.js client/onboarding-state.js client/bootstrap.js && npm run lint:premiere",
     "lint:premiere": "cd ../com.opencut.uxp && eslint \"*.js\"",
     "test": "vitest run --config vitest.config.mjs",
     "test:rendered": "playwright test --config playwright.config.mjs",

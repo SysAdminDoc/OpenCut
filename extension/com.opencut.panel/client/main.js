@@ -799,10 +799,12 @@
 
     function focusOverlayEntry(entry) {
         if (!entry || !entry.element) return;
-        var target = entry.initialFocus && isFocusableNode(entry.initialFocus)
-            ? entry.initialFocus
-            : null;
-        var focusable = target ? null : getFocusableNodes(entry.element);
+        var target = null;
+        if (entry.initialFocus && typeof entry.initialFocus.focus === "function") {
+            try { entry.initialFocus.focus(); } catch (e) {}
+            if (document.activeElement === entry.initialFocus) return;
+        }
+        var focusable = getFocusableNodes(entry.element);
         if (!target && focusable.length) target = focusable[0];
         if (!target) {
             if (!entry.element.hasAttribute("tabindex")) entry.element.setAttribute("tabindex", "-1");
@@ -818,7 +820,9 @@
         var children = app.children;
         for (var i = 0; i < children.length; i++) {
             var child = children[i];
-            var isOverlayLayer = child === el.commandPaletteOverlay || child === el.previewModal;
+            var isOverlayLayer = child === el.commandPaletteOverlay ||
+                child === el.previewModal ||
+                (getTopOverlayEntry() && child === getTopOverlayEntry().element);
             if (isOverlayLayer) continue;
             if (hasOverlay) {
                 child.setAttribute("aria-hidden", "true");
@@ -883,7 +887,6 @@
         if (element && typeof element._ocCloseOverlay === "function") return element._ocCloseOverlay;
         if (element === el.commandPaletteOverlay) return closeCommandPalette;
         if (element === el.previewModal) return closePreviewModal;
-        if (element === el.wizardOverlay) return closeWizard;
         if (element === el.audioPreview) return closeAudioPreview;
         return null;
     }
@@ -2129,8 +2132,6 @@
         // Wizard
         el.wizardOverlay = $("wizardOverlay");
         el.wizardCard = el.wizardOverlay ? el.wizardOverlay.querySelector(".wizard-card") : null;
-        el.wizardCloseBtn = $("wizardCloseBtn");
-        el.wizardDontShow = $("wizardDontShow");
         // Output browser
         el.outputBrowser = $("outputBrowser");
         el.outputBrowserToggle = $("outputBrowserToggle");
@@ -12238,52 +12239,6 @@
     }
 
     // ================================================================
-    // First-Run Wizard
-    // ================================================================
-
-    function closeWizard() {
-        if (!el.wizardOverlay) return;
-        el.wizardOverlay.classList.add("hidden");
-        try {
-            var s = JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || "{}");
-            s.wizardDismissed = !!(el.wizardDontShow && el.wizardDontShow.checked);
-            localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(s));
-        } catch (e) {}
-        deactivateOverlay(el.wizardOverlay);
-    }
-
-    function initWizard() {
-        if (!el.wizardOverlay) return;
-        // Check if user has dismissed the wizard before
-        try {
-            var settings = JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || "{}");
-            if (settings.wizardDismissed) return;
-        } catch (e) {}
-        // Show wizard
-        if (el.wizardDontShow) el.wizardDontShow.checked = false;
-        el.wizardOverlay.classList.remove("hidden");
-        var wizardFocusTarget = el.wizardCard || el.wizardCloseBtn;
-        activateOverlay(el.wizardOverlay, { returnFocus: el.stageChooseMediaBtn, initialFocus: wizardFocusTarget });
-        // Animate steps
-        var steps = el.wizardOverlay.querySelectorAll(".wizard-step");
-        for (var i = 1; i < steps.length; i++) {
-            (function (idx) {
-                setTimeout(function () { steps[idx].classList.add("active"); }, idx * 400);
-            })(i);
-        }
-        if (el.wizardCloseBtn && !el.wizardCloseBtn._wizardBound) {
-            el.wizardCloseBtn.addEventListener("click", closeWizard);
-            el.wizardCloseBtn._wizardBound = true;
-        }
-        if (!el.wizardOverlay._wizardOverlayBound) {
-            el.wizardOverlay.addEventListener("click", function (e) {
-                if (e.target === el.wizardOverlay) closeWizard();
-            });
-            el.wizardOverlay._wizardOverlayBound = true;
-        }
-    }
-
-    // ================================================================
     // Output Browser
     // ================================================================
     var _outputBrowserOpen = false;
@@ -17140,7 +17095,7 @@
             initKeyboardShortcuts, initPresets, initModelManagement, initGpuRecommendation,
             initQueue, initTranscriptSearch, initWaveform,
             initFavorites, initPreviewModal, initAudioPreview, initContextMenu,
-            initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
+            initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
             initCollapsibleCards, initI18n, initProjectTemplates,
             initJournal, initInterviewPolish, initLutGrid,
@@ -17522,95 +17477,217 @@
                 }
             ];
 
-            function maybeRunOnboarding() {
-                api("GET", "/settings/onboarding", null, function (err, data) {
-                    if (err) return;
-                    if (data && data.seen) return;
-                    runOnboarding(data && data.step ? parseInt(data.step, 10) : 0);
+            var onboardingState = window.OpenCutOnboardingState.createOnboardingState({
+                stepCount: ONBOARDING_STEPS.length
+            });
+            var onboardingReturnFocus = null;
+
+            function onboardingOverlay() {
+                var overlay = el.wizardOverlay || document.getElementById("wizardOverlay");
+                var card = el.wizardCard || (overlay && overlay.querySelector(".wizard-card"));
+                if (!overlay || !card) return null;
+                overlay.classList.add("server-backed-onboarding");
+                card.classList.add("oc-onboarding-card");
+                card.id = "ocOnboardingCard";
+                overlay.setAttribute("aria-labelledby", "ocOnboardingTitle");
+                overlay.setAttribute("aria-describedby", "ocOnboardingBody");
+                if (!overlay._onboardingBackdropBound) {
+                    overlay.addEventListener("click", function (event) {
+                        if (event.target === overlay && typeof overlay._ocCloseOverlay === "function") {
+                            overlay._ocCloseOverlay();
+                        }
+                    });
+                    overlay._onboardingBackdropBound = true;
+                }
+                return { overlay: overlay, card: card };
+            }
+
+            function closeOnboardingOverlay() {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                shell.overlay.classList.add("hidden");
+                shell.overlay.removeAttribute("aria-busy");
+                deactivateOverlay(shell.overlay);
+                onboardingReturnFocus = null;
+            }
+
+            function closeOnboardingLocally() {
+                onboardingState.transition("close-local");
+                closeOnboardingOverlay();
+            }
+
+            function showOnboardingShell(initialFocus) {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                shell.overlay.classList.remove("hidden");
+                activateOverlay(shell.overlay, {
+                    returnFocus: onboardingReturnFocus || el.stageChooseMediaBtn,
+                    initialFocus: initialFocus || shell.card
                 });
             }
 
-            function runOnboarding(startStep) {
-                var idx = Math.max(0, Math.min(startStep || 0, ONBOARDING_STEPS.length - 1));
-                var overlay = document.getElementById("ocOnboardingOverlay");
-                if (!overlay) {
-                    overlay = buildOnboardingOverlay();
-                    document.body.appendChild(overlay);
-                }
-                renderOnboardingStep(overlay, idx);
-                overlay.style.display = "flex";
+            function disableOnboardingActions(overlay) {
+                var buttons = overlay ? overlay.querySelectorAll("button") : [];
+                for (var i = 0; i < buttons.length; i++) buttons[i].disabled = true;
+                if (overlay) overlay.setAttribute("aria-busy", "true");
             }
 
-            function buildOnboardingOverlay() {
-                var overlay = h("div", {
-                    id: "ocOnboardingOverlay",
-                    className: "oc-onboarding-overlay",
-                    role: "dialog",
-                    "aria-modal": "true"
-                }, []);
-                var card = h("div", { className: "oc-onboarding-card" }, []);
-                card.id = "ocOnboardingCard";
-                overlay.appendChild(card);
-                return overlay;
+            function showOnboardingUnavailable(retry, returnFocus) {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                onboardingReturnFocus = returnFocus || onboardingReturnFocus || el.stageChooseMediaBtn;
+                onboardingState.transition("failed", { error: "backend unavailable" });
+                shell.card.innerHTML = "";
+                var title = h("h2", {
+                    id: "ocOnboardingTitle",
+                    className: "oc-onboarding-title",
+                    tabindex: "-1"
+                }, [t("onboarding.unavailable_title", "Tour unavailable")]);
+                shell.card.appendChild(title);
+                shell.card.appendChild(h("p", {
+                    id: "ocOnboardingBody",
+                    className: "oc-onboarding-body",
+                    role: "status"
+                }, [t(
+                    "onboarding.unavailable_body",
+                    "OpenCut could not reach the local backend to load or save tour progress. Start or refresh the backend, then retry."
+                )]));
+                var row = h("div", { className: "oc-onboarding-actions" }, []);
+                row.appendChild(h("button", {
+                    className: "btn btn-ghost oc-onboarding-btn",
+                    onclick: closeOnboardingLocally
+                }, [t("onboarding.continue_without_tour", "Continue without tour")]));
+                row.appendChild(h("button", {
+                    className: "btn btn-primary oc-onboarding-btn",
+                    onclick: function () {
+                        if (typeof retry === "function") retry();
+                    }
+                }, [t("common.retry", "Retry")]));
+                shell.card.appendChild(row);
+                shell.overlay.removeAttribute("aria-busy");
+                shell.overlay._ocCloseOverlay = closeOnboardingLocally;
+                showOnboardingShell(title);
             }
 
-            function renderOnboardingStep(overlay, idx) {
-                var card = document.getElementById("ocOnboardingCard");
-                if (!card) return;
-                var step = ONBOARDING_STEPS[idx];
-                card.innerHTML = "";
-                card.appendChild(h("div", { className: "oc-onboarding-step" },
+            function maybeRunOnboarding(returnFocus) {
+                onboardingReturnFocus = returnFocus || onboardingReturnFocus || el.stageChooseMediaBtn;
+                onboardingState.transition("load");
+                api("GET", "/settings/onboarding", null, function (err, data) {
+                    if (err || !data) {
+                        showOnboardingUnavailable(function () {
+                            maybeRunOnboarding(onboardingReturnFocus);
+                        }, onboardingReturnFocus);
+                        return;
+                    }
+                    var state = onboardingState.transition("loaded", data);
+                    if (state.seen) {
+                        closeOnboardingOverlay();
+                        return;
+                    }
+                    renderOnboardingStep(state.step);
+                });
+            }
+
+            function persistOnboardingStep(nextStep) {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                onboardingState.transition("saving");
+                disableOnboardingActions(shell.overlay);
+                api("POST", "/settings/onboarding", { step: nextStep }, function (err, data) {
+                    if (err || !data) {
+                        showOnboardingUnavailable(function () {
+                            persistOnboardingStep(nextStep);
+                        }, onboardingReturnFocus);
+                        return;
+                    }
+                    onboardingState.transition("loaded", data);
+                    renderOnboardingStep(nextStep);
+                });
+            }
+
+            function persistOnboardingCompletion(completed) {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                onboardingState.transition("saving");
+                disableOnboardingActions(shell.overlay);
+                api("POST", "/settings/onboarding", { seen: true }, function (err, data) {
+                    if (err || !data) {
+                        showOnboardingUnavailable(function () {
+                            persistOnboardingCompletion(completed);
+                        }, onboardingReturnFocus);
+                        return;
+                    }
+                    onboardingState.transition("completed");
+                    closeOnboardingOverlay();
+                    if (completed) {
+                        showToast(t("onboarding.ready", "Ready to go — explore any tab"), "success");
+                    }
+                });
+            }
+
+            function renderOnboardingStep(idx) {
+                var shell = onboardingOverlay();
+                if (!shell) return;
+                var state = onboardingState.transition("step", { step: idx });
+                var step = ONBOARDING_STEPS[state.step];
+                shell.card.innerHTML = "";
+                shell.overlay.removeAttribute("aria-busy");
+                shell.card.appendChild(h("div", { className: "oc-onboarding-step" },
                     [t("onboarding.step_count", "Step {current} of {total}")
-                        .replace("{current}", idx + 1)
+                        .replace("{current}", state.step + 1)
                         .replace("{total}", ONBOARDING_STEPS.length)]));
-                card.appendChild(h("h2", { className: "oc-onboarding-title" }, [
-                    step.title()
-                ]));
-                card.appendChild(h("p", { className: "oc-onboarding-body" }, [
-                    step.body()
-                ]));
+                var title = h("h2", {
+                    id: "ocOnboardingTitle",
+                    className: "oc-onboarding-title",
+                    tabindex: "-1"
+                }, [step.title()]);
+                shell.card.appendChild(title);
+                shell.card.appendChild(h("p", {
+                    id: "ocOnboardingBody",
+                    className: "oc-onboarding-body"
+                }, [step.body()]));
 
                 var row = h("div", { className: "oc-onboarding-actions" }, []);
-                if (idx > 0) {
+                if (state.step > 0) {
                     row.appendChild(h("button", {
                         className: "btn btn-secondary oc-onboarding-btn",
-                        onclick: function () { renderOnboardingStep(overlay, idx - 1); }
+                        onclick: function () {
+                            var previous = onboardingState.transition("back");
+                            renderOnboardingStep(previous.step);
+                        }
                     }, [t("onboarding.back", "Back")]));
                 }
                 row.appendChild(h("button", {
                     className: "btn btn-ghost oc-onboarding-btn",
-                    onclick: function () { finishOnboarding(overlay, false); }
+                    onclick: function () { persistOnboardingCompletion(false); }
                 }, [t("onboarding.skip", "Skip")]));
-                var nextLabel = (idx + 1 >= ONBOARDING_STEPS.length)
-                    ? t("onboarding.finish", "Finish")
-                    : t("onboarding.next", "Next");
+                var atEnd = state.step + 1 >= ONBOARDING_STEPS.length;
                 row.appendChild(h("button", {
                     className: "btn btn-primary oc-onboarding-btn",
                     onclick: function () {
-                        api("POST", "/settings/onboarding", { step: idx + 1 }, function () {});
-                        if (idx + 1 >= ONBOARDING_STEPS.length) {
-                            finishOnboarding(overlay, true);
-                        } else {
-                            renderOnboardingStep(overlay, idx + 1);
-                        }
+                        if (atEnd) persistOnboardingCompletion(true);
+                        else persistOnboardingStep(state.step + 1);
                     }
-                }, [nextLabel]));
-                card.appendChild(row);
+                }, [atEnd ? t("onboarding.finish", "Finish") : t("onboarding.next", "Next")]));
+                shell.card.appendChild(row);
+                shell.overlay._ocCloseOverlay = function () {
+                    persistOnboardingCompletion(false);
+                };
+                showOnboardingShell(title);
             }
 
-            function finishOnboarding(overlay, completed) {
-                api("POST", "/settings/onboarding", { seen: true }, function () {});
-                if (overlay && overlay.parentNode) {
-                    overlay.style.display = "none";
-                }
-                if (completed) {
-                    showToast(t("onboarding.ready", "Ready to go — explore any tab"), "success");
-                }
-            }
-
-            function restartOnboarding() {
-                api("POST", "/settings/onboarding", { seen: false, step: 0 }, function (err) {
-                    if (!err) runOnboarding(0);
+            function restartOnboarding(returnFocus) {
+                onboardingReturnFocus = returnFocus || el.stageChooseMediaBtn;
+                onboardingState.transition("saving");
+                api("POST", "/settings/onboarding", { seen: false, step: 0 }, function (err, data) {
+                    if (err || !data) {
+                        showOnboardingUnavailable(function () {
+                            restartOnboarding(onboardingReturnFocus);
+                        }, onboardingReturnFocus);
+                        return;
+                    }
+                    onboardingState.transition("restart");
+                    renderOnboardingStep(0);
                 });
             }
 
@@ -17694,7 +17771,9 @@
                 b = document.getElementById("ocWaveHGistPull");
                 if (b) b.addEventListener("click", gistPull);
                 b = document.getElementById("ocWaveHRestartTour");
-                if (b) b.addEventListener("click", restartOnboarding);
+                if (b) b.addEventListener("click", function () {
+                    restartOnboarding(this);
+                });
                 b = document.getElementById("ocWaveHVirality");
                 if (b) b.addEventListener("click", runViralityScore);
                 b = document.getElementById("ocWaveHCursorZoom");
@@ -17707,7 +17786,7 @@
                 // Sequence the startup probes so we don't block the first
                 // health check / media scan.
                 setTimeout(checkChangelog, 1200);
-                setTimeout(maybeRunOnboarding, 1800);
+                setTimeout(maybeRunOnboarding, 600);
                 setTimeout(runQeReflect, 2400);
                 setTimeout(runPingProbe, 3000);
             }
