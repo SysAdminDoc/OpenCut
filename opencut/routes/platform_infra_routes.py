@@ -9,8 +9,9 @@ Frame.io integration, waveform timeline, and preview server.
 
 import logging
 import os
+from urllib.parse import urlencode
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, request, send_file
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir, _unique_output_path
@@ -44,6 +45,8 @@ def review_create(job_id, filepath, data):
     """Create a shareable review link for a video."""
     title = data.get("title", "")
     project_id = str(data.get("project_id") or "").strip()
+    review_id = str(data.get("review_id") or "").strip()
+    version_label = str(data.get("version_label") or "").strip()
     expires_hours = safe_float(data.get("expires_hours"), default=0)
 
     def _on_progress(pct, msg=""):
@@ -56,6 +59,8 @@ def review_create(job_id, filepath, data):
         project_id=project_id,
         expires_hours=expires_hours if expires_hours > 0 else None,
         on_progress=_on_progress,
+        review_id=review_id,
+        version_label=version_label,
     )
     return {
         "review_id": result.review_id,
@@ -63,10 +68,12 @@ def review_create(job_id, filepath, data):
         "status": result.status,
         "title": result.title,
         "project_id": result.project_id,
+        "current_version_id": result.current_version_id,
+        "version_count": len(result.versions),
     }
 
 
-def _fire_review_notification(event_type, review_id, *, comment=None, status=""):
+def _fire_review_notification(event_type, review_id, *, comment=None, status="", version_id=""):
     """Best-effort review webhook dispatch; never fail the user action."""
     try:
         from opencut.core.review_notifications import build_review_webhook_details
@@ -77,6 +84,7 @@ def _fire_review_notification(event_type, review_id, *, comment=None, status="")
             event_type=event_type,
             comment=comment,
             status=status,
+            version_id=version_id,
         )
         fire_event(event_type, details, job_id=review_id)
     except Exception as exc:
@@ -93,20 +101,23 @@ def review_add_comment():
         timestamp = safe_float(data.get("timestamp"), default=0)
         text = data.get("text", "")
         author = data.get("author", "Anonymous")
+        version_id = str(data.get("version_id") or "").strip()
 
         from opencut.core.review_links import add_review_comment
-        comment = add_review_comment(review_id, timestamp, text, author)
+        comment = add_review_comment(review_id, timestamp, text, author, version_id=version_id)
         comment_payload = {
             "comment_id": comment.comment_id,
             "timestamp": comment.timestamp,
             "text": comment.text,
             "author": comment.author,
             "created_at": comment.created_at,
+            "version_id": comment.version_id,
         }
         _fire_review_notification(
             "review.comment_added",
             review_id,
             comment=comment_payload,
+            version_id=comment.version_id,
         )
         return jsonify({
             "comment_id": comment.comment_id,
@@ -114,6 +125,7 @@ def review_add_comment():
             "timestamp": comment.timestamp,
             "text": comment.text,
             "author": comment.author,
+            "version_id": comment.version_id,
         })
     except Exception as exc:
         return safe_error(exc, "review_comment")
@@ -126,11 +138,26 @@ def review_get_comments():
     try:
         data = get_json_dict()
         review_id = data.get("review_id", "")
+        version_id = str(data.get("version_id") or "").strip()
 
-        from opencut.core.review_links import get_review_comments
-        comments = get_review_comments(review_id)
+        from opencut.core.review_links import get_review_comments, get_review_versions
+        comments = get_review_comments(review_id, version_id=version_id)
+        versions = get_review_versions(review_id)
         return jsonify({
             "review_id": review_id,
+            "versions": [
+                {
+                    "version_id": version.version_id,
+                    "number": version.number,
+                    "label": version.label,
+                    "status": version.status,
+                    "created_at": version.created_at,
+                    "video_basename": os.path.basename(version.video_path),
+                    "artifact_sha256": version.artifact_sha256,
+                    "size_bytes": version.size_bytes,
+                }
+                for version in versions
+            ],
             "comments": [
                 {
                     "comment_id": c.comment_id,
@@ -138,6 +165,7 @@ def review_get_comments():
                     "text": c.text,
                     "author": c.author,
                     "created_at": c.created_at,
+                    "version_id": c.version_id,
                 }
                 for c in comments
             ],
@@ -154,17 +182,21 @@ def review_update_status():
         data = get_json_dict()
         review_id = data.get("review_id", "")
         status = data.get("status", "")
+        version_id = str(data.get("version_id") or "").strip()
 
         from opencut.core.review_links import update_review_status
-        result = update_review_status(review_id, status)
+        result = update_review_status(review_id, status, version_id=version_id)
+        selected_version_id = version_id or result.current_version_id
         _fire_review_notification(
             "review.status_changed",
             review_id,
             status=result.status,
+            version_id=selected_version_id,
         )
         return jsonify({
             "review_id": result.review_id,
             "status": result.status,
+            "version_id": selected_version_id,
         })
     except Exception as exc:
         return safe_error(exc, "review_status")
@@ -195,6 +227,9 @@ def review_portal_share():
             }
         if headscale is not None and not isinstance(headscale, dict):
             return jsonify({"error": "headscale must be an object"}), 400
+        version_ids = data.get("version_ids")
+        if version_ids is not None and not isinstance(version_ids, list):
+            return jsonify({"error": "version_ids must be an array"}), 400
 
         from opencut.core.review_portal import build_portal_share
 
@@ -206,6 +241,7 @@ def review_portal_share():
             ttl_seconds=ttl_seconds,
             service_name=service_name,
             headscale=headscale,
+            version_ids=version_ids,
         )
         return jsonify(share.as_dict())
     except KeyError as exc:
@@ -222,15 +258,37 @@ def review_portal_view(review_id):
     try:
         expires_at = safe_int(request.args.get("expires"), default=0, min_val=0)
         signature = request.args.get("sig", "")
-        from opencut.core.review_portal import render_portal_html, resolve_portal_review
+        versions_query = request.args.get("versions")
+        version_ids = versions_query.split(",") if versions_query is not None else None
+        from opencut.core.review_portal import render_portal_html, resolve_portal_media, resolve_portal_review
 
-        payload = resolve_portal_review(review_id, expires_at, signature)
+        media_version_id = str(request.args.get("media") or "").strip()
+        if media_version_id:
+            media_path = resolve_portal_media(
+                review_id,
+                expires_at,
+                signature,
+                media_version_id,
+                version_ids,
+            )
+            return send_file(media_path, conditional=True, max_age=0)
+
+        payload = resolve_portal_review(review_id, expires_at, signature, version_ids)
+        media_query = {"expires": expires_at, "sig": signature}
+        if versions_query is not None:
+            media_query["versions"] = versions_query
+        for version in payload["versions"]:
+            query = dict(media_query)
+            query["media"] = version["version_id"]
+            version["media_url"] = f"/review/portal/{review_id}?{urlencode(query)}"
         if request.args.get("format") == "json":
             return jsonify(payload)
         return Response(render_portal_html(payload), mimetype="text/html")
     except PermissionError as exc:
         return jsonify({"error": str(exc)}), 403
     except KeyError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
