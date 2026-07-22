@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "boundary_tolerance_ms": 80,
+  "fixtures": [
+    {
+      "id": "accent-en-scottish-2997",
+      "traits": ["accent", "29.97"],
+      "media": {"container": "mov", "frame_rate": "30000/1001", "variable_frame_rate": false},
+      "reference_words": [
+        {"text": "we're", "start": 0.2, "end": 0.48},
+        {"text": "ready", "start": 0.5, "end": 0.91}
+      ],
+      "hypothesis_words": [
+        {"text": "we're", "start": 0.22, "end": 0.5},
+        {"text": "ready", "start": 0.52, "end": 0.95}
+      ]
+    },
+    {
+      "id": "overlap-two-speakers-5994",
+      "traits": ["overlap", "59.94"],
+      "media": {"container": "mp4", "frame_rate": "60000/1001", "variable_frame_rate": false},
+      "reference_words": [
+        {"text": "yes", "start": 1.0, "end": 1.2},
+        {"text": "exactly", "start": 1.15, "end": 1.62}
+      ],
+      "hypothesis_words": [
+        {"text": "yes", "start": 1.01, "end": 1.22},
+        {"text": "exactly", "start": 1.2, "end": 1.7}
+      ]
+    },
+    {
+      "id": "filler-boundary-regression",
+      "traits": ["fillers"],
+      "media": {"container": "wav", "sample_rate": 16000},
+      "reference_words": [
+        {"text": "um", "start": 2.0, "end": 2.24},
+        {"text": "continue", "start": 2.35, "end": 2.82}
+      ],
+      "hypothesis_words": [
+        {"text": "um", "start": 1.82, "end": 2.4},
+        {"text": "continue", "start": 2.35, "end": 2.82}
+      ]
+    },
+    {
+      "id": "vfr-phone-source",
+      "traits": ["VFR"],
+      "media": {"container": "mp4", "frame_rate": "variable", "average_frame_rate": "30000/1001", "variable_frame_rate": true},
+      "reference_words": [
+        {"text": "phone", "start": 3.1, "end": 3.42},
+        {"text": "video", "start": 3.45, "end": 3.78}
+      ],
+      "hypothesis_words": [
+        {"text": "phone", "start": 3.12, "end": 3.44},
+        {"text": "video", "start": 3.48, "end": 3.81}
+      ]
+    },
+    {
+      "id": "accent-hi-code-switch-vfr-5994",
+      "traits": ["accent", "VFR", "59.94"],
+      "media": {"container": "mov", "frame_rate": "variable", "average_frame_rate": "60000/1001", "variable_frame_rate": true},
+      "reference_words": [
+        {"text": "अब", "start": 4.0, "end": 4.19},
+        {"text": "cut", "start": 4.22, "end": 4.48}
+      ],
+      "hypothesis_words": [
+        {"text": "अब", "start": 4.04, "end": 4.22},
+        {"text": "cut", "start": 4.25, "end": 4.52}
+      ]
+    }
+  ]
+}

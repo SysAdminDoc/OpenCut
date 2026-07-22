@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-07-22T07:21:44Z",
-  "total_routes": 1557,
-  "shipped_route_count": 1530,
+  "generated_at": "2026-07-22T09:04:44Z",
+  "total_routes": 1558,
+  "shipped_route_count": 1531,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 396,
+    "GET": 397,
     "PATCH": 1,
     "POST": 1145,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1501,
+    "implemented": 1502,
     "stub": 27
   },
   "blueprints": {
@@ -178,10 +178,10 @@
       ]
     },
     "captions": {
-      "route_count": 32,
+      "route_count": 33,
       "method_counts": {
         "DELETE": 2,
-        "GET": 8,
+        "GET": 9,
         "POST": 22
       },
       "sample_rules": [
@@ -6118,6 +6118,15 @@
         "DELETE"
       ],
       "endpoint": "captions.caption_cache_clear",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/cache/provenance/<cache_key>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "captions.caption_cache_provenance",
       "blueprint": "captions",
       "readiness": "implemented"
     },

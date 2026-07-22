@@ -239,6 +239,7 @@ def _word_namespace_from_dict(word_data):
         start=word_data.get("start", 0),
         end=word_data.get("end", 0),
         confidence=word_data.get("confidence", 1.0),
+        boundary_confidence=word_data.get("boundary_confidence"),
     )
 
 
@@ -255,6 +256,7 @@ def _segment_namespace_from_dict(seg_data):
         language=seg_data.get("language"),
         language_confidence=seg_data.get("language_confidence", 1.0),
         confidence=seg_data.get("confidence", 1.0),
+        boundary_confidence=seg_data.get("boundary_confidence"),
         human_review_recommended=safe_bool(seg_data.get("human_review_recommended", False), False),
         review_reasons=list(seg_data.get("review_reasons") or []),
     )
@@ -285,6 +287,7 @@ def _caption_review_summary(result_or_segments):
     review_count = 0
     low_confidence_count = 0
     language_review_count = 0
+    boundary_review_count = 0
     languages = set()
     for seg in segments:
         if isinstance(seg, dict):
@@ -299,6 +302,8 @@ def _caption_review_summary(result_or_segments):
             review_count += 1
         if reasons.intersection({"low_asr_confidence", "low_language_confidence"}):
             low_confidence_count += 1
+        if "low_boundary_confidence" in reasons:
+            boundary_review_count += 1
         if "language_requires_human_review" in reasons:
             language_review_count += 1
             if language:
@@ -308,8 +313,15 @@ def _caption_review_summary(result_or_segments):
         "human_review_segments": review_count,
         "low_confidence_segments": low_confidence_count,
         "language_review_segments": language_review_count,
+        "low_boundary_confidence_segments": boundary_review_count,
         "human_review_languages": sorted(languages),
     }
+
+
+def _asr_provenance_payload(result) -> dict:
+    from opencut.core.asr_provenance import provenance_to_dict
+
+    return provenance_to_dict(getattr(result, "provenance", None))
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +341,8 @@ def generate_captions(job_id, filepath, data):
     if model not in VALID_WHISPER_MODELS:
         raise ValueError(f"Invalid model: {model}")
     language = data.get("language", None)
+    engine = data.get("engine", None)
+    model_revision = data.get("model_revision", None)
     sub_format = data.get("format", "srt")
     if sub_format not in ("srt", "vtt", "json", "ass"):
         sub_format = "srt"
@@ -344,7 +358,9 @@ def generate_captions(job_id, filepath, data):
     _update_job(job_id, progress=10, message=f"Loading {model} model ({backend})...")
 
     config = CaptionConfig(
+        engine=engine,
         model=model,
+        model_revision=model_revision,
         language=language,
         word_timestamps=word_timestamps,
     )
@@ -391,6 +407,7 @@ def generate_captions(job_id, filepath, data):
         "words": getattr(result, "word_count", 0),
         "transcript_cache_hit": bool(getattr(result, "cache_hit", False)),
         "transcript_cache_key": getattr(result, "cache_key", None),
+        "asr_provenance": _asr_provenance_payload(result),
     }
     if sidecar_warnings:
         response["warnings"] = sidecar_warnings
@@ -447,6 +464,30 @@ def caption_cache_stats():
         return jsonify(cache_stats())
     except Exception as e:
         return safe_error(e, "caption_cache_stats")
+
+
+@captions_bp.route("/captions/cache/provenance/<cache_key>", methods=["GET"])
+def caption_cache_provenance(cache_key):
+    """Return cache/ASR identity without returning transcript contents."""
+    try:
+        from opencut.core.asr_provenance import provenance_to_dict
+        from opencut.core.transcript_cache import load_transcript
+
+        cached = load_transcript(cache_key)
+        if not cached:
+            return jsonify({"error": "Transcript cache entry not found"}), 404
+        metadata = cached.get("metadata") or {}
+        result = cached.get("result") or {}
+        return jsonify({
+            "cache_key": cache_key,
+            "cache_schema_version": cached.get("schema_version"),
+            "source_sha256": (metadata.get("source") or {}).get("source_sha256"),
+            "asr_provenance": provenance_to_dict(result.get("provenance")),
+        })
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid transcript cache key"}), 400
+    except Exception as e:
+        return safe_error(e, "caption_cache_provenance")
 
 
 @captions_bp.route("/captions/cache/clear", methods=["DELETE"])
@@ -515,6 +556,8 @@ def styled_captions_route(job_id, filepath, data):
     if model not in VALID_WHISPER_MODELS:
         raise ValueError(f"Invalid model: {model}")
     language = data.get("language", None)
+    engine = data.get("engine", None)
+    model_revision = data.get("model_revision", None)
     custom_action_words = data.get("action_words", [])
     # Bound the list + per-item size so malicious/misconfigured clients can't
     # drive the styled-captions renderer into unbounded regex work or OOM.
@@ -548,7 +591,13 @@ def styled_captions_route(job_id, filepath, data):
 
     # Step 1: Transcribe
     _update_job(job_id, progress=10, message=f"Transcribing with {backend} ({model})...")
-    config = CaptionConfig(model=model, language=language, word_timestamps=True)
+    config = CaptionConfig(
+        engine=engine,
+        model=model,
+        model_revision=model_revision,
+        language=language,
+        word_timestamps=True,
+    )
     transcription = transcribe(filepath, config=config)
 
     if _is_cancelled(job_id):
@@ -641,6 +690,7 @@ def styled_captions_route(job_id, filepath, data):
         "caption_segments": len(transcription.segments),
         "words": sum(len(getattr(s, "words", []) or []) for s in transcription.segments),
         "language": getattr(transcription, "language", language or "en"),
+        "asr_provenance": _asr_provenance_payload(transcription),
     }
 
 
@@ -657,6 +707,8 @@ def get_transcript(job_id, filepath, data):
     if model not in VALID_WHISPER_MODELS:
         raise ValueError(f"Invalid model: {model}")
     language = data.get("language", None)
+    engine = data.get("engine", None)
+    model_revision = data.get("model_revision", None)
 
     from opencut.core.captions import check_whisper_available, transcribe
 
@@ -665,7 +717,13 @@ def get_transcript(job_id, filepath, data):
         raise ValueError("Whisper is required for transcription.")
 
     _update_job(job_id, progress=10, message=f"Transcribing with {backend} ({model})...")
-    config = CaptionConfig(model=model, language=language, word_timestamps=True)
+    config = CaptionConfig(
+        engine=engine,
+        model=model,
+        model_revision=model_revision,
+        language=language,
+        word_timestamps=True,
+    )
     result = transcribe(filepath, config=config)
 
     if _is_cancelled(job_id):
@@ -678,6 +736,7 @@ def get_transcript(job_id, filepath, data):
         "word_count": result.word_count,
         "full_text": result.text,
         "language_confidence": getattr(result, "language_confidence", 1.0),
+        "asr_provenance": _asr_provenance_payload(result),
         **_caption_review_summary(result),
         "segments": [
             {
@@ -689,6 +748,11 @@ def get_transcript(job_id, filepath, data):
                         "start": round(w.start, 3),
                         "end": round(w.end, 3),
                         "confidence": round(w.confidence, 3),
+                        "boundary_confidence": (
+                            round(w.boundary_confidence, 3)
+                            if getattr(w, "boundary_confidence", None) is not None
+                            else None
+                        ),
                     }
                     for w in seg.words
                 ],
@@ -966,6 +1030,10 @@ def full_pipeline(job_id, filepath, data):
     skip_captions = safe_bool(data.get("skip_captions", False), False)
     skip_zoom = safe_bool(data.get("skip_zoom", False), False)
     remove_fillers = safe_bool(data.get("remove_fillers", False), False)
+    accept_low_confidence_boundaries = safe_bool(
+        data.get("accept_low_confidence_boundaries", False),
+        False,
+    )
     seq_name = data.get("sequence_name", "")
     legacy_srt_bom = _legacy_srt_bom_requested(data)
 
@@ -1010,13 +1078,19 @@ def full_pipeline(job_id, filepath, data):
     transcription_result = None
     if remove_fillers:
         from opencut.core.captions import check_whisper_available, transcribe
-        from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
+        from opencut.core.fillers import (
+            build_boundary_review,
+            detect_fillers,
+            remove_fillers_from_segments,
+        )
 
         available, backend = check_whisper_available()
         if available:
             next_step(f"Detecting filler words ({backend})...")
             filler_cfg = CaptionConfig(
+                engine=data.get("engine", None),
                 model=cfg.captions.model,
+                model_revision=data.get("model_revision", None),
                 language=cfg.captions.language,
                 word_timestamps=True,
             )
@@ -1037,6 +1111,28 @@ def full_pipeline(job_id, filepath, data):
                 analysis = detect_fillers(transcription_result, include_context_fillers=True)
 
                 if analysis.hits:
+                    boundary_review = build_boundary_review(
+                        analysis.hits,
+                        filepath=filepath,
+                    )
+                    if (
+                        boundary_review["required"]
+                        and not accept_low_confidence_boundaries
+                    ):
+                        return {
+                            "preview_only": True,
+                            "mutation_blocked": True,
+                            "boundary_review": boundary_review,
+                            "filler_stats": {
+                                "total_fillers": len(analysis.hits),
+                                "removed_fillers": 0,
+                                "planned_fillers": len(analysis.hits),
+                                "total_filler_time": analysis.total_filler_time,
+                            },
+                            "asr_provenance": _asr_provenance_payload(
+                                transcription_result
+                            ),
+                        }
                     segments = remove_fillers_from_segments(segments, analysis.hits)
                     # Recalculate summary with filler-cleaned segments
                     summary = get_edit_summary(filepath, segments, file_duration=_fdur)
@@ -1154,7 +1250,11 @@ def interview_polish(job_id, filepath, data):
         remap_captions_to_segments,
         transcribe,
     )
-    from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
+    from opencut.core.fillers import (
+        build_boundary_review,
+        detect_fillers,
+        remove_fillers_from_segments,
+    )
     from opencut.core.repeat_detect import detect_repeated_takes, merge_repeat_ranges
     from opencut.polish_state import (
         _transcription_from_dict,
@@ -1174,6 +1274,10 @@ def interview_polish(job_id, filepath, data):
     generate_chapters_flag = safe_bool(data.get("generate_chapters", True), True)
     diarize_flag = safe_bool(data.get("diarize", True), True)
     remove_fillers_flag = safe_bool(data.get("remove_fillers", True), True)
+    accept_low_confidence_boundaries = safe_bool(
+        data.get("accept_low_confidence_boundaries", False),
+        False,
+    )
     detect_repeats_flag = safe_bool(data.get("detect_repeats", True), True)
     legacy_srt_bom = _legacy_srt_bom_requested(data)
 
@@ -1234,7 +1338,21 @@ def interview_polish(job_id, filepath, data):
         )
     elif whisper_ok:
         try:
-            transcription = transcribe(filepath, config=cfg.captions, timeout=1800)
+            transcription_config = CaptionConfig(
+                engine=data.get("engine", None),
+                model=getattr(cfg.captions, "model", "base"),
+                model_revision=data.get("model_revision", None),
+                language=data.get(
+                    "language",
+                    getattr(cfg.captions, "language", None),
+                ),
+                word_timestamps=True,
+            )
+            transcription = transcribe(
+                filepath,
+                config=transcription_config,
+                timeout=1800,
+            )
             # Persist immediately so a crash in steps 3-6 still lets us
             # resume from here on the next attempt.
             try:
@@ -1312,6 +1430,27 @@ def interview_polish(job_id, filepath, data):
         try:
             analysis = detect_fillers(transcription, include_context_fillers=True)
             if analysis.hits:
+                boundary_review = build_boundary_review(
+                    analysis.hits,
+                    filepath=filepath,
+                )
+                if (
+                    boundary_review["required"]
+                    and not accept_low_confidence_boundaries
+                ):
+                    record_step(
+                        "fillers",
+                        "Review filler boundaries",
+                        False,
+                        reason="Boundary audition required before timeline mutation",
+                    )
+                    return {
+                        "preview_only": True,
+                        "mutation_blocked": True,
+                        "boundary_review": boundary_review,
+                        "steps": steps_report,
+                        "asr_provenance": _asr_provenance_payload(transcription),
+                    }
                 segments = remove_fillers_from_segments(segments, analysis.hits)
             record_step("fillers", "Remove filler words", True,
                         removed_fillers=len(analysis.hits),
@@ -1505,6 +1644,7 @@ def captions_whisperx(job_id, filepath, data):
 
     result = whisperx_transcribe(
         filepath, model_size=model_size,
+        model_revision=str(data.get("model_revision") or ""),
         language=language, diarize=diarize,
         hf_token=hf_token, on_progress=_on_progress,
     )

@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional
 
+from opencut.core.asr_provenance import model_identity, normalize_engine
 from opencut.core.captions import normalize_language_code
 
 TRANSCRIPTION_DOMAIN = "transcription"
@@ -92,6 +93,9 @@ class ASRRoute:
     used_fallback: bool = False    # True when a preferred engine was wanted but unavailable
     requested: Optional[str] = None  # explicit override engine that was asked for, if any
     whisper_model: Optional[str] = None  # turbo model when the engine is Whisper-family
+    model_id: Optional[str] = None
+    model_revision: Optional[str] = None
+    alignment_mode: str = "none"
     available_engines: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -117,6 +121,15 @@ def canary_supports_language(language: Optional[str]) -> bool:
 
 def _whisper_model_for(engine: Optional[str]) -> Optional[str]:
     return WHISPER_TURBO_MODEL if engine in WHISPER_FAMILY else None
+
+
+def _whisper_identity(engine: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    if engine not in WHISPER_FAMILY:
+        return None, None
+    normalized = normalize_engine(engine)
+    if normalized not in {"faster-whisper", "openai-whisper", "whisperx"}:
+        return None, None
+    return model_identity(normalized, WHISPER_TURBO_MODEL)
 
 
 def _get_registry(registry):
@@ -168,12 +181,22 @@ def route_asr(
     # 1. Explicit override wins — but only when it is genuinely runnable.
     if override:
         if override in available:
+            model_id, model_revision = _whisper_identity(override)
             return ASRRoute(
                 engine=override,
                 language=code,
                 reason=f"explicit override -> {override}",
                 requested=override,
                 whisper_model=_whisper_model_for(override),
+                model_id=model_id,
+                model_revision=model_revision,
+                alignment_mode=(
+                    "forced-alignment"
+                    if override == "whisperx"
+                    else "decoder-token-timestamps"
+                    if override in WHISPER_FAMILY
+                    else "none"
+                ),
                 available_engines=available,
             )
         # Requested but not runnable (stub/absent dep): fall through to auto,
@@ -196,6 +219,7 @@ def route_asr(
     # 3. Long tail (and honest fallback): Whisper turbo.
     whisper = _resolve_whisper(available)
     if whisper:
+        model_id, model_revision = _whisper_identity(whisper)
         if override:
             reason = f"requested {override!r} unavailable; fell back to {whisper}"
         elif wanted:
@@ -211,6 +235,13 @@ def route_asr(
             requested=override,
             used_fallback=bool(override or wanted),
             whisper_model=WHISPER_TURBO_MODEL,
+            model_id=model_id,
+            model_revision=model_revision,
+            alignment_mode=(
+                "forced-alignment"
+                if whisper == "whisperx"
+                else "decoder-token-timestamps"
+            ),
             available_engines=available,
         )
 

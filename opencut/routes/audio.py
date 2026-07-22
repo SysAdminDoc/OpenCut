@@ -161,6 +161,13 @@ def filler_removal(job_id, filepath, data):
     if model not in VALID_WHISPER_MODELS:
         model = "base"
     language = data.get("language", None)
+    engine = data.get("engine", None)
+    model_revision = data.get("model_revision", None)
+    preview_only = safe_bool(data.get("preview_only", False), False)
+    accept_low_confidence_boundaries = safe_bool(
+        data.get("accept_low_confidence_boundaries", False),
+        False,
+    )
     include_context = safe_bool(data.get("include_context_fillers", True), True)
     custom_words = data.get("custom_words", [])
     # Which filler types to actually remove (empty = all detected)
@@ -215,7 +222,12 @@ def filler_removal(job_id, filepath, data):
 
     # Standard Whisper path
     from opencut.core.captions import check_whisper_available, transcribe
-    from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
+    from opencut.core.asr_provenance import provenance_to_dict
+    from opencut.core.fillers import (
+        build_boundary_review,
+        detect_fillers,
+        remove_fillers_from_segments,
+    )
 
     available, backend = check_whisper_available()
     if not available:
@@ -243,7 +255,9 @@ def filler_removal(job_id, filepath, data):
     # Step 2: Transcribe with word timestamps
     _update_job(job_id, progress=20, message=f"Step 2/4: Transcribing with {backend} ({model})...")
     config = CaptionConfig(
+        engine=engine,
         model=model,
+        model_revision=model_revision,
         language=language,
         word_timestamps=True,
     )
@@ -277,6 +291,29 @@ def filler_removal(job_id, filepath, data):
     if remove_keys:
         key_set = set(remove_keys)
         hits_to_remove = [h for h in analysis.hits if h.filler_key in key_set]
+
+    boundary_review = build_boundary_review(
+        hits_to_remove,
+        filepath=filepath,
+    )
+    if preview_only or (
+        boundary_review["required"] and not accept_low_confidence_boundaries
+    ):
+        return {
+            "preview_only": True,
+            "mutation_blocked": bool(boundary_review["required"]),
+            "boundary_review": boundary_review,
+            "filler_stats": {
+                "total_fillers": len(analysis.hits),
+                "removed_fillers": 0,
+                "planned_fillers": len(hits_to_remove),
+                "total_filler_time": analysis.total_filler_time,
+                "filler_percentage": analysis.filler_percentage,
+                "total_words": analysis.total_words,
+            },
+            "language": transcription.language,
+            "asr_provenance": provenance_to_dict(transcription.provenance),
+        }
 
     refined_segments = remove_fillers_from_segments(segments, hits_to_remove)
 
@@ -324,6 +361,8 @@ def filler_removal(job_id, filepath, data):
             "breakdown": filler_breakdown,
         },
         "language": transcription.language,
+        "boundary_review": boundary_review,
+        "asr_provenance": provenance_to_dict(transcription.provenance),
     }
 
 

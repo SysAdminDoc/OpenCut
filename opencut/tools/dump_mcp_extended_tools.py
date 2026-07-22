@@ -26,6 +26,10 @@ _SPECIAL_CURATED_ROUTES = {
 # durable recovery state without the MCP registry's destructive confirmation
 # contract. Agents can still use the established add/list/clear queue tools.
 _REST_ONLY_ROUTES = {
+    # Diagnostic cache identity is intentionally not an agent action. Keeping
+    # this REST/CLI-only also avoids making local cache keys discoverable via
+    # the broad generated route catalogue.
+    ("GET", "/captions/cache/provenance/<cache_key>"),
     ("GET", "/queue/export"),
     ("POST", "/queue/import"),
     ("POST", "/queue/replay/<queue_id>"),

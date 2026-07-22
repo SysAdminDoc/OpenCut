@@ -1112,7 +1112,7 @@ def assistant_dismiss_clear():
 # for a full-file job. Budget: 15s slice + FFmpeg-native filters only. Heavy
 # neural processors (Resemble Enhance, Demucs) fall back to full-file jobs.
 _PREVIEW_MAX_SECONDS = 15
-_PREVIEW_FILTERS = {"denoise", "normalize", "compress", "eq", "silence"}
+_PREVIEW_FILTERS = {"raw", "denoise", "normalize", "compress", "eq", "silence"}
 
 
 @system_bp.route("/preview/audio", methods=["POST"])
@@ -1126,7 +1126,7 @@ def preview_audio():
           "filepath": "...",
           "start": 0,                   # seconds into the file
           "duration": 10,               # seconds of preview (max 15)
-          "filter": "denoise|normalize|compress|eq|silence",
+          "filter": "raw|denoise|normalize|compress|eq|silence",
           "params": {...}               # filter-specific
         }
 
@@ -1206,12 +1206,15 @@ def preview_audio():
         "-t", str(duration),
         "-i", filepath,
         "-vn",
-        "-af", afilter,
+    ]
+    if afilter:
+        cmd.extend(["-af", afilter])
+    cmd.extend([
         "-ac", "2",
         "-ar", "44100",
         "-f", "wav",
         out_path,
-    ]
+    ])
     try:
         proc = _sp.run(cmd, capture_output=True, timeout=60)
         if proc.returncode != 0:

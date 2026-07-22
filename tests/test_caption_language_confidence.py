@@ -136,7 +136,7 @@ def test_caption_roundtrip_sidecar_preserves_timeline_metadata(tmp_path):
 
     assert Path(sidecar_path).name == "clip.srt.opencut-captions.json"
     assert warnings == []
-    assert sidecar["schema_version"] == 1
+    assert sidecar["schema_version"] == 2
     assert sidecar["source"]["source_file_hash"]
     assert sidecar["source"]["transcript_cache_key"] == "a" * 64
     cue = sidecar["cues"][0]

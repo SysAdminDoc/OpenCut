@@ -9,12 +9,14 @@ import re
 from pathlib import Path
 from typing import Any
 
+from opencut.core.asr_provenance import provenance_to_dict
 from opencut.core.captions import TranscriptionResult, caption_segment_to_dict
 from opencut.core.transcript_cache import source_digest
 from opencut.user_data import OPENCUT_DIR
 
 SIDECAR_SCHEMA = "opencut.caption_sidecar"
-SIDECAR_VERSION = 1
+SIDECAR_VERSION = 2
+LEGACY_SIDECAR_VERSIONS = frozenset({1})
 SIDECAR_SUFFIX = ".opencut-captions.json"
 REVISION_SCHEMA = "opencut.caption_revision"
 REVISION_VERSION = 1
@@ -117,6 +119,7 @@ def _word_payload(words: list[dict[str, Any]], caption_id: str) -> tuple[list[di
             "start": word.get("start", 0.0),
             "end": word.get("end", 0.0),
             "confidence": word.get("confidence", 1.0),
+            "boundary_confidence": word.get("boundary_confidence"),
         })
     return word_items, word_ids
 
@@ -172,6 +175,9 @@ def build_caption_sidecar(
             "word_count": int(getattr(result, "word_count", 0) or 0),
             "human_review_recommended": bool(getattr(result, "human_review_recommended", False)),
             "review_segment_count": int(getattr(result, "review_segment_count", 0) or 0),
+            "asr_provenance": provenance_to_dict(
+                getattr(result, "provenance", None)
+            ),
         },
         "cues": cues,
         "warnings": [],
@@ -228,7 +234,20 @@ def read_caption_sidecar(
         return None, ["sidecar_invalid"]
     if not isinstance(payload, dict):
         return None, ["sidecar_invalid"]
-    if payload.get("schema") != SIDECAR_SCHEMA or payload.get("schema_version") != SIDECAR_VERSION:
+    if payload.get("schema") != SIDECAR_SCHEMA:
+        warnings.append("sidecar_schema_mismatch")
+    elif payload.get("schema_version") in LEGACY_SIDECAR_VERSIONS:
+        result = payload.setdefault("result", {})
+        if isinstance(result, dict):
+            result.setdefault("asr_provenance", provenance_to_dict(None))
+        for cue in payload.get("cues") or []:
+            if isinstance(cue, dict):
+                cue.setdefault("boundary_confidence", None)
+                for word in cue.get("words") or []:
+                    if isinstance(word, dict):
+                        word.setdefault("boundary_confidence", None)
+        payload["schema_version"] = SIDECAR_VERSION
+    elif payload.get("schema_version") != SIDECAR_VERSION:
         warnings.append("sidecar_schema_mismatch")
     cues = payload.get("cues")
     if not isinstance(cues, list):

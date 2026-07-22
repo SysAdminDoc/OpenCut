@@ -2793,6 +2793,37 @@ input[type="checkbox"]:disabled {
     color: var(--text-secondary);
 }
 
+.boundary-review {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid var(--warning, #c8902f);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--warning, #c8902f) 10%, transparent);
+}
+
+.boundary-review-list {
+    display: grid;
+    gap: 6px;
+    max-height: 220px;
+    margin-bottom: 8px;
+    overflow: auto;
+}
+
+.boundary-review-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 4px;
+    background: var(--surface-raised, rgba(255, 255, 255, 0.04));
+}
+
+.boundary-review-item > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 /* ============================================================
    PRESET SAVE/LOAD
    ============================================================ */
