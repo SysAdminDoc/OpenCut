@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## [Unreleased]
+## [1.41.0] — 2026-07-21 — Decompose the CEP and UXP panel runtimes
 
 ### Changed - Extract UXP runtime boundaries behind focused contracts
 
