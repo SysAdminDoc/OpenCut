@@ -12927,6 +12927,8 @@ body:not(.has-clip) .media-sidecar .file-info {
 
 .panel-dialog-detail {
     padding: 10px 12px;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
 }
 
 .panel-dialog-help {

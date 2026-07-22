@@ -335,6 +335,14 @@ record also lives in the git commit messages.
   private keys, and home paths before truncation and GitHub URL encoding. The
   CEP prompt keeps an explicit human-review warning.
 
+### Fixed - Restore safe CEP destructive actions
+
+- Preset, model-cache, queue, and custom-workflow deletion controls now fetch
+  and render the backend's signed dry-run plan before asking for confirmation.
+  Destructive dialogs focus Cancel first, retain the shared focus trap and
+  Escape/return-focus behavior, and safely re-preview changed or expired plans
+  before accepting a replacement confirmation token.
+
 ### Improved - Rebuild CEP and UXP as an editorial command center
 
 - CEP and UXP now share a restrained graphite command-center system with a
