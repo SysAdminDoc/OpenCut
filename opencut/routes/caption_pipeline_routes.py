@@ -26,6 +26,7 @@ from .captions import (
     validate_path,
 )
 
+
 # Full Pipeline
 # ---------------------------------------------------------------------------
 @captions_bp.route("/full", methods=["POST"])

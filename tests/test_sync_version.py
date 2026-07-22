@@ -132,3 +132,26 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
         module.check_file(path, pattern, replacement, "1.33.0")
         for path, pattern, replacement in targets
     )
+
+
+def test_sync_file_preserves_crlf_bytes(monkeypatch, tmp_path):
+    module = _sync_version_module()
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    target = tmp_path / "version.txt"
+    target.write_bytes(b'version = "1.41.0"\r\nnext = true\r\n')
+
+    changed = module.sync_file(
+        "version.txt",
+        r'^(version\s*=\s*")[^"]+(")',
+        r'\g<1>{v}\g<2>',
+        "1.42.0",
+    )
+
+    assert changed is True
+    assert target.read_bytes() == b'version = "1.42.0"\r\nnext = true\r\n'
+
+
+def test_smoke_manifest_version_is_tracked():
+    module = _sync_version_module()
+
+    assert _targets(module, "installer/src/OpenCut.Installer/Properties/app.smoke.manifest")

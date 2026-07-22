@@ -96,6 +96,12 @@ def _probe_aliases(probes: Set[str]) -> Dict[str, str]:
 def _blueprint_assignments(tree: ast.Module) -> Dict[str, str]:
     blueprints: Dict[str, str] = {}
     for node in tree.body:
+        if isinstance(node, ast.ImportFrom):
+            for imported in node.names:
+                local_name = imported.asname or imported.name
+                if imported.name.endswith("_bp"):
+                    blueprints[local_name] = imported.name.removesuffix("_bp")
+            continue
         if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
             continue
         func = node.value.func

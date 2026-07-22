@@ -381,4 +381,3 @@ def video_broll_backends():
         return jsonify({"backends": get_available_backends()})
     except Exception:
         return jsonify({"backends": []})
-

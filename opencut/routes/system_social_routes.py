@@ -177,4 +177,3 @@ def social_upload(job_id, filepath, data):
         }
     else:
         raise RuntimeError(f"Upload failed: {result.error}")
-

@@ -38,6 +38,24 @@ def test_generator_finds_direct_route_probe_bindings():
     assert "/audio/tts/elevenlabs" in records["audio.elevenlabs"]["routes"]
 
 
+def test_route_probe_scan_resolves_imported_blueprint_contracts(tmp_path):
+    route = tmp_path / "purpose_routes.py"
+    route.write_text(
+        "from .contract import sample_bp\n"
+        "@sample_bp.route('/sample')\n"
+        "def sample():\n"
+        "    return check_sample_available()\n",
+        encoding="utf-8",
+    )
+
+    bindings = dump_feature_readiness.route_endpoint_probes(
+        tmp_path,
+        aliases={"check_sample_available": "check_sample"},
+    )
+
+    assert bindings == {"sample.sample": ["check_sample"]}
+
+
 def test_generator_carries_model_card_hardware_requirements():
     payload = dump_feature_readiness.build_manifest()
     records = {record["feature_id"]: record for record in payload["records"]}

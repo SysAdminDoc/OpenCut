@@ -495,4 +495,3 @@ def recent_outputs():
         if len(outputs) >= limit:
             break
     return jsonify(outputs)
-

@@ -367,4 +367,3 @@ def feature_state():
         return jsonify(manifest)
     except Exception as e:
         return safe_error(e, "feature_state")
-

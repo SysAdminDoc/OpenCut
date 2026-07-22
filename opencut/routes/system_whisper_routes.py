@@ -256,7 +256,6 @@ def install_whisper(job_id, filepath, data):
     finally:
         _unregister_job_process(job_id)
 
-
 # ---------------------------------------------------------------------------
 # Whisper Settings & Reinstall
 # ---------------------------------------------------------------------------
@@ -523,4 +522,3 @@ def whisper_reinstall(job_id, filepath, data):
 
     finally:
         _unregister_job_process(job_id)
-

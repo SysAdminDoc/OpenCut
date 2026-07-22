@@ -274,4 +274,3 @@ def auth_rotate():
         )
     except Exception as exc:
         return safe_error(exc, "auth_rotate")
-
