@@ -98,8 +98,9 @@ def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
     result = module.step_generated_docs(argparse.Namespace())
 
     assert result.status == "ok"
-    assert result.message == "5 generated-doc checks passed"
+    assert result.message == "6 generated-doc checks passed"
     joined = [" ".join(cmd).replace("\\", "/") for cmd in calls]
+    assert any("opencut.tools.dump_project_facts --check" in cmd for cmd in joined)
     assert any("scripts/sync_badges.py --check" in cmd for cmd in joined)
     assert any("opencut.tools.dump_mcp_registry_manifest --check" in cmd for cmd in joined)
     assert any("opencut.tools.dump_mcp_extended_tools --check" in cmd for cmd in joined)

@@ -95,6 +95,18 @@ DEPENDENCY_EXTRAS: Mapping[str, str] = {
 }
 
 
+def source_extra_install_command(extra: str) -> str:
+    """Return the supported install command for a repository checkout.
+
+    OpenCut is not currently published on PyPI.  Keeping this helper beside
+    the extra-support contract prevents APIs and the Dependency Dashboard from
+    suggesting a registry command that cannot resolve.
+    """
+    cleaned = extra.strip()
+    suffix = f"[{cleaned}]" if cleaned else ""
+    return f'python -m pip install -e ".{suffix}"'
+
+
 def python_version_text(version: Sequence[int] | None = None) -> str:
     selected = sys.version_info if version is None else version
     return f"{int(selected[0])}.{int(selected[1])}"
@@ -154,7 +166,7 @@ def extra_support(
         "supported": True,
         "reason": "",
         "extra": extra,
-        "install_hint": f'pip install "opencut-ppro[{extra}]"',
+        "install_hint": source_extra_install_command(extra),
     }
 
 

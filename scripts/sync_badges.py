@@ -7,16 +7,11 @@ hand-edited "API Routes-1344" / "Tests-7600+" badge that drifted away from
 the generated route manifest and the live test count.
 
 Source of truth:
-  - Routes  -> ``opencut/_generated/route_manifest.json::shipped_route_count``
-              (advertised count excludes 501 strategic stubs; falls back to
-              ``total_routes`` for older manifests without the field)
+  - Product -> ``opencut/_generated/project_facts.json`` (version, runtime,
+              route, FFmpeg, trust, and distribution-channel facts)
   - Tests   -> ``len(glob('tests/test_*.py'))`` rounded down to nearest 100.
               The README badge uses ``<N>+`` (e.g. ``7600+``) so any drift
               by less than 100 is intentionally tolerated.
-  - Version -> ``opencut/__init__.py::__version__`` (already handled by
-              ``scripts/sync_version.py``; we re-check it here only for
-              consistency, never write).
-  - Python  -> from ``pyproject.toml::requires-python`` (read-only).
 
 Usage:
     python scripts/sync_badges.py            # update README
@@ -34,10 +29,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-ROUTE_MANIFEST = ROOT / "opencut" / "_generated" / "route_manifest.json"
+PROJECT_FACTS = ROOT / "opencut" / "_generated" / "project_facts.json"
 TESTS_DIR = ROOT / "tests"
 CAPTION_STYLES = ROOT / "opencut" / "core" / "caption_styles.py"
-OPENCUT_INIT = ROOT / "opencut" / "__init__.py"
 
 ROUTE_BADGE_RE = re.compile(
     r"(!\[Routes\]\(https://img\.shields\.io/badge/API%20Routes-)(\d+)(-orange\))"
@@ -65,30 +59,26 @@ class TextTarget:
         self.expected = expected
 
 
-def _live_manifest() -> dict:
-    if not ROUTE_MANIFEST.exists():
+def _live_project_facts() -> dict:
+    if not PROJECT_FACTS.exists():
         raise SystemExit(
-            f"ERROR: {ROUTE_MANIFEST.relative_to(ROOT)} not found. "
-            "Run: python -m opencut.tools.dump_route_manifest"
+            f"ERROR: {PROJECT_FACTS.relative_to(ROOT)} not found. "
+            "Run: python -m opencut.tools.dump_project_facts"
         )
-    payload = json.loads(ROUTE_MANIFEST.read_text(encoding="utf-8"))
-    return payload
+    return json.loads(PROJECT_FACTS.read_text(encoding="utf-8"))
 
 
 def _live_route_count() -> int:
-    # Advertise shipped routes only (excludes 501 strategic stubs). Older
-    # manifests without the field fall back to total_routes.
-    payload = _live_manifest()
-    count = int(payload.get("shipped_route_count", payload.get("total_routes", 0)))
+    # Advertise shipped routes only (excludes strategic 501 stubs).
+    payload = _live_project_facts()["routes"]
+    count = int(payload["shipped"])
     if count <= 0:
         raise SystemExit("ERROR: route manifest reports zero routes")
     return count
 
 
 def _live_stub_count() -> int:
-    payload = _live_manifest()
-    readiness = payload.get("readiness_counts") or {}
-    return int(readiness.get("stub", 0))
+    return int(_live_project_facts()["routes"]["stubs"])
 
 
 def _live_test_count_rounded() -> int:
@@ -138,16 +128,7 @@ def _live_caption_style_count() -> int:
 
 
 def _live_version() -> str:
-    if not OPENCUT_INIT.exists():
-        raise SystemExit(f"ERROR: {OPENCUT_INIT.relative_to(ROOT)} not found")
-    match = re.search(
-        r"^__version__\s*=\s*['\"]([^'\"]+)['\"]",
-        OPENCUT_INIT.read_text(encoding="utf-8"),
-        re.MULTILINE,
-    )
-    if not match:
-        raise SystemExit("ERROR: could not find __version__ in opencut/__init__.py")
-    return match.group(1)
+    return str(_live_project_facts()["project"]["version"])
 
 
 def _format_int(value: int) -> str:

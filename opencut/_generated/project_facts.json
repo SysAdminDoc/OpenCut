@@ -1,0 +1,87 @@
+{
+  "distribution": {
+    "channels": {
+      "github_windows_installer": {
+        "asset_pattern": "OpenCut-Setup-<version>.exe",
+        "available": true,
+        "current": false,
+        "install_command": null,
+        "published_version": "1.25.1",
+        "url": "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.25.1"
+      },
+      "homebrew": {
+        "available": false,
+        "install_command": null
+      },
+      "pypi": {
+        "available": false,
+        "install_command": null,
+        "registry": "https://pypi.org/project/opencut-ppro/"
+      },
+      "source_checkout": {
+        "available": true,
+        "current": true,
+        "install_command": "python -m pip install -e \".\""
+      },
+      "winget": {
+        "available": false,
+        "install_command": null
+      }
+    },
+    "verified_on": "2026-07-22"
+  },
+  "ffmpeg": {
+    "pinned_installer_build": "8.1.2-essentials_build-www.gyan.dev",
+    "release_floor": "8.1.2",
+    "snapshot_floor_date": "2026-06-10"
+  },
+  "project": {
+    "distribution_name": "opencut-ppro",
+    "name": "OpenCut",
+    "version": "1.41.0"
+  },
+  "routes": {
+    "blueprints": 107,
+    "shipped": 1531,
+    "source": "opencut/_generated/route_manifest.json",
+    "stubs": 27,
+    "total": 1558
+  },
+  "runtime": {
+    "platform_display": [
+      "Windows",
+      "macOS",
+      "Linux"
+    ],
+    "platforms": [
+      "win32",
+      "linux",
+      "darwin"
+    ],
+    "python_requires": ">=3.11,<3.15",
+    "python_versions": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ]
+  },
+  "schema_version": 1,
+  "trust": {
+    "fresh_install_telemetry": false,
+    "guarded_dynamic_execution": [
+      "opencut/core/expression_engine.py",
+      "opencut/core/scripting_console.py"
+    ],
+    "local_only_environment_variable": "OPENCUT_LOCAL_ONLY",
+    "network_default": "local-by-default",
+    "optional_egress": [
+      "cloud AI providers",
+      "Edge-TTS",
+      "model, package, and update downloads",
+      "OAuth and social uploads",
+      "opt-in Aptabase telemetry"
+    ],
+    "restricted_checkpoint_loading": "opencut/core/model_safety.py"
+  }
+}

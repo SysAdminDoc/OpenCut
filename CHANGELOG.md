@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Gate public trust and installation claims on generated facts
+
+- Added a deterministic project-facts manifest for version, Python/platform
+  support, route readiness, FFmpeg security floors, distribution availability,
+  and trust boundaries, with generated-doc and release-smoke drift gates.
+- Corrected locality and dynamic-execution language, removed the unavailable
+  PyPI/Homebrew/winget commands, and distinguished the older published Windows
+  installer from the current source tree.
+- Changed dependency APIs and the CEP Dependency Dashboard to publish explicit
+  source-checkout commands while PyPI remains unavailable, and added committed
+  shipped-document link-integrity coverage with an explicit historical changelog
+  exemption.
+
 ### Added - Make ASR provenance and boundary confidence reproducible
 
 - Persisted the selected transcription engine, immutable model ID/revision,

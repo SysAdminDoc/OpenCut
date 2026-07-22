@@ -23,7 +23,7 @@ def test_top_dependency_hints_include_extra_and_package(message, extra, package)
 
     suggestion = build_install_suggestion(message, message=message)
 
-    assert f"pip install 'opencut-ppro[{extra}]'" in suggestion
+    assert f'python -m pip install -e ".[{extra}]"' in suggestion
     assert package in suggestion
 
 
@@ -33,7 +33,7 @@ def test_missing_dependency_accepts_explicit_extra_and_gpu_metadata():
     exc = missing_dependency("F5-TTS", extra="tts", gpu=True, vram_mb=8192)
 
     assert exc.code == "MISSING_DEPENDENCY"
-    assert "pip install 'opencut-ppro[tts]'" in exc.suggestion
+    assert 'python -m pip install -e ".[tts]"' in exc.suggestion
     assert "GPU-recommended" in exc.suggestion
     assert "8 GB" in exc.suggestion
 
@@ -61,7 +61,7 @@ def test_safe_error_infers_dependency_install_suggestion():
     payload = response.get_json()
     assert status == 503
     assert payload["code"] == "MISSING_DEPENDENCY"
-    assert "pip install 'opencut-ppro[audio]'" in payload["suggestion"]
+    assert 'python -m pip install -e ".[audio]"' in payload["suggestion"]
     assert "demucs" in payload["suggestion"]
 
 
@@ -78,7 +78,7 @@ def test_safe_error_classifies_dependencies_not_installed_phrase():
     payload = response.get_json()
     assert status == 503
     assert payload["code"] == "MISSING_DEPENDENCY"
-    assert "pip install 'opencut-ppro[depth]'" in payload["suggestion"]
+    assert 'python -m pip install -e ".[depth]"' in payload["suggestion"]
 
 
 def test_async_job_dependency_errors_keep_install_suggestion(monkeypatch):
@@ -107,7 +107,7 @@ def test_async_job_dependency_errors_keep_install_suggestion(monkeypatch):
 
         safe = jobs._get_job_copy(job_id)
         assert safe["status"] == "error"
-        assert "pip install 'opencut-ppro[audio]'" in safe["suggestion"]
+        assert 'python -m pip install -e ".[audio]"' in safe["suggestion"]
         assert "deepfilternet" in safe["suggestion"]
     finally:
         with jobs.job_lock:

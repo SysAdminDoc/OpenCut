@@ -16,7 +16,7 @@
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list.
 
-> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- all running on your own machine with no subscriptions, no usage caps, no cloud upload, and no API keys required for core features.
+> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
 
 ---
 
@@ -41,8 +41,9 @@ stay distinct from it when it relaunches — this project distributes under a
 qualified token: the **`-ppro`** suffix marks the Adobe **Premiere Pro**
 integration that uniquely identifies this tool. So:
 
-- **PyPI:** `pip install opencut-ppro[standard]` (distribution name `opencut-ppro`)
-- **Homebrew / winget:** the same `opencut-ppro` token (see ROADMAP).
+- **Reserved distribution name:** `opencut-ppro` on PyPI, Homebrew, and winget.
+  None of those package channels is published as of 2026-07-22, so this README
+  provides source-checkout commands only.
 - **Unchanged:** the product name *OpenCut*, the Python import package
   (`import opencut`), the CLI commands (`opencut`, `opencut-server`,
   `opencut-mcp-server`), and the CEP/UXP extension IDs
@@ -67,7 +68,7 @@ is the one step that needs the maintainer's PyPI account.
 
 **Option A -- Windows Installer (recommended for Windows):**
 
-Download the latest Windows installer from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+The latest published Windows installer is [OpenCut v1.25.1](https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.25.1). It predates the current source tree. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python is needed for that packaged release; use Option B or C for the current source version.
 
 Every assembled installer includes `release-composition.json`,
 `opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
@@ -111,9 +112,12 @@ If you prefer manual control or are on macOS/Linux, follow these steps:
    ```bash
    git clone https://github.com/SysAdminDoc/OpenCut.git
    cd OpenCut
-   pip install -e ".[all]"
+   python -m pip install -e "."
    ```
-   If `pip` is not found, use `python -m pip install -e ".[all]"` or `py -3.12 -m pip install -e ".[all]"` on Windows. If you get permission errors, add `--user` to the pip command.
+   Add a supported optional profile after the core install as needed (see
+   [Dependency Tiers](#dependency-tiers)). On Windows, if `python`
+   is not found, use `py -3.12 -m pip install -e "."`. If you get permission
+   errors, add `--user` to the pip command.
 
 3. **Install the CEP extension** (for the Premiere Pro panel):
    - Windows: copy the folder `extension/com.opencut.panel` to `%APPDATA%\Adobe\CEP\extensions\` (create the `extensions` folder if it does not exist)
@@ -177,7 +181,10 @@ desktop release lanes.
 
 **Option E -- Linux desktop package:**
 
-Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller server bundle. See `docs/LINUX_DISTRIBUTION.md` for the `io.github.sysadmindoc.opencut` Flatpak/AppImage contract and local package-build command.
+The repository includes Flatpak and AppImage packaging for local release builds,
+but no Flatpak or AppImage is currently published. See
+[`docs/LINUX_DISTRIBUTION.md`](docs/LINUX_DISTRIBUTION.md) for the
+`io.github.sysadmindoc.opencut` contract and local package-build command.
 
 ### Uninstall data safety
 
@@ -484,7 +491,9 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
                                           +---------------------+
 ```
 
-Everything runs locally. No data leaves your machine. No API keys needed for core features.
+Core editing runs locally by default and needs no API key. Data leaves the
+machine only when an optional network feature is explicitly used; set
+`OPENCUT_LOCAL_ONLY=1` to deny non-loopback egress at runtime.
 
 ---
 
@@ -524,10 +533,13 @@ Only the core tier is required -- everything else is optional and auto-detected 
 flask, flask-cors, click, rich
 ```
 
+The following profiles are available from an OpenCut source checkout. PyPI is
+not currently a published install channel.
+
 ### Standard (recommended, ~200MB)
 
 ```bash
-pip install opencut-ppro[standard]
+python -m pip install -e ".[standard]"
 ```
 
 Adds: `faster-whisper`, `opencv-python`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
@@ -535,7 +547,7 @@ Adds: `faster-whisper`, `opencv-python`, `Pillow`, `numpy`, `librosa`, `noisered
 ### Audited convenience install (non-Torch optional stack)
 
 ```bash
-pip install opencut-ppro[all]
+python -m pip install -e ".[all]"
 ```
 
 Adds all standard deps plus: `pedalboard`, `edge-tts`, `rembg`, `insightface`, `onnxruntime`, `auto-editor`, `opentimelineio`, and `otio-aaf-adapter`. Torch/Transformers-backed packages stay out of this release-audited lane until their advisory and resolver posture is clean.
@@ -543,8 +555,8 @@ Adds all standard deps plus: `pedalboard`, `edge-tts`, `rembg`, `insightface`, `
 For the larger Torch-backed stack, install the explicit extra or narrower feature extras:
 
 ```bash
-pip install opencut-ppro[all,torch-stack]
-pip install opencut-ppro[diarize]  # pyannote speaker diarization
+python -m pip install -e ".[all,torch-stack]"
+python -m pip install -e ".[diarize]"  # pyannote speaker diarization
 ```
 
 `torch-stack` includes Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2,
@@ -672,7 +684,10 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 ## Security
 
 - **No `shell=True`** in any subprocess call
-- **No `eval`/`exec`/`pickle`** anywhere in the codebase
+- **Guarded dynamic execution** -- timeline expressions and the scripting
+  console validate ASTs, restrict globals/builtins, and enforce deadlines
+  before their deliberate `eval`/`exec` calls; PyTorch checkpoints use the
+  restricted `weights_only=True` loader and reject unsafe pickle payloads
 - **CSRF protection** on all POST/DELETE routes via `X-OpenCut-Token` header
 - **Path traversal prevention** via `validate_filepath()` with realpath + prefix whitelist
 - **HTML sanitization** via `esc()` for all dynamic innerHTML content
@@ -761,13 +776,13 @@ A: See the [Troubleshooting](#troubleshooting) section above. In short: the back
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: See the [Troubleshooting](#troubleshooting) section above. Most AI features are optional. Use `pip install -e ".[all]"` (source) or `pip install opencut-ppro[all]` (PyPI) to install all audited extras. For Torch-backed features add `torch-stack`: `pip install opencut-ppro[all,torch-stack]`. The Dependency Dashboard shows only commands supported on the detected platform and Python 3.11-3.14; incompatible packages such as WhisperX explain the resolver conflict instead of offering an unsafe command.
+A: See the [Troubleshooting](#troubleshooting) section above. Most AI features are optional. From the repository root, use `python -m pip install -e ".[all]"` for the audited extras. For Torch-backed features add `torch-stack`: `python -m pip install -e ".[all,torch-stack]"`. The Dependency Dashboard shows source-checkout commands supported on the detected platform and Python 3.11-3.14; incompatible packages such as WhisperX explain the resolver conflict instead of offering an unsafe command.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
 
 **Q: Does this send data to the cloud?**
-A: No by default. Everything core runs locally, and fresh installs emit no telemetry. Optional Aptabase telemetry is available only after explicit opt-in; see [docs/TELEMETRY.md](docs/TELEMETRY.md). Edge-TTS requires internet for voice synthesis; LLM features can use local Ollama or cloud providers. Social media upload is opt-in and requires explicit OAuth connection.
+A: Core editing is local by default, and fresh installs emit no telemetry. Optional Aptabase telemetry is available only after explicit opt-in. Edge-TTS requires internet for voice synthesis; LLM features can use local Ollama or cloud providers. Social media upload is opt-in and requires explicit OAuth connection. Set `OPENCUT_LOCAL_ONLY=1` to enforce loopback-only networking.
 
 **Q: Can I export edits to DaVinci Resolve or Final Cut Pro?**
 A: Yes. Use the OTIO (OpenTimelineIO) export in the Timeline tab. OTIO files can be imported into Resolve, FCP, Avid, and any OTIO-compatible editor. Resolve also has a direct Python scripting bridge.
