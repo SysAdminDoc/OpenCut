@@ -7970,6 +7970,57 @@ async function runShortsPipelineUxp() {
   }
 }
 
+function initSettingsNavigation() {
+  const nav = document.querySelector(".oc-settings-nav");
+  if (!nav) return;
+
+  const buttons = Array.from(nav.querySelectorAll(".oc-settings-nav-item"));
+  const panes = Array.from(document.querySelectorAll("#tab-settings [data-settings-pane]"));
+  if (!buttons.length || !panes.length) return;
+
+  const activate = (section, { focus = false } = {}) => {
+    const nextButton = buttons.find((button) => button.dataset.settingsSection === section) || buttons[0];
+    const activeSection = nextButton.dataset.settingsSection;
+
+    buttons.forEach((button) => {
+      const selected = button === nextButton;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-selected", selected ? "true" : "false");
+      button.tabIndex = selected ? 0 : -1;
+    });
+
+    panes.forEach((pane) => {
+      const selected = pane.dataset.settingsPane === activeSection;
+      pane.classList.toggle("active", selected);
+      pane.hidden = !selected;
+    });
+
+    if (focus) nextButton.focus();
+  };
+
+  nav.addEventListener("click", (event) => {
+    const button = event.target.closest(".oc-settings-nav-item");
+    if (button) activate(button.dataset.settingsSection);
+  });
+
+  nav.addEventListener("keydown", (event) => {
+    const currentIndex = buttons.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (currentIndex + 1) % buttons.length;
+    else if (event.key === "ArrowUp" || event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = buttons.length - 1;
+    else return;
+
+    event.preventDefault();
+    activate(buttons[nextIndex].dataset.settingsSection, { focus: true });
+  });
+
+  activate(buttons.find((button) => button.classList.contains("active"))?.dataset.settingsSection || "workspace");
+}
+
 async function initApp() {
   console.log(`[OpenCut UXP] v${VERSION} initialising...`);
   UXPThemeSync.start();
@@ -7987,6 +8038,7 @@ async function initApp() {
   // Keep the panel navigable while backend discovery, UXP bridge checks, and
   // migration metadata load in the background.
   UIController.initCollapsibles();
+  initSettingsNavigation();
   bindSliders();
   bindEvents();
   syncQuickActionButtons();

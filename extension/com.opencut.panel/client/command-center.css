@@ -956,6 +956,52 @@ select:hover,
     }
 }
 
+/* Premium parity: navigation reads as an editorial rail, not a button stack. */
+@media (min-width: 701px) {
+    .sidebar {
+        padding-inline: 0;
+    }
+
+    .sidebar-brand,
+    .sidebar-footer {
+        padding-inline: 20px;
+    }
+
+    .nav-tabs {
+        gap: 2px;
+    }
+
+    .nav-tab {
+        min-height: 44px;
+        padding: 0 22px;
+        border: 0;
+        border-left: 2px solid transparent;
+        border-radius: 0;
+        background: transparent;
+        font-size: 14px;
+    }
+
+    .nav-tab:hover,
+    .nav-tab:focus-visible {
+        border-color: transparent;
+        border-left-color: var(--cc-border-strong);
+        background: transparent;
+    }
+
+    .nav-tab.active {
+        border-color: transparent;
+        border-left-color: var(--cc-accent);
+        background: transparent;
+        color: var(--cc-accent);
+        box-shadow: none;
+    }
+
+    .nav-tab span {
+        font-size: 14px;
+        font-weight: 480;
+    }
+}
+
 /* Editorial system: open sections, restrained status, and grouped controls. */
 .nav-panel.active {
     gap: 0;

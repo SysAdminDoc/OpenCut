@@ -1148,43 +1148,42 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     const tabs = getComputedStyle(document.getElementById("tabNav"));
     const header = document.querySelector(".oc-header")?.getBoundingClientRect();
     const commandBar = document.querySelector(".oc-workspace-actions")?.getBoundingClientRect();
-    const groups = Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group"))
-      .slice(0, 2)
-      .map((group) => group.getBoundingClientRect());
+    const settingsNav = document.querySelector("#tab-settings .oc-settings-nav")?.getBoundingClientRect();
+    const visibleGroup = document.querySelector("#tab-settings.active > .oc-settings-group:not([hidden])");
+    const group = visibleGroup?.getBoundingClientRect();
     return {
       railWidth: rail?.width || 0,
       tabDirection: tabs.flexDirection,
-      groupColumns: groups.length === 2 ? Math.abs(groups[0].left - groups[1].left) : 0,
+      settingsColumns: settingsNav && group ? group.left - settingsNav.left : 0,
+      settingsNavItems: document.querySelectorAll("#tab-settings .oc-settings-nav-item").length,
+      visibleGroups: document.querySelectorAll("#tab-settings.active > .oc-settings-group:not([hidden])").length,
       bodyFontSize: Number.parseFloat(getComputedStyle(document.body).fontSize),
-      groupShadow: getComputedStyle(document.querySelector("#tab-settings.active > .oc-settings-group")).boxShadow,
-      groupRadius: getComputedStyle(document.querySelector("#tab-settings.active > .oc-settings-group")).borderRadius,
+      groupShadow: getComputedStyle(visibleGroup).boxShadow,
+      groupRadius: getComputedStyle(visibleGroup).borderRadius,
       statusPillBorder: getComputedStyle(document.querySelector("#tab-settings .oc-status-pill")).borderTopWidth,
       commandBarInHeader: !!header && !!commandBar
         && commandBar.top >= header.top
         && commandBar.bottom <= header.bottom,
       guideDisplay: getComputedStyle(document.getElementById("workspaceGuide")).display,
-      groupTitles: Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group > .oc-section-title"))
-        .slice(0, 4)
+      groupTitles: Array.from(document.querySelectorAll("#tab-settings.active > .oc-settings-group:not([hidden]) > .oc-section-title"))
         .map((title) => title.textContent?.trim()),
     };
   });
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
-  expect(uxpGeometry.groupColumns).toBeGreaterThan(200);
+  expect(uxpGeometry.settingsColumns).toBeGreaterThan(170);
+  expect(uxpGeometry.settingsNavItems).toBe(9);
+  expect(uxpGeometry.visibleGroups).toBe(1);
   expect(uxpGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(uxpGeometry.groupShadow).toBe("none");
   expect(uxpGeometry.groupRadius).toBe("0px");
   expect(uxpGeometry.statusPillBorder).toBe("0px");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
-  expect(uxpGeometry.groupTitles).toEqual([
-    "Workspace",
-    "Timeline Recovery",
-    "Engine Routing",
-    "Live Updates",
-  ]);
+  expect(uxpGeometry.groupTitles).toEqual(["Workspace"]);
   await expect(page.locator("#workspaceChooseClipBtn")).toBeEnabled();
   await expect(page.locator("#settingsWorkspaceBackendValue")).toHaveText("Offline");
+  await page.locator("#settingsNavDiagnostics").click();
   await expect(page.locator("#settingsDiagnosticsBackendValue")).toHaveText("Offline");
   await expect(page.locator("#settingsDiagnosticsEndpointValue")).toContainText("127.0.0.1");
   await expect(page.locator("#settingsDiagnosticsLastCheckValue")).toHaveText("Just now");
@@ -1193,6 +1192,7 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   await page.locator(".oc-tab[data-tab='cut']").click();
   await page.locator("#clipPathCut").fill("C:/media/interview.mov");
   await page.locator(".oc-tab[data-tab='settings']").click();
+  await page.locator("#settingsNavWorkspace").click();
   await expect(page.locator("#settingsWorkspaceSourceValue")).toHaveText("interview.mov");
   await page.locator("#settingsWorkspaceSearchBtn").click();
   await expect(page.locator(".oc-tab[data-tab='search']")).toHaveAttribute("aria-selected", "true");
@@ -1566,6 +1566,7 @@ for (const surfaceName of ["cep", "uxp"]) {
     await page
       .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
       .click();
+    if (surfaceName === "uxp") await page.locator("#settingsNavPlugins").click();
     const checkbox = page.locator(
       surfaceName === "cep"
         ? ".plugin-install-approval-checkbox"
@@ -1665,6 +1666,7 @@ for (const surfaceName of ["cep", "uxp"]) {
     await page
       .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
       .click();
+    if (surfaceName === "uxp") await page.locator("#settingsNavPlugins").click();
     const row = page.locator(
       surfaceName === "cep" ? ".plugin-trust-row" : ".oc-plugin-trust-row",
     ).first();

@@ -148,6 +148,7 @@
   "uxp.settings.not_checked_yet": "Not checked yet",
   "uxp.settings.show_connection_details": "Show Connection Details",
   "uxp.settings.workspace": "Workspace",
+  "uxp.settings.sections": "Settings sections",
   "uxp.settings.workspace_hint": "Confirm the active shot, library, and backend before moving into a focused editing tool.",
   "uxp.settings.connect_live_updates": "Connect Live Updates",
   "uxp.settings.connect_panel_updates_title": "Connect this panel to receive live job updates.",
