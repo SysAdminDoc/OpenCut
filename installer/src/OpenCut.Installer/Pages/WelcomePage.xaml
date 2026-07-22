@@ -10,15 +10,19 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.25*" />
-                <ColumnDefinition Width="0.95*" />
-            </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Row="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="True">
+            <Grid Margin="0,0,8,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.25*" />
+                    <ColumnDefinition Width="0.95*" />
+                </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Style="{StaticResource SetupHeroBorder}" Margin="0,0,18,0">
                 <StackPanel>
-                    <Border Background="#22304a" BorderBrush="#334865" BorderThickness="1"
+                    <Border Background="{DynamicResource HeroBadgeBrush}" BorderBrush="{DynamicResource HeroBadgeStrokeBrush}" BorderThickness="1"
                             CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
                         <TextBlock x:Name="InstallModeBadgeText" Text="Fresh install"
                                    Foreground="{DynamicResource Blue}" FontSize="11"
@@ -82,7 +86,7 @@
                 </StackPanel>
             </Border>
 
-            <StackPanel Grid.Column="1">
+                <StackPanel Grid.Column="1">
                 <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,14">
                     <StackPanel>
                         <TextBlock Text="Setup Status" Style="{StaticResource SectionTitleText}" FontSize="18" />
@@ -119,8 +123,9 @@
                                    Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
                     </StackPanel>
                 </Border>
-            </StackPanel>
-        </Grid>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
 
         <Grid Grid.Row="1" Margin="0,22,0,0">
             <Grid.ColumnDefinitions>

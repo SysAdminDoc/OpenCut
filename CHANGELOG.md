@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Retarget the Windows installer to .NET 10 LTS
+
+- Retargeted the WPF installer and its xUnit contracts from .NET 9 to
+  `net10.0-windows`, raised the build prerequisite to SDK 10.0.100, and updated
+  the Microsoft test platform and xUnit Visual Studio runner.
+- Added Windows app-theme selection with Catppuccin Mocha and Latte resources;
+  installer chrome now uses theme resources instead of fixed dark colors so
+  both light and dark shells remain legible.
+- Kept installer actions reachable in the fixed-size shell by sizing pages to
+  the navigation viewport and scrolling long welcome content.
+- Isolated WPF and Inno install/uninstall smoke tests behind test-only manifests
+  and disposable profiles, removed stale installer metadata while preserving
+  user data, and excluded extension dependencies and test artifacts from both
+  release payloads.
+
 ### Added - Recover interrupted Premiere host writes
 
 - Promoted the SQLite operation journal to schema-v3 checkpoints that persist a

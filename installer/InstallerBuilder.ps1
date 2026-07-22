@@ -47,10 +47,20 @@ Write-Step "Checking prerequisites..."
 # Check dotnet SDK
 $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
 if (-not $dotnet) {
-    Write-Err "dotnet SDK not found. Install .NET 9 SDK from https://dot.net"
+    Write-Err "dotnet SDK not found. Install the .NET 10 SDK from https://dot.net"
     exit 1
 }
 $sdkVersion = & dotnet --version 2>$null
+try {
+    $parsedSdkVersion = [Version]($sdkVersion -replace '-.*$', '')
+} catch {
+    Write-Err "Could not parse dotnet SDK version '$sdkVersion'. Install the .NET 10 SDK from https://dot.net"
+    exit 1
+}
+if ($parsedSdkVersion -lt [Version]'10.0.100') {
+    Write-Err "dotnet SDK $sdkVersion is unsupported. Install .NET 10 SDK 10.0.100 or newer from https://dot.net"
+    exit 1
+}
 Write-Ok "dotnet SDK: $sdkVersion"
 
 # Check csproj exists
@@ -174,7 +184,13 @@ if (Test-Path $ffmpegDir) {
 if (Test-Path $extensionDir) {
     Write-Step "  Copying CEP extension..."
     $extDest = Join-Path $StagingDir "extension\com.opencut.panel"
-    Copy-Item -Path $extensionDir -Destination $extDest -Recurse
+    New-Item -ItemType Directory -Path $extDest -Force | Out-Null
+    & robocopy $extensionDir $extDest /E /NFL /NDL /NJH /NJS /NP `
+        /XD node_modules tests test-results playwright-report | Out-Null
+    if ($LASTEXITCODE -ge 8) {
+        Write-Err "CEP extension payload copy failed with robocopy exit code $LASTEXITCODE"
+        exit 1
+    }
     Write-Ok "  Extension copied"
 }
 

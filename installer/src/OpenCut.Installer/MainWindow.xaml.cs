@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Data;
 using OpenCut.Installer.Models;
 using OpenCut.Installer.Pages;
 
@@ -34,6 +35,16 @@ public partial class MainWindow : Window
 
     public void NavigateToPage(System.Windows.Controls.Page page)
     {
+        // WPF Frame measures Page content at its desired size, which can place
+        // a page's fixed action row below a non-resizable shell. Bind every
+        // page to the actual viewport so its internal star rows and scrollers
+        // receive a finite layout constraint.
+        page.SetBinding(
+            FrameworkElement.WidthProperty,
+            new Binding(nameof(PageFrame.ActualWidth)) { Source = PageFrame });
+        page.SetBinding(
+            FrameworkElement.HeightProperty,
+            new Binding(nameof(PageFrame.ActualHeight)) { Source = PageFrame });
         PageFrame.Navigate(page);
     }
 

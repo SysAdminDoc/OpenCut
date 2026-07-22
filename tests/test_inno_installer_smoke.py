@@ -22,7 +22,9 @@ def test_inno_smoke_script_has_profile_mutation_guard():
     text = _read(SMOKE_SCRIPT)
     assert "$env:OPENCUT_INSTALLER_SMOKE" in text
     assert "AllowLocalProfileMutation" in text
-    assert "~/.opencut" in text
+    assert "OpenCut-Inno-Profile-" in text
+    assert "/USERDATADIR=$userDataDir" in text
+    assert 'Join-Path $env:USERPROFILE ".opencut' not in text
     assert "Remove-Item -LiteralPath $installFull -Recurse -Force" in text
     assert "Assert-UnderDirectory" in text
     assert "$env:CI" not in text
@@ -37,6 +39,7 @@ def test_inno_smoke_script_runs_silent_install_and_uninstall():
         "/SP-",
         "/TASKS=",
         "/DIR=$installFull",
+        "/USERDATADIR=$userDataDir",
         "installer.json",
         "installer_kind",
         "unins*.exe",

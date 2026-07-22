@@ -35,7 +35,7 @@
                                Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
                 </StackPanel>
 
-                <Border Grid.Column="1" Background="#20362b" BorderBrush="{DynamicResource Surface1}"
+                <Border Grid.Column="1" Background="{DynamicResource SuccessTintBrush}" BorderBrush="{DynamicResource Surface1}"
                         BorderThickness="1" CornerRadius="999" Padding="10,4" HorizontalAlignment="Right">
                     <TextBlock x:Name="ProgressPercentText" Text="0%"
                                Foreground="{DynamicResource Green}" FontSize="12"
