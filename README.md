@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.40.0-blue)
+![Version](https://img.shields.io/badge/version-1.41.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
@@ -224,7 +224,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.40.0 includes **1,527 shipped API routes** (implemented or dependency-gated; 27 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.41.0 includes **1,527 shipped API routes** (implemented or dependency-gated; 27 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 

@@ -32,7 +32,7 @@ logger = logging.getLogger("opencut")
 SPEC_VERSION = "0.3-sidecar"
 MANIFEST_SPEC_VERSION = SPEC_VERSION  # public alias
 C2PA_SPEC_VERSION = "2.4"
-CLAIM_GENERATOR_DEFAULT = "OpenCut/1.40.0 (sidecar; c2pa-spec 2.4)"
+CLAIM_GENERATOR_DEFAULT = "OpenCut/1.41.0 (sidecar; c2pa-spec 2.4)"
 SUPPORTED_EMBED_EXTENSIONS = {".jpg", ".jpeg", ".mp4", ".png"}
 DEFAULT_C2PATOOL_TIMEOUT_SECONDS = 120
 
