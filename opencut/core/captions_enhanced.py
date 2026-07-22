@@ -187,7 +187,9 @@ def whisperx_transcribe(
         Dict with segments, each containing words with precise timestamps.
     """
     if not ensure_package("whisperx", "whisperx", on_progress):
-        raise RuntimeError("Failed to install whisperx. Install manually: pip install whisperx")
+        raise RuntimeError(
+            "WhisperX is unavailable in OpenCut's supported dependency matrix."
+        )
     import torch
     import whisperx
 

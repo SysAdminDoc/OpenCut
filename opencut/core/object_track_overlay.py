@@ -260,7 +260,7 @@ def _track_object_through_video(
     Returns:
         List of TrackFrame for each frame.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+    if not ensure_package("cv2", "opencv-python", on_progress):
         raise RuntimeError("OpenCV required for tracking")
 
     import cv2

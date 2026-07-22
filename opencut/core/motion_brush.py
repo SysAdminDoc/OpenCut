@@ -152,7 +152,7 @@ def create_motion_mask(
     Returns:
         Path to the generated mask PNG file.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError("OpenCV is required for mask generation")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("numpy is required for mask generation")
@@ -687,8 +687,8 @@ def apply_motion_brush(
 
     # Get dimensions
     if is_still:
-        if not ensure_package("cv2", "opencv-python-headless"):
-            raise RuntimeError("OpenCV is required. Run: pip install opencv-python-headless")
+        if not ensure_package("cv2", "opencv-python"):
+            raise RuntimeError("OpenCV is required. Run: pip install opencv-python")
         import cv2
         img = cv2.imread(input_path)
         if img is None:

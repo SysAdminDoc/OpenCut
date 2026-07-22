@@ -25,7 +25,7 @@ from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info
 logger = logging.getLogger("opencut")
 
 GENRES = ["sports", "concert", "event", "reaction", "game"]
-INSTALL_HINT = "pip install opencv-python-headless numpy  # already in standard install"
+INSTALL_HINT = "pip install opencv-python numpy  # already in standard install"
 
 # Genre-specific weights for motion/audio/face scoring
 _GENRE_WEIGHTS: Dict[str, Dict[str, float]] = {

@@ -282,8 +282,8 @@ def extend_frame_spatial(
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Input video not found: {video_path}")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
 
     import cv2
 
@@ -423,8 +423,8 @@ def extend_frame_temporal(
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Input video not found: {video_path}")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
 
     import cv2
     import numpy as np
@@ -655,8 +655,8 @@ def outpaint_aspect_ratio(
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Input video not found: {video_path}")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
 
     import cv2
 
@@ -697,7 +697,7 @@ def outpaint_aspect_ratio(
     # Attempt AI inpainting if requested
     if ai_enhance and actual_method in ("auto", "inpaint"):
         try:
-            require_package("cv2", "opencv-python-headless")
+            require_package("cv2", "opencv-python")
             actual_method = "inpaint"
             ai_used = True
         except Exception:

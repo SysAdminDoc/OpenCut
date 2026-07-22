@@ -352,7 +352,7 @@ def preview_lip_sync(
     Returns:
         Dict with preview_path, face_detected, mouth_openness.
     """
-    require_package("cv2", "opencv-python-headless")
+    require_package("cv2", "opencv-python")
     require_package("mediapipe")
     require_package("numpy", "numpy")
 
@@ -493,7 +493,7 @@ def _builtin_lip_sync(
     on_progress: Optional[Callable] = None,
 ) -> LipSyncResult:
     """Built-in amplitude-driven lip sync."""
-    require_package("cv2", "opencv-python-headless")
+    require_package("cv2", "opencv-python")
     require_package("mediapipe")
     require_package("numpy", "numpy")
 

@@ -155,7 +155,7 @@ def _enhance_resemble(audio_path: str, output_wav: str, denoise: bool, enhance: 
         from resemble_enhance.enhancer.inference import enhance as _enhance_fn
     except ImportError as err:
         raise RuntimeError(
-            "resemble-enhance required. Install: pip install resemble-enhance"
+            "Resemble Enhance is unavailable in OpenCut's supported dependency matrix."
         ) from err
 
     audio, sr = torchaudio.load(audio_path)

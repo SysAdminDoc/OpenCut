@@ -84,6 +84,7 @@ def test_dev_import_check_reports_missing_test_tooling(monkeypatch):
 def test_python_version_floor_is_3_11():
     bootstrap_check = load_bootstrap_check()
     assert bootstrap_check.MIN_PYTHON == (3, 11)
+    assert bootstrap_check.MAX_PYTHON == (3, 14)
 
 
 def test_json_output_uses_aggregate_status(monkeypatch, capsys):

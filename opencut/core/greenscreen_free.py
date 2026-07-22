@@ -451,8 +451,8 @@ def _ensure_method_deps(method: str):
             raise RuntimeError("SAM2 is required. Run: pip install segment-anything-2")
 
     # All methods need OpenCV and numpy
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("OpenCV is required. Run: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("OpenCV is required. Run: pip install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("numpy is required. Run: pip install numpy")
 

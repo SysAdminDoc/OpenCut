@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
 from opencut import checks
+from opencut.dependency_support import dependency_support
 from opencut.model_cards import CARDS
 from opencut.registry import (
     GENERATED_FEATURE_READINESS_PATH,
@@ -282,6 +283,13 @@ def _record_for_probe(
         install_hint = "see route response for dependency hint"
         docs = "docs/MODELS.md"
         hardware = ""
+
+    support = dependency_support(f"{feature_id} {label} {install_hint}")
+    if not support["supported"]:
+        install_hint = (
+            "Unavailable in OpenCut's supported dependency matrix: "
+            f"{support['reason']}"
+        )
 
     state = _derive_feature_state(routes_sorted, route_readiness or {})
 

@@ -15,12 +15,12 @@ if exist "%OPENCUT_HOME%\python\python.exe" (
 
 set "DETECTED_PYTHON=not found"
 for /f "delims=" %%V in ('"%PYTHON%" %PYTHON_ARGS% --version 2^>^&1') do set "DETECTED_PYTHON=%%V"
-"%PYTHON%" %PYTHON_ARGS% -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>&1
+"%PYTHON%" %PYTHON_ARGS% -c "import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] <= (3, 14) else 1)" >nul 2>&1
 if errorlevel 1 (
     echo.
     echo  OpenCut could not start.
     echo  Detected: %DETECTED_PYTHON%
-    echo  Required: Python 3.11 or later
+    echo  Required: Python 3.11-3.14
     echo  Install a supported version from https://www.python.org/downloads/
     echo  Windows: winget install Python.Python.3.12
     echo.

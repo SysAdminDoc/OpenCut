@@ -261,7 +261,7 @@ def preview_eye_contact(
     Returns:
         Dict with preview_path, face_detected, gaze_estimate.
     """
-    require_package("cv2", "opencv-python-headless")
+    require_package("cv2", "opencv-python")
     require_package("mediapipe")
 
     import cv2  # noqa: F401
@@ -364,7 +364,7 @@ def fix_eye_contact(
     Returns:
         EyeContactResult with output path and statistics.
     """
-    require_package("cv2", "opencv-python-headless")
+    require_package("cv2", "opencv-python")
     require_package("mediapipe")
 
     import cv2  # noqa: F401

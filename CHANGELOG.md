@@ -3,6 +3,20 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed - Make optional dependency support resolver-executable
+
+- Unified source, launcher, installer, classifier, and runtime readiness claims
+  on Python 3.11-3.14; added a local uv resolver matrix covering every declared
+  Windows, Linux, and macOS lane with actionable unsupported combinations.
+- Removed the incompatible WhisperX, AudioCraft, and Resemble Enhance extras
+  without weakening the Torch 2.10 / torchvision 0.25 / Transformers 5.3
+  security floors, and removed the obsolete Transformers advisory waivers.
+- Updated the hash-locked standard install to PySceneDetect 0.7 and one direct
+  OpenCV 5 provider, while normalizing legacy runtime install requests to the
+  same supported package.
+
 ## [1.41.0] — 2026-07-21 — Decompose the CEP and UXP panel runtimes
 
 ### Changed - Extract UXP runtime boundaries behind focused contracts

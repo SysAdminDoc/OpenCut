@@ -5,7 +5,7 @@ Auto-crop video to keep face centered for vertical/social media formats.
 Uses MediaPipe face detection to track face positions across frames,
 applies smoothing, and generates a dynamic crop via FFmpeg.
 
-Uses: mediapipe (already a dependency via face_tools.py), opencv-python-headless, numpy
+Uses: mediapipe (already a dependency via face_tools.py), opencv-python, numpy
 """
 
 import logging
@@ -249,8 +249,8 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     Returns:
         Output file path.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("OpenCV not installed. Run: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("OpenCV not installed. Run: pip install opencv-python")
     if not ensure_package("mediapipe", "mediapipe", on_progress):
         raise RuntimeError("MediaPipe not installed. Run: pip install mediapipe")
     if not ensure_package("numpy", "numpy", on_progress):

@@ -70,8 +70,8 @@ def generate_masks_sam2(
     if not ensure_package("sam2", "sam2", on_progress):
         raise RuntimeError("SAM 2 not installed. Run: pip install sam2")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     import shutil
 
     import cv2
@@ -284,8 +284,8 @@ def remove_watermark_lama(
     if not ensure_package("simple_lama_inpainting", "simple-lama-inpainting", on_progress):
         raise RuntimeError("simple-lama-inpainting not installed")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     import cv2
     import numpy as np
     from simple_lama_inpainting import SimpleLama
@@ -456,7 +456,7 @@ def detect_watermark_region(
     try:
         import cv2
     except ImportError:
-        raise ImportError("OpenCV required. Install: pip install opencv-python-headless")
+        raise ImportError("OpenCV required. Install: pip install opencv-python")
 
     if on_progress:
         on_progress(10, "Extracting sample frame...")

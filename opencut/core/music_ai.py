@@ -65,8 +65,7 @@ def generate_music(
     """
     if not ensure_package("audiocraft", "audiocraft", on_progress):
         raise RuntimeError(
-            "AudioCraft not installed. Run: pip install audiocraft\n"
-            "Requires PyTorch with CUDA support."
+            "AudioCraft is unavailable in OpenCut's supported dependency matrix."
         )
 
     if on_progress:

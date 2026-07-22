@@ -75,8 +75,8 @@ def detect_sky_mask(
     Returns:
         SkyMaskResult with mask path and sky statistics.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required for sky detection")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required for sky detection")
     import cv2
     import numpy as np
 
@@ -278,8 +278,8 @@ def replace_sky(
     Returns:
         SkyReplaceResult with output path and processing statistics.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required for sky replacement")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required for sky replacement")
     import cv2
     import numpy as np
 

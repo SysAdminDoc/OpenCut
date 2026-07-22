@@ -7,7 +7,7 @@ Click-to-select object via SAM2, track through frames, attach overlays:
 - Overlay/annotation attachment to tracked regions
 - Track data export (JSON) for downstream compositing
 
-Requires: pip install torch torchvision transformers opencv-python-headless
+Requires: pip install torch torchvision transformers opencv-python
 """
 
 import json
@@ -79,8 +79,8 @@ def track_object(
     Returns:
         Dict with track_data (list of TrackPoint dicts), output_path, frame_count.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     import cv2
 
     if not os.path.isfile(video_path):
@@ -251,8 +251,8 @@ def annotate_tracked(
     Returns:
         Path to annotated output video.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     import cv2
 
     if not os.path.isfile(video_path):

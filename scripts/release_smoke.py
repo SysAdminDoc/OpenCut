@@ -489,6 +489,29 @@ def step_release_lock(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_dependency_matrix(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "scripts/check_dependency_matrix.py", "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "dependency-matrix",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "optional dependency support contract is synchronized"
+            if status == "ok"
+            else "optional dependency support contract drifted"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_roadmap_lint(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -1261,6 +1284,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Gate model cards and hash-locked release requirements"),
     StepDefinition("release-lock", step_release_lock, "Check exact pins and SHA-256 hashes for release inputs"),
+    StepDefinition("dependency-matrix", step_dependency_matrix, "Check optional dependency support contract"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),

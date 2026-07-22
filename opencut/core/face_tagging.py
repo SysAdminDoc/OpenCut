@@ -8,7 +8,7 @@ Detect, cluster, and label faces across project media:
 - Name tagging and face-based search
 
 Optional: pip install face-recognition dlib (for higher accuracy)
-Requires: pip install opencv-python-headless numpy scikit-learn
+Requires: pip install opencv-python numpy scikit-learn
 """
 
 import logging
@@ -62,8 +62,8 @@ def detect_faces(
         Dict with faces (list of detection dicts), total_faces,
         frames_sampled.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

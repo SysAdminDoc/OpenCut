@@ -47,46 +47,13 @@ def test_auto_editor_extra_tracks_available_v29_pip_line():
     assert all("auto-editor>=24.0,<25" not in req for req in requirements)
 
 
-def test_audiocraft_stays_separate_from_combined_all_extra():
-    music_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "music",
-    )
-    all_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "all",
-    )
+def test_unsafe_legacy_torch_extras_are_not_advertised():
+    data = __import__("tomllib").loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    extras = data["project"]["optional-dependencies"]
 
-    assert "audiocraft>=1.3,<2; python_version < '3.12'" in music_requirements
-    assert not any(req.startswith("audiocraft") for req in all_requirements)
-
-
-def test_resemble_enhance_stays_separate_from_combined_all_extra():
-    enhance_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "enhance",
-    )
-    all_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "all",
-    )
-
-    assert "resemble-enhance>=0.0.1,<1; python_version < '3.12'" in enhance_requirements
-    assert not any(req.startswith("resemble-enhance") for req in all_requirements)
-
-
-def test_whisperx_stays_separate_from_combined_all_extra():
-    whisperx_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "captions-whisperx",
-    )
-    all_requirements = pip_audit_extras.load_pyproject_requirements(
-        REPO_ROOT / "pyproject.toml",
-        "all",
-    )
-
-    assert "whisperx>=3.8.5,<4" in whisperx_requirements
-    assert not any(req.startswith("whisperx") for req in all_requirements)
+    assert "captions-whisperx" not in extras
+    assert "music" not in extras
+    assert "enhance" not in extras
 
 
 def test_torch_stack_collects_advisory_heavy_backends():
@@ -96,7 +63,6 @@ def test_torch_stack_collects_advisory_heavy_backends():
     )
 
     expected = {
-        "whisperx>=3.8.5,<4",
         "demucs>=4.0,<5",
         "realesrgan>=0.3,<1",
         "gfpgan>=1.3,<2",
@@ -104,7 +70,7 @@ def test_torch_stack_collects_advisory_heavy_backends():
         "transnetv2-pytorch>=1.0.5,<2",
         "torch>=2.10.0",
         "torchvision>=0.25.0",
-        "transformers>=4.30",
+        "transformers>=5.3",
         "picklescan>=1.0.3",
     }
     assert expected.issubset(set(requirements))
@@ -266,7 +232,7 @@ def test_run_audits_uses_no_deps_for_lockfile_targets(monkeypatch):
     assert result["targets"][0]["resolved_dependency_count"] == 1
 
 
-def test_run_audits_allows_documented_optional_dependency_advisories(monkeypatch):
+def test_run_audits_rejects_transformers_advisories_after_floor_upgrade(monkeypatch):
     target = pip_audit_extras.AuditTarget(
         name="pyproject[all]",
         kind="pyproject-extra",
@@ -321,24 +287,20 @@ def test_run_audits_allows_documented_optional_dependency_advisories(monkeypatch
     result = pip_audit_extras.run_audits([target])
     target_result = result["targets"][0]
 
-    assert result["status"] == "ok"
+    assert result["status"] == "fail"
     assert result["vulnerability_count"] == 3
-    assert result["allowed_vulnerability_count"] == 3
-    assert result["unallowed_vulnerability_count"] == 0
-    assert target_result["status"] == "ok"
-    assert all(vulnerability["allowed"] for vulnerability in target_result["vulnerabilities"])
-    assert {vulnerability["waiver"]["docs"] for vulnerability in target_result["vulnerabilities"]} == {
-        "docs/PYTHON_ADVISORIES.md"
-    }
+    assert result["allowed_vulnerability_count"] == 1
+    assert result["unallowed_vulnerability_count"] == 2
+    assert target_result["status"] == "fail"
+    by_id = {item["id"]: item for item in target_result["vulnerabilities"]}
+    assert by_id["CVE-2024-27763"]["allowed"] is True
+    assert by_id["CVE-2026-1839"]["allowed"] is False
+    assert by_id["CVE-2026-4372"]["allowed"] is False
 
 
-def test_transformers_config_injection_waiver_is_torch_stack_scoped():
-    advisory = pip_audit_extras.ALLOWED_ADVISORIES["CVE-2026-4372"]
-
-    assert advisory.package == "transformers"
-    assert advisory.docs == "docs/PYTHON_ADVISORIES.md"
-    assert "opencut[torch-stack]" in advisory.reason
-    assert "pyproject[all]" in advisory.reason
+def test_transformers_advisories_are_not_waived():
+    assert "CVE-2026-1839" not in pip_audit_extras.ALLOWED_ADVISORIES
+    assert "CVE-2026-4372" not in pip_audit_extras.ALLOWED_ADVISORIES
 
 
 def test_run_audits_fails_unlisted_advisories(monkeypatch):

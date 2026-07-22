@@ -354,6 +354,7 @@ def _find_system_python() -> Optional[str]:
 
 
 PILLOW_RUNTIME_REQUIREMENT = "Pillow>=12.3.0,<13"
+OPENCV_RUNTIME_REQUIREMENT = "opencv-python>=5,<6"
 
 _SAFE_PACKAGE_RE = re.compile(
     r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"
@@ -364,6 +365,11 @@ _SAFE_PACKAGE_RE = re.compile(
 
 _RUNTIME_SECURITY_REQUIREMENTS = {
     "pillow": PILLOW_RUNTIME_REQUIREMENT,
+    "opencv-python-headless": OPENCV_RUNTIME_REQUIREMENT,
+    # Both distributions export ``cv2`` and cannot safely coexist.  Normalize
+    # legacy feature bootstraps to the GUI-capable provider required by
+    # PySceneDetect 0.7+.
+    "opencv-python": OPENCV_RUNTIME_REQUIREMENT,
 }
 
 
@@ -393,6 +399,11 @@ def runtime_security_requirement(package: str) -> str:
     direct ``safe_pip_install`` path on the same bounded range.
     """
     normalized = validate_safe_pip_package(package)
+    from opencut.dependency_support import dependency_support
+
+    support = dependency_support(normalized)
+    if not support["supported"]:
+        raise RuntimeError(support["reason"])
     name = re.split(r"[\[>=<!~]", normalized, maxsplit=1)[0].lower()
     return _RUNTIME_SECURITY_REQUIREMENTS.get(name, normalized)
 

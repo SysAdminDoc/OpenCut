@@ -146,8 +146,8 @@ def generate_thumbnails(
     Returns:
         List of dicts with path, timestamp, score.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     import cv2
 
     info = get_video_info(input_path)

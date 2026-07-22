@@ -69,6 +69,22 @@ def test_step_version_sync_reports_failure_on_drift(monkeypatch):
     assert result.exit_code == 1
 
 
+def test_step_dependency_matrix_runs_contract_check(monkeypatch):
+    module = load_module()
+    calls = []
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, '{"status":"ok"}', "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_dependency_matrix(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert any("scripts/check_dependency_matrix.py" in " ".join(cmd) for cmd in calls)
+
+
 def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
     module = load_module()
     calls = []

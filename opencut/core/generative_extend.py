@@ -242,7 +242,7 @@ def _generate_via_flow(
     if len(frames) < 2:
         return []
 
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         return []
     if not ensure_package("numpy", "numpy"):
         return []

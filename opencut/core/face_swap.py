@@ -62,8 +62,8 @@ def enhance_faces(
         upscale: Face upscale factor (1-4).
         fidelity: CodeFormer fidelity weight (0.0=quality, 1.0=fidelity). Ignored for GFPGAN.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
 
     import cv2
 
@@ -255,8 +255,8 @@ def swap_face(
     """
     if not ensure_package("insightface", "insightface", on_progress):
         raise RuntimeError("InsightFace not installed")
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     if not ensure_package("onnxruntime", "onnxruntime", on_progress):
         raise RuntimeError("Failed to install onnxruntime. Install manually: pip install onnxruntime")
 

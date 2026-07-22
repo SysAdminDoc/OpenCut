@@ -1570,7 +1570,9 @@ def audio_enhance(job_id, filepath, data):
     if backend == "resemble":
         from opencut.checks import check_resemble_enhance_available
         if not check_resemble_enhance_available():
-            raise ValueError("resemble-enhance not installed. Install with: pip install resemble-enhance")
+            raise ValueError(
+                "Resemble Enhance is unavailable in OpenCut's supported dependency matrix."
+            )
 
     denoise = safe_bool(data.get("denoise", True), True)
     enhance = safe_bool(data.get("enhance", True), True)

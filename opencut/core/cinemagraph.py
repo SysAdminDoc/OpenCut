@@ -213,8 +213,8 @@ def create_cinemagraph(
     Returns:
         CinemagraphResult.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
     import cv2
     import numpy as np
 

@@ -336,7 +336,7 @@ def captions(input_file, output, sub_format, model, language, translate, word_ti
         console.print("Install one of:")
         console.print("  [cyan]pip install openai-whisper[/cyan]        # Reference implementation")
         console.print("  [cyan]pip install faster-whisper[/cyan]        # Fastest (recommended)")
-        console.print("  [cyan]pip install whisperx[/cyan]              # Best word timestamps")
+        console.print("  [dim]WhisperX is unavailable in OpenCut's supported dependency matrix.[/dim]")
         sys.exit(1)
 
     console.print(f"[dim]Using Whisper backend: {backend}[/dim]")
@@ -1072,7 +1072,7 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
         from .core.auto_zoom import generate_zoom_keyframes
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
-        console.print("Ensure opencv-python is installed: pip install opencv-python-headless")
+        console.print("Ensure opencv-python is installed: pip install opencv-python")
         sys.exit(1)
 
     base = _resolve_output_dir(file, output_dir)
