@@ -329,6 +329,38 @@ os._exit(73)
             jm.MAX_JOURNAL_PAYLOAD_JSON_BYTES = original_bytes
         self.assertFalse(spill_path.exists())
 
+    def test_prune_respects_in_flight_spill_writes(self):
+        """The orphan pruner blocks behind _SPILL_IO_LOCK, so it can never
+        delete a spill written by a writer that has not committed its row yet
+        (spills are written by _encode_payload BEFORE the row commit).
+        """
+        from opencut import journal as jm
+
+        jm.init_db()
+        spill_root = Path(os.path.dirname(jm._DB_PATH)) / "payload_spills" / "journal"
+        spill_root.mkdir(parents=True, exist_ok=True)
+        in_flight = spill_root / "inverse_json.deadbeef.json"
+        in_flight.write_text("{}", encoding="utf-8")
+
+        results = {}
+
+        def _prune():
+            results["removed"] = jm._prune_orphan_payload_spills(jm._get_conn())
+
+        # Simulate a concurrent begin_checkpoint/record holding the lock
+        # between writing its spill file and committing the row.
+        with jm._SPILL_IO_LOCK:
+            worker = threading.Thread(target=_prune, daemon=True)
+            worker.start()
+            worker.join(timeout=0.3)
+            self.assertTrue(worker.is_alive(), "pruner must wait for in-flight writes")
+            self.assertTrue(in_flight.exists(), "in-flight spill must survive")
+        worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        # Once the writer window closes, a genuinely unreferenced spill is pruned.
+        self.assertEqual(results["removed"], 1)
+        self.assertFalse(in_flight.exists())
+
     def test_clear_preserves_incomplete_recovery_evidence(self):
         from opencut import journal as jm
 
@@ -521,6 +553,35 @@ class TestJournalRoutes(unittest.TestCase):
         self.assertEqual(completed.status_code, 200)
         self.assertEqual(completed.get_json()["status"], "completed")
         self.assertEqual(self.client.get("/journal/recovery").get_json()["count"], 0)
+
+    def test_duplicate_transaction_id_returns_conflict(self):
+        body = {
+            "action": "add_markers",
+            "transaction_id": "txn-duplicate-1",
+            "inverse": {"markers": []},
+        }
+        first = self.client.post(
+            "/journal/checkpoints", data=json.dumps(body), headers=self._h()
+        )
+        self.assertEqual(first.status_code, 201)
+        duplicate = self.client.post(
+            "/journal/checkpoints", data=json.dumps(body), headers=self._h()
+        )
+        self.assertEqual(duplicate.status_code, 409)
+        payload = duplicate.get_json()
+        self.assertEqual(payload["code"], "INVALID_INPUT")
+        self.assertIn("transaction_id", payload["error"])
+        self.assertIn("suggestion", payload)
+
+    def test_transaction_id_rejects_markup_characters(self):
+        for bad in ('tx"quote', "tx<angle>", "tx id", "tx'sq"):
+            r = self.client.post(
+                "/journal/checkpoints",
+                data=json.dumps({"action": "add_markers", "transaction_id": bad}),
+                headers=self._h(),
+            )
+            self.assertEqual(r.status_code, 400, bad)
+            self.assertIn("transaction_id", r.get_json()["error"])
 
     def test_cleanup_routes_preserve_incomplete_checkpoint(self):
         created = self.client.post(

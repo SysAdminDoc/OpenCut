@@ -10,10 +10,11 @@ crash-recovery record rather than an optimistic after-the-fact audit event.
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import logging
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -32,6 +33,10 @@ SCHEMA_VERSION = 3
 MAX_JOURNAL_PAYLOAD_JSON_BYTES = 128 * 1024
 MAX_JOURNAL_ENTRIES = 1000
 
+# Client-supplied transaction IDs are rendered into a UXP panel HTML
+# attribute, so the charset is locked down alongside the length bound.
+_TRANSACTION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
 CHECKPOINT_PENDING = "pending"
 CHECKPOINT_COMPLETED = "completed"
 CHECKPOINT_RECOVERY_FAILED = "recovery_failed"
@@ -45,6 +50,14 @@ INCOMPLETE_CHECKPOINT_STATUSES = frozenset({
 # close every WAL-mode connection on shutdown.
 _ALL_CONNECTIONS: "dict[int, sqlite3.Connection]" = {}
 _CONN_LOCK = threading.Lock()
+
+# Serializes payload-spill writes against the orphan-spill pruner. A spill
+# file is written by _encode_payload BEFORE the row that references it is
+# committed, so a concurrent prune scan could otherwise delete an in-flight
+# spill it cannot yet see in the journal table. Writers acquire this lock
+# BEFORE opening their SQLite transaction (never inside one) and hold it
+# through commit; the pruner holds it for the whole scan.
+_SPILL_IO_LOCK = threading.Lock()
 
 # Actions the panel can record + later invert. Adding a new type requires
 # (a) a matching ExtendScript inverse function and (b) the frontend revert
@@ -332,6 +345,12 @@ def _prune_history(conn: sqlite3.Connection) -> None:
 
 def _prune_orphan_payload_spills(conn: sqlite3.Connection) -> int:
     """Delete content-addressed journal payloads no row references anymore."""
+    with _SPILL_IO_LOCK:
+        return _prune_orphan_payload_spills_locked(conn)
+
+
+def _prune_orphan_payload_spills_locked(conn: sqlite3.Connection) -> int:
+    """Prune scan body; caller must hold ``_SPILL_IO_LOCK``."""
     spill_root = os.path.realpath(os.path.join(
         os.path.dirname(_DB_PATH), "payload_spills", "journal"
     ))
@@ -391,46 +410,50 @@ def begin_checkpoint(
     if action not in VALID_ACTIONS:
         raise ValueError(f"Unknown journal action: {action}")
     txid = (transaction_id or str(uuid.uuid4())).strip()
-    if not txid or len(txid) > 128:
-        raise ValueError("transaction_id must be 1-128 characters")
+    if not _TRANSACTION_ID_RE.fullmatch(txid):
+        raise ValueError(
+            "transaction_id must be 1-128 characters of letters, digits, "
+            "hyphens, or underscores"
+        )
     init_db()
     conn = _get_conn()
     now = time.time()
-    inverse_json = _encode_payload(inverse_payload or {}, field_name="inverse_json")
-    forward_json = _encode_payload(
-        forward_payload, field_name="forward_json", allow_none=True
-    )
-    preview_json = _encode_payload(
-        preview_payload or {}, field_name="preview_json"
-    )
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        cur = conn.execute(
-            """INSERT INTO journal (
-                   created_at, action, clip_path, label, inverse_json,
-                   forward_json, transaction_id, status, started_at,
-                   preview_json, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                now,
-                action,
-                clip_path or "",
-                label or "",
-                inverse_json,
-                forward_json,
-                txid,
-                CHECKPOINT_PENDING,
-                now,
-                preview_json,
-                now,
-            ),
+    with _SPILL_IO_LOCK:
+        inverse_json = _encode_payload(inverse_payload or {}, field_name="inverse_json")
+        forward_json = _encode_payload(
+            forward_payload, field_name="forward_json", allow_none=True
         )
-        _prune_history(conn)
-        conn.commit()
-        _prune_orphan_payload_spills(conn)
-    except Exception:
-        conn.rollback()
-        raise
+        preview_json = _encode_payload(
+            preview_payload or {}, field_name="preview_json"
+        )
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            cur = conn.execute(
+                """INSERT INTO journal (
+                       created_at, action, clip_path, label, inverse_json,
+                       forward_json, transaction_id, status, started_at,
+                       preview_json, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    now,
+                    action,
+                    clip_path or "",
+                    label or "",
+                    inverse_json,
+                    forward_json,
+                    txid,
+                    CHECKPOINT_PENDING,
+                    now,
+                    preview_json,
+                    now,
+                ),
+            )
+            _prune_history(conn)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    _prune_orphan_payload_spills(conn)
     return _row_to_dict(conn.execute(
         "SELECT * FROM journal WHERE id = ?", (cur.lastrowid,)
     ).fetchone())
@@ -446,46 +469,47 @@ def complete_checkpoint(
     init_db()
     conn = _get_conn()
     now = time.time()
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        row = conn.execute(
-            "SELECT * FROM journal WHERE transaction_id = ?", (transaction_id,)
-        ).fetchone()
-        if row is None:
-            conn.rollback()
-            return None
-        if row["status"] == CHECKPOINT_COMPLETED:
-            conn.commit()
-            return _row_to_dict(row)
-        if row["status"] not in INCOMPLETE_CHECKPOINT_STATUSES:
-            conn.rollback()
-            raise ValueError(f"Checkpoint cannot complete from status {row['status']}")
-        inverse_json = row["inverse_json"]
-        if inverse_payload is not None:
-            inverse_json = _encode_payload(inverse_payload, field_name="inverse_json")
-        diagnostics_json = row["diagnostics_json"]
-        if diagnostics_payload is not None:
-            diagnostics_json = _encode_payload(
-                diagnostics_payload, field_name="diagnostics_json"
+    with _SPILL_IO_LOCK:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM journal WHERE transaction_id = ?", (transaction_id,)
+            ).fetchone()
+            if row is None:
+                conn.rollback()
+                return None
+            if row["status"] == CHECKPOINT_COMPLETED:
+                conn.commit()
+                return _row_to_dict(row)
+            if row["status"] not in INCOMPLETE_CHECKPOINT_STATUSES:
+                conn.rollback()
+                raise ValueError(f"Checkpoint cannot complete from status {row['status']}")
+            inverse_json = row["inverse_json"]
+            if inverse_payload is not None:
+                inverse_json = _encode_payload(inverse_payload, field_name="inverse_json")
+            diagnostics_json = row["diagnostics_json"]
+            if diagnostics_payload is not None:
+                diagnostics_json = _encode_payload(
+                    diagnostics_payload, field_name="diagnostics_json"
+                )
+            conn.execute(
+                """UPDATE journal
+                   SET inverse_json = ?, diagnostics_json = ?, status = ?,
+                       completed_at = ?, updated_at = ?, recovery_error = ''
+                   WHERE transaction_id = ?""",
+                (
+                    inverse_json,
+                    diagnostics_json,
+                    CHECKPOINT_COMPLETED,
+                    now,
+                    now,
+                    transaction_id,
+                ),
             )
-        conn.execute(
-            """UPDATE journal
-               SET inverse_json = ?, diagnostics_json = ?, status = ?,
-                   completed_at = ?, updated_at = ?, recovery_error = ''
-               WHERE transaction_id = ?""",
-            (
-                inverse_json,
-                diagnostics_json,
-                CHECKPOINT_COMPLETED,
-                now,
-                now,
-                transaction_id,
-            ),
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
     return get_checkpoint(transaction_id)
 
 
@@ -506,36 +530,37 @@ def record(action: str, label: str, inverse_payload: dict,
     init_db()
     conn = _get_conn()
     now = time.time()
-    inverse_json = _encode_payload(inverse_payload or {}, field_name="inverse_json")
-    forward_json = _encode_payload(
-        forward_payload, field_name="forward_json", allow_none=True
-    )
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        cur = conn.execute(
-            """INSERT INTO journal (
-                   created_at, action, clip_path, label, inverse_json,
-                   forward_json, status, started_at, completed_at, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                now,
-                action,
-                clip_path or "",
-                label or "",
-                inverse_json,
-                forward_json,
-                CHECKPOINT_COMPLETED,
-                now,
-                now,
-                now,
-            ),
+    with _SPILL_IO_LOCK:
+        inverse_json = _encode_payload(inverse_payload or {}, field_name="inverse_json")
+        forward_json = _encode_payload(
+            forward_payload, field_name="forward_json", allow_none=True
         )
-        _prune_history(conn)
-        conn.commit()
-        _prune_orphan_payload_spills(conn)
-    except Exception:
-        conn.rollback()
-        raise
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            cur = conn.execute(
+                """INSERT INTO journal (
+                       created_at, action, clip_path, label, inverse_json,
+                       forward_json, status, started_at, completed_at, updated_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    now,
+                    action,
+                    clip_path or "",
+                    label or "",
+                    inverse_json,
+                    forward_json,
+                    CHECKPOINT_COMPLETED,
+                    now,
+                    now,
+                    now,
+                ),
+            )
+            _prune_history(conn)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    _prune_orphan_payload_spills(conn)
     entry_id = cur.lastrowid
     return _row_to_dict(conn.execute(
         "SELECT * FROM journal WHERE id = ?", (entry_id,)
@@ -607,29 +632,30 @@ def mark_recovery_failed(
     ).fetchone()
     if row is None:
         return None
-    diagnostics_json = row["diagnostics_json"]
-    if diagnostics_payload is not None:
-        diagnostics_json = _encode_payload(
-            diagnostics_payload, field_name="diagnostics_json"
+    with _SPILL_IO_LOCK:
+        diagnostics_json = row["diagnostics_json"]
+        if diagnostics_payload is not None:
+            diagnostics_json = _encode_payload(
+                diagnostics_payload, field_name="diagnostics_json"
+            )
+        now = time.time()
+        conn.execute(
+            """UPDATE journal
+               SET status = ?, recovery_error = ?, recovery_attempted_at = ?,
+                   diagnostics_json = ?, updated_at = ?
+               WHERE transaction_id = ? AND status IN (?, ?)""",
+            (
+                CHECKPOINT_RECOVERY_FAILED,
+                str(error or "Recovery failed")[:4000],
+                now,
+                diagnostics_json,
+                now,
+                transaction_id,
+                CHECKPOINT_PENDING,
+                CHECKPOINT_RECOVERY_FAILED,
+            ),
         )
-    now = time.time()
-    conn.execute(
-        """UPDATE journal
-           SET status = ?, recovery_error = ?, recovery_attempted_at = ?,
-               diagnostics_json = ?, updated_at = ?
-           WHERE transaction_id = ? AND status IN (?, ?)""",
-        (
-            CHECKPOINT_RECOVERY_FAILED,
-            str(error or "Recovery failed")[:4000],
-            now,
-            diagnostics_json,
-            now,
-            transaction_id,
-            CHECKPOINT_PENDING,
-            CHECKPOINT_RECOVERY_FAILED,
-        ),
-    )
-    conn.commit()
+        conn.commit()
     return get_checkpoint(transaction_id)
 
 

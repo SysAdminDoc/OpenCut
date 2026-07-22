@@ -8,10 +8,12 @@ The backend's job is just durable storage and the revert-state flag.
 from __future__ import annotations
 
 import logging
+import sqlite3
 
 from flask import Blueprint, jsonify, request
 
 from opencut import journal
+from opencut.errors import error_response
 from opencut.security import get_json_dict, require_csrf, safe_bool, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
@@ -112,6 +114,14 @@ def journal_checkpoint_begin():
         return jsonify(entry), 201
     except ValueError as e:
         return jsonify({"error": str(e), "valid": sorted(journal.VALID_ACTIONS)}), 400
+    except sqlite3.IntegrityError:
+        return error_response(
+            "INVALID_INPUT",
+            "A checkpoint with this transaction_id already exists.",
+            status=409,
+            suggestion="Use a unique transaction_id for each checkpoint, or "
+                       "omit it to have one generated.",
+        )
     except Exception as e:
         logger.exception("journal_checkpoint_begin failed")
         return jsonify({"error": f"Could not create checkpoint: {e}"}), 500
