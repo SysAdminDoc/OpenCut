@@ -1133,9 +1133,9 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual([
     "Workspace",
+    "Timeline Recovery",
     "Engine Routing",
     "Live Updates",
-    "Diagnostics",
   ]);
   await expect(page.locator("#workspaceChooseClipBtn")).toBeEnabled();
   await expect(page.locator("#settingsWorkspaceBackendValue")).toHaveText("Offline");
