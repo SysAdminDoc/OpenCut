@@ -209,11 +209,11 @@ def test_optional_dependency_security_floor_pins():
     for extra in ("standard", "video", "all"):
         deps = _dep_names(extras[extra])
         assert deps["opencv-python-headless"] == "opencv-python-headless>=4.13,<5"
-        assert deps["pillow"] == "Pillow>=12.2,<13"
+        assert deps["pillow"] == "Pillow>=12.3.0,<13"
 
     for extra in ("captions", "all"):
         deps = _dep_names(extras[extra])
-        assert deps["pillow"] == "Pillow>=12.2,<13"
+        assert deps["pillow"] == "Pillow>=12.3.0,<13"
 
     deps = _dep_names(extras["captions-whisperx"])
     assert deps["whisperx"] == "whisperx>=3.8.5,<4"
@@ -265,13 +265,44 @@ def test_requirements_txt_matches_security_floor():
     required = [
         "flask-cors>=6.0,<7",
         "opencv-python-headless>=4.13,<5",
-        "Pillow>=12.2,<13",
+        "Pillow>=12.3.0,<13",
         "# onnxruntime-gpu>=1.25",
         "# whisperx>=3.8.5",
     ]
     for needle in required:
         assert needle in text
     assert "pydub>=0.25" not in text
+
+
+def test_pillow_security_floor_covers_bootstrap_and_runtime_installers():
+    """All Pillow install paths must reject the vulnerable <=12.2 range."""
+    from opencut.security import PILLOW_RUNTIME_REQUIREMENT, runtime_security_requirement
+
+    expected = "Pillow>=12.3.0,<13"
+    assert PILLOW_RUNTIME_REQUIREMENT == expected
+    assert runtime_security_requirement("Pillow") == expected
+    assert runtime_security_requirement("Pillow>=10.0") == expected
+    assert runtime_security_requirement("Pillow==12.2.0") == expected
+    assert runtime_security_requirement("numpy>=1.24") == "numpy>=1.24"
+
+    install_source = (REPO_ROOT / "install.py").read_text(encoding="utf-8")
+    assert expected in install_source
+    assert "Pillow>=10.0" not in install_source
+
+    dashboard_source = (REPO_ROOT / "opencut" / "routes" / "system.py").read_text(encoding="utf-8")
+    assert f'pip install "{expected}"' in dashboard_source
+
+    unsafe_runtime_installs = []
+    unsafe_copy_commands = []
+    for path in (REPO_ROOT / "opencut").rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        if re.search(r"safe_pip_install\(\s*[\"']Pillow[\"']", source):
+            unsafe_runtime_installs.append(str(path.relative_to(REPO_ROOT)))
+        if re.search(r"pip install(?: [^\r\n\"']+)* Pillow(?:[\"'\s]|$)", source):
+            unsafe_copy_commands.append(str(path.relative_to(REPO_ROOT)))
+
+    assert unsafe_runtime_installs == []
+    assert unsafe_copy_commands == []
 
 
 def test_requirements_txt_matches_core_and_standard_pyproject_deps():

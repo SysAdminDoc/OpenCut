@@ -353,13 +353,18 @@ def _find_system_python() -> Optional[str]:
     return None
 
 
+PILLOW_RUNTIME_REQUIREMENT = "Pillow>=12.3.0,<13"
+
 _SAFE_PACKAGE_RE = re.compile(
-    r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?"
-    r"(\[[A-Za-z0-9_,\s-]+\])?"                   # extras: [all], [dev,test]
-    r"(==|>=|<=|~=|!=)[A-Za-z0-9.*+!_-]+$|"       # version: ==1.0, >=2.0.1
-    r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?"
-    r"(\[[A-Za-z0-9_,\s-]+\])?$"                   # no version spec
+    r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"
+    r"(?:\[[A-Za-z0-9_,-]+\])?"  # extras: [all], [dev,test]
+    r"(?:(?:==|>=|<=|~=|!=|>|<)[A-Za-z0-9.*+!_-]+"
+    r"(?:,(?:==|>=|<=|~=|!=|>|<)[A-Za-z0-9.*+!_-]+)*)?$"
 )
+
+_RUNTIME_SECURITY_REQUIREMENTS = {
+    "pillow": PILLOW_RUNTIME_REQUIREMENT,
+}
 
 
 def validate_safe_pip_package(package: str) -> str:
@@ -377,6 +382,19 @@ def validate_safe_pip_package(package: str) -> str:
     if not _SAFE_PACKAGE_RE.fullmatch(normalized):
         raise ValueError(f"Invalid package name: {package!r}")
     return normalized
+
+
+def runtime_security_requirement(package: str) -> str:
+    """Return the advisory-safe runtime requirement for *package*.
+
+    Optional feature bootstraps historically requested bare ``Pillow`` and
+    therefore could install a vulnerable release from an old package index.
+    Centralising security constraints here keeps every ``ensure_package`` and
+    direct ``safe_pip_install`` path on the same bounded range.
+    """
+    normalized = validate_safe_pip_package(package)
+    name = re.split(r"[\[>=<!~]", normalized, maxsplit=1)[0].lower()
+    return _RUNTIME_SECURITY_REQUIREMENTS.get(name, normalized)
 
 
 def _verify_package_importable(python: str, package: str, target_dir: str = None) -> bool:
@@ -418,7 +436,7 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     Returns the ``CompletedProcess`` on success.
     Raises ``RuntimeError`` if all strategies fail.
     """
-    package = validate_safe_pip_package(package)
+    package = runtime_security_requirement(package)
 
     # Frozen builds can't use sys.executable for pip — find system Python
     if getattr(sys, "frozen", False):

@@ -220,7 +220,9 @@ def _load_clip(on_progress: Optional[Callable] = None):
     if not ensure_package("torch", "torch", on_progress):
         raise RuntimeError("PyTorch required for CLIP. Install: pip install torch")
     if not ensure_package("PIL", "Pillow", on_progress):
-        raise RuntimeError("Pillow required. Install: pip install Pillow")
+        raise RuntimeError(
+            'Pillow required. Install: pip install "Pillow>=12.3.0,<13"'
+        )
 
     import torch
     from PIL import Image  # noqa: F401

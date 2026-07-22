@@ -185,7 +185,10 @@ def generate_contact_sheet(
     try:
         from PIL import Image, ImageDraw, ImageFont  # noqa: F401
     except ImportError:
-        raise ImportError("Pillow is required for contact sheet generation. Install with: pip install Pillow")
+        raise ImportError(
+            'Pillow is required for contact sheet generation. '
+            'Install with: pip install "Pillow>=12.3.0,<13"'
+        )
 
     if not thumbnails:
         raise ValueError("No thumbnails provided for contact sheet")

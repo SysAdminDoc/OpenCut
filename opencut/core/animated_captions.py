@@ -101,7 +101,9 @@ def render_animated_captions(
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     if not ensure_package("PIL", "Pillow", on_progress):
-        raise RuntimeError("Failed to install Pillow. Install manually: pip install Pillow")
+        raise RuntimeError(
+            'Failed to install Pillow. Install manually: pip install "Pillow>=12.3.0,<13"'
+        )
     import cv2
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont

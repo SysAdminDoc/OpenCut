@@ -67,7 +67,7 @@ dependencies = [
 standard = [
     "faster-whisper>=1.1,<2",
     "opencv-python-headless>=4.13,<5",
-    "Pillow>=12.2,<13",
+    "Pillow>=12.3.0,<13",
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (vestigial; not imported by the OpenCut tree;
@@ -85,7 +85,7 @@ standard = [
 ]
 captions = [
     "faster-whisper>=1.1,<2",
-    "Pillow>=12.2,<13",
+    "Pillow>=12.3.0,<13",
 ]
 captions-whisperx = [
     "whisperx>=3.8.5,<4",
@@ -100,7 +100,7 @@ audio = [
 ]
 video = [
     "opencv-python-headless>=4.13,<5",
-    "Pillow>=12.2,<13",
+    "Pillow>=12.3.0,<13",
     "numpy>=1.24",
     "scenedetect[opencv]>=0.6,<1",
 ]
@@ -191,7 +191,7 @@ all = [
     # RA-15 - [all] is the release-audited convenience lane. Torch-backed
     # features remain explicit extras so pip-audit can fail closed here.
     "opencv-python-headless>=4.13,<5",
-    "Pillow>=12.2,<13",
+    "Pillow>=12.3.0,<13",
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (see [standard] extra).

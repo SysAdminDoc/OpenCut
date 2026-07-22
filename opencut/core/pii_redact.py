@@ -80,7 +80,10 @@ def _ocr_frame(frame_path: str) -> List[dict]:
         import pytesseract
         from PIL import Image
     except ImportError:
-        logger.info("pytesseract/Pillow not available; install with: pip install pytesseract Pillow")
+        logger.info(
+            'pytesseract/Pillow not available; install with: '
+            'pip install pytesseract "Pillow>=12.3.0,<13"'
+        )
         return []
 
     try:
