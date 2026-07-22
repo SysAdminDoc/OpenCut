@@ -8,18 +8,19 @@ and more. Exports Premiere Pro / DaVinci Resolve / FCP XML.
 import sys
 
 MIN_PYTHON = (3, 11)
+MAX_PYTHON = (3, 14)
 
 
 def _require_supported_python(version_info=None):
     """Reject unsupported source launches before importing feature modules."""
     version_info = sys.version_info if version_info is None else version_info
     detected = tuple(version_info[:3])
-    if detected[:2] >= MIN_PYTHON:
+    if MIN_PYTHON <= detected[:2] <= MAX_PYTHON:
         return
     detected_text = ".".join(str(part) for part in detected)
-    required_text = ".".join(str(part) for part in MIN_PYTHON)
+    required_text = f"{MIN_PYTHON[0]}.{MIN_PYTHON[1]}-{MAX_PYTHON[0]}.{MAX_PYTHON[1]}"
     raise RuntimeError(
-        f"OpenCut requires Python {required_text} or newer; detected Python "
+        f"OpenCut requires Python {required_text}; detected Python "
         f"{detected_text}. Install a supported Python from "
         "https://www.python.org/downloads/ and retry."
     )

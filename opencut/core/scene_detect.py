@@ -507,7 +507,7 @@ def detect_scenes_pyscenedetect(
         from scenedetect import SceneManager, open_video
         from scenedetect.detectors import ContentDetector
     except ImportError:
-        raise RuntimeError("PySceneDetect not installed. Run: pip install scenedetect[opencv]")
+        raise RuntimeError('PySceneDetect not installed. Run: pip install "opencut-ppro[video]"')
 
     if on_progress:
         on_progress(10, "Opening video with PySceneDetect...")

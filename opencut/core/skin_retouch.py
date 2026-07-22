@@ -16,7 +16,7 @@ Pipeline:
 Optional GFPGAN mode: uses `gfpgan` package for deep face restoration
 on top of the bilateral pass.  Gated by check_gfpgan_available().
 
-Requirements: mediapipe (or cv2 only for haar fallback), opencv-python-headless, numpy.
+Requirements: mediapipe (or cv2 only for haar fallback), opencv-python, numpy.
 Optional:     gfpgan, torch.
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info, run_ff
 
 logger = logging.getLogger("opencut")
 
-INSTALL_HINT = "pip install mediapipe opencv-python-headless numpy"
+INSTALL_HINT = "pip install mediapipe opencv-python numpy"
 GFPGAN_HINT = "pip install gfpgan torch  # for deep face restoration mode"
 
 # HSV skin colour range (broad to cover various skin tones)

@@ -129,8 +129,8 @@ def extract_pose_sequence(
 
     if not ensure_package("mediapipe", "mediapipe", on_progress):
         raise RuntimeError("mediapipe is required but could not be installed")
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required but could not be installed")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required but could not be installed")
 
     import cv2
     import mediapipe as mp
@@ -225,8 +225,8 @@ def _render_stick_figure_frames(
 
     Returns the number of frames written.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("opencv-python-headless is required for stick figure rendering")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("opencv-python is required for stick figure rendering")
 
     import cv2
 

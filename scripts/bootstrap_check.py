@@ -30,6 +30,8 @@ from typing import Dict, Iterable, List, Optional, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MIN_PYTHON = (3, 11)
+MAX_PYTHON = (3, 14)
+SUPPORTED_PYTHON = "Python 3.11-3.14"
 
 
 def _resolve_python_for_subprocess() -> str:
@@ -135,13 +137,13 @@ def _path_is_relative_to(child: Path, parent: Path) -> bool:
 def check_python_version() -> CheckResult:
     current = sys.version_info[:3]
     current_text = ".".join(str(part) for part in current)
-    required_text = ".".join(str(part) for part in MIN_PYTHON)
-    if current >= MIN_PYTHON:
-        return _pass("python-version", f"Python {current_text} satisfies >= {required_text}")
+    required_text = SUPPORTED_PYTHON.removeprefix("Python ")
+    if MIN_PYTHON <= current[:2] <= MAX_PYTHON:
+        return _pass("python-version", f"Python {current_text} satisfies {required_text}")
     return _fail(
         "python-version",
-        f"Python {current_text} is below required >= {required_text}",
-        "Install Python 3.11 or newer before running OpenCut.",
+        f"Python {current_text} is outside supported range {required_text}",
+        f"Install {SUPPORTED_PYTHON} before running OpenCut.",
     )
 
 

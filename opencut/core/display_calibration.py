@@ -9,7 +9,7 @@ Generate test patterns for display calibration verification:
 - Guided verification walkthrough
 
 All patterns are generated as still images via FFmpeg or numpy+OpenCV,
-avoiding any external dependencies beyond opencv-python-headless.
+avoiding any external dependencies beyond opencv-python.
 """
 
 import logging
@@ -84,8 +84,8 @@ def generate_smpte_bars(
     Returns:
         TestPatternResult with output path and pattern metadata.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
     import cv2
     import numpy as np
 
@@ -181,8 +181,8 @@ def generate_grayscale_ramp(
     Returns:
         TestPatternResult.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
     import cv2
     import numpy as np
 
@@ -284,8 +284,8 @@ def generate_gamut_test(
     Returns:
         TestPatternResult.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
     import cv2
     import numpy as np
 

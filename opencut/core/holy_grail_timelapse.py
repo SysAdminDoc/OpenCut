@@ -7,7 +7,7 @@ Day-to-night (or night-to-day) timelapse exposure ramping:
 - White balance shift correction
 - Combined deflicker for smooth transitions
 
-Requires: pip install opencv-python-headless numpy
+Requires: pip install opencv-python numpy
 """
 
 import logging
@@ -58,8 +58,8 @@ def analyze_exposure_ramp(
         Dict with brightness_values, exposure_steps, ramp_direction,
         wb_shifts, recommended_adjustments.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2
@@ -175,8 +175,8 @@ def apply_exposure_compensation(
     Returns:
         Path to compensated image.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2
@@ -240,8 +240,8 @@ def process_holy_grail(
         Dict with output_path, frame_count, ramp_direction,
         exposure_range.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

@@ -7,7 +7,7 @@ significant moments — ideal for highlight extraction.
 
 Uses deepface for lightweight facial emotion recognition.
 
-Requires: pip install deepface opencv-python-headless
+Requires: pip install deepface opencv-python
 """
 
 import logging
@@ -73,7 +73,7 @@ def analyze_video_emotions(
     try:
         import cv2  # noqa: F401
     except ImportError:
-        raise ImportError("OpenCV required. Install: pip install opencv-python-headless")
+        raise ImportError("OpenCV required. Install: pip install opencv-python")
 
     try:
         from deepface import DeepFace

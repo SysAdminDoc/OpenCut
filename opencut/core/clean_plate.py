@@ -6,7 +6,7 @@ Generate a static clean background frame from video:
 - Gap detection and inpainting for remaining artifacts
 - Useful for background subtraction, VFX paint-outs, plate work
 
-Requires: pip install opencv-python-headless numpy
+Requires: pip install opencv-python numpy
 """
 
 import logging
@@ -81,8 +81,8 @@ def inpaint_gaps(
     Returns:
         Inpainted image as BGR uint8 numpy array.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     import cv2
 
     if image is None or image.size == 0:
@@ -136,8 +136,8 @@ def generate_clean_plate(
     Returns:
         Dict with output_path, width, height, num_samples.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

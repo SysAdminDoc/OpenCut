@@ -7,7 +7,7 @@ Change lighting direction and intensity using depth-estimated normal maps:
 - Per-frame relighting with configurable position, intensity, color
 - Ambient + diffuse + specular lighting model
 
-Requires: pip install opencv-python-headless numpy
+Requires: pip install opencv-python numpy
 Optional: pip install torch transformers (for depth estimation)
 """
 
@@ -51,8 +51,8 @@ def estimate_normals(depth_map) -> object:
     Returns:
         3D numpy array (H, W, 3) of unit normal vectors (x, y, z).
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2
@@ -174,8 +174,8 @@ def relight_video(
     Returns:
         Path to relit output video.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

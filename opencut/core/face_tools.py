@@ -134,8 +134,8 @@ def blur_faces(
         strength: Blur kernel size (odd number, higher = more blur). For pixelate, block size.
         detector: "insightface" (highest accuracy), "mediapipe" (fast), or "haar" (fallback).
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     import cv2
 
     if output_path is None:
@@ -284,8 +284,8 @@ def detect_faces_in_frame(
     Detect faces in an image or first frame of video.
     Returns face count and bounding box coordinates.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     import cv2
 
     ext = os.path.splitext(input_path)[1].lower()

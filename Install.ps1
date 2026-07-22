@@ -9,7 +9,7 @@
     What this installer does:
     1. Cleans up old OpenCut installations (kills processes, removes packages)
     2. Checks/installs FFmpeg (via winget)
-    3. Checks Python 3.11+ is available
+    3. Checks Python 3.11-3.14 is available
     4. Installs Python dependencies (click, rich, flask, flask-cors)
     5. Optionally installs Whisper for caption generation
     6. Copies the CEP extension to Adobe's extensions folder
@@ -374,15 +374,12 @@ foreach ($cmd in @("python", "python3", "py")) {
             if ($ver -match "(\d+)\.(\d+)") {
                 $major = [int]$Matches[1]
                 $minor = [int]$Matches[2]
-                # Accept any Python whose version is >= 3.11 (so a hypothetical
-                # 4.x or 3.20 still passes). A minor-only comparison would
-                # reject Python 4.0 because 0 < 11.
-                if (($major -gt 3) -or ($major -eq 3 -and $minor -ge 11)) {
+                if ($major -eq 3 -and $minor -ge 11 -and $minor -le 14) {
                     $pythonCmd = $cmd
-                    Write-Ok "Detected $ver (using '$cmd'); required Python 3.11+"
+                    Write-Ok "Detected $ver (using '$cmd'); supported Python 3.11-3.14"
                     break
                 } else {
-                    Write-Warn "Detected $ver from '$cmd'; required Python 3.11+"
+                    Write-Warn "Detected $ver from '$cmd'; supported Python 3.11-3.14"
                 }
             }
         } catch {
@@ -392,7 +389,7 @@ foreach ($cmd in @("python", "python3", "py")) {
 }
 
 if (-not $pythonCmd) {
-    Write-Err "No supported interpreter found; OpenCut requires Python 3.11+."
+    Write-Err "No supported interpreter found; OpenCut requires Python 3.11-3.14."
     Write-Err "Install from: https://www.python.org/downloads/"
     Write-Err "Or run: winget install Python.Python.3.12"
     Write-Err ""
@@ -430,14 +427,9 @@ if (Test-Path $releaseLock) {
         $script:ExitCode = 1
     }
 } else {
-    & $pythonCmd -m pip install click rich flask flask-cors --quiet 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Ok "Core packages installed (click, rich, flask, flask-cors)"
-    } else {
-        Write-Err "pip install of core packages failed (exit code $LASTEXITCODE)."
-        Write-Err "Check your network connection, then re-run: $pythonCmd -m pip install click rich flask flask-cors"
-        $script:ExitCode = 1
-    }
+    Write-Err "No dependency lock or requirements file was found."
+    Write-Err "Re-download the complete OpenCut release and retry."
+    $script:ExitCode = 1
 }
 
 # Install OpenCut package
@@ -465,11 +457,12 @@ if (-not $SkipWhisper) {
     Write-Info ""
 
     $whisperInstalled = $false
+    $fasterWhisperRequirement = "faster-whisper>=1.1,<2"
 
     # Strategy 1: Pre-built wheels only (fastest, avoids Rust requirement)
     Write-Info "  Trying pre-built wheels..."
     try {
-        $pipOutput = & $pythonCmd -m pip install faster-whisper --only-binary :all: --progress-bar on 2>&1
+        $pipOutput = & $pythonCmd -m pip install $fasterWhisperRequirement --only-binary :all: --progress-bar on 2>&1
         $pipExit = $LASTEXITCODE
         foreach ($line in ($pipOutput -split "`n")) {
             $trimmed = $line.Trim()
@@ -491,7 +484,7 @@ if (-not $SkipWhisper) {
         Write-Info "  Trying with prefer-binary flag..."
         try {
             & $pythonCmd -m pip install --upgrade pip setuptools wheel 2>&1 | Out-Null
-            $pipOutput = & $pythonCmd -m pip install faster-whisper --prefer-binary --progress-bar on 2>&1
+            $pipOutput = & $pythonCmd -m pip install $fasterWhisperRequirement --prefer-binary --progress-bar on 2>&1
             $pipExit = $LASTEXITCODE
             foreach ($line in ($pipOutput -split "`n")) {
                 $trimmed = $line.Trim()
@@ -509,32 +502,9 @@ if (-not $SkipWhisper) {
         } catch {}
     }
 
-    # Strategy 3: Fallback to openai-whisper (no tokenizers dependency)
-    if (-not $whisperInstalled) {
-        Write-Warn "faster-whisper failed (likely needs Rust for tokenizers)."
-        Write-Info "  Trying openai-whisper as fallback..."
-        try {
-            $pipOutput = & $pythonCmd -m pip install openai-whisper --progress-bar on 2>&1
-            $pipExit = $LASTEXITCODE
-            foreach ($line in ($pipOutput -split "`n")) {
-                $trimmed = $line.Trim()
-                if ($trimmed -match "^(Downloading|Installing|Successfully|ERROR|error|failed)") {
-                    Write-Info "  $trimmed"
-                }
-            }
-            if ($pipExit -eq 0) {
-                $verifyResult = & $pythonCmd -c "import whisper; print('ok')" 2>&1
-                if ($verifyResult -match "ok") {
-                    Write-Ok "openai-whisper installed as fallback (caption support enabled)"
-                    $whisperInstalled = $true
-                }
-            }
-        } catch {}
-    }
-
     if (-not $whisperInstalled) {
         Write-Warn "Could not install Whisper automatically."
-        Write-Warn "Common fix: Update Python to 3.11-3.13, or install Rust from https://rustup.rs/"
+        Write-Warn "Verify Python 3.11-3.14 and retry the supported captions extra."
         Write-Warn "You can retry from the OpenCut panel in Premiere Pro."
     }
 } else {

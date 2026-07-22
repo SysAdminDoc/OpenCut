@@ -112,7 +112,7 @@ def _extract_embeddings_insightface(
     """
     if not ensure_package("insightface", "insightface"):
         return {}
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         return {}
     if not ensure_package("numpy", "numpy"):
         return {}

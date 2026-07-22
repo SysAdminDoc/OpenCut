@@ -508,6 +508,14 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
         return True
     except ImportError:
         pip_name = pip_name or pkg
+        from opencut.dependency_support import dependency_support
+
+        support = dependency_support(pip_name)
+        if not support["supported"]:
+            logger.warning("Unsupported dependency request for %s: %s", pip_name, support["reason"])
+            if on_progress:
+                on_progress(0, support["reason"])
+            return False
         if on_progress:
             on_progress(5, f"Installing {pip_name}...")
         logger.info(f"Installing missing dependency: {pip_name}")
@@ -533,6 +541,11 @@ def require_package(pkg: str, pip_name: str = None, on_progress=None) -> None:
     """
     if not ensure_package(pkg, pip_name=pip_name, on_progress=on_progress):
         display = pip_name or pkg
+        from opencut.dependency_support import dependency_support
+
+        support = dependency_support(display)
+        if not support["supported"]:
+            raise RuntimeError(support["reason"])
         raise RuntimeError(
             f"{display} is required but could not be installed. "
             f"Install manually: pip install {display}"

@@ -5,7 +5,7 @@ Speech denoising and super-resolution:
 - ClearerVoice-Studio (recommended): MossFormer2/FRCRN, 16kHz/48kHz, denoise+enhance+separation
 - Resemble Enhance (legacy): ODE-based super-resolution
 
-Requires: pip install clearvoice (preferred) or pip install resemble-enhance (legacy)
+Requires: ClearVoice; the legacy Resemble Enhance lane is unsupported.
 """
 
 import logging
@@ -168,8 +168,7 @@ def enhance_speech(
         from resemble_enhance.enhancer.inference import enhance as _enhance_fn
     except ImportError as err:
         raise RuntimeError(
-            "resemble-enhance is required. Install with: "
-            "pip install resemble-enhance"
+            "Resemble Enhance is unavailable in OpenCut's supported dependency matrix."
         ) from err
 
     # If input is video, extract audio to temp WAV

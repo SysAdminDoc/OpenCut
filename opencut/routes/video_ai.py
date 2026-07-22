@@ -212,9 +212,9 @@ def video_ai_install(job_id, filepath, data):
     """Install AI video dependencies."""
     component = data.get("component", "upscale")
     packages = {
-        "upscale": ["realesrgan", "basicsr", "opencv-python-headless"],
-        "rembg": ["rembg[gpu]", "opencv-python-headless"],
-        "rembg_cpu": ["rembg", "opencv-python-headless"],
+        "upscale": ["realesrgan", "basicsr", "opencv-python"],
+        "rembg": ["rembg[gpu]", "opencv-python"],
+        "rembg_cpu": ["rembg", "opencv-python"],
     }
     pkgs = packages.get(component, [])
     if not pkgs:
@@ -297,7 +297,7 @@ def face_blur(job_id, filepath, data):
     return {"output_path": out}
 
 make_install_route(video_ai_bp, "/video/face/install", "mediapipe",
-                   ["mediapipe", "opencv-python-headless"],
+                   ["mediapipe", "opencv-python"],
                    doc="Install MediaPipe for face detection.")
 
 

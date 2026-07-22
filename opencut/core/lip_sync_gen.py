@@ -265,8 +265,8 @@ def apply_lip_sync(
     Returns:
         LipSyncResult with output path and statistics.
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
     if not ensure_package("mediapipe", "mediapipe", on_progress):
         raise RuntimeError("mediapipe is required for lip sync")
 

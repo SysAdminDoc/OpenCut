@@ -614,7 +614,7 @@ def reframe_multi_subject(
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"Video not found: {video_path}")
 
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+    if not ensure_package("cv2", "opencv-python", on_progress):
         raise RuntimeError("OpenCV required for reframing")
 
     import cv2

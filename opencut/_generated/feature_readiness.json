@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-17T15:25:34Z",
+  "generated_at": "2026-07-22T06:17:53Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 72,
   "total_routes": 98,
@@ -810,7 +810,7 @@
       "label": "Resemble Enhance",
       "category": "audio",
       "state": "available",
-      "install_hint": "pip install \"opencut[enhance]\" (Python 3.11; Torch 2.1 stack)",
+      "install_hint": "Unavailable in OpenCut's supported dependency matrix: Resemble Enhance 0.0.1 pins Torch 2.1.1 and deepspeed 0.12.4 and is not offered by OpenCut's supported dependency matrix.",
       "docs": "docs/MODELS.md",
       "routes": [
         "/audio/enhance"

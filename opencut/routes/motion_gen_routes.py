@@ -113,7 +113,7 @@ def replace_background_preview(job_id, filepath, data):
     _progress(10, "Extracting frame...")
 
     # Extract the target frame from the video
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError("OpenCV is required for frame preview")
 
     import cv2

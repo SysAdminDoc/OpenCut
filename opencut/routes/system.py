@@ -752,28 +752,26 @@ def check_dependencies():
     # The install_hint is surfaced to the panel so users know how to install
     # missing packages without leaving the UI.
     _DEP_INSTALL_HINTS = {
-        "faster-whisper": "pip install faster-whisper",
-        "whisperx": "pip install opencut-ppro[captions-whisperx]",
-        "demucs": "pip install opencut-ppro[audio]",
-        "pedalboard": "pip install pedalboard",
-        "deepfilternet": "pip install opencut-ppro[audio]",
-        "noisereduce": "pip install noisereduce",
-        "librosa": "pip install librosa",
+        "faster-whisper": 'pip install "opencut-ppro[captions]"',
+        "demucs": 'pip install "opencut-ppro[audio]"',
+        "pedalboard": 'pip install "opencut-ppro[audio]"',
+        "deepfilternet": 'pip install "opencut-ppro[audio]"',
+        "noisereduce": 'pip install "opencut-ppro[audio]"',
+        "librosa": 'pip install "opencut-ppro[audio]"',
         "pydub": "pip install pydub",
-        "opencv": "pip install opencv-python-headless",
+        "opencv": 'pip install "opencut-ppro[video]"',
         "Pillow": 'pip install "Pillow>=12.3.0,<13"',
-        "numpy": "pip install numpy",
-        "rembg": "pip install rembg",
-        "realesrgan": "pip install opencut-ppro[ai]",
-        "gfpgan": "pip install opencut-ppro[ai]",
-        "insightface": "pip install opencut-ppro[ai]",
-        "edge-tts": "pip install edge-tts",
-        "audiocraft": "pip install opencut-ppro[music]",
-        "scenedetect": "pip install scenedetect[opencv]",
-        "pyannote.audio": "pip install opencut-ppro[captions-whisperx]",
-        "mediapipe": "pip install mediapipe",
-        "torch": "pip install torch --index-url https://download.pytorch.org/whl/cu121",
-        "onnxruntime": "pip install onnxruntime",
+        "numpy": 'pip install "opencut-ppro[video]"',
+        "rembg": 'pip install "opencut-ppro[ai]"',
+        "realesrgan": 'pip install "opencut-ppro[ai]"',
+        "gfpgan": 'pip install "opencut-ppro[ai]"',
+        "insightface": 'pip install "opencut-ppro[ai]"',
+        "edge-tts": 'pip install "opencut-ppro[tts]"',
+        "scenedetect": 'pip install "opencut-ppro[video]"',
+        "pyannote.audio": 'pip install "opencut-ppro[diarize]"',
+        "mediapipe": 'pip install "opencut-ppro[reframe]"',
+        "torch": 'pip install "opencut-ppro[torch-stack]"',
+        "onnxruntime": 'pip install "opencut-ppro[ai]"',
     }
 
     deps = {}
@@ -801,16 +799,26 @@ def check_dependencies():
         "torch": "torch",
         "onnxruntime": "onnxruntime",
     }
+    from opencut.dependency_support import dependency_support
+
     for name, module in checks.items():
+        support = dependency_support(name)
         try:
             mod = importlib.import_module(module.split(".")[0])
             version = getattr(mod, "__version__", getattr(mod, "VERSION", "installed"))
-            deps[name] = {"installed": True, "version": str(version)}
+            deps[name] = {
+                "installed": True,
+                "version": str(version),
+                "supported": support["supported"],
+                "support_reason": support["reason"],
+            }
         except ImportError:
             deps[name] = {
                 "installed": False,
                 "version": None,
-                "install_hint": _DEP_INSTALL_HINTS.get(name, ""),
+                "supported": support["supported"],
+                "support_reason": support["reason"],
+                "install_hint": support["install_hint"] or _DEP_INSTALL_HINTS.get(name, ""),
             }
 
     # Check FFmpeg

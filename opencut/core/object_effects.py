@@ -137,7 +137,7 @@ def _generate_mask_sam2(
         f for f in os.listdir(mask_dir) if f.endswith(".png")
     )[:num_frames]
 
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError("OpenCV required for mask processing")
     import cv2
     import numpy as np
@@ -171,10 +171,10 @@ def _generate_mask_threshold(
     and creates a mask of pixels within a tolerance.  The same mask
     is duplicated for all requested frames (static object assumption).
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError(
             "OpenCV is required for mask generation. "
-            "Install with: pip install opencv-python-headless"
+            "Install with: pip install opencv-python"
         )
     import cv2
     import numpy as np
@@ -548,10 +548,10 @@ def apply_object_effect(
     Returns:
         ObjectEffectResult with output path, frame count, and effect name.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError(
             "OpenCV is required for object effects. "
-            "Install with: pip install opencv-python-headless"
+            "Install with: pip install opencv-python"
         )
     import cv2
 
@@ -669,7 +669,7 @@ def preview_effect_frame(
     Returns:
         Dict with preview_path (PNG) and dimensions.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError("OpenCV required for preview")
     import cv2
 

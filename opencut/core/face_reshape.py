@@ -17,7 +17,7 @@ Algorithm:
   3. Apply displacement via cv2.remap.
   4. Re-encode output video with audio copy.
 
-Requirements: mediapipe, opencv-python-headless, numpy, torch (optional).
+Requirements: mediapipe, opencv-python, numpy, torch (optional).
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info, run_ff
 
 logger = logging.getLogger("opencut")
 
-INSTALL_HINT = "pip install mediapipe opencv-python-headless numpy"
+INSTALL_HINT = "pip install mediapipe opencv-python numpy"
 
 OPERATIONS = ("slim_face", "enlarge_eyes", "shrink_nose", "raise_cheekbones", "smooth_jaw")
 

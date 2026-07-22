@@ -225,8 +225,8 @@ def extend_scene(
         actual_method = "optical_flow"
 
     # Optical flow path
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv-python-headless is required")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv-python is required")
 
     if on_progress:
         on_progress(15, "Using optical flow extrapolation...")

@@ -115,11 +115,11 @@
                     <StackPanel>
                         <TextBlock Text="Optional Tools" Foreground="{DynamicResource TextBrush}"
                                    FontSize="15" FontWeight="SemiBold" />
-                        <TextBlock Text="Optional Python helpers can be installed if Python is already available on this machine."
+                        <TextBlock Text="Optional helpers require a supported system Python 3.11-3.14. Package versions are constrained to OpenCut's tested matrix."
                                    Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
                         <CheckBox x:Name="OptionalDepsCheck" Content="Install optional Python tools"
-                                  AutomationProperties.HelpText="Installs selected optional Python helpers when Python is available."
+                                  AutomationProperties.HelpText="Installs selected optional Python helpers with supported version constraints when Python 3.11-3.14 is available."
                                   Margin="0,14,0,0"
                                   Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
                         <StackPanel x:Name="OptionalDepsPanel" Margin="20,8,0,0" Visibility="Collapsed">

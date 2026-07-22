@@ -527,8 +527,8 @@ def ai_detect_edges():
 
     frame_time = safe_float(data.get("frame_time"), 0.0, 0.0)
 
-    if not ensure_package("cv2", "opencv-python-headless"):
-        return jsonify({"error": "opencv-python-headless is required"}), 500
+    if not ensure_package("cv2", "opencv-python"):
+        return jsonify({"error": "opencv-python is required"}), 500
 
     import cv2
 

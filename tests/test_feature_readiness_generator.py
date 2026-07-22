@@ -48,6 +48,15 @@ def test_generator_carries_model_card_hardware_requirements():
     assert flashvsr["minimum_vram_mb"] == 12288
 
 
+def test_generator_suppresses_unsupported_dependency_commands():
+    payload = dump_feature_readiness.build_manifest()
+    records = {record["feature_id"]: record for record in payload["records"]}
+
+    hint = records["audio.resemble-enhance"]["install_hint"]
+    assert "Unavailable in OpenCut's supported dependency matrix" in hint
+    assert "pip install" not in hint
+
+
 def test_dependency_gated_routes_produce_non_available_features():
     payload = dump_feature_readiness.build_manifest()
     records = payload["records"]

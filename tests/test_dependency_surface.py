@@ -29,10 +29,15 @@ def _active_requirements_txt() -> set[str]:
     return requirements
 
 
+def _python_bounds(requires_python: str) -> tuple[tuple[int, int], tuple[int, int]]:
+    match = re.fullmatch(r">=(\d+)\.(\d+),<(\d+)\.(\d+)", requires_python)
+    assert match, f"unsupported requires-python range: {requires_python}"
+    min_major, min_minor, max_major, max_minor = (int(value) for value in match.groups())
+    return (min_major, min_minor), (max_major, max_minor)
+
+
 def _python_floor_target(requires_python: str) -> str:
-    match = re.fullmatch(r">=(\d+)\.(\d+)", requires_python)
-    assert match, f"unsupported requires-python floor: {requires_python}"
-    major, minor = match.groups()
+    (major, minor), _ = _python_bounds(requires_python)
     return f"py{major}{minor}"
 
 
@@ -70,16 +75,20 @@ def test_deep_translator_removed_from_install_surfaces():
 def test_python_floor_tracks_security_dependency_floor():
     """F121/F133/F135 require a Python 3.11+ install surface."""
     project = _pyproject()["project"]
-    assert project["requires-python"] == ">=3.11"
+    assert project["requires-python"] == ">=3.11,<3.15"
     classifiers = set(project["classifiers"])
     assert "Programming Language :: Python :: 3.9" not in classifiers
     assert "Programming Language :: Python :: 3.10" not in classifiers
     assert "Programming Language :: Python :: 3.11" in classifiers
+    assert "Programming Language :: Python :: 3.14" in classifiers
 
 
 def test_every_source_install_and_launch_surface_tracks_python_floor():
     """Keep user-facing entry paths aligned with canonical package metadata."""
-    project_floor = _pyproject()["project"]["requires-python"].removeprefix(">=")
+    project_range = _pyproject()["project"]["requires-python"]
+    (min_major, min_minor), (max_major, max_minor) = _python_bounds(project_range)
+    project_floor = f"{min_major}.{min_minor}"
+    project_ceiling = f"{max_major}.{max_minor - 1}"
     surfaces = [
         "README.md",
         "install.py",
@@ -90,19 +99,22 @@ def test_every_source_install_and_launch_surface_tracks_python_floor():
         "scripts/bootstrap_check.py",
         "opencut/__init__.py",
     ]
-    major, minor = project_floor.split(".", 1)
-    tuple_floor = re.compile(rf"\({major},\s*{minor}\)")
+    tuple_floor = re.compile(rf"\({min_major},\s*{min_minor}\)")
+    tuple_ceiling = re.compile(rf"\({max_major},\s*{max_minor - 1}\)")
     for relative_path in surfaces:
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         assert project_floor in text or tuple_floor.search(text), (
-            f"{relative_path} must advertise or enforce Python {project_floor}+"
+            f"{relative_path} must advertise or enforce Python {project_floor}"
+        )
+        assert project_ceiling in text or tuple_ceiling.search(text), (
+            f"{relative_path} must advertise or enforce Python through {project_ceiling}"
         )
 
     executable_surfaces = surfaces[1:]
     for relative_path in executable_surfaces:
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8").lower()
         assert "require" in text, f"{relative_path} must state the required floor"
-        assert "python.org/downloads" in text or "install python 3.11" in text, (
+        assert "python.org/downloads" in text or "python 3.11-3.14" in text, (
             f"{relative_path} must provide Python upgrade remediation"
         )
 
@@ -114,11 +126,14 @@ def test_runtime_guard_rejects_unsupported_python_with_actionable_error():
         opencut._require_supported_python((3, 10, 14))
 
     message = str(exc_info.value)
-    assert "requires Python 3.11" in message
+    assert "requires Python 3.11-3.14" in message
     assert "detected Python 3.10.14" in message
     assert "python.org/downloads" in message
 
     opencut._require_supported_python((3, 11, 0))
+    opencut._require_supported_python((3, 14, 0))
+    with pytest.raises(RuntimeError, match="Python 3.11-3.14"):
+        opencut._require_supported_python((3, 15, 0))
 
 
 def test_ruff_target_tracks_python_floor():
@@ -208,17 +223,18 @@ def test_optional_dependency_security_floor_pins():
 
     for extra in ("standard", "video", "all"):
         deps = _dep_names(extras[extra])
-        assert deps["opencv-python-headless"] == "opencv-python-headless>=4.13,<5"
+        assert deps["opencv-python"] == "opencv-python>=5,<6"
         assert deps["pillow"] == "Pillow>=12.3.0,<13"
 
     for extra in ("captions", "all"):
         deps = _dep_names(extras[extra])
         assert deps["pillow"] == "Pillow>=12.3.0,<13"
 
-    deps = _dep_names(extras["captions-whisperx"])
-    assert deps["whisperx"] == "whisperx>=3.8.5,<4"
+    assert "captions-whisperx" not in extras
     assert "whisperx" not in _dep_names(extras["all"])
-    assert _dep_names(extras["torch-stack"])["whisperx"] == "whisperx>=3.8.5,<4"
+    assert "whisperx" not in _dep_names(extras["torch-stack"])
+    assert "music" not in extras
+    assert "enhance" not in extras
 
     for extra in ("ai", "all"):
         deps = _dep_names(extras[extra])
@@ -231,7 +247,7 @@ def test_optional_dependency_security_floor_pins():
     torch_stack = _dep_names(extras["torch-stack"])
     assert torch_stack["torch"] == "torch>=2.10.0"
     assert torch_stack["torchvision"] == "torchvision>=0.25.0"
-    assert torch_stack["transformers"] == "transformers>=4.30"
+    assert torch_stack["transformers"] == "transformers>=5.3"
 
     depth = _dep_names(extras["depth"])
     assert depth["torch"] == "torch>=2.10.0"
@@ -243,14 +259,14 @@ def test_optional_dependency_security_floor_pins():
         assert _dep_names(extras[extra])["picklescan"] == "picklescan>=1.0.3"
 
 
-def test_transformers_floor_exception_is_confined_to_torch_stack():
+def test_transformers_security_floor_covers_every_declared_extra():
     extras = _pyproject()["project"]["optional-dependencies"]
     transformers_specs = {
         extra: _dep_names(requirements).get("transformers")
         for extra, requirements in extras.items()
     }
 
-    assert transformers_specs["torch-stack"] == "transformers>=4.30"
+    assert transformers_specs["torch-stack"] == "transformers>=5.3"
     assert transformers_specs["depth"] == "transformers>=5.3"
     assert {
         extra: spec
@@ -264,29 +280,39 @@ def test_requirements_txt_matches_security_floor():
     text = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
     required = [
         "flask-cors>=6.0,<7",
-        "opencv-python-headless>=4.13,<5",
+        "opencv-python>=5,<6",
         "Pillow>=12.3.0,<13",
-        "# onnxruntime-gpu>=1.25",
-        "# whisperx>=3.8.5",
+        "# onnxruntime-gpu>=1.26",
+        "WhisperX is unsupported until it accepts torchvision >=0.25 / Torch >=2.10.",
     ]
     for needle in required:
         assert needle in text
     assert "pydub>=0.25" not in text
 
 
-def test_pillow_security_floor_covers_bootstrap_and_runtime_installers():
-    """All Pillow install paths must reject the vulnerable <=12.2 range."""
-    from opencut.security import PILLOW_RUNTIME_REQUIREMENT, runtime_security_requirement
+def test_runtime_security_floors_cover_bootstrap_installers():
+    """Runtime installs must normalize vulnerable or conflicting package specs."""
+    from opencut.security import (
+        OPENCV_RUNTIME_REQUIREMENT,
+        PILLOW_RUNTIME_REQUIREMENT,
+        runtime_security_requirement,
+    )
 
     expected = "Pillow>=12.3.0,<13"
     assert PILLOW_RUNTIME_REQUIREMENT == expected
     assert runtime_security_requirement("Pillow") == expected
     assert runtime_security_requirement("Pillow>=10.0") == expected
     assert runtime_security_requirement("Pillow==12.2.0") == expected
+    assert OPENCV_RUNTIME_REQUIREMENT == "opencv-python>=5,<6"
+    assert runtime_security_requirement("opencv-python") == OPENCV_RUNTIME_REQUIREMENT
+    assert runtime_security_requirement("opencv-python-headless") == OPENCV_RUNTIME_REQUIREMENT
+    with pytest.raises(RuntimeError, match="No safe OpenCut install lane"):
+        runtime_security_requirement("whisperx")
     assert runtime_security_requirement("numpy>=1.24") == "numpy>=1.24"
 
     install_source = (REPO_ROOT / "install.py").read_text(encoding="utf-8")
-    assert expected in install_source
+    assert "requirements-release-lock.txt" in install_source
+    assert '"--require-hashes"' in install_source
     assert "Pillow>=10.0" not in install_source
 
     dashboard_source = (REPO_ROOT / "opencut" / "routes" / "system.py").read_text(encoding="utf-8")

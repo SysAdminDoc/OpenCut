@@ -82,8 +82,8 @@ def upscale_video(
         raise RuntimeError("Failed to install realesrgan. Install manually: pip install realesrgan")
     if not ensure_package("basicsr", "basicsr", on_progress):
         raise RuntimeError("Failed to install basicsr. Install manually: pip install basicsr")
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
 
     if output_path is None:
         output_path = _output_path(input_path, f"upscale_{scale}x", output_dir)
@@ -249,8 +249,8 @@ def remove_background(
         )
     if not ensure_package("rembg", "rembg[gpu]", on_progress):
         raise RuntimeError("Failed to install rembg. Install manually: pip install rembg[gpu]")
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
 
     if output_path is None:
         suffix = "nobg" if not bg_color else "newbg"
@@ -855,8 +855,8 @@ def _denoise_basicvsr(
     """
     if not ensure_package("basicsr", "basicsr", on_progress):
         raise RuntimeError("basicsr not installed. Run: pip install basicsr")
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("opencv not installed. Run: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("opencv not installed. Run: pip install opencv-python")
     if not ensure_package("numpy", "numpy", on_progress):
         raise RuntimeError("numpy not installed. Run: pip install numpy")
 

@@ -108,7 +108,7 @@ def analyze_frames(
     if not check_visual_multicam_available():
         raise RuntimeError(
             "Visual multicam requires mediapipe and opencv-python. "
-            "Install with: pip install mediapipe opencv-python-headless"
+            "Install with: pip install mediapipe opencv-python"
         )
 
     import cv2

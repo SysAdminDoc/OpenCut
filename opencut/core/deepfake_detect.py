@@ -7,7 +7,7 @@ Analyse video for AI-generated manipulation artifacts:
 - Per-segment confidence scoring
 - Authenticity report generation
 
-Requires: pip install opencv-python-headless numpy
+Requires: pip install opencv-python numpy
 """
 
 import json
@@ -74,8 +74,8 @@ def analyze_face_consistency(
     Returns:
         List of per-segment analysis dicts with consistency metrics.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

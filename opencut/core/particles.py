@@ -177,8 +177,8 @@ def overlay_particles(
         preset: Particle preset name from PARTICLE_PRESETS.
         density: Particle density multiplier (0.5 = half, 2.0 = double).
     """
-    if not ensure_package("cv2", "opencv-python-headless", on_progress):
-        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python", on_progress):
+        raise RuntimeError("Failed to install opencv-python. Install manually: pip install opencv-python")
     if not ensure_package("PIL", "Pillow", on_progress):
         raise RuntimeError(
             'Failed to install Pillow. Install manually: pip install "Pillow>=12.3.0,<13"'

@@ -42,7 +42,7 @@ DEPENDENCY_HINTS: Dict[str, Dict[str, Any]] = {
         aliases=("caption", "captions", "whisper", "faster-whisper", "openai-whisper"),
     ),
     "whisperx": _hint(
-        extra="captions-whisperx",
+        extra="",
         packages=("whisperx",),
         aliases=("whisperx", "pyannote"),
         gpu=True,
@@ -158,7 +158,17 @@ def build_install_suggestion(
     message: str = "",
 ) -> str:
     """Build an actionable install suggestion for an optional dependency."""
+    from opencut.dependency_support import dependency_support
+
     hint = lookup_hint(name, context, message) or {}
+    support = dependency_support(name)
+    for package in hint.get("packages") or ():
+        package_support = dependency_support(package)
+        if not package_support["supported"]:
+            support = package_support
+            break
+    if not support["supported"]:
+        return f"Unavailable in the supported OpenCut dependency matrix: {support['reason']}"
     selected_extra = extra or hint.get("extra")
     packages = tuple(hint.get("packages") or ())
     needs_gpu = bool(gpu or hint.get("gpu"))
@@ -166,7 +176,7 @@ def build_install_suggestion(
 
     parts = []
     if selected_extra:
-        parts.append(f"Install with: pip install 'opencut[{selected_extra}]'")
+        parts.append(f"Install with: pip install 'opencut-ppro[{selected_extra}]'")
     elif packages:
         parts.append(f"Install with: pip install {' '.join(packages)}")
     else:

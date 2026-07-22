@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.41.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1527-orange)
 ![Tests](https://img.shields.io/badge/Tests-11600+-brightgreen)
@@ -60,7 +60,7 @@ is the one step that needs the maintainer's PyPI account.
 
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
 - **Windows 10/11, macOS, or Linux** (Windows installer, macOS/Linux source launchers, and Linux Flatpak/AppImage release packaging)
-- **Python 3.11+** for source installs; the Windows installer bundles its own runtime
+- **Python 3.11-3.14** for source installs; the Windows installer bundles its own runtime
 - **FFmpeg** must be installed and on your system PATH for all video/audio processing. The Windows installer handles this automatically; source installs require a manual install (see below)
 
 ### Installation
@@ -87,7 +87,7 @@ cd OpenCut
 
 Then right-click `Install.bat` and select **Run as Administrator**. The installer will:
 1. Install or upgrade FFmpeg and reject builds below 8.1.2
-2. Verify Python 3.11+ is on your PATH (unsupported versions are rejected before installation)
+2. Verify Python 3.11-3.14 is on your PATH (unsupported versions are rejected before installation)
 3. Install all Python dependencies (Flask, click, rich, etc.)
 4. Install the OpenCut Python package
 5. Optionally install Whisper for caption generation
@@ -125,10 +125,22 @@ If you prefer manual control or are on macOS/Linux, follow these steps:
 4. **Start the server:** `python -m opencut.server`
 
 Add `torch-stack` or narrower feature extras only when you need Torch-backed
-backends such as WhisperX diarized captioning, Demucs separation, pyannote
-diarization, RealESRGAN/GFPGAN restoration, or TransNetV2 scene detection.
-The source default keeps the audited convenience extra away from current
-Torch/Transformers advisory exposure.
+backends such as Demucs separation, pyannote diarization,
+RealESRGAN/GFPGAN restoration, or TransNetV2 scene detection. WhisperX 3.8.x is
+not an installable OpenCut extra because its `torchvision <0.24` requirement
+conflicts with the `torchvision >=0.25` / Torch 2.10 security floor. The
+Dependency Dashboard reports that incompatibility instead of recommending a
+vulnerable environment.
+
+Supported base runtimes are CPython 3.11, 3.12, 3.13, and 3.14 on Windows,
+Linux, and macOS. Optional extras are resolver-tested across their declared
+lanes; `ai-gpu` is limited to Windows and Linux, generic macOS targets exclude
+the `ai`/`all` bundles, and macOS Python 3.14 also excludes caption bundles
+until onnxruntime publishes matching wheels. Validate all declared lanes with:
+
+```bash
+python scripts/check_dependency_matrix.py --matrix
+```
 
 **Option D -- Docker:**
 
@@ -208,7 +220,7 @@ Most AI features are optional dependencies. Open the **Settings** tab in the pan
 The server requires FFmpeg 8.1.2+ (or a dated post-fix snapshot) on your PATH. Run `python scripts/verify_ffmpeg_provenance.py` to see the detected version and reason. If missing or below the floor: Windows users can run `winget upgrade --id Gyan.FFmpeg --exact`, macOS users `brew upgrade ffmpeg`, and Linux users should install an 8.1.2+ package or build from the checksum-verified upstream source. Restart the terminal and OpenCut server after upgrading. `Install.ps1 -SkipFFmpeg` skips automatic installation only; it cannot bypass this security check.
 
 **Python not found or wrong version:**
-OpenCut requires Python 3.11 or later. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH".
+OpenCut requires Python 3.11-3.14. Run `python --version` to check. On Windows, if Python is installed but not on PATH, use `py -3.12 -m opencut.server` instead, or re-run the Python installer and check "Add Python to PATH". Python 3.15+ is rejected until the dependency matrix has verified it.
 
 ---
 
@@ -510,7 +522,7 @@ flask, flask-cors, click, rich
 pip install opencut-ppro[standard]
 ```
 
-Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
+Adds: `faster-whisper`, `opencv-python`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
 
 ### Audited convenience install (non-Torch optional stack)
 
@@ -524,10 +536,21 @@ For the larger Torch-backed stack, install the explicit extra or narrower featur
 
 ```bash
 pip install opencut-ppro[all,torch-stack]
-pip install opencut-ppro[captions-whisperx]  # WhisperX diarized captions
+pip install opencut-ppro[diarize]  # pyannote speaker diarization
 ```
 
-`torch-stack` includes WhisperX, Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2, PyTorch, torchvision, and Transformers. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut-ppro[music]`, `opencut-ppro[enhance]`) because they hard-pin older Torch stacks.
+`torch-stack` includes Demucs, RealESRGAN/GFPGAN, pyannote.audio, TransNetV2,
+PyTorch 2.10+, torchvision 0.25+, and Transformers 5.3+. WhisperX,
+AudioCraft/MusicGen, and Resemble Enhance are not advertised install lanes:
+their published releases require obsolete Torch families below OpenCut's
+security floor.
+
+| Platform | Python | CPU extras | `ai-gpu` |
+|----------|--------|------------|----------|
+| Windows | 3.11-3.14 | Supported | Supported |
+| Linux | 3.11-3.14 | Supported | Supported |
+| macOS | 3.11-3.13 | Supported except `ai` and `all` | Not supported |
+| macOS | 3.14 | Supported except `standard`, `captions`, `ai`, and `all` | Not supported |
 
 ### GPU Acceleration
 
@@ -717,7 +740,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,600+ estimated tests across 290 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,600+ estimated tests across 291 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -730,7 +753,7 @@ A: See the [Troubleshooting](#troubleshooting) section above. In short: the back
 A: Install CUDA-enabled PyTorch and use `faster-whisper` with a GPU. The `tiny` model is fastest. For batch processing, `insanely-fast-whisper` on GPU offers 10-15x speedup.
 
 **Q: I get "module not found" errors for AI features**
-A: See the [Troubleshooting](#troubleshooting) section above. Most AI features are optional. Use `pip install -e ".[all]"` (source) or `pip install opencut-ppro[all]` (PyPI) to install all audited extras. For Torch-backed features add `torch-stack`: `pip install opencut-ppro[all,torch-stack]`. The Dependency Dashboard in the Settings tab shows every optional package and the pip command to install it.
+A: See the [Troubleshooting](#troubleshooting) section above. Most AI features are optional. Use `pip install -e ".[all]"` (source) or `pip install opencut-ppro[all]` (PyPI) to install all audited extras. For Torch-backed features add `torch-stack`: `pip install opencut-ppro[all,torch-stack]`. The Dependency Dashboard shows only commands supported on the detected platform and Python 3.11-3.14; incompatible packages such as WhisperX explain the resolver conflict instead of offering an unsafe command.
 
 **Q: Can I use this without Premiere Pro?**
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
@@ -778,7 +801,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,600+ estimated tests, 290 root test files)
+tests/               # pytest test suite (11,600+ estimated tests, 291 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

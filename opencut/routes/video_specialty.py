@@ -587,15 +587,15 @@ def video_broll_plan(job_id, filepath, data):
 # Install Endpoints (generated via factory)
 # ---------------------------------------------------------------------------
 make_install_route(video_specialty_bp, "/video/depth/install", "depth_effects",
-                   ["torch", "torchvision", "transformers", "opencv-python-headless", "Pillow"],
+                   ["torch", "torchvision", "transformers", "opencv-python", "Pillow"],
                    doc="Install Depth Anything V2 dependencies.")
 
 make_install_route(video_specialty_bp, "/video/emotion/install", "emotion_highlights",
-                   ["deepface", "opencv-python-headless"],
+                   ["deepface", "opencv-python"],
                    doc="Install emotion analysis dependencies.")
 
 make_install_route(video_specialty_bp, "/video/multimodal-diarize/install", "multimodal_diarize",
-                   ["opencv-python-headless", "insightface", "onnxruntime"],
+                   ["opencv-python", "insightface", "onnxruntime"],
                    doc="Install multimodal diarization dependencies.")
 
 make_install_route(video_specialty_bp, "/video/broll-generate/install", "broll_generate",

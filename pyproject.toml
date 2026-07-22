@@ -14,7 +14,7 @@ version = "1.41.0"
 description = "OpenCut for Premiere Pro - local AI video editing automation (captions, audio, VFX) for Adobe Premiere Pro via CEP/UXP, CLI, REST, and MCP"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 authors = [
     {name = "OpenCut Contributors"},
 ]
@@ -33,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
@@ -66,7 +67,9 @@ dependencies = [
 [project.optional-dependencies]
 standard = [
     "faster-whisper>=1.1,<2",
-    "opencv-python-headless>=4.13,<5",
+    # PySceneDetect 0.7 requires the OpenCV distribution directly. Standard
+    # and video use that provider rather than declaring a second cv2 package.
+    "opencv-python>=5,<6",
     "Pillow>=12.3.0,<13",
     "numpy>=1.24",
     "librosa>=0.10,<1",
@@ -75,7 +78,7 @@ standard = [
     # See opencut.core.audioop_shim for the optional 3.13 bridge if a
     # downstream plugin needs pydub.
     "noisereduce>=3.0,<4",
-    "scenedetect[opencv]>=0.6,<1",
+    "scenedetect>=0.7.1,<1",
     # RA-23 — requests/urllib3 enter transitively via faster-whisper's
     # huggingface-hub fetch path. Floor them to the lockfile security level so
     # this lane cannot resolve urllib3<2.6.3 (CVE-2026-21441 decompression-bomb
@@ -87,9 +90,6 @@ captions = [
     "faster-whisper>=1.1,<2",
     "Pillow>=12.3.0,<13",
 ]
-captions-whisperx = [
-    "whisperx>=3.8.5,<4",
-]
 audio = [
     "demucs>=4.0,<5",
     "pedalboard>=0.9,<1",
@@ -99,10 +99,10 @@ audio = [
     "edge-tts>=6.1,<7",
 ]
 video = [
-    "opencv-python-headless>=4.13,<5",
+    "opencv-python>=5,<6",
     "Pillow>=12.3.0,<13",
     "numpy>=1.24",
-    "scenedetect[opencv]>=0.6,<1",
+    "scenedetect>=0.7.1,<1",
 ]
 ai = [
     "realesrgan>=0.3,<1",
@@ -121,12 +121,6 @@ ai-gpu = [
     "onnxruntime-gpu>=1.26,<2",
     "picklescan>=1.0.3",
 ]
-music = [
-    # F263 — AudioCraft 1.x hard-pins Torch 2.1 and is not compatible with
-    # the current WhisperX/Torch 2.8 stack or Python 3.12+ wheels. Keep it as
-    # an explicit Python 3.11 music install instead of pulling it into [all].
-    "audiocraft>=1.3,<2; python_version < '3.12'",
-]
 diarize = [
     "pyannote.audio>=4.0,<5",
 ]
@@ -136,11 +130,8 @@ auto-edit = [
 scene-ml = [
     "transnetv2-pytorch>=1.0.5,<2",
 ]
-enhance = [
-    # F263 — resemble-enhance 0.0.1 hard-pins Torch 2.1.1 and deepspeed
-    # 0.12.4. Keep it as an explicit Python 3.11 enhancement install instead
-    # of pulling it into [all] with the current WhisperX/pyannote Torch stack.
-    "resemble-enhance>=0.0.1,<1; python_version < '3.12'",
+reframe = [
+    "mediapipe>=0.10,<1",
 ]
 mcp = [
     # F137 — pin to the stable 1.x line. MCP 2.x is a pre-alpha
@@ -168,11 +159,9 @@ depth = [
     "transformers>=5.3",
 ]
 torch-stack = [
-    # RA-15 - keep Torch/Transformers-backed feature stacks out of the
-    # release-audited [all] lane until their advisory and resolver posture is
-    # clean. Users who accept that larger surface can install
-    # `opencut[all,torch-stack]` or the narrower feature extras directly.
-    "whisperx>=3.8.5,<4",
+    # WhisperX 3.8.x is intentionally absent: it requires torchvision<0.24,
+    # which cannot coexist with OpenCut's torchvision>=0.25/Torch>=2.10
+    # security floor. Runtime readiness reports that conflict explicitly.
     "demucs>=4.0,<5",
     "realesrgan>=0.3,<1",
     "gfpgan>=1.3,<2",
@@ -181,22 +170,19 @@ torch-stack = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "picklescan>=1.0.3",
-    # WhisperX 3.8.x requires huggingface-hub<1, while Transformers 5.x
-    # requires huggingface-hub>=1.x. Keep this lane explicit and audit-gated
-    # until WhisperX supports the Transformers 5 dependency stack.
-    "transformers>=4.30",
+    "transformers>=5.3",
 ]
 all = [
     "faster-whisper>=1.1,<2",
     # RA-15 - [all] is the release-audited convenience lane. Torch-backed
     # features remain explicit extras so pip-audit can fail closed here.
-    "opencv-python-headless>=4.13,<5",
+    "opencv-python>=5,<6",
     "Pillow>=12.3.0,<13",
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (see [standard] extra).
     "noisereduce>=3.0,<4",
-    "scenedetect[opencv]>=0.6,<1",
+    "scenedetect>=0.7.1,<1",
     "pedalboard>=0.9,<1",
     "edge-tts>=6.1,<7",
     "rembg>=2.0,<3",

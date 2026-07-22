@@ -118,7 +118,7 @@ def check_shorts_variants_available() -> bool:
 
 INSTALL_HINT = (
     "Variant generator orchestrates existing modules; install Pillow + "
-    "opencv-python-headless for the full caption-burn-in surface."
+    "opencv-python for the full caption-burn-in surface."
 )
 
 

@@ -1,6 +1,6 @@
 # OpenCut v1.41.0 Requirements
 # Install: pip install -r requirements.txt
-# For GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# For GPU: pip install "torch>=2.10" "torchvision>=0.25" torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # === CORE (required) ===
 # click CVE-2026-7246 / PYSEC-2026-2132 (command injection in click.edit) fixed 8.3.3
@@ -22,14 +22,14 @@ Jinja2>=3.1.6
 
 # === STANDARD (recommended) ===
 faster-whisper>=1.1,<2
-opencv-python-headless>=4.13,<5
+opencv-python>=5,<6
 Pillow>=12.3.0,<13
 numpy>=1.24
 librosa>=0.10,<1
 # pydub retired in F123; OpenCut does not import it and keeps an optional
 # audioop-lts compatibility shim for downstream plugins that install pydub.
 noisereduce>=3.0,<4
-scenedetect[opencv]>=0.6,<1
+scenedetect>=0.7.1,<1
 # RA-23 — requests/urllib3 enter via faster-whisper's huggingface-hub; floor
 # them (urllib3 CVE-2026-21441 fixed 2.6.3, requests CVE-2026-25645 fixed 2.33.0).
 requests>=2.33.0
@@ -45,15 +45,15 @@ urllib3>=2.6.3
 # rembg>=2.0               # Background removal (~170MB model)
 # gfpgan>=1.3              # Face enhancement (~330MB model)
 # insightface>=0.7         # Face detection/swap
-# onnxruntime-gpu>=1.25    # GPU inference for InsightFace
-# audiocraft>=1.3          # MusicGen AI music (Python 3.11; Torch 2.1 stack)
+# onnxruntime-gpu>=1.26    # GPU inference for InsightFace
+# AudioCraft is unsupported because its published releases pin Torch 2.1.
 
 # === ADVANCED (optional) ===
-# whisperx>=3.8.5          # Word-level timestamps + alignment
+# WhisperX is unsupported until it accepts torchvision >=0.25 / Torch >=2.10.
 # pyannote.audio>=4.0      # Speaker diarization (needs HuggingFace token)
 
 # === POST-PRODUCTION FEATURES (optional) ===
-# Color matching & auto-zoom use opencv-python-headless + numpy (already listed above)
+# Color matching & auto-zoom use opencv-python + numpy (already listed above)
 
 # Loudness matching uses FFmpeg subprocess (external tool, not pip)
 # Install FFmpeg from https://ffmpeg.org/download.html

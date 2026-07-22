@@ -525,7 +525,7 @@ def transcribe(
             "No Whisper backend installed. Install one of:\n"
             "  pip install openai-whisper        # Reference implementation\n"
             "  pip install faster-whisper         # Fastest (recommended)\n"
-            "  pip install whisperx               # Best word timestamps\n"
+            "  WhisperX is unavailable in OpenCut's supported dependency matrix.\n"
         )
 
     cache_key: Optional[str] = None

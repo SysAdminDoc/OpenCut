@@ -91,8 +91,8 @@ def detect_face_in_image(image_path: str) -> Dict:
     if not os.path.isfile(image_path):
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
 
     import cv2
 

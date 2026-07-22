@@ -7,7 +7,7 @@ Multi-signal fusion for automatic highlight extraction:
 - Optional chat activity correlation (Twitch/YouTube chat logs)
 - Segment scoring and ranked highlight extraction
 
-Requires: pip install opencv-python-headless numpy
+Requires: pip install opencv-python numpy
 """
 
 import json
@@ -68,8 +68,8 @@ def score_segments(
     Returns:
         List of HighlightScore objects sorted by score descending.
     """
-    if not ensure_package("cv2", "opencv-python-headless"):
-        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python"):
+        raise RuntimeError("Failed to install opencv-python")
     if not ensure_package("numpy", "numpy"):
         raise RuntimeError("Failed to install numpy")
     import cv2

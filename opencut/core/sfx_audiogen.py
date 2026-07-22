@@ -32,11 +32,7 @@ def check_audiogen_available() -> bool:
     return _try_import("audiocraft") is not None
 
 
-INSTALL_HINT = (
-    "pip install audiocraft\n"
-    "Weights (CC-BY-NC): https://github.com/facebookresearch/audiocraft "
-    "-- run model.download() after pip install"
-)
+INSTALL_HINT = "Unavailable in OpenCut's supported dependency matrix."
 
 
 def generate(

@@ -105,10 +105,10 @@ class PlanarInsert:
 
 def _require_cv2():
     """Ensure OpenCV is available, raise clear error if not."""
-    if not ensure_package("cv2", "opencv-python-headless"):
+    if not ensure_package("cv2", "opencv-python"):
         raise RuntimeError(
             "OpenCV is required for planar tracking. "
-            "Install with: pip install opencv-python-headless"
+            "Install with: pip install opencv-python"
         )
     import cv2
     return cv2

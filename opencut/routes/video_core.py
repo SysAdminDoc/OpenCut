@@ -86,7 +86,7 @@ def video_auto_detect_watermark():
     except ImportError as e:
         return error_response(
             "MISSING_DEPENDENCY", str(e), status=400,
-            suggestion="Install: pip install transformers torch opencv-python-headless")
+            suggestion="Install: pip install transformers torch opencv-python")
     except Exception as exc:
         return safe_error(exc, "video_auto_detect_watermark")
 

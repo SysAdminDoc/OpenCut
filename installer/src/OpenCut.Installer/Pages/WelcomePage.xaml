@@ -115,7 +115,7 @@
                         <TextBlock Text="Optional AI extras"
                                    Foreground="{DynamicResource TextBrush}" FontSize="13.5"
                                    FontWeight="SemiBold" Margin="0,14,0,0" />
-                        <TextBlock Text="Whisper models and optional Python helpers can be added on the next step."
+                        <TextBlock Text="Whisper models and optional helpers for system Python 3.11-3.14 can be added on the next step."
                                    Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
                     </StackPanel>
                 </Border>

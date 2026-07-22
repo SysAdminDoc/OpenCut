@@ -9,6 +9,16 @@ namespace OpenCut.Installer.Services;
 public class DependencyInstaller
 {
     private static readonly string[] PythonCandidates = ["python", "python3", "py"];
+    private static readonly IReadOnlyDictionary<string, string> SupportedRequirements =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["auto-editor"] = "auto-editor>=29.3,<30",
+            ["edge-tts"] = "edge-tts>=6.1,<7",
+            ["mediapipe"] = "mediapipe>=0.10,<1",
+        };
+
+    internal static bool TryGetSupportedRequirement(string package, out string requirement) =>
+        SupportedRequirements.TryGetValue(package, out requirement!);
 
     public void InstallDeps(InstallConfig config, IProgress<InstallProgress> progress, int step, int totalSteps)
     {
@@ -25,7 +35,7 @@ public class DependencyInstaller
         if (python == null)
         {
             Report(progress, step, totalSteps, stepName,
-                "Python not found in PATH — optional tools skipped. Install from python.org and add to PATH.",
+                "Python 3.11-3.14 not found in PATH — optional tools skipped. Install a supported Python from python.org.",
                 LogLevel.Warning);
             return;
         }
@@ -34,13 +44,20 @@ public class DependencyInstaller
 
         foreach (var package in config.SelectedDeps)
         {
+            if (!TryGetSupportedRequirement(package, out var requirement))
+            {
+                Report(progress, step, totalSteps, stepName,
+                    $"Unsupported optional tool '{package}'. Choose auto-editor, edge-tts, or mediapipe.",
+                    LogLevel.Error);
+                continue;
+            }
             Report(progress, step, totalSteps, stepName, $"Installing {package}...");
             try
             {
                 var psi = new ProcessStartInfo
                 {
                     FileName = python,
-                    Arguments = $"-m pip install {package} -q",
+                    Arguments = $"-m pip install \"{requirement}\" -q",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -98,7 +115,7 @@ public class DependencyInstaller
                 var psi = new ProcessStartInfo
                 {
                     FileName = name,
-                    Arguments = "--version",
+                    Arguments = "-c \"import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] <= (3, 14) else 1)\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
