@@ -135,6 +135,35 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   await page.route("http://127.0.0.1:*/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.port === "41737") return route.continue();
+    if (
+      url.pathname === "/queue/list" &&
+      Array.isArray(backendFixtures.queueEntries)
+    ) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(backendFixtures.queueEntries),
+      });
+    }
+    if (
+      url.pathname.startsWith("/queue/replay/") &&
+      route.request().method() === "POST" &&
+      Array.isArray(backendFixtures.queueEntries)
+    ) {
+      const queueId = decodeURIComponent(url.pathname.slice("/queue/replay/".length));
+      capturedRequests.push({ queueReplay: queueId });
+      const entry = backendFixtures.queueEntries.find((item) => item.id === queueId);
+      if (entry) entry.status = "queued";
+      return route.fulfill({
+        status: entry ? 200 : 404,
+        contentType: "application/json",
+        body: JSON.stringify(
+          entry
+            ? { queue_id: queueId, status: "queued" }
+            : { error: "Queue entry not found" },
+        ),
+      });
+    }
     if (backendFixtures.destructiveProtocol) {
       const method = route.request().method();
       const listFixtures = {
@@ -474,6 +503,40 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
     }
   }
 }
+
+test("CEP exposes interrupted queue recovery without overflowing", async ({ page }) => {
+  const queueEntries = [
+    {
+      id: "recover-fixture",
+      endpoint: "/silence",
+      payload: { filepath: "C:/fixture.mp4" },
+      status: "interrupted",
+      added: 1,
+    },
+  ];
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    480,
+    { queueEntries },
+  );
+
+  await expect(page.locator("#jobQueueBar")).toBeVisible();
+  await expect(page.locator("#queueStatusText")).toHaveText(
+    "Queue: 0 active, 1 interrupted",
+  );
+  await expect(page.locator("#recoverQueueBtn")).toBeVisible();
+  await assertNoPageOverflow(page);
+
+  await page.locator("#recoverQueueBtn").click();
+  await expect.poll(() => capturedRequests).toContainEqual({
+    queueReplay: "recover-fixture",
+  });
+  await expect(page.locator("#recoverQueueBtn")).toBeHidden();
+  await expect(page.locator("#queueStatusText")).toHaveText("Queue: 1 job");
+  expect(pageErrors).toEqual([]);
+});
 
 test("CEP keyboard tabs, focus trap, Escape, and destructive confirmation", async ({
   page,

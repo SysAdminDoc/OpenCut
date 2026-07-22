@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-07-17T15:22:35Z",
-  "total_routes": 1554,
-  "shipped_route_count": 1527,
+  "generated_at": "2026-07-22T07:21:44Z",
+  "total_routes": 1557,
+  "shipped_route_count": 1530,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 395,
+    "GET": 396,
     "PATCH": 1,
-    "POST": 1143,
+    "POST": 1145,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1498,
+    "implemented": 1501,
     "stub": 27
   },
   "blueprints": {
@@ -498,10 +498,10 @@
       ]
     },
     "jobs": {
-      "route_count": 16,
+      "route_count": 19,
       "method_counts": {
-        "GET": 11,
-        "POST": 5
+        "GET": 12,
+        "POST": 7
       },
       "sample_rules": [
         "/cancel-all",
@@ -9906,11 +9906,38 @@
       "readiness": "implemented"
     },
     {
+      "rule": "/queue/export",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "jobs.queue_export",
+      "blueprint": "jobs",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/queue/import",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "jobs.queue_import",
+      "blueprint": "jobs",
+      "readiness": "implemented"
+    },
+    {
       "rule": "/queue/list",
       "methods": [
         "GET"
       ],
       "endpoint": "jobs.queue_list",
+      "blueprint": "jobs",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/queue/replay/<queue_id>",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "jobs.queue_replay",
       "blueprint": "jobs",
       "readiness": "implemented"
     },

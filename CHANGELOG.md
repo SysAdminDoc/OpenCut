@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Recover the legacy job queue across restarts
+
+- Persisted queued work in a versioned, atomic user-data document; server
+  restarts preserve order and expose formerly active entries as `interrupted`
+  instead of rerunning them without user review.
+- Added validated queue replay plus `/queue/import` and `/queue/export` JSON
+  interchange with stable-ID deduplication, live-route checks, and output
+  collision protection.
+- Added a CEP queue recovery control with explicit active and interrupted
+  states; queue clearing now includes interrupted records in the existing
+  preview-and-confirm protocol.
+
 ### Fixed - Make optional dependency support resolver-executable
 
 - Unified source, launcher, installer, classifier, and runtime readiness claims

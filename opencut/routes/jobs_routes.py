@@ -6,6 +6,8 @@ Job status, cancel, list, SSE streaming, queue management.
 
 import json
 import logging
+import os
+import re
 import threading
 import time
 import uuid
@@ -18,6 +20,22 @@ from opencut.jobs import (
     _get_job_copy,
     _kill_job_process,
     _list_jobs_copy,
+)
+from opencut.queue_store import (
+    QUEUE_SCHEMA_VERSION,
+    QueueDocumentError,
+)
+from opencut.queue_store import (
+    build_document as build_queue_document,
+)
+from opencut.queue_store import (
+    load_queue as load_persisted_queue,
+)
+from opencut.queue_store import (
+    parse_document as parse_queue_document,
+)
+from opencut.queue_store import (
+    save_queue as save_persisted_queue,
 )
 from opencut.security import (
     build_destructive_plan,
@@ -151,6 +169,9 @@ def stream_job(job_id):
 job_queue = []
 job_queue_lock = threading.Lock()
 _queue_state = {"running": False}
+_queue_persistence_enabled = False
+_queue_app = None
+_queue_storage_error = None
 MAX_QUEUE_SIZE = 100
 
 # Only processing-oriented routes may be invoked via the queue.
@@ -374,6 +395,223 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/cinefocus",
 })
 
+_QUEUE_ENTRY_STATUSES = frozenset({
+    "queued", "running", "started", "interrupted", "complete", "error", "cancelled",
+})
+_QUEUE_TRANSIENT_STATUSES = frozenset({"running", "started"})
+_QUEUE_REMOVABLE_STATUSES = frozenset({"queued", "interrupted"})
+_QUEUE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_OUTPUT_PATH_KEYS = frozenset({
+    "output", "output_file", "output_filepath", "output_path",
+    "destination", "destination_file", "destination_path",
+})
+
+
+def _normalize_queue_entry(raw, *, require_queueable=True):
+    """Return a validated, detached queue entry."""
+    if not isinstance(raw, dict):
+        raise ValueError("Queue entry must be a JSON object")
+    queue_id = raw.get("id")
+    if not isinstance(queue_id, str) or not _QUEUE_ID_RE.fullmatch(queue_id):
+        raise ValueError("Queue entry id must use 1-64 letters, numbers, '_' or '-'")
+    endpoint = raw.get("endpoint")
+    if not isinstance(endpoint, str) or not endpoint.startswith("/") or len(endpoint) > 256:
+        raise ValueError("Queue entry endpoint must be an absolute route path")
+    if require_queueable and endpoint not in _ALLOWED_QUEUE_ENDPOINTS:
+        raise ValueError(f"Endpoint not queueable: {endpoint}")
+    payload = raw.get("payload", {})
+    if not isinstance(payload, dict):
+        raise ValueError("Queue entry payload must be a JSON object")
+    status = raw.get("status", "queued")
+    if status not in _QUEUE_ENTRY_STATUSES:
+        raise ValueError(f"Unsupported queue entry status: {status!r}")
+    added = raw.get("added", time.time())
+    if isinstance(added, bool) or not isinstance(added, (int, float)):
+        raise ValueError("Queue entry added timestamp must be numeric")
+
+    entry = {
+        "id": queue_id,
+        "endpoint": endpoint,
+        "payload": json.loads(json.dumps(payload)),
+        "status": status,
+        "added": float(added),
+    }
+    for key in ("job_id", "error", "code"):
+        if key in raw:
+            if not isinstance(raw[key], str):
+                raise ValueError(f"Queue entry {key} must be a string")
+            entry[key] = raw[key][:1000]
+    for key in ("interrupted_at", "replayed_at"):
+        if key in raw:
+            value = raw[key]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"Queue entry {key} must be numeric")
+            entry[key] = float(value)
+    if "attempts" in raw:
+        attempts = raw["attempts"]
+        if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts < 0:
+            raise ValueError("Queue entry attempts must be a non-negative integer")
+        entry["attempts"] = attempts
+    return entry
+
+
+def _persist_queue_locked():
+    """Persist the queue while ``job_queue_lock`` is held."""
+    if _queue_storage_error:
+        raise RuntimeError(_queue_storage_error)
+    if _queue_persistence_enabled:
+        save_persisted_queue(job_queue)
+
+
+def _persist_queue_best_effort_locked():
+    try:
+        _persist_queue_locked()
+    except Exception as exc:  # noqa: BLE001 - queue worker must finish coherently
+        logger.error("Could not persist job queue state: %s", exc)
+
+
+def _update_queue_entry(entry, status, **details):
+    with job_queue_lock:
+        entry["status"] = status
+        entry.update(details)
+        _persist_queue_best_effort_locked()
+
+
+def _find_output_collisions(value):
+    """Return existing output paths referenced by a queued payload."""
+    collisions = []
+
+    def _walk(item):
+        if isinstance(item, dict):
+            for key, child in item.items():
+                normalized = str(key).strip().lower()
+                if normalized in _OUTPUT_PATH_KEYS and isinstance(child, str) and child.strip():
+                    candidate = os.path.abspath(os.path.expanduser(child.strip()))
+                    if os.path.exists(candidate):
+                        collisions.append(candidate)
+                else:
+                    _walk(child)
+        elif isinstance(item, list):
+            for child in item:
+                _walk(child)
+
+    _walk(value)
+    return list(dict.fromkeys(collisions))
+
+
+def _validate_queue_replay(entry, app, *, check_output=True):
+    """Revalidate a recovered entry against the live route graph and outputs."""
+    try:
+        normalized = _normalize_queue_entry(entry)
+    except ValueError as exc:
+        return {"code": "INVALID_QUEUE_ENTRY", "error": str(exc)}
+    try:
+        adapter = app.url_map.bind("localhost")
+        endpoint_name, _view_args = adapter.match(normalized["endpoint"], method="POST")
+        if endpoint_name not in app.view_functions:
+            raise LookupError("route handler is unavailable")
+    except Exception:  # noqa: BLE001 - Werkzeug raises several route exceptions
+        return {
+            "code": "QUEUE_ROUTE_UNAVAILABLE",
+            "error": f"Queued route is no longer available: {normalized['endpoint']}",
+        }
+    collisions = _find_output_collisions(normalized["payload"]) if check_output else []
+    if collisions:
+        return {
+            "code": "OUTPUT_COLLISION",
+            "error": "A queued output already exists; choose a new output path before replaying",
+            "collisions": collisions,
+        }
+    return None
+
+
+def initialize_job_queue(app, *, start_processing=True):
+    """Load the durable queue and recover in-flight entries after a restart."""
+    global _queue_app, _queue_persistence_enabled, _queue_storage_error
+
+    try:
+        stored_entries, migrated = load_persisted_queue()
+    except QueueDocumentError as exc:
+        logger.error("Job queue was not loaded: %s", exc)
+        _queue_persistence_enabled = False
+        _queue_storage_error = str(exc)
+        return {"loaded": 0, "interrupted": 0, "invalid": 0, "error": str(exc)}
+    except Exception as exc:  # noqa: BLE001 - startup remains available for recovery
+        logger.error("Job queue storage could not be read: %s", exc)
+        _queue_persistence_enabled = False
+        _queue_storage_error = str(exc)
+        return {"loaded": 0, "interrupted": 0, "invalid": 0, "error": str(exc)}
+
+    normalized_entries = []
+    seen_ids = set()
+    interrupted = 0
+    invalid = 0
+    changed = migrated
+    now = time.time()
+    for raw in stored_entries:
+        try:
+            entry = _normalize_queue_entry(raw, require_queueable=False)
+        except (TypeError, ValueError) as exc:
+            invalid += 1
+            changed = True
+            logger.warning("Skipping invalid persisted queue entry: %s", exc)
+            continue
+        if entry["id"] in seen_ids:
+            invalid += 1
+            changed = True
+            logger.warning("Skipping duplicate persisted queue id: %s", entry["id"])
+            continue
+        seen_ids.add(entry["id"])
+        if entry["status"] in ("complete", "error", "cancelled"):
+            changed = True
+            continue
+        if entry["endpoint"] not in _ALLOWED_QUEUE_ENDPOINTS:
+            entry["status"] = "interrupted"
+            entry["code"] = "QUEUE_ROUTE_UNAVAILABLE"
+            entry["error"] = f"Queued route is no longer supported: {entry['endpoint']}"
+            entry["interrupted_at"] = now
+            interrupted += 1
+            changed = True
+        elif entry["status"] == "queued":
+            validation_error = _validate_queue_replay(entry, app)
+            if validation_error:
+                entry["status"] = "interrupted"
+                entry["code"] = validation_error["code"]
+                entry["error"] = validation_error["error"]
+                entry["interrupted_at"] = now
+                interrupted += 1
+                changed = True
+        elif entry["status"] in _QUEUE_TRANSIENT_STATUSES:
+            entry["status"] = "interrupted"
+            entry["code"] = "SERVER_RESTARTED"
+            entry["error"] = "The server stopped while this queued job was active"
+            entry["interrupted_at"] = now
+            interrupted += 1
+            changed = True
+        normalized_entries.append(entry)
+
+    if len(normalized_entries) > MAX_QUEUE_SIZE:
+        invalid += len(normalized_entries) - MAX_QUEUE_SIZE
+        normalized_entries = normalized_entries[:MAX_QUEUE_SIZE]
+        changed = True
+
+    with job_queue_lock:
+        job_queue[:] = normalized_entries
+        _queue_state["running"] = False
+        _queue_app = app
+        _queue_persistence_enabled = True
+        _queue_storage_error = None
+        if changed:
+            _persist_queue_best_effort_locked()
+
+    if start_processing and any(entry["status"] == "queued" for entry in normalized_entries):
+        _process_queue(app)
+    return {
+        "loaded": len(normalized_entries),
+        "interrupted": interrupted,
+        "invalid": invalid,
+    }
+
 
 @jobs_bp.route("/queue/add", methods=["POST"])
 @require_csrf
@@ -390,19 +628,36 @@ def queue_add():
     endpoint = data.get("endpoint", "")
     if endpoint not in _ALLOWED_QUEUE_ENDPOINTS:
         return jsonify({"error": f"Endpoint not queueable: {endpoint}"}), 400
-    entry = {
-        "id": str(uuid.uuid4())[:8],
-        "endpoint": endpoint,
-        "payload": data.get("payload", {}),
-        "status": "queued",
-        "added": time.time(),
-    }
+    try:
+        entry = _normalize_queue_entry({
+            "id": str(uuid.uuid4())[:8],
+            "endpoint": endpoint,
+            "payload": data.get("payload", {}),
+            "status": "queued",
+            "added": time.time(),
+        })
+    except (TypeError, ValueError) as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "INVALID_QUEUE_ENTRY",
+            "suggestion": "Send a JSON-object payload compatible with the selected route.",
+        }), 400
     with job_queue_lock:
         if len(job_queue) >= MAX_QUEUE_SIZE:
             return jsonify({"error": "Queue full (max 100)"}), 429
         job_queue.append(entry)
         position = len(job_queue)
-    _process_queue()
+        try:
+            _persist_queue_locked()
+        except Exception as exc:  # noqa: BLE001 - roll back an uncommitted enqueue
+            job_queue.remove(entry)
+            logger.error("Could not persist queued job: %s", exc)
+            return jsonify({
+                "error": "Could not save the queued job",
+                "code": "QUEUE_STORAGE_ERROR",
+                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+            }), 503
+    _process_queue(current_app._get_current_object())
     return jsonify({"queue_id": entry["id"], "position": position})
 
 
@@ -416,47 +671,207 @@ def queue_list():
 @jobs_bp.route("/queue/clear", methods=["POST"])
 @require_csrf
 def queue_clear():
-    """Clear all queued (not running) jobs."""
+    """Clear all queued or interrupted (not running) jobs."""
     data = get_json_dict() if request.data else {}
     dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
     with job_queue_lock:
-        queued = [e for e in job_queue if e["status"] == "queued"]
+        removable = [e for e in job_queue if e["status"] in _QUEUE_REMOVABLE_STATUSES]
         records = [
             {
                 "id": entry.get("id", ""),
                 "endpoint": entry.get("endpoint", ""),
                 "status": entry.get("status", ""),
             }
-            for entry in queued
+            for entry in removable
         ]
         plan = build_destructive_plan(
             "queue.clear",
             records=records,
-            metadata={"queued_count": len(records)},
+            metadata={
+                "queued_count": sum(e["status"] == "queued" for e in removable),
+                "interrupted_count": sum(e["status"] == "interrupted" for e in removable),
+            },
             reversible=False,
         )
         if dry_run:
             return jsonify({"success": True, "dry_run": True, "removed": 0, "plan": plan})
         if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
             return jsonify(destructive_confirmation_required_response(plan)), 409
-        removed = len(queued)
-        job_queue[:] = [e for e in job_queue if e["status"] != "queued"]
+        before = list(job_queue)
+        removed = len(removable)
+        job_queue[:] = [e for e in job_queue if e["status"] not in _QUEUE_REMOVABLE_STATUSES]
+        try:
+            _persist_queue_locked()
+        except Exception as exc:  # noqa: BLE001 - restore before returning failure
+            job_queue[:] = before
+            logger.error("Could not persist queue clear: %s", exc)
+            return jsonify({
+                "error": "Could not save the cleared queue",
+                "code": "QUEUE_STORAGE_ERROR",
+                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+            }), 503
     return jsonify({"success": True, "dry_run": False, "removed": removed, "plan": plan})
 
 
-def _dispatch_queue_entry(entry):
+@jobs_bp.route("/queue/export", methods=["GET"])
+def queue_export():
+    """Export the queue as a versioned JSON document."""
+    with job_queue_lock:
+        document = build_queue_document(job_queue)
+    response = jsonify(document)
+    response.headers["Content-Disposition"] = "attachment; filename=opencut-job-queue.json"
+    return response
+
+
+@jobs_bp.route("/queue/import", methods=["POST"])
+@require_csrf
+def queue_import():
+    """Import validated queue entries without duplicating stable IDs."""
+    data = get_json_dict()
+    try:
+        raw_entries, _migrated = parse_queue_document(data)
+    except QueueDocumentError as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "INVALID_QUEUE_DOCUMENT",
+            "expected_schema_version": QUEUE_SCHEMA_VERSION,
+        }), 400
+
+    app = current_app._get_current_object()
+    imported = []
+    skipped = []
+    rejected = []
+    candidates = []
+    document_ids = set()
+    for index, raw in enumerate(raw_entries):
+        try:
+            entry = _normalize_queue_entry(raw)
+        except (TypeError, ValueError) as exc:
+            rejected.append({"index": index, "error": str(exc)})
+            continue
+        queue_id = entry["id"]
+        if queue_id in document_ids:
+            skipped.append(queue_id)
+            continue
+        document_ids.add(queue_id)
+        if entry["status"] in _QUEUE_TRANSIENT_STATUSES:
+            entry["status"] = "interrupted"
+            entry["code"] = "IMPORTED_ACTIVE_ENTRY"
+            entry["error"] = "Imported active work requires an explicit replay"
+            entry["interrupted_at"] = time.time()
+        elif entry["status"] not in ("queued", "interrupted"):
+            rejected.append({
+                "index": index,
+                "id": queue_id,
+                "error": f"Status cannot be imported: {entry['status']}",
+            })
+            continue
+        validation_error = _validate_queue_replay(
+            entry,
+            app,
+            check_output=entry["status"] == "queued",
+        )
+        if validation_error:
+            rejected.append({"index": index, "id": queue_id, **validation_error})
+            continue
+        candidates.append(entry)
+
+    with job_queue_lock:
+        existing_ids = {entry["id"] for entry in job_queue}
+        new_entries = []
+        for entry in candidates:
+            if entry["id"] in existing_ids:
+                skipped.append(entry["id"])
+                continue
+            if len(job_queue) + len(new_entries) >= MAX_QUEUE_SIZE:
+                rejected.append({
+                    "id": entry["id"],
+                    "code": "QUEUE_FULL",
+                    "error": f"Queue full (max {MAX_QUEUE_SIZE})",
+                })
+                continue
+            existing_ids.add(entry["id"])
+            new_entries.append(entry)
+            imported.append(entry["id"])
+        job_queue.extend(new_entries)
+        try:
+            _persist_queue_locked()
+        except Exception as exc:  # noqa: BLE001 - imports are transactional
+            if new_entries:
+                del job_queue[-len(new_entries):]
+            logger.error("Could not persist queue import: %s", exc)
+            return jsonify({
+                "error": "Could not save the imported queue",
+                "code": "QUEUE_STORAGE_ERROR",
+                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+            }), 503
+
+    if any(entry["status"] == "queued" for entry in candidates):
+        _process_queue(app)
+    return jsonify({
+        "schema_version": QUEUE_SCHEMA_VERSION,
+        "imported": imported,
+        "skipped": list(dict.fromkeys(skipped)),
+        "rejected": rejected,
+    })
+
+
+@jobs_bp.route("/queue/replay/<queue_id>", methods=["POST"])
+@require_csrf
+def queue_replay(queue_id):
+    """Replay an interrupted entry after revalidating its route and outputs."""
+    app = current_app._get_current_object()
+    with job_queue_lock:
+        entry = next((item for item in job_queue if item.get("id") == queue_id), None)
+        if entry is None:
+            return jsonify({"error": "Queue entry not found"}), 404
+        if entry.get("status") != "interrupted":
+            return jsonify({
+                "error": "Only interrupted queue entries can be replayed",
+                "code": "QUEUE_ENTRY_NOT_INTERRUPTED",
+            }), 409
+        validation_error = _validate_queue_replay(entry, app)
+        if validation_error:
+            return jsonify(validation_error), 409
+
+        before = dict(entry)
+        original_index = job_queue.index(entry)
+        job_queue.remove(entry)
+        entry["status"] = "queued"
+        entry["added"] = time.time()
+        entry["replayed_at"] = entry["added"]
+        entry["attempts"] = int(entry.get("attempts", 0)) + 1
+        for key in ("job_id", "error", "code", "interrupted_at"):
+            entry.pop(key, None)
+        job_queue.append(entry)
+        try:
+            _persist_queue_locked()
+        except Exception as exc:  # noqa: BLE001 - restore exact record and ordering
+            job_queue.remove(entry)
+            entry.clear()
+            entry.update(before)
+            job_queue.insert(original_index, entry)
+            logger.error("Could not persist queue replay: %s", exc)
+            return jsonify({
+                "error": "Could not save the replayed queue entry",
+                "code": "QUEUE_STORAGE_ERROR",
+                "suggestion": "Check that the OpenCut data directory is writable, then retry.",
+            }), 503
+
+    _process_queue(app)
+    return jsonify({"queue_id": queue_id, "status": "queued"})
+
+
+def _dispatch_queue_entry(entry, app):
     """Dispatch a queue entry by calling the route handler directly
     via Flask's test_request_context (no HTTP round-trip).
     Includes the CSRF token so @require_csrf doesn't reject the call."""
-    from flask import current_app
-
     from opencut.security import get_csrf_token
     endpoint = entry.get("endpoint", "")
     payload = entry.get("payload", {})
 
     dispatch_timeout = 60  # seconds max for route handler to return a job_id
 
-    app = current_app._get_current_object()
     csrf_token = get_csrf_token()
 
     try:
@@ -467,11 +882,16 @@ def _dispatch_queue_entry(entry):
                                           "Content-Type": "application/json",
                                           "X-OpenCut-Token": csrf_token,
                                       }):
-            adapter = current_app.url_map.bind("")
+            adapter = app.url_map.bind("")
             ep_name, view_args = adapter.match(endpoint, method="POST")
-            view_func = current_app.view_functions.get(ep_name)
+            view_func = app.view_functions.get(ep_name)
         if view_func is None:
-            entry["status"] = "error"
+            _update_queue_entry(
+                entry,
+                "error",
+                code="QUEUE_ROUTE_UNAVAILABLE",
+                error=f"Queued route is unavailable: {endpoint}",
+            )
             return
 
         # Run the handler in a sub-thread with its own request context
@@ -493,7 +913,12 @@ def _dispatch_queue_entry(entry):
         t.start()
         t.join(timeout=dispatch_timeout)
         if t.is_alive():
-            entry["status"] = "error"
+            _update_queue_entry(
+                entry,
+                "error",
+                code="QUEUE_DISPATCH_TIMEOUT",
+                error=f"Queue dispatch timed out after {dispatch_timeout} seconds",
+            )
             logger.warning("Queue dispatch timed out after %ds for %s", dispatch_timeout, endpoint)
             return
         if _dispatch_result[1]:
@@ -511,25 +936,42 @@ def _dispatch_queue_entry(entry):
         if not isinstance(result, dict):
             result = {}
         if status_code >= 400:
-            entry["status"] = "error"
-            entry["error"] = result.get("error") or f"Route failed with HTTP {status_code}"
-            entry["code"] = result.get("code", "")
+            _update_queue_entry(
+                entry,
+                "error",
+                error=result.get("error") or f"Route failed with HTTP {status_code}",
+                code=result.get("code", ""),
+            )
             return
         job_id = result.get("job_id", "")
         if not job_id:
-            entry["status"] = "error"
-            entry["error"] = result.get("error") or "Route did not return a job ID"
-            entry["code"] = result.get("code", "")
+            _update_queue_entry(
+                entry,
+                "error",
+                error=result.get("error") or "Route did not return a job ID",
+                code=result.get("code", ""),
+            )
             return
-        entry["job_id"] = job_id
-        entry["status"] = "started"
+        _update_queue_entry(entry, "started", job_id=job_id)
     except Exception as e:
-        entry["status"] = "error"
+        _update_queue_entry(
+            entry,
+            "error",
+            code="QUEUE_DISPATCH_ERROR",
+            error="The queued route could not be started",
+        )
         logger.exception("Queue dispatch error for %s: %s", endpoint, e)
 
 
-def _process_queue():
+def _process_queue(app=None):
     """Process the next item in the queue (fire-and-forget)."""
+    resolved_app = app or _queue_app
+    if resolved_app is None:
+        try:
+            resolved_app = current_app._get_current_object()
+        except RuntimeError:
+            logger.error("Cannot process queue without a Flask application")
+            return
     with job_queue_lock:
         if _queue_state["running"]:
             return
@@ -539,40 +981,66 @@ def _process_queue():
         _queue_state["running"] = True
         entry = pending[0]
         entry["status"] = "running"
+        try:
+            _persist_queue_locked()
+        except Exception as exc:  # noqa: BLE001 - do not run work we cannot recover
+            entry["status"] = "queued"
+            _queue_state["running"] = False
+            logger.error("Queue processing paused because state could not be saved: %s", exc)
+            return
 
     def _run():
         try:
-            _dispatch_queue_entry(entry)
+            _dispatch_queue_entry(entry, resolved_app)
             # Wait for the job to finish (timeout after 30 minutes)
-            job_id = entry.get("job_id")
+            with job_queue_lock:
+                job_id = entry.get("job_id")
+                entry_status = entry.get("status")
             if job_id:
                 deadline = time.time() + 1800
                 while time.time() < deadline:
                     # Call _get_job_copy outside job_queue_lock to avoid nested lock deadlock
                     safe = _get_job_copy(job_id)
                     if safe and safe.get("status") in ("complete", "error", "cancelled"):
-                        with job_queue_lock:
-                            entry["status"] = safe["status"]
+                        _update_queue_entry(entry, safe["status"])
                         break
                     time.sleep(1)
                 else:
-                    with job_queue_lock:
-                        entry["status"] = "error"
+                    _update_queue_entry(
+                        entry,
+                        "error",
+                        code="QUEUE_JOB_TIMEOUT",
+                        error="Queued job timed out after 30 minutes",
+                    )
                     logger.warning("Queue job %s timed out after 30 minutes", job_id)
-            elif entry.get("status") not in ("started", "error"):
-                with job_queue_lock:
-                    entry["status"] = "error"
+            elif entry_status not in ("started", "error"):
+                _update_queue_entry(
+                    entry,
+                    "error",
+                    code="QUEUE_JOB_ID_MISSING",
+                    error="Queued route did not start a trackable job",
+                )
         except Exception as e:
-            with job_queue_lock:
-                entry["status"] = "error"
+            _update_queue_entry(
+                entry,
+                "error",
+                code="QUEUE_PROCESSING_ERROR",
+                error="The queued job could not be processed",
+            )
             logger.exception("Queue processing error: %s", e)
         finally:
             with job_queue_lock:
                 _queue_state["running"] = False
-                # Remove completed entries
-                job_queue[:] = [e for e in job_queue if e["status"] in ("queued", "running", "started")]
+                # Live jobs are represented by the job history once terminal.
+                # Keep interrupted entries visible until the user replays or
+                # clears them.
+                job_queue[:] = [
+                    e for e in job_queue
+                    if e["status"] in ("queued", "running", "started", "interrupted")
+                ]
+                _persist_queue_best_effort_locked()
             # Process next
-            _process_queue()
+            _process_queue(resolved_app)
 
     threading.Thread(target=_run, daemon=True).start()
 

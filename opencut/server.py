@@ -644,7 +644,25 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     # when launched via VBS hidden launcher where console is invisible)
     _show_startup_notification(effective_port)
 
-    _serve_wsgi_app(_get_app(), host=host, port=effective_port, debug=debug)
+    server_app = _get_app()
+    # The Werkzeug debug reloader starts a parent process before the serving
+    # child. Only the serving process may claim and resume durable queue work.
+    if not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        try:
+            from opencut.routes.jobs_routes import initialize_job_queue
+
+            recovery = initialize_job_queue(server_app)
+            if recovery.get("loaded") or recovery.get("interrupted"):
+                logger.info(
+                    "Job queue recovered: loaded=%s interrupted=%s invalid=%s",
+                    recovery.get("loaded", 0),
+                    recovery.get("interrupted", 0),
+                    recovery.get("invalid", 0),
+                )
+        except Exception as queue_exc:  # noqa: BLE001 - server remains available
+            logger.error("Job queue startup recovery failed: %s", queue_exc)
+
+    _serve_wsgi_app(server_app, host=host, port=effective_port, debug=debug)
 
 
 def _serve_wsgi_app(app, *, host: str, port: int, debug: bool) -> None:

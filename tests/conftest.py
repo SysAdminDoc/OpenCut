@@ -111,6 +111,9 @@ def _isolate_global_state():
         with _jr.job_queue_lock:
             _jr.job_queue.clear()
             _jr._queue_state["running"] = False
+            _jr._queue_persistence_enabled = False
+            _jr._queue_app = None
+            _jr._queue_storage_error = None
     except Exception as _e:
         _fixture_log.warning("job_queue teardown failed: %s", _e)
     try:

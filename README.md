@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1527-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1530-orange)
 ![Tests](https://img.shields.io/badge/Tests-11600+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -247,7 +247,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.41.0 includes **1,527 shipped API routes** (implemented or dependency-gated; 27 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.41.0 includes **1,530 shipped API routes** (implemented or dependency-gated; 27 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -457,7 +457,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,527 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,530 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -635,7 +635,7 @@ opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepa
 | Feature | Description |
 |---------|-------------|
 | Async Job System | Background processing with SSE streaming, WebSocket, and polling fallback |
-| Job Queue | Sequential job processing with queue management and cancellation |
+| Durable Job Queue | Sequential processing persisted atomically across restarts; active work becomes replayable `interrupted` entries, with collision-safe recovery and versioned JSON import/export |
 | GPU Rate Limiting | One GPU-heavy job at a time with 429 responses when busy |
 | FFmpeg Progress | Real-time percentage from `-progress pipe:1` parsing |
 | Cancel + Kill | Job cancellation terminates running FFmpeg subprocesses |
@@ -740,7 +740,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,600+ estimated tests across 291 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,600+ estimated tests across 292 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -801,7 +801,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,600+ estimated tests, 291 root test files)
+tests/               # pytest test suite (11,600+ estimated tests, 292 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

@@ -3986,9 +3986,12 @@
             <div class="job-queue-bar hidden" id="jobQueueBar">
                 <div class="queue-info">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-                    <span id="queueStatusText" data-i18n="queue.status_zero">Queue: 0 jobs</span>
+                    <span id="queueStatusText" role="status" aria-live="polite" data-i18n="queue.status_zero">Queue: 0 jobs</span>
                 </div>
-                <button type="button" class="btn-sm" id="clearQueueBtn" data-i18n="common.clear">Clear</button>
+                <div class="queue-actions">
+                    <button type="button" class="btn-sm hidden" id="recoverQueueBtn" data-i18n="queue.recover">Recover</button>
+                    <button type="button" class="btn-sm" id="clearQueueBtn" data-i18n="common.clear">Clear</button>
+                </div>
             </div>
 
             <!-- Output Browser -->
