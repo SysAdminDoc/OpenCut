@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel — AI Editing Suite for Adobe Premiere Pro
+   OpenCut CEP Panel v1.42.1 — AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
 /* Google Fonts removed — external imports hang for 30s+ in air-gapped studios.
@@ -17958,6 +17958,27 @@ html.theme-light .conn-status[data-state="offline"] {
     border-color: rgba(220, 38, 38, 0.16);
     background: rgba(254, 226, 226, 0.72);
     color: #9f1d20;
+}
+
+/* Journal status pills hardcode light-on-dark ink; re-tint them for light
+   surfaces with dark text on soft tinted backgrounds (≥4.5:1). */
+html.theme-light .journal-pill-reverted {
+    color: #475569;
+    background: rgba(23, 32, 45, 0.05);
+    border-color: rgba(23, 32, 45, 0.14);
+}
+
+html.theme-light .journal-pill-info,
+html.theme-light #journalCard .journal-pill-info {
+    color: #72510f;
+    background: rgba(152, 103, 19, 0.10);
+    border-color: rgba(152, 103, 19, 0.22);
+}
+
+html.theme-light .journal-pill-interrupted {
+    color: #8a3d06;
+    background: rgba(255, 151, 48, 0.16);
+    border-color: rgba(194, 90, 10, 0.35);
 }
 
 html.theme-light .stage-action:hover:not(:disabled),

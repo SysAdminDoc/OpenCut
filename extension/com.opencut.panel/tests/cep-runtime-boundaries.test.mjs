@@ -225,6 +225,34 @@ describe("CEP onboarding state machine", () => {
     });
     expect(Object.isFrozen(changes[0])).toBe(true);
   });
+
+  it("gates the startup tour probe on connectivity and a local seen cache", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    expect(main).toContain('var ONBOARDING_SEEN_KEY = "opencut_onboarding_seen"');
+
+    const start = main.indexOf("function maybeRunOnboarding(");
+    const end = main.indexOf("function onBackendConnected(");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const probe = main.slice(start, end);
+    // Silent short-circuits: a cached seen flag or a disconnected backend
+    // must never open the focus-trapped modal from the startup timer.
+    expect(probe).toContain("if (hasLocalOnboardingSeen()) return;");
+    expect(probe).toContain("onboardingAutoPending = true;");
+    // The offline card is only rendered when the backend is reachable but
+    // the onboarding endpoint itself errors (and on explicit restarts).
+    expect(probe).toContain("if (!connected) {");
+
+    // Deferred probes re-run once a backend health check succeeds again.
+    expect(main).toContain("function notifyBackendReconnectHooks()");
+    expect(main).toContain("if (wasDisconnected) notifyBackendReconnectHooks();");
+    expect(main).toContain("onBackendConnected: onBackendConnected");
+
+    // Server seen=true responses and complete/skip both cache locally, and
+    // an explicit restart clears the cache so the tour can run again.
+    expect(main.match(/setLocalOnboardingSeen\(true\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(main).toContain("setLocalOnboardingSeen(false)");
+  });
 });
 
 describe("CEP bootstrap", () => {
