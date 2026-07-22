@@ -163,6 +163,7 @@ def check_pysubs2_available() -> bool:
 def whisperx_transcribe(
     audio_path: str,
     model_size: str = "base",
+    model_revision: str = "",
     language: str = "",
     diarize: bool = False,
     hf_token: str = "",
@@ -192,6 +193,13 @@ def whisperx_transcribe(
         )
     import torch
     import whisperx
+    from faster_whisper.utils import download_model
+    from opencut.core.asr_provenance import (
+        apply_language_decision,
+        build_provenance,
+        model_identity,
+        whisperx_alignment_identity,
+    )
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -201,7 +209,17 @@ def whisperx_transcribe(
         on_progress(10, f"Loading WhisperX model ({model_size})...")
 
     # Step 1: Transcribe with batched inference
-    model = whisperx.load_model(model_size, device, compute_type=compute_type)
+    _model_id, resolved_revision = model_identity(
+        "whisperx",
+        model_size,
+        model_revision or None,
+    )
+    model_source = (
+        model_size
+        if os.path.isdir(model_size)
+        else download_model(model_size, revision=resolved_revision)
+    )
+    model = whisperx.load_model(model_source, device, compute_type=compute_type)
     align_model = None
     try:
         audio = whisperx.load_audio(audio_path)
@@ -250,6 +268,8 @@ def whisperx_transcribe(
                     "start": round(w.get("start", 0), 3),
                     "end": round(w.get("end", 0), 3),
                     "score": round(w.get("score", 1.0), 3),
+                    "confidence": round(w.get("probability", 1.0), 3),
+                    "boundary_confidence": round(w.get("score", 1.0), 3),
                 })
             segments.append({
                 "text": seg.get("text", "").strip(),
@@ -272,10 +292,30 @@ def whisperx_transcribe(
     if on_progress:
         on_progress(100, "WhisperX transcription complete")
 
+    provenance = build_provenance(
+        engine="whisperx",
+        requested_engine="whisperx",
+        model=model_size,
+        model_revision=model_revision or None,
+        requested_language=language or None,
+        word_timestamps=True,
+        translate=False,
+        diarize=diarize,
+        min_speakers=None,
+        max_speakers=None,
+    )
+    provenance.device = device
+    provenance.compute_type = compute_type
+    apply_language_decision(provenance, detected_lang)
+    align_id, align_revision = whisperx_alignment_identity(detected_lang)
+    provenance.alignment_model_id = align_id
+    provenance.alignment_model_revision = align_revision
+
     return {
         "segments": segments,
         "language": detected_lang,
         "word_count": sum(len(s["words"]) for s in segments),
+        "asr_provenance": provenance.to_dict(),
     }
 
 

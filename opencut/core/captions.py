@@ -14,12 +14,23 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.config import CaptionConfig
 from . import transcript_cache
+from .asr_provenance import (
+    ASRProvenance,
+    apply_language_decision,
+    build_provenance,
+    model_identity,
+    normalize_engine,
+    provenance_from_dict,
+    provenance_to_dict,
+    whisperx_alignment_identity,
+)
 from .audio import extract_audio_wav
 
 logger = logging.getLogger(__name__)
 
 
 REVIEW_ASR_CONFIDENCE_THRESHOLD = 0.70
+REVIEW_BOUNDARY_CONFIDENCE_THRESHOLD = 0.65
 REVIEW_LANGUAGE_CONFIDENCE_THRESHOLD = 0.80
 HUMAN_REVIEW_LANGUAGE_CODES = frozenset({
     "ar",
@@ -51,6 +62,19 @@ def _clamp_confidence(value: Any, default: float = 1.0) -> float:
     return max(0.0, min(1.0, score))
 
 
+def _clamp_optional_confidence(value: Any) -> Optional[float]:
+    """Return a bounded confidence value while preserving unknown/None."""
+    if value is None:
+        return None
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(score) or math.isinf(score):
+        return None
+    return max(0.0, min(1.0, score))
+
+
 @dataclass
 class Word:
     """A single word with timestamp."""
@@ -58,9 +82,11 @@ class Word:
     start: float
     end: float
     confidence: float = 1.0
+    boundary_confidence: Optional[float] = None
 
     def __post_init__(self) -> None:
         self.confidence = _clamp_confidence(self.confidence)
+        self.boundary_confidence = _clamp_optional_confidence(self.boundary_confidence)
 
 
 def normalize_language_code(language: Optional[str]) -> str:
@@ -125,6 +151,7 @@ def caption_review_reasons(
     language: Optional[str],
     language_confidence: float = 1.0,
     confidence: float = 1.0,
+    boundary_confidence: Optional[float] = None,
 ) -> List[str]:
     """Return stable machine-readable reasons a segment needs review."""
     reasons: List[str] = []
@@ -134,6 +161,9 @@ def caption_review_reasons(
         reasons.append("low_language_confidence")
     if _clamp_confidence(confidence) < REVIEW_ASR_CONFIDENCE_THRESHOLD:
         reasons.append("low_asr_confidence")
+    boundary_score = _clamp_optional_confidence(boundary_confidence)
+    if boundary_score is not None and boundary_score < REVIEW_BOUNDARY_CONFIDENCE_THRESHOLD:
+        reasons.append("low_boundary_confidence")
     return reasons
 
 
@@ -159,6 +189,7 @@ class CaptionSegment:
     language: Optional[str] = None
     language_confidence: float = 1.0
     confidence: float = 1.0
+    boundary_confidence: Optional[float] = None
     human_review_recommended: bool = False
     review_reasons: List[str] = field(default_factory=list)
 
@@ -168,10 +199,29 @@ class CaptionSegment:
         else:
             self.confidence = _clamp_confidence(self.confidence)
         self.language_confidence = _clamp_confidence(self.language_confidence)
+        if self.boundary_confidence is None and self.words:
+            boundary_scores = [
+                score
+                for score in (
+                    _clamp_optional_confidence(getattr(word, "boundary_confidence", None))
+                    for word in self.words
+                )
+                if score is not None
+            ]
+            if boundary_scores:
+                self.boundary_confidence = round(
+                    sum(boundary_scores) / len(boundary_scores),
+                    4,
+                )
+        else:
+            self.boundary_confidence = _clamp_optional_confidence(
+                self.boundary_confidence
+            )
         computed = caption_review_reasons(
             language=self.language,
             language_confidence=self.language_confidence,
             confidence=self.confidence,
+            boundary_confidence=self.boundary_confidence,
         )
         self.review_reasons = _dedupe_reasons([*self.review_reasons, *computed])
         self.human_review_recommended = bool(
@@ -193,9 +243,12 @@ class TranscriptionResult:
     cache_hit: bool = False
     cache_key: Optional[str] = None
     cache_path: Optional[str] = None
+    provenance: ASRProvenance = field(default_factory=ASRProvenance)
 
     def __post_init__(self) -> None:
         self.language_confidence = _clamp_confidence(self.language_confidence)
+        if not isinstance(self.provenance, ASRProvenance):
+            self.provenance = provenance_from_dict(self.provenance)
 
     @property
     def text(self) -> str:
@@ -232,12 +285,16 @@ def caption_segment_to_dict(
     language = getattr(seg, "language", None)
     language_confidence = _clamp_confidence(getattr(seg, "language_confidence", 1.0))
     confidence = _clamp_confidence(getattr(seg, "confidence", 1.0))
+    boundary_confidence = _clamp_optional_confidence(
+        getattr(seg, "boundary_confidence", None)
+    )
     review_reasons = _dedupe_reasons([
         *list(getattr(seg, "review_reasons", []) or []),
         *caption_review_reasons(
             language=language,
             language_confidence=language_confidence,
             confidence=confidence,
+            boundary_confidence=boundary_confidence,
         ),
     ])
 
@@ -249,6 +306,7 @@ def caption_segment_to_dict(
         "language": language,
         "language_confidence": language_confidence,
         "confidence": confidence,
+        "boundary_confidence": boundary_confidence,
         "human_review_recommended": bool(getattr(seg, "human_review_recommended", False) or review_reasons),
         "review_reasons": review_reasons,
     }
@@ -259,6 +317,9 @@ def caption_segment_to_dict(
                 "start": _number(getattr(w, "start", 0.0)),
                 "end": _number(getattr(w, "end", 0.0)),
                 "confidence": _clamp_confidence(getattr(w, "confidence", 1.0)),
+                "boundary_confidence": _clamp_optional_confidence(
+                    getattr(w, "boundary_confidence", None)
+                ),
             }
             for w in (getattr(seg, "words", None) or [])
         ]
@@ -273,6 +334,7 @@ def transcription_result_to_dict(result: TranscriptionResult) -> Dict[str, Any]:
         "language_confidence": _clamp_confidence(
             getattr(result, "language_confidence", 1.0)
         ),
+        "provenance": provenance_to_dict(getattr(result, "provenance", None)),
         "segments": [
             caption_segment_to_dict(seg, include_words=True)
             for seg in (getattr(result, "segments", []) or [])
@@ -286,6 +348,7 @@ def _word_from_dict(data: Dict[str, Any]) -> Word:
         start=data.get("start", 0.0),
         end=data.get("end", 0.0),
         confidence=data.get("confidence", 1.0),
+        boundary_confidence=data.get("boundary_confidence"),
     )
 
 
@@ -304,6 +367,7 @@ def _segment_from_dict(data: Dict[str, Any]) -> CaptionSegment:
         language=data.get("language"),
         language_confidence=data.get("language_confidence", 1.0),
         confidence=data.get("confidence", 1.0),
+        boundary_confidence=data.get("boundary_confidence"),
         human_review_recommended=bool(data.get("human_review_recommended", False)),
         review_reasons=[
             str(reason)
@@ -334,6 +398,7 @@ def transcription_result_from_dict(
         cache_hit=cache_hit,
         cache_key=cache_key,
         cache_path=cache_path,
+        provenance=provenance_from_dict(payload.get("provenance")),
     )
 
 
@@ -367,6 +432,70 @@ def check_whisper_available() -> Tuple[bool, str]:
         pass
 
     return False, "none"
+
+
+def _whisper_backend_available(backend: str) -> bool:
+    try:
+        if backend == "whisperx":
+            import whisperx  # noqa: F401
+        elif backend == "faster-whisper":
+            from faster_whisper import WhisperModel  # noqa: F401
+        elif backend == "openai-whisper":
+            import whisper  # noqa: F401
+        else:
+            return False
+    except ImportError:
+        return False
+    return True
+
+
+def resolve_whisper_backend(override: Optional[str] = None) -> Tuple[str, str]:
+    """Resolve an optional strict engine override and its fallback reason."""
+    requested = normalize_engine(override)
+    if requested and requested != "auto":
+        if requested not in {"whisperx", "faster-whisper", "openai-whisper"}:
+            raise ValueError(f"Unsupported ASR engine override: {override}")
+        if not _whisper_backend_available(requested):
+            raise RuntimeError(
+                f"Requested ASR engine '{requested}' is not installed; "
+                "choose auto or install that engine"
+            )
+        return requested, ""
+    available, backend = check_whisper_available()
+    if not available:
+        raise RuntimeError(
+            "No Whisper backend installed. Install faster-whisper, "
+            "openai-whisper, or whisperx."
+        )
+    return backend, ""
+
+
+def _backend_provenance(
+    engine: str,
+    config: CaptionConfig,
+    language: str,
+    *,
+    device: str,
+    compute_type: str,
+    fallback_reason: str = "",
+) -> ASRProvenance:
+    provenance = build_provenance(
+        engine=engine,
+        requested_engine=getattr(config, "engine", None),
+        model=config.model,
+        model_revision=getattr(config, "model_revision", None),
+        requested_language=config.language,
+        word_timestamps=config.word_timestamps,
+        translate=config.translate,
+        diarize=config.diarize,
+        min_speakers=config.min_speakers,
+        max_speakers=config.max_speakers,
+        fallback_reason=fallback_reason,
+    )
+    provenance.device = device
+    provenance.compute_type = compute_type
+    apply_language_decision(provenance, language)
+    return provenance
 
 
 def plan_transcription_engine(language=None, override=None):
@@ -467,6 +596,7 @@ def remap_captions_to_segments(
                 start=round(w_start, 4),
                 end=round(w_end, 4),
                 confidence=w.confidence,
+                boundary_confidence=getattr(w, "boundary_confidence", None),
             ))
 
         new_segments.append(CaptionSegment(
@@ -478,6 +608,7 @@ def remap_captions_to_segments(
             language=getattr(cap, "language", None),
             language_confidence=getattr(cap, "language_confidence", 1.0),
             confidence=getattr(cap, "confidence", 1.0),
+            boundary_confidence=getattr(cap, "boundary_confidence", None),
             human_review_recommended=getattr(cap, "human_review_recommended", False),
             review_reasons=list(getattr(cap, "review_reasons", []) or []),
         ))
@@ -487,6 +618,7 @@ def remap_captions_to_segments(
         language=captions.language,
         duration=total_condensed,
         language_confidence=getattr(captions, "language_confidence", 1.0),
+        provenance=getattr(captions, "provenance", ASRProvenance()),
     )
 
 
@@ -518,15 +650,22 @@ def transcribe(
     if config is None:
         config = CaptionConfig()
 
-    available, backend = check_whisper_available()
-
-    if not available:
-        raise RuntimeError(
-            "No Whisper backend installed. Install one of:\n"
-            "  pip install openai-whisper        # Reference implementation\n"
-            "  pip install faster-whisper         # Fastest (recommended)\n"
-            "  WhisperX is unavailable in OpenCut's supported dependency matrix.\n"
-        )
+    backend, fallback_reason = resolve_whisper_backend(
+        getattr(config, "engine", None)
+    )
+    provenance = build_provenance(
+        engine=backend,
+        requested_engine=getattr(config, "engine", None),
+        model=config.model,
+        model_revision=getattr(config, "model_revision", None),
+        requested_language=config.language,
+        word_timestamps=config.word_timestamps,
+        translate=config.translate,
+        diarize=config.diarize,
+        min_speakers=config.min_speakers,
+        max_speakers=config.max_speakers,
+        fallback_reason=fallback_reason,
+    )
 
     cache_key: Optional[str] = None
     cache_metadata: Optional[Dict[str, Any]] = None
@@ -536,8 +675,38 @@ def transcribe(
                 filepath,
                 backend=backend,
                 config=config,
+                extra={"asr_provenance": provenance.cache_identity()},
             )
             cached = transcript_cache.load_transcript(cache_key)
+            if not cached:
+                legacy_key, _legacy_metadata = transcript_cache.build_legacy_cache_key(
+                    filepath,
+                    backend=backend,
+                    config=config,
+                )
+                legacy = transcript_cache.load_transcript(
+                    legacy_key,
+                    count_miss=False,
+                )
+                if legacy:
+                    migrated = transcription_result_from_dict(
+                        legacy["result"],
+                        cache_hit=True,
+                        cache_key=cache_key,
+                        cache_path=transcript_cache.cache_entry_path(cache_key),
+                    )
+                    if migrated.provenance.engine == "legacy-unknown":
+                        migrated.provenance = provenance
+                        migrated.provenance.fallback_reason = (
+                            "migrated from transcript cache schema 1"
+                        )
+                        apply_language_decision(migrated.provenance, migrated.language)
+                    transcript_cache.store_transcript(
+                        cache_key,
+                        cache_metadata,
+                        transcription_result_to_dict(migrated),
+                    )
+                    return migrated
             if cached:
                 logger.info("Transcript cache hit for %s", filepath)
                 return transcription_result_from_dict(
@@ -591,6 +760,12 @@ def transcribe(
         else:
             result = _do_transcribe()
 
+        result.provenance = provenance_from_dict(
+            getattr(result, "provenance", provenance.to_dict())
+        )
+        if result.provenance.engine == "legacy-unknown":
+            result.provenance = provenance
+        apply_language_decision(result.provenance, result.language)
         result.cache_hit = False
         result.cache_key = cache_key
         if cache_key and cache_metadata:
@@ -706,6 +881,13 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         segments=segments,
         language=language,
         language_confidence=language_confidence,
+        provenance=_backend_provenance(
+            "openai-whisper",
+            config,
+            language,
+            device="cpu-or-cuda",
+            compute_type="backend-default",
+        ),
     )
 
 
@@ -750,13 +932,17 @@ def _clear_model_cache(model_name: str):
                 pass
 
 
-def _download_model(model_name: str):
-    """Force-download a faster-whisper model via huggingface_hub."""
-    repo_id = f"Systran/faster-whisper-{model_name}"
+def _download_model(model_name: str, requested_revision: Optional[str] = None):
+    """Force-download the same immutable faster-whisper revision used at runtime."""
+    repo_id, revision = model_identity(
+        "faster-whisper",
+        model_name,
+        requested_revision,
+    )
     try:
         from huggingface_hub import snapshot_download
         logger.info(f"Downloading model '{repo_id}' from HuggingFace Hub...")
-        snapshot_download(repo_id, force_download=True)
+        snapshot_download(repo_id, revision=revision, force_download=True)
         logger.info(f"Model '{repo_id}' downloaded successfully.")
     except ImportError:
         # huggingface_hub not available — faster-whisper will download on load
@@ -768,6 +954,14 @@ def _download_model(model_name: str):
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using faster-whisper (CTranslate2 backend)."""
     from faster_whisper import WhisperModel
+
+    _model_id, resolved_revision = model_identity(
+        "faster-whisper",
+        config.model,
+        getattr(config, "model_revision", None),
+    )
+    model_revision = None if os.path.isdir(config.model) else resolved_revision
+    runtime_fallback_reason = ""
 
     # Check for forced CPU mode from settings
     force_cpu = False
@@ -808,16 +1002,27 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     for attempt in range(max_attempts):
         try:
             logger.debug(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
-            model = WhisperModel(config.model, device=device, compute_type=compute_type)
+            model = WhisperModel(
+                config.model,
+                device=device,
+                compute_type=compute_type,
+                revision=model_revision,
+            )
             break
         except RuntimeError as e:
             err_str = str(e).lower()
             # CUDA library errors - fall back to CPU
             if "cuda" in err_str or "cublas" in err_str or "cudnn" in err_str:
                 logger.warning(f"CUDA error, falling back to CPU: {e}")
+                runtime_fallback_reason = "CUDA model load failed; retried on CPU"
                 device = "cpu"
                 compute_type = "int8"
-                model = WhisperModel(config.model, device=device, compute_type=compute_type)
+                model = WhisperModel(
+                    config.model,
+                    device=device,
+                    compute_type=compute_type,
+                    revision=model_revision,
+                )
                 break
             # Corrupt model cache - clear, re-download, and retry
             elif ("unable to open file" in err_str or "model.bin" in err_str
@@ -826,7 +1031,10 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 if attempt < max_attempts - 1:
                     logger.warning(f"Model cache appears corrupt (attempt {attempt + 1}), purging and re-downloading: {e}")
                     _clear_model_cache(config.model)
-                    _download_model(config.model)
+                    _download_model(
+                        config.model,
+                        getattr(config, "model_revision", None),
+                    )
                     continue
                 else:
                     raise RuntimeError(
@@ -843,7 +1051,10 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 if attempt < max_attempts - 1:
                     logger.warning(f"Model cache error (attempt {attempt + 1}), purging and re-downloading: {e}")
                     _clear_model_cache(config.model)
-                    _download_model(config.model)
+                    _download_model(
+                        config.model,
+                        getattr(config, "model_revision", None),
+                    )
                     continue
                 else:
                     raise
@@ -869,7 +1080,15 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         except RuntimeError as e:
             if "cuda" in str(e).lower() or "cublas" in str(e).lower() or "cudnn" in str(e).lower():
                 logger.warning(f"CUDA error during transcription, retrying with CPU: {e}")
-                model = WhisperModel(config.model, device="cpu", compute_type="int8")
+                runtime_fallback_reason = "CUDA inference failed; retried on CPU"
+                device = "cpu"
+                compute_type = "int8"
+                model = WhisperModel(
+                    config.model,
+                    device=device,
+                    compute_type=compute_type,
+                    revision=model_revision,
+                )
                 result_segments, info = model.transcribe(
                     wav_path,
                     language=config.language,
@@ -917,6 +1136,14 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
             segments=segments,
             language=language,
             language_confidence=language_confidence,
+            provenance=_backend_provenance(
+                "faster-whisper",
+                config,
+                language,
+                device=device,
+                compute_type=compute_type,
+                fallback_reason=runtime_fallback_reason,
+            ),
         )
     finally:
         try:
@@ -945,12 +1172,24 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
 
     import torch
     import whisperx
+    from faster_whisper.utils import download_model
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     compute_type = "float16" if device == "cuda" else "int8"
 
+    # Resolve named checkpoints through the immutable revision recorded in the
+    # provenance contract, then pass the snapshot path to WhisperX.
+    model_source = config.model
+    if not os.path.isdir(config.model):
+        _model_id, resolved_revision = model_identity(
+            "whisperx",
+            config.model,
+            getattr(config, "model_revision", None),
+        )
+        model_source = download_model(config.model, revision=resolved_revision)
+
     # Load model and transcribe
-    model = whisperx.load_model(config.model, device, compute_type=compute_type)
+    model = whisperx.load_model(model_source, device, compute_type=compute_type)
     align_model = None
     diarize_pipeline = None
     try:
@@ -1053,9 +1292,14 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
                     text=w.get("word", ""),
                     start=w.get("start", 0.0),
                     end=w.get("end", 0.0),
-                    confidence=w.get("score", 1.0),
+                    confidence=w.get("probability", 1.0),
+                    boundary_confidence=w.get("score"),
                 ))
-        segment_confidence = _confidence_from_backend_metadata(words)
+        segment_confidence = _confidence_from_backend_metadata(
+            words,
+            avg_logprob=seg.get("avg_logprob"),
+            no_speech_prob=seg.get("no_speech_prob"),
+        )
 
         segments.append(CaptionSegment(
             text=seg.get("text", "").strip(),
@@ -1068,8 +1312,21 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
             confidence=segment_confidence,
         ))
 
+    provenance = _backend_provenance(
+        "whisperx",
+        config,
+        language,
+        device=device,
+        compute_type=compute_type,
+    )
+    if config.word_timestamps:
+        align_model_id, align_revision = whisperx_alignment_identity(language)
+        provenance.alignment_model_id = align_model_id
+        provenance.alignment_model_revision = align_revision
+
     return TranscriptionResult(
         segments=segments,
         language=language,
         language_confidence=language_confidence,
+        provenance=provenance,
     )

@@ -47,7 +47,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
   await page.addInitScript(
-    ({ surfaceName, selectedTheme, environment, localeTag }) => {
+    ({ surfaceName, selectedTheme, environment, localeTag, forceEventSourceError }) => {
       localStorage.clear();
       localStorage.setItem("opencut_debug", "0");
       Object.defineProperty(navigator, "language", {
@@ -120,6 +120,9 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       window.EventSource = class RenderedEventSource {
         constructor() {
           this.readyState = 2;
+          if (forceEventSourceError) {
+            setTimeout(() => this.onerror?.(new Event("error")), 0);
+          }
         }
         addEventListener() {}
         close() {}
@@ -130,11 +133,81 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       selectedTheme: theme,
       environment: hostEnvironment(),
       localeTag: locale,
+      forceEventSourceError: Boolean(backendFixtures.boundaryReview),
     },
   );
   await page.route("http://127.0.0.1:*/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.port === "41737") return route.continue();
+    if (backendFixtures.boundaryReview) {
+      const method = route.request().method();
+      if (url.pathname === "/health" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ status: "ok", csrf_token: "fixture-token" }),
+        });
+      }
+      if (url.pathname === "/fillers" && method === "POST") {
+        const body = route.request().postDataJSON() || {};
+        capturedRequests.push({ fillers: body });
+        return route.fulfill({
+          status: 202,
+          contentType: "application/json",
+          body: JSON.stringify({ job_id: "boundary-fixture" }),
+        });
+      }
+      if (url.pathname === "/status/boundary-fixture" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "complete",
+            progress: 100,
+            result: {
+              preview_only: true,
+              mutation_blocked: true,
+              filler_stats: { removed_fillers: 0, total_filler_time: 0.2 },
+              boundary_review: {
+                required: true,
+                review_hits: 1,
+                items: [
+                  {
+                    text: "um",
+                    start: 1,
+                    end: 1.2,
+                    boundary_confidence: null,
+                    audition: {
+                      filepath: "C:/media/interview.mov",
+                      start: 0.25,
+                      duration: 1.7,
+                      filter: "raw",
+                    },
+                  },
+                ],
+              },
+              asr_provenance: {
+                engine: "faster-whisper",
+                model_id: "Systran/faster-whisper-base",
+                model_revision: "ebe41a7c92b6db74b05b378aa96b6dcf5251e2c4",
+                alignment_mode: "decoder-token-timestamps",
+                language_decision: "auto-detected:en",
+              },
+            },
+          }),
+        });
+      }
+      if (url.pathname === "/preview/audio" && method === "POST") {
+        capturedRequests.push({
+          boundaryAudition: route.request().postDataJSON() || {},
+        });
+        return route.fulfill({
+          status: 200,
+          contentType: "audio/wav",
+          body: "RIFF....WAVEfmt ",
+        });
+      }
+    }
     if (
       url.pathname === "/queue/list" &&
       Array.isArray(backendFixtures.queueEntries)
@@ -535,6 +608,76 @@ test("CEP exposes interrupted queue recovery without overflowing", async ({ page
   });
   await expect(page.locator("#recoverQueueBtn")).toBeHidden();
   await expect(page.locator("#queueStatusText")).toHaveText("Queue: 1 job");
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP auditions uncertain ASR boundaries before timeline mutation", async ({
+  page,
+}) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    480,
+    { boundaryReview: true },
+  );
+
+  await page.evaluate(() => {
+    const select = document.getElementById("clipSelect");
+    const option = document.createElement("option");
+    option.value = "C:/media/interview.mov";
+    option.textContent = "interview.mov";
+    option.setAttribute("data-name", "interview.mov");
+    select.appendChild(option);
+    select.value = option.value;
+    select._customDropdown.update();
+  });
+  const clipTrigger = page.locator(
+    ".custom-dropdown[data-for='clipSelect'] .custom-dropdown-trigger",
+  );
+  await clipTrigger.click();
+  await page.locator("#clipSelect-listbox .custom-dropdown-item").last().click();
+  await page.locator(".nav-tab[data-nav='cut']").click();
+  await page.locator("#cutSubTabs [data-sub='fillers']").click();
+  await expect(page.locator("#runFillersBtn")).toBeEnabled();
+  await page.locator("#runFillersBtn").click();
+
+  const review = page.locator("#fillerBoundaryReview");
+  await expect(review).toBeVisible({ timeout: 5000 });
+  await expect(review).toContainText("um · 1.00–1.20s · boundary unavailable");
+  await expect(page.locator("#resultsStats")).toContainText(
+    "Systran/faster-whisper-base",
+  );
+  await expect(page.locator("#resultsStats")).toContainText(
+    "decoder-token-timestamps",
+  );
+  await assertNoPageOverflow(page);
+
+  await review.getByRole("button", { name: "Audition" }).click();
+  await expect.poll(() => capturedRequests).toContainEqual({
+    boundaryAudition: {
+      filepath: "C:/media/interview.mov",
+      start: 0.25,
+      duration: 1.7,
+      filter: "raw",
+    },
+  });
+  await expect(page.locator("#fillerBoundaryPlayer")).toBeVisible();
+
+  await page.locator("#applyFillerBoundariesBtn").click();
+  await expect
+    .poll(
+      () =>
+        capturedRequests.filter(
+          (request) => request.fillers?.accept_low_confidence_boundaries,
+        ).length,
+    )
+    .toBe(1);
+  expect(
+    capturedRequests.find(
+      (request) => request.fillers?.accept_low_confidence_boundaries,
+    ).fillers.filepath,
+  ).toBe("C:/media/interview.mov");
   expect(pageErrors).toEqual([]);
 });
 

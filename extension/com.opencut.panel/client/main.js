@@ -1550,6 +1550,11 @@
         el.fillersHint = $("fillersHint");
         el.installCrisperWhisperBtn = $("installCrisperWhisperBtn");
         el.runFillersBtn = $("runFillersBtn");
+        el.fillerBoundaryReview = $("fillerBoundaryReview");
+        el.fillerBoundaryReviewSummary = $("fillerBoundaryReviewSummary");
+        el.fillerBoundaryList = $("fillerBoundaryList");
+        el.fillerBoundaryPlayer = $("fillerBoundaryPlayer");
+        el.applyFillerBoundariesBtn = $("applyFillerBoundariesBtn");
         el.vadHint = $("vadHint");
         el.fullPreset = $("fullPreset");
         el.fullZoom = $("fullZoom");
@@ -4675,6 +4680,10 @@
         var stats = "";
         var r = job.result || {};
 
+        if (r.boundary_review && r.boundary_review.required) {
+            renderFillerBoundaryReview(r.boundary_review, lastJobPayload);
+        }
+
         if (r.summary) {
             stats += esc(r.summary) + "<br>";
         }
@@ -4690,6 +4699,22 @@
                 .replace("{count}", fillerCount)
                 .replace("{plural}", fillerCount === 1 ? "" : "s")
                 .replace("{seconds}", safeFixed(r.filler_stats.total_filler_time, 1));
+        }
+        if (r.boundary_review && r.boundary_review.required) {
+            stats += (stats ? "<br>" : "") + t(
+                "cut.boundary_review_summary",
+                "{count} boundary or alignment result needs review before OpenCut changes the timeline."
+            ).replace("{count}", Number(r.boundary_review.review_hits || 0));
+        }
+        if (r.asr_provenance) {
+            var provenance = r.asr_provenance;
+            var revision = String(provenance.model_revision || "unknown");
+            if (revision.length > 12) revision = revision.slice(0, 12);
+            stats += (stats ? "<br>" : "") + "ASR: "
+                + esc(provenance.engine || "unknown") + " · "
+                + esc(provenance.model_id || "unknown") + " @ " + esc(revision)
+                + " · " + esc(provenance.alignment_mode || "none")
+                + " · " + esc(provenance.language_decision || "unknown");
         }
         if (r.caption_segments !== undefined) {
             var captionCount = Number(r.caption_segments);
@@ -4841,7 +4866,79 @@
         startJob("/silence", payload);
     }
 
+    var pendingFillerBoundaryPayload = null;
+    var pendingFillerBoundaryEndpoint = "";
+
+    function clearFillerBoundaryReview() {
+        pendingFillerBoundaryPayload = null;
+        pendingFillerBoundaryEndpoint = "";
+        if (el.fillerBoundaryReview) el.fillerBoundaryReview.classList.add("hidden");
+        if (el.fillerBoundaryList) el.fillerBoundaryList.innerHTML = "";
+        if (el.fillerBoundaryPlayer) {
+            el.fillerBoundaryPlayer.pause();
+            el.fillerBoundaryPlayer.classList.add("hidden");
+        }
+    }
+
+    function renderFillerBoundaryReview(review, sourcePayload) {
+        if (!el.fillerBoundaryReview || !el.fillerBoundaryList) return;
+        pendingFillerBoundaryPayload = sourcePayload
+            ? JSON.parse(JSON.stringify(sourcePayload))
+            : null;
+        pendingFillerBoundaryEndpoint = lastJobEndpoint || "/fillers";
+        el.fillerBoundaryList.innerHTML = "";
+        var items = Array.isArray(review.items) ? review.items : [];
+        for (var i = 0; i < items.length; i++) {
+            (function (item) {
+                var row = document.createElement("div");
+                row.className = "boundary-review-item";
+                var copy = document.createElement("span");
+                var confidence = item.boundary_confidence == null
+                    ? "unavailable"
+                    : Math.round(Number(item.boundary_confidence) * 100) + "%";
+                copy.textContent = String(item.text || item.filler_key || "boundary")
+                    + " · " + safeFixed(item.start, 2) + "–" + safeFixed(item.end, 2) + "s"
+                    + " · boundary " + confidence;
+                var audition = document.createElement("button");
+                audition.type = "button";
+                audition.className = "btn-sm btn-secondary";
+                audition.textContent = t("cut.boundary_audition", "Audition");
+                audition.addEventListener("click", function () {
+                    renderAudioPreview(
+                        item.audition || {},
+                        el.fillerBoundaryPlayer,
+                        audition
+                    );
+                });
+                row.appendChild(copy);
+                row.appendChild(audition);
+                el.fillerBoundaryList.appendChild(row);
+            })(items[i]);
+        }
+        if (el.fillerBoundaryReviewSummary) {
+            el.fillerBoundaryReviewSummary.textContent = t(
+                "cut.boundary_review_summary",
+                "{count} boundary or alignment result needs review before OpenCut changes the timeline."
+            ).replace("{count}", items.length);
+        }
+        el.fillerBoundaryReview.classList.remove("hidden");
+        try { activateSubTab("cut", "fillers"); } catch (_) {}
+        if (el.fillerBoundaryReview.scrollIntoView) {
+            el.fillerBoundaryReview.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function applyReviewedFillerBoundaries() {
+        if (!pendingFillerBoundaryPayload) return;
+        var payload = JSON.parse(JSON.stringify(pendingFillerBoundaryPayload));
+        var endpoint = pendingFillerBoundaryEndpoint || "/fillers";
+        payload.accept_low_confidence_boundaries = true;
+        clearFillerBoundaryReview();
+        startJob(endpoint, payload);
+    }
+
     function runFillers() {
+        clearFillerBoundaryReview();
         var checks = el.fillerChecks.querySelectorAll("input:checked");
         var removeKeys = [];
         for (var i = 0; i < checks.length; i++) removeKeys.push(checks[i].getAttribute("data-filler"));
@@ -16624,6 +16721,7 @@
         // Cut tab buttons
         _on("runSilenceBtn", "click", runSilence);
         _on("runFillersBtn", "click", runFillers);
+        _on("applyFillerBoundariesBtn", "click", applyReviewedFillerBoundaries);
         _on("runFullBtn", "click", runFull);
         _on("fillerBackend", "change", updateButtons);
 

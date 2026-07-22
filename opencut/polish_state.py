@@ -156,6 +156,9 @@ def _transcription_to_dict(result: Any) -> dict:
     for attr in ("language", "duration", "word_count", "language_confidence"):
         if hasattr(result, attr):
             out[attr] = getattr(result, attr)
+    from opencut.core.asr_provenance import provenance_to_dict
+
+    out["provenance"] = provenance_to_dict(getattr(result, "provenance", None))
     segs = getattr(result, "segments", None) or []
     out["segments"] = []
     for seg in segs:
@@ -170,6 +173,7 @@ def _transcription_to_dict(result: Any) -> dict:
             "language": getattr(seg, "language", None),
             "language_confidence": getattr(seg, "language_confidence", 1.0),
             "confidence": getattr(seg, "confidence", 1.0),
+            "boundary_confidence": getattr(seg, "boundary_confidence", None),
             "human_review_recommended": getattr(seg, "human_review_recommended", False),
             "review_reasons": list(getattr(seg, "review_reasons", []) or []),
         }
@@ -182,6 +186,7 @@ def _transcription_to_dict(result: Any) -> dict:
                     "word":  getattr(w, "word", "") or getattr(w, "text", ""),
                     "text":  getattr(w, "text", "") or getattr(w, "word", ""),
                     "confidence": getattr(w, "confidence", 1.0),
+                    "boundary_confidence": getattr(w, "boundary_confidence", None),
                 }
                 for w in words
             ]
@@ -213,6 +218,7 @@ def _transcription_from_dict(d: dict):
                     language=seg.get("language"),
                     language_confidence=seg.get("language_confidence", 1.0),
                     confidence=seg.get("confidence", 1.0),
+                    boundary_confidence=seg.get("boundary_confidence"),
                 )
             )
         review_reasons = list(dict.fromkeys(str(r) for r in review_reasons if str(r).strip()))
@@ -223,6 +229,7 @@ def _transcription_from_dict(d: dict):
                 word=w.get("word", ""),
                 text=w.get("text", w.get("word", "")),
                 confidence=w.get("confidence", 1.0),
+                boundary_confidence=w.get("boundary_confidence"),
             )
             for w in (seg.get("words") or [])
         ]
@@ -235,9 +242,12 @@ def _transcription_from_dict(d: dict):
             language=seg.get("language"),
             language_confidence=seg.get("language_confidence", 1.0),
             confidence=seg.get("confidence", 1.0),
+            boundary_confidence=seg.get("boundary_confidence"),
             human_review_recommended=bool(seg.get("human_review_recommended", False) or review_reasons),
             review_reasons=review_reasons,
         ))
+    from opencut.core.asr_provenance import provenance_from_dict
+
     return SimpleNamespace(
         language=d.get("language", ""),
         duration=d.get("duration", 0),
@@ -250,4 +260,5 @@ def _transcription_from_dict(d: dict):
         review_segment_count=sum(
             1 for s in segs if bool(getattr(s, "human_review_recommended", False))
         ),
+        provenance=provenance_from_dict(d.get("provenance")),
     )

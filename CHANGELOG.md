@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Make ASR provenance and boundary confidence reproducible
+
+- Persisted the selected transcription engine, immutable model ID/revision,
+  alignment backend/version, language decision, fallback reason, and runtime
+  versions in transcript caches, caption sidecars, JSON exports, interview
+  state, and privacy-safe diagnostics; legacy caches and sidecars migrate in
+  place without discarding transcript data.
+- Separated text confidence from edit-boundary confidence and added a
+  non-mutating filler review contract. The CEP panel auditions every uncertain
+  range as raw source audio and requires explicit acknowledgement before an XML
+  timeline mutation is generated.
+- Added deterministic ASR evaluation fixtures for accents, overlap, fillers,
+  variable frame rate, 29.97/59.94 timing, and code-switching, with independent
+  word-error and boundary-error metrics plus rendered narrow-panel coverage.
+
 ### Added - Recover the legacy job queue across restarts
 
 - Persisted queued work in a versioned, atomic user-data document; server

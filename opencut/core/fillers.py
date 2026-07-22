@@ -8,7 +8,7 @@ produces refined speech segments with those words excised.
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set
 
-from .captions import TranscriptionResult
+from .captions import REVIEW_BOUNDARY_CONFIDENCE_THRESHOLD, TranscriptionResult
 from .silence import TimeSegment
 
 # -------------------------------------------------------------------
@@ -79,10 +79,18 @@ class FillerHit:
     end: float          # End time in seconds
     confidence: float   # Whisper's confidence for this word
     safe: bool          # True if this is a "safe" (always-filler) word
+    boundary_confidence: Optional[float] = None  # alignment/timestamp confidence
 
     @property
     def duration(self) -> float:
         return self.end - self.start
+
+    @property
+    def boundary_review_required(self) -> bool:
+        return (
+            self.boundary_confidence is None
+            or self.boundary_confidence < REVIEW_BOUNDARY_CONFIDENCE_THRESHOLD
+        )
 
 
 @dataclass
@@ -196,6 +204,15 @@ def detect_fillers(
                         phrase_end = words[i + plen - 1].end
                         phrase_text = " ".join(words[i + j].text for j in range(plen))
                         avg_conf = sum(_conf(words[i + j]) for j in range(plen)) / plen
+                        boundary_scores = [
+                            getattr(words[i + j], "boundary_confidence", None)
+                            for j in range(plen)
+                        ]
+                        boundary_confidence = (
+                            min(float(score) for score in boundary_scores)
+                            if all(score is not None for score in boundary_scores)
+                            else None
+                        )
 
                         hits.append(FillerHit(
                             text=phrase_text,
@@ -203,6 +220,7 @@ def detect_fillers(
                             start=phrase_start,
                             end=phrase_end,
                             confidence=avg_conf,
+                            boundary_confidence=boundary_confidence,
                             safe=(pkey in SAFE_FILLERS),
                         ))
                         i += plen
@@ -220,6 +238,7 @@ def detect_fillers(
                     start=w.start,
                     end=w.end,
                     confidence=_conf(w),
+                    boundary_confidence=getattr(w, "boundary_confidence", None),
                     safe=(active_singles[norm] in SAFE_FILLERS),
                 ))
 
@@ -242,6 +261,52 @@ def detect_fillers(
         total_words=total_words,
         filler_percentage=round(filler_pct, 1),
     )
+
+
+def build_boundary_review(
+    hits: List[FillerHit],
+    *,
+    filepath: str,
+    context_seconds: float = 0.75,
+) -> Dict:
+    """Build an auditionable, non-mutating review plan for risky boundaries."""
+    risky = [hit for hit in hits if hit.boundary_review_required]
+    items = []
+    for index, hit in enumerate(risky):
+        preview_start = max(0.0, hit.start - context_seconds)
+        preview_end = hit.end + context_seconds
+        items.append({
+            "id": f"boundary_{index + 1:04d}",
+            "text": hit.text,
+            "filler_key": hit.filler_key,
+            "start": round(hit.start, 4),
+            "end": round(hit.end, 4),
+            "text_confidence": round(float(hit.confidence), 4),
+            "boundary_confidence": (
+                round(float(hit.boundary_confidence), 4)
+                if hit.boundary_confidence is not None
+                else None
+            ),
+            "reason": (
+                "boundary_confidence_unavailable"
+                if hit.boundary_confidence is None
+                else "low_boundary_confidence"
+            ),
+            "audition": {
+                "endpoint": "/preview/audio",
+                "filepath": filepath,
+                "start": round(preview_start, 4),
+                "duration": round(max(1.0, min(15.0, preview_end - preview_start)), 4),
+                "filter": "raw",
+            },
+        })
+    return {
+        "required": bool(items),
+        "threshold": REVIEW_BOUNDARY_CONFIDENCE_THRESHOLD,
+        "total_hits": len(hits),
+        "review_hits": len(items),
+        "items": items,
+    }
 
 
 def remove_fillers_from_segments(

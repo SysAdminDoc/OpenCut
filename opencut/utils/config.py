@@ -28,9 +28,16 @@ class SilenceConfig:
 @dataclass
 class CaptionConfig:
     """Configuration for caption/subtitle generation."""
+    # Explicit ASR engine override. None/"auto" selects the best installed
+    # backend; supported overrides are faster-whisper, openai-whisper, and
+    # whisperx.
+    engine: Optional[str] = None
     # Whisper model size: tiny, base, small, medium, large-v3, turbo,
     # large-v3-turbo (default — within 1-2% WER of large-v3 at 5.4x speed)
     model: str = "large-v3-turbo"
+    # Optional immutable model commit/hash override. Built-in faster-whisper
+    # names otherwise resolve through OpenCut's pinned revision table.
+    model_revision: Optional[str] = None
     # Language code (None = auto-detect)
     language: Optional[str] = None
     # Enable word-level timestamps for animated captions

@@ -32,6 +32,7 @@ import json
 import logging
 import os
 import platform
+import re
 import statistics
 import threading
 import time
@@ -43,6 +44,7 @@ logger = logging.getLogger("opencut")
 
 EVAL_DIR = Path(os.path.expanduser("~")) / ".opencut" / "ai_eval"
 EVAL_VERSION = 1
+ASR_FIXTURE_SCHEMA_VERSION = 1
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +115,108 @@ class EvalDefinition:
     description: str = ""
     sample_type: str = "audio"
     metric_name: str = "n/a"
+
+
+def _asr_token(value: object) -> str:
+    return re.sub(r"[^\w']+", "", str(value or "").casefold())
+
+
+def _word_alignment(reference: list[dict], hypothesis: list[dict]):
+    """Return edit distance and matching word-index pairs."""
+    ref_tokens = [_asr_token(word.get("text", word.get("word", ""))) for word in reference]
+    hyp_tokens = [_asr_token(word.get("text", word.get("word", ""))) for word in hypothesis]
+    rows = len(ref_tokens) + 1
+    cols = len(hyp_tokens) + 1
+    distance = [[0] * cols for _ in range(rows)]
+    step = [[""] * cols for _ in range(rows)]
+    for i in range(1, rows):
+        distance[i][0] = i
+        step[i][0] = "delete"
+    for j in range(1, cols):
+        distance[0][j] = j
+        step[0][j] = "insert"
+    for i in range(1, rows):
+        for j in range(1, cols):
+            if ref_tokens[i - 1] == hyp_tokens[j - 1]:
+                distance[i][j] = distance[i - 1][j - 1]
+                step[i][j] = "match"
+                continue
+            choices = (
+                (distance[i - 1][j - 1] + 1, "substitute"),
+                (distance[i - 1][j] + 1, "delete"),
+                (distance[i][j - 1] + 1, "insert"),
+            )
+            distance[i][j], step[i][j] = min(choices, key=lambda item: item[0])
+
+    matches = []
+    i, j = len(ref_tokens), len(hyp_tokens)
+    while i or j:
+        action = step[i][j]
+        if action == "match":
+            matches.append((i - 1, j - 1))
+            i -= 1
+            j -= 1
+        elif action == "substitute":
+            i -= 1
+            j -= 1
+        elif action == "delete":
+            i -= 1
+        else:
+            j -= 1
+    matches.reverse()
+    return distance[-1][-1], matches
+
+
+def evaluate_asr_contract(
+    reference_words: list[dict],
+    hypothesis_words: list[dict],
+    *,
+    boundary_tolerance_ms: float = 80.0,
+) -> dict:
+    """Score text errors and edit-boundary errors as independent metrics."""
+    if not isinstance(reference_words, list) or not isinstance(hypothesis_words, list):
+        raise ValueError("ASR reference and hypothesis words must be lists")
+    errors, matches = _word_alignment(reference_words, hypothesis_words)
+    wer = errors / max(1, len(reference_words))
+    boundary_errors = []
+    within_tolerance = 0
+    for ref_index, hyp_index in matches:
+        reference = reference_words[ref_index]
+        hypothesis = hypothesis_words[hyp_index]
+        start_error = abs(float(reference.get("start", 0)) - float(hypothesis.get("start", 0))) * 1000
+        end_error = abs(float(reference.get("end", 0)) - float(hypothesis.get("end", 0))) * 1000
+        boundary_errors.extend([start_error, end_error])
+        if start_error <= boundary_tolerance_ms and end_error <= boundary_tolerance_ms:
+            within_tolerance += 1
+    boundary_mae = (
+        statistics.fmean(boundary_errors) if boundary_errors else None
+    )
+    return {
+        "text_wer": round(wer, 6),
+        "text_errors": errors,
+        "reference_word_count": len(reference_words),
+        "hypothesis_word_count": len(hypothesis_words),
+        "matched_word_count": len(matches),
+        "boundary_tolerance_ms": float(boundary_tolerance_ms),
+        "boundary_mae_ms": round(boundary_mae, 3) if boundary_mae is not None else None,
+        "boundary_within_tolerance_rate": round(
+            within_tolerance / max(1, len(matches)),
+            6,
+        ),
+    }
+
+
+def load_asr_fixture_manifest(path: Path) -> dict:
+    """Load a deterministic ASR fixture manifest with strict schema checks."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("ASR fixture manifest must be an object")
+    if payload.get("schema_version") != ASR_FIXTURE_SCHEMA_VERSION:
+        raise ValueError("Unsupported ASR fixture schema")
+    fixtures = payload.get("fixtures")
+    if not isinstance(fixtures, list) or not fixtures:
+        raise ValueError("ASR fixture manifest must contain fixtures")
+    return payload
 
 
 # ---------------------------------------------------------------------------

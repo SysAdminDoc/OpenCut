@@ -543,6 +543,13 @@
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> <span data-i18n="cut.filler_also_silence">Also remove silences</span></label>
                         <button type="button" class="btn-primary" id="runFillersBtn" disabled data-i18n="cut.clean_fillers">Clean Filler Words</button>
+                        <div class="boundary-review hidden" id="fillerBoundaryReview" role="region" aria-labelledby="fillerBoundaryReviewTitle">
+                            <div class="card-title" id="fillerBoundaryReviewTitle" data-i18n="cut.boundary_review_title">Review uncertain edit boundaries</div>
+                            <p class="card-desc" id="fillerBoundaryReviewSummary" data-i18n="cut.boundary_review_desc">Audition each flagged range before allowing timeline changes.</p>
+                            <div class="boundary-review-list" id="fillerBoundaryList"></div>
+                            <audio id="fillerBoundaryPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
+                            <button type="button" class="btn-secondary btn-sm" id="applyFillerBoundariesBtn" data-i18n="cut.boundary_apply">Apply reviewed boundaries</button>
+                        </div>
                         <div class="hint hidden" id="fillersHint">
                             <span class="hint-copy" data-i18n="cut.filler_backend_missing">No filler detection backend is installed yet. Add Whisper from Settings or install CrisperWhisper here for verbatim filler detection.</span>
                             <button type="button" class="btn-text btn-xs hidden" id="installCrisperWhisperBtn" data-i18n="install.crisper_whisper">Install CrisperWhisper</button>

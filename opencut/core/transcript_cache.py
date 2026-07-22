@@ -14,7 +14,8 @@ from typing import Any, Dict, Optional, Tuple
 
 from opencut.user_data import OPENCUT_DIR
 
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
+LEGACY_CACHE_SCHEMA_VERSION = 1
 CACHE_ENV = "OPENCUT_TRANSCRIPT_CACHE"
 CACHE_DIR_ENV = "OPENCUT_TRANSCRIPT_CACHE_DIR"
 DEFAULT_CHUNK_SIZE = 1024 * 1024
@@ -114,7 +115,9 @@ def build_cache_key(
     """Build a stable cache key and metadata payload for a transcription."""
     source = source_digest(filepath)
     settings = {
+        "engine": getattr(config, "engine", None) or "auto",
         "model": getattr(config, "model", "base"),
+        "model_revision": getattr(config, "model_revision", None) or "",
         "language": getattr(config, "language", None) or "",
         "word_timestamps": bool(getattr(config, "word_timestamps", True)),
         "translate": bool(getattr(config, "translate", False)),
@@ -140,27 +143,62 @@ def build_cache_key(
     return key, metadata
 
 
-def load_transcript(key: str) -> Optional[Dict[str, Any]]:
+def build_legacy_cache_key(
+    filepath: str,
+    *,
+    backend: str,
+    config: Any,
+) -> Tuple[str, Dict[str, Any]]:
+    """Rebuild the v1 key so existing transcript caches remain readable."""
+    source = source_digest(filepath)
+    settings = {
+        "model": getattr(config, "model", "base"),
+        "language": getattr(config, "language", None) or "",
+        "word_timestamps": bool(getattr(config, "word_timestamps", True)),
+        "translate": bool(getattr(config, "translate", False)),
+        "diarize": bool(getattr(config, "diarize", False)),
+        "min_speakers": getattr(config, "min_speakers", None),
+        "max_speakers": getattr(config, "max_speakers", None),
+        "vad_filter": True,
+    }
+    payload = {
+        "schema_version": LEGACY_CACHE_SCHEMA_VERSION,
+        "source": source,
+        "backend": backend,
+        "backend_version": _backend_version(backend),
+        "settings": settings,
+        "extra": {},
+    }
+    key = hashlib.sha256(_json_dumps(payload).encode("utf-8")).hexdigest()
+    return key, {**payload, "key": key, "source_path_was": os.path.realpath(filepath)}
+
+
+def load_transcript(key: str, *, count_miss: bool = True) -> Optional[Dict[str, Any]]:
     """Load a cached transcript entry, or None on miss/corruption."""
     if not cache_enabled():
         return None
     path = _entry_path(key)
     with _LOCK:
         if not os.path.isfile(path):
-            _RUNTIME_STATS["misses"] += 1
+            if count_miss:
+                _RUNTIME_STATS["misses"] += 1
             return None
         try:
             with open(path, "r", encoding="utf-8") as handle:
                 entry = json.load(handle)
             if (
                 not isinstance(entry, dict)
-                or entry.get("schema_version") != CACHE_SCHEMA_VERSION
+                or entry.get("schema_version") not in {
+                    LEGACY_CACHE_SCHEMA_VERSION,
+                    CACHE_SCHEMA_VERSION,
+                }
                 or entry.get("key") != key
                 or not isinstance(entry.get("result"), dict)
             ):
                 raise ValueError("invalid transcript cache entry")
         except Exception:
-            _RUNTIME_STATS["misses"] += 1
+            if count_miss:
+                _RUNTIME_STATS["misses"] += 1
             _RUNTIME_STATS["corrupt_entries"] += 1
             _quarantine(path)
             return None
