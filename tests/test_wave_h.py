@@ -250,6 +250,37 @@ class TestIssueReport(unittest.TestCase):
             self.assertNotIn(secret, result["url"])
         mocked_logger.assert_not_called()
 
+    def test_redaction_covers_json_and_dict_quoted_keys(self):
+        from opencut.core import issue_report
+
+        cases = [
+            ('"api_key": "sk-abc"', '"api_key": "[REDACTED]"'),
+            ('"password": "hunter2"', '"password": "[REDACTED]"'),
+            ("'client_secret': 'abc-secret-123'", "'client_secret': '[REDACTED]'"),
+            ('{"refresh_token":"tok-secret-456"}', '{"refresh_token":"[REDACTED]"}'),
+        ]
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assertEqual(issue_report._redact_sensitive_text(raw), expected)
+
+    def test_redaction_keeps_existing_unquoted_shapes(self):
+        from opencut.core import issue_report
+
+        cases = [
+            ("OPENAI_API_KEY=envsecret123", "OPENAI_API_KEY=[REDACTED]"),
+            ("password: hunter2", "password: [REDACTED]"),
+            ("api_key = barevalue", "api_key = [REDACTED]"),
+        ]
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assertEqual(issue_report._redact_sensitive_text(raw), expected)
+
+    def test_quoted_key_redaction_is_idempotent(self):
+        from opencut.core import issue_report
+
+        once = issue_report._redact_sensitive_text('{"refresh_token":"tok-123"}')
+        self.assertEqual(issue_report._redact_sensitive_text(once), once)
+
 
 # =========================================================================
 # demo_bundle

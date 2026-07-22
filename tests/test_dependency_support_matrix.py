@@ -88,6 +88,19 @@ def test_python_ceiling_rejects_unverified_future_runtime():
     assert "Python 3.11-3.14" in result["reason"]
 
 
+def test_versioned_requirement_hits_the_same_platform_gate_as_bare_name():
+    """A spec like nemo_toolkit[asr]>=2.7.3,<2.8 (as passed by
+    security.runtime_security_requirement) must not bypass the Linux-only
+    gate that applies to bare nemo_toolkit."""
+    versioned = dependency_support.dependency_support("nemo_toolkit[asr]>=2.7.3,<2.8")
+    bare = dependency_support.dependency_support("nemo_toolkit")
+
+    assert versioned == bare
+    if dependency_support.normalise_platform() != "linux":
+        assert versioned["supported"] is False
+        assert "supports linux" in versioned["reason"]
+
+
 def test_whisperx_conflict_never_emits_an_install_command():
     status = dependency_support.dependency_support("whisperx")
 
