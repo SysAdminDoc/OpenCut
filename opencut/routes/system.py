@@ -761,7 +761,7 @@ def check_dependencies():
         "librosa": "pip install librosa",
         "pydub": "pip install pydub",
         "opencv": "pip install opencv-python-headless",
-        "Pillow": "pip install Pillow",
+        "Pillow": 'pip install "Pillow>=12.3.0,<13"',
         "numpy": "pip install numpy",
         "rembg": "pip install rembg",
         "realesrgan": "pip install opencut-ppro[ai]",

@@ -97,7 +97,7 @@ def install_deps():
                      "click>=8.0", "rich>=13.0", "flask>=3.0", "flask-cors>=4.0",
                      "python-json-logger>=2.0", "psutil>=5.9",
                      "faster-whisper>=1.0", "opencv-python-headless>=4.8",
-                     "Pillow>=10.0", "numpy>=1.24",
+                     "Pillow>=12.3.0,<13", "numpy>=1.24",
                      "--prefer-binary", "--progress-bar", "on"],
                     check=True, timeout=pip_timeout,
                 )

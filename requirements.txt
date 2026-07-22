@@ -23,7 +23,7 @@ Jinja2>=3.1.6
 # === STANDARD (recommended) ===
 faster-whisper>=1.1,<2
 opencv-python-headless>=4.13,<5
-Pillow>=12.2,<13
+Pillow>=12.3.0,<13
 numpy>=1.24
 librosa>=0.10,<1
 # pydub retired in F123; OpenCut does not import it and keeps an optional

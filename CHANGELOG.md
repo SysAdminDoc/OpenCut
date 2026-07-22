@@ -321,6 +321,13 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Close vulnerable Pillow install paths
+
+- Raised every declared Pillow lane to `>=12.3.0,<13`, constrained runtime
+  auto-installs to the same advisory-safe range, and updated bootstrap and
+  dependency-dashboard commands so old indexes cannot select Pillow 12.2 or
+  earlier. A repository regression gate rejects unbounded runtime/copy paths.
+
 ### Improved - Rebuild CEP and UXP as an editorial command center
 
 - CEP and UXP now share a restrained graphite command-center system with a

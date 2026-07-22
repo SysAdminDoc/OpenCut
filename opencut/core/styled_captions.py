@@ -1326,12 +1326,12 @@ def _ensure_pillow():
     logger.info("Pillow not found, installing...")
     try:
         from opencut.security import safe_pip_install
-        safe_pip_install("Pillow")
+        safe_pip_install("Pillow>=12.3.0,<13")
     except Exception as e:
         logger.error(f"Failed to install Pillow: {e}")
         raise RuntimeError(
             "Pillow is required for styled captions. "
-            "Install it manually: pip install Pillow"
+            'Install it manually: pip install "Pillow>=12.3.0,<13"'
         ) from e
 
     # CRITICAL: invalidate Python's import cache so it finds the new package

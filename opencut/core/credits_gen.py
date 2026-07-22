@@ -133,7 +133,8 @@ def generate_credits(
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
         raise RuntimeError(
-            "Pillow is required for credits generation. Install with: pip install Pillow"
+            'Pillow is required for credits generation. '
+            'Install with: pip install "Pillow>=12.3.0,<13"'
         )
 
     if on_progress:

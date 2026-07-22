@@ -440,7 +440,9 @@ def _ensure_method_deps(method: str):
         if not ensure_package("rembg", "rembg"):
             raise RuntimeError("rembg is required but could not be installed. Run: pip install rembg")
         if not ensure_package("PIL", "Pillow"):
-            raise RuntimeError("Pillow is required. Run: pip install Pillow")
+            raise RuntimeError(
+                'Pillow is required. Run: pip install "Pillow>=12.3.0,<13"'
+            )
     elif method == "mediapipe":
         if not ensure_package("mediapipe", "mediapipe"):
             raise RuntimeError("mediapipe is required. Run: pip install mediapipe")
