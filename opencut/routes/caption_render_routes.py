@@ -17,6 +17,7 @@ from .captions import (
     workflow_step,
 )
 
+
 # Caption Burn-in
 # ---------------------------------------------------------------------------
 @captions_bp.route("/captions/burnin/styles", methods=["GET"])

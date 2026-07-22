@@ -5,7 +5,7 @@ Transcription, caption styles, burn-in, animated captions, whisperx,
 translation, karaoke, format conversion.
 """
 
-# ruff: noqa: F401 -- compatibility facade exports shared contracts and routes.
+# ruff: noqa: F401,I001 -- compatibility facade exports ordered shared contracts and routes.
 
 import copy
 import logging

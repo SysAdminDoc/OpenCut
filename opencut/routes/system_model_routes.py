@@ -144,7 +144,6 @@ def list_models():
         _models_cache["ts"] = now
     return jsonify(result)
 
-
 @system_bp.route("/models/delete", methods=["POST"])
 @require_csrf
 def delete_model():
@@ -392,4 +391,3 @@ def check_for_update():
         _update_cache["ts"] = now
 
     return jsonify(result)
-

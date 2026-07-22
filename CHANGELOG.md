@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+## [1.42.0] — 2026-07-22 — Trustworthy recovery and modular route contracts
+
+### Security - Harden release and support paths
+
+- Closed all supported Pillow installation paths below 12.3, redacted secrets
+  from issue-report previews, restored signed dry-run confirmation for CEP
+  destructive actions, and made release assembly attest its resolved
+  dependency composition.
+
 ### Added - Version review artifacts under stable identities
 
 - Snapshot each review render into immutable, SHA-256-identified local storage
@@ -140,6 +149,14 @@ record also lives in the git commit messages.
 - Updated the hash-locked standard install to PySceneDetect 0.7 and one direct
   OpenCV 5 provider, while normalizing legacy runtime install requests to the
   same supported package.
+
+### Changed - Decompose oversized route modules
+
+- Split the system, caption, and Wave L route monoliths into 23 cohesive
+  purpose modules behind their existing blueprint facades. URLs, endpoint
+  names, decorators, payload contracts, and the 1,566-route manifest remain
+  unchanged, while every extracted module is below the repository's 600-line
+  decomposition guidance.
 
 ## [1.41.0] — 2026-07-21 — Decompose the CEP and UXP panel runtimes
 

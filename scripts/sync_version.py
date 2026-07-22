@@ -81,6 +81,11 @@ TARGETS = [
         r'(assemblyIdentity version=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(")',
         r'\g<1>{v}.0\g<2>',
     ),
+    (
+        "installer/src/OpenCut.Installer/Properties/app.smoke.manifest",
+        r'(assemblyIdentity version=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}.0\g<2>',
+    ),
     # Install.ps1 dev installer banner
     (
         "Install.ps1",
@@ -192,6 +197,18 @@ TARGETS = [
 ]
 
 
+def _read_text(path: Path) -> str:
+    """Read UTF-8 without normalizing the file's existing line endings."""
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def _write_text(path: Path, text: str) -> None:
+    """Write UTF-8 without translating line endings on Windows."""
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+
+
 def version_tokens(version: str) -> dict[str, str]:
     """Return replacement tokens derived from an X.Y.Z version string."""
     major_s, minor_s, patch_s = version.split(".")
@@ -226,7 +243,7 @@ def render_replacement(replacement: str, version: str) -> str:
 
 def read_version() -> str:
     """Read __version__ from opencut/__init__.py."""
-    text = INIT_PY.read_text(encoding="utf-8")
+    text = _read_text(INIT_PY)
     m = re.search(r'__version__\s*=\s*"([^"]+)"', text)
     if not m:
         print(f"ERROR: Could not find __version__ in {INIT_PY}")
@@ -236,13 +253,13 @@ def read_version() -> str:
 
 def set_version(new_ver: str) -> None:
     """Write __version__ into opencut/__init__.py."""
-    text = INIT_PY.read_text(encoding="utf-8")
+    text = _read_text(INIT_PY)
     updated = re.sub(
         r'(__version__\s*=\s*")[^"]+(")',
         rf'\g<1>{new_ver}\g<2>',
         text,
     )
-    INIT_PY.write_text(updated, encoding="utf-8")
+    _write_text(INIT_PY, updated)
     print(f"  SET  {INIT_PY.relative_to(ROOT)}  ->  {new_ver}")
 
 
@@ -252,7 +269,7 @@ def check_file(rel_path: str, pattern: str, replacement: str, version: str) -> b
     if not fpath.exists():
         return True  # Missing files are OK (optional targets)
 
-    text = fpath.read_text(encoding="utf-8")
+    text = _read_text(fpath)
     m = re.search(pattern, text, flags=re.MULTILINE)
     if not m:
         return True  # Pattern not found — nothing to check
@@ -274,7 +291,7 @@ def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bo
         print(f"  SKIP {rel_path}  (file not found)")
         return False
 
-    text = fpath.read_text(encoding="utf-8")
+    text = _read_text(fpath)
     repl = render_replacement(replacement, version)
     updated, count = re.subn(pattern, repl, text, count=1, flags=re.MULTILINE)
 
@@ -282,7 +299,7 @@ def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bo
         print(f"  SKIP {rel_path}  (pattern not matched)")
         return False
 
-    fpath.write_text(updated, encoding="utf-8")
+    _write_text(fpath, updated)
     print(f"  SYNC {rel_path}  ->  {version}")
     return True
 

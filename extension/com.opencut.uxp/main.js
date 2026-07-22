@@ -58,7 +58,7 @@ const WS_RECONNECT_MAX_MS = 30000;
 const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.41.0";
+const VERSION          = "1.42.0";
 const UXP_DEFAULT_LOCALE = "en";
 const UXP_LOCALE_DIR   = "locales";
 const UXPThemeSync     = createPremiereThemeSync({ documentRef: document });

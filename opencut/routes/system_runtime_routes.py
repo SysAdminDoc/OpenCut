@@ -513,4 +513,3 @@ def check_dependencies():
         _deps_cache["ts"] = time.time()
 
     return jsonify(deps)
-

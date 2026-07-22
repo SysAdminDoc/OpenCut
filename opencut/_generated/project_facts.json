@@ -38,7 +38,7 @@
   "project": {
     "distribution_name": "opencut-ppro",
     "name": "OpenCut",
-    "version": "1.41.0"
+    "version": "1.42.0"
   },
   "routes": {
     "blueprints": 107,
