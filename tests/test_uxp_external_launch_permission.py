@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_ROOT = REPO_ROOT / "extension" / "com.opencut.uxp"
 LIVE_MANIFEST = UXP_ROOT / "manifest.json"
 UXP_MAIN = UXP_ROOT / "main.js"
+UXP_UTILS = UXP_ROOT / "uxp-utils.js"
 WEBVIEW_CONFIG = UXP_ROOT / "bolt-webview" / "uxp.config.ts"
 WEBVIEW_UXP_API = UXP_ROOT / "bolt-webview" / "src" / "api" / "uxp.ts"
 SOURCE_SUFFIXES = {".html", ".js", ".mjs", ".ts", ".tsx", ".jsx"}
@@ -43,9 +44,11 @@ def test_live_manifest_declares_https_only_launch_process_permission():
 
 def test_live_uxp_oauth_launch_uses_https_normalizer_and_consent_context():
     source = UXP_MAIN.read_text(encoding="utf-8")
+    utilities = UXP_UTILS.read_text(encoding="utf-8")
 
-    assert "function normalizeHttpsExternalUrl" in source
-    assert 'parsed.protocol === "https:"' in source
+    assert 'normalizeHttpsExternalUrl,' in source
+    assert "export function normalizeHttpsExternalUrl" in utilities
+    assert 'parsed.protocol === "https:"' in utilities
     assert "async function openHttpsExternalUrl" in source
     assert "shell.openExternal(" in source
     assert "developerText ||" in source

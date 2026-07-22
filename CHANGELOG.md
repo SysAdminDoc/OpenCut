@@ -3,6 +3,19 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## [Unreleased]
+
+### Changed - Extract UXP runtime boundaries behind focused contracts
+
+- Split UXP runtime state, CSRF-aware backend transport, async job tracking,
+  locale loading/DOM translation, timeline payload normalization, DOM
+  components, and bootstrap error containment into dedicated ES modules.
+  `main.js` now composes those boundaries while preserving endpoint payloads,
+  host-action names, retry rules, and job completion behavior.
+- Added 12 focused Vitest contracts for transport retry, job exclusivity,
+  locale overlays, timeline payloads, component escaping/state, and ordered
+  bootstrap behavior.
+
 ## [1.40.0] — 2026-07-21 — Extract the CEP + UXP i18n cores behind tests
 
 ### Changed - Move the CEP i18n lookup + locale merge into a pure, tested core

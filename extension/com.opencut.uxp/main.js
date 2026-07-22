@@ -1,10 +1,4 @@
 import {
-  escapeHtml as escapeHtmlValue,
-  safeDomIdSegment,
-  expandRenamePattern,
-  computeInverseRenames,
-  buildSmartBinRules,
-  summarizeRenamePreview,
   formatTimecode,
   formatCompactDuration,
   formatBytes,
@@ -17,11 +11,19 @@ import {
   normalizeCaptionStyleCatalog,
   migrationStateClass,
   pluginTrustStateClass,
-  normalizeLocaleTag,
-  getLocaleCandidates,
-  translate,
-  interpolateI18n,
 } from "./uxp-utils.js";
+import { createUxpState } from "./uxp-state.js";
+import { createBackendClient } from "./backend-client.js";
+import { createJobController } from "./job-controller.js";
+import { createI18nRuntime } from "./uxp-i18n.js";
+import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-components.js";
+import {
+  expandRenamePattern,
+  computeInverseRenames,
+  buildSmartBinRules,
+  summarizeRenamePreview,
+} from "./uxp-timeline.js";
+import { bootstrapApplication } from "./uxp-bootstrap.js";
 
 /**
  * OpenCut UXP Panel — main.js
@@ -58,7 +60,6 @@ const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.40.0";
 const UXP_DEFAULT_LOCALE = "en";
 const UXP_LOCALE_DIR   = "locales";
-const UXP_LOCALE_PATH  = `${UXP_LOCALE_DIR}/${UXP_DEFAULT_LOCALE}.json`;
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const CONNECTION_LABEL_KEYS = {
@@ -265,87 +266,20 @@ const WORKSPACE_GUIDES = {
 // ─────────────────────────────────────────────────────────────
 // i18n / Localization
 // ─────────────────────────────────────────────────────────────
-let _currentLang = UXP_DEFAULT_LOCALE;
-let _i18n = {};
+let UxpI18n = null;
 
-function t(key, fallback) {
-  return translate(_i18n, key, fallback);
-}
-
+function t(key, fallback) { return UxpI18n ? UxpI18n.t(key, fallback) : fallback; }
 function formatI18n(key, fallback, values = {}) {
-  return interpolateI18n(t(key, fallback), values);
+  return UxpI18n ? UxpI18n.format(key, fallback, values) : fallback;
 }
-
 function formatCountI18n(count, oneKey, oneFallback, manyKey, manyFallback, values = {}) {
-  return formatI18n(
-    count === 1 ? oneKey : manyKey,
-    count === 1 ? oneFallback : manyFallback,
-    { count, ...values }
-  );
+  return UxpI18n
+    ? UxpI18n.formatCount(count, oneKey, oneFallback, manyKey, manyFallback, values)
+    : (count === 1 ? oneFallback : manyFallback).replace("{count}", count);
 }
 
 function getDeliverableLabel(type) {
   return t(DELIVERABLE_LABEL_KEYS[type], DELIVERABLE_LABELS[type] || humanizeDomain(type));
-}
-
-function applyI18nToDOM(root = document) {
-  const scope = root || document;
-  scope.querySelectorAll("[data-i18n]").forEach((node) => {
-    const key = node.getAttribute("data-i18n");
-    if (!key) return;
-    const labelTarget = node.querySelector(".btn-label, .i18n-text");
-    if (!node.hasAttribute("data-i18n-fallback")) {
-      node.setAttribute("data-i18n-fallback", labelTarget ? labelTarget.textContent : node.textContent);
-    }
-    const fallback = node.getAttribute("data-i18n-fallback") || "";
-    const translated = t(key, fallback);
-    if (labelTarget) labelTarget.textContent = translated;
-    else node.textContent = translated;
-  });
-
-  const attrMappings = [
-    ["data-i18n-title", "title"],
-    ["data-i18n-label", "label"],
-    ["data-i18n-alt", "alt"],
-    ["data-i18n-placeholder", "placeholder"],
-    ["data-i18n-aria-label", "aria-label"],
-  ];
-  attrMappings.forEach(([dataAttr, targetAttr]) => {
-    scope.querySelectorAll(`[${dataAttr}]`).forEach((node) => {
-      const key = node.getAttribute(dataAttr);
-      if (!key) return;
-      const fallbackAttr = `${dataAttr}-fallback`;
-      if (!node.hasAttribute(fallbackAttr)) {
-        node.setAttribute(fallbackAttr, node.getAttribute(targetAttr) || "");
-      }
-      node.setAttribute(targetAttr, t(key, node.getAttribute(fallbackAttr) || ""));
-    });
-  });
-}
-
-function getLocaleOverride() {
-  try {
-    if (typeof window !== "undefined" && window.location) {
-      const override = new URLSearchParams(window.location.search).get("lang");
-      return override ? normalizeLocaleTag(override) : "";
-    }
-  } catch (err) {
-    console.debug("[OpenCut UXP] Locale override unavailable.", err);
-  }
-  return "";
-}
-
-function getPreferredLocale() {
-  const override = getLocaleOverride();
-  if (override) return override;
-  if (typeof navigator !== "undefined") {
-    const languages = Array.isArray(navigator.languages) && navigator.languages.length
-      ? navigator.languages
-      : [navigator.language];
-    const first = languages.find(Boolean);
-    if (first) return normalizeLocaleTag(first);
-  }
-  return UXP_DEFAULT_LOCALE;
 }
 
 async function fetchLocaleJson(path) {
@@ -360,34 +294,14 @@ async function fetchLocaleJson(path) {
   return null;
 }
 
-async function loadLocale(lang = getPreferredLocale()) {
-  const requestedLang = normalizeLocaleTag(lang);
-  const baseLocale = await fetchLocaleJson(UXP_LOCALE_PATH) || {};
-  let activeLang = UXP_DEFAULT_LOCALE;
-  let activeLocale = {};
+UxpI18n = createI18nRuntime({
+  defaultLocale: UXP_DEFAULT_LOCALE,
+  localeDir: UXP_LOCALE_DIR,
+  fetchJson: fetchLocaleJson,
+});
 
-  for (const candidate of getLocaleCandidates(requestedLang)) {
-    if (candidate === UXP_DEFAULT_LOCALE) {
-      activeLocale = baseLocale;
-      activeLang = UXP_DEFAULT_LOCALE;
-      break;
-    }
-    const locale = await fetchLocaleJson(`${UXP_LOCALE_DIR}/${candidate}.json`);
-    if (locale) {
-      activeLocale = locale;
-      activeLang = candidate;
-      break;
-    }
-  }
-  _i18n = { ...baseLocale, ...activeLocale };
-  _currentLang = Object.keys(_i18n).length ? activeLang : UXP_DEFAULT_LOCALE;
-  if (!Object.keys(_i18n).length) {
-    console.warn("[OpenCut UXP] Locale files unavailable; using inline English fallbacks.");
-  }
-  document.documentElement.lang = _currentLang;
-  applyI18nToDOM();
-  return _currentLang;
-}
+function applyI18nToDOM(root = document) { return UxpI18n.applyToDom(root); }
+async function loadLocale(lang = UxpI18n.getPreferredLocale()) { return UxpI18n.load(lang); }
 
 function localizeWorkspaceMeta(meta, field) {
   return t(meta?.[`${field}Key`], meta?.[field] || "");
@@ -495,7 +409,11 @@ async function detectBackend() {
   return BACKEND_DEFAULT;
 }
 
-let BACKEND = BACKEND_DEFAULT;
+const runtimeState = createUxpState({
+  backendUrl: BACKEND_DEFAULT,
+  healthBackoffMs: HEALTH_CHECK_MS,
+});
+let BACKEND = runtimeState.backendUrl;
 
 async function refreshBackendBaseUrl() {
   const detected = await detectBackend();
@@ -503,15 +421,13 @@ async function refreshBackendBaseUrl() {
     console.log(`[OpenCut UXP] Backend switched from ${BACKEND} to ${detected}`);
   }
   BACKEND = detected;
+  runtimeState.backendUrl = detected;
   return BACKEND;
 }
 
 // ─────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────
-let csrfToken     = null;
-let activeJobId   = null;
-let _jobStartInFlight = false;
 let elapsedTimer  = null;
 let elapsedSec    = 0;
 let lastCuts      = [];     // cuts array from last silence/filler run
@@ -527,8 +443,6 @@ let _lastMarkersInfo = null;
 let _lastTimelineAction = null;
 
 // ---- SSE / health-check state ----
-let _activeSSE       = null;  // current EventSource instance
-let _healthBackoff   = HEALTH_CHECK_MS;
 let _mediaScanTimer  = null;
 const _jobLockedButtonStates = new Map();
 const JOB_ACTION_BUTTON_SELECTOR = [
@@ -540,7 +454,7 @@ const JOB_ACTION_BUTTON_SELECTOR = [
 ].join(", ");
 
 function hasActiveJob() {
-  return Boolean(activeJobId || _jobStartInFlight);
+  return runtimeState.hasActiveJob();
 }
 
 function setJobActionsLocked(locked) {
@@ -573,15 +487,6 @@ function setJobActionsLocked(locked) {
     }
   });
   _jobLockedButtonStates.clear();
-  syncQuickActionButtons();
-}
-
-function clearTrackedJob(jobId = null) {
-  if (!jobId || activeJobId === jobId) {
-    activeJobId = null;
-  }
-  _jobStartInFlight = false;
-  setJobActionsLocked(false);
   syncQuickActionButtons();
 }
 
@@ -1843,349 +1748,33 @@ if (typeof window !== "undefined") {
 // ─────────────────────────────────────────────────────────────
 // BackendClient — all HTTP communication with Python server
 // ─────────────────────────────────────────────────────────────
-const BackendClient = (() => {
-  /**
-   * Core fetch wrapper with CSRF token handling and error normalisation.
-   * @param {"GET"|"POST"|"PUT"|"DELETE"} method
-   * @param {string} endpoint  — e.g. "/silence"
-   * @param {object|null} body — JSON body for POST/PUT
-   * @returns {Promise<{ok: boolean, data?: any, error?: string, status?: number}>}
-   */
-  async function _doFetch(method, endpoint, body) {
-    const url = BACKEND + endpoint;
-    const headers = { "Content-Type": "application/json" };
-    if (csrfToken) headers["X-OpenCut-Token"] = csrfToken;
-
-    // 120s default — long enough for synchronous routes (CSRF, health,
-    // /info), short enough that a hung backend doesn't pin a button
-    // forever. Async job submission returns within seconds; the actual
-    // long-running work is observed via SSE/polling, not held in this
-    // request.
-    const opts = { method, headers };
-    if (body && method !== "GET") opts.body = JSON.stringify(body);
-
-    let resp;
-    try {
-      resp = await fetchWithTimeout(url, opts, 120000);
-    } catch (err) {
-      if (isTimeoutError(err)) {
-        throw new Error("Backend request timed out. Check that OpenCut Server is still running, then try again.");
-      }
-      throw err;
-    }
-
-    // Refresh CSRF token if provided in response headers
-    const newToken = resp.headers.get("X-OpenCut-Token");
-    if (newToken) csrfToken = newToken;
-
-    let data;
-    const ct = resp.headers.get("Content-Type") || "";
-    if (ct.includes("application/json")) {
-      try {
-        data = await resp.json();
-      } catch (_) {
-        // Server claimed JSON but produced garbage — surface as a string
-        // rather than throwing inside the wrapper, which would skip the
-        // status-code branch and hide whether this was a 4xx/5xx response.
-        data = null;
-      }
-    } else {
-      data = await resp.text();
-    }
-    return { resp, data };
+function updateCapabilityHints(capabilities) {
+  const hints = {
+    depthHintUxp: capabilities.depth_effects !== false,
+  };
+  for (const [id, available] of Object.entries(hints)) {
+    const element = document.getElementById(id);
+    if (element) element.classList.toggle("oc-hidden", available);
   }
+}
 
-  async function call(method, endpoint, body = null) {
-    try {
-      let { resp, data } = await _doFetch(method, endpoint, body);
+const BackendClient = createBackendClient({
+  state: runtimeState,
+  fetchWithTimeout,
+  isTimeoutError,
+  onCapabilities: updateCapabilityHints,
+});
 
-      // Server-restart recovery: /health issues a new CSRF token on startup,
-      // so a stale in-memory token returns 403. Refresh and retry exactly
-      // once before surfacing the error to the user.
-      if (resp.status === 403 && endpoint !== "/health") {
-        await fetchCsrf();
-        ({ resp, data } = await _doFetch(method, endpoint, body));
-      }
-
-      if (!resp.ok) {
-        const msg = (data && data.error) ? data.error : `HTTP ${resp.status}`;
-        return { ok: false, error: msg, status: resp.status, data };
-      }
-      return { ok: true, data, status: resp.status };
-    } catch (err) {
-      const fallback = isTimeoutError(err)
-        ? "Backend request timed out. Check that OpenCut Server is still running, then try again."
-        : "Network error";
-      return { ok: false, error: err.message ?? fallback };
-    }
-  }
-
-  async function get(endpoint)             { return call("GET",    endpoint); }
-  async function post(endpoint, body)      { return call("POST",   endpoint, body); }
-  async function del(endpoint)             { return call("DELETE", endpoint); }
-
-  /**
-   * Ping /health endpoint.
-   * @returns {Promise<boolean>}
-   */
-  let _capabilities = {};
-
-  async function checkHealth() {
-    const r = await get("/health");
-    if (r.ok && r.data?.capabilities) {
-      _capabilities = r.data.capabilities;
-      _updateCapabilityHints();
-    }
-    return r.ok;
-  }
-
-  function getCapabilities() { return _capabilities; }
-
-  function _updateCapabilityHints() {
-    // Show/hide install hints based on backend capabilities
-    const hints = {
-      depthHintUxp: _capabilities.depth_effects !== false,
-    };
-    for (const [id, available] of Object.entries(hints)) {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("oc-hidden", available);
-    }
-  }
-
-  /**
-   * Fetch the CSRF token from /health (returned as `csrf_token`); it is then
-   * sent on mutating requests via the X-OpenCut-Token header.
-   */
-  async function fetchCsrf() {
-    const r = await get("/health");
-    if (r.ok && r.data && r.data.csrf_token) {
-      csrfToken = r.data.csrf_token;
-    }
-  }
-
-  return { call, get, post, del: del, checkHealth, fetchCsrf, getCapabilities };
-})();
-
-// ─────────────────────────────────────────────────────────────
-// JobPoller — submits job and polls until done
-// ─────────────────────────────────────────────────────────────
-const JobPoller = (() => {
-  /**
-   * Start a backend job and poll until completion.
-   * @param {string}   endpoint     — POST endpoint to start the job
-   * @param {object}   body         — request body
-   * @param {Function} onProgress   — (pct: number, msg: string) => void
-   * @param {Function} onComplete   — (result: object) => void
-   * @param {Function} onError      — (msg: string) => void
-   */
-  async function start(endpoint, body, onProgress, onComplete, onError) {
-    if (hasActiveJob()) {
-      onError(t("uxp.runtime.job_already_running", "Another OpenCut job is already running."));
-      return;
-    }
-
-    _jobStartInFlight = true;
-    setJobActionsLocked(true);
-    let r;
-    try {
-      r = await BackendClient.post(endpoint, body);
-    } catch (err) {
-      clearTrackedJob();
-      onError(err?.message ?? "Failed to start job");
-      return;
-    }
-    if (!r.ok) {
-      clearTrackedJob();
-      onError(r.error ?? "Failed to start job");
-      return;
-    }
-
-    const jobId = r.data?.job_id ?? r.data?.id ?? null;
-    if (!jobId) {
-      // Synchronous response — job completed inline
-      clearTrackedJob();
-      onProgress(100, "Done");
-      onComplete(r.data);
-      return;
-    }
-
-    activeJobId = jobId;
-    _jobStartInFlight = false;
-
-    // Prefer SSE for real-time progress; fall back to polling
-    if (SSE_AVAILABLE) {
-      trackJobSSE(jobId, onProgress, onComplete, onError);
-    } else {
-      pollJob(jobId, onProgress, onComplete, onError);
-    }
-  }
-
-  /**
-   * Track job progress via Server-Sent Events (SSE).
-   * Falls back to polling on connection error.
-   */
-  function trackJobSSE(jobId, onProgress, onComplete, onError) {
-    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
-
-    const es = new EventSource(`${BACKEND}/stream/${jobId}`);
-    _activeSSE = es;
-
-    es.onmessage = (event) => {
-      try {
-        const job = JSON.parse(event.data);
-        const status = job.status ?? "running";
-        const pct    = typeof job.progress === "number" ? job.progress : 0;
-        const msg    = job.message ?? job.msg ?? t("processing.processing", "Processing...");
-
-        onProgress(pct, msg);
-
-        if (status === "done" || status === "complete" || status === "success") {
-          es.close();
-          _activeSSE = null;
-          clearTrackedJob(jobId);
-          onComplete(job.result ?? job);
-          _fireCompletionHooks();
-        } else if (status === "error" || status === "failed" || status === "cancelled") {
-          es.close();
-          _activeSSE = null;
-          clearTrackedJob(jobId);
-          onError(job.error ?? job.message ?? "Job failed");
-          _fireCompletionHooks();
-        }
-      } catch (_) { /* ignore parse errors in SSE stream */ }
-    };
-
-    es.onerror = () => {
-      if (!_activeSSE) return;
-      es.close();
-      _activeSSE = null;
-      // Fallback to polling on SSE failure
-      pollJob(jobId, onProgress, onComplete, onError);
-    };
-  }
-
-  // Hard cap: 1200ms × 3000 = 60 minutes of polling. If a job is still
-  // "running" after an hour the panel gives up rather than spinning closures
-  // forever. The CEP panel has the same cap; UXP previously had none.
-  const MAX_POLL_ATTEMPTS = 3000;
-  const MAX_STATUS_POLL_FAILURES = 3;
-
-  function schedulePollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures = 0) {
-    setTimeout(() => {
-      if (activeJobId === jobId) {
-        pollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures);
-      }
-    }, POLL_INTERVAL_MS);
-  }
-
-  async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0, statusFailures = 0) {
-    let r;
-    try {
-      r = await BackendClient.get(`/status/${jobId}`);
-    } catch (err) {
-      r = { ok: false, error: err?.message ?? "Polling error" };
-    }
-    if (!r.ok) {
-      const nextStatusFailures = statusFailures + 1;
-      if (nextStatusFailures < MAX_STATUS_POLL_FAILURES) {
-        schedulePollJob(jobId, onProgress, onComplete, onError, attempt, nextStatusFailures);
-        return;
-      }
-      onError(r.error ?? "Polling error");
-      clearTrackedJob(jobId);
-      _fireCompletionHooks();
-      return;
-    }
-
-    const job = r.data;
-    const status  = job.status ?? "running";
-    const pct     = typeof job.progress === "number" ? job.progress : 0;
-    const msg     = job.message ?? job.msg ?? t("processing.processing", "Processing...");
-
-    onProgress(pct, msg);
-
-    if (status === "done" || status === "complete" || status === "success") {
-      clearTrackedJob(jobId);
-      onComplete(job.result ?? job);
-      _fireCompletionHooks();
-      return;
-    }
-
-    // 'interrupted' is the terminal state set on server startup for jobs
-    // that were running when the server died; treat it like an error so
-    // the panel doesn't poll forever for progress that will never arrive.
-    if (status === "error" || status === "failed" || status === "cancelled" || status === "interrupted") {
-      clearTrackedJob(jobId);
-      onError(job.error ?? job.message ?? "Job failed");
-      _fireCompletionHooks();
-      return;
-    }
-
-    if (attempt >= MAX_POLL_ATTEMPTS) {
-      clearTrackedJob(jobId);
-      onError("Polling timed out — the job is still running on the server.");
-      _fireCompletionHooks();
-      return;
-    }
-
-    // Still running — schedule next poll
-    schedulePollJob(jobId, onProgress, onComplete, onError, attempt + 1, 0);
-  }
-
-  // Post-completion hooks — called after every successful or failed job
-  const _completionHooks = [];
-
-  function onJobFinished(hook) { _completionHooks.push(hook); }
-
-  function _fireCompletionHooks() {
-    for (const hook of _completionHooks) {
-      try { hook(); } catch (_) {}
-    }
-  }
-
-  async function cancel() {
-    if (!activeJobId) return false;
-    const jobId = activeJobId;
-    // Close SSE stream first to prevent stale events after cancel
-    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
-    try {
-      await BackendClient.post(`/cancel/${jobId}`, {});
-    } finally {
-      clearTrackedJob(jobId);
-      _fireCompletionHooks();
-    }
-    return true;
-  }
-
-  /**
-   * Poll an already-started job by ID until completion.
-   * Returns the final result object or throws.
-   */
-  function poll(jobId) {
-    return new Promise((resolve, reject) => {
-      if (hasActiveJob()) {
-        reject(new Error(t("uxp.runtime.job_already_running", "Another OpenCut job is already running.")));
-        return;
-      }
-      activeJobId = jobId;
-      setJobActionsLocked(true);
-      const onProgress = () => {};
-      const onComplete = (result) => resolve(result);
-      const onError = (msg) => reject(new Error(msg));
-      if (SSE_AVAILABLE) {
-        trackJobSSE(jobId, onProgress, onComplete, onError);
-      } else {
-        pollJob(jobId, onProgress, onComplete, onError);
-      }
-    });
-  }
-
-  function resume(jobId, onProgress, onComplete, onError) {
-    return start(`/jobs/${jobId}/resume`, {}, onProgress, onComplete, onError);
-  }
-
-  return { start, poll, cancel, resume, onJobFinished };
-})();
+const JobPoller = createJobController({
+  client: BackendClient,
+  state: runtimeState,
+  getBackendUrl: () => runtimeState.backendUrl,
+  EventSourceCtor: SSE_AVAILABLE ? EventSource : null,
+  pollIntervalMs: POLL_INTERVAL_MS,
+  translate: t,
+  setLocked: setJobActionsLocked,
+  onStateChange: syncQuickActionButtons,
+});
 
 // ─────────────────────────────────────────────────────────────
 // UIController — DOM manipulation, tabs, toasts, sliders
@@ -6044,12 +5633,13 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     const detected = await detectBackend();
     if (detected !== previousBackend) {
       BACKEND = detected;
+      runtimeState.backendUrl = detected;
       console.log(`[OpenCut UXP] Backend moved from ${previousBackend} to ${BACKEND}`);
       r = await BackendClient.get("/health");
     }
   }
   const alive = r.ok;
-  if (alive && r.data?.csrf_token) csrfToken = r.data.csrf_token;
+  if (alive && r.data?.csrf_token) runtimeState.csrfToken = r.data.csrf_token;
   UIController.setConnection(alive ? "connected" : "disconnected");
 
   const wasAlive = _lastConnectionState;
@@ -6114,16 +5704,16 @@ const QUICK_ACTION_DEFS = Object.freeze({
 
 function syncQuickActionButtons() {
   document.querySelectorAll('[data-quick-action="cancel-job"]').forEach((btn) => {
-    btn.disabled = !activeJobId;
-    btn.setAttribute("aria-disabled", activeJobId ? "false" : "true");
-    btn.title = activeJobId
+    btn.disabled = !runtimeState.activeJobId;
+    btn.setAttribute("aria-disabled", runtimeState.activeJobId ? "false" : "true");
+    btn.title = runtimeState.activeJobId
       ? t("uxp.settings.cancel_active_job_text", "Stop a long-running process from the visible action button.")
       : t("uxp.settings.no_active_job", "No active job to cancel.");
   });
 }
 
 async function cancelActiveJobFromSettings() {
-  if (!activeJobId) {
+  if (!runtimeState.activeJobId) {
     UIController.showToast(t("uxp.settings.no_active_job", "No active job to cancel."), "info");
     return;
   }
@@ -6172,7 +5762,7 @@ function runSettingsQuickAction(actionId) {
 function startMediaScanInterval() {
   if (_mediaScanTimer) clearInterval(_mediaScanTimer);
   _mediaScanTimer = setInterval(async () => {
-    if (activeJobId) return; // skip during active jobs
+    if (runtimeState.activeJobId) return; // skip during active jobs
     try {
       await BackendClient.get("/project/media");
     } catch (_) { /* ignore scan failures */ }
@@ -8030,7 +7620,7 @@ async function initApp() {
   // Initial connection check
   const alive = await checkConnection();
   if (alive) {
-    _healthBackoff = HEALTH_CHECK_MS; // reset backoff on initial success
+    runtimeState.healthBackoffMs = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
     await loadInterruptedProxyRecovery();
     await loadCaptionStyleCatalog({ silent: true });
@@ -8071,7 +7661,7 @@ async function initApp() {
 
   // Periodic soft re-scan to pick up newly imported media
   setInterval(async () => {
-    if (!activeJobId) await scanProjectClips();
+    if (!runtimeState.activeJobId) await scanProjectClips();
   }, 25000);
 
   // Re-scan when panel regains focus
@@ -8087,23 +7677,23 @@ async function initApp() {
       const ok = await checkConnection({ background: true });
       if (ok) {
         // Reset backoff on success
-        if (_healthBackoff !== HEALTH_CHECK_MS) {
-          _healthBackoff = HEALTH_CHECK_MS;
+        if (runtimeState.healthBackoffMs !== HEALTH_CHECK_MS) {
+          runtimeState.healthBackoffMs = HEALTH_CHECK_MS;
           startMediaScanInterval(); // resume media scans on reconnect
         }
       } else {
         // Exponential backoff: double interval on failure, cap at HEALTH_MAX_MS
-        _healthBackoff = Math.min(_healthBackoff * 2, HEALTH_MAX_MS);
+        runtimeState.healthBackoffMs = Math.min(runtimeState.healthBackoffMs * 2, HEALTH_MAX_MS);
         stopMediaScanInterval(); // pause media scans while disconnected
       }
       scheduleHealthCheck();
-    }, _healthBackoff);
+    }, runtimeState.healthBackoffMs);
   }
   scheduleHealthCheck();
 
   // Clean up SSE connections on panel close/navigation
   window.addEventListener("beforeunload", () => {
-    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
+    JobPoller.closeSse();
     stopMediaScanInterval();
   });
 
@@ -8647,6 +8237,6 @@ function initCaptionDisplaySettingsCard() {
 }
 
 // Bootstrap
-initApp().catch(err => {
+bootstrapApplication(initApp, (err) => {
   console.error("[OpenCut UXP] Init error:", err);
 });
