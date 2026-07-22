@@ -5,6 +5,72 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
+
+### Fixed - Make interrupted host-write recovery actually restore
+
+- UXP marker restore matched checkpoint fingerprints against marker comments
+  while the bridge writes labels to marker names, so "Restore" removed nothing
+  yet reported success and consumed the recovery evidence. Fingerprints now
+  store the name, matching falls back across name and comment, and a restore
+  that removes nothing is reported as failed instead of recovered.
+- Cross-panel rename recovery used conflicting inverse shapes (UXP stored
+  applied→original, CEP restores to `oldName`), so restoring a UXP rename from
+  CEP re-applied it. Both panels now persist one canonical inverse shape with
+  a legacy-shape fallback for existing checkpoints.
+- The journal's orphan-spill pruner could delete a concurrent checkpoint's
+  payload file between spill write and row commit, destroying the inverse the
+  recovery feature exists to preserve; spill I/O and pruning now share a lock.
+- Duplicate client transaction IDs returned HTTP 500; they now return 409, and
+  transaction IDs are restricted to URL-safe characters (also closing a
+  markup-injection vector in the UXP recovery list).
+
+### Fixed - Stop corrupt state files from bricking or destroying data
+
+- A structurally corrupt `job_queue.json` no longer disables the queue until a
+  manual delete-and-restart: the file is quarantined to `job_queue.json.corrupt`
+  and the queue continues with persistence enabled. Newer-schema files still
+  fail closed. Queue 503s now name the actual failure.
+- A corrupt reviews store is quarantined to `reviews.json.corrupt` instead of
+  being silently overwritten by the next save.
+
+### Security - Close redaction, token, and oracle gaps in review/support paths
+
+- Issue-report redaction now catches JSON/dict-quoted secrets
+  (`"api_key": "..."`) that previously reached pre-filled public GitHub issues.
+- Review share tokens are now generated with `secrets.token_urlsafe` and
+  compared in constant time; portal signature verification runs before version
+  selection, removing a version-ID existence oracle.
+- Portal media serving verifies the recorded artifact size before serving, so
+  a tampered "immutable" review artifact returns an integrity error.
+- `dependency_support()` now strips extras/specifiers before support lookup, so
+  versioned specs like `nemo_toolkit[asr]>=2.7.3` can no longer bypass the
+  Linux-only platform gate.
+
+### Fixed - Panel polish and honest failure reporting
+
+- CEP no longer opens a "Tour unavailable" modal on every launch while the
+  backend is down; tour-completed state is cached locally and the startup probe
+  retries silently after reconnect.
+- UXP reconnect now reloads OTIO capabilities and the Timeline Recovery card
+  (previously stuck on "Loading…" if the panel started before the backend).
+- OTIO export errors are only labeled as preflight blocks when the server says
+  so; other failures show the real error, and the UXP toast includes the lossy
+  field list. Snapshotting a review version no longer blocks all review reads
+  for the duration of the artifact copy.
+- Journal status pills gained light-theme contrast overrides; the ASR
+  provenance result line is localized; UXP `escapeHtml` now always escapes
+  quotes.
+
+### Changed - Version/doc sync integrity
+
+- Fixed the `sync_version.py` SECURITY.md regex that left `|—` residue in the
+  support table; added the installer `AssemblyVersion` (stale at 1.19.0.0) as
+  a managed sync target and documented why the Flatpak MetaInfo release list
+  deliberately is not one; revived the dead CEP `style.css` header target and
+  the `check_doc_sizes.py` route-count guards; refreshed `.NET 9` → `.NET 10`
+  doc references and stale MCP tool counts.
+
 ## [1.42.0] — 2026-07-22 — Trustworthy recovery and modular route contracts
 
 ### Security - Harden release and support paths
