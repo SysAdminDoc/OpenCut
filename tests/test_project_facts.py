@@ -15,6 +15,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_INDEX = REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html"
 UXP_MAIN = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
+UXP_BACKEND_CLIENT = REPO_ROOT / "extension" / "com.opencut.uxp" / "backend-client.js"
 PANEL_PKG = REPO_ROOT / "extension" / "com.opencut.panel" / "package.json"
 README = REPO_ROOT / "README.md"
 NODE_ADVISORIES = REPO_ROOT / "docs" / "NODE_ADVISORIES.md"
@@ -61,11 +62,12 @@ def test_uxp_architecture_box_tab_count_matches_source():
 
 def test_uxp_csrf_comment_matches_implementation():
     main = UXP_MAIN.read_text(encoding="utf-8")
+    client = UXP_BACKEND_CLIENT.read_text(encoding="utf-8")
     # Implementation reads the token from /health and sends X-OpenCut-Token.
-    assert 'get("/health")' in main
-    assert "X-OpenCut-Token" in main
+    assert 'get("/health")' in client
+    assert "X-OpenCut-Token" in client
     # The stale "/csrf or /api/csrf" comment must not reappear.
-    assert "/csrf" not in main, "stale /csrf CSRF reference re-introduced in UXP main.js"
+    assert "/csrf" not in main + client, "stale /csrf CSRF reference re-introduced in UXP runtime"
 
 
 def test_node_advisories_vite_major_matches_package():

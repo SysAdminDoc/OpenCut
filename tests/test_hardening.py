@@ -663,9 +663,12 @@ def test_uxp_engine_registry_escapes_dynamic_attribute_values():
 def test_uxp_fetch_wrapper_clears_backend_timeout_timers():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp/main.js").read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp"
+    source = (root / "main.js").read_text(encoding="utf-8")
+    client_source = (root / "backend-client.js").read_text(encoding="utf-8")
 
     assert "async function fetchWithTimeout" in source
     assert "clearTimeout(timer);" in source
     assert "await fetchWithTimeout(`${url}/health`, {}, 500)" in source
-    assert "await fetchWithTimeout(url, opts, 120000)" in source
+    assert "await fetchWithTimeout(" in client_source
+    assert "requestTimeoutMs = 120000" in client_source

@@ -10,6 +10,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_ROOT = REPO_ROOT / "extension" / "com.opencut.uxp"
 UXP_HTML = UXP_ROOT / "index.html"
 UXP_JS = UXP_ROOT / "main.js"
+UXP_I18N = UXP_ROOT / "uxp-i18n.js"
+UXP_UTILS = UXP_ROOT / "uxp-utils.js"
 UXP_LOCALE = UXP_ROOT / "locales" / "en.json"
 UXP_ES_LOCALE = UXP_ROOT / "locales" / "es.json"
 
@@ -29,6 +31,10 @@ def _html() -> str:
 
 def _js() -> str:
     return UXP_JS.read_text(encoding="utf-8")
+
+
+def _i18n_js() -> str:
+    return UXP_I18N.read_text(encoding="utf-8")
 
 
 def _locale(path: Path = UXP_LOCALE) -> dict[str, str]:
@@ -88,25 +94,26 @@ def test_uxp_locale_file_is_valid_and_local_to_panel():
     assert UXP_LOCALE.exists()
     assert 'const UXP_DEFAULT_LOCALE = "en";' in _js()
     assert 'const UXP_LOCALE_DIR   = "locales";' in _js()
-    assert "UXP_LOCALE_PATH  = `${UXP_LOCALE_DIR}/${UXP_DEFAULT_LOCALE}.json`;" in _js()
+    assert "createI18nRuntime" in _js()
     assert locale["uxp.document_title"] == "OpenCut UXP"
 
 
 def test_uxp_i18n_loader_supports_dom_text_and_attributes():
     js = _js()
+    runtime = _i18n_js()
+    utilities = UXP_UTILS.read_text(encoding="utf-8")
 
     assert "function t(key, fallback)" in js
     assert "function applyI18nToDOM(root = document)" in js
-    assert "function normalizeLocaleTag(lang = UXP_DEFAULT_LOCALE)" in js
-    assert "function getLocaleOverride()" in js
-    assert "function getPreferredLocale()" in js
-    assert "function getLocaleCandidates(lang)" in js
+    assert "export function normalizeLocaleTag" in utilities
+    assert "function getOverride()" in runtime
+    assert "function getPreferredLocale()" in runtime
+    assert "getLocaleCandidates(requested, defaultLocale)" in runtime
     assert "async function fetchLocaleJson(path)" in js
-    assert "async function loadLocale(lang = getPreferredLocale())" in js
-    assert 'new URLSearchParams(window.location.search).get("lang")' in js
-    assert "navigator.languages" in js
-    assert "const baseLocale = await fetchLocaleJson(UXP_LOCALE_PATH) || {};" in js
-    assert "_i18n = { ...baseLocale, ...activeLocale };" in js
+    assert "async function loadLocale(lang = UxpI18n.getPreferredLocale())" in js
+    assert 'new URLSearchParams(locationSearch()).get("lang")' in runtime
+    assert "navigatorRef?.languages" in runtime
+    assert "messages = { ...base, ...active };" in runtime
     for data_attribute, dom_attribute in (
         ("data-i18n-title", "title"),
         ("data-i18n-label", "label"),
@@ -114,7 +121,7 @@ def test_uxp_i18n_loader_supports_dom_text_and_attributes():
         ("data-i18n-placeholder", "placeholder"),
         ("data-i18n-aria-label", "aria-label"),
     ):
-        assert f'["{data_attribute}", "{dom_attribute}"]' in js
+        assert f'["{data_attribute}", "{dom_attribute}"]' in runtime
 
     assert js.index("await loadLocale();") < js.index("bindEvents();")
 
@@ -561,8 +568,8 @@ def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
 
 def test_uxp_search_runtime_feedback_uses_locale_helpers():
     js = _js()
-    search_helpers_js = js[
-        js.index("function getSearchResultPath")
+    search_helpers_js = UXP_UTILS.read_text(encoding="utf-8") + js[
+        js.index("function getSearchResultKindLabel")
         : js.index("function getDeliverablesSelectionSummary")
     ]
     search_jobs_js = js[

@@ -1,6 +1,6 @@
 """F217 — UXP BackendClient HTTP-shape contract tests.
 
-The UXP panel's `BackendClient` (in `extension/com.opencut.uxp/main.js`)
+The UXP panel's `BackendClient` (in `extension/com.opencut.uxp/backend-client.js`)
 talks to the Python backend over HTTP. The panel's job-running flow
 depends on a specific response shape:
 
@@ -31,10 +31,21 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
+BACKEND_CLIENT_JS = MAIN_JS.with_name("backend-client.js")
+JOB_CONTROLLER_JS = MAIN_JS.with_name("job-controller.js")
+STATE_JS = MAIN_JS.with_name("uxp-state.js")
 
 
 def _read_main_js() -> str:
     return MAIN_JS.read_text(encoding="utf-8", errors="replace")
+
+
+def _read_backend_js() -> str:
+    return BACKEND_CLIENT_JS.read_text(encoding="utf-8", errors="replace")
+
+
+def _read_job_js() -> str:
+    return JOB_CONTROLLER_JS.read_text(encoding="utf-8", errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -44,31 +55,21 @@ def _read_main_js() -> str:
 
 def test_backend_client_module_present():
     text = _read_main_js()
-    assert "const BackendClient = " in text, (
-        "UXP main.js must expose a BackendClient module"
-    )
+    assert 'import { createBackendClient } from "./backend-client.js";' in text
+    assert "const BackendClient = createBackendClient({" in text
+    assert "export function createBackendClient" in _read_backend_js()
 
 
 def test_backend_client_exports_canonical_verbs():
-    text = _read_main_js()
-    # Find the BackendClient IIFE body and pull its closing `return { ... }`.
-    iife_start = text.find("const BackendClient")
-    assert iife_start >= 0, "BackendClient declaration missing"
-    body = text[iife_start: iife_start + 6000]
-    match = re.search(
-        r"return\s+\{\s*([^}]+)\s*\}\s*;\s*\}\s*\)\s*\(\s*\)\s*;",
-        body,
-    )
-    assert match, "BackendClient closure must end with a `return { ... }`"
-    exported = match.group(1)
+    text = _read_backend_js()
     for verb in ("call", "get", "post", "del", "checkHealth", "fetchCsrf"):
-        assert verb in exported, (
-            f"BackendClient must export {verb!r}; current export block: {exported.strip()}"
+        assert re.search(rf"\n\s{{4}}{verb},?\n", text), (
+            f"BackendClient must export {verb!r} from its factory return object"
         )
 
 
 def test_backend_client_uses_x_opencut_token_header():
-    text = _read_main_js()
+    text = _read_backend_js()
     assert '"X-OpenCut-Token"' in text or "'X-OpenCut-Token'" in text, (
         "BackendClient must send the X-OpenCut-Token CSRF header"
     )
@@ -79,7 +80,7 @@ def test_backend_client_uses_x_opencut_token_header():
 
 
 def test_backend_client_carries_120s_timeout():
-    text = _read_main_js()
+    text = _read_backend_js()
     # 120s = 120000ms — must be present so a hung backend can't pin the
     # button forever.
     assert "120000" in text, (
@@ -88,7 +89,7 @@ def test_backend_client_carries_120s_timeout():
 
 
 def test_backend_client_refreshes_csrf_token_from_response_header():
-    text = _read_main_js()
+    text = _read_backend_js()
     assert 'resp.headers.get("X-OpenCut-Token")' in text \
         or "resp.headers.get('X-OpenCut-Token')" in text, (
         "BackendClient must refresh csrfToken from response headers"
@@ -145,7 +146,7 @@ def test_live_updates_websocket_uses_server_reported_url():
 def test_backend_client_returns_ok_failure_shape():
     """The wrapper must return ``{ok, data, error, status}`` objects so
     callers can branch on `r.ok` without try/catch nesting."""
-    text = _read_main_js()
+    text = _read_backend_js()
     # Search for "return { ok: false" — the failure path must surface
     # this shape.
     assert re.search(r"return\s*\{\s*ok:\s*false", text), (
@@ -159,7 +160,7 @@ def test_backend_client_returns_ok_failure_shape():
 def test_backend_client_surfaces_timeout_as_normal_result():
     """A timeout must produce ``ok: false`` with an actionable error
     message, not an unhandled rejection."""
-    text = _read_main_js()
+    text = _read_backend_js()
     assert "timed out" in text.lower(), (
         "BackendClient must include 'timed out' guidance in its error string"
     )
@@ -171,33 +172,33 @@ def test_backend_client_surfaces_timeout_as_normal_result():
 def test_job_poller_uses_status_endpoint():
     """JobPoller polls ``/status/<job_id>``; if the route changes this test
     fires before the panel breaks."""
-    text = _read_main_js()
+    text = _read_job_js()
     assert re.search(r"`/status/\$\{[a-zA-Z_]+\}`", text), (
         "JobPoller must poll /status/<job_id>"
     )
 
 
 def test_job_poller_retries_transient_status_failures():
-    text = _read_main_js()
-    assert "const MAX_STATUS_POLL_FAILURES = 3;" in text
-    assert "function schedulePollJob(jobId, onProgress, onComplete, onError, attempt, statusFailures = 0)" in text
+    text = _read_job_js()
+    assert "maxStatusFailures = 3" in text
+    assert "function schedulePoll(jobId, onProgress, onComplete, onError, attempt, statusFailures = 0)" in text
     assert "async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0, statusFailures = 0)" in text
-    assert "const nextStatusFailures = statusFailures + 1;" in text
-    assert "if (nextStatusFailures < MAX_STATUS_POLL_FAILURES)" in text
+    assert "const nextFailures = statusFailures + 1;" in text
+    assert "if (nextFailures < maxStatusFailures)" in text
     assert re.search(
-        r"if \(!r\.ok\).*?schedulePollJob\(jobId, onProgress, onComplete, onError, attempt, nextStatusFailures\)",
+        r"if \(!result\.ok\).*?schedulePoll\(jobId, onProgress, onComplete, onError, attempt, nextFailures\)",
         text,
         re.S,
     ), "pollJob must retry a transient /status failure before failing the job"
-    assert "schedulePollJob(jobId, onProgress, onComplete, onError, attempt + 1, 0);" in text
+    assert "schedulePoll(jobId, onProgress, onComplete, onError, attempt + 1, 0);" in text
 
 
 def test_job_id_is_pulled_from_canonical_field():
     """Async job submissions return ``{job_id: "..."}`` (canonical) with
     a legacy ``{id: ...}`` fallback. The poller must accept either."""
-    text = _read_main_js()
+    text = _read_job_js()
     assert "job_id" in text, "JobPoller must read r.data.job_id from the response"
-    assert re.search(r"r\.data\?\.job_id\s*\?\?\s*r\.data\?\.id", text), (
+    assert re.search(r"result\.data\?\.job_id\s*\?\?\s*result\.data\?\.id", text), (
         "JobPoller must accept either {job_id} or legacy {id} as the job identifier"
     )
 
@@ -205,7 +206,7 @@ def test_job_id_is_pulled_from_canonical_field():
 def test_terminal_job_statuses_are_complete_error_cancelled():
     """JobPoller branches on the canonical terminal statuses. If the
     backend renames any of these, the poller will spin forever."""
-    text = _read_main_js()
+    text = _read_job_js()
     for status in ("complete", "error", "cancelled"):
         assert f'"{status}"' in text or f"'{status}'" in text, (
             f"JobPoller must recognise terminal job status {status!r}"
@@ -213,21 +214,21 @@ def test_terminal_job_statuses_are_complete_error_cancelled():
 
 
 def test_job_cancel_clears_button_loading_state():
-    text = _read_main_js()
+    text = _read_main_js() + _read_job_js()
     assert "function clearButtonLoadingStates()" in text
     assert 'document.querySelectorAll("button.loading")' in text
     assert "UIController.clearButtonLoadingStates();" in text
-    assert re.search(r"async function cancel\(\).*?return true;", text, re.S), (
+    assert re.search(r"async function cancel\(\).*?return true;", _read_job_js(), re.S), (
         "JobPoller.cancel() must report whether it actually cancelled a job"
     )
 
 
 def test_proxy_batch_recovery_is_exposed_in_uxp():
-    text = _read_main_js()
+    text = _read_main_js() + _read_job_js()
     assert 'BackendClient.get("/jobs/interrupted")' in text
     assert 'entry?.type === "proxy_batch" && entry?.resumable' in text
-    assert "function resume(jobId, onProgress, onComplete, onError)" in text
-    assert "return start(`/jobs/${jobId}/resume`" in text
+    assert "resume: (jobId, onProgress, onComplete, onError)" in text
+    assert "start(`/jobs/${jobId}/resume`" in text
     html = (REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html").read_text(
         encoding="utf-8"
     )
@@ -236,18 +237,18 @@ def test_proxy_batch_recovery_is_exposed_in_uxp():
 
 
 def test_job_poller_rejects_concurrent_jobs_and_locks_job_buttons():
-    text = _read_main_js()
+    text = _read_main_js() + _read_job_js() + STATE_JS.read_text(encoding="utf-8")
     assert "function hasActiveJob()" in text
-    assert "_jobStartInFlight" in text
+    assert "jobStartInFlight" in text
     assert 'button[id^="run"]' in text
     assert "function setJobActionsLocked(locked)" in text
-    assert "setJobActionsLocked(true);" in text
-    assert "setJobActionsLocked(false);" in text
+    assert "setLocked(true);" in text
+    assert "setLocked(false);" in text
     assert "Another OpenCut job is already running." in text
-    assert re.search(r"async function start\(.*?if \(hasActiveJob\(\)\)", text, re.S), (
+    assert re.search(r"async function start\(.*?if \(!state\.markJobStarting\(\)\)", text, re.S), (
         "JobPoller.start() must reject a second job before posting"
     )
-    assert re.search(r"function poll\(jobId\).*?if \(hasActiveJob\(\)\)", text, re.S), (
+    assert re.search(r"function poll\(jobId\).*?if \(!state\.markJobStarting\(\)\)", text, re.S), (
         "JobPoller.poll() must reject a second tracked job"
     )
 
