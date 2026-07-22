@@ -332,6 +332,7 @@ EGRESS_INVENTORY: dict[str, str] = {
     "opencut/mcp_server.py": "loopback-server",
     "opencut/pid.py": "loopback-client-health",
     "opencut/routes/system.py": "mixed-route-client",
+    "opencut/routes/system_model_routes.py": "mixed-route-client",
     "opencut/tools/adobe_premierepro_versions.py": "operator-tool",
     "opencut/tools/download_eval_dataset.py": "operator-tool",
 }

@@ -287,7 +287,7 @@ class TestWebSocketRoutes:
             assert 1024 <= int(body["port"]) <= 65535
 
     def test_ws_start_avoids_current_http_port(self, client, monkeypatch):
-        from opencut.routes import system
+        from opencut.routes import system_realtime_routes as system
 
         monkeypatch.setattr(system, "_port_is_free", lambda _host, _port: True)
         with client.application.test_request_context("/ws/start", headers={"Host": "127.0.0.1:5680"}):

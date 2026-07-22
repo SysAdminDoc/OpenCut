@@ -8,7 +8,7 @@ def _headers(token: str) -> dict[str, str]:
 
 
 def _isolate_whisper_caches(monkeypatch, tmp_path):
-    import opencut.routes.system as system_routes
+    import opencut.routes.system_whisper_routes as system_routes
 
     home = tmp_path / "home"
     local_appdata = tmp_path / "localappdata"
@@ -101,7 +101,7 @@ def test_whisper_clear_cache_requires_confirm_token(client, csrf_token, monkeypa
 
 
 def test_models_delete_dry_run_preserves_target(client, csrf_token, monkeypatch, tmp_path):
-    import opencut.routes.system as system_routes
+    import opencut.routes.system_model_routes as system_routes
 
     model_dir = tmp_path / "models"
     model_dir.mkdir()
@@ -126,7 +126,7 @@ def test_models_delete_dry_run_preserves_target(client, csrf_token, monkeypatch,
 
 
 def test_models_delete_requires_confirm_token(client, csrf_token, monkeypatch, tmp_path):
-    import opencut.routes.system as system_routes
+    import opencut.routes.system_model_routes as system_routes
 
     model_dir = tmp_path / "models"
     model_dir.mkdir()
@@ -145,7 +145,7 @@ def test_models_delete_requires_confirm_token(client, csrf_token, monkeypatch, t
 
 
 def test_models_delete_accepts_confirm_token(client, csrf_token, monkeypatch, tmp_path):
-    import opencut.routes.system as system_routes
+    import opencut.routes.system_model_routes as system_routes
 
     model_dir = tmp_path / "models"
     model_dir.mkdir()
