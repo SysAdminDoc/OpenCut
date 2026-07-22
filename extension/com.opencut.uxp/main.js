@@ -2480,18 +2480,6 @@ function syncCaptionsActionButtons() {
 }
 
 function updateCaptionsPlanSummary() {
-  setTextAndTitle("captionsPlanModel", getSelectLabel("whisperModel", "turbo"), getSelectLabel("whisperModel", "turbo"));
-  setTextAndTitle(
-    "captionsPlanLanguage",
-    getSelectLabel("transcribeLang", t("uxp.captions.language_auto", "Auto-detect")),
-    getSelectLabel("transcribeLang", t("uxp.captions.language_auto", "Auto-detect"))
-  );
-  setTextAndTitle(
-    "captionsPlanStyle",
-    getSelectLabel("captionStyle", t("uxp.captions.style_minimal_clean", "Minimal Clean")),
-    getSelectLabel("captionStyle", t("uxp.captions.style_minimal_clean", "Minimal Clean"))
-  );
-
   const diarization = document.getElementById("enableDiarization")?.checked;
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
   const wordTiming = wordLevel

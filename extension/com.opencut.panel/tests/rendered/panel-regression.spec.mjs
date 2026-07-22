@@ -1039,10 +1039,15 @@ for (const width of [480, 520]) {
       const tabs = page.locator(surface.tabSelector);
       for (let index = 0; index < (await tabs.count()); index += 1) {
         const tab = tabs.nth(index);
+        const tabName = await tab.getAttribute(surface.tabAttribute);
         await tab.click();
         await expect(page.locator("#workspaceOverviewTitle")).toBeVisible();
-        await expect(page.locator("#workspaceGuide")).toBeVisible();
-        await expect(page.locator("#workspaceGuideAction")).toBeVisible();
+        if (tabName === "settings") {
+          await expect(page.locator("#workspaceGuide")).toBeHidden();
+        } else {
+          await expect(page.locator("#workspaceGuide")).toBeVisible();
+          await expect(page.locator("#workspaceGuideAction")).toBeVisible();
+        }
         const geometry = await page.evaluate(() => {
           const nav = document.getElementById("tabNav")?.getBoundingClientRect();
           const selected = document
@@ -1063,7 +1068,7 @@ for (const width of [480, 520]) {
         expect(geometry.mainScrollTop).toBe(0);
         expect(geometry.selected.left).toBeGreaterThanOrEqual(geometry.nav.left - 1);
         expect(geometry.selected.right).toBeLessThanOrEqual(geometry.nav.right + 1);
-        for (const region of [geometry.title, geometry.state, geometry.action]) {
+        for (const region of [geometry.title, geometry.state, geometry.action].filter(Boolean)) {
           expect(region.top).toBeGreaterThanOrEqual(0);
           expect(region.bottom).toBeLessThanOrEqual(800);
         }
@@ -1103,8 +1108,8 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
   });
   expect(menuGeometry.detailRadius).toBe("9px");
   expect(menuGeometry.detailFontSize).toBeGreaterThanOrEqual(12);
-  expect(menuGeometry.selectRadius).toBe("7px");
-  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(40);
+  expect(menuGeometry.selectRadius).toBe("0px");
+  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(38);
   expect(menuGeometry.selectAppearance).toBe("none");
   expect(menuGeometry.selectArrow).toContain("data:image/svg+xml");
   expect(pageErrors).toEqual([]);
@@ -1189,7 +1194,46 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   await expect(page.locator("#settingsDiagnosticsLastCheckValue")).toHaveText("Just now");
   await page.locator("#settingsDiagnosticsDetailsBtn").click();
   await expect(page.locator("#connectionDetails")).toHaveAttribute("open", "");
+  await page.locator(".oc-tab[data-tab='captions']").click();
+  await expect(page.locator("#captionsPlanModel")).toHaveCount(0);
+  const controlGrammar = await page.evaluate(() => {
+    const summaryItems = Array.from(document.querySelectorAll(".oc-inline-summary-grid--captions .oc-inline-stat"));
+    const summaryTops = summaryItems.map((item) => item.getBoundingClientRect().top);
+    const status = getComputedStyle(document.getElementById("captionsStatusLine"));
+    return {
+      summaryCount: summaryItems.length,
+      summaryRowSpread: summaryTops.length
+        ? Math.max(...summaryTops) - Math.min(...summaryTops)
+        : 0,
+      statusBackground: status.backgroundColor,
+      statusRadius: status.borderRadius,
+    };
+  });
+  expect(controlGrammar.summaryCount).toBe(3);
+  expect(controlGrammar.summaryRowSpread).toBeLessThan(1);
+  expect(controlGrammar.statusBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(controlGrammar.statusRadius).toBe("0px");
   await page.locator(".oc-tab[data-tab='cut']").click();
+  const fieldGrammar = await page.locator("#clipPathCut").evaluate((field) => {
+    const input = getComputedStyle(field);
+    const select = getComputedStyle(document.getElementById("silenceMode"));
+    return {
+      inputRadius: input.borderRadius,
+      inputTop: input.borderTopWidth,
+      inputBottom: input.borderBottomWidth,
+      selectRadius: select.borderRadius,
+      selectTop: select.borderTopWidth,
+      selectBottom: select.borderBottomWidth,
+    };
+  });
+  expect(fieldGrammar).toEqual({
+    inputRadius: "0px",
+    inputTop: "0px",
+    inputBottom: "1px",
+    selectRadius: "0px",
+    selectTop: "0px",
+    selectBottom: "1px",
+  });
   await page.locator("#clipPathCut").fill("C:/media/interview.mov");
   await page.locator(".oc-tab[data-tab='settings']").click();
   await page.locator("#settingsNavWorkspace").click();

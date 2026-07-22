@@ -280,7 +280,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="transcribeBody">
-            <p class="oc-caption-intro" data-i18n="uxp.captions.transcribe_intro">Create a clean transcript first, then reuse the same review surface for chapters, repeat cleanup, and subtitle delivery.</p>
+            <p class="oc-caption-intro" data-i18n="uxp.captions.transcribe_intro">Create a transcript, then reuse it for chapters, cleanup, and subtitles.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="clipPathCaptions" data-i18n="uxp.cut.clip_path">Clip Path</label>
               <div class="oc-input-group">
@@ -329,20 +329,6 @@
               <label class="oc-checkbox-label">
                 <input type="checkbox" id="enableWordLevel" checked> <span data-i18n="uxp.captions.word_level_timestamps">Word-Level Timestamps</span>
               </label>
-            </div>
-            <div class="oc-inline-summary-grid oc-inline-summary-grid--caption-plan" aria-label="Current transcription plan" data-i18n-aria-label="uxp.captions.current_plan">
-              <div class="oc-inline-stat">
-                <span class="oc-label" data-i18n="uxp.captions.model">Model</span>
-                <span class="oc-inline-value" id="captionsPlanModel" data-i18n="uxp.captions.model_turbo">turbo (recommended)</span>
-              </div>
-              <div class="oc-inline-stat">
-                <span class="oc-label" data-i18n="uxp.captions.language">Language</span>
-                <span class="oc-inline-value" id="captionsPlanLanguage" data-i18n="uxp.captions.language_auto">Auto-detect</span>
-              </div>
-              <div class="oc-inline-stat">
-                <span class="oc-label" data-i18n="uxp.captions.style">Style</span>
-                <span class="oc-inline-value" id="captionsPlanStyle" data-i18n="uxp.captions.style_minimal_clean">Minimal Clean</span>
-              </div>
             </div>
             <p class="oc-hint oc-caption-plan-note" id="captionsPlanNote" data-i18n="uxp.captions.plan_note_default">Word timing is on. Speaker splits are off.</p>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runTranscribeBtn" data-i18n="uxp.captions.transcribe">Transcribe</button>
@@ -988,7 +974,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="applyCutsBody">
-            <p class="oc-hint" data-i18n="uxp.timeline.apply_cuts_hint">Use the latest cut pass from Cut or Video and send it into the active Premiere sequence when the edit is ready.</p>
+            <p class="oc-hint" data-i18n="uxp.timeline.apply_cuts_hint">Send the latest cut pass to the active Premiere sequence.</p>
             <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Apply cuts readiness" data-i18n-aria-label="uxp.timeline.apply_cuts_readiness">
               <div class="oc-inline-stat">
                 <span class="oc-label" data-i18n="uxp.timeline.latest_cuts">Latest Cuts</span>
@@ -1448,9 +1434,9 @@
            uses the command palette + NLP tab; see PANEL_PARITY.json). -->
       <div class="oc-tab-panel" id="tab-agent" role="tabpanel" aria-labelledby="tabBtnAgent">
 
-        <div class="oc-section-title" data-i18n="uxp.agent.chat_conductor_f143">Chat Conductor (F143)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.chat_conductor_f143">Chat Conductor</div>
         <div class="oc-card">
-          <p class="oc-hint" data-i18n="uxp.agent.chat_conductor_hint">Describe an edit in plain language. The conductor turns it into a step-by-step plan you can review before any work runs.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.chat_conductor_hint">Describe an edit. Review the plan before anything runs.</p>
           <div class="oc-field-row">
             <label class="oc-label" for="agentChatIntent" data-i18n="uxp.agent.intent">Intent</label>
             <textarea class="oc-input" id="agentChatIntent" rows="3" placeholder="e.g. Cut silences then add captions in Spanish" data-i18n-placeholder="uxp.agent.intent_placeholder"></textarea>
@@ -1472,9 +1458,9 @@
           </div>
         </div>
 
-        <div class="oc-section-title" data-i18n="uxp.agent.one_click_enhance_q3">One-Click Enhance (Q3)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.one_click_enhance_q3">One-Click Enhance</div>
         <div class="oc-card">
-          <p class="oc-hint" data-i18n="uxp.agent.one_click_enhance_hint">Loudness, denoise, stabilize, deflicker, and grade in one pass. Pick a style - Social, Speech, or Cinematic.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.one_click_enhance_hint">Apply loudness, denoise, stabilization, deflicker, and grading in one pass.</p>
           <div class="oc-field-row">
             <label class="oc-label" for="enhanceClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
             <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
@@ -1491,12 +1477,12 @@
             <button type="button" class="oc-btn oc-btn-secondary" id="enhanceDryRunBtn" data-i18n="uxp.agent.preview_plan">Preview Plan</button>
             <button type="button" class="oc-btn oc-btn-primary" id="enhanceRunBtn" data-i18n="uxp.agent.run_enhance">Run Enhance</button>
           </div>
-          <div class="oc-status-line" id="enhanceStatus" role="status" aria-live="polite" data-i18n="uxp.agent.enhance_status">Pick a clip, pick a style, then Preview Plan to see what will run.</div>
+          <div class="oc-status-line" id="enhanceStatus" role="status" aria-live="polite" data-i18n="uxp.agent.enhance_status">Choose a clip and preview the plan.</div>
         </div>
 
-        <div class="oc-section-title" data-i18n="uxp.agent.shorts_ab_variants_q8">Shorts A/B Variants (Q8)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.shorts_ab_variants_q8">Shorts A/B Variants</div>
         <div class="oc-card">
-          <p class="oc-hint" data-i18n="uxp.agent.shorts_ab_variants_hint">Render 2-6 short-form variants of the same window with different hook tightness, caption style, and focal point. A/B test before posting.</p>
+          <p class="oc-hint" data-i18n="uxp.agent.shorts_ab_variants_hint">Create 2-6 variants with different hooks, captions, and framing.</p>
           <div class="oc-field-row">
             <label class="oc-label" for="variantsClipPath" data-i18n="uxp.agent.clip_path">Clip Path</label>
             <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path..." data-i18n-placeholder="uxp.agent.clip_path_placeholder">
@@ -1520,7 +1506,7 @@
           <div class="oc-status-line" id="variantsStatus" role="status" aria-live="polite" data-i18n="uxp.agent.variants_status">2-6 variants per source window.</div>
         </div>
 
-        <div class="oc-section-title" data-i18n="uxp.agent.sequence_index_q7_f273">Sequence Index (Q7 / F273)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.sequence_index_q7_f273">Sequence Index</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.agent.sequence_index_hint">Spreadsheet-style read of the active Premiere sequence - clip name, timecode, duration, effects, ratings, transcript excerpts. Sort and filter without re-walking the timeline.</p>
           <div class="oc-btn-row">
@@ -1533,7 +1519,7 @@
           </div>
         </div>
 
-        <div class="oc-section-title" data-i18n="uxp.agent.mcp_bridge_f146">MCP Bridge (F146)</div>
+        <div class="oc-section-title" data-i18n="uxp.agent.mcp_bridge_f146">MCP Bridge</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.agent.mcp_bridge_hint">UXP-native bridge to the MCP tool catalogue. 39 curated tools plus 1,325 opt-in extended tools.</p>
           <div class="oc-btn-row">
@@ -1563,7 +1549,7 @@
         <section class="oc-settings-group oc-settings-group--workspace active" id="settingsPaneWorkspace" data-settings-pane="workspace" role="tabpanel" aria-labelledby="settingsNavWorkspace">
         <div class="oc-section-title" data-i18n="uxp.settings.workspace">Workspace</div>
         <div class="oc-card oc-command-card">
-          <p class="oc-hint" data-i18n="uxp.settings.workspace_hint">Confirm the active shot, library, and backend before moving into a focused editing tool.</p>
+          <p class="oc-hint" data-i18n="uxp.settings.workspace_hint">Current source, library, and backend.</p>
           <div class="oc-command-state-list" role="list" aria-label="Current workspace context" data-i18n-aria-label="uxp.workspace.current_context">
             <div class="oc-command-state-row" role="listitem">
               <span class="oc-label" data-i18n="uxp.workspace.label_source">Active Shot</span>

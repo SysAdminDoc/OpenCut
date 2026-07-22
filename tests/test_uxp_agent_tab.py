@@ -82,6 +82,12 @@ class TestUxpAgentTabHtml(unittest.TestCase):
                 self.assertIn(f'id="{btn_id}"', self.html,
                               f"Agent panel HTML missing button id={btn_id!r}")
 
+    def test_visible_headings_hide_internal_tracking_codes(self):
+        visible_text = " ".join(re.findall(r">([^<>]+)<", self.html))
+        for tracking_code in ("F143", "Q3", "Q8", "F273", "F146"):
+            with self.subTest(tracking_code=tracking_code):
+                self.assertNotIn(tracking_code, visible_text)
+
 
 class TestUxpAgentTabWiring(unittest.TestCase):
     @classmethod
