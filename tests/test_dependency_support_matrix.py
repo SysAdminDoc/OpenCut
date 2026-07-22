@@ -97,7 +97,9 @@ def test_dependency_dashboard_uses_canonical_support_contract(client):
     assert "Torch >=2.10" in payload["whisperx"]["support_reason"]
     assert payload["pyannote.audio"]["supported"] is True
     if not payload["pyannote.audio"]["installed"]:
-        assert payload["pyannote.audio"]["install_hint"] == 'pip install "opencut-ppro[diarize]"'
+        assert payload["pyannote.audio"]["install_hint"] == (
+            'python -m pip install -e ".[diarize]"'
+        )
 
 
 def test_matrix_script_reports_machine_readable_contract(capsys):

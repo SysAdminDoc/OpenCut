@@ -158,7 +158,7 @@ def build_install_suggestion(
     message: str = "",
 ) -> str:
     """Build an actionable install suggestion for an optional dependency."""
-    from opencut.dependency_support import dependency_support
+    from opencut.dependency_support import dependency_support, source_extra_install_command
 
     hint = lookup_hint(name, context, message) or {}
     support = dependency_support(name)
@@ -176,7 +176,10 @@ def build_install_suggestion(
 
     parts = []
     if selected_extra:
-        parts.append(f"Install with: pip install 'opencut-ppro[{selected_extra}]'")
+        parts.append(
+            "From an OpenCut source checkout, install with: "
+            + source_extra_install_command(selected_extra)
+        )
     elif packages:
         parts.append(f"Install with: pip install {' '.join(packages)}")
     else:

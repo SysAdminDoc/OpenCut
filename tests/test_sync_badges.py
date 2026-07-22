@@ -2,8 +2,8 @@
 Tests for scripts/sync_badges.py (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q4/E8).
 
 The README ships hand-edited "API Routes" and "Tests" badges that historically
-drifted from the live route manifest. The badge sync script binds the badges
-to ``route_manifest.json::total_routes`` (truth) and a floor-to-100 test count.
+drifted from source. The badge sync script binds product claims to
+``project_facts.json`` and the Tests badge to a floor-to-100 test count.
 
 These tests cover:
   - Regex correctness against the current README badge syntax.
@@ -37,8 +37,8 @@ def _copy_minimal_sync_tree(tmp_path: Path) -> None:
         tmp_path / "opencut" / "core" / "caption_styles.py",
     )
     shutil.copy2(
-        REPO_ROOT / "opencut" / "_generated" / "route_manifest.json",
-        tmp_path / "opencut" / "_generated" / "route_manifest.json",
+        REPO_ROOT / "opencut" / "_generated" / "project_facts.json",
+        tmp_path / "opencut" / "_generated" / "project_facts.json",
     )
 
 

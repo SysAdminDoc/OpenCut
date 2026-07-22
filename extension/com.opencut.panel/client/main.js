@@ -12634,7 +12634,7 @@
                         "Run the following in a terminal (Command Prompt, PowerShell, or Terminal) to install recommended dependencies:"
                     )) +
                     "</span>" +
-                    '<code class="dep-bulk-cmd">pip install opencut-ppro[all]</code>';
+                    '<code class="dep-bulk-cmd">python -m pip install -e ".[all]"</code>';
                 el.depGrid.appendChild(bulkDiv);
             }
             el.depGrid.appendChild(frag);

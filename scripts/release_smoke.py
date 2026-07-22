@@ -385,6 +385,10 @@ def step_model_cards(_args: argparse.Namespace) -> StepResult:
 
 GENERATED_DOC_CHECKS = [
     (
+        "project facts manifest",
+        [sys.executable, "-m", "opencut.tools.dump_project_facts", "--check"],
+    ),
+    (
         "README badges/product facts",
         [sys.executable, str(REPO_ROOT / "scripts" / "sync_badges.py"), "--check"],
     ),
@@ -899,6 +903,7 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
 # during release validation.
 RELEASE_GATE_TESTS: List[str] = [
     "tests/test_bootstrap_check.py",
+    "tests/test_project_facts.py",
     "tests/test_node_advisories.py",
     "tests/test_panel_node_entrypoints.py",
     "tests/test_error_request_ids.py",
