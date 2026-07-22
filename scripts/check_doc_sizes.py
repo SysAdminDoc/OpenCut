@@ -100,15 +100,25 @@ class DocClaim:
 # Each regex must capture the documented number as group 1 (or named "n").
 TARGETS: list[DocClaim] = [
     DocClaim(
+        label="README routes badge",
+        regex=re.compile(r"API%20Routes-([\d,]+)-"),
+        live=_route_count,
+        docs=(README,),
+        unit="routes",
+    ),
+    # Route-count prose tolerates an optional qualifier word (e.g. "shipped")
+    # between the number and "routes" so copy rewording doesn't silently
+    # disable the check.
+    DocClaim(
         label="README feature overview API routes",
-        regex=re.compile(r"OpenCut\s+v[\d.]+\s+includes\s+\*\*([\d,]+)\s+API routes\*\*", re.IGNORECASE),
+        regex=re.compile(r"OpenCut\s+v[\d.]+\s+includes\s+\*\*([\d,]+)\s+(?:\w+\s+)?API routes\*\*", re.IGNORECASE),
         live=_route_count,
         docs=(README,),
         unit="routes",
     ),
     DocClaim(
         label="README architecture API routes",
-        regex=re.compile(r"\|\s*([\d,]+)\s+API routes\s*\|", re.IGNORECASE),
+        regex=re.compile(r"\|\s*([\d,]+)\s+(?:\w+\s+)?(?:API\s+)?routes\s*\|", re.IGNORECASE),
         live=_route_count,
         docs=(README,),
         unit="routes",

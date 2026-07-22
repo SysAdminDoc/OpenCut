@@ -194,6 +194,7 @@ def whisperx_transcribe(
     import torch
     import whisperx
     from faster_whisper.utils import download_model
+
     from opencut.core.asr_provenance import (
         apply_language_decision,
         build_provenance,

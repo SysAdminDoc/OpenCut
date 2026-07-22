@@ -69,6 +69,11 @@ TARGETS = [
         r'(<FileVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</FileVersion>)',
         r'\g<1>{v}.0\g<2>',
     ),
+    (
+        "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
+        r'(<AssemblyVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</AssemblyVersion>)',
+        r'\g<1>{v}.0\g<2>',
+    ),
     # Installer AppConstants.cs
     (
         "installer/src/OpenCut.Installer/Models/AppConstants.cs",
@@ -158,10 +163,14 @@ TARGETS = [
         r'(latest minor\*\* \(`)[0-9]+\.[0-9]+\.x(`\) and the one immediately preceding it \(`)[0-9]+\.[0-9]+\.x(`\))',
         r'\g<1>{series}\g<2>{previous_series}\g<3>',
     ),
+    # NOTE: this row is matched and rebuilt as a full single line. The previous
+    # pattern used `\|\s*)[^\n|]+(\s*\|` for the last cell; `\s*` could swallow
+    # the newline and match the next row's leading pipe when the row carried
+    # trailing whitespace, leaving `|—` residue after the closing pipe.
     (
         "SECURITY.md",
-        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Active[^\n]*\|\s*)[^\n|]+(\s*\|)',
-        r'\g<1>{series}\g<2>—                    \g<3>',
+        r'^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n]*$',
+        r'| {series}  | ✅ Active         | —                    |',
     ),
     (
         "SECURITY.md",
@@ -183,6 +192,11 @@ TARGETS = [
         r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.4\)")',
         r'\g<1>{v}\g<2>',
     ),
+    # NOTE: packaging/linux/*.metainfo.xml is deliberately NOT a sync target.
+    # Its newest <release> entry tracks the last Flathub-PUBLISHED build
+    # (pinned by tests/test_linux_distribution_packaging.py), not the source
+    # version; add a dated <release> block there only when a Flathub build
+    # actually ships.
     # README.md version badge and feature-overview heading
     (
         "README.md",

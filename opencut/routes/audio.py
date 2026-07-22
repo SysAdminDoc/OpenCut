@@ -221,8 +221,8 @@ def filler_removal(job_id, filepath, data):
             # Fall through to standard Whisper path
 
     # Standard Whisper path
-    from opencut.core.captions import check_whisper_available, transcribe
     from opencut.core.asr_provenance import provenance_to_dict
+    from opencut.core.captions import check_whisper_available, transcribe
     from opencut.core.fillers import (
         build_boundary_review,
         detect_fillers,

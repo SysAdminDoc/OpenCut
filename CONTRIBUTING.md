@@ -30,7 +30,7 @@ opencut/
 
 extension/com.opencut.panel/   CEP (Adobe) panel — HTML/JS/ExtendScript
 extension/com.opencut.uxp/     UXP panel (Premiere 25.6+)
-installer/src/OpenCut.Installer/   Windows WPF installer (C#, .NET 9)
+installer/src/OpenCut.Installer/   Windows WPF installer (C#, .NET 10)
 tests/                    pytest suite; tests/fuzz/ for Atheris harness
 scripts/                  sync_version, sbom, misc dev helpers
 ```

@@ -211,15 +211,18 @@ def invalidate_caps_cache():
         _caps_cache["data"] = None
         _caps_cache["ts"] = 0.0
     # Also clear the /system/dependencies TTL cache so the next render
-    # reflects the new install. Defined later in this module.
+    # reflects the new install. _deps_cache and _deps_cache_lock live in
+    # system_runtime_routes and are imported at the bottom of this module;
+    # mutating the dict in place (never rebinding it) keeps this module and
+    # system_runtime_routes operating on the same shared object.
     try:
         with _deps_cache_lock:
             _deps_cache["data"] = None
             _deps_cache["ts"] = 0.0
     except NameError:
-        # _deps_cache is defined later in module load order; if this
-        # function is somehow called before that, the deps cache is
-        # already empty.
+        # The bottom-of-module import from system_runtime_routes has not
+        # run yet; if this function is somehow called before that, the
+        # deps cache is already empty.
         pass
 
 
