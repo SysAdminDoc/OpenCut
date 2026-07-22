@@ -8,6 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CEP_HTML = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 CEP_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+CEP_STRING_UTILS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "string-utils.js"
 CEP_CSS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "style.css"
 
 REQUIRED_SELECT_IDS = (
@@ -58,6 +59,7 @@ class TestCepCaptionDisplaySettingsJs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.js = CEP_JS.read_text(encoding="utf-8", errors="replace")
+        cls.string_utils = CEP_STRING_UTILS.read_text(encoding="utf-8", errors="replace")
 
     def test_init_function_defined_and_called(self):
         self.assertIn("function initCaptionDisplaySettingsCard()", self.js)
@@ -75,7 +77,8 @@ class TestCepCaptionDisplaySettingsJs(unittest.TestCase):
 
     def test_font_options_surface_resolution_status(self):
         self.assertIn("font_resolution", self.js)
-        self.assertIn('source !== "preferred_file" ? "fallback" : "resolved"', self.js)
+        self.assertIn('source !== "preferred_file" ? "fallback" : "resolved"', self.string_utils)
+        self.assertIn("captionDisplayOptionLabel(spec, opt)", self.js)
         self.assertIn("option.title = opt.font_resolution.warning", self.js)
 
     def test_preview_and_reset_handlers_wired(self):

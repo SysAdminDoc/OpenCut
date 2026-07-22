@@ -20,7 +20,13 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 const clientRoot = resolve(__dirname, "client");
-const classicScriptPlaceholders = ["CSInterface.js", "panel-utils.js", "feature-state.js", "format-utils.js", "job-meta-utils.js", "classify-utils.js", "data-shape-utils.js", "string-utils.js", "lookup-utils.js", "i18n-utils.js", "main.js"];
+const classicScriptPlaceholders = [
+  "CSInterface.js", "panel-utils.js", "feature-state.js", "format-utils.js",
+  "job-meta-utils.js", "classify-utils.js", "data-shape-utils.js",
+  "string-utils.js", "lookup-utils.js", "i18n-utils.js", "panel-state.js",
+  "backend-client.js", "job-runtime.js", "component-utils.js",
+  "timeline-utils.js", "bootstrap.js", "main.js",
+];
 
 function preserveCepClassicScripts() {
   return {
@@ -28,10 +34,11 @@ function preserveCepClassicScripts() {
     transformIndexHtml: {
       order: "pre",
       handler(html) {
-        return html.replace(
-          /<script\s+src="(CSInterface\.js|panel-utils\.js|feature-state\.js|main\.js)"><\/script>/g,
-          (_, src) => `<!-- OPENCUT_CLASSIC_SCRIPT:${src} -->`,
-        );
+        return html.replace(/<script\s+src="([^"]+\.js)"><\/script>/g, (tag, src) => (
+          classicScriptPlaceholders.includes(src)
+            ? `<!-- OPENCUT_CLASSIC_SCRIPT:${src} -->`
+            : tag
+        ));
       },
     },
     generateBundle(_, bundle) {

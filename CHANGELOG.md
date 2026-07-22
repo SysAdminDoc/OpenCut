@@ -15,6 +15,15 @@ record also lives in the git commit messages.
 - Added 12 focused Vitest contracts for transport retry, job exclusivity,
   locale overlays, timeline payloads, component escaping/state, and ordered
   bootstrap behavior.
+- Extracted the CEP connection store, XHR/CSRF transport, exclusive job
+  lifecycle, timeline payload builders, component state, and bootstrap error
+  containment into independently testable classic-script modules. The panel
+  build now preserves the complete module graph explicitly, and 11 focused
+  contracts lock request deduplication, CSRF retry, route payloads, and ordered
+  startup behavior.
+- Split both command-center stylesheets into ordered token, shell-layout, and
+  component/responsive layers, with source-ownership contracts preventing the
+  monoliths from silently absorbing those responsibilities again.
 
 ## [1.40.0] — 2026-07-21 — Extract the CEP + UXP i18n cores behind tests
 

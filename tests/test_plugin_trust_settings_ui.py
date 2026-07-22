@@ -15,6 +15,7 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
     def setUpClass(cls):
         cls.html = (CEP_ROOT / "index.html").read_text(encoding="utf-8", errors="replace")
         cls.js = (CEP_ROOT / "main.js").read_text(encoding="utf-8", errors="replace")
+        cls.data_shape = (CEP_ROOT / "data-shape-utils.js").read_text(encoding="utf-8", errors="replace")
         cls.css = (CEP_ROOT / "style.css").read_text(encoding="utf-8", errors="replace")
 
     def test_settings_card_markup_present(self):
@@ -52,8 +53,8 @@ class TestCepPluginTrustSettingsUi(unittest.TestCase):
                 self.assertIn(needle, self.js)
 
     def test_language_capability_dropdown_normalizes_route_payload(self):
-        self.assertIn("function normalizeLanguageOptions(languages)", self.js)
-        self.assertIn("Array.isArray(languages)", self.js)
+        self.assertIn("function normalizeLanguageOptions(languages)", self.data_shape)
+        self.assertIn("Array.isArray(languages)", self.data_shape)
         self.assertIn("languageOptionLabel(langMap[a], a).localeCompare", self.js)
         self.assertNotIn("langMap[a].localeCompare(langMap[b])", self.js)
 

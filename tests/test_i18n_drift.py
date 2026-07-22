@@ -110,12 +110,14 @@ class TestI18nDrift(unittest.TestCase):
         var y = t('video.title_tip');
         var z = t("not_an_i18n_key");  // single segment — not matched
         var w = t(variable);             // dynamic — not matched
+        var transport = translate(\"error.network\", \"Network error\");
         var u = subscribe(\"chan.foo\"); // wrong function name — not matched
         """
         found = set(self.mod.JS_I18N_RE.findall(js))
         # Single-segment keys aren't matched; dotted keys are.
         self.assertIn("audio.duck", found)
         self.assertIn("video.title_tip", found)
+        self.assertIn("error.network", found)
         self.assertNotIn("not_an_i18n_key", found)
 
     def test_js_key_field_regex_captures_supported_locale_metadata(self):
