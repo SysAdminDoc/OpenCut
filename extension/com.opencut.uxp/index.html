@@ -1548,7 +1548,19 @@
       <!-- ==================== SETTINGS TAB ==================== -->
       <div class="oc-tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tabBtnSettings">
 
-        <section class="oc-settings-group oc-settings-group--workspace">
+        <nav class="oc-settings-nav" aria-label="Settings sections" data-i18n-aria-label="uxp.settings.sections" role="tablist">
+          <button type="button" class="oc-settings-nav-item active" id="settingsNavWorkspace" data-settings-section="workspace" aria-controls="settingsPaneWorkspace" aria-selected="true" role="tab" data-i18n="uxp.settings.workspace">Workspace</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavEngines" data-settings-section="engines" aria-controls="settingsPaneEngines" aria-selected="false" role="tab" data-i18n="uxp.settings.engine_routing">Engines</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavLiveUpdates" data-settings-section="live-updates" aria-controls="settingsPaneLiveUpdates" aria-selected="false" role="tab" data-i18n="uxp.settings.live_updates">Live Updates</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavRecovery" data-settings-section="recovery" aria-controls="settingsPaneRecovery" aria-selected="false" role="tab" data-i18n="uxp.journal.recovery">Recovery</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavDiagnostics" data-settings-section="diagnostics" aria-controls="settingsPaneDiagnostics" aria-selected="false" role="tab" data-i18n="uxp.settings.diagnostics">Diagnostics</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavMigration" data-settings-section="migration" aria-controls="settingsPaneMigration" aria-selected="false" role="tab" data-i18n="uxp.settings.migration_risk">Migration</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavPlugins" data-settings-section="plugins" aria-controls="settingsPanePlugins" aria-selected="false" role="tab" data-i18n="uxp.settings.plugin_trust">Plugins</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavActions" data-settings-section="actions" aria-controls="settingsPaneActions" aria-selected="false" role="tab" data-i18n="uxp.settings.keyboard">Fast Actions</button>
+          <button type="button" class="oc-settings-nav-item" id="settingsNavAbout" data-settings-section="about" aria-controls="settingsPaneAbout" aria-selected="false" role="tab" data-i18n="uxp.settings.about">About</button>
+        </nav>
+
+        <section class="oc-settings-group oc-settings-group--workspace active" id="settingsPaneWorkspace" data-settings-pane="workspace" role="tabpanel" aria-labelledby="settingsNavWorkspace">
         <div class="oc-section-title" data-i18n="uxp.settings.workspace">Workspace</div>
         <div class="oc-card oc-command-card">
           <p class="oc-hint" data-i18n="uxp.settings.workspace_hint">Confirm the active shot, library, and backend before moving into a focused editing tool.</p>
@@ -1574,7 +1586,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group oc-settings-group--recovery">
+        <section class="oc-settings-group oc-settings-group--recovery" id="settingsPaneRecovery" data-settings-pane="recovery" role="tabpanel" aria-labelledby="settingsNavRecovery">
         <div class="oc-section-title" data-i18n="uxp.journal.recovery">Timeline Recovery</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.journal.recovery_hint">Review host writes that began but did not record completion after a panel or Premiere restart.</p>
@@ -1599,7 +1611,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group oc-settings-group--engines">
+        <section class="oc-settings-group oc-settings-group--engines" id="settingsPaneEngines" data-settings-pane="engines" role="tabpanel" aria-labelledby="settingsNavEngines">
         <div class="oc-section-title" data-i18n="uxp.settings.engine_routing">Engine Routing</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.engine_routing_hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
@@ -1628,7 +1640,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group oc-settings-group--live-updates">
+        <section class="oc-settings-group oc-settings-group--live-updates" id="settingsPaneLiveUpdates" data-settings-pane="live-updates" role="tabpanel" aria-labelledby="settingsNavLiveUpdates">
         <div class="oc-section-title" title="Live Updates Bridge" data-i18n="uxp.settings.live_updates" data-i18n-title="uxp.settings.live_updates_bridge">Live Updates</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.live_updates_bridge_hint">Keep progress, completion, and cancel feedback flowing into the panel while longer jobs run.</p>
@@ -1655,7 +1667,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group oc-settings-group--diagnostics">
+        <section class="oc-settings-group oc-settings-group--diagnostics" id="settingsPaneDiagnostics" data-settings-pane="diagnostics" role="tabpanel" aria-labelledby="settingsNavDiagnostics">
         <div class="oc-section-title" data-i18n="uxp.settings.diagnostics">Diagnostics</div>
         <div class="oc-card oc-command-card">
           <p class="oc-hint" data-i18n="uxp.settings.diagnostics_hint">Check the local services that power processing before troubleshooting an editing workflow.</p>
@@ -1681,7 +1693,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group">
+        <section class="oc-settings-group" id="settingsPaneMigration" data-settings-pane="migration" role="tabpanel" aria-labelledby="settingsNavMigration">
         <div class="oc-section-title" data-i18n="uxp.settings.migration_risk">Migration Risk</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.migration_risk_hint">Track CEP fallback, direct UXP, and hybrid-plugin migration status from the generated host-action catalogue.</p>
@@ -1710,7 +1722,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group">
+        <section class="oc-settings-group" id="settingsPanePlugins" data-settings-pane="plugins" role="tabpanel" aria-labelledby="settingsNavPlugins">
         <div class="oc-section-title" data-i18n="uxp.settings.plugin_trust">Plugin Trust</div>
         <div class="oc-card" id="uxpPluginTrustCard">
           <p class="oc-hint" data-i18n="uxp.settings.plugin_trust_hint">Review plugin locks, capability requests, failed loads, marketplace cache, and quarantine before enabling third-party automation.</p>
@@ -1743,7 +1755,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group">
+        <section class="oc-settings-group" id="settingsPaneActions" data-settings-pane="actions" role="tabpanel" aria-labelledby="settingsNavActions">
         <div class="oc-section-title" data-i18n="uxp.settings.keyboard">Fast Actions</div>
         <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.keyboard_hint">High-traffic editorial actions stay visible so you do not have to hunt through tabs.</p>
@@ -1780,7 +1792,7 @@
         </div>
         </section>
 
-        <section class="oc-settings-group">
+        <section class="oc-settings-group" id="settingsPaneAbout" data-settings-pane="about" role="tabpanel" aria-labelledby="settingsNavAbout">
         <div class="oc-section-title" data-i18n="uxp.settings.about">About</div>
         <div class="oc-card">
           <div class="oc-field-row">

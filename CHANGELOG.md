@@ -13,6 +13,9 @@ record also lives in the git commit messages.
 - Added image-generated reference designs for Cut, Captions, Audio, Video,
   Timeline, Search, Deliverables, Agent, Settings, and Export, plus rendered
   page-by-page visual regression coverage for both panel surfaces.
+- Refined both navigation rails into open editorial lists, moved UXP workspace
+  utilities into quieter project chrome, and replaced the Settings dashboard
+  wall with a keyboard-accessible section navigator and one focused pane.
 
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 
