@@ -5,8 +5,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1533-orange)
-![Tests](https://img.shields.io/badge/Tests-11700+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1534-orange)
+![Tests](https://img.shields.io/badge/Tests-11800+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -254,7 +254,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.41.0 includes **1,533 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.41.0 includes **1,534 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -457,7 +457,8 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 - **9 tabs** -- Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables, Agent, Settings
 - **Direct Premiere API** -- Uses the `premierepro` UXP module for sequence access
 - **Project media discovery** -- Scans project items via UXP API with datalist autocomplete
-- **OTIO export** -- Export timeline edits in universal format from within the panel
+- **OTIO export** -- Discover installed adapters, select a current or legacy
+  schema target, and preflight downgrade loss before writing from either panel
 - **Connection-aware UI** -- Buttons disable when server is offline, re-enable on reconnect
 - **Near-complete feature parity** with CEP panel including depth effects, emotion highlights, B-roll, chat editor, social upload, engine preferences, and WebSocket bridge
 
@@ -472,7 +473,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,533 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,534 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  602 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -650,6 +651,12 @@ opencut deliverables --sequence-json sequence.json --type all
 # Natural language editing
 opencut nlp "remove silence and add captions in Spanish" --file video.mp4
 
+# Preflight a legacy-compatible OTIO export without writing
+opencut silence interview.mp4 --format otio --otio-schema OTIO_CORE:0.14.0 --otio-preflight
+
+# Write only after reviewing any reported downgrade fields
+opencut silence interview.mp4 --format otio --otio-schema OTIO_CORE:0.14.0 --accept-lossy-otio
+
 # Call any generated backend route from scripts
 opencut route GET /system/check-failures
 opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepath":"C:/clip.mp4"}}'
@@ -770,7 +777,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,700+ estimated tests across 294 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,800+ estimated tests across 295 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -792,7 +799,11 @@ A: Yes. The server runs standalone with a REST API. Call any route with curl, us
 A: Core editing is local by default, and fresh installs emit no telemetry. Optional Aptabase telemetry is available only after explicit opt-in. Edge-TTS requires internet for voice synthesis; LLM features can use local Ollama or cloud providers. Social media upload is opt-in and requires explicit OAuth connection. Set `OPENCUT_LOCAL_ONLY=1` to enforce loopback-only networking.
 
 **Q: Can I export edits to DaVinci Resolve or Final Cut Pro?**
-A: Yes. Use the OTIO (OpenTimelineIO) export in the Timeline tab. OTIO files can be imported into Resolve, FCP, Avid, and any OTIO-compatible editor. Resolve also has a direct Python scripting bridge.
+A: Yes. Use the OTIO (OpenTimelineIO) export in the Timeline tab. Both panels
+discover the installed adapters and let you choose the current schema or a
+supported legacy `OTIO_CORE` target. OpenCut reports lossy downgrade fields
+before writing and records the exact adapter/runtime versions inside the
+timeline. Resolve also has a direct Python scripting bridge.
 
 **Q: How do I update?**
 A: `git pull` and restart the server. Or download the latest exe from [Releases](https://github.com/SysAdminDoc/OpenCut/releases).
@@ -831,7 +842,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,700+ estimated tests, 294 root test files)
+tests/               # pytest test suite (11,800+ estimated tests, 295 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

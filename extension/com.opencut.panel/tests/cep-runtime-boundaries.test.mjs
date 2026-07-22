@@ -186,6 +186,9 @@ describe("CEP timeline payloads", () => {
       filepath: "clip.mp4",
       output_dir: "out",
       mode: "markers",
+      adapter_name: "otio_json",
+      schema_target: "current",
+      accept_lossy: false,
       markers: [{ time: 2, name: "Beat" }],
     });
   });

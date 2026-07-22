@@ -1018,6 +1018,22 @@
                 <option value="markers" data-i18n="uxp.timeline.mode_markers">Markers (beats/chapters)</option>
               </select>
             </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="otioAdapter" data-i18n="uxp.timeline.otio_adapter">Adapter</label>
+              <select class="oc-select" id="otioAdapter" aria-label="OTIO adapter" data-i18n-aria-label="uxp.timeline.otio_adapter_aria">
+                <option value="otio_json" selected data-i18n="uxp.timeline.otio_adapter_native">Native OTIO JSON (.otio)</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="otioSchemaTarget" data-i18n="uxp.timeline.otio_schema_target">Compatibility</label>
+              <select class="oc-select" id="otioSchemaTarget" aria-label="OTIO schema compatibility target" data-i18n-aria-label="uxp.timeline.otio_schema_target_aria">
+                <option value="current" selected data-i18n="uxp.timeline.otio_schema_current">Current schema</option>
+              </select>
+            </div>
+            <label class="oc-checkbox-row" for="otioAcceptLossy">
+              <input type="checkbox" id="otioAcceptLossy">
+              <span data-i18n="uxp.timeline.otio_accept_lossy">Allow a downgrade after reviewing reported data loss</span>
+            </label>
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="exportOtioBtn" aria-label="Export OpenTimelineIO file" data-i18n="uxp.timeline.export_otio_file" data-i18n-aria-label="uxp.timeline.export_opentimelineio_file">Export .otio File</button>
           </div>
         </div>

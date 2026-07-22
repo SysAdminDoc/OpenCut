@@ -3253,6 +3253,22 @@
                                 <option value="markers" data-i18n="timeline.otio_mode_markers">Markers (chapter/beat points)</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="otioAdapter" data-i18n="timeline.otio_adapter">Adapter</label>
+                            <select id="otioAdapter" aria-label="OTIO adapter" data-i18n-aria-label="timeline.otio_adapter_aria">
+                                <option value="otio_json" selected data-i18n="timeline.otio_adapter_native">Native OTIO JSON (.otio)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="otioSchemaTarget" data-i18n="timeline.otio_schema_target">Compatibility target</label>
+                            <select id="otioSchemaTarget" aria-label="OTIO schema compatibility target" data-i18n-aria-label="timeline.otio_schema_target_aria">
+                                <option value="current" selected data-i18n="timeline.otio_schema_current">Current schema</option>
+                            </select>
+                        </div>
+                        <label class="checkbox-row" for="otioAcceptLossy">
+                            <input type="checkbox" id="otioAcceptLossy">
+                            <span data-i18n="timeline.otio_accept_lossy">Allow export when preflight reports downgrade data loss</span>
+                        </label>
                         <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file" data-i18n="timeline.export_otio_file" data-i18n-aria-label="timeline.export_otio_file_aria">Export .otio File</button>
                         <div class="hint hidden" id="otioHint"><span data-i18n="timeline.otio_missing">OpenTimelineIO not installed.</span> <button type="button" class="btn-text btn-xs" id="installOtioBtn" data-i18n="timeline.install_otio">Install</button></div>
                         <div class="hint hidden mt-xs" id="otioResult"></div>

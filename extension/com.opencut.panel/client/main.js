@@ -16121,7 +16121,60 @@
     // v1.5.0 — Init Timeline/NLP features
     // ================================================================
 
+    function syncOtioSchemaAvailability() {
+        var adapter = document.getElementById("otioAdapter");
+        var schema = document.getElementById("otioSchemaTarget");
+        if (!adapter || !schema) return;
+        var option = adapter.options[adapter.selectedIndex];
+        var supportsTargets = !option || option.getAttribute("data-schema-targeting") !== "false";
+        schema.disabled = !supportsTargets;
+        if (!supportsTargets) schema.value = "current";
+    }
+
+    function loadOtioCapabilities() {
+        var adapterSelect = document.getElementById("otioAdapter");
+        var schemaSelect = document.getElementById("otioSchemaTarget");
+        if (!adapterSelect || !schemaSelect) return;
+        api("GET", "/timeline/otio-capabilities", null, function (err, data) {
+            if (err || !data || data.error) {
+                var message = (data && data.error) || (err && err.message) || t("common.unknown", "Unknown");
+                setHintState(
+                    document.getElementById("otioResult"),
+                    t("timeline.otio_capabilities_failed", "Could not discover OTIO adapters: {error}").replace("{error}", message),
+                    "error"
+                );
+                return;
+            }
+            var previousAdapter = adapterSelect.value;
+            var previousSchema = schemaSelect.value;
+            adapterSelect.textContent = "";
+            (data.adapters || []).filter(function (adapter) { return adapter.write; }).forEach(function (adapter) {
+                var option = document.createElement("option");
+                option.value = adapter.name;
+                option.textContent = adapter.name + " (." + (adapter.suffixes || ["otio"])[0] + ") — " + adapter.version;
+                option.setAttribute("data-schema-targeting", adapter.schema_targeting ? "true" : "false");
+                adapterSelect.appendChild(option);
+            });
+            schemaSelect.textContent = "";
+            (data.schema_targets || []).forEach(function (target) {
+                var option = document.createElement("option");
+                option.value = target.id;
+                option.textContent = target.label;
+                schemaSelect.appendChild(option);
+            });
+            if (Array.prototype.some.call(adapterSelect.options, function (option) { return option.value === previousAdapter; })) {
+                adapterSelect.value = previousAdapter;
+            }
+            if (Array.prototype.some.call(schemaSelect.options, function (option) { return option.value === previousSchema; })) {
+                schemaSelect.value = previousSchema;
+            }
+            syncOtioSchemaAvailability();
+        });
+        adapterSelect.addEventListener("change", syncOtioSchemaAvailability);
+    }
+
     function initTimelineFeatures() {
+        loadOtioCapabilities();
         // Write-back
         var applyBtn = document.getElementById("applySeqCutsBtn");
         if (applyBtn) applyBtn.addEventListener("click", function() {
@@ -16154,6 +16207,9 @@
                 filepath: selectedPath,
                 outputDir: projectFolder,
                 mode: mode,
+                adapterName: (document.getElementById("otioAdapter") || {}).value || "otio_json",
+                schemaTarget: (document.getElementById("otioSchemaTarget") || {}).value || "current",
+                acceptLossy: !!((document.getElementById("otioAcceptLossy") || {}).checked),
                 cuts: lastTimelineCuts,
                 beatTimes: beatMarkerTimes,
                 chapters: chaptersData,
@@ -16168,10 +16224,16 @@
                 setButtonText(otioBtn, originalOtioText);
                 if (err || !data || data.error) {
                     var otioRes = document.getElementById("otioResult");
+                    var preflight = data && data.preflight;
+                    var lossDetail = preflight && preflight.lossy_fields && preflight.lossy_fields.length
+                        ? " " + preflight.lossy_fields.join(", ")
+                        : "";
+                    var otioError = t("timeline.otio_error", "Error: {error}")
+                        .replace("{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
                     setHintState(
                         otioRes,
-                        t("timeline.otio_error", "Error: {error}")
-                            .replace("{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown")),
+                        t("timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}")
+                            .replace("{error}", otioError) + lossDetail,
                         "error"
                     );
                     return;
@@ -16179,9 +16241,13 @@
                 showToast(t("timeline.otio_exported", "OTIO exported: {name}")
                     .replace("{name}", (data.output_path || "").split(/[/\\]/).pop()), "success");
                 var otioRes = document.getElementById("otioResult");
+                var report = data.preflight || {};
                 setHintState(
                     otioRes,
-                    t("timeline.otio_saved", "Saved: {path}").replace("{path}", data.output_path || ""),
+                    t("timeline.otio_saved", "Saved: {path} — {adapter}, {schema}")
+                        .replace("{path}", data.output_path || "")
+                        .replace("{adapter}", (report.adapter && report.adapter.name) || "otio_json")
+                        .replace("{schema}", report.schema_target || "current"),
                     "success"
                 );
             });

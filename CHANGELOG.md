@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Preflight targetable OpenTimelineIO exports
+
+- Added live adapter discovery and explicit current or `OTIO_CORE` legacy
+  schema targets across the REST API, CLI, CEP panel, and UXP panel.
+- OTIO writes now simulate downgrade and re-upgrade in memory, report fields
+  that would be lost, and require explicit acceptance before a lossy file can
+  be written. Missing, read-only, and extension-incompatible adapters fail in
+  the same structured preflight.
+- Embedded OTIO runtime, adapter package/version, schema target, and exact
+  schema map in export metadata, with real current/0.14 round-trip fixtures for
+  rational time, markers, transitions, and custom metadata.
+
 ### Added - Run pinned Parakeet and Canary ASR locally on Linux
 
 - Replaced the terminal NeMo stubs with cache-first Parakeet and Canary
