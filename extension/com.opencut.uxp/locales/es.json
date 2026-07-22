@@ -1568,6 +1568,7 @@
   "uxp.journal.restore_failed": "La restauración falló",
   "uxp.journal.restore_failed_detail": "La restauración falló: {error}",
   "uxp.journal.restore_mark_failed": "Premiere se restauró, pero no se pudo actualizar el estado del punto de control.",
+  "uxp.journal.restore_markers_missing": "No se encontraron marcadores coincidentes en la secuencia activa ({count} esperados), así que no se restauró nada.",
   "uxp.journal.saved_checkpoint": "Punto de control de escritura de host guardado",
   "uxp.journal.saved_plan": "Plan guardado: {settings}",
   "uxp.journal.unknown_action": "Acción desconocida"

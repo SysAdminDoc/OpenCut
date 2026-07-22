@@ -58,7 +58,7 @@ const WS_RECONNECT_MAX_MS = 30000;
 const MEDIA_SCAN_MS    = 30000;
 const INLINE_CONFIRM_MS = 8000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.42.0";
+const VERSION          = "1.42.1";
 const UXP_DEFAULT_LOCALE = "en";
 const UXP_LOCALE_DIR   = "locales";
 const UXPThemeSync     = createPremiereThemeSync({ documentRef: document });
@@ -758,10 +758,19 @@ const PProBridge = (() => {
     if (!fingerprint) return false;
     const expectedTime = Number(fingerprint.time ?? fingerprint.start ?? fingerprint.seconds ?? NaN);
     if (Number.isFinite(expectedTime) && Math.abs(info.time - expectedTime) > 0.01) return false;
-    const expectedName = fingerprint.name ?? fingerprint.label;
-    if (expectedName != null && String(expectedName) !== info.name) return false;
-    if (fingerprint.comment != null && String(fingerprint.comment) !== info.comment) return false;
-    return Number.isFinite(expectedTime) || expectedName != null || fingerprint.comment != null;
+    // Markers created via the UXP bridge carry the label in NAME while CEP
+    // host writes carry it in COMMENTS, and older checkpoints stored only
+    // {time, comment}. Accept a label match against either marker field so
+    // fingerprints written by one panel still match markers written by the
+    // other (mirrors ocRemoveSequenceMarkers in the CEP host).
+    const expectedLabels = [fingerprint.name, fingerprint.label, fingerprint.comment]
+      .filter((value) => value != null)
+      .map((value) => String(value));
+    if (expectedLabels.length) {
+      const actualLabels = [info.name, info.comment];
+      if (!expectedLabels.some((expected) => actualLabels.includes(expected))) return false;
+    }
+    return Number.isFinite(expectedTime) || expectedLabels.length > 0;
   }
 
   async function removeSequenceMarkers(payload) {
@@ -4674,6 +4683,12 @@ async function addSequenceMarkers(markers, color) {
     try {
       const inverseMarkers = formatted.map((marker) => ({
         time: marker.time,
+        // The UXP bridge writes the label to the marker NAME (setName) while
+        // the CEP host writes it to COMMENTS. Store both fields so either
+        // panel can match this fingerprint when restoring the checkpoint
+        // (CEP's ocRemoveSequenceMarkers matches fp.comment || fp.name
+        // against m.comments || m.name).
+        name: marker.label,
         comment: marker.label,
       }));
       result = await runCheckpointedUxpHostWrite({
@@ -4779,7 +4794,28 @@ async function runBatchExport() {
 // applies. After a successful rename the button offers a one-click undo that
 // applies the recorded inverse.
 let _renameArmed = null;      // { renames } pending apply
-let _renameUndo = null;       // { inverse, redo } available to revert safely
+let _renameUndo = null;       // { inverse } (canonical entries) available to revert safely
+
+/**
+ * Converts persisted journal inverse-rename entries into the rename shape
+ * consumed by PProBridge.batchRenameProjectItems ({oldName: current name in
+ * the project tree, newName: name to apply}).
+ *
+ * Shape heuristic — two inverse shapes exist in the shared journal DB:
+ *  - canonical (matches CEP ocUnrenameItems): {nodeId, oldName: <original
+ *    name to restore>, currentName: <applied name>} — detected by the
+ *    presence of `currentName`;
+ *  - legacy UXP (pre-canonicalization): {oldName: <applied>, newName:
+ *    <original>} — already in bridge shape, passed through.
+ */
+function renamesFromCanonicalInverse(entries) {
+  return (Array.isArray(entries) ? entries : []).map((item) => {
+    if (item && item.currentName != null) {
+      return { nodeId: item.nodeId, path: item.path, oldName: item.currentName, newName: item.oldName };
+    }
+    return { ...item, newName: item?.newName || item?.oldName };
+  });
+}
 
 function _setBtnLabel(btnId, label) {
   const el = document.getElementById(btnId);
@@ -4795,20 +4831,25 @@ async function runBatchRename() {
   // Undo phase: the button is offering to revert the last rename.
   if (_renameUndo) {
     const undoPlan = _renameUndo;
+    // undoPlan.inverse holds canonical inverse entries; the bridge needs the
+    // {oldName: current, newName: target} rename shape to apply the revert.
+    const undoRenames = renamesFromCanonicalInverse(undoPlan.inverse);
     UIController.setButtonLoading("runBatchRenameBtn", true);
     const res = await runCheckpointedUxpHostWrite({
       action: "batch_rename",
       label: formatI18n("uxp.journal.batch_rename_undo_label", "Undo {count} project-item rename(s)", { count: undoPlan.inverse.length }),
-      inverse: { renames: undoPlan.redo },
+      // Inverse of the undo = re-apply the original renames, stored in the
+      // same canonical {nodeId, oldName, currentName} checkpoint shape.
+      inverse: { renames: computeInverseRenames(undoRenames) },
       preview: {
         items: undoPlan.inverse.map((item) => ({
           nodeId: item.nodeId,
           before: item.currentName || item.oldName,
-          after: item.newName || item.oldName,
+          after: item.oldName,
         })),
         settings: { operation: "undo_batch_rename" },
       },
-    }, () => PProBridge.batchRenameProjectItems({ renames: undoPlan.inverse }));
+    }, () => PProBridge.batchRenameProjectItems({ renames: undoRenames }));
     UIController.setButtonLoading("runBatchRenameBtn", false);
     if (res?.ok) {
       _renameUndo = null;
@@ -4871,7 +4912,6 @@ async function runBatchRename() {
   // Record the inverse (limited to what applied) so the next click can undo.
   _renameUndo = {
     inverse: pendingInverse.slice(0, renamed),
-    redo: pending.slice(0, renamed),
   };
   _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.runtime.undo_rename", "Undo last rename"));
 
@@ -5787,6 +5827,11 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     if (alive && wasAlive === false) {
       UIController.showToast(t("uxp.status.server_reconnected", "Server reconnected."), "success");
       void loadInterruptedProxyRecovery();
+      // Re-run the connect-time loaders the initial-connect path performs:
+      // OTIO adapter discovery and journal recovery both fail silently while
+      // the backend is down and would otherwise stay stale until reload.
+      void loadOtioCapabilities();
+      void loadJournalRecoveryUxp();
     }
   }
 
@@ -5879,6 +5924,11 @@ function stopMediaScanInterval() {
 // Event binding
 // ─────────────────────────────────────────────────────────────
 let loadOtioCapabilities = async () => {};
+// loadOtioCapabilities re-runs on every reconnect; bind the #otioAdapter
+// change listener once and route it through a swappable delegate so repeated
+// loads don't accumulate listeners.
+let _otioAdapterListenerBound = false;
+let _otioSyncSchemaTarget = null;
 
 function bindEvents() {
   // ── Tab navigation ──
@@ -6133,7 +6183,11 @@ function bindEvents() {
       schemaSelect.disabled = !supportsTargets;
       if (!supportsTargets) schemaSelect.value = "current";
     };
-    adapterSelect.addEventListener("change", syncSchemaTarget);
+    _otioSyncSchemaTarget = syncSchemaTarget;
+    if (!_otioAdapterListenerBound) {
+      _otioAdapterListenerBound = true;
+      adapterSelect.addEventListener("change", () => _otioSyncSchemaTarget?.());
+    }
     syncSchemaTarget();
   };
 
@@ -6181,11 +6235,18 @@ function bindEvents() {
       const error = r.error || r.data?.error || t("common.unknown", "unknown");
       const lossFields = r.data?.preflight?.lossy_fields || [];
       const detail = lossFields.length ? `${error} ${lossFields.join(", ")}` : error;
-      UIController.showToast(formatI18n("uxp.timeline.runtime.otio_export_failed", "OTIO export failed: {error}", { error }), "error");
+      // The backend tags genuine preflight blocks with code
+      // OTIO_PREFLIGHT_FAILED (plus a preflight report); every other failure
+      // (validation, adapter, IO) gets the generic export-failed message.
+      const preflightBlocked = r.data?.code === "OTIO_PREFLIGHT_FAILED";
+      const message = preflightBlocked
+        ? formatI18n("uxp.timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}", { error: detail })
+        : formatI18n("uxp.timeline.runtime.otio_export_failed", "OTIO export failed: {error}", { error: detail });
+      UIController.showToast(message, "error");
       noteTimelineAction(
         t("uxp.timeline.runtime.otio_export_error_title", "OTIO export error"),
         "error",
-        formatI18n("uxp.timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}", { error: detail }),
+        message,
         detail
       );
     }
@@ -6778,13 +6839,27 @@ async function recoverJournalCheckpointUxp(transactionId) {
   const inverse = entry.inverse || {};
   let result;
   if (entry.action === "add_markers") {
-    result = await PProBridge.removeSequenceMarkers({ fingerprints: inverse.markers || inverse.fingerprints || [] });
+    const fingerprints = inverse.markers || inverse.fingerprints || [];
+    result = await PProBridge.removeSequenceMarkers({ fingerprints });
+    if (result?.ok && fingerprints.length > 0 && Number(result.removed || 0) === 0) {
+      // The host reported success but removed nothing the checkpoint listed —
+      // the sequence no longer matches the stored fingerprints. Treat this as
+      // a FAILED restore so the checkpoint is not marked recovered on a no-op.
+      result = {
+        ok: false,
+        reason: formatI18n(
+          "uxp.journal.restore_markers_missing",
+          "No matching markers were found in the active sequence ({count} expected), so nothing was restored.",
+          { count: fingerprints.length },
+        ),
+        removed: 0,
+        wanted: fingerprints.length,
+      };
+    }
   } else if (entry.action === "batch_rename") {
-    const renames = (inverse.renames || []).map((item) => ({
-      ...item,
-      newName: item.newName || item.oldName,
-    }));
-    result = await PProBridge.batchRenameProjectItems({ renames });
+    result = await PProBridge.batchRenameProjectItems({
+      renames: renamesFromCanonicalInverse(inverse.renames || []),
+    });
   } else if (entry.action === "import_sequence" || entry.action === "import_overlay") {
     result = await PProBridge.removeImportedProjectItem(inverse);
   } else {

@@ -15,6 +15,7 @@ import {
 } from "../../com.opencut.uxp/uxp-theme.js";
 import {
   buildMarkerPayload,
+  computeInverseRenames,
   expandRenamePattern,
   normalizeTimelineCuts,
 } from "../../com.opencut.uxp/uxp-timeline.js";
@@ -240,6 +241,75 @@ describe("UXP host theme boundary", () => {
     dispose();
     expect(harness.documentRef.theme.onUpdated.removeListener).toHaveBeenCalledOnce();
     expect(harness.listeners.size).toBe(0);
+  });
+});
+
+describe("UXP journal restore contract", () => {
+  const mainSource = () =>
+    readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+
+  it("stores marker fingerprints with both name and comment labels", () => {
+    // The UXP bridge writes labels to the marker NAME (setName) while the
+    // CEP host writes COMMENTS; the checkpoint fingerprint must carry both
+    // so either panel can match markers written by the other.
+    const source = mainSource();
+    const start = source.indexOf("const inverseMarkers");
+    expect(start).toBeGreaterThan(-1);
+    const slice = source.slice(start, start + 700);
+    expect(slice).toContain("name: marker.label");
+    expect(slice).toContain("comment: marker.label");
+  });
+
+  it("matches marker fingerprints against either the marker name or comment", () => {
+    const source = mainSource();
+    const start = source.indexOf("function _markerMatches");
+    const end = source.indexOf("async function removeSequenceMarkers", start);
+    const slice = source.slice(start, end);
+    expect(slice).toContain("fingerprint.name, fingerprint.label, fingerprint.comment");
+    expect(slice).toContain("[info.name, info.comment]");
+  });
+
+  it("treats a zero-removal marker restore as failed instead of recovered", () => {
+    const source = mainSource();
+    const start = source.indexOf("async function recoverJournalCheckpointUxp");
+    const end = source.indexOf("async function copyJournalDiagnosticsUxp", start);
+    const slice = source.slice(start, end);
+    expect(slice).toContain("fingerprints.length > 0 && Number(result.removed || 0) === 0");
+    expect(slice).toContain("uxp.journal.restore_markers_missing");
+    // The failure path posts /recovery-failed; only verified restores may
+    // reach the /recovered mark further down.
+    expect(slice.indexOf("/recovery-failed")).toBeGreaterThan(-1);
+    expect(slice.indexOf("/recovery-failed")).toBeLessThan(slice.indexOf("/recovered`"));
+    // batch_rename restores consume the canonical inverse shape.
+    expect(slice).toContain("renamesFromCanonicalInverse(inverse.renames");
+  });
+
+  it("computes canonical inverse renames and converts them for the host bridge", () => {
+    expect(
+      computeInverseRenames([
+        { oldName: "a.mp4", newName: "a_001.mp4", path: "/p/a.mp4", nodeId: "9" },
+      ]),
+    ).toEqual([{ nodeId: "9", path: "/p/a.mp4", oldName: "a.mp4", currentName: "a_001.mp4" }]);
+
+    const source = mainSource();
+    const start = source.indexOf("function renamesFromCanonicalInverse");
+    expect(start).toBeGreaterThan(-1);
+    // Shape heuristic: canonical entries carry currentName; legacy entries
+    // ({oldName: applied, newName: original}) pass through unchanged.
+    const slice = source.slice(start, start + 900);
+    expect(slice).toContain("item.currentName != null");
+    expect(slice).toContain("oldName: item.currentName, newName: item.oldName");
+  });
+
+  it("re-runs connect-time loaders on reconnect without stacking OTIO listeners", () => {
+    const source = mainSource();
+    const start = source.indexOf("if (alive && wasAlive === false)");
+    expect(start).toBeGreaterThan(-1);
+    const slice = source.slice(start, start + 700);
+    expect(slice).toContain("loadOtioCapabilities()");
+    expect(slice).toContain("loadJournalRecoveryUxp()");
+    expect(source).toContain("_otioAdapterListenerBound");
+    expect(source.match(/_otioAdapterListenerBound = true/g)).toHaveLength(1);
   });
 });
 
