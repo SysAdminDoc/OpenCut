@@ -16,6 +16,9 @@ record also lives in the git commit messages.
 - Refined both navigation rails into open editorial lists, moved UXP workspace
   utilities into quieter project chrome, and replaced the Settings dashboard
   wall with a keyboard-accessible section navigator and one focused pane.
+- Replaced UXP boxed inputs, readiness pills, and deliverable tiles with a
+  quieter baseline-and-metadata grammar; removed duplicated caption summaries,
+  internal feature codes, and excess helper copy across desktop and narrow UI.
 
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 

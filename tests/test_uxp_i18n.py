@@ -169,7 +169,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert spanish["uxp.settings.generate_captions"] == "Generar subtitulos"
     assert spanish["uxp.settings.pinned_title_one"] == "{count} dominio tiene una preferencia de motor fijada."
     assert sorted(key for key in english if key.startswith("uxp.agent.") and key not in spanish) == []
-    assert spanish["uxp.agent.chat_conductor_f143"] == "Conductor de chat (F143)"
+    assert spanish["uxp.agent.chat_conductor_f143"] == "Conductor de chat"
     assert spanish["uxp.agent.runtime.plan_ready"] == "Plan: {count} paso(s) via {source}. Sesion {session}."
     assert spanish["uxp.agent.runtime.sequence_index_built"].startswith("Indice creado:")
     assert spanish["nav.feature_tabs"] == "Pestanas de funciones"
@@ -243,7 +243,6 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.captions.select_clip_placeholder",
         "uxp.captions.model_turbo",
         "uxp.captions.language_auto",
-        "uxp.captions.current_plan",
         "uxp.captions.result_details",
         "uxp.captions.result_placeholder",
         "uxp.cut.clip_input",
