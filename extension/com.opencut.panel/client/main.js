@@ -460,7 +460,18 @@
             optionSerial = 0;
             var hasOptgroups = select.querySelector('optgroup');
             var i, j, child;
-            
+
+            if (select.classList.contains("clip-select")) {
+                var hasMediaOptions = false;
+                for (i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value) {
+                        hasMediaOptions = true;
+                        break;
+                    }
+                }
+                document.body.classList.toggle("has-media-options", hasMediaOptions);
+            }
+
             if (hasOptgroups) {
                 for (i = 0; i < select.children.length; i++) {
                     child = select.children[i];
@@ -3055,6 +3066,16 @@
 
     function refreshClipDropdown() {
         if (!el.clipSelect || !el.clipSelect.parentNode) return;
+        var hasMediaOptions = false;
+        if (el.clipSelect.options) {
+            for (var optionIdx = 0; optionIdx < el.clipSelect.options.length; optionIdx++) {
+                if (el.clipSelect.options[optionIdx].value) {
+                    hasMediaOptions = true;
+                    break;
+                }
+            }
+        }
+        document.body.classList.toggle("has-media-options", hasMediaOptions);
         // Disconnect old observer to prevent leak
         if (el.clipSelect._customDropdown && el.clipSelect._customDropdown.observer) {
             el.clipSelect._customDropdown.observer.disconnect();
@@ -3119,15 +3140,15 @@
     // Tab Navigation
     // ================================================================
     var TAB_DESCRIPTIONS = {
-        cut: function () { return t("tabs.cut_desc", "Remove dead space, clean fillers, and review pacing from the active source."); },
-        captions: function () { return t("tabs.captions_desc", "Transcribe, edit, style, translate, and export caption assets."); },
-        audio: function () { return t("tabs.audio_desc", "Repair dialogue, balance stems, check loudness, and prep timing cues."); },
-        video: function () { return t("tabs.video_desc", "Analyze, repair, reframe, and finish image treatments for delivery."); },
-        export: function () { return t("tabs.export_desc", "Package deliverables, presets, thumbnails, and repeatable workflows."); },
-        timeline: function () { return t("tabs.timeline_desc", "Send markers, cuts, bins, and sequence changes back to Premiere."); },
-        nlp: function () { return t("tabs.search_desc", "Search footage and route editing commands from one command surface."); },
-        settings: function () { return t("tabs.settings_desc", "Manage backend health, models, defaults, templates, and diagnostics."); },
-        fallback: function () { return t("tabs.default_desc", "Focused tools for the current editing workflow."); }
+        cut: function () { return t("tabs.cut_desc", "Silence, fillers, and pacing."); },
+        captions: function () { return t("tabs.captions_desc", "Transcribe, style, and deliver."); },
+        audio: function () { return t("tabs.audio_desc", "Repair, mix, and master."); },
+        video: function () { return t("tabs.video_desc", "Color, reframe, and finish."); },
+        export: function () { return t("tabs.export_desc", "Presets, outputs, and delivery."); },
+        timeline: function () { return t("tabs.timeline_desc", "Markers, cuts, and write-back."); },
+        nlp: function () { return t("tabs.search_desc", "Find footage and run commands."); },
+        settings: function () { return t("tabs.settings_desc", "Workspace, engines, and diagnostics."); },
+        fallback: function () { return t("tabs.default_desc", "Tools for the active edit."); }
     };
 
     var WORKSPACE_STAGE_META = {
@@ -12123,12 +12144,8 @@
     function renderFavorites() {
         if (!el.favoritesItems || !el.favoritesBar) return;
         if (_favorites.length === 0) {
-            el.favoritesBar.classList.remove("hidden");
-            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
-                t("favorites.empty_title", "No favorites pinned"),
-                t("favorites.empty_body", "Pinned tools appear here once you save them."),
-                "info"
-            );
+            el.favoritesBar.classList.add("hidden");
+            el.favoritesItems.innerHTML = "";
             return;
         }
         el.favoritesBar.classList.remove("hidden");
@@ -12181,12 +12198,8 @@
             visibleCount++;
         }
         if (!visibleCount) {
-            el.favoritesBar.classList.remove("hidden");
-            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
-                t("favorites.empty_title", "No favorites pinned"),
-                t("favorites.empty_body", "Pinned tools appear here once you save them."),
-                "info"
-            );
+            el.favoritesBar.classList.add("hidden");
+            el.favoritesItems.innerHTML = "";
             return;
         }
         el.favoritesItems.innerHTML = "";

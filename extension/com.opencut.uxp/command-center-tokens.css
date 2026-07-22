@@ -17,7 +17,7 @@ html.theme-darkest {
   --cc-success: #76b99e;
   --cc-warning: #d7ad62;
   --cc-danger: #d68680;
-  --cc-radius: 10px;
+  --cc-radius: 6px;
   --cc-shadow: none;
 }
 
@@ -37,7 +37,7 @@ html.theme-dark {
   --cc-success: #7bc2a5;
   --cc-warning: #e1ba70;
   --cc-danger: #df918a;
-  --cc-radius: 10px;
+  --cc-radius: 6px;
   --cc-shadow: none;
 
   --bg-primary: #1b1e23;
@@ -69,7 +69,7 @@ html.theme-light {
   --cc-success: #287f64;
   --cc-warning: #895d0c;
   --cc-danger: #a83f3c;
-  --cc-radius: 10px;
+  --cc-radius: 6px;
   --cc-shadow: 0 14px 32px rgba(38, 52, 73, 0.10);
 
   --bg-primary: #edf1f6;

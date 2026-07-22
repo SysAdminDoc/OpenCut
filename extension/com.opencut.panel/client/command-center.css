@@ -6,8 +6,8 @@
 body {
     background: var(--cc-bg);
     color: var(--cc-text);
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .sidebar {
@@ -53,7 +53,7 @@ body {
 .nav-tab {
     justify-content: flex-start;
     width: 100%;
-    min-height: 44px;
+    min-height: 42px;
     gap: 12px;
     padding: 0 14px;
     border: 1px solid transparent;
@@ -64,8 +64,8 @@ body {
 
 .nav-tab span {
     display: inline;
-    font-size: 12px;
-    font-weight: 560;
+    font-size: 13px;
+    font-weight: 580;
 }
 
 .nav-tab.active {
@@ -76,9 +76,9 @@ body {
 }
 
 .content-header {
-    min-height: 76px;
-    gap: 18px;
-    padding: 14px 28px;
+    min-height: 60px;
+    gap: 14px;
+    padding: 9px 24px;
     border-bottom: 1px solid var(--cc-border);
     background: var(--cc-header);
     box-shadow: none;
@@ -92,7 +92,7 @@ body {
 
 .content-title {
     color: var(--cc-text);
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 680;
     line-height: 1.1;
     letter-spacing: -0.035em;
@@ -102,12 +102,15 @@ body {
     max-width: 68ch;
     color: var(--cc-muted);
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .main {
-    gap: 16px;
-    padding: 20px 28px 88px;
+    gap: 0;
+    padding: 0 24px 72px;
     background: transparent;
 }
 
@@ -122,17 +125,18 @@ body {
 }
 
 .workspace-stage {
-    border: 1px solid var(--cc-border);
-    border-radius: var(--cc-radius);
-    background: var(--cc-surface);
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
-    padding: 22px;
+    padding: 16px 0;
 }
 
 .workspace-stage-primary {
     display: grid;
     grid-template-columns: minmax(280px, 1.1fr) minmax(300px, 0.9fr);
-    grid-template-areas: "kicker session" "title session" "copy session" "actions session";
+    grid-template-areas: "kicker session" "title session" "copy session" "actions actions";
     gap: 10px 24px;
     align-items: start;
 }
@@ -155,7 +159,7 @@ body {
     grid-area: title;
     max-width: 30ch;
     color: var(--cc-text);
-    font-size: 26px;
+    font-size: 21px;
     line-height: 1.2;
     letter-spacing: -0.025em;
     font-weight: 660;
@@ -165,8 +169,12 @@ body {
     grid-area: copy;
     max-width: 58ch;
     color: var(--cc-muted);
-    line-height: 1.55;
+    line-height: 1.4;
     font-size: 13px;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
 }
 
 .workspace-stage-session {
@@ -174,9 +182,11 @@ body {
     display: grid;
     gap: 0;
     overflow: hidden;
-    border: 1px solid var(--cc-border);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.018);
+    border: 0;
+    border-block: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .workspace-stage-session-item {
@@ -184,12 +194,13 @@ body {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    min-height: 58px;
-    padding: 11px 13px;
+    min-height: 44px;
+    padding: 8px 0;
 }
 
 .workspace-stage-session-item + .workspace-stage-session-item {
-    border-top: 1px solid var(--cc-border);
+    border-top: 0;
+    border-left: 1px solid var(--cc-border);
 }
 
 .workspace-stage-session-item::before {
@@ -201,26 +212,37 @@ html body .workspace-stage-actions,
 html body.is-disconnected .workspace-stage-actions,
 html body.has-clip .workspace-stage-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .stage-action {
-    min-height: 40px;
+    min-height: 36px;
     border-color: var(--cc-border);
     border-radius: 7px;
     background: var(--cc-control);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
+.workspace-stage-actions .stage-action:first-child {
+    border-color: var(--cc-accent);
+    background: var(--cc-accent);
+    color: #08101f;
+}
+
+.workspace-stage-actions .stage-action:first-child:hover:not(:disabled) {
+    border-color: #94b2ff;
+    background: #94b2ff;
+}
+
 .header-btn {
-    min-height: 40px;
+    min-height: 36px;
     border: 1px solid var(--cc-border);
     background: var(--cc-surface);
     border-radius: 7px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -230,8 +252,8 @@ html body.has-clip .workspace-stage-actions {
     background: var(--cc-accent);
     color: #08101f;
     box-shadow: none;
-    min-height: 40px;
-    font-size: 12px;
+    min-height: 36px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -246,25 +268,26 @@ html body.has-clip .workspace-stage-actions {
     background: var(--cc-control);
     color: var(--cc-text);
     box-shadow: none;
-    min-height: 40px;
-    font-size: 12px;
+    min-height: 36px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .card {
-    border: 1px solid var(--cc-border);
-    border-radius: var(--cc-radius);
-    background: var(--cc-surface);
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
-    padding: 20px;
+    padding: 16px 0;
 }
 
 .card-header {
     align-items: center;
     gap: 10px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--cc-border);
+    margin-bottom: 8px;
+    padding-bottom: 0;
+    border-bottom: 0;
 }
 
 .card-title {
@@ -281,33 +304,64 @@ html body.has-clip .workspace-stage-actions {
 .hint,
 .hint-inline {
     color: var(--cc-muted);
-    font-size: 12.5px;
-    line-height: 1.55;
+    font-size: 13px;
+    line-height: 1.45;
 }
 
 .workspace-stage-card {
-    border: 1px solid var(--cc-border);
-    border-radius: 8px;
-    background: var(--cc-surface-raised);
+    border: 0;
+    border-left: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
-    padding: 14px;
+    padding: 10px 14px;
 }
 
 .media-intake-main,
 .media-sidecar {
-    border: 1px solid var(--cc-border);
-    border-radius: 8px;
-    background: var(--cc-surface-raised);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
 }
 
+.media-sidecar {
+    border-left: 1px solid var(--cc-border);
+}
+
+.media-sidecar-kicker {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--cc-muted);
+    letter-spacing: 0.04em;
+}
+
+.media-sidecar-pills {
+    display: none;
+}
+
+.media-sidecar-copy {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
 .quick-action-btn {
-    border: 1px solid var(--cc-border);
-    border-radius: 8px;
-    background: var(--cc-surface-raised);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
-    min-height: 86px;
-    padding: 13px;
+    min-height: 58px;
+    padding: 10px 12px;
+}
+
+.quick-action-btn + .quick-action-btn {
+    border-left: 1px solid var(--cc-border);
 }
 
 .card:hover,
@@ -318,10 +372,11 @@ html body.has-clip .workspace-stage-actions {
 }
 
 .conn-status {
-    min-height: 36px;
-    border-radius: 7px;
-    border: 1px solid var(--cc-border);
-    background: var(--cc-surface);
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .content-footer {
@@ -339,10 +394,11 @@ html body.has-clip .workspace-stage-actions {
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     min-width: 0;
-    margin: 0 0 16px;
+    margin: 0 0 6px;
     overflow: hidden;
-    border: 1px solid var(--cc-border);
-    border-radius: 8px;
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
     background: var(--cc-sidebar);
     box-shadow: none;
 }
@@ -408,7 +464,7 @@ html.theme-light .sub-tab:hover {
 
 .sub-tab.active {
     border-bottom-color: var(--cc-accent);
-    background: var(--cc-accent-soft);
+    background: transparent;
     color: var(--cc-text);
     box-shadow: none;
 }
@@ -448,20 +504,20 @@ html.theme-light .sub-tab:hover {
 }
 
 .custom-dropdown-trigger {
-    min-height: 40px;
+    min-height: 36px;
     padding: 0 12px;
     border: 1px solid var(--cc-border);
     border-radius: 7px;
     background: var(--cc-control);
     color: var(--cc-text);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 560;
     box-shadow: none;
 }
 
 select,
 .clip-select {
-    min-height: 40px;
+    min-height: 36px;
     border-color: var(--cc-border);
     border-radius: 7px;
     background: var(--cc-control);
@@ -469,19 +525,19 @@ select,
     box-shadow: none;
     padding: 0 12px;
     border: 1px solid var(--cc-border);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 560;
 }
 
 .inline-select,
 .form-select {
-    min-height: 40px;
+    min-height: 36px;
     padding: 0 12px;
     border: 1px solid var(--cc-border);
     border-radius: 7px;
     background: var(--cc-control);
     color: var(--cc-text);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 560;
     box-shadow: none;
 }
@@ -897,5 +953,318 @@ select:hover,
     .card,
     .quick-action-btn {
         transition: none;
+    }
+}
+
+/* Editorial system: open sections, restrained status, and grouped controls. */
+.nav-panel.active {
+    gap: 0;
+}
+
+html:not(.theme-light) .workspace-stage,
+html.theme-light .workspace-stage {
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.workspace-chip,
+.settings-status-pill,
+.oc-status-pill,
+.feature-state-pill,
+.status-pill,
+.job-history-status-pill {
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.workspace-chip.is-active,
+.settings-status-pill[data-state="ready"],
+.oc-status-pill[data-state="ready"],
+.oc-status-pill[data-state="success"],
+.status-pill[data-state="ready"],
+.status-pill[data-state="success"] {
+    border: 0;
+    background: transparent;
+    color: var(--cc-success);
+}
+
+.oc-inline-summary-grid {
+    gap: 0;
+    overflow: hidden;
+    border-block: 1px solid var(--cc-border);
+}
+
+.oc-inline-stat {
+    min-height: 44px;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.oc-inline-stat:last-child {
+    border-bottom: 0;
+}
+
+html body .oc-status-line {
+    min-height: 34px;
+    padding: 8px 10px;
+    border: 0;
+    border-left: 2px solid var(--cc-border-strong);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.status-text,
+.status-gpu,
+.status-jobs {
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 560;
+}
+
+#statusBar.status-bar,
+#statusBar.status-bar[data-state="offline"],
+#statusBar.status-bar[data-state="degraded"],
+#statusBar.status-bar[data-state="online"] {
+    min-height: 28px;
+    padding: 4px 12px;
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: var(--cc-sidebar);
+    box-shadow: none;
+}
+
+.settings-status-pill[data-state="warning"],
+.oc-status-pill[data-state="working"],
+.oc-status-pill[data-state="warning"],
+.oc-status-pill[data-state="empty"],
+.status-pill[data-state="warning"],
+.status-pill[data-state="offline"] {
+    border: 0;
+    background: transparent;
+    color: var(--cc-warning);
+}
+
+.oc-status-pill[data-state="error"] {
+    border: 0;
+    background: transparent;
+    color: var(--cc-danger);
+}
+
+html body #clipSection.card {
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html:not(.theme-light) .card,
+html.theme-light .card {
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .quick-action-btn {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .quick-action-btn + .quick-action-btn {
+    border-left: 1px solid var(--cc-border);
+}
+
+.quick-action-tag {
+    display: none;
+}
+
+.quick-action-icon {
+    border: 0;
+    background: transparent;
+}
+
+html body .quick-actions {
+    padding: 0;
+    gap: 0;
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .quick-actions::before,
+html body .quick-action-btn::before,
+html body .quick-action-btn::after {
+    display: none;
+    content: none;
+}
+
+html body .quick-action-btn:disabled,
+html body:not(.has-clip) .nav-panel.active .quick-action-btn:disabled {
+    min-height: 72px;
+    padding: 10px 12px;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    color: var(--cc-text) !important;
+    box-shadow: none !important;
+    opacity: 0.66;
+}
+
+html body .sub-panel.active > .card:first-child {
+    border-color: var(--cc-border) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body .slider-row,
+html body .stem-check {
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .conn-status,
+html body .conn-status[data-state="offline"],
+html body .conn-status[data-state="degraded"],
+html body .conn-status[data-state="online"] {
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .conn-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+html body .conn-status::before {
+    display: none;
+    content: none;
+}
+
+html body .btn,
+html body .btn-primary,
+html body .btn-secondary,
+html body .btn-outline,
+html body .btn-ghost,
+html body .btn-install,
+html body .btn-cancel,
+html body .btn-browse,
+html body .header-btn,
+html body .utility-btn,
+html body .stage-action,
+html body .oc-wave-h-btn {
+    border-radius: var(--cc-radius) !important;
+}
+
+body:not(.has-clip):not(.has-media-options) #clipSection.card {
+    display: none;
+}
+
+body:not(.has-clip) #panel-cut.active::before,
+body:not(.has-clip) #panel-captions.active::before,
+body:not(.has-clip) #panel-audio.active::before,
+body:not(.has-clip) #panel-video.active::before,
+body:not(.has-clip) #panel-export.active::before {
+    display: none;
+    content: none;
+}
+
+.empty,
+.hint-empty,
+.assistant-empty,
+.journal-empty,
+.drop-zone.empty {
+    border: 0;
+    border-block: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.form-group,
+.field-group {
+    margin-bottom: 10px;
+}
+
+label,
+.form-label,
+.field-label {
+    font-size: 13px;
+}
+
+@media (max-width: 980px) {
+    #panel-settings.active {
+        gap: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    body {
+        font-size: 14px;
+    }
+
+    .content-header {
+        min-height: 52px;
+        padding: 8px 14px;
+    }
+
+    .main {
+        padding: 0 12px 64px;
+    }
+
+    .workspace-stage,
+    .card {
+        padding: 14px 0;
+    }
+
+    .workspace-stage-copy,
+    .workspace-stage-session {
+        display: none;
+    }
+
+    html body .workspace-stage-actions,
+    html body.is-disconnected .workspace-stage-actions,
+    html body.has-clip .workspace-stage-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .quick-action-btn + .quick-action-btn,
+    .media-sidecar {
+        border-left: 0;
+        border-top: 1px solid var(--cc-border);
     }
 }

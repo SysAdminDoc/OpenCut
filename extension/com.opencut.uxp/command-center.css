@@ -10,17 +10,18 @@
 .oc-result-insight,
 .oc-inline-summary-grid--settings .oc-inline-stat,
 .oc-shortcut-item {
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius);
-  background: var(--cc-surface);
-  box-shadow: var(--cc-shadow);
+  border: 0;
+  border-top: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .oc-workspace-meta-item,
 .oc-inline-summary-grid--settings .oc-inline-stat,
 .oc-shortcut-item,
 .oc-card--nested {
-  background: var(--cc-surface-raised);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -30,7 +31,7 @@
 
 .oc-workspace-guide[data-state="warning"],
 .oc-workspace-guide[data-state="error"] {
-  border-color: rgba(232, 180, 77, 0.28);
+  border-top-color: rgba(232, 180, 77, 0.28);
   background: rgba(232, 180, 77, 0.055);
 }
 
@@ -42,8 +43,8 @@
 .oc-card:hover,
 .oc-workspace-guide:hover,
 .oc-workspace-meta-item:hover {
-  border-color: var(--cc-border-strong);
-  box-shadow: var(--cc-shadow);
+  border-top-color: var(--cc-border-strong);
+  box-shadow: none;
   transform: none;
 }
 
@@ -52,7 +53,7 @@
   padding: 0 2px;
   border: 0;
   color: var(--cc-text);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 680;
   line-height: 1.35;
   letter-spacing: -0.01em;
@@ -60,18 +61,19 @@
 }
 
 .oc-card {
-  padding: 16px;
+  margin-bottom: 0;
+  padding: 14px 0;
 }
 
 .oc-card-header {
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--cc-border);
+  margin-bottom: 8px;
+  padding: 0;
+  border-bottom: 0;
 }
 
 .oc-card-header span {
   color: var(--cc-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
 }
 
@@ -126,9 +128,10 @@
 }
 
 .oc-status-line {
-  border-color: var(--cc-border);
-  border-radius: 9px;
-  background: var(--cc-surface-raised);
+  border: 0;
+  border-left: 2px solid var(--cc-border-strong);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .oc-status-line[data-state="error"] {
@@ -636,36 +639,36 @@
 /* Professional editor refinement: calmer surfaces, readable type, less nesting. */
 
 body {
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   letter-spacing: 0;
 }
 
 .oc-header {
-  min-height: 56px;
-  height: 56px;
-  padding: 0 20px;
+  min-height: 52px;
+  height: 52px;
+  padding: 0 18px;
 }
 
 .oc-logo {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .oc-connection {
-  min-height: 34px;
-  padding: 5px 11px;
+  min-height: auto;
+  padding: 0;
   border-color: transparent;
   background: transparent;
 }
 
 body.oc-disconnected .oc-connection {
-  border-color: rgba(215, 173, 98, 0.22);
-  background: rgba(215, 173, 98, 0.08);
+  border-color: transparent;
+  background: transparent;
 }
 
 .oc-workspace-title {
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 680;
   letter-spacing: -0.03em;
 }
@@ -674,8 +677,8 @@ body.oc-disconnected .oc-connection {
 .oc-hint,
 .oc-card-copy,
 .oc-status-line {
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .oc-btn,
@@ -685,9 +688,9 @@ body.oc-disconnected .oc-connection {
 .oc-input,
 .oc-select,
 .oc-textarea {
-  min-height: 40px;
-  border-radius: 7px;
-  font-size: 12px;
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -718,23 +721,24 @@ body.oc-disconnected .oc-connection {
 }
 
 #tab-settings.active {
-  gap: 16px;
+  gap: 0 24px;
 }
 
 #tab-settings .oc-settings-group {
   height: auto;
   align-self: start;
-  gap: 14px;
-  padding: 20px;
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius);
-  background: var(--cc-surface);
+  gap: 10px;
+  padding: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
 #tab-settings .oc-settings-group > .oc-section-title {
   padding: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 680;
   letter-spacing: -0.015em;
 }
@@ -750,17 +754,18 @@ body.oc-disconnected .oc-connection {
 
 #tab-settings .oc-inline-summary-grid--settings {
   gap: 0;
-  margin: 14px 0;
+  margin: 10px 0;
   overflow: hidden;
-  border: 1px solid var(--cc-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.018);
+  border: 0;
+  border-block: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
 }
 
 #tab-settings .oc-inline-summary-grid--settings .oc-inline-stat {
-  min-height: 62px;
+  min-height: 50px;
   gap: 6px;
-  padding: 12px !important;
+  padding: 10px 0 !important;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -776,8 +781,8 @@ body.oc-disconnected .oc-connection {
 }
 
 #tab-settings .oc-status-line {
-  min-height: 38px;
-  padding: 9px 11px;
+  min-height: 34px;
+  padding: 8px 10px;
   border: 0;
   border-left: 3px solid var(--cc-border-strong);
   border-radius: 5px;
@@ -817,15 +822,15 @@ body.oc-disconnected .oc-connection {
 }
 
 .oc-command-state-list {
-  margin: 14px 0;
+  margin: 10px 0;
   border-width: 1px 0;
   border-radius: 0;
   background: transparent;
 }
 
 .oc-command-state-row {
-  min-height: 50px;
-  padding: 10px 0;
+  min-height: 44px;
+  padding: 8px 0;
 }
 
 .oc-command-state-value {
@@ -844,11 +849,11 @@ body.oc-disconnected .oc-connection {
 @media (min-width: 821px) {
   #app {
     grid-template-columns: 176px minmax(0, 1fr);
-    grid-template-rows: 56px minmax(0, 1fr);
+    grid-template-rows: 52px minmax(0, 1fr);
   }
 
   .oc-tab-nav-shell {
-    padding: 18px 12px 14px;
+    padding: 14px 12px 12px;
   }
 
   .oc-tab-nav-shell .oc-tabs {
@@ -856,11 +861,11 @@ body.oc-disconnected .oc-connection {
   }
 
   .oc-tab-nav-shell .oc-tab {
-    min-height: 44px;
+    min-height: 42px;
     gap: 12px;
     padding: 0 14px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 560;
   }
 
@@ -870,29 +875,33 @@ body.oc-disconnected .oc-connection {
   }
 
   .oc-content {
-    padding: 24px 28px 40px;
+    padding: 18px 28px 32px;
   }
 
   .oc-processing-banner:not(.hidden),
   .oc-recovery-banner:not(.hidden) {
-    top: 66px;
+    top: 62px;
     left: 194px;
   }
 
   #tab-settings .oc-inline-summary-grid--settings .oc-inline-stat + .oc-inline-stat {
     border-left: 1px solid var(--cc-border);
   }
+
+  .oc-workspace-guide {
+    display: none;
+  }
 }
 
 @media (min-width: 1050px) {
   .oc-workspace-actions {
-    top: 8px;
+    top: 7px;
     right: 122px;
     grid-template-columns: 136px 96px 96px;
   }
 
   .oc-workspace-actions .oc-btn {
-    min-height: 40px;
+    min-height: 36px;
   }
 }
 
@@ -916,8 +925,8 @@ body.oc-disconnected .oc-connection {
   }
 
   #tab-settings .oc-settings-group {
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 14px 0;
   }
 
   #tab-settings .oc-inline-summary-grid--settings {
@@ -1158,4 +1167,182 @@ html.theme-light .oc-caption-preview-area {
   border-color: var(--cc-border);
   background: var(--cc-surface-raised);
   color: var(--cc-text);
+}
+
+/* Editorial system: open sections, plain state text, and compact hierarchy. */
+.oc-workspace-kicker {
+  display: none;
+}
+
+.oc-workspace-overview {
+  gap: 8px 18px;
+  padding-bottom: 14px;
+}
+
+.oc-workspace-title {
+  margin: 0;
+}
+
+.oc-workspace-subtitle {
+  max-width: 64ch;
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-workspace-meta {
+  gap: 0;
+  border-block: 1px solid var(--cc-border);
+}
+
+.oc-workspace-meta-item {
+  min-height: 46px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-workspace-meta-item + .oc-workspace-meta-item {
+  border-top: 1px solid var(--cc-border);
+}
+
+.oc-tab-panel.active {
+  gap: 0;
+}
+
+.oc-section-title {
+  margin: 0;
+  padding: 14px 0 6px;
+}
+
+.oc-card,
+.oc-card--nested,
+.oc-result-area,
+.oc-caption-preview-area {
+  border: 0;
+  border-top: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-card:hover,
+.oc-card--nested:hover,
+.oc-result-area:hover {
+  border-top-color: var(--cc-border-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-card-body {
+  gap: 9px;
+  padding: 0 0 14px;
+}
+
+.oc-hint,
+.oc-card-copy,
+.oc-caption-intro {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.oc-status-pill,
+.oc-inline-value[data-state],
+.oc-result-list-item-badge,
+.oc-chip[data-state] {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.oc-status-pill[data-state="ready"],
+.oc-status-pill[data-state="success"],
+.oc-inline-value[data-state="ready"],
+.oc-inline-value[data-state="success"] {
+  border: 0;
+  background: transparent;
+  color: var(--cc-success);
+}
+
+.oc-status-pill[data-state="warning"],
+.oc-status-pill[data-state="empty"],
+.oc-inline-value[data-state="warning"] {
+  border: 0;
+  background: transparent;
+  color: var(--cc-warning);
+}
+
+.oc-status-pill[data-state="error"],
+.oc-inline-value[data-state="error"] {
+  border: 0;
+  background: transparent;
+  color: var(--cc-danger);
+}
+
+.oc-inline-summary-grid .oc-inline-stat,
+.oc-result-insight,
+.oc-shortcut-item,
+.oc-result-list-item,
+.oc-info-pair {
+  border: 0;
+  border-bottom: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-empty-state {
+  border: 0;
+  border-block: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-label {
+  font-size: 13px;
+}
+
+@media (min-width: 821px) {
+  #tab-settings .oc-settings-group:nth-child(even) {
+    padding-left: 24px;
+    border-left: 1px solid var(--cc-border);
+  }
+}
+
+@media (max-width: 1020px) and (min-width: 821px) {
+  #tab-settings .oc-settings-group:nth-child(even) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 820px) {
+  .oc-workspace-overview {
+    padding: 8px 0 10px;
+  }
+
+  .oc-workspace-subtitle {
+    display: none;
+  }
+
+  .oc-card {
+    padding: 12px 0;
+  }
+
+  .oc-workspace-guide {
+    border: 0;
+    border-left: 2px solid rgba(215, 173, 98, 0.65);
+    border-radius: 3px;
+  }
 }

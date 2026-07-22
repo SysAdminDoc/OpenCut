@@ -35,6 +35,6 @@ html.theme-light {
     --cc-success: #76b99e;
     --cc-warning: #d7ad62;
     --cc-danger: #d68680;
-    --cc-radius: 10px;
+    --cc-radius: 6px;
     --cc-shadow: none;
 }

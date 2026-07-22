@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Premium editorial interface
+
+- Reworked the CEP and UXP panels around a shared 14px type scale, compact
+  headers, open hairline-divided sections, grouped controls, plain-text status
+  treatments, and shorter workspace copy across every primary page.
+- Added image-generated reference designs for Cut, Captions, Audio, Video,
+  Timeline, Search, Deliverables, Agent, Settings, and Export, plus rendered
+  page-by-page visual regression coverage for both panel surfaces.
+
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 
 ### Fixed - Make interrupted host-write recovery actually restore
