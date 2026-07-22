@@ -849,7 +849,7 @@ ROADMAP.md           # Active open-work tracker
 docs/
   RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md # June 2026 competitive teardown
   UXP_MIGRATION.md   # CEP to UXP migration plan
-installer/           # WPF installer (C# .NET 9) + legacy Inno Setup
+installer/           # WPF installer (C# .NET 10 LTS) + legacy Inno Setup
 scripts/             # Build and utility scripts
 ```
 

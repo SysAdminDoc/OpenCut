@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using OpenCut.Installer.CommandLine;
+using OpenCut.Installer.Themes;
 
 namespace OpenCut.Installer;
 
@@ -14,6 +15,8 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         base.OnStartup(e);
+
+        InstallerThemeManager.ApplyPreferredTheme(Resources);
 
         InstallerCommandLineOptions options;
         try

@@ -11,6 +11,9 @@
 #define BundledFfmpegSecurityCve "CVE-2026-8461"
 #define BundledFfmpegFixCommit1 "374b726ffa878ee1cadb987bd1e1e20cc7ed8845"
 #define BundledFfmpegFixCommit2 "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
+#ifndef InstallerPrivilegesRequired
+#define InstallerPrivilegesRequired "admin"
+#endif
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}
@@ -31,7 +34,7 @@ UninstallDisplayIcon={app}\logo.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
-PrivilegesRequired=admin
+PrivilegesRequired={#InstallerPrivilegesRequired}
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardImageFile=compiler:WizClassicImage-IS.bmp
 WizardSmallImageFile=compiler:WizClassicSmallImage-IS.bmp
@@ -70,7 +73,7 @@ Source: "installer\Export-OpenCutUserData.ps1"; DestDir: "{app}"; Flags: ignorev
 Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CEP Extension
-Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Excludes: "node_modules\*,tests\*,test-results\*,playwright-report\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Dirs]
 Name: "{app}\logs"
@@ -219,11 +222,29 @@ begin
   StringChangeEx(Result, '"', '\"', True);
 end;
 
+function GetParameterValue(Prefix, DefaultValue: string): string;
+var
+  I: Integer;
+  Value: string;
+begin
+  Result := DefaultValue;
+  for I := 1 to ParamCount do
+  begin
+    Value := ParamStr(I);
+    if Pos(Uppercase(Prefix), Uppercase(Value)) = 1 then
+    begin
+      Result := Copy(Value, Length(Prefix) + 1, MaxInt);
+      Exit;
+    end;
+  end;
+end;
+
 procedure WriteInstallerManifest();
 var
   ManifestDir, ManifestPath, Json: string;
 begin
-  ManifestDir := ExpandConstant('{%USERPROFILE}\.opencut');
+  ManifestDir := GetParameterValue(
+    '/USERDATADIR=', ExpandConstant('{%USERPROFILE}\.opencut'));
   ManifestPath := ManifestDir + '\installer.json';
   ForceDirectories(ManifestDir);
   Json :=
@@ -407,20 +428,8 @@ begin
 end;
 
 function GetUninstallParameter(Prefix, DefaultValue: string): string;
-var
-  I: Integer;
-  Value: string;
 begin
-  Result := DefaultValue;
-  for I := 1 to ParamCount do
-  begin
-    Value := ParamStr(I);
-    if Pos(Uppercase(Prefix), Uppercase(Value)) = 1 then
-    begin
-      Result := Copy(Value, Length(Prefix) + 1, MaxInt);
-      Exit;
-    end;
-  end;
+  Result := GetParameterValue(Prefix, DefaultValue);
 end;
 
 function InitializeUninstall(): Boolean;
@@ -577,7 +586,11 @@ begin
         BackupAndRemoveUserData(ConfigDir);
     end
     else
-      Log('Preserving OpenCut user data at ' + ConfigDir + '.');
+    begin
+      DeleteFile(ConfigDir + '\installer.json');
+      Log('Preserved OpenCut user data at ' + ConfigDir +
+        ' and removed stale installer metadata.');
+    end;
 
     // Remove startup shortcut (in case autostart was selected)
     StartupShortcut := ExpandConstant('{userstartup}\OpenCut.lnk');

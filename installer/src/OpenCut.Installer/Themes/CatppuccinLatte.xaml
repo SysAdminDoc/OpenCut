@@ -1,33 +1,33 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Catppuccin Mocha Palette -->
-    <Color x:Key="RosewaterColor">#f5e0dc</Color>
-    <Color x:Key="FlamingoColor">#f2cdcd</Color>
-    <Color x:Key="PinkColor">#f5c2e7</Color>
-    <Color x:Key="MauveColor">#cba6f7</Color>
-    <Color x:Key="RedColor">#f38ba8</Color>
-    <Color x:Key="MaroonColor">#eba0ac</Color>
-    <Color x:Key="PeachColor">#fab387</Color>
-    <Color x:Key="YellowColor">#f9e2af</Color>
-    <Color x:Key="GreenColor">#a6e3a1</Color>
-    <Color x:Key="TealColor">#94e2d5</Color>
-    <Color x:Key="SkyColor">#89dceb</Color>
-    <Color x:Key="SapphireColor">#74c7ec</Color>
-    <Color x:Key="BlueColor">#89b4fa</Color>
-    <Color x:Key="LavenderColor">#b4befe</Color>
-    <Color x:Key="TextColor">#cdd6f4</Color>
-    <Color x:Key="Subtext1Color">#bac2de</Color>
-    <Color x:Key="Subtext0Color">#a6adc8</Color>
-    <Color x:Key="Overlay2Color">#9399b2</Color>
-    <Color x:Key="Overlay1Color">#7f849c</Color>
-    <Color x:Key="Overlay0Color">#6c7086</Color>
-    <Color x:Key="Surface2Color">#585b70</Color>
-    <Color x:Key="Surface1Color">#45475a</Color>
-    <Color x:Key="Surface0Color">#313244</Color>
-    <Color x:Key="BaseColor">#1e1e2e</Color>
-    <Color x:Key="MantleColor">#181825</Color>
-    <Color x:Key="CrustColor">#11111b</Color>
+    <!-- Catppuccin Latte Palette -->
+    <Color x:Key="RosewaterColor">#dc8a78</Color>
+    <Color x:Key="FlamingoColor">#dd7878</Color>
+    <Color x:Key="PinkColor">#ea76cb</Color>
+    <Color x:Key="MauveColor">#8839ef</Color>
+    <Color x:Key="RedColor">#d20f39</Color>
+    <Color x:Key="MaroonColor">#e64553</Color>
+    <Color x:Key="PeachColor">#fe640b</Color>
+    <Color x:Key="YellowColor">#df8e1d</Color>
+    <Color x:Key="GreenColor">#40a02b</Color>
+    <Color x:Key="TealColor">#179299</Color>
+    <Color x:Key="SkyColor">#04a5e5</Color>
+    <Color x:Key="SapphireColor">#209fb5</Color>
+    <Color x:Key="BlueColor">#1e66f5</Color>
+    <Color x:Key="LavenderColor">#7287fd</Color>
+    <Color x:Key="TextColor">#4c4f69</Color>
+    <Color x:Key="Subtext1Color">#5c5f77</Color>
+    <Color x:Key="Subtext0Color">#6c6f85</Color>
+    <Color x:Key="Overlay2Color">#7c7f93</Color>
+    <Color x:Key="Overlay1Color">#8c8fa1</Color>
+    <Color x:Key="Overlay0Color">#9ca0b0</Color>
+    <Color x:Key="Surface2Color">#acb0be</Color>
+    <Color x:Key="Surface1Color">#bcc0cc</Color>
+    <Color x:Key="Surface0Color">#ccd0da</Color>
+    <Color x:Key="BaseColor">#eff1f5</Color>
+    <Color x:Key="MantleColor">#e6e9ef</Color>
+    <Color x:Key="CrustColor">#dce0e8</Color>
 
     <!-- Brushes -->
     <SolidColorBrush x:Key="Rosewater" Color="{StaticResource RosewaterColor}" />
@@ -61,26 +61,26 @@
     <SolidColorBrush x:Key="Accent" Color="{StaticResource BlueColor}" />
     <SolidColorBrush x:Key="AccentHover" Color="{StaticResource SapphireColor}" />
     <LinearGradientBrush x:Key="WindowChromeBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#181c27" Offset="0" />
-        <GradientStop Color="#11151f" Offset="1" />
+        <GradientStop Color="#f8f9fc" Offset="0" />
+        <GradientStop Color="#e6e9ef" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroPanelBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#2a3145" Offset="0" />
-        <GradientStop Color="#1a2130" Offset="1" />
+        <GradientStop Color="#ffffff" Offset="0" />
+        <GradientStop Color="#edf0f7" Offset="1" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="PanelBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#252b3c" Offset="0" />
-        <GradientStop Color="#1c2230" Offset="1" />
+        <GradientStop Color="#f8f9fc" Offset="0" />
+        <GradientStop Color="#eceff5" Offset="1" />
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="PanelStrokeBrush" Color="#3a435d" />
-    <SolidColorBrush x:Key="SuccessTintBrush" Color="#20362b" />
-    <SolidColorBrush x:Key="WarningTintBrush" Color="#3b3020" />
-    <SolidColorBrush x:Key="DangerTintBrush" Color="#3f2430" />
-    <SolidColorBrush x:Key="WindowTitleBarBrush" Color="#0f121a" />
-    <SolidColorBrush x:Key="BuildBadgeBrush" Color="#20293b" />
-    <SolidColorBrush x:Key="BuildBadgeStrokeBrush" Color="#31405c" />
-    <SolidColorBrush x:Key="HeroBadgeBrush" Color="#22304a" />
-    <SolidColorBrush x:Key="HeroBadgeStrokeBrush" Color="#334865" />
+    <SolidColorBrush x:Key="PanelStrokeBrush" Color="#bcc0cc" />
+    <SolidColorBrush x:Key="SuccessTintBrush" Color="#e5f3df" />
+    <SolidColorBrush x:Key="WarningTintBrush" Color="#f9edd5" />
+    <SolidColorBrush x:Key="DangerTintBrush" Color="#f8dfe5" />
+    <SolidColorBrush x:Key="WindowTitleBarBrush" Color="#e6e9ef" />
+    <SolidColorBrush x:Key="BuildBadgeBrush" Color="#edf0f7" />
+    <SolidColorBrush x:Key="BuildBadgeStrokeBrush" Color="#bcc0cc" />
+    <SolidColorBrush x:Key="HeroBadgeBrush" Color="#e7ecfb" />
+    <SolidColorBrush x:Key="HeroBadgeStrokeBrush" Color="#b8c7ef" />
 
     <!-- Fonts -->
     <FontFamily x:Key="UIFont">Segoe UI</FontFamily>

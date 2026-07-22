@@ -1,7 +1,7 @@
 """F200 — Windows installer policy invariants.
 
 The repo ships two parallel Windows installer paths (the recommended
-WPF / .NET 9 path under `installer/` and the deprecated-but-supported
+WPF / .NET 10 path under `installer/` and the deprecated-but-supported
 Inno Setup fallback at `OpenCut.iss`). Both must agree on the user-
 visible install-tree state. These tests pin the §3 invariants from
 `docs/INSTALLER_POLICY.md`:
@@ -111,6 +111,17 @@ def test_inno_script_writes_installer_json_with_ffmpeg_version():
     assert "bundled_ffmpeg_version" in text, (
         "OpenCut.iss must record bundled_ffmpeg_version in installer.json"
     )
+    assert "GetParameterValue(" in text
+    assert "'/USERDATADIR='" in text
+    assert "DeleteFile(ConfigDir + '\\installer.json')" in text
+
+
+def test_inno_production_remains_elevated_and_dev_payload_is_excluded():
+    text = _read(INNO_SCRIPT)
+    assert '#define InstallerPrivilegesRequired "admin"' in text
+    assert "PrivilegesRequired={#InstallerPrivilegesRequired}" in text
+    for excluded in ("node_modules\\*", "tests\\*", "test-results\\*", "playwright-report\\*"):
+        assert excluded in text
 
 
 def test_install_root_is_program_files_opencut():

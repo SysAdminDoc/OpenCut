@@ -7,9 +7,8 @@ Installs the generated OpenCut-Setup-*.exe into a temporary directory,
 verifies the user-visible payload and machine-readable installer manifest,
 then runs the generated uninstaller and verifies cleanup.
 
-The Inno uninstaller removes the user's ~/.opencut directory by design.
-For that reason this script refuses to run unless OPENCUT_INSTALLER_SMOKE=1
-is set or -AllowLocalProfileMutation is passed explicitly.
+The installer and uninstaller are pointed at a disposable user-data directory;
+the real ~/.opencut profile is never used by this smoke.
 #>
 
 [CmdletBinding()]
@@ -118,6 +117,9 @@ if (-not $InstallRoot) {
 $installFull = Get-FullPath $InstallRoot
 Assert-UnderDirectory -Child $installFull -Parent $tempFull -Label "InstallRoot"
 
+$userDataDir = Join-Path $tempFull ("OpenCut-Inno-Profile-" + [System.Guid]::NewGuid().ToString("N"))
+Assert-UnderDirectory -Child $userDataDir -Parent $tempFull -Label "UserDataDir"
+
 $logDir = Join-Path $tempFull "OpenCut-Inno-Smoke-Logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $installLog = Join-Path $logDir "install.log"
@@ -135,6 +137,7 @@ try {
         "/SP-",
         "/TASKS=""""",
         "/DIR=$installFull",
+        "/USERDATADIR=$userDataDir",
         "/LOG=$installLog"
     )
     Invoke-CheckedProcess -FilePath $installerFull -Arguments $installArgs -Label "Installing OpenCut with Inno"
@@ -156,7 +159,7 @@ try {
         Assert-Exists (Join-Path $installFull $relative) "Installed payload $relative"
     }
 
-    $manifestPath = Join-Path $env:USERPROFILE ".opencut\installer.json"
+    $manifestPath = Join-Path $userDataDir "installer.json"
     Assert-Exists $manifestPath "Inno installer manifest"
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
     if ($manifest.installer_kind -ne "inno") {
@@ -187,6 +190,7 @@ try {
         "/VERYSILENT",
         "/SUPPRESSMSGBOXES",
         "/NORESTART",
+        "/USERDATADIR=$userDataDir",
         "/LOG=$uninstallLog"
     )
     Invoke-CheckedProcess -FilePath $uninstaller.FullName -Arguments $uninstallArgs -Label "Uninstalling OpenCut with Inno"
@@ -202,6 +206,10 @@ finally {
     if ((-not $KeepArtifacts) -and (Test-Path -LiteralPath $installFull)) {
         Assert-UnderDirectory -Child $installFull -Parent $tempFull -Label "Cleanup target"
         Remove-Item -LiteralPath $installFull -Recurse -Force
+    }
+    if ((-not $KeepArtifacts) -and (Test-Path -LiteralPath $userDataDir)) {
+        Assert-UnderDirectory -Child $userDataDir -Parent $tempFull -Label "Profile cleanup target"
+        Remove-Item -LiteralPath $userDataDir -Recurse -Force
     }
 }
 

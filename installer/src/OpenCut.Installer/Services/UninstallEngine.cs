@@ -11,6 +11,7 @@ public class UninstallEngine
     private readonly ShortcutCreator _shortcutCreator = new();
     private readonly CepInstaller _cepInstaller = new();
     private readonly UserDataRemovalService _userDataRemovalService = new();
+    private readonly InstallerManifestCleaner _installerManifestCleaner = new();
 
     public UninstallEngine(InstallConfig config)
     {
@@ -48,6 +49,15 @@ public class UninstallEngine
                 dataResult.SourceExisted
                     ? $"Backed up {dataResult.FileCount} files to {dataResult.BackupPath}; user data removed."
                     : $"No user data directory found at {_config.UserDataPath}.",
+                LogLevel.Success);
+        }
+        else
+        {
+            // Preserve user-created data, but remove installation metadata that
+            // would otherwise report an uninstalled copy as still present.
+            _installerManifestCleaner.Remove(_config);
+            Report(progress, step, totalSteps, "Protecting user data",
+                "Preserved user data and removed stale installer metadata.",
                 LogLevel.Success);
         }
 
