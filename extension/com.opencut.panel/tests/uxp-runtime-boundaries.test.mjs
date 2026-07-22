@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { createBackendClient } from "../../com.opencut.uxp/backend-client.js";
@@ -171,5 +173,32 @@ describe("UXP bootstrap boundary", () => {
     await expect(bootstrapApplication(async () => { throw new Error("boom"); }, onError))
       .resolves.toBeNull();
     expect(onError).toHaveBeenCalledOnce();
+  });
+});
+
+describe("UXP source ownership", () => {
+  it("keeps extracted runtime implementations out of main.js", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    expect(main).toContain("createBackendClient");
+    expect(main).toContain("createJobController");
+    expect(main).toContain("bootstrapApplication");
+    expect(main).not.toContain("class BackendClient");
+    expect(main).not.toContain("class JobPoller");
+    expect(main).not.toContain("const I18n = {");
+    expect(main).not.toContain("function expandRenamePattern(");
+    expect(main).not.toContain("function buildSmartBinRules(");
+  });
+
+  it("keeps token and workspace layout rules outside component CSS", () => {
+    const root = "../../com.opencut.uxp/";
+    const index = readFileSync(new URL(`${root}index.html`, import.meta.url), "utf8");
+    const tokens = readFileSync(new URL(`${root}command-center-tokens.css`, import.meta.url), "utf8");
+    const layout = readFileSync(new URL(`${root}command-center-layout.css`, import.meta.url), "utf8");
+    const components = readFileSync(new URL(`${root}command-center.css`, import.meta.url), "utf8");
+    expect(tokens).toContain(":root {");
+    expect(layout).toContain(".oc-header {");
+    expect(components).not.toContain(":root {");
+    expect(index.indexOf("command-center-tokens.css")).toBeLessThan(index.indexOf("command-center-layout.css"));
+    expect(index.indexOf("command-center-layout.css")).toBeLessThan(index.indexOf("command-center.css"));
   });
 });

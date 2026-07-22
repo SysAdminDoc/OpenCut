@@ -13,8 +13,8 @@ This linter:
   2. Walks ``index.html`` for
      ``data-i18n[-title|-label|-alt|-placeholder|-aria-label]=…``
      attributes.
-  3. Walks ``main.js`` for ``t("…")`` / ``t('…')`` calls and structured
-     locale metadata fields such as ``labelKey: "…"``.
+  3. Walks the CEP runtime owners for ``t("…")`` / ``translate("…")`` calls
+     and structured locale metadata fields such as ``labelKey: "…"``.
   4. Reports:
        - dead keys (in en.json, no consumer)
        - missing keys (consumed but not in en.json)
@@ -40,6 +40,8 @@ ROOT = Path(__file__).resolve().parent.parent
 LOCALES = ROOT / "extension" / "com.opencut.panel" / "client" / "locales"
 INDEX_HTML = ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 MAIN_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+BACKEND_CLIENT_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "backend-client.js"
+RUNTIME_JS_SOURCES = (MAIN_JS, BACKEND_CLIENT_JS)
 
 # The historic dead-key cleanup is complete. Keep the floor at zero so new
 # unused locale keys fail the gate immediately.
@@ -52,9 +54,9 @@ HTML_I18N_RE = re.compile(
     r'data-i18n(?:-(?:title|label|alt|placeholder|aria-label))?="([^"]+)"'
 )
 
-# t("key") / t('key') — key must look like an i18n key (dotted lowercase + underscore).
+# t("key") / translate("key") — key must look like an i18n key.
 JS_I18N_RE = re.compile(
-    r"""\bt\s*\(\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]"""
+    r"""\b(?:t|translate)\s*\(\s*['"]([a-z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+)['"]"""
 )
 
 # Structured JS metadata such as labelKey/titleKey/placeholderKey. Keep this
@@ -83,21 +85,23 @@ def _scan_html_consumers() -> set[str]:
     return set(HTML_I18N_RE.findall(INDEX_HTML.read_text(encoding="utf-8")))
 
 
-def _read_main_js() -> str:
-    if not MAIN_JS.exists():
-        return ""
-    return MAIN_JS.read_text(encoding="utf-8")
+def _read_runtime_js() -> str:
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in RUNTIME_JS_SOURCES
+        if path.exists()
+    )
 
 
 def _scan_js_call_consumers(source: str | None = None) -> set[str]:
     if source is None:
-        source = _read_main_js()
+        source = _read_runtime_js()
     return set(JS_I18N_RE.findall(source))
 
 
 def _scan_js_metadata_consumers(source: str | None = None) -> set[str]:
     if source is None:
-        source = _read_main_js()
+        source = _read_runtime_js()
     keys = set(JS_KEY_FIELD_RE.findall(source))
     for one_key, many_key in JS_PLUGIN_COUNT_LABEL_RE.findall(source):
         keys.add(one_key)
@@ -110,13 +114,13 @@ def _scan_js_consumers_from_source(source: str) -> set[str]:
 
 
 def _scan_js_consumers() -> set[str]:
-    return _scan_js_consumers_from_source(_read_main_js())
+    return _scan_js_consumers_from_source(_read_runtime_js())
 
 
 def evaluate() -> dict:
     keys = _load_en_keys()
     html_consumers = _scan_html_consumers()
-    js_source = _read_main_js()
+    js_source = _read_runtime_js()
     js_call_consumers = _scan_js_call_consumers(js_source)
     js_metadata_consumers = _scan_js_metadata_consumers(js_source)
     js_consumers = js_call_consumers | js_metadata_consumers

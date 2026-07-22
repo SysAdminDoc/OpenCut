@@ -6,6 +6,8 @@
     <title>OpenCut</title>
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="command-center-tokens.css">
+    <link rel="stylesheet" href="command-center-layout.css">
     <link rel="stylesheet" href="command-center.css">
     <script>
     (function(){try{var s=JSON.parse(localStorage.getItem('opencut_settings')||'{}');var t=s.theme||'auto';if(t==='light'){document.documentElement.classList.add('theme-light');}else if(t==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches){document.documentElement.classList.add('theme-light');}}catch(e){}})();
@@ -4185,6 +4187,12 @@
     <script src="string-utils.js"></script>
     <script src="lookup-utils.js"></script>
     <script src="i18n-utils.js"></script>
+    <script src="panel-state.js"></script>
+    <script src="backend-client.js"></script>
+    <script src="job-runtime.js"></script>
+    <script src="component-utils.js"></script>
+    <script src="timeline-utils.js"></script>
+    <script src="bootstrap.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

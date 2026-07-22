@@ -1,0 +1,40 @@
+/* OpenCut CEP command-center color and elevation tokens. */
+
+html.theme-light {
+    --cc-bg: #edf1f6;
+    --cc-header: rgba(247, 249, 252, 0.96);
+    --cc-sidebar: #f7f9fc;
+    --cc-surface: #ffffff;
+    --cc-surface-raised: #f6f8fb;
+    --cc-control: #edf1f6;
+    --cc-border: rgba(34, 48, 69, 0.14);
+    --cc-border-strong: rgba(34, 48, 69, 0.24);
+    --cc-text: #182132;
+    --cc-muted: #5e697a;
+    --cc-accent: #466fd3;
+    --cc-accent-soft: rgba(70, 111, 211, 0.12);
+    --cc-success: #287f64;
+    --cc-warning: #986a13;
+    --cc-danger: #ad4845;
+    --cc-shadow: 0 14px 32px rgba(38, 52, 73, 0.10);
+}
+
+:root {
+    --cc-bg: #0d0f13;
+    --cc-header: rgba(13, 15, 19, 0.98);
+    --cc-sidebar: #101319;
+    --cc-surface: #171b22;
+    --cc-surface-raised: #1c2129;
+    --cc-control: #222832;
+    --cc-border: rgba(214, 222, 233, 0.10);
+    --cc-border-strong: rgba(214, 222, 233, 0.18);
+    --cc-text: #e8ebf0;
+    --cc-muted: #a2a9b4;
+    --cc-accent: #86a8f7;
+    --cc-accent-soft: rgba(134, 168, 247, 0.12);
+    --cc-success: #76b99e;
+    --cc-warning: #d7ad62;
+    --cc-danger: #d68680;
+    --cc-radius: 10px;
+    --cc-shadow: none;
+}

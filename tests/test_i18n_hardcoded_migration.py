@@ -27,6 +27,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EN_JSON = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "locales" / "en.json"
 MAIN_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+I18N_UTILS_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "i18n-utils.js"
+BACKEND_CLIENT_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "backend-client.js"
 INDEX_HTML = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 
 
@@ -8723,17 +8725,17 @@ EXPECTED_CALLS = (
     # --- Ninety-second batch --------------------------------------
     (
         "error.http_status",
-        re.compile(r't\(\s*"error\.http_status"'),
+        re.compile(r'(?:t|translate)\(\s*"error\.http_status"'),
         re.compile(r'"HTTP 403"|"HTTP "\s*\+\s*xhr\.status'),
     ),
     (
         "error.network",
-        re.compile(r't\(\s*"error\.network"'),
+        re.compile(r'(?:t|translate)\(\s*"error\.network"'),
         re.compile(r'new Error\("Network error"\)'),
     ),
     (
         "error.timeout",
-        re.compile(r't\(\s*"error\.timeout"'),
+        re.compile(r'(?:t|translate)\(\s*"error\.timeout"'),
         re.compile(r'new Error\("Timeout"\)'),
     ),
     # --- Ninety-third batch ---------------------------------------
@@ -9091,7 +9093,12 @@ class TestI18nHardcodedMigration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.en = json.loads(EN_JSON.read_text(encoding="utf-8"))
-        cls.js = MAIN_JS.read_text(encoding="utf-8")
+        cls.js = "\n".join(
+            (
+                MAIN_JS.read_text(encoding="utf-8"),
+                BACKEND_CLIENT_JS.read_text(encoding="utf-8"),
+            )
+        )
         cls.html = INDEX_HTML.read_text(encoding="utf-8")
 
     def test_all_migrated_keys_in_en_json(self):
@@ -9215,10 +9222,12 @@ class TestI18nHardcodedMigration(unittest.TestCase):
         )
 
     def test_i18n_lookup_is_safe_before_locale_initialization(self):
+        i18n_utils = I18N_UTILS_JS.read_text(encoding="utf-8", errors="replace")
         self.assertIn(
-            "return (_i18n && _i18n[key]) || fallback || key;",
-            self.js,
+            "return (map && map[key]) || fallback || key;",
+            i18n_utils,
         )
+        self.assertIn("return translate(_i18n, key, fallback);", self.js)
 
 
 if __name__ == "__main__":

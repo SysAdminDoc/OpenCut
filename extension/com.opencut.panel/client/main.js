@@ -57,8 +57,16 @@
     var OpenCutI18n = (typeof window !== "undefined" && window.OpenCutI18n) ? window.OpenCutI18n : {};
     var translate = OpenCutI18n.translate,
         mergeLocale = OpenCutI18n.mergeLocale;
+    var OpenCutPanelState = (typeof window !== "undefined" && window.OpenCutPanelState) ? window.OpenCutPanelState : {};
+    var OpenCutBackendClient = (typeof window !== "undefined" && window.OpenCutBackendClient) ? window.OpenCutBackendClient : {};
+    var OpenCutJobRuntime = (typeof window !== "undefined" && window.OpenCutJobRuntime) ? window.OpenCutJobRuntime : {};
+    var OpenCutComponents = (typeof window !== "undefined" && window.OpenCutComponents) ? window.OpenCutComponents : {};
+    var OpenCutTimeline = (typeof window !== "undefined" && window.OpenCutTimeline) ? window.OpenCutTimeline : {};
+    var OpenCutBootstrap = (typeof window !== "undefined" && window.OpenCutBootstrap) ? window.OpenCutBootstrap : {};
 
     // ---- Core State ----
+    var panelState = OpenCutPanelState.createPanelState({ backendUrl: BACKEND });
+    var jobRuntime = OpenCutJobRuntime.createJobRuntime();
     var cs = null;
     var inPremiere = false;
     var connected = false;
@@ -66,7 +74,6 @@
     var selectedPath = "";
     var selectedName = "";
     var _clipDurationSeconds = 0;
-    var currentJob = null;
     var pollTimer = null;
     var healthTimer = null;
     var csrfToken = "";
@@ -93,6 +100,21 @@
     var _waveformRequestSeq = 0;
     var _previewModalRequestSeq = 0;
     var _clipThumbRequestSeq = 0;
+
+    function setBackendUrl(value) {
+        BACKEND = value;
+        panelState.setBackendUrl(value);
+    }
+
+    function setConnected(value) {
+        connected = !!value;
+        panelState.setConnected(connected);
+    }
+
+    function setCsrfToken(value) {
+        csrfToken = value || "";
+        panelState.setCsrfToken(csrfToken);
+    }
 
     // Hoist timers referenced by cleanupTimers() — strict mode would throw
     // ReferenceError if these were only declared inside their nested helpers.
@@ -135,7 +157,7 @@
     function startBackgroundPollers() {
         if (!mediaScanTimer) {
             mediaScanTimer = setInterval(function () {
-                if (!currentJob && (inPremiere || connected)) {
+                if (jobRuntime.isIdle() && (inPremiere || connected)) {
                     scanProjectMedia();
                 }
             }, MEDIA_POLL_MS);
@@ -351,7 +373,7 @@
         "audio-denoise": function () { if (el.runDenoiseBtn && !el.runDenoiseBtn.disabled) el.runDenoiseBtn.click(); },
         "export-video": function () { if (el.runExportPresetBtn && !el.runExportPresetBtn.disabled) el.runExportPresetBtn.click(); },
         "command-palette": function () { openCommandPalette(); },
-        "cancel-job": function () { if (currentJob) cancelJob(); },
+        "cancel-job": function () { if (jobRuntime.current()) cancelJob(); },
         "quick-workflow": function () { if (el.runWorkflowBtn && !el.runWorkflowBtn.disabled) el.runWorkflowBtn.click(); }
     };
 
@@ -2179,132 +2201,15 @@
     // ================================================================
     // Backend Communication
     // ================================================================
-    var _inflightRequests = {};
-    function formatHttpStatusError(status) {
-        return t("error.http_status", "HTTP {status}").replace("{status}", status);
-    }
-
-    function refreshCsrfToken(callback, timeout) {
-        callback = typeof callback === "function" ? callback : function () {};
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", BACKEND + "/health", true);
-        xhr.timeout = timeout || 10000;
-        xhr.onload = function () {
-            var data = null;
-            try { data = JSON.parse(xhr.responseText); } catch (e) {}
-            if (xhr.status >= 200 && xhr.status < 300 && data && data.csrf_token) {
-                csrfToken = data.csrf_token;
-                callback(true);
-                return;
-            }
-            callback(false);
-        };
-        xhr.onerror = function () { callback(false); };
-        xhr.ontimeout = function () { callback(false); };
-        xhr.send(null);
-    }
-
-    function api(method, path, body, callback, timeout) {
-        callback = typeof callback === "function" ? callback : function () {};
-        var key = method + " " + path;
-        // Deduplicate in-flight GET requests (F6)
-        if (method === "GET" && _inflightRequests[key]) {
-            // Queue callback to be called when the in-flight request completes
-            var existing = _inflightRequests[key];
-            if (callback && existing._pendingCallbacks) {
-                existing._pendingCallbacks.push(callback);
-            }
-            return;
-        }
-
-        function _send(retriedCsrf) {
-            var xhr = new XMLHttpRequest();
-            xhr.open(method, BACKEND + path, true);
-            xhr.timeout = timeout || 120000;
-            xhr.setRequestHeader("Content-Type", "application/json");
-            if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
-            if (method === "GET") {
-                xhr._pendingCallbacks = [];
-                _inflightRequests[key] = xhr;
-            }
-            function _notifyPending(err, data) {
-                var cbs = xhr._pendingCallbacks || [];
-                for (var i = 0; i < cbs.length; i++) {
-                    try { cbs[i](err, data); } catch (e) { /* swallow */ }
-                }
-            }
-            xhr.onload = function () {
-                delete _inflightRequests[key];
-                var err = null, data = null;
-                try { data = JSON.parse(xhr.responseText); }
-                catch (e) { err = e; }
-                if (!err && xhr.status === 403 && method !== "GET" && !retriedCsrf) {
-                    var message = data && data.error ? String(data.error) : "";
-                    if (/csrf|token/i.test(message)) {
-                        refreshCsrfToken(function (ok) {
-                            if (ok) {
-                                _send(true);
-                                return;
-                            }
-                            err = new Error(message || formatHttpStatusError(403));
-                            err.status = xhr.status;
-                            callback(err, data);
-                        }, timeout);
-                        return;
-                    }
-                }
-                // Treat non-2xx HTTP responses as errors
-                if (!err && xhr.status >= 400) {
-                    err = new Error((data && data.error) ? data.error : formatHttpStatusError(xhr.status));
-                    err.status = xhr.status;
-                }
-                callback(err, data);
-                _notifyPending(err, data);
-            };
-            xhr.onerror = function () {
-                delete _inflightRequests[key];
-                var err = new Error(t("error.network", "Network error"));
-                callback(err, null);
-                _notifyPending(err, null);
-            };
-            xhr.ontimeout = function () {
-                delete _inflightRequests[key];
-                var err = new Error(t("error.timeout", "Timeout"));
-                callback(err, null);
-                _notifyPending(err, null);
-            };
-            xhr.send(body ? JSON.stringify(body) : null);
-        }
-
-        _send(false);
-    }
-
-    function getButtonLabelNode(btn) {
-        if (!btn || typeof btn.querySelector !== "function") return null;
-        return btn.querySelector(".btn-label");
-    }
-
-    function getButtonText(btn) {
-        if (!btn) return "";
-        var labelNode = getButtonLabelNode(btn);
-        return labelNode ? labelNode.textContent : btn.textContent;
-    }
-
-    function rememberButtonText(btn) {
-        if (!btn) return "";
-        var cached = btn.getAttribute("data-oc-default-text");
-        if (cached !== null) return cached;
-        var text = getButtonText(btn);
-        btn.setAttribute("data-oc-default-text", text);
-        return text;
-    }
-
-    function setButtonText(btn, text) {
-        if (!btn) return;
-        var labelNode = getButtonLabelNode(btn);
-        if (labelNode) labelNode.textContent = text;
-        else btn.textContent = text;
-    }
+    var backendClient = OpenCutBackendClient.createBackendClient({
+        getBaseUrl: function () { return panelState.getBackendUrl(); },
+        getToken: function () { return panelState.getCsrfToken(); },
+        setToken: setCsrfToken,
+        translate: t
+    });
+    var api = backendClient.request;
+    var rememberButtonText = OpenCutComponents.rememberButtonText;
+    var setButtonText = OpenCutComponents.setButtonText;
 
     // Wrapper: api call with button spinner feedback
     function apiWithSpinner(btn, method, path, body, callback, timeout) {
@@ -2362,9 +2267,9 @@
                     el.serverStatusBanner.classList.add("hidden");
                     showToast(t("toast.server_reconnected", "Server reconnected"), "success");
                 }
-                connected = true;
+                setConnected(true);
                 setConnectionBadge("online", t("conn.connected", "Connected"));
-                if (data.csrf_token) csrfToken = data.csrf_token;
+                if (data.csrf_token) setCsrfToken(data.csrf_token);
                 if (data.capabilities) capabilities = data.capabilities;
                 el.backendPort.textContent = t("conn.port", "Port {port}")
                     .replace("{port}", BACKEND.replace("http://127.0.0.1:", ""));
@@ -2403,7 +2308,7 @@
                     el.serverStatusMsg.textContent = t("conn.reconnecting", "Server disconnected. Reconnecting…");
                 }
             }
-            connected = false;
+            setConnected(false);
             syncSettingsBackendSummary(false);
             // Clean up all active timers on disconnect
             cleanupTimers();
@@ -2433,9 +2338,9 @@
                         var data = JSON.parse(xhr.responseText);
                         if (data.status === "ok") {
                             found = true;
-                            BACKEND = testUrl;
-                            connected = true;
-                            if (data.csrf_token) csrfToken = data.csrf_token;
+                            setBackendUrl(testUrl);
+                            setConnected(true);
+                            if (data.csrf_token) setCsrfToken(data.csrf_token);
                             setConnectionBadge(
                                 "online",
                                 port !== BACKEND_BASE_PORT
@@ -2472,7 +2377,7 @@
 
         function finishScan() {
             portScanPending = false;
-            connected = false;
+            setConnected(false);
             setConnectionBadge("offline", t("conn.disconnected", "Disconnected"));
             // Clear capability cache so buttons get re-evaluated when server returns
             capabilitiesLoaded = false;
@@ -3939,8 +3844,6 @@
     // ================================================================
     // Job Execution & Tracking
     // ================================================================
-    var jobStarting = false;
-
     function runStartJobErrorHook(options, detail) {
         if (options && typeof options.onStartError === "function") {
             try {
@@ -4118,7 +4021,7 @@
 
     function startJob(endpoint, payload, options) {
         var opts = normalizeJobOptions(options);
-        if (currentJob || jobStarting) {
+        if (jobRuntime.isBusy()) {
             showAlert(t(
                 "progress.busy",
                 "OpenCut is already processing another task. Stop the active run or wait for it to finish first."
@@ -4133,7 +4036,7 @@
         }
 
         // Lock immediately to prevent double-click race
-        jobStarting = true;
+        jobRuntime.beginStart();
 
         // Show persistent processing banner
         var stepPrefix = getProgressStepPrefix();
@@ -4179,17 +4082,14 @@
         try {
             api("POST", endpoint, payload, function (err, data) {
                 if (err || !data || data.error) {
-                    jobStarting = false;
+                    jobRuntime.failStart();
                     showAlert(data ? data.error : t("progress.start_failed", "Failed to start job"), data);
                     hideProgress();
                     runStartJobErrorHook(opts, { reason: "request-failed", err: err, data: data });
                     return;
                 }
-                // Set currentJob BEFORE clearing jobStarting to prevent
-                // double-click race where a second job could start between
-                // jobStarting=false and currentJob assignment.
-                currentJob = data.job_id;
-                jobStarting = false;
+                // Activate atomically so a second click cannot race the job id.
+                jobRuntime.activate(data.job_id);
                 if (opts.onComplete || opts.onError || opts.onCancel || opts.onFinally) {
                     jobLifecycleHandlers[data.job_id] = opts;
                 }
@@ -4202,7 +4102,7 @@
             });
             return true;
         } catch (e) {
-            jobStarting = false;
+            jobRuntime.failStart();
             hideProgress();
             showAlert(t("progress.start_failed_prefix", "Failed to start job: {error}")
                 .replace("{error}", e.message));
@@ -4218,11 +4118,11 @@
 
         es.onmessage = function (e) {
             // Guard against stale events firing after cancelJob()
-            if (!currentJob || activeStream !== es) { try { es.close(); } catch (_) {} return; }
+            if (!jobRuntime.isCurrent(jobId) || activeStream !== es) { try { es.close(); } catch (_) {} return; }
             try {
                 var job = JSON.parse(e.data);
                 updateProgress(job);
-                if (job.status === "complete" || job.status === "error" || job.status === "cancelled") {
+                if (OpenCutJobRuntime.isTerminalStatus(job.status)) {
                     es.close();
                     activeStream = null;
                     onJobDone(job);
@@ -4245,10 +4145,10 @@
         pollTimer = setInterval(function () {
             api("GET", "/status/" + jobId, null, function (err, job) {
                 // Guard against in-flight polls returning after cancelJob()
-                if (!currentJob || currentJob !== jobId) return;
+                if (!jobRuntime.isCurrent(jobId)) return;
                 if (err || !job) return;
                 updateProgress(job);
-                if (job.status === "complete" || job.status === "error" || job.status === "cancelled") {
+                if (OpenCutJobRuntime.isTerminalStatus(job.status)) {
                     clearInterval(pollTimer);
                     pollTimer = null;
                     onJobDone(job);
@@ -4414,7 +4314,7 @@
     }
 
     function onJobDone(job) {
-        currentJob = null;
+        jobRuntime.finish(job);
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
 
         // Dispatch to registered listeners; if any returns true, it handled the job.
@@ -4714,8 +4614,8 @@
     }
 
     function cancelJob() {
-        if (currentJob) {
-            var cancellingJob = currentJob;
+        if (jobRuntime.current()) {
+            var cancellingJob = jobRuntime.current();
             rememberButtonText(el.processingCancel);
             setButtonText(el.processingCancel, t("progress.cancelling", "Cancelling…"));
             el.processingCancel.disabled = true;
@@ -4731,8 +4631,8 @@
                 activeStream.close();
                 activeStream = null;
             }
-            // Now safe to null currentJob — no more event handlers can fire
-            currentJob = null;
+            // Now safe to clear the job — no more event handlers can fire.
+            jobRuntime.cancel();
             hideProgress();
             // Fire cancel to backend (best-effort, UI already updated)
             api("POST", "/cancel/" + cancellingJob, {}, function (err) {
@@ -5336,9 +5236,9 @@
             if (el.processingMsg && message) el.processingMsg.textContent = message;
         } else if (msg.type === "event" && msg.event === "job_complete") {
             // Job completed via WS — trigger poll to pick up result
-            if (currentJob) trackJobPoll(currentJob);
+            if (jobRuntime.current()) trackJobPoll(jobRuntime.current());
         } else if (msg.type === "event" && msg.event === "job_error") {
-            if (currentJob) trackJobPoll(currentJob);
+            if (jobRuntime.current()) trackJobPoll(jobRuntime.current());
         }
     }
 
@@ -9074,7 +8974,7 @@
                 return;
             }
             if (data && data.job_id) {
-                currentJob = data.job_id;
+                jobRuntime.activate(data.job_id);
                 if (SSE_OK) { trackJobSSE(data.job_id); } else { trackJobPoll(data.job_id); }
             }
         });
@@ -10713,7 +10613,7 @@
             // Cancel-job shortcut (Escape) works even in inputs — but never when
             // a dropdown/menu/dialog is open (Escape should dismiss that first)
             // or when another handler already consumed the event.
-            if (!e.defaultPrevented && matchesShortcut(e, _shortcutRegistry["cancel-job"].keys) && currentJob) {
+            if (!e.defaultPrevented && matchesShortcut(e, _shortcutRegistry["cancel-job"].keys) && jobRuntime.current()) {
                 if (_anyDismissibleSurfaceOpen()) return;
                 _shortcutActions["cancel-job"]();
                 return;
@@ -10738,7 +10638,7 @@
             // when focus is not on an interactive control. Otherwise Enter on a
             // focused button/link/tab/dropdown would be hijacked, suppressing the
             // control's own activation and launching an unrelated job instead.
-            if (e.key === "Enter" && !currentJob) {
+            if (e.key === "Enter" && jobRuntime.isIdle()) {
                 if (e.target && e.target.closest &&
                     e.target.closest("button, a, [role='button'], [role='tab'], [role='combobox'], [role='menuitem'], [tabindex]")) {
                     return;
@@ -14539,7 +14439,7 @@
 
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
-        var payload = JSON.stringify(cuts);
+        var payload = JSON.stringify(OpenCutTimeline.cloneCuts(cuts));
         cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
@@ -14609,13 +14509,11 @@
     function addBeatMarkersToSequence() {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert(t("timeline.no_beat_markers", "No beat markers detected.")); return; }
-        var markers = beatMarkerTimes.map(function(time) {
-            return {
-                time: time,
-                name: t("timeline.beat_marker_name", "Beat"),
-                type: t("timeline.chapter_marker_name", "Chapter")
-            };
-        });
+        var markers = OpenCutTimeline.buildBeatMarkers(
+            beatMarkerTimes,
+            t("timeline.beat_marker_name", "Beat"),
+            t("timeline.chapter_marker_name", "Chapter")
+        );
         var payload = JSON.stringify(markers);
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
@@ -14844,14 +14742,11 @@
 
     function renameAll() {
         var inputs = document.querySelectorAll(".rename-name-input");
-        var renames = [];
+        var edits = [];
         for (var i = 0; i < inputs.length; i++) {
-            var idx = parseInt(inputs[i].getAttribute("data-idx"));
-            var orig = renameItemsData[idx];
-            if (orig && inputs[i].value !== orig.name) {
-                renames.push({ nodeId: orig.nodeId || orig.id || orig.path, newName: inputs[i].value });
-            }
+            edits.push({ index: inputs[i].getAttribute("data-idx"), value: inputs[i].value });
         }
+        var renames = OpenCutTimeline.buildRenameOperations(renameItemsData, edits);
         if (!renames.length) { showAlert(t("timeline.no_changes_to_apply", "No changes to apply.")); return; }
         api("POST", "/timeline/batch-rename", { renames: renames }, function (err, data) {
             if (err || (data && data.error)) {
@@ -14994,7 +14889,7 @@
                 return;
             }
             if (!inPremiere) { showToast(t("timeline.rules_validated_no_premiere", "Rules validated (no Premiere connection)"), "info"); return; }
-            var jsxRules = smartBinRules.map(function(r) { return { binName: r.bin_name, rule: r.rule_type, field: r.field, value: r.value }; });
+            var jsxRules = OpenCutTimeline.buildSmartBinHostRules(smartBinRules);
             var payload = JSON.stringify(jsxRules);
             cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", function (result) {
                 try {
@@ -15681,7 +15576,7 @@
             return;
         }
         var btn = document.getElementById("indexAllClipsBtn");
-        if (currentJob || jobStarting) {
+        if (jobRuntime.isBusy()) {
             setStatusLine("searchStatus", t("search.task_in_progress_status", "Another task is already in progress. Cancel it from the processing bar before re-indexing."), "warning");
             showAlert(t("search.task_in_progress_alert", "Another task is in progress. You can cancel it from the processing bar above."));
             return;
@@ -15949,28 +15844,28 @@
         if (otioBtn) otioBtn.addEventListener("click", function () {
             if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             var mode = (document.getElementById("otioExportMode") || {}).value || "cuts";
-            var payload = { filepath: selectedPath, output_dir: projectFolder, mode: mode };
+            var payload;
             if (mode === "cuts") {
                 if (!lastTimelineCuts || !lastTimelineCuts.length) {
                     showAlert(t("timeline.no_cuts_available", "No cuts available. Run Silence Removal or Repeat Detection first."));
                     return;
                 }
-                payload.cuts = lastTimelineCuts;
             } else if (mode === "markers") {
-                if (beatMarkerTimes && beatMarkerTimes.length) {
-                    payload.markers = beatMarkerTimes.map(function(time) { return { time: time, name: t("timeline.beat_marker_name", "Beat") }; });
-                } else if (chaptersData && chaptersData.length) {
-                    payload.markers = chaptersData.map(function(c) {
-                        return {
-                            time: c.seconds || c.start || c.time || 0,
-                            name: c.title || t("timeline.chapter_marker_name", "Chapter")
-                        };
-                    });
-                } else {
+                if ((!beatMarkerTimes || !beatMarkerTimes.length) && (!chaptersData || !chaptersData.length)) {
                     showAlert(t("timeline.no_markers_available", "No markers available. Run Beat Detection or Chapter Generation first."));
                     return;
                 }
             }
+            payload = OpenCutTimeline.buildOtioPayload({
+                filepath: selectedPath,
+                outputDir: projectFolder,
+                mode: mode,
+                cuts: lastTimelineCuts,
+                beatTimes: beatMarkerTimes,
+                chapters: chaptersData,
+                beatLabel: t("timeline.beat_marker_name", "Beat"),
+                chapterLabel: t("timeline.chapter_marker_name", "Chapter")
+            });
             otioBtn.disabled = true;
             var originalOtioText = rememberButtonText(otioBtn);
             setButtonText(otioBtn, t("timeline.exporting", "Exporting…"));
@@ -16442,7 +16337,7 @@
         } catch (err) { /* defensive */ }
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    OpenCutBootstrap.onReady(document, function () {
         initCSInterface();
         initDOM();
         initSkipLinkFocus();
@@ -16881,7 +16776,7 @@
             }
         });
         window.addEventListener("focus", function () {
-            if (!currentJob && (inPremiere || connected)) {
+            if (jobRuntime.isIdle() && (inPremiere || connected)) {
                 scanProjectMedia();
             }
         });
@@ -16911,10 +16806,9 @@
             initJournal, initInterviewPolish, initLutGrid,
             initAudioPreviewButtons, initAssistant
         ];
-        for (var fi = 0; fi < _featureInits.length; fi++) {
-            try { _featureInits[fi](); }
-            catch (initErr) { console.error("[OpenCut] Feature init failed:", _featureInits[fi].name || fi, initErr); }
-        }
+        OpenCutBootstrap.runSteps(_featureInits, function (initErr, fi) {
+            console.error("[OpenCut] Feature init failed:", _featureInits[fi].name || fi, initErr);
+        });
 
         // Preset file export/import buttons
         var exportPresetFileBtn = document.getElementById("exportPresetFileBtn");
@@ -17499,6 +17393,8 @@
             window._ocWaveHInitDone = true;
             setTimeout(function () { WaveH.init(); }, 400);
         }
+    }, function (error) {
+        console.error("[OpenCut] Panel bootstrap failed:", error);
     });
 
 })();

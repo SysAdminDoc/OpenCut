@@ -1,0 +1,152 @@
+/* OpenCut UXP command-center header, navigation, and workspace layout. */
+
+body {
+  background: var(--cc-bg);
+  color: var(--cc-text);
+}
+
+.oc-header {
+  min-height: 52px;
+  height: 52px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--cc-border);
+  background: var(--cc-sidebar);
+  box-shadow: none;
+}
+
+.oc-header-left {
+  gap: 9px;
+}
+
+.oc-logo-mark {
+  width: 20px;
+  height: 20px;
+}
+
+.oc-logo {
+  color: var(--cc-text);
+  font-size: 15px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.oc-version {
+  display: none;
+}
+
+.oc-connection {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--cc-border);
+  border-radius: 9px;
+  background: var(--cc-surface);
+}
+
+body.oc-disconnected .oc-connection {
+  border-color: rgba(232, 180, 77, 0.28);
+  background: rgba(232, 180, 77, 0.09);
+}
+
+.oc-conn-dot.disconnected {
+  background: var(--cc-warning);
+  box-shadow: 0 0 0 4px rgba(232, 180, 77, 0.11);
+}
+
+body.oc-disconnected .oc-connection .oc-conn-label {
+  color: #f3ca76;
+}
+
+.oc-connection-detail-panel {
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  background: var(--cc-surface);
+  box-shadow: var(--cc-shadow);
+}
+
+.oc-tab-nav-shell {
+  border-color: var(--cc-border);
+  background: var(--cc-sidebar);
+}
+
+.oc-tab-nav-shell .oc-tabs {
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-tab {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--cc-muted);
+  background: transparent;
+}
+
+.oc-tab:hover,
+.oc-tab:focus-visible {
+  border-color: var(--cc-border);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--cc-text);
+}
+
+.oc-tab.active {
+  border-color: rgba(125, 162, 255, 0.28);
+  background: var(--cc-accent-soft);
+  color: #dfe9ff;
+  box-shadow: inset 3px 0 0 var(--cc-accent);
+}
+
+html.theme-light .oc-tab.active {
+  color: #294eaa;
+}
+
+.oc-nav-footer {
+  display: none;
+}
+
+.oc-content {
+  gap: 12px;
+  background: var(--cc-bg);
+}
+
+.oc-workspace-overview {
+  border: 0;
+  border-bottom: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-workspace-overview::before {
+  display: none;
+}
+
+.oc-workspace-kicker {
+  justify-self: start;
+  width: max-content;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid var(--cc-border);
+  border-radius: 7px;
+  background: var(--cc-control);
+  color: var(--cc-muted);
+  letter-spacing: 0.04em;
+}
+
+.oc-workspace-title {
+  color: var(--cc-text);
+  font-size: 27px;
+  font-weight: 720;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.oc-workspace-subtitle,
+.oc-workspace-guide-text,
+.oc-hint,
+.oc-card-copy,
+.oc-status-line {
+  color: var(--cc-muted);
+}
+
+.oc-workspace-actions {
+  gap: 8px;
+}
