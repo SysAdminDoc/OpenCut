@@ -19,6 +19,9 @@ record also lives in the git commit messages.
 - Replaced UXP boxed inputs, readiness pills, and deliverable tiles with a
   quieter baseline-and-metadata grammar; removed duplicated caption summaries,
   internal feature codes, and excess helper copy across desktop and narrow UI.
+- Flattened tertiary action groups, suggested-search controls, fallback notices,
+  and light-theme chrome; removed the duplicate rail footer and restored full-
+  width Settings content in compact panels.
 
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 
