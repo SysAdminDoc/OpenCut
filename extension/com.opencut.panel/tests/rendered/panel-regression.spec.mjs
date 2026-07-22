@@ -630,6 +630,31 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   }
 }
 
+for (const [surfaceName, surface] of Object.entries(SURFACES)) {
+  test(`${surfaceName} premium workspace hierarchy stays consistent across every page`, async ({
+    page,
+  }) => {
+    const { pageErrors } = await openSurface(page, surfaceName, "dark", 1200, {
+      height: 800,
+    });
+    const tabs = page.locator(surface.tabSelector);
+    const count = await tabs.count();
+
+    for (let index = 0; index < count; index += 1) {
+      const tab = tabs.nth(index);
+      const tabName = await tab.getAttribute(surface.tabAttribute);
+      await tab.click();
+      await expect(page.locator(surface.activePanelSelector)).toBeVisible();
+      await expect(page).toHaveScreenshot(
+        `${surfaceName}-page-${tabName || index}-dark-1200.png`,
+        { fullPage: false },
+      );
+    }
+
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test("UXP follows live Premiere theme updates with legible tokens and cleanup", async ({
   page,
 }) => {
@@ -668,7 +693,11 @@ test("UXP follows live Premiere theme updates with legible tokens and cleanup", 
     const sidebar = getComputedStyle(document.querySelector(".oc-header")).backgroundColor;
     const icon = getComputedStyle(document.querySelector(".oc-logo-mark path")).fill;
     const secondary = getComputedStyle(document.querySelector("#tab-settings .oc-hint")).color;
-    const surface = getComputedStyle(document.querySelector("#tab-settings .oc-settings-group")).backgroundColor;
+    const surfaceValue = getComputedStyle(document.querySelector("#tab-settings .oc-settings-group")).backgroundColor;
+    const surfaceParts = surfaceValue.match(/[\d.]+/g) || [];
+    const surface = surfaceParts.length > 3 && Number(surfaceParts[3]) === 0
+      ? background
+      : surfaceValue;
     return {
       className: document.documentElement.className,
       theme: document.documentElement.dataset.premiereTheme,
@@ -1098,14 +1127,18 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       brandMetaDisplay: getComputedStyle(document.querySelector(".brand-meta")).display,
       kickerDisplay: getComputedStyle(document.querySelector(".content-kicker-row")).display,
       cardShadow: getComputedStyle(document.querySelector("#panel-settings.active > .card")).boxShadow,
+      cardRadius: getComputedStyle(document.querySelector("#panel-settings.active > .card")).borderRadius,
+      statusRadius: getComputedStyle(document.getElementById("statusBar")).borderRadius,
     };
   });
   expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
   expect(cepGeometry.cardColumns).toBeGreaterThan(200);
-  expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(13);
+  expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(cepGeometry.brandMetaDisplay).toBe("none");
   expect(cepGeometry.kickerDisplay).toBe("none");
   expect(cepGeometry.cardShadow).toBe("none");
+  expect(cepGeometry.cardRadius).toBe("0px");
+  expect(cepGeometry.statusRadius).toBe("0px");
   expect(cep.pageErrors).toEqual([]);
 
   const uxp = await openSurface(page, "uxp", "dark", 1200, { height: 800 });
@@ -1124,6 +1157,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       groupColumns: groups.length === 2 ? Math.abs(groups[0].left - groups[1].left) : 0,
       bodyFontSize: Number.parseFloat(getComputedStyle(document.body).fontSize),
       groupShadow: getComputedStyle(document.querySelector("#tab-settings.active > .oc-settings-group")).boxShadow,
+      groupRadius: getComputedStyle(document.querySelector("#tab-settings.active > .oc-settings-group")).borderRadius,
+      statusPillBorder: getComputedStyle(document.querySelector("#tab-settings .oc-status-pill")).borderTopWidth,
       commandBarInHeader: !!header && !!commandBar
         && commandBar.top >= header.top
         && commandBar.bottom <= header.bottom,
@@ -1136,8 +1171,10 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.groupColumns).toBeGreaterThan(200);
-  expect(uxpGeometry.bodyFontSize).toBeGreaterThanOrEqual(13);
+  expect(uxpGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
   expect(uxpGeometry.groupShadow).toBe("none");
+  expect(uxpGeometry.groupRadius).toBe("0px");
+  expect(uxpGeometry.statusPillBorder).toBe("0px");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual([
@@ -1191,7 +1228,7 @@ test("CEP tool submenus keep every label readable behind explicit overflow contr
   expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
   expect(initial.scrollLeft).toBe(0);
   expect(Math.max(...initial.tabTops) - Math.min(...initial.tabTops)).toBeLessThan(1);
-  expect(initial.shellRadius).toBe("8px");
+  expect(initial.shellRadius).toBe("0px");
   await expect(shell).toHaveScreenshot("cep-video-submenu-dark-1200.png");
 
   await next.click();

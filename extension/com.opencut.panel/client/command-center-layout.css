@@ -67,9 +67,10 @@ html.theme-light .nav-tab.active {
 }
 
 .workspace-chip {
-    min-height: 24px;
-    border-radius: 8px;
-    border-color: var(--cc-border);
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
     background: transparent;
     color: var(--cc-muted);
 }
@@ -99,10 +100,11 @@ html.theme-light .nav-tab.active {
 }
 
 .content-kicker {
-    min-height: 24px;
-    border-radius: 8px;
-    border-color: var(--cc-border);
-    background: var(--cc-control);
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--cc-muted);
     font-size: 9px;
     font-weight: 720;
@@ -124,12 +126,17 @@ html.theme-light .nav-tab.active {
 }
 
 .workspace-stage-grid {
-    gap: 10px;
-    margin-top: 12px;
+    display: none;
 }
 
 .quick-actions {
-    gap: 10px;
+    gap: 0;
+    padding: 4px 0;
+    border: 0;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .quick-action-btn:hover:not(:disabled) {
@@ -167,15 +174,24 @@ html.theme-light .btn-primary:hover:not(:disabled) {
 
 #panel-settings.active {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 0 24px;
 }
 
 #panel-settings .card {
-    border: 1px solid var(--cc-border);
-    border-radius: var(--cc-radius);
-    background: var(--cc-surface);
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
     box-shadow: var(--cc-shadow);
-    padding: 16px;
+    padding: 16px 0;
+}
+
+#panel-settings .card-title,
+#panel-settings .card-heading {
+    font-size: 15px;
+    font-weight: 660;
+    letter-spacing: -0.01em;
+    text-transform: none;
 }
 
 #panel-settings .settings-row,
@@ -184,10 +200,16 @@ html.theme-light .btn-primary:hover:not(:disabled) {
 #panel-settings .model-list,
 #panel-settings .gpu-rec,
 #panel-settings .shortcut-row {
-    border-color: var(--cc-border);
-    border-radius: 9px;
-    background: var(--cc-surface-raised);
+    border-color: transparent;
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
+}
+
+#panel-settings .settings-row + .settings-row,
+#panel-settings .checkbox-row + .checkbox-row,
+#panel-settings .shortcut-row + .shortcut-row {
+    border-top-color: var(--cc-border);
 }
 
 #panel-settings .settings-value,
@@ -197,7 +219,10 @@ html.theme-light .btn-primary:hover:not(:disabled) {
 }
 
 .status-bar {
-    border-color: var(--cc-border);
+    min-height: 28px;
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
     background: var(--cc-sidebar);
     box-shadow: none;
 }
