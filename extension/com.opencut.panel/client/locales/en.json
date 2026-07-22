@@ -1212,7 +1212,7 @@
   "prompt.issue_confirm": "Build Report",
   "prompt.issue_description": "What went wrong? (optional)",
   "prompt.issue_description_label": "What went wrong?",
-  "prompt.issue_help": "Home paths are scrubbed, but you should still review the issue body before submitting.",
+  "prompt.issue_help": "Common secrets and home paths are redacted, but you should still review the issue body before submitting.",
   "prompt.issue_message": "Add a short note so the generated report opens with useful context. Review the report before submitting it.",
   "prompt.issue_title": "Prepare issue report",
   "processing.cancel_active_run": "Cancel active run",

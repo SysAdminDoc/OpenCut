@@ -16988,7 +16988,7 @@
                     message: t("prompt.issue_message", "Add a short note so the generated report opens with useful context. Review the report before submitting it."),
                     inputLabel: t("prompt.issue_description_label", "What went wrong?"),
                     placeholder: t("prompt.issue_description", "What went wrong? (optional)"),
-                    inputHelp: t("prompt.issue_help", "Home paths are scrubbed, but you should still review the issue body before submitting."),
+                    inputHelp: t("prompt.issue_help", "Common secrets and home paths are redacted, but you should still review the issue body before submitting."),
                     multiline: true,
                     confirmLabel: t("prompt.issue_confirm", "Build Report"),
                     tone: "info"

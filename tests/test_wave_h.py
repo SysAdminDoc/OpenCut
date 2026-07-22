@@ -182,6 +182,74 @@ class TestIssueReport(unittest.TestCase):
         result = bundle(description=big_description)
         self.assertLessEqual(result["size_bytes"], 62_000)
 
+    def test_bundle_redacts_secrets_before_url_encoding(self):
+        import urllib.parse
+
+        from opencut.core import issue_report
+
+        home = os.path.expanduser("~")
+        secrets = [
+            "header-bearer-token-123456",
+            "query-api-key-123456",
+            "openai-env-secret-123456",
+            "crash-aws-secret-123456",
+            "cookie-session-secret-123456",
+            "url-password-123456",
+            "sk-proj-OpenAISecretValue123456",
+            "github_pat_GitHubSecretValue1234567890",
+            "hf_HuggingFaceSecretValue1234567890",
+            "AIzaGoogleSecretValue1234567890",
+            "xoxb-Slack-Secret-1234567890",
+            "AKIAIOSFODNN7EXAMPLE",
+            "eyJheader12345.eyJpayload12345.signature12345",
+            "private-key-material-123456",
+        ]
+        description = "\n".join([
+            f"Authorization: Bearer {secrets[0]}",
+            f"request=https://example.test/run?api_key={secrets[1]}&mode=safe",
+            f"OPENAI_API_KEY={secrets[2]}",
+            f"repository token: {secrets[7]}",
+            f"model token: {secrets[8]}",
+            f"google token: {secrets[9]}",
+            f"slack token: {secrets[10]}",
+            f"aws access id: {secrets[11]}",
+            f"jwt: {secrets[12]}",
+            f"source=https://alice:{secrets[5]}@example.test/private",
+            f"file={home}/private/project.prproj",
+            "-----BEGIN PRIVATE KEY-----",
+            secrets[13],
+            "-----END PRIVATE KEY-----",
+        ])
+        crash_tail = f"AWS_SECRET_ACCESS_KEY={secrets[3]}\n"
+        log_tail = f"Cookie: session={secrets[4]}\nprovider={secrets[6]}\n"
+
+        with (
+            patch.object(issue_report, "_tail_file", return_value=crash_tail),
+            patch.object(issue_report, "_tail_lines", return_value=log_tail),
+            patch.object(issue_report, "logger") as mocked_logger,
+        ):
+            result = issue_report.bundle(
+                title=f"Failure {secrets[6]}",
+                description=description,
+            )
+
+        decoded_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(result["url"]).query
+        )
+        self.assertEqual(decoded_query["body"], [result["body"]])
+        self.assertEqual(decoded_query["title"], [result["title"]])
+        self.assertIn(issue_report.REDACTION_MARKER, result["body"])
+        self.assertIn("Authorization: [REDACTED]", result["body"])
+        self.assertIn("api_key=[REDACTED]&mode=safe", result["body"])
+        self.assertIn("OPENAI_API_KEY=[REDACTED]", result["body"])
+        self.assertIn("https://[REDACTED]@example.test/private", result["body"])
+        self.assertNotIn(home, result["body"])
+        for secret in secrets:
+            self.assertNotIn(secret, result["body"])
+            self.assertNotIn(secret, result["title"])
+            self.assertNotIn(secret, result["url"])
+        mocked_logger.assert_not_called()
+
 
 # =========================================================================
 # demo_bundle

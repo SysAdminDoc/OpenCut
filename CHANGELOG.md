@@ -328,6 +328,13 @@ record also lives in the git commit messages.
   dependency-dashboard commands so old indexes cannot select Pillow 12.2 or
   earlier. A repository regression gate rejects unbounded runtime/copy paths.
 
+### Security - Redact secrets from issue report previews
+
+- Issue-report titles, descriptions, crash tails, and log tails now redact
+  credential-bearing headers, URLs, environment assignments, provider tokens,
+  private keys, and home paths before truncation and GitHub URL encoding. The
+  CEP prompt keeps an explicit human-review warning.
+
 ### Improved - Rebuild CEP and UXP as an editorial command center
 
 - CEP and UXP now share a restrained graphite command-center system with a
