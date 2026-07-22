@@ -330,27 +330,27 @@ def _register_builtin_engines(reg: EngineRegistry):
         name="parakeet_tdt",
         domain="transcription",
         display_name="Parakeet TDT 0.6B v3",
-        description="NVIDIA NeMo streaming ASR (tops HF Open ASR leaderboard, 25 EU langs, ~4x faster on CPU)",
+        description="Pinned NVIDIA NeMo multilingual ASR with word and segment timestamps",
         check_fn=check_nemo_asr_available,
         priority=85,
         vram_mb=2400,
         speed_rating="fast",
         quality_rating="high",
-        tags=["streaming", "nemo", "multilingual"],
-        impl_module="asr_parakeet",  # terminal stub — listed but never active
+        tags=["timestamps", "nemo", "multilingual"],
+        impl_module="asr_parakeet",
     ))
     reg.register(EngineInfo(
         name="canary_1b_flash",
         domain="transcription",
         display_name="Canary 1B Flash",
-        description="NVIDIA NeMo batch ASR (RTFx 1000+, transcription + translation)",
+        description="Pinned NVIDIA NeMo batch ASR and four-language translation",
         check_fn=check_nemo_asr_available,
         priority=80,
         vram_mb=4200,
         speed_rating="fast",
         quality_rating="high",
         tags=["batch", "nemo", "translation"],
-        impl_module="asr_canary",  # terminal stub — listed but never active
+        impl_module="asr_canary",
     ))
 
     # --- Background Removal ---

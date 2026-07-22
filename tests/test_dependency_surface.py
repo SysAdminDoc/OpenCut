@@ -258,6 +258,13 @@ def test_optional_dependency_security_floor_pins():
     for extra in ("ai", "ai-gpu", "depth", "torch-stack"):
         assert _dep_names(extras[extra])["picklescan"] == "picklescan>=1.0.3"
 
+    nemo = _dep_names(extras["nemo-asr"])
+    assert nemo["picklescan"] == "picklescan>=1.0.3; sys_platform == 'linux'"
+    assert nemo["nemo_toolkit"] == "nemo_toolkit[asr]>=2.7.3,<2.8; sys_platform == 'linux'"
+    assert nemo["torch"] == "torch>=2.10.0; sys_platform == 'linux'"
+    assert nemo["huggingface-hub"] == "huggingface-hub>=0.36,<1; sys_platform == 'linux'"
+    assert "nemo_toolkit" not in _dep_names(extras["all"])
+
 
 def test_transformers_security_floor_covers_every_declared_extra():
     extras = _pyproject()["project"]["optional-dependencies"]

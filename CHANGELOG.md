@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Run pinned Parakeet and Canary ASR locally on Linux
+
+- Replaced the terminal NeMo stubs with cache-first Parakeet and Canary
+  adapters that normalize word/segment timestamps, confidence, language,
+  cancellation, and reproducible provenance into OpenCut's shared transcript
+  contract.
+- Pinned both CC-BY-4.0 checkpoints to immutable Hugging Face revisions and
+  SHA-256 hashes, scan them before loading, and expose a resolver-tested
+  `nemo-asr` extra for NeMo 2.7.3 on Python 3.11-3.14 Linux.
+- Made route, registry, dependency-dashboard, and model-manager readiness
+  distinguish implemented adapters from unsupported platforms, while cached
+  transcripts remain readable without loading NeMo or downloading a model.
+
 ### Fixed - Unify CEP first-run onboarding
 
 - Replaced the competing local and server-backed first-run tours with one

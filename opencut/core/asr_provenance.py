@@ -15,6 +15,8 @@ ENGINE_ALIASES = {
     "faster_whisper": "faster-whisper",
     "openai_whisper": "openai-whisper",
     "whisper": "openai-whisper",
+    "parakeet_tdt": "parakeet-tdt",
+    "canary_1b_flash": "canary-1b-flash",
 }
 
 # Immutable revisions resolved from the model repositories on 2026-07-21.
@@ -45,6 +47,12 @@ FASTER_WHISPER_MODELS = {
 
 def package_version(package: str) -> str:
     """Return an installed package version without importing the package."""
+    package = {
+        "parakeet-tdt": "nemo-toolkit",
+        "parakeet_tdt": "nemo-toolkit",
+        "canary-1b-flash": "nemo-toolkit",
+        "canary_1b_flash": "nemo-toolkit",
+    }.get(package, package)
     try:
         return metadata.version(package)
     except metadata.PackageNotFoundError:
@@ -80,13 +88,19 @@ def model_identity(
     model_value = str(model or "base")
     if os.path.isdir(model_value):
         return os.path.realpath(model_value), requested_revision or _local_model_revision(model_value)
-    if engine in {"faster-whisper", "whisperx"}:
+    normalized_engine = normalize_engine(engine)
+    if normalized_engine in {"parakeet-tdt", "canary-1b-flash"}:
+        from opencut.core.asr_nemo_models import CANARY_SPEC, PARAKEET_SPEC
+
+        spec = PARAKEET_SPEC if normalized_engine == "parakeet-tdt" else CANARY_SPEC
+        return spec.model_id, str(requested_revision or spec.revision)
+    if normalized_engine in {"faster-whisper", "whisperx"}:
         model_id, pinned = FASTER_WHISPER_MODELS.get(
             model_value,
             (model_value, "operator-supplied"),
         )
         return model_id, str(requested_revision or pinned)
-    if engine == "openai-whisper":
+    if normalized_engine == "openai-whisper":
         revision = str(requested_revision or "")
         if not revision:
             try:

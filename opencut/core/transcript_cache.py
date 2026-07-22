@@ -71,6 +71,8 @@ def _backend_version(backend: str) -> str:
         "faster-whisper": "faster-whisper",
         "openai-whisper": "openai-whisper",
         "whisperx": "whisperx",
+        "parakeet-tdt": "nemo-toolkit",
+        "canary-1b-flash": "nemo-toolkit",
     }
     package = package_names.get(backend)
     if not package:

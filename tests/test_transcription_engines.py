@@ -1,9 +1,4 @@
-"""Registry coverage for the NeMo ASR transcription engines (Parakeet / Canary).
-
-Both engines wrap NVIDIA NeMo stubs that activate when ``nemo`` is installed
-locally. These tests pin the registry wiring, the availability gating, and the
-model-download catalog entries without requiring the multi-GB weights.
-"""
+"""Registry coverage for the NeMo ASR transcription engines."""
 
 from __future__ import annotations
 
@@ -20,27 +15,23 @@ def test_parakeet_and_canary_registered_in_transcription_domain():
     assert "crisper_whisper" in names
 
 
-def test_nemo_engines_gated_by_availability_check():
+def test_nemo_engines_are_implemented_and_gated_by_runtime():
     from opencut.core.engine_registry import get_registry
 
     reg = get_registry()
     for name in ("parakeet_tdt", "canary_1b_flash"):
         engine = reg.get_engine("transcription", name)
         assert engine is not None
-        # The adapters are terminal NotImplementedError stubs, so the engines
-        # must never report available — even when NeMo itself is installed.
-        # They stay listed (coming-soon) but are not selectable as active.
-        assert engine.is_stub is True
-        assert engine.is_available is False
+        assert engine.is_stub is False
+        assert engine.is_available == engine.check_fn()
 
 
-def test_stub_engines_never_resolve_as_active():
+def test_remaining_stub_engines_never_resolve_as_active():
     from opencut.core.engine_registry import get_registry
 
     reg = get_registry()
     reg.clear_cache()
     for domain, stub_names in (
-        ("transcription", {"parakeet_tdt", "canary_1b_flash"}),
         ("diarization", {"sortformer"}),
         ("upscaling", {"seedvr2"}),
         ("lip_sync", {"latentsync"}),
@@ -59,17 +50,13 @@ def test_nemo_check_handles_missing_dependency():
     assert isinstance(check_nemo_asr_available(), bool)
 
 
-def test_nemo_engine_modules_accept_the_installed_import_namespace(monkeypatch):
-    from opencut.core import asr_canary, asr_parakeet
+def test_nemo_runtime_is_linux_only():
+    from opencut.core.asr_nemo import nemo_runtime_status
 
-    def import_probe(name):
-        return object() if name == "nemo" else None
-
-    monkeypatch.setattr(asr_canary, "_try_import", import_probe)
-    monkeypatch.setattr(asr_parakeet, "_try_import", import_probe)
-
-    assert asr_canary.check_nemo_toolkit_available() is True
-    assert asr_parakeet.check_nemo_toolkit_available() is True
+    windows = nemo_runtime_status("win32")
+    assert windows["available"] is False
+    assert windows["platform_supported"] is False
+    assert windows["supported_platforms"] == ["linux"]
 
 
 def test_parakeet_and_canary_have_model_catalog_entries():
@@ -81,16 +68,16 @@ def test_parakeet_and_canary_have_model_catalog_entries():
         assert entry["category"] == "transcription"
         assert entry["size_mb"] > 0
         assert entry["url"].startswith("https://")
+        assert "/resolve/main/" not in entry["url"]
+        assert len(entry["sha256"]) == 64
 
 
-def test_nemo_asr_stubs_raise_without_dependency():
+def test_nemo_asr_adapters_validate_input_before_runtime():
     import pytest
 
     from opencut.core import asr_canary, asr_parakeet
 
-    if asr_parakeet.check_nemo_toolkit_available():
-        pytest.skip("nemo installed; stub raises NotImplementedError instead")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(FileNotFoundError):
         asr_parakeet.transcribe(filepath="x.wav")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(FileNotFoundError):
         asr_canary.transcribe_batch(filepath="x.wav")

@@ -259,24 +259,33 @@ def route_asr(
 def asr_engine_readiness(registry=None) -> List[dict]:
     """Honest per-engine readiness for the transcription domain (CEP/UXP display).
 
-    Each entry reports ``available``/``stub`` straight from the registry, so a
-    terminal-stub adapter (Parakeet/Canary today) is surfaced as coming-soon,
-    never as ready.
+    Each entry reports implementation state separately from runtime/platform
+    availability so an implemented Linux-only adapter is not mislabeled a stub.
     """
     reg = _get_registry(registry)
     out: List[dict] = []
     for e in reg.get_engines(TRANSCRIPTION_DOMAIN):
-        out.append(
-            {
-                "name": e.name,
-                "display_name": e.display_name,
-                "available": e.is_available,
-                "stub": e.is_stub,
-                "parakeet_languages": sorted(PARAKEET_V3_LANGUAGES)
-                if e.name == PARAKEET_ENGINE
-                else None,
-            }
-        )
+        entry = {
+            "name": e.name,
+            "display_name": e.display_name,
+            "available": e.is_available,
+            "stub": e.is_stub,
+            "parakeet_languages": sorted(PARAKEET_V3_LANGUAGES)
+            if e.name == PARAKEET_ENGINE
+            else None,
+        }
+        if e.name in {PARAKEET_ENGINE, CANARY_ENGINE}:
+            from opencut.core.asr_nemo import nemo_runtime_status
+
+            runtime = nemo_runtime_status()
+            entry.update(
+                {
+                    "runtime_reason": runtime["reason"],
+                    "runtime_version": runtime["version"],
+                    "supported_platforms": runtime["supported_platforms"],
+                }
+            )
+        out.append(entry)
     return out
 
 

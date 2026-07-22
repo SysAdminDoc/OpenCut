@@ -582,7 +582,7 @@
       "hardware": "cpu/gpu",
       "install_hint": "pip install \"nemo_toolkit[asr]\"",
       "privacy": "local-only (model downloads only)",
-      "latency": "sub-realtime on supported GPU; CPU varies by model",
+      "latency": "unbenchmarked by OpenCut; NVIDIA GPU recommended",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [

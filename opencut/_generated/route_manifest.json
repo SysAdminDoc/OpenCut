@@ -2,7 +2,7 @@
   "version": 3,
   "generated_at": "2026-07-22T09:04:44Z",
   "total_routes": 1558,
-  "shipped_route_count": 1531,
+  "shipped_route_count": 1533,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
@@ -13,8 +13,8 @@
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1502,
-    "stub": 27
+    "implemented": 1504,
+    "stub": 25
   },
   "blueprints": {
     "<app>": {
@@ -5369,7 +5369,7 @@
       ],
       "endpoint": "wave_qrs.route_canary_transcribe",
       "blueprint": "wave_qrs",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/audio/transcribe/canary/info",
@@ -5405,7 +5405,7 @@
       ],
       "endpoint": "wave_qrs.route_parakeet_transcribe",
       "blueprint": "wave_qrs",
-      "readiness": "stub"
+      "readiness": "implemented"
     },
     {
       "rule": "/audio/transcribe/parakeet/info",

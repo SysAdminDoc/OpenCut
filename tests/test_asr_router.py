@@ -3,7 +3,7 @@
 Parakeet TDT v3 handles its 25-language European set; Whisper turbo covers the
 long tail. Selection is honest — an engine is chosen only when the registry
 reports it available, which respects the implementation-state gate, so a
-terminal-stub Parakeet adapter always falls back to Whisper.
+runtime-unavailable Parakeet adapter falls back to Whisper.
 
 The registry is constructed explicitly per test so routing decisions are
 deterministic without any real model, GPU, or Adobe host.
@@ -72,13 +72,11 @@ def test_unknown_language_uses_whisper_broad_coverage():
     assert "broad coverage" in route.reason
 
 
-# --- honest implementation-state gate -------------------------------------
+# --- honest availability gate ---------------------------------------------
 
-def test_stub_parakeet_falls_back_to_whisper():
-    # asr_parakeet is a real terminal stub, so is_available is False despite
-    # check_fn returning True — the router must not route to it.
+def test_unavailable_parakeet_falls_back_to_whisper():
     reg = _registry(
-        _engine("parakeet_tdt", available=True, impl_module="asr_parakeet", priority=85),
+        _engine("parakeet_tdt", available=False, impl_module="asr_parakeet", priority=85),
         _engine("faster_whisper", priority=70),
     )
     route = ar.route_asr("de", registry=reg)
@@ -88,7 +86,7 @@ def test_stub_parakeet_falls_back_to_whisper():
 
 
 def test_no_engine_available_returns_none():
-    reg = _registry(_engine("parakeet_tdt", impl_module="asr_parakeet"))  # only a stub
+    reg = _registry(_engine("parakeet_tdt", available=False, impl_module="asr_parakeet"))
     route = ar.route_asr("de", registry=reg)
     assert route.engine is None
     assert route.used_fallback is True
@@ -107,7 +105,7 @@ def test_override_honored_when_available():
 
 def test_override_falls_back_honestly_when_unavailable():
     reg = _registry(
-        _engine("canary_1b_flash", impl_module="asr_canary", priority=80),  # stub
+        _engine("canary_1b_flash", available=False, impl_module="asr_canary", priority=80),
         _engine("faster_whisper", priority=70),
     )
     route = ar.route_asr("en", override="canary_1b_flash", registry=reg)
@@ -126,15 +124,25 @@ def test_override_to_whisper_carries_turbo_model():
 
 # --- readiness surface ----------------------------------------------------
 
-def test_asr_engine_readiness_reports_stub_honestly():
+def test_asr_engine_readiness_separates_implementation_and_runtime(monkeypatch):
+    monkeypatch.setattr(
+        "opencut.core.asr_nemo.nemo_runtime_status",
+        lambda: {
+            "reason": "Linux runtime dependency missing",
+            "version": "unavailable",
+            "supported_platforms": ["linux"],
+        },
+    )
     reg = _registry(
-        _engine("parakeet_tdt", available=True, impl_module="asr_parakeet"),
+        _engine("parakeet_tdt", available=False, impl_module="asr_parakeet"),
         _engine("faster_whisper"),
     )
     readiness = {r["name"]: r for r in ar.asr_engine_readiness(registry=reg)}
     assert readiness["parakeet_tdt"]["available"] is False
-    assert readiness["parakeet_tdt"]["stub"] is True
+    assert readiness["parakeet_tdt"]["stub"] is False
     assert readiness["parakeet_tdt"]["parakeet_languages"]  # language list surfaced
+    assert readiness["parakeet_tdt"]["runtime_reason"] == "Linux runtime dependency missing"
+    assert readiness["parakeet_tdt"]["supported_platforms"] == ["linux"]
     assert readiness["faster_whisper"]["available"] is True
 
 
@@ -145,9 +153,14 @@ def test_route_to_dict_is_serializable():
     assert set(payload) >= {"engine", "language", "reason", "used_fallback", "available_engines"}
 
 
-def test_default_registry_is_honest_without_nemo():
-    # Against the real registry Parakeet/Canary are stubs, so a supported
-    # language must never resolve to them (it resolves to Whisper or None).
-    route = ar.route_asr("de")
+def test_default_registry_is_honest_without_nemo(monkeypatch):
+    from opencut.core.engine_registry import get_registry
+
+    reg = get_registry()
+    for name in (ar.PARAKEET_ENGINE, ar.CANARY_ENGINE):
+        engine = reg.get_engine(ar.TRANSCRIPTION_DOMAIN, name)
+        monkeypatch.setattr(engine, "check_fn", lambda: False)
+    reg.clear_cache()
+    route = ar.route_asr("de", registry=reg)
     assert route.engine != "parakeet_tdt"
     assert route.engine != "canary_1b_flash"
