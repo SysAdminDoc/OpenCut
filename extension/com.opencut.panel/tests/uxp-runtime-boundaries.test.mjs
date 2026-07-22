@@ -9,6 +9,11 @@ import { createI18nRuntime } from "../../com.opencut.uxp/uxp-i18n.js";
 import { createJobController } from "../../com.opencut.uxp/job-controller.js";
 import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
 import {
+  applyPremiereTheme,
+  createPremiereThemeSync,
+  normalizePremiereTheme,
+} from "../../com.opencut.uxp/uxp-theme.js";
+import {
   buildMarkerPayload,
   expandRenamePattern,
   normalizeTimelineCuts,
@@ -176,12 +181,75 @@ describe("UXP bootstrap boundary", () => {
   });
 });
 
+describe("UXP host theme boundary", () => {
+  function themeDocument(initial = "darkest") {
+    const classes = new Set();
+    const listeners = new Set();
+    const root = {
+      classList: {
+        add: (...values) => values.forEach((value) => classes.add(value)),
+        remove: (...values) => values.forEach((value) => classes.delete(value)),
+        contains: (value) => classes.has(value),
+      },
+      dataset: {},
+    };
+    return {
+      classes,
+      listeners,
+      documentRef: {
+        documentElement: root,
+        theme: {
+          getCurrent: vi.fn(() => initial),
+          onUpdated: {
+            addListener: vi.fn((listener) => listeners.add(listener)),
+            removeListener: vi.fn((listener) => listeners.delete(listener)),
+          },
+        },
+      },
+    };
+  }
+
+  it("normalizes Premiere Light, Dark, and Darkest values", () => {
+    expect(normalizePremiereTheme("light")).toBe("light");
+    expect(normalizePremiereTheme("Dark")).toBe("dark");
+    expect(normalizePremiereTheme("darkest")).toBe("darkest");
+    expect(normalizePremiereTheme("unknown")).toBe("darkest");
+  });
+
+  it("applies exactly one root theme class", () => {
+    const harness = themeDocument();
+    applyPremiereTheme("dark", harness.documentRef);
+    expect([...harness.classes]).toEqual(["theme-dark"]);
+    applyPremiereTheme("light", harness.documentRef);
+    expect([...harness.classes]).toEqual(["theme-light"]);
+    expect(harness.documentRef.documentElement.dataset.premiereTheme).toBe("light");
+  });
+
+  it("tracks live host changes and unregisters on teardown", () => {
+    const harness = themeDocument("dark");
+    const runtime = createPremiereThemeSync({ documentRef: harness.documentRef });
+    const dispose = runtime.start();
+
+    expect(runtime.currentTheme).toBe("dark");
+    expect(harness.documentRef.theme.onUpdated.addListener).toHaveBeenCalledOnce();
+    expect(harness.listeners.size).toBe(1);
+    [...harness.listeners][0]("light");
+    expect(runtime.currentTheme).toBe("light");
+    expect([...harness.classes]).toEqual(["theme-light"]);
+
+    dispose();
+    expect(harness.documentRef.theme.onUpdated.removeListener).toHaveBeenCalledOnce();
+    expect(harness.listeners.size).toBe(0);
+  });
+});
+
 describe("UXP source ownership", () => {
   it("keeps extracted runtime implementations out of main.js", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
     expect(main).toContain("createBackendClient");
     expect(main).toContain("createJobController");
     expect(main).toContain("bootstrapApplication");
+    expect(main).toContain("createPremiereThemeSync");
     expect(main).not.toContain("class BackendClient");
     expect(main).not.toContain("class JobPoller");
     expect(main).not.toContain("const I18n = {");
@@ -195,7 +263,10 @@ describe("UXP source ownership", () => {
     const tokens = readFileSync(new URL(`${root}command-center-tokens.css`, import.meta.url), "utf8");
     const layout = readFileSync(new URL(`${root}command-center-layout.css`, import.meta.url), "utf8");
     const components = readFileSync(new URL(`${root}command-center.css`, import.meta.url), "utf8");
-    expect(tokens).toContain(":root {");
+    expect(tokens).toContain(":root,");
+    expect(tokens).toContain("html.theme-darkest");
+    expect(tokens).toContain("html.theme-dark");
+    expect(tokens).toContain("html.theme-light");
     expect(layout).toContain(".oc-header {");
     expect(components).not.toContain(":root {");
     expect(index.indexOf("command-center-tokens.css")).toBeLessThan(index.indexOf("command-center-layout.css"));

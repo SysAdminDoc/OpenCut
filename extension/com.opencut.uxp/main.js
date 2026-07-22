@@ -24,6 +24,7 @@ import {
   summarizeRenamePreview,
 } from "./uxp-timeline.js";
 import { bootstrapApplication } from "./uxp-bootstrap.js";
+import { createPremiereThemeSync } from "./uxp-theme.js";
 
 /**
  * OpenCut UXP Panel — main.js
@@ -60,6 +61,7 @@ const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.41.0";
 const UXP_DEFAULT_LOCALE = "en";
 const UXP_LOCALE_DIR   = "locales";
+const UXPThemeSync     = createPremiereThemeSync({ documentRef: document });
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const CONNECTION_LABEL_KEYS = {
@@ -7581,6 +7583,12 @@ async function runShortsPipelineUxp() {
 
 async function initApp() {
   console.log(`[OpenCut UXP] v${VERSION} initialising...`);
+  UXPThemeSync.start();
+  window.addEventListener("beforeunload", () => {
+    UXPThemeSync.dispose();
+    JobPoller.closeSse();
+    stopMediaScanInterval();
+  }, { once: true });
   const headerVersion = document.getElementById("uxpHeaderVersion");
   const aboutVersion = document.getElementById("uxpVersionDisplay");
   if (headerVersion) headerVersion.textContent = `v${VERSION}`;
@@ -7690,12 +7698,6 @@ async function initApp() {
     }, runtimeState.healthBackoffMs);
   }
   scheduleHealthCheck();
-
-  // Clean up SSE connections on panel close/navigation
-  window.addEventListener("beforeunload", () => {
-    JobPoller.closeSse();
-    stopMediaScanInterval();
-  });
 
   // -------------------------------------------------------------
   // Agent tab — F143 conductor + Q3/Q7/Q8 + F146 MCP bridge
@@ -8238,5 +8240,6 @@ function initCaptionDisplaySettingsCard() {
 
 // Bootstrap
 bootstrapApplication(initApp, (err) => {
+  UXPThemeSync.dispose();
   console.error("[OpenCut UXP] Init error:", err);
 });

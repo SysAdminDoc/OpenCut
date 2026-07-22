@@ -707,7 +707,7 @@ body.oc-disconnected .oc-connection {
 .oc-select,
 .oc-textarea,
 .oc-icon-btn {
-  background: #202630;
+  background: var(--cc-control);
 }
 
 .oc-card:hover,
@@ -1047,4 +1047,115 @@ html.theme-light .oc-select {
   .oc-workspace-guide {
     transition: none;
   }
+}
+
+/* Premiere Light uses the same component hierarchy with light-safe state colors. */
+html.theme-light body.oc-disconnected .oc-connection {
+  border-color: rgba(137, 93, 12, 0.30);
+  background: rgba(137, 93, 12, 0.09);
+}
+
+html.theme-light body.oc-disconnected .oc-connection .oc-conn-label {
+  color: var(--cc-warning);
+}
+
+html.theme-light .oc-tab:hover,
+html.theme-light .oc-tab:focus-visible {
+  background: rgba(34, 48, 69, 0.06);
+}
+
+html.theme-light .oc-workspace-subtitle,
+html.theme-light .oc-workspace-guide-text,
+html.theme-light .oc-hint,
+html.theme-light .oc-card-copy,
+html.theme-light .oc-caption-intro,
+html.theme-light .oc-result-meta,
+html.theme-light .oc-engine-meta,
+html.theme-light .oc-shortcut-text,
+html.theme-light .oc-empty-state p,
+html.theme-light .oc-inline-stat .oc-label,
+html.theme-light .oc-command-state-label {
+  color: var(--cc-muted);
+}
+
+html.theme-light #tab-settings .oc-card > .oc-hint:first-child,
+html.theme-light #tab-timeline .oc-card-body > .oc-hint:first-child,
+html.theme-light #projectReportBody > .oc-hint:first-child {
+  color: var(--cc-muted);
+}
+
+html.theme-light .oc-inline-value,
+html.theme-light .oc-command-state-value,
+html.theme-light .oc-engine-domain {
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-status-line {
+  color: var(--cc-muted);
+}
+
+html.theme-light .oc-status-line[data-state="error"] {
+  border-left-color: rgba(168, 63, 60, 0.72);
+  background: rgba(168, 63, 60, 0.08);
+  color: var(--cc-danger);
+}
+
+html.theme-light .oc-status-line[data-state="warning"] {
+  border-left-color: rgba(137, 93, 12, 0.72);
+  background: rgba(137, 93, 12, 0.08);
+  color: var(--cc-warning);
+}
+
+html.theme-light .oc-status-line[data-state="ready"],
+html.theme-light .oc-status-line[data-state="success"] {
+  border-left-color: rgba(40, 127, 100, 0.72);
+  background: rgba(40, 127, 100, 0.08);
+  color: var(--cc-success);
+}
+
+html.theme-light .oc-btn-secondary,
+html.theme-light .oc-cancel-btn,
+html.theme-light .oc-icon-btn,
+html.theme-light .oc-chip,
+html.theme-light .oc-input,
+html.theme-light .oc-select,
+html.theme-light .oc-textarea {
+  border-color: var(--cc-border);
+  background: var(--cc-control);
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-btn-secondary:not(:disabled):hover,
+html.theme-light .oc-cancel-btn:not(:disabled):hover,
+html.theme-light .oc-icon-btn:not(:disabled):hover,
+html.theme-light .oc-chip:not([aria-disabled="true"]):hover {
+  border-color: var(--cc-border-strong);
+  background: var(--cc-surface-raised);
+  color: var(--cc-text);
+}
+
+html.theme-light .oc-btn:disabled,
+html.theme-light .oc-cancel-btn:disabled,
+html.theme-light .oc-icon-btn:disabled,
+html.theme-light .oc-deliv-btn:disabled,
+html.theme-light .oc-chip[aria-disabled="true"] {
+  border-color: var(--cc-border);
+  background: #e1e6ed;
+  color: #687386;
+  opacity: 1;
+  filter: none;
+}
+
+html.theme-light #tab-settings .oc-inline-summary-grid--settings {
+  background: rgba(34, 48, 69, 0.025);
+}
+
+html.theme-light .oc-result-list-item,
+html.theme-light .oc-workspace-meta-item,
+html.theme-light .oc-result-insight,
+html.theme-light .oc-empty-state,
+html.theme-light .oc-caption-preview-area {
+  border-color: var(--cc-border);
+  background: var(--cc-surface-raised);
+  color: var(--cc-text);
 }

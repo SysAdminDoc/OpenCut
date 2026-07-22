@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Follow Premiere's live UXP theme
+
+- Synchronized the UXP shell with Premiere Pro's Light, Dark, and Darkest host
+  themes at startup and on live updates, with deterministic fallback behavior
+  and listener cleanup during teardown.
+- Added light-safe component and state colors, refreshed the rendered Light
+  baselines, and locked primary text, secondary text, and icon contrast through
+  a mocked UXP theme API rather than browser media emulation.
+
 ### Fixed - Gate public trust and installation claims on generated facts
 
 - Added a deterministic project-facts manifest for version, Python/platform
