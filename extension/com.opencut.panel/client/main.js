@@ -1057,7 +1057,13 @@
             if (e.target === overlay) finish(closeValue, false);
         });
         document.body.appendChild(overlay);
-        activateOverlay(overlay, { initialFocus: input || actions.querySelector("button:last-child") });
+        var initialAction = options.initialAction === "cancel"
+            ? actions.querySelector("button:first-child")
+            : actions.querySelector("button:last-child");
+        activateOverlay(overlay, {
+            initialFocus: input || initialAction,
+            returnFocus: options.returnFocus || null
+        });
     }
 
     function showPanelConfirm(options, callback) {
@@ -1070,6 +1076,166 @@
         showPanelDialog(options, function (value) {
             if (typeof callback === "function") callback(value === true);
         });
+    }
+
+    function destructivePlanFromResponse(data) {
+        if (!data || typeof data !== "object") return null;
+        if (data.destructive_plan && typeof data.destructive_plan === "object") {
+            return data.destructive_plan;
+        }
+        if (data.plan && typeof data.plan === "object" && data.plan.confirm_token) {
+            return data.plan;
+        }
+        return null;
+    }
+
+    function destructivePayload(payload, extra) {
+        var result = {};
+        var key;
+        payload = payload || {};
+        extra = extra || {};
+        for (key in payload) {
+            if (Object.prototype.hasOwnProperty.call(payload, key)) result[key] = payload[key];
+        }
+        for (key in extra) {
+            if (Object.prototype.hasOwnProperty.call(extra, key)) result[key] = extra[key];
+        }
+        return result;
+    }
+
+    function destructivePlanItemLabel(item, index) {
+        item = item || {};
+        var label = item.key || item.name || item.path || item.id || item.endpoint ||
+            t("destructive.item_fallback", "Item {index}").replace("{index}", index + 1);
+        var details = [];
+        if (item.endpoint && item.endpoint !== label) details.push(item.endpoint);
+        if (typeof item.bytes === "number") {
+            details.push(t("destructive.bytes", "{count} bytes").replace("{count}", item.bytes));
+        }
+        return (index + 1) + ". " + label + (details.length ? " — " + details.join(", ") : "");
+    }
+
+    function destructivePlanDetail(plan) {
+        plan = plan || {};
+        var records = plan.records && plan.records.length ? plan.records : (plan.targets || []);
+        var lines = [
+            t("destructive.affected_count", "Affected items: {count}").replace("{count}", records.length),
+            plan.reversible
+                ? t("destructive.reversible", "Recovery: This action can be restored from OpenCut's tombstones.")
+                : t("destructive.irreversible", "Recovery: This action is permanent and cannot be undone.")
+        ];
+        var visibleCount = Math.min(records.length, 12);
+        for (var i = 0; i < visibleCount; i++) {
+            lines.push(destructivePlanItemLabel(records[i], i));
+        }
+        if (records.length > visibleCount) {
+            lines.push(t("destructive.more_items", "+{count} more items")
+                .replace("{count}", records.length - visibleCount));
+        }
+        return lines.join("\n");
+    }
+
+    function destructiveErrorMessage(err, data, fallback) {
+        var message = data && data.error
+            ? data.error
+            : (err && err.message ? err.message : String(err || t("toast.unknown_error", "Unknown error")));
+        if (data && data.suggestion) message += " " + data.suggestion;
+        return fallback.replace("{error}", message);
+    }
+
+    function runDestructiveAction(options) {
+        options = options || {};
+        var trigger = options.trigger || null;
+        var triggerWasDisabled = !!(trigger && trigger.disabled);
+        var triggerText = trigger ? trigger.textContent : "";
+        var method = options.method || "POST";
+
+        function setBusy(busy, label) {
+            if (trigger) trigger.disabled = busy ? true : triggerWasDisabled;
+            if (trigger && busy && label) trigger.textContent = label;
+            if (trigger && !busy) trigger.textContent = triggerText;
+        }
+
+        function fail(err, data, fallback) {
+            setBusy(false);
+            showAlert(destructiveErrorMessage(err, data, fallback));
+        }
+
+        function execute(confirmToken) {
+            setBusy(true, options.executeBusyLabel);
+            api(method, options.path, destructivePayload(options.payload, {
+                confirm_token: confirmToken
+            }), function (err, data) {
+                if (err && data && data.code === "DESTRUCTIVE_CONFIRMATION_REQUIRED") {
+                    showToast(
+                        t("destructive.plan_expired", "The deletion plan changed or expired. Review the refreshed plan before continuing."),
+                        "warning"
+                    );
+                    preview(true);
+                    return;
+                }
+                if (err || (data && (data.success === false || data.error))) {
+                    fail(
+                        err,
+                        data,
+                        options.executeError || t("destructive.execute_failed", "Could not complete this action: {error}")
+                    );
+                    return;
+                }
+                setBusy(false);
+                if (typeof options.onSuccess === "function") options.onSuccess(data || {});
+            });
+        }
+
+        function preview(refreshed) {
+            setBusy(true, options.previewBusyLabel);
+            api(method, options.path, destructivePayload(options.payload, {
+                dry_run: true
+            }), function (err, data) {
+                if (err || (data && data.success === false)) {
+                    fail(
+                        err,
+                        data,
+                        t("destructive.preview_failed", "Could not preview this action: {error}")
+                    );
+                    return;
+                }
+                var plan = destructivePlanFromResponse(data);
+                var confirmToken = data && data.confirm_token
+                    ? data.confirm_token
+                    : (plan && plan.confirm_token);
+                if (!plan || !confirmToken) {
+                    fail(
+                        new Error(t("destructive.invalid_plan", "The backend did not return a signed deletion plan.")),
+                        data,
+                        t("destructive.preview_failed", "Could not preview this action: {error}")
+                    );
+                    return;
+                }
+                setBusy(false);
+                showPanelConfirm({
+                    title: options.title || t("destructive.review_title", "Review destructive action"),
+                    message: refreshed
+                        ? t("destructive.review_refreshed", "The previous plan changed or expired. Review the refreshed affected items before deciding again.")
+                        : (options.message || t("destructive.review_message", "Review the affected items and recovery details before continuing.")),
+                    detail: destructivePlanDetail(plan),
+                    cancelLabel: t("common.cancel", "Cancel"),
+                    confirmLabel: options.confirmLabel || t("destructive.confirm", "Confirm deletion"),
+                    confirmClass: options.confirmClass || "btn btn-primary",
+                    initialAction: "cancel",
+                    returnFocus: trigger,
+                    tone: "warning"
+                }, function (confirmed) {
+                    if (!confirmed) {
+                        setBusy(false);
+                        return;
+                    }
+                    execute(confirmToken);
+                });
+            });
+        }
+
+        preview(false);
     }
 
     function showPanelPrompt(options, callback) {
@@ -10707,8 +10873,15 @@
         if (el.deletePresetBtn) el.deletePresetBtn.addEventListener("click", function () {
             if (!el.presetSelect || !el.presetSelect.value) return;
             var name = el.presetSelect.value;
-            api("POST", "/presets/delete", { name: name }, function (err, data) {
-                if (!err && data && data.success) {
+            runDestructiveAction({
+                method: "POST",
+                path: "/presets/delete",
+                payload: { name: name },
+                trigger: el.deletePresetBtn,
+                title: t("destructive.delete_preset_title", "Delete preset?"),
+                message: t("destructive.delete_preset_message", "Review the preset record and recovery details before deleting it."),
+                confirmLabel: t("destructive.delete_preset_confirm", "Delete Preset"),
+                onSuccess: function () {
                     showAlert(t("toast.preset_deleted", "Preset deleted: {name}").replace("{name}", name));
                     showToast(t("toast.preset_deleted_toast", "Preset deleted"), "success");
                     refreshPresetList();
@@ -11025,16 +11198,19 @@
                 showAlert(t("models.delete_missing_path", "Couldn't determine which model to delete."));
                 return;
             }
-            btn.disabled = true;
-            btn.textContent = t("models.deleting", "Deleting…");
-            api("POST", "/models/delete", { path: path }, function (err, data) {
-                if (!err && data && data.success) {
+            runDestructiveAction({
+                method: "POST",
+                path: "/models/delete",
+                payload: { path: path },
+                trigger: btn,
+                title: t("destructive.delete_model_title", "Delete model?"),
+                message: t("destructive.delete_model_message", "Review the model cache target. This deletion cannot be undone."),
+                confirmLabel: t("destructive.delete_model_confirm", "Delete Model"),
+                executeBusyLabel: t("models.deleting", "Deleting…"),
+                executeError: t("models.delete_failed", "Failed to delete model.") + " {error}",
+                onSuccess: function () {
                     showToast(t("models.deleted", "Model deleted"), "success");
                     refreshModelList();
-                } else {
-                    btn.disabled = false;
-                    btn.textContent = t("models.delete", "Delete");
-                    showAlert(t("models.delete_failed", "Failed to delete model."));
                 }
             });
         });
@@ -11187,14 +11363,22 @@
     function initQueue() {
         if (!el.clearQueueBtn) return;
         el.clearQueueBtn.addEventListener("click", function () {
-            api("POST", "/queue/clear", {}, function (err, data) {
-                if (!err && data) {
+            runDestructiveAction({
+                method: "POST",
+                path: "/queue/clear",
+                payload: {},
+                trigger: el.clearQueueBtn,
+                title: t("destructive.clear_queue_title", "Clear queued jobs?"),
+                message: t("destructive.clear_queue_message", "Review every queued job that will be removed. Running jobs are not affected."),
+                confirmLabel: t("destructive.clear_queue_confirm", "Clear Queue"),
+                onSuccess: function (data) {
                     showAlert(t("queue.cleared", "Queue cleared: {count} jobs removed.")
                         .replace("{count}", data.removed || 0));
                     refreshQueueStatus();
                 }
             });
         });
+        refreshQueueStatus();
     }
 
     function refreshQueueStatus() {
@@ -12485,10 +12669,18 @@
             el.deleteCustomWorkflowBtn.addEventListener("click", function () {
                 var sel = el.savedWorkflowSelect;
                 if (!sel || !sel.value) return;
-                api("DELETE", "/workflow/delete", { name: sel.value }, function (err, data) {
-                    if (!err && !(data && data.error)) {
+                var workflowName = sel.value;
+                runDestructiveAction({
+                    method: "DELETE",
+                    path: "/workflow/delete",
+                    payload: { name: workflowName },
+                    trigger: el.deleteCustomWorkflowBtn,
+                    title: t("destructive.delete_workflow_title", "Delete workflow?"),
+                    message: t("destructive.delete_workflow_message", "Review the workflow record and recovery details before deleting it."),
+                    confirmLabel: t("destructive.delete_workflow_confirm", "Delete Workflow"),
+                    onSuccess: function () {
                         showToast(t("workflow.deleted", "Workflow deleted"), "success");
-                        updateCustomWorkflowSummary(t("workflow.deleted_summary", "Deleted {name} from the saved workflow library.").replace("{name}", sel.value), "warning");
+                        updateCustomWorkflowSummary(t("workflow.deleted_summary", "Deleted {name} from the saved workflow library.").replace("{name}", workflowName), "warning");
                         refreshSavedWorkflows();
                         loadWorkflowPresets();
                     }

@@ -40,6 +40,9 @@ function hostEnvironment() {
 async function preparePage(page, surface, theme, backendFixtures = {}) {
   const pageErrors = [];
   const capturedRequests = [];
+  const destructiveTokens = new Map();
+  const destructivePreviewCounts = new Map();
+  let queueTokenExpired = false;
   const locale = backendFixtures.locale || "en-US";
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
@@ -132,6 +135,137 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   await page.route("http://127.0.0.1:*/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.port === "41737") return route.continue();
+    if (backendFixtures.destructiveProtocol) {
+      const method = route.request().method();
+      const listFixtures = {
+        "/presets": {
+          "Editorial Clean": { settings: { denoise: true }, saved: 1 },
+        },
+        "/models/list": {
+          models: [
+            {
+              name: "whisper-fixture.bin",
+              path: "C:/OpenCut/models/whisper-fixture.bin",
+              size_mb: 24,
+              source: "whisper",
+            },
+          ],
+          total_mb: 24,
+        },
+        "/queue/list": [
+          { id: "queued-fixture", endpoint: "/silence", status: "queued" },
+        ],
+        "/workflows/list": [
+          {
+            name: "Fixture Workflow",
+            description: "Rendered destructive protocol fixture",
+            steps: [{ endpoint: "/silence", label: "Silence" }],
+          },
+        ],
+      };
+      if (method === "GET" && Object.hasOwn(listFixtures, url.pathname)) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(listFixtures[url.pathname]),
+        });
+      }
+      const destructivePaths = new Set([
+        "/presets/delete",
+        "/models/delete",
+        "/queue/clear",
+        "/workflow/delete",
+      ]);
+      if (destructivePaths.has(url.pathname) && method !== "GET") {
+        const body = route.request().postDataJSON() || {};
+        capturedRequests.push({
+          destructive: true,
+          path: url.pathname,
+          method,
+          body,
+        });
+        const definitions = {
+          "/presets/delete": {
+            operation: "user_data.preset.delete",
+            records: [{ key: body.name, kind: "preset", bytes: 32 }],
+            targets: [],
+            reversible: true,
+          },
+          "/models/delete": {
+            operation: "models.delete",
+            records: [],
+            targets: [{ path: body.path, bytes: 25165824 }],
+            reversible: false,
+          },
+          "/queue/clear": {
+            operation: "queue.clear",
+            records: [
+              { id: "queued-fixture", endpoint: "/silence", status: "queued" },
+            ],
+            targets: [],
+            reversible: false,
+          },
+          "/workflow/delete": {
+            operation: "user_data.workflow.delete",
+            records: [{ key: body.name, kind: "workflow", bytes: 48 }],
+            targets: [],
+            reversible: true,
+          },
+        };
+        if (body.dry_run) {
+          const previewCount =
+            (destructivePreviewCounts.get(url.pathname) || 0) + 1;
+          destructivePreviewCounts.set(url.pathname, previewCount);
+          const token = `${url.pathname}-token-${previewCount}`;
+          destructiveTokens.set(url.pathname, token);
+          const plan = {
+            ...definitions[url.pathname],
+            metadata: { route: url.pathname },
+            confirm_token: token,
+          };
+          const payload =
+            url.pathname === "/queue/clear"
+              ? { success: true, dry_run: true, removed: 0, plan }
+              : {
+                  success: true,
+                  dry_run: true,
+                  destructive_plan: plan,
+                  confirm_token: token,
+                };
+          return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(payload),
+          });
+        }
+        if (
+          body.confirm_token !== destructiveTokens.get(url.pathname) ||
+          (url.pathname === "/queue/clear" && !queueTokenExpired)
+        ) {
+          if (url.pathname === "/queue/clear") queueTokenExpired = true;
+          return route.fulfill({
+            status: 409,
+            contentType: "application/json",
+            body: JSON.stringify({
+              error: "confirm_token required",
+              code: "DESTRUCTIVE_CONFIRMATION_REQUIRED",
+              suggestion: "Refresh and review the plan.",
+            }),
+          });
+        }
+        const successPayloads = {
+          "/presets/delete": { success: true, deleted: body.name },
+          "/models/delete": { success: true, deleted: [body.path] },
+          "/queue/clear": { success: true, removed: 1 },
+          "/workflow/delete": { success: true, deleted: body.name },
+        };
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(successPayloads[url.pathname]),
+        });
+      }
+    }
     if (url.pathname === "/plugins/trust" && backendFixtures.pluginTrust) {
       return route.fulfill({
         status: 200,
@@ -828,6 +962,127 @@ const PLUGIN_WORKER_TRUST_FIXTURE = {
     restart_worker: { route: "/plugins/workers/restart", method: "POST" },
   },
 };
+
+test("CEP destructive controls preview signed plans before confirmation", async ({
+  page,
+}) => {
+  const { pageErrors, capturedRequests } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { destructiveProtocol: true },
+  );
+  const dialog = page.locator(".panel-dialog-overlay");
+
+  await page.locator("#navTabSettings").click();
+  await expect(page.locator("#presetSelect option[value='Editorial Clean']")).toHaveCount(1);
+  await page.locator("#presetSelect").evaluate((select) => {
+    select.value = "Editorial Clean";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  const presetDelete = page.locator("#deletePresetBtn");
+  await presetDelete.click();
+  await expect(dialog).toContainText("Delete preset?");
+  await expect(dialog).toContainText("Affected items: 1");
+  await expect(dialog).toContainText("can be restored");
+  const cancelButton = dialog.getByRole("button", { name: "Cancel" });
+  const presetConfirm = dialog.getByRole("button", { name: "Delete Preset" });
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(presetConfirm).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(presetDelete).toBeFocused();
+  await expect
+    .poll(
+      () =>
+        capturedRequests.filter(
+          (request) => request.path === "/presets/delete",
+        ).length,
+    )
+    .toBe(1);
+  expect(
+    capturedRequests.find((request) => request.path === "/presets/delete")
+      .body,
+  ).toEqual({ name: "Editorial Clean", dry_run: true });
+
+  await presetDelete.click();
+  await dialog.getByRole("button", { name: "Delete Preset" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect
+    .poll(
+      () =>
+        capturedRequests.filter(
+          (request) =>
+            request.path === "/presets/delete" && request.body.confirm_token,
+        ).length,
+    )
+    .toBe(1);
+
+  await page.locator("#refreshModelsBtn").click();
+  const modelDelete = page.locator(".model-item-delete");
+  await expect(modelDelete).toBeVisible();
+  await modelDelete.click();
+  await expect(dialog).toContainText("Delete model?");
+  await expect(dialog).toContainText("25165824 bytes");
+  await expect(dialog).toContainText("permanent and cannot be undone");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Delete Model" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const clearQueue = page.locator("#clearQueueBtn");
+  await expect(clearQueue).toBeVisible();
+  await clearQueue.click();
+  await expect(dialog).toContainText("Clear queued jobs?");
+  await expect(dialog).toContainText("queued-fixture");
+  await dialog.getByRole("button", { name: "Clear Queue" }).click();
+  await expect(dialog).toContainText(/previous plan changed or expired/i);
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Clear Queue" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await page.locator("#navTabExport").click();
+  await page.locator("button[data-sub='exp-batch']").click();
+  await expect(
+    page.locator("#savedWorkflowSelect option[value='Fixture Workflow']"),
+  ).toHaveCount(1);
+  await page.locator("#savedWorkflowSelect").evaluate((select) => {
+    select.value = "Fixture Workflow";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.locator("#deleteCustomWorkflowBtn").click();
+  await expect(dialog).toContainText("Delete workflow?");
+  await expect(dialog).toContainText("Fixture Workflow");
+  await expect(dialog).toContainText("can be restored");
+  await dialog.getByRole("button", { name: "Delete Workflow" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  const destructiveRequests = capturedRequests.filter(
+    (request) => request.destructive,
+  );
+  for (const path of [
+    "/presets/delete",
+    "/models/delete",
+    "/queue/clear",
+    "/workflow/delete",
+  ]) {
+    const requests = destructiveRequests.filter(
+      (request) => request.path === path,
+    );
+    expect(requests[0].body.dry_run).toBe(true);
+    expect(requests.some((request) => request.body.confirm_token)).toBe(true);
+    expect(
+      requests.findIndex((request) => request.body.confirm_token),
+    ).toBeGreaterThan(0);
+  }
+  expect(
+    destructiveRequests.filter((request) => request.path === "/queue/clear"),
+  ).toHaveLength(4);
+  expect(pageErrors).toEqual([]);
+});
 
 for (const surfaceName of ["cep", "uxp"]) {
   test(`${surfaceName} requires explicit publisher and capability approval`, async ({
