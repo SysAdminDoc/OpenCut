@@ -98,10 +98,6 @@ html.theme-light .oc-tab.active {
   color: #294eaa;
 }
 
-.oc-nav-footer {
-  display: none;
-}
-
 .oc-content {
   gap: 12px;
   background: var(--cc-bg);

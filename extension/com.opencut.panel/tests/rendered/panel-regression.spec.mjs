@@ -692,6 +692,7 @@ test("UXP follows live Premiere theme updates with legible tokens and cleanup", 
 
     const sidebar = getComputedStyle(document.querySelector(".oc-header")).backgroundColor;
     const icon = getComputedStyle(document.querySelector(".oc-logo-mark path")).fill;
+    const connection = getComputedStyle(document.getElementById("connectionStatus"));
     const secondary = getComputedStyle(document.querySelector("#tab-settings .oc-hint")).color;
     const surfaceValue = getComputedStyle(document.querySelector("#tab-settings .oc-settings-group")).backgroundColor;
     const surfaceParts = surfaceValue.match(/[\d.]+/g) || [];
@@ -704,6 +705,7 @@ test("UXP follows live Premiere theme updates with legible tokens and cleanup", 
       background,
       text,
       icon,
+      connectionBackground: connection.backgroundColor,
       textContrast: contrast(text, background),
       iconContrast: contrast(icon, sidebar),
       secondaryContrast: contrast(secondary, surface),
@@ -728,6 +730,7 @@ test("UXP follows live Premiere theme updates with legible tokens and cleanup", 
   expect(light.textContrast).toBeGreaterThanOrEqual(4.5);
   expect(light.iconContrast).toBeGreaterThanOrEqual(3);
   expect(light.secondaryContrast).toBeGreaterThanOrEqual(4.5);
+  expect(light.connectionBackground).toBe("rgba(0, 0, 0, 0)");
 
   await page.evaluate(() => window.__opencutThemeHarness.emit("darkest"));
   await expect(page.locator("html")).toHaveClass(/theme-darkest/);
@@ -1056,6 +1059,9 @@ for (const width of [480, 520]) {
           const title = document.getElementById("workspaceOverviewTitle")?.getBoundingClientRect();
           const state = document.getElementById("workspaceGuide")?.getBoundingClientRect();
           const action = document.getElementById("workspaceGuideAction")?.getBoundingClientRect();
+          const settingsGroup = document.querySelector(
+            "#tab-settings.active > .oc-settings-group:not([hidden])",
+          )?.getBoundingClientRect();
           return {
             mainScrollTop: document.getElementById("mainContent")?.scrollTop || 0,
             nav,
@@ -1063,6 +1069,7 @@ for (const width of [480, 520]) {
             title,
             state,
             action,
+            settingsGroup,
           };
         });
         expect(geometry.mainScrollTop).toBe(0);
@@ -1071,6 +1078,9 @@ for (const width of [480, 520]) {
         for (const region of [geometry.title, geometry.state, geometry.action].filter(Boolean)) {
           expect(region.top).toBeGreaterThanOrEqual(0);
           expect(region.bottom).toBeLessThanOrEqual(800);
+        }
+        if (tabName === "settings") {
+          expect(geometry.settingsGroup.width).toBeGreaterThanOrEqual(width - 32);
         }
       }
 
@@ -1241,6 +1251,64 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   await page.locator("#settingsWorkspaceSearchBtn").click();
   await expect(page.locator(".oc-tab[data-tab='search']")).toHaveAttribute("aria-selected", "true");
   expect(uxp.pageErrors).toEqual([]);
+});
+
+test("UXP hierarchy keeps tertiary actions, suggestions, and notices visually open", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "uxp", "dark", 1200, {
+    height: 800,
+  });
+
+  await page.locator(".oc-tab[data-tab='settings']").click();
+  const settingsGrammar = await page.evaluate(() => {
+    const action = getComputedStyle(document.getElementById("settingsWorkspaceSearchBtn"));
+    return {
+      footerCount: document.querySelectorAll(".oc-nav-footer").length,
+      actionBorder: action.borderTopWidth,
+      actionRadius: action.borderRadius,
+      actionBackground: action.backgroundColor,
+    };
+  });
+  expect(settingsGrammar).toEqual({
+    footerCount: 0,
+    actionBorder: "0px",
+    actionRadius: "0px",
+    actionBackground: "rgba(0, 0, 0, 0)",
+  });
+
+  await page.locator(".oc-tab[data-tab='search']").click();
+  const suggestionGrammar = await page.locator(".oc-chip-group .oc-chip").first().evaluate((chip) => {
+    const style = getComputedStyle(chip);
+    return {
+      borderTop: style.borderTopWidth,
+      radius: style.borderRadius,
+      background: style.backgroundColor,
+    };
+  });
+  expect(suggestionGrammar).toEqual({
+    borderTop: "0px",
+    radius: "0px",
+    background: "rgba(0, 0, 0, 0)",
+  });
+
+  await page.locator(".oc-tab[data-tab='timeline']").click();
+  const noticeGrammar = await page.locator(".oc-uxp-notice").evaluate((notice) => {
+    const style = getComputedStyle(notice);
+    return {
+      borderTop: style.borderTopWidth,
+      borderLeft: style.borderLeftWidth,
+      radius: style.borderRadius,
+      background: style.backgroundColor,
+    };
+  });
+  expect(noticeGrammar).toEqual({
+    borderTop: "0px",
+    borderLeft: "2px",
+    radius: "0px",
+    background: "rgba(0, 0, 0, 0)",
+  });
+  expect(pageErrors).toEqual([]);
 });
 
 test("CEP tool submenus keep every label readable behind explicit overflow controls", async ({
