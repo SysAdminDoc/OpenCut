@@ -1,44 +1,8 @@
 /* OpenCut UXP command-center color and elevation tokens. */
 
-:root {
-  --cc-bg: #0a0d12;
-  --cc-sidebar: #0c1016;
-  --cc-surface: #11161e;
-  --cc-surface-raised: #151b24;
-  --cc-control: #1a212c;
-  --cc-border: rgba(196, 210, 230, 0.13);
-  --cc-border-strong: rgba(196, 210, 230, 0.22);
-  --cc-text: #f3f6fb;
-  --cc-muted: #aab4c3;
-  --cc-accent: #7da2ff;
-  --cc-accent-soft: rgba(125, 162, 255, 0.14);
-  --cc-success: #63c7a5;
-  --cc-warning: #e8b44d;
-  --cc-danger: #e37972;
-  --cc-radius: 12px;
-  --cc-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
-}
-
-html.theme-light {
-  --cc-bg: #edf1f6;
-  --cc-sidebar: #f7f9fc;
-  --cc-surface: #ffffff;
-  --cc-surface-raised: #f6f8fb;
-  --cc-control: #edf1f6;
-  --cc-border: rgba(34, 48, 69, 0.14);
-  --cc-border-strong: rgba(34, 48, 69, 0.24);
-  --cc-text: #182132;
-  --cc-muted: #5e697a;
-  --cc-accent: #466fd3;
-  --cc-accent-soft: rgba(70, 111, 211, 0.12);
-  --cc-success: #287f64;
-  --cc-warning: #986a13;
-  --cc-danger: #ad4845;
-  --cc-shadow: 0 14px 32px rgba(38, 52, 73, 0.10);
-}
-
-/* Professional editor refinement tokens. */
-:root {
+:root,
+html.theme-darkest {
+  color-scheme: dark;
   --cc-bg: #0d0f13;
   --cc-sidebar: #101319;
   --cc-surface: #171b22;
@@ -55,4 +19,84 @@ html.theme-light {
   --cc-danger: #d68680;
   --cc-radius: 10px;
   --cc-shadow: none;
+}
+
+html.theme-dark {
+  color-scheme: dark;
+  --cc-bg: #1b1e23;
+  --cc-sidebar: #20242a;
+  --cc-surface: #272b32;
+  --cc-surface-raised: #2d323a;
+  --cc-control: #343a44;
+  --cc-border: rgba(226, 231, 239, 0.13);
+  --cc-border-strong: rgba(226, 231, 239, 0.22);
+  --cc-text: #f0f2f5;
+  --cc-muted: #b8bec7;
+  --cc-accent: #91aff7;
+  --cc-accent-soft: rgba(145, 175, 247, 0.15);
+  --cc-success: #7bc2a5;
+  --cc-warning: #e1ba70;
+  --cc-danger: #df918a;
+  --cc-radius: 10px;
+  --cc-shadow: none;
+
+  --bg-primary: #1b1e23;
+  --bg-secondary: #20242a;
+  --bg-card: #272b32;
+  --bg-card-hdr: #2d323a;
+  --bg-input: #20242a;
+  --bg-hover: #343a44;
+  --text-primary: #f0f2f5;
+  --text-secondary: #b8bec7;
+  --text-disabled: #7e858f;
+  --border: #3c424c;
+  --border-light: #4a515d;
+}
+
+html.theme-light {
+  color-scheme: light;
+  --cc-bg: #edf1f6;
+  --cc-sidebar: #f7f9fc;
+  --cc-surface: #ffffff;
+  --cc-surface-raised: #f6f8fb;
+  --cc-control: #e7ecf3;
+  --cc-border: rgba(34, 48, 69, 0.16);
+  --cc-border-strong: rgba(34, 48, 69, 0.28);
+  --cc-text: #182132;
+  --cc-muted: #5e697a;
+  --cc-accent: #466fd3;
+  --cc-accent-soft: rgba(70, 111, 211, 0.13);
+  --cc-success: #287f64;
+  --cc-warning: #895d0c;
+  --cc-danger: #a83f3c;
+  --cc-radius: 10px;
+  --cc-shadow: 0 14px 32px rgba(38, 52, 73, 0.10);
+
+  --bg-primary: #edf1f6;
+  --bg-secondary: #f7f9fc;
+  --bg-card: #ffffff;
+  --bg-card-hdr: #f6f8fb;
+  --bg-input: #ffffff;
+  --bg-hover: #e4e9f0;
+  --text-primary: #182132;
+  --text-secondary: #5e697a;
+  --text-disabled: #7a8493;
+  --border: #d3dae5;
+  --border-light: #c4cdd9;
+  --border-focus: #466fd3;
+  --success: #287f64;
+  --success-dim: rgba(40, 127, 100, 0.12);
+  --error: #a83f3c;
+  --error-dim: rgba(168, 63, 60, 0.12);
+  --warning: #895d0c;
+  --warning-dim: rgba(137, 93, 12, 0.12);
+  --info: #2c6eaa;
+}
+
+html.theme-light body {
+  --oc-accent-rgb: 70, 111, 211;
+  --oc-warm-rgb: 137, 93, 12;
+  --accent: rgb(var(--oc-accent-rgb));
+  --accent-hover: #315dbd;
+  --accent-dim: rgba(var(--oc-accent-rgb), 0.13);
 }

@@ -47,7 +47,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
   await page.addInitScript(
-    ({ surfaceName, selectedTheme, environment, localeTag, forceEventSourceError }) => {
+    ({ surfaceName, selectedTheme, environment, localeTag, forceEventSourceError, hostTheme }) => {
       localStorage.clear();
       localStorage.setItem("opencut_debug", "0");
       Object.defineProperty(navigator, "language", {
@@ -103,6 +103,26 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             },
           },
         );
+      } else {
+        const themeListeners = new Set();
+        let currentHostTheme = hostTheme;
+        Object.defineProperty(document, "theme", {
+          configurable: true,
+          value: {
+            getCurrent: () => currentHostTheme,
+            onUpdated: {
+              addListener: (listener) => themeListeners.add(listener),
+              removeListener: (listener) => themeListeners.delete(listener),
+            },
+          },
+        });
+        window.__opencutThemeHarness = {
+          emit(theme) {
+            currentHostTheme = theme;
+            themeListeners.forEach((listener) => listener(theme));
+          },
+          listenerCount: () => themeListeners.size,
+        };
       }
       window.WebSocket = class RenderedWebSocket {
         static OPEN = 1;
@@ -134,6 +154,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       environment: hostEnvironment(),
       localeTag: locale,
       forceEventSourceError: Boolean(backendFixtures.boundaryReview),
+      hostTheme: theme === "light" ? "light" : theme === "dark" ? "dark" : "darkest",
     },
   );
   await page.route("http://127.0.0.1:*/**", async (route) => {
@@ -576,6 +597,93 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
     }
   }
 }
+
+test("UXP follows live Premiere theme updates with legible tokens and cleanup", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "uxp", "dark", 520);
+
+  const snapshot = async () => page.evaluate(() => {
+    const linearize = (channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = ([red, green, blue]) => (
+      0.2126 * linearize(red) +
+      0.7152 * linearize(green) +
+      0.0722 * linearize(blue)
+    );
+    const parseRgb = (value) => (
+      (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number)
+    );
+    const contrast = (foreground, background) => {
+      const foregroundLum = luminance(parseRgb(foreground));
+      const backgroundLum = luminance(parseRgb(background));
+      return (Math.max(foregroundLum, backgroundLum) + 0.05) /
+        (Math.min(foregroundLum, backgroundLum) + 0.05);
+    };
+    const probe = document.createElement("span");
+    probe.style.color = "var(--cc-text)";
+    probe.style.backgroundColor = "var(--cc-bg)";
+    document.body.appendChild(probe);
+    const probeStyle = getComputedStyle(probe);
+    const text = probeStyle.color;
+    const background = probeStyle.backgroundColor;
+    probe.remove();
+
+    const sidebar = getComputedStyle(document.querySelector(".oc-header")).backgroundColor;
+    const icon = getComputedStyle(document.querySelector(".oc-logo-mark path")).fill;
+    const secondary = getComputedStyle(document.querySelector("#tab-settings .oc-hint")).color;
+    const surface = getComputedStyle(document.querySelector("#tab-settings .oc-settings-group")).backgroundColor;
+    return {
+      className: document.documentElement.className,
+      theme: document.documentElement.dataset.premiereTheme,
+      background,
+      text,
+      icon,
+      textContrast: contrast(text, background),
+      iconContrast: contrast(icon, sidebar),
+      secondaryContrast: contrast(secondary, surface),
+      listenerCount: window.__opencutThemeHarness.listenerCount(),
+    };
+  });
+
+  const dark = await snapshot();
+  expect(dark.className).toContain("theme-dark");
+  expect(dark.theme).toBe("dark");
+  expect(dark.listenerCount).toBe(1);
+  expect(dark.textContrast).toBeGreaterThanOrEqual(4.5);
+  expect(dark.iconContrast).toBeGreaterThanOrEqual(3);
+  expect(dark.secondaryContrast).toBeGreaterThanOrEqual(4.5);
+
+  await page.evaluate(() => window.__opencutThemeHarness.emit("light"));
+  await expect(page.locator("html")).toHaveClass(/theme-light/);
+  const light = await snapshot();
+  expect(light.theme).toBe("light");
+  expect(light.background).not.toBe(dark.background);
+  expect(light.text).not.toBe(dark.text);
+  expect(light.textContrast).toBeGreaterThanOrEqual(4.5);
+  expect(light.iconContrast).toBeGreaterThanOrEqual(3);
+  expect(light.secondaryContrast).toBeGreaterThanOrEqual(4.5);
+
+  await page.evaluate(() => window.__opencutThemeHarness.emit("darkest"));
+  await expect(page.locator("html")).toHaveClass(/theme-darkest/);
+  const darkest = await snapshot();
+  expect(darkest.theme).toBe("darkest");
+  expect(darkest.background).not.toBe(dark.background);
+  expect(darkest.background).not.toBe(light.background);
+  expect(darkest.textContrast).toBeGreaterThanOrEqual(4.5);
+  expect(darkest.iconContrast).toBeGreaterThanOrEqual(3);
+  expect(darkest.secondaryContrast).toBeGreaterThanOrEqual(4.5);
+
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeunload")));
+  await expect.poll(
+    () => page.evaluate(() => window.__opencutThemeHarness.listenerCount()),
+  ).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
 
 test("CEP exposes interrupted queue recovery without overflowing", async ({ page }) => {
   const queueEntries = [
