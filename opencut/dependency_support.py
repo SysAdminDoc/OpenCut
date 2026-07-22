@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import platform
+import re
 import sys
 from typing import Iterable, Mapping, Sequence
 
@@ -178,7 +179,11 @@ def dependency_support(name: str) -> dict:
     for dependency, unsupported_reason in UNSUPPORTED_DEPENDENCIES.items():
         if dependency in key:
             return {"supported": False, "reason": unsupported_reason, "install_hint": ""}
-    extra = DEPENDENCY_EXTRAS.get(key)
+    # Strip extras/version specifiers (same split runtime_security_requirement
+    # uses) so "nemo_toolkit[asr]>=2.7.3,<2.8" resolves to the same extras
+    # contract — and platform gate — as bare "nemo_toolkit".
+    base = re.split(r"[\[>=<!~]", key, maxsplit=1)[0].strip()
+    extra = DEPENDENCY_EXTRAS.get(base)
     if not extra:
         return {"supported": True, "reason": "", "install_hint": ""}
     return extra_support(extra)

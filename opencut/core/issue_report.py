@@ -79,9 +79,11 @@ _QUERY_SECRET_RE = re.compile(
     re.IGNORECASE,
 )
 _ASSIGNED_SECRET_RE = re.compile(
-    rf"(?P<prefix>\b(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME})\b[ \t]*[:=][ \t]*)"
-    rf"(?P<value>(?!{re.escape(REDACTION_MARKER)})"
-    r"(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,;\r\n}\]]+))",
+    rf"(?P<prefix>(?P<kq>[\"']?)\b(?:{_KNOWN_SECRET_ENV}|{_SECRET_NAME})\b"
+    r"(?P=kq)[ \t]*[:=][ \t]*)"
+    rf"(?P<value>(?P<vq>[\"'])(?!{re.escape(REDACTION_MARKER)})"
+    r"(?:(?!(?P=vq))[^\r\n])*(?P=vq)"
+    rf"|(?![\"']?{re.escape(REDACTION_MARKER)})[^\s,;\r\n}}\]]+)",
     re.IGNORECASE,
 )
 _CLI_SECRET_RE = re.compile(
@@ -122,6 +124,12 @@ def _redact_match_value(match: re.Match[str]) -> str:
     return f"{match.group('prefix')}{REDACTION_MARKER}"
 
 
+def _redact_assigned_value(match: re.Match[str]) -> str:
+    """Redact an assigned secret while preserving quotes around the value."""
+    quote = match.group("vq") or ""
+    return f"{match.group('prefix')}{quote}{REDACTION_MARKER}{quote}"
+
+
 def _redact_sensitive_text(text: str) -> str:
     """Redact common secrets and home paths from diagnostic text.
 
@@ -140,7 +148,7 @@ def _redact_sensitive_text(text: str) -> str:
         redacted,
     )
     redacted = _QUERY_SECRET_RE.sub(_redact_match_value, redacted)
-    redacted = _ASSIGNED_SECRET_RE.sub(_redact_match_value, redacted)
+    redacted = _ASSIGNED_SECRET_RE.sub(_redact_assigned_value, redacted)
     redacted = _CLI_SECRET_RE.sub(_redact_match_value, redacted)
     redacted = _AUTH_SCHEME_RE.sub(_redact_match_value, redacted)
     for pattern in _PROVIDER_SECRET_PATTERNS:
