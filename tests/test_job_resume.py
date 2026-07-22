@@ -288,7 +288,7 @@ def test_checkpointable_routes_are_marked_resumable():
         "opencut/routes/color_mam_routes.py": {
             "proxy_batch": {"resumable": True},
         },
-        "opencut/routes/wave_l_routes.py": {
+        "opencut/routes/video_enhancement_routes.py": {
             "depth_estimate_v2": {"resumable": True},
         },
     }
