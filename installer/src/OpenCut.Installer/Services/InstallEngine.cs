@@ -95,6 +95,20 @@ public class InstallEngine
                     Path.Combine(_config.InstallPath, "logo.ico"),
                     "Copying icon", progress, step, totalSteps);
 
+            var releaseMetadataSrc = Path.Combine(tempDir, "release-metadata");
+            if (!Directory.Exists(releaseMetadataSrc))
+                throw new InvalidDataException("The installer payload has no release composition evidence.");
+            _fileInstaller.CopyDirectory(releaseMetadataSrc,
+                Path.Combine(_config.InstallPath, "release-metadata"),
+                "Copying release evidence", progress, step, totalSteps);
+
+            var licenseSrc = Path.Combine(tempDir, "LICENSE");
+            if (!File.Exists(licenseSrc))
+                throw new InvalidDataException("The installer payload has no OpenCut license.");
+            _fileInstaller.CopyFile(licenseSrc,
+                Path.Combine(_config.InstallPath, "LICENSE"),
+                "Copying license", progress, step, totalSteps);
+
             // Step 7: Create logs directory
             step = 7;
             _fileInstaller.EnsureDirectory(_config.LogsPath,

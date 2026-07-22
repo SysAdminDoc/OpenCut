@@ -321,6 +321,20 @@ record also lives in the git commit messages.
 
 ## [Unreleased]
 
+### Security - Attest resolved release composition
+
+- Added SHA-256-locked runtime and build dependency lanes, and made source,
+  Docker, Windows, Flatpak, and AppImage assembly consume or validate those
+  locks instead of resolving mutable dependency ranges at release time.
+- Release assembly now fails closed unless it can inventory every direct and
+  transitive Python distribution, hash packaged artifacts, and emit a resolved
+  CycloneDX SBOM plus third-party notices. Bundled FFmpeg additionally records
+  its binary hash, GPL status, exact source archive and checksum, build origin,
+  configure flags, and corresponding-source instructions.
+- Windows installers now carry the release-composition manifest, SBOM,
+  third-party notices, FFmpeg provenance, and project license in the installed
+  payload; license and vulnerability gates cover the new resolved locks.
+
 ### Security - Close vulnerable Pillow install paths
 
 - Raised every declared Pillow lane to `>=12.3.0,<13`, constrained runtime

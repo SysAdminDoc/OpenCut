@@ -19,10 +19,12 @@
 # Stage 0: build the exact CVE-floor release from upstream source. Debian's
 # distro package can lag the patched point release, so it is never accepted as
 # the container's media runtime.
-FROM python:3.12-slim-bookworm AS ffmpeg-build
-
 ARG FFMPEG_VERSION=8.1.2
 ARG FFMPEG_SHA256=464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+FROM python:3.12-slim-bookworm AS ffmpeg-build
+
+ARG FFMPEG_VERSION
+ARG FFMPEG_SHA256
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -105,15 +107,18 @@ WORKDIR /app
 # Stage 2: Install Python dependencies
 FROM base AS deps
 
-COPY requirements.txt ./
+COPY requirements.txt requirements-release-lock.txt ./
 
 # Keep the container dependency layer on the committed Python install surface.
 # This prevents retired packages from re-entering through Docker and lets pip
 # failures fail the image build instead of producing a partial runtime.
-RUN python -m pip install --no-cache-dir --requirement requirements.txt
+RUN python -m pip install --no-cache-dir --require-hashes --requirement requirements-release-lock.txt
 
 # Stage 3: Final image
 FROM base AS final
+
+ARG FFMPEG_VERSION
+ARG FFMPEG_SHA256
 
 # Copy installed packages from deps stage
 COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
@@ -124,7 +129,21 @@ COPY . /app
 
 # Project-owned provenance gate records CVE-2026-8461 and both upstream fix
 # commits and fails the image build if the resolved binary is ever downgraded.
-RUN python scripts/verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg
+RUN python scripts/verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg \
+    --ffprobe /opt/ffmpeg/bin/ffprobe \
+    --release \
+    --source-url "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
+    --source-sha256 "${FFMPEG_SHA256}" \
+    --build-origin "OpenCut Dockerfile upstream source build for FFmpeg ${FFMPEG_VERSION}" \
+    --corresponding-source "Download the archive at source.url, verify source.sha256, then run the recorded configuration with the Debian Bookworm development libraries listed in Dockerfile." \
+    --manifest /tmp/ffmpeg-provenance.json \
+    && python scripts/release_composition.py \
+        --lane linux \
+        --artifact /app/opencut \
+        --artifact /opt/ffmpeg/bin/ffmpeg \
+        --artifact /opt/ffmpeg/bin/ffprobe \
+        --ffmpeg-provenance /tmp/ffmpeg-provenance.json \
+        --output-dir /app/release-metadata
 
 # Create a stable non-root identity and a private runtime-secret directory.
 # The fixed IDs make Compose secret ownership deterministic across hosts.

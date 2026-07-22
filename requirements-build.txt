@@ -1,0 +1,3 @@
+# Release builder tools. Install only with requirements-build-lock.txt and
+# --require-hashes; these packages are not part of the shipped runtime SBOM.
+pyinstaller==6.20.0

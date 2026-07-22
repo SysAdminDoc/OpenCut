@@ -26,6 +26,13 @@ fi
 
 mkdir -p "$OUT_DIR"
 
+RELEASE_METADATA="$OUT_DIR/release-metadata"
+python "$REPO_ROOT/scripts/release_composition.py" \
+  --lane linux \
+  --artifact "$DIST_DIR" \
+  --build-lock "$REPO_ROOT/requirements-build-lock.txt" \
+  --output-dir "$RELEASE_METADATA"
+
 DESKTOP_FILE="$REPO_ROOT/packaging/linux/$APP_ID.desktop"
 METAINFO_FILE="$REPO_ROOT/packaging/linux/$APP_ID.metainfo.xml"
 ICON_FILE="$REPO_ROOT/img/icon.png"
@@ -50,13 +57,15 @@ mkdir -p \
   "$APPDIR/usr/lib/opencut" \
   "$APPDIR/usr/share/applications" \
   "$APPDIR/usr/share/metainfo" \
-  "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+  "$APPDIR/usr/share/icons/hicolor/256x256/apps" \
+  "$APPDIR/usr/share/opencut/release-metadata"
 
 cp -a "$DIST_DIR" "$APPDIR/usr/lib/opencut/OpenCut-Server"
 install -Dm755 "$REPO_ROOT/packaging/linux/appimage/AppRun" "$APPDIR/AppRun"
 install -Dm644 "$DESKTOP_FILE" "$APPDIR/usr/share/applications/$APP_ID.desktop"
 install -Dm644 "$METAINFO_FILE" "$APPDIR/usr/share/metainfo/$APP_ID.metainfo.xml"
 install -Dm644 "$ICON_FILE" "$APPDIR/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
+cp -a "$RELEASE_METADATA/." "$APPDIR/usr/share/opencut/release-metadata/"
 ln -sf "usr/share/applications/$APP_ID.desktop" "$APPDIR/$APP_ID.desktop"
 ln -sf "usr/share/icons/hicolor/256x256/apps/$APP_ID.png" "$APPDIR/$APP_ID.png"
 ln -sf "$APP_ID.png" "$APPDIR/.DirIcon"

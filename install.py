@@ -67,6 +67,7 @@ def install_deps():
     print("\n  Installing Python dependencies...")
     base_dir = os.path.dirname(os.path.abspath(__file__))
     req_file = os.path.join(base_dir, "requirements.txt")
+    release_lock = os.path.join(base_dir, "requirements-release-lock.txt")
 
     # 30-min timeout: enough for slow networks downloading torch/faster-whisper,
     # but bounded so a hung pip mirror doesn't freeze the installer forever.
@@ -76,7 +77,13 @@ def install_deps():
     # ``--progress-bar on`` keeps the visual feedback even when stdout is
     # piped through subprocess.
     try:
-        if os.path.exists(req_file):
+        if os.path.exists(release_lock):
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--require-hashes", "-r", release_lock,
+                 "--prefer-binary", "--progress-bar", "on"],
+                check=True, timeout=pip_timeout,
+            )
+        elif os.path.exists(req_file):
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-r", req_file,
                  "--prefer-binary", "--progress-bar", "on"],

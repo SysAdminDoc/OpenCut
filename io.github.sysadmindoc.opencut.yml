@@ -27,12 +27,13 @@ modules:
   - name: opencut-server-bundle
     buildsystem: simple
     build-commands:
-      - install -d /app/lib/opencut/OpenCut-Server /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/256x256/apps
+      - install -d /app/lib/opencut/OpenCut-Server /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/256x256/apps /app/share/opencut/release-metadata
       - cp -a OpenCut-Server/. /app/lib/opencut/OpenCut-Server/
       - install -Dm755 packaging/linux/flatpak/opencut-server /app/bin/opencut-server
       - install -Dm644 packaging/linux/io.github.sysadmindoc.opencut.desktop /app/share/applications/io.github.sysadmindoc.opencut.desktop
       - install -Dm644 packaging/linux/io.github.sysadmindoc.opencut.metainfo.xml /app/share/metainfo/io.github.sysadmindoc.opencut.metainfo.xml
       - install -Dm644 img/icon.png /app/share/icons/hicolor/256x256/apps/io.github.sysadmindoc.opencut.png
+      - cp -a release-metadata/. /app/share/opencut/release-metadata/
     sources:
       - type: dir
         path: dist/OpenCut-Server
@@ -49,3 +50,6 @@ modules:
       - type: file
         path: img/icon.png
         dest: img
+      - type: dir
+        path: dist/linux-packages/release-metadata
+        dest: release-metadata

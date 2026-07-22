@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1527-orange)
-![Tests](https://img.shields.io/badge/Tests-11500+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-11600+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -68,6 +68,13 @@ is the one step that needs the maintainer's PyPI account.
 **Option A -- Windows Installer (recommended for Windows):**
 
 Download the latest Windows installer from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Release artifacts are named `OpenCut-Setup-<version>.exe` and handle everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+
+Every assembled installer includes `release-composition.json`,
+`opencut-artifact-sbom.cyclonedx.json`, `THIRD-PARTY-NOTICES.txt`, and
+`ffmpeg-provenance.json` beside the installed application. These records bind
+the direct and transitive Python packages, packaged payloads, and bundled
+FFmpeg binary to SHA-256 hashes and document the exact FFmpeg source and build
+provenance needed to reproduce the GPL-covered component.
 
 **Option B -- Install.bat (recommended for Windows source installs):**
 
@@ -150,7 +157,11 @@ lane. A direct, owner-writable `0600` secret-file backend supports
 `opencut-server --rotate-auth`, while a `0400` file returns the explicit
 `REMOTE_AUTH_TOKEN_FILE_READ_ONLY` error. The image builds FFmpeg 8.1.2 from
 the checksum-pinned upstream source archive and fails its build-time provenance
-gate if the binary falls below OpenCut's security floor.
+gate if the binary falls below OpenCut's security floor. Image assembly also
+installs Python from the universal `requirements-release-lock.txt` with
+`--require-hashes`
+and generates the same resolved SBOM, notices, and composition manifest as the
+desktop release lanes.
 
 **Option E -- Linux desktop package:**
 
@@ -685,6 +696,12 @@ python -m pytest tests/test_core_modules.py tests/test_core_modules_batch2.py -q
 # Run ExtendScript mock tests
 node tests/jsx_mock.js
 
+# Validate immutable release inputs without assembling an artifact
+python scripts/release_composition.py --check-lock-only
+
+# Generate Windows artifact evidence after staging the server and FFmpeg payload
+powershell -File scripts/prepare_windows_release_metadata.ps1
+
 # CEP panel checks from Windows UNC/HGFS checkouts
 cd extension/com.opencut.panel
 npm ci
@@ -700,7 +717,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-11,500+ estimated tests across 289 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,600+ estimated tests across 290 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -761,7 +778,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,500+ estimated tests, 289 root test files)
+tests/               # pytest test suite (11,600+ estimated tests, 290 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

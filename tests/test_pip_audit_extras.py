@@ -113,12 +113,22 @@ def test_torch_stack_collects_advisory_heavy_backends():
 def test_default_targets_include_requirements_and_pyproject_all():
     targets = pip_audit_extras.build_targets()
 
-    assert [target.name for target in targets] == ["requirements.txt", "requirements-lock.txt", "pyproject[all]"]
+    assert [target.name for target in targets] == [
+        "requirements.txt",
+        "requirements-lock.txt",
+        "requirements-release-lock.txt",
+        "requirements-build-lock.txt",
+        "pyproject[all]",
+    ]
     assert targets[0].kind == "requirements"
     assert targets[1].kind == "lockfile"
     assert targets[1].no_deps is True
-    assert targets[2].kind == "pyproject-extra"
-    assert targets[2].extra == "all"
+    assert targets[2].kind == "lockfile"
+    assert targets[2].no_deps is True
+    assert targets[3].kind == "lockfile"
+    assert targets[3].no_deps is True
+    assert targets[4].kind == "pyproject-extra"
+    assert targets[4].extra == "all"
     assert any(req.startswith("idna==") for req in targets[1].requirements)
     assert len(targets[2].requirements) > len(targets[0].requirements)
 
@@ -133,7 +143,12 @@ def test_lockfile_target_can_be_disabled_for_diagnostics():
 def test_pyproject_extra_targets_can_be_disabled_for_diagnostics():
     targets = pip_audit_extras.build_targets(extras=())
 
-    assert [target.name for target in targets] == ["requirements.txt", "requirements-lock.txt"]
+    assert [target.name for target in targets] == [
+        "requirements.txt",
+        "requirements-lock.txt",
+        "requirements-release-lock.txt",
+        "requirements-build-lock.txt",
+    ]
     assert all(target.kind != "pyproject-extra" for target in targets)
 
 
@@ -155,7 +170,12 @@ def test_cli_no_extras_audits_only_committed_requirements(monkeypatch):
     monkeypatch.setattr(pip_audit_extras, "run_audits", _fake_run_audits)
 
     assert pip_audit_extras.cli(["--json", "--no-extras"]) == 0
-    assert [target.name for target in captured_targets] == ["requirements.txt", "requirements-lock.txt"]
+    assert [target.name for target in captured_targets] == [
+        "requirements.txt",
+        "requirements-lock.txt",
+        "requirements-release-lock.txt",
+        "requirements-build-lock.txt",
+    ]
 
 
 def test_all_extras_cli_target_builder_knows_every_optional_extra():
@@ -228,6 +248,7 @@ def test_run_audits_uses_no_deps_for_lockfile_targets(monkeypatch):
 
     def _fake_run(cmd, cwd, timeout, env=None):  # noqa: ANN001
         assert "--no-deps" in cmd
+        assert "--disable-pip" in cmd
         payload = {
             "dependencies": [
                 {"name": "idna", "version": "3.16", "vulns": []},

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "packages": {
+    "ctranslate2": {
+      "version": "4.8.1",
+      "license": "MIT",
+      "source_url": "https://github.com/OpenNMT/CTranslate2/tree/v4.8.1",
+      "license_url": "https://github.com/OpenNMT/CTranslate2/blob/v4.8.1/LICENSE",
+      "license_file": "release_licenses/ctranslate2-4.8.1.txt",
+      "license_sha256": "54aa79d9fe3c09e67a16dcd95b9e88676405a6ec174efda31036983cf7672ecb"
+    },
+    "decorator": {
+      "version": "5.3.1",
+      "license": "BSD-2-Clause",
+      "source_url": "https://github.com/micheles/decorator/tree/5.3.1"
+    },
+    "flask-cors": {
+      "version": "6.0.5",
+      "license": "MIT",
+      "source_url": "https://github.com/corydolphin/flask-cors/tree/6.0.5",
+      "license_url": "https://github.com/corydolphin/flask-cors/blob/6.0.5/LICENSE",
+      "license_file": "release_licenses/flask-cors-6.0.5.txt",
+      "license_sha256": "34695d881d470df541acc610e1b8914ab08958c8abea988b8731ba10e21c965a"
+    },
+    "flatbuffers": {
+      "version": "25.12.19",
+      "license": "Apache-2.0",
+      "source_url": "https://github.com/google/flatbuffers/tree/v25.12.19",
+      "license_url": "https://github.com/google/flatbuffers/blob/v25.12.19/LICENSE",
+      "license_file": "release_licenses/apache-2.0.txt",
+      "license_sha256": "bfcc0a95c6d0635efebd2b61034c0275e0f8cb766a80a477095d91ea71e09895"
+    },
+    "tokenizers": {
+      "version": "0.23.1",
+      "license": "Apache-2.0",
+      "source_url": "https://github.com/huggingface/tokenizers/tree/v0.23.1",
+      "license_url": "https://github.com/huggingface/tokenizers/blob/v0.23.1/LICENSE",
+      "license_file": "release_licenses/apache-2.0.txt",
+      "license_sha256": "bfcc0a95c6d0635efebd2b61034c0275e0f8cb766a80a477095d91ea71e09895"
+    }
+  }
+}

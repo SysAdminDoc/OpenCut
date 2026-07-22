@@ -470,6 +470,25 @@ def step_license_gate(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_release_lock(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "scripts/release_composition.py", "--check-lock-only"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "release-lock",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message="release inputs are exactly pinned and SHA-256 locked" if status == "ok" else "release lock failed",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_roadmap_lint(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -1240,7 +1259,8 @@ STEPS: List[StepDefinition] = [
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
     StepDefinition("mcp-registry", step_mcp_registry, "Check MCP server registry manifest is in sync (F147)"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
-    StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
+    StepDefinition("license-gate", step_license_gate, "Gate model cards and hash-locked release requirements"),
+    StepDefinition("release-lock", step_release_lock, "Check exact pins and SHA-256 hashes for release inputs"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),

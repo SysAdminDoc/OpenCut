@@ -99,7 +99,7 @@ def test_gpu_compose_command_targets_gpu_service_only():
 
 def test_dockerfile_uses_tracked_dependency_surface():
     dockerfile = _read("Dockerfile")
-    assert "pip install --no-cache-dir --requirement requirements.txt" in dockerfile
+    assert "pip install --no-cache-dir --require-hashes --requirement requirements-release-lock.txt" in dockerfile
     forbidden_fail_open_tokens = ["|| echo", "|| true", "set +e", "Some optional deps failed"]
     for token in forbidden_fail_open_tokens:
         assert token not in dockerfile

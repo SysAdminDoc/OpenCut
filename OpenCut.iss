@@ -61,6 +61,9 @@ Source: "dist\OpenCut-Server\*"; DestDir: "{app}\server"; Flags: ignoreversion r
 ; Bundled FFmpeg (ffmpeg.exe + ffprobe.exe)
 Source: "ffmpeg\ffmpeg.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
 Source: "ffmpeg\ffprobe.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
+; Fail closed if the resolved release evidence was not generated first.
+Source: "dist\release-metadata\*"; DestDir: "{app}\release-metadata"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "installer\Export-OpenCutUserData.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Hidden launcher (runs server with no console window)

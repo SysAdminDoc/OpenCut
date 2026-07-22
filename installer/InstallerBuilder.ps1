@@ -8,7 +8,8 @@
 
 param(
     [switch]$SkipPublish,
-    [switch]$PayloadOnly
+    [switch]$PayloadOnly,
+    [string]$PythonExe = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +19,8 @@ $InstallerProj = Join-Path $ScriptDir "src\OpenCut.Installer\OpenCut.Installer.c
 $PublishDir = Join-Path $ScriptDir "publish"
 $StagingDir = Join-Path $ScriptDir "staging"
 $OutputDir = Join-Path $ScriptDir "dist"
+$ReleaseEvidenceDir = Join-Path $OutputDir "release-evidence"
+$FfmpegManifest = Join-Path $ReleaseEvidenceDir "ffmpeg-provenance.json"
 
 # Read version from opencut/__init__.py
 $InitPy = Join-Path $RepoRoot "opencut\__init__.py"
@@ -72,17 +75,32 @@ if (-not (Test-Path $launcherVbs)) { Write-Warn "OpenCut-Launcher.vbs not found"
 if (-not (Test-Path $logoIco)) { Write-Warn "img/logo.ico not found"; $payloadReady = $false }
 
 if ($payloadReady) { Write-Ok "All payload sources found" }
-else { Write-Warn "Some payload sources missing - payload.zip will be incomplete" }
+else {
+    Write-Err "Release payload sources are incomplete; refusing to build."
+    exit 1
+}
 
 if ($payloadReady) {
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $python) {
+    if (-not $PythonExe) {
+        $python = Get-Command python -ErrorAction SilentlyContinue
+        if ($python) { $PythonExe = $python.Source }
+    }
+    if (-not $PythonExe -or -not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
         Write-Err "Python is required to verify FFmpeg provenance."
         exit 1
     }
     $ffmpegExe = Join-Path $ffmpegDir "ffmpeg.exe"
+    $ffprobeExe = Join-Path $ffmpegDir "ffprobe.exe"
     $provenanceGate = Join-Path $RepoRoot "scripts\verify_ffmpeg_provenance.py"
-    & $python.Source $provenanceGate $ffmpegExe
+    New-Item -ItemType Directory -Path $ReleaseEvidenceDir -Force | Out-Null
+    & $PythonExe $provenanceGate $ffmpegExe `
+        --ffprobe $ffprobeExe `
+        --release `
+        --source-url "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz" `
+        --source-sha256 "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c" `
+        --build-origin "gyan.dev release essentials 2026-06-27; FFmpeg commit 38b88335f9" `
+        --corresponding-source "Download and verify the FFmpeg 8.1.2 archive named by source.url/source.sha256. The exact binary configuration is in this manifest; gyan.dev/builds identifies release 8.1.2 commit 38b88335f9 and its MSYS2 toolchain." `
+        --manifest $FfmpegManifest
     if ($LASTEXITCODE -ne 0) {
         Write-Err "FFmpeg payload failed the mandatory security-floor gate."
         exit 1
@@ -169,6 +187,28 @@ if (Test-Path $logoIco) {
     Copy-Item -Path $logoIco -Destination $StagingDir
     Write-Ok "  Logo icon copied"
 }
+
+# Generate the release composition only after every payload input exists. The
+# command verifies that this Python environment exactly matches the hashed
+# release lock and fails on missing license/source evidence.
+$releaseMetadataDest = Join-Path $StagingDir "release-metadata"
+$compositionTool = Join-Path $RepoRoot "scripts\release_composition.py"
+& $PythonExe $compositionTool `
+    --lane windows `
+    --artifact (Join-Path $StagingDir "server") `
+    --artifact (Join-Path $StagingDir "ffmpeg\ffmpeg.exe") `
+    --artifact (Join-Path $StagingDir "ffmpeg\ffprobe.exe") `
+    --artifact (Join-Path $StagingDir "extension\com.opencut.panel") `
+    --build-lock (Join-Path $RepoRoot "requirements-build-lock.txt") `
+    --ffmpeg-provenance $FfmpegManifest `
+    --output-dir $releaseMetadataDest
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Resolved release composition or license evidence is incomplete."
+    exit 1
+}
+Copy-Item -LiteralPath $FfmpegManifest -Destination $releaseMetadataDest
+Copy-Item -LiteralPath (Join-Path $RepoRoot "LICENSE") -Destination $StagingDir
+Write-Ok "  Resolved SBOM and third-party notices generated"
 
 Write-Host ""
 

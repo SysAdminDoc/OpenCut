@@ -1,22 +1,22 @@
 """
-Generate a CycloneDX 1.5 SBOM for the OpenCut repository.
+Generate CycloneDX 1.5 SBOMs for OpenCut source or resolved artifacts.
 
 Reads dependency declarations from ``pyproject.toml`` +
 ``requirements.txt`` plus OpenCut model-card metadata and emits a
 declared-dependency CycloneDX JSON document at
 ``dist/opencut-declared-sbom.cyclonedx.json`` (or XML with ``--format xml``).
 
-Does **not** walk installed site-packages — the output reflects the
-repository's *declared* dependency surface, which is what downstream
-security scanners and compliance reviewers care about.  For an
-installed-packages SBOM, use ``cyclonedx-py`` or ``syft`` on a
-populated virtualenv.
+The default source view records declared dependencies.  Release builds pass a
+validated ``release-composition.json`` to ``--composition``; that view records
+the exact direct/transitive distributions, their installed-tree and locked
+download hashes, bundled FFmpeg provenance, and packaged artifact digests.
 
 Usage::
 
     python scripts/sbom.py                # JSON to dist/
     python scripts/sbom.py --format xml
     python scripts/sbom.py --output path/to/file.json
+    python scripts/sbom.py --composition dist/release/release-composition.json
 
 Zero-dependency: stdlib only. No ``cyclonedx-bom`` install required.
 """
@@ -38,6 +38,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SBOM_BASENAME = "opencut-declared-sbom.cyclonedx"
+RESOLVED_SBOM_BASENAME = "opencut-artifact-sbom.cyclonedx"
 SBOM_FIDELITY = "declared-only"
 SBOM_SOURCE_LABEL = "pyproject.toml, requirements.txt, opencut.model_cards"
 SBOM_EXCLUDES_LABEL = "installed transitive packages and requirements-lock.txt pins"
@@ -383,6 +384,161 @@ def build_sbom() -> Dict:
     }
 
 
+def build_resolved_sbom(composition: Dict) -> Dict:
+    """Build an artifact SBOM from a validated release composition."""
+    if composition.get("schema_version") != 1:
+        raise ValueError("unsupported or missing release composition schema_version")
+    application = composition.get("application") or {}
+    app_name = application.get("name") or "opencut-ppro"
+    app_version = application.get("version") or "0.0.0"
+    root_ref = f"pkg:pypi/{app_name}@{app_version}"
+    components: List[Dict] = []
+    dependency_rows: List[Dict] = []
+
+    python_components = composition.get("python", {}).get("components") or []
+    python_refs: Dict[str, str] = {}
+    for resolved in python_components:
+        name = _normalise_pypi_name(str(resolved["name"]))
+        version = str(resolved["version"])
+        ref = str(resolved.get("purl") or _purl(name, version))
+        python_refs[name] = ref
+        component = _make_component(
+            name,
+            version,
+            scope="required",
+            bom_ref=ref,
+            purl=ref,
+            properties=[
+                {
+                    "name": "opencut:dependency-kind",
+                    "value": "direct" if resolved.get("direct") else "transitive",
+                },
+                {
+                    "name": "opencut:installed-tree-sha256",
+                    "value": str(resolved["installed_tree_sha256"]),
+                },
+                {
+                    "name": "opencut:locked-download-sha256",
+                    "value": ",".join(resolved.get("download_sha256") or []),
+                },
+            ],
+            external_references=[{"type": "website", "url": str(resolved["source_url"])}],
+            licenses=[{"license": {"name": str(resolved["license"])}}],
+        )
+        component["hashes"] = [
+            {"alg": "SHA-256", "content": str(resolved["installed_tree_sha256"])}
+        ]
+        components.append(component)
+
+    for resolved in python_components:
+        name = _normalise_pypi_name(str(resolved["name"]))
+        ref = python_refs[name]
+        dependency_rows.append(
+            {
+                "ref": ref,
+                "dependsOn": sorted(
+                    python_refs[dependency]
+                    for dependency in resolved.get("dependencies") or []
+                    if dependency in python_refs
+                ),
+            }
+        )
+
+    bundled_refs: List[str] = []
+    for bundled in composition.get("bundled_components") or []:
+        name = str(bundled.get("name") or "bundled-component")
+        version = str((bundled.get("bundled") or {}).get("version") or "unknown")
+        ref = f"opencut:bundled:{name}@{version}"
+        bundled_refs.append(ref)
+        source = bundled.get("source") or {}
+        build = bundled.get("build") or {}
+        redistribution = bundled.get("redistribution") or {}
+        artifact_hashes = [
+            {"alg": "SHA-256", "content": str(item["sha256"])}
+            for item in bundled.get("artifacts") or []
+        ]
+        component = _make_component(
+            name,
+            version,
+            scope="required",
+            component_type="application",
+            bom_ref=ref,
+            properties=[
+                {"name": "opencut:source-sha256", "value": str(source.get("sha256", ""))},
+                {"name": "opencut:build-origin", "value": str(build.get("origin", ""))},
+                {"name": "opencut:build-configuration", "value": str(build.get("configuration", ""))},
+                {
+                    "name": "opencut:corresponding-source",
+                    "value": str(redistribution.get("corresponding_source", "")),
+                },
+            ],
+            external_references=[{"type": "distribution", "url": str(source.get("url", ""))}],
+            licenses=[{"license": {"name": str(redistribution.get("license", ""))}}],
+        )
+        component["hashes"] = artifact_hashes
+        components.append(component)
+        dependency_rows.append({"ref": ref, "dependsOn": []})
+
+    artifact_refs: List[str] = []
+    for index, artifact in enumerate(composition.get("artifacts") or []):
+        name = os.path.basename(str(artifact["path"]).rstrip("/\\")) or f"artifact-{index}"
+        ref = f"opencut:artifact:{index}:{artifact['sha256']}"
+        artifact_refs.append(ref)
+        component = _make_component(
+            name,
+            None,
+            scope="required",
+            component_type="file",
+            bom_ref=ref,
+            properties=[
+                {"name": "opencut:artifact-kind", "value": str(artifact["kind"])},
+                {"name": "opencut:artifact-size", "value": str(artifact["size"])},
+                {"name": "opencut:artifact-file-count", "value": str(artifact["file_count"])},
+            ],
+        )
+        component["hashes"] = [{"alg": "SHA-256", "content": str(artifact["sha256"])}]
+        components.append(component)
+        dependency_rows.append({"ref": ref, "dependsOn": []})
+
+    direct_refs = sorted(
+        python_refs[_normalise_pypi_name(str(item["name"]))]
+        for item in python_components
+        if item.get("direct")
+    )
+    root_component = {
+        "type": "application",
+        "bom-ref": root_ref,
+        "name": app_name,
+        "version": app_version,
+        "purl": root_ref,
+        "description": "Video editing automation for Adobe Premiere Pro",
+    }
+    return {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "serialNumber": f"urn:uuid:{uuid.uuid4()}",
+        "version": 1,
+        "metadata": {
+            "timestamp": composition.get("generated_at")
+            or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "tools": [{"vendor": "opencut", "name": "scripts/sbom.py", "version": app_version}],
+            "component": root_component,
+            "properties": [
+                {"name": "opencut:sbom:fidelity", "value": "resolved-artifact"},
+                {"name": "opencut:sbom:lane", "value": str(composition.get("lane", "unknown"))},
+                {
+                    "name": "opencut:sbom:composition-schema",
+                    "value": str(composition.get("$schema", "")),
+                },
+            ],
+        },
+        "components": components,
+        "dependencies": [
+            {"ref": root_ref, "dependsOn": sorted(set(direct_refs + bundled_refs + artifact_refs))},
+            *dependency_rows,
+        ],
+    }
+
 # ---------------------------------------------------------------------------
 # XML serialiser (pure stdlib, CycloneDX 1.5 namespace)
 # ---------------------------------------------------------------------------
@@ -437,6 +593,11 @@ def _to_xml(bom: Dict) -> str:
                 if name:
                     name_el = SubElement(license_el, "name")
                     name_el.text = str(name)
+        if c.get("hashes"):
+            hashes_el = SubElement(ce, "hashes")
+            for item_hash in c["hashes"]:
+                hash_el = SubElement(hashes_el, "hash", {"alg": item_hash.get("alg", "SHA-256")})
+                hash_el.text = str(item_hash.get("content", ""))
         if c.get("externalReferences"):
             refs_el = SubElement(ce, "externalReferences")
             for ref in c["externalReferences"]:
@@ -476,9 +637,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--output", default="",
         help=f"Output path. Default: dist/{SBOM_BASENAME}.{{json,xml}}",
     )
+    parser.add_argument(
+        "--composition", default="",
+        help="Validated release-composition.json; emits an exact artifact SBOM instead of the source view.",
+    )
     args = parser.parse_args(argv)
 
-    bom = build_sbom()
+    if args.composition:
+        with open(args.composition, encoding="utf-8") as handle:
+            bom = build_resolved_sbom(json.load(handle))
+    else:
+        bom = build_sbom()
 
     if args.output:
         out_path = args.output
@@ -486,7 +655,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         dist_dir = os.path.join(REPO_ROOT, "dist")
         os.makedirs(dist_dir, exist_ok=True)
         suffix = "json" if args.format == "json" else "xml"
-        out_path = os.path.join(dist_dir, f"{SBOM_BASENAME}.{suffix}")
+        basename = RESOLVED_SBOM_BASENAME if args.composition else SBOM_BASENAME
+        out_path = os.path.join(dist_dir, f"{basename}.{suffix}")
 
     if args.format == "json":
         with open(out_path, "w", encoding="utf-8") as f:
