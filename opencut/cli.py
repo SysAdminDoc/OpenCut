@@ -232,21 +232,41 @@ def cli():
 
 @cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
-@click.option("-o", "--output", type=click.Path(), default=None, help="Output XML file path")
+@click.option("-o", "--output", type=click.Path(), default=None, help="Output timeline file path")
 @click.option("-t", "--threshold", type=float, default=-30.0, help="Silence threshold in dB (default: -30)")
 @click.option("-d", "--min-duration", type=float, default=0.5, help="Minimum silence duration in seconds (default: 0.5)")
 @click.option("--padding-before", type=float, default=0.1, help="Padding before speech in seconds (default: 0.1)")
 @click.option("--padding-after", type=float, default=0.1, help="Padding after speech in seconds (default: 0.1)")
 @click.option("--min-speech", type=float, default=0.25, help="Minimum speech segment duration (default: 0.25)")
 @click.option("--preset", type=click.Choice(["default", "aggressive", "conservative", "podcast", "youtube"]), default=None, help="Use a preset configuration")
-@click.option("--format", "export_format", type=click.Choice(["premiere", "resolve"]), default="premiere", help="Export format (default: premiere)")
+@click.option("--format", "export_format", type=click.Choice(["premiere", "resolve", "otio"]), default="premiere", help="Export format (default: premiere)")
 @click.option("--name", "seq_name", type=str, default="OpenCut Edit", help="Sequence name in the exported timeline")
+@click.option("--otio-schema", default="current", help="OTIO schema target: current or OTIO_CORE:<version>")
+@click.option("--otio-adapter", default="otio_json", help="Installed OTIO adapter name (default: otio_json)")
+@click.option("--accept-lossy-otio", is_flag=True, help="Allow fields reported as lost by OTIO downgrade preflight")
+@click.option("--otio-preflight", is_flag=True, help="Check OTIO compatibility without writing a file")
 @click.option("--dry-run", is_flag=True, help="Analyze only, don't export")
-def silence(input_file, output, threshold, min_duration, padding_before, padding_after, min_speech, preset, export_format, seq_name, dry_run):
+def silence(
+    input_file,
+    output,
+    threshold,
+    min_duration,
+    padding_before,
+    padding_after,
+    min_speech,
+    preset,
+    export_format,
+    seq_name,
+    otio_schema,
+    otio_adapter,
+    accept_lossy_otio,
+    otio_preflight,
+    dry_run,
+):
     """Remove silences from a video/audio file.
 
-    Detects silent sections and exports a Premiere Pro XML timeline
-    with only the speech segments, ready to import.
+    Detects silent sections and exports a Premiere/Resolve XML or
+    version-targeted OpenTimelineIO timeline with only the speech segments.
     """
     print_banner()
 
@@ -272,7 +292,16 @@ def silence(input_file, output, threshold, min_duration, padding_before, padding
     # Default output path
     if output is None:
         base = os.path.splitext(input_file)[0]
-        output = f"{base}_opencut.xml"
+        if export_format == "otio":
+            try:
+                from .export.otio_compat import adapter_output_suffix
+
+                suffix = adapter_output_suffix(otio_adapter)
+            except (ImportError, ValueError) as exc:
+                raise click.ClickException(str(exc)) from exc
+            output = f"{base}_opencut.{suffix}"
+        else:
+            output = f"{base}_opencut.xml"
 
     # Detect speech
     console.print(f"\n[bold]Analyzing:[/bold] {input_file}")
@@ -304,8 +333,38 @@ def silence(input_file, output, threshold, min_duration, padding_before, padding
 
     # Export
     console.print(f"\n[bold]Exporting:[/bold] {output}")
-    export_premiere_xml(input_file, segments, output, config=ecfg)
-    console.print("[green bold]Done![/green bold] Import this XML into Premiere Pro via File > Import.\n")
+    if export_format == "otio":
+        from .export.otio_compat import OTIOPreflightError
+        from .export.otio_export import export_otio
+
+        try:
+            report = export_otio(
+                input_file,
+                segments,
+                output,
+                sequence_name=seq_name,
+                schema_target=otio_schema,
+                adapter_name=otio_adapter,
+                accept_lossy=accept_lossy_otio,
+                preflight_only=otio_preflight,
+                return_report=True,
+            )
+        except OTIOPreflightError as exc:
+            fields = ", ".join(exc.report.get("lossy_fields", []))
+            detail = f" Lost fields: {fields}" if fields else ""
+            raise click.ClickException(f"OTIO preflight failed: {exc}.{detail}") from exc
+        console.print(
+            "[bold]OTIO compatibility:[/bold] "
+            f"adapter {report['adapter']['name']} {report['adapter']['version']}; "
+            f"schema {report['schema_target']}; lossy={str(report['lossy']).lower()}"
+        )
+        if otio_preflight:
+            console.print("[green bold]Preflight passed.[/green bold] No file was written.\n")
+        else:
+            console.print("[green bold]Done![/green bold] Import the timeline into an OTIO-compatible editor.\n")
+    else:
+        export_premiere_xml(input_file, segments, output, config=ecfg)
+        console.print("[green bold]Done![/green bold] Import this XML into Premiere Pro via File > Import.\n")
 
 
 @cli.command()

@@ -15,7 +15,7 @@ Requires: pip install opentimelineio
 
 import logging
 import os
-from typing import List
+from typing import Any, List
 
 from ..core.silence import TimeSegment
 
@@ -37,7 +37,12 @@ def export_otio(
     output_path: str,
     sequence_name: str = "OpenCut Edit",
     framerate: float = 24.0,
-) -> str:
+    schema_target: str = "current",
+    adapter_name: str = "otio_json",
+    accept_lossy: bool = False,
+    preflight_only: bool = False,
+    return_report: bool = False,
+) -> str | dict[str, Any]:
     """
     Export an edited timeline as an OTIO file.
 
@@ -97,11 +102,27 @@ def export_otio(
         audio_track.append(_make_clip(segment, i, " (audio)"))
     timeline.tracks.append(audio_track)
 
-    # Write the OTIO file
-    otio.adapters.write_to_file(timeline, output_path)
+    from .otio_compat import write_otio_timeline
+
+    report = write_otio_timeline(
+        timeline,
+        output_path,
+        adapter_name=adapter_name,
+        schema_target=schema_target,
+        accept_lossy=accept_lossy,
+        preflight_only=preflight_only,
+    )
+    if preflight_only:
+        logger.info(
+            "Preflighted OTIO timeline: adapter=%s target=%s lossy=%s",
+            adapter_name,
+            schema_target,
+            report["lossy"],
+        )
+        return report
     logger.info("Exported OTIO timeline: %s (%d clips)", output_path, len(speech_segments))
 
-    return output_path
+    return report if return_report else output_path
 
 
 def export_otio_from_cuts(
@@ -111,7 +132,12 @@ def export_otio_from_cuts(
     sequence_name: str = "OpenCut Edit",
     framerate: float = 24.0,
     total_duration: float = 0.0,
-) -> str:
+    schema_target: str = "current",
+    adapter_name: str = "otio_json",
+    accept_lossy: bool = False,
+    preflight_only: bool = False,
+    return_report: bool = False,
+) -> str | dict[str, Any]:
     """
     Export an OTIO timeline from cut regions (regions to REMOVE).
 
@@ -168,7 +194,18 @@ def export_otio_from_cuts(
     if pos < total_duration:
         kept.append(TimeSegment(start=pos, end=total_duration, label="speech"))
 
-    return export_otio(filepath, kept, output_path, sequence_name, framerate)
+    return export_otio(
+        filepath,
+        kept,
+        output_path,
+        sequence_name,
+        framerate,
+        schema_target=schema_target,
+        adapter_name=adapter_name,
+        accept_lossy=accept_lossy,
+        preflight_only=preflight_only,
+        return_report=return_report,
+    )
 
 
 def export_otio_markers(
@@ -178,7 +215,12 @@ def export_otio_markers(
     sequence_name: str = "OpenCut Markers",
     framerate: float = 24.0,
     total_duration: float = 0.0,
-) -> str:
+    schema_target: str = "current",
+    adapter_name: str = "otio_json",
+    accept_lossy: bool = False,
+    preflight_only: bool = False,
+    return_report: bool = False,
+) -> str | dict[str, Any]:
     """
     Export an OTIO timeline with markers (chapters, beat markers, etc.).
 
@@ -243,10 +285,27 @@ def export_otio_markers(
     track.append(full_clip)
     timeline.tracks.append(track)
 
-    otio.adapters.write_to_file(timeline, output_path)
+    from .otio_compat import write_otio_timeline
+
+    report = write_otio_timeline(
+        timeline,
+        output_path,
+        adapter_name=adapter_name,
+        schema_target=schema_target,
+        accept_lossy=accept_lossy,
+        preflight_only=preflight_only,
+    )
+    if preflight_only:
+        logger.info(
+            "Preflighted OTIO markers: adapter=%s target=%s lossy=%s",
+            adapter_name,
+            schema_target,
+            report["lossy"],
+        )
+        return report
     logger.info("Exported OTIO with %d markers: %s", len(markers), output_path)
 
-    return output_path
+    return report if return_report else output_path
 
 
 def _file_to_url(filepath: str) -> str:

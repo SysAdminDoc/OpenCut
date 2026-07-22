@@ -5778,6 +5778,8 @@ function stopMediaScanInterval() {
 // ─────────────────────────────────────────────────────────────
 // Event binding
 // ─────────────────────────────────────────────────────────────
+let loadOtioCapabilities = async () => {};
+
 function bindEvents() {
   // ── Tab navigation ──
   const tabs = Array.from(document.querySelectorAll(".oc-tab"));
@@ -5840,7 +5842,7 @@ function bindEvents() {
     control.addEventListener("change", () => updateTimelineReadiness());
   });
 
-  ["renameScope", "binStrategy", "srtTrackIndex", "exportPreset", "beatMarkerColor", "otioExportMode"].forEach((id) => {
+  ["renameScope", "binStrategy", "srtTrackIndex", "exportPreset", "beatMarkerColor", "otioExportMode", "otioAdapter", "otioSchemaTarget"].forEach((id) => {
     const control = document.getElementById(id);
     if (!control) return;
     control.addEventListener("change", () => updateTimelineReadiness());
@@ -5985,12 +5987,67 @@ function bindEvents() {
   document.getElementById("runSrtImportBtn")?.addEventListener("click",   runSrtImport);
 
   // ── OTIO Export ──
+  loadOtioCapabilities = async function () {
+    const adapterSelect = document.getElementById("otioAdapter");
+    const schemaSelect = document.getElementById("otioSchemaTarget");
+    if (!adapterSelect || !schemaSelect) return;
+    const response = await BackendClient.get("/timeline/otio-capabilities");
+    if (!response.ok) {
+      UIController.showToast(
+        formatI18n(
+          "uxp.timeline.otio_capabilities_failed",
+          "Could not discover OTIO adapters: {error}",
+          { error: response.error || t("common.unknown", "unknown") },
+        ),
+        "warning",
+      );
+      return;
+    }
+    const previousAdapter = adapterSelect.value;
+    const previousSchema = schemaSelect.value;
+    adapterSelect.textContent = "";
+    (response.data?.adapters || []).filter((adapter) => adapter.write).forEach((adapter) => {
+      const option = document.createElement("option");
+      option.value = adapter.name;
+      option.textContent = `${adapter.name} (.${adapter.suffixes?.[0] || "otio"}) — ${adapter.version}`;
+      option.dataset.schemaTargeting = adapter.schema_targeting ? "true" : "false";
+      adapterSelect.appendChild(option);
+    });
+    schemaSelect.textContent = "";
+    (response.data?.schema_targets || []).forEach((target) => {
+      const option = document.createElement("option");
+      option.value = target.id;
+      option.textContent = target.label;
+      schemaSelect.appendChild(option);
+    });
+    if ([...adapterSelect.options].some((option) => option.value === previousAdapter)) {
+      adapterSelect.value = previousAdapter;
+    }
+    if ([...schemaSelect.options].some((option) => option.value === previousSchema)) {
+      schemaSelect.value = previousSchema;
+    }
+    const syncSchemaTarget = () => {
+      const selected = adapterSelect.options[adapterSelect.selectedIndex];
+      const supportsTargets = !selected || selected.dataset.schemaTargeting !== "false";
+      schemaSelect.disabled = !supportsTargets;
+      if (!supportsTargets) schemaSelect.value = "current";
+    };
+    adapterSelect.addEventListener("change", syncSchemaTarget);
+    syncSchemaTarget();
+  };
+
   document.getElementById("exportOtioBtn")?.addEventListener("click", async () => {
     const clipPath = document.getElementById("clipPathCut")?.value?.trim()
                   ?? document.getElementById("clipPathVideo")?.value?.trim() ?? "";
     if (!clipPath) { showSelectClipWarning(); return; }
     const mode = document.getElementById("otioExportMode")?.value ?? "cuts";
-    const payload = { filepath: clipPath, mode };
+    const payload = {
+      filepath: clipPath,
+      mode,
+      adapter_name: document.getElementById("otioAdapter")?.value || "otio_json",
+      schema_target: document.getElementById("otioSchemaTarget")?.value || "current",
+      accept_lossy: document.getElementById("otioAcceptLossy")?.checked === true,
+    };
     if (mode === "cuts") {
       if (!lastCuts || lastCuts.length === 0) {
         UIController.showToast(t("uxp.timeline.runtime.no_cuts_available", "No cuts available. Run silence removal first."), "warning");
@@ -6021,12 +6078,14 @@ function bindEvents() {
       );
     } else {
       const error = r.error || r.data?.error || t("common.unknown", "unknown");
+      const lossFields = r.data?.preflight?.lossy_fields || [];
+      const detail = lossFields.length ? `${error} ${lossFields.join(", ")}` : error;
       UIController.showToast(formatI18n("uxp.timeline.runtime.otio_export_failed", "OTIO export failed: {error}", { error }), "error");
       noteTimelineAction(
         t("uxp.timeline.runtime.otio_export_error_title", "OTIO export error"),
         "error",
-        formatI18n("uxp.timeline.runtime.otio_export_failed_detail", "OTIO export failed. {error}", { error }),
-        error
+        formatI18n("uxp.timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}", { error: detail }),
+        detail
       );
     }
   });
@@ -7630,6 +7689,7 @@ async function initApp() {
   if (alive) {
     runtimeState.healthBackoffMs = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
+    await loadOtioCapabilities();
     await loadInterruptedProxyRecovery();
     await loadCaptionStyleCatalog({ silent: true });
     await loadLlmSettings();

@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 16,
-    "GET": 379,
+    "GET": 380,
     "PATCH": 1,
     "POST": 1054,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1452,
+  "tool_count": 1453,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -10211,6 +10211,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_timeline_index_status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /timeline/otio-capabilities"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /timeline/otio-capabilities.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "timeline",
+        "endpoint": "timeline.timeline_otio_capabilities",
+        "generated": true,
+        "method": "GET",
+        "path": "/timeline/otio-capabilities",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_timeline_otio_capabilities"
     },
     {
       "annotations": {

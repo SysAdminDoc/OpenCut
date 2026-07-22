@@ -498,6 +498,24 @@ def timeline_index_status():
 # ---------------------------------------------------------------------------
 # Timeline: OTIO Export (Universal Timeline Interchange)
 # ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/otio-capabilities", methods=["GET"])
+def timeline_otio_capabilities():
+    """Return live OTIO adapter and schema-target capabilities."""
+    try:
+        from opencut.export.otio_compat import get_otio_capabilities
+
+        return jsonify(get_otio_capabilities())
+    except ImportError as exc:
+        return jsonify({
+            "runtime_version": None,
+            "adapters": [],
+            "schema_targets": [],
+            "error": str(exc),
+        }), 503
+    except Exception as exc:
+        return safe_error(exc, "timeline_otio_capabilities")
+
+
 @timeline_bp.route("/timeline/export-otio", methods=["POST"])
 @require_csrf
 def timeline_export_otio():
@@ -516,6 +534,10 @@ def timeline_export_otio():
         markers (list): [{time, name, color}, ...] — marker list (mode=markers)
         output_dir (str): Output directory
         sequence_name (str): Name for the timeline
+        adapter_name (str): Discovered writable adapter (default: otio_json)
+        schema_target (str): current or OTIO_CORE:<version>
+        preflight_only (bool): Report compatibility without writing
+        accept_lossy (bool): Explicitly allow reported downgrade loss
     """
     try:
         data = get_json_dict()
@@ -525,6 +547,13 @@ def timeline_export_otio():
     mode = data.get("mode", "cuts")
     output_dir = str(data.get("output_dir", "")).strip()
     sequence_name = data.get("sequence_name", "OpenCut Edit")
+    adapter_name = str(data.get("adapter_name", "otio_json")).strip() or "otio_json"
+    schema_target = str(data.get("schema_target", "current")).strip() or "current"
+    preflight_only = safe_bool(data.get("preflight_only"), default=False)
+    accept_lossy = safe_bool(data.get("accept_lossy"), default=False)
+
+    if len(adapter_name) > 100 or len(schema_target) > 100:
+        return jsonify({"error": "OTIO adapter or schema target is too long"}), 400
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -550,6 +579,7 @@ def timeline_export_otio():
             export_otio_from_cuts,
             export_otio_markers,
         )
+        from opencut.export.otio_compat import adapter_output_suffix
 
         if not check_otio_available():
             return jsonify({
@@ -560,7 +590,13 @@ def timeline_export_otio():
         # Determine output path
         base_name = os.path.splitext(os.path.basename(filepath))[0]
         effective_dir = output_dir or os.path.dirname(filepath)
-        otio_path = os.path.join(effective_dir, f"{base_name}_opencut.otio")
+        try:
+            output_suffix = adapter_output_suffix(adapter_name)
+        except ValueError:
+            # Let the full timeline preflight return the structured unavailable
+            # adapter report instead of failing with an unhelpful path error.
+            output_suffix = "otio"
+        otio_path = os.path.join(effective_dir, f"{base_name}_opencut.{output_suffix}")
 
         # Probe for framerate
         from opencut.utils.media import probe
@@ -579,6 +615,11 @@ def timeline_export_otio():
                 sequence_name=sequence_name,
                 framerate=fps,
                 total_duration=total_duration,
+                schema_target=schema_target,
+                adapter_name=adapter_name,
+                accept_lossy=accept_lossy,
+                preflight_only=preflight_only,
+                return_report=True,
             )
         elif mode == "segments":
             segments_data = data.get("segments", [])
@@ -601,8 +642,13 @@ def timeline_export_otio():
                 filepath, segments, otio_path,
                 sequence_name=sequence_name,
                 framerate=fps,
+                schema_target=schema_target,
+                adapter_name=adapter_name,
+                accept_lossy=accept_lossy,
+                preflight_only=preflight_only,
+                return_report=True,
             )
-        else:
+        elif mode == "cuts":
             # mode == "cuts" (default)
             cuts = data.get("cuts", [])
             if not isinstance(cuts, list) or not cuts:
@@ -614,20 +660,44 @@ def timeline_export_otio():
                 sequence_name=sequence_name,
                 framerate=fps,
                 total_duration=total_duration,
+                schema_target=schema_target,
+                adapter_name=adapter_name,
+                accept_lossy=accept_lossy,
+                preflight_only=preflight_only,
+                return_report=True,
             )
+        else:
+            return jsonify({"error": "mode must be cuts, segments, or markers"}), 400
+
+        report = result_path if isinstance(result_path, dict) else {
+            "output_path": result_path,
+            "written": True,
+        }
+        if preflight_only:
+            return jsonify({"preflight": report, "format": output_suffix})
 
         return jsonify({
-            "output_path": result_path,
-            "format": "otio",
-            "message": f"Exported OTIO timeline: {os.path.basename(result_path)}",
+            "output_path": report["output_path"],
+            "format": output_suffix,
+            "preflight": report,
+            "message": f"Exported OTIO timeline: {os.path.basename(report['output_path'])}",
         })
 
-    except ImportError as e:
-        return jsonify({
-            "error": f"OpenTimelineIO not available: {e}",
-            "suggestion": "Install with: pip install opentimelineio",
-        }), 400
     except Exception as exc:
+        from opencut.export.otio_compat import OTIOPreflightError
+
+        if isinstance(exc, OTIOPreflightError):
+            status = 409 if exc.report.get("lossy") else 400
+            return jsonify({
+                "error": str(exc),
+                "code": "OTIO_PREFLIGHT_FAILED",
+                "preflight": exc.report,
+            }), status
+        if isinstance(exc, ImportError):
+            return jsonify({
+                "error": f"OpenTimelineIO not available: {exc}",
+                "suggestion": "Install with: pip install opentimelineio",
+            }), 400
         return safe_error(exc, "timeline_export_otio")
 
 

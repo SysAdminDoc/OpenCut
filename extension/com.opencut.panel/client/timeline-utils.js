@@ -58,7 +58,10 @@
         var payload = {
             filepath: options.filepath,
             output_dir: options.outputDir,
-            mode: options.mode
+            mode: options.mode,
+            adapter_name: options.adapterName || "otio_json",
+            schema_target: options.schemaTarget || "current",
+            accept_lossy: options.acceptLossy === true
         };
         if (options.mode === "cuts") {
             payload.cuts = cloneCuts(options.cuts);
