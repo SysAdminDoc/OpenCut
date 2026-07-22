@@ -124,17 +124,25 @@ def verify_portal_signature(
     return hmac.compare_digest(expected, str(signature or "").strip())
 
 
+def _normalize_requested_version_ids(requested: List[str] | None) -> List[str] | None:
+    """Strip and de-duplicate requested version IDs without consulting review data."""
+    if requested is None:
+        return None
+    normalized: List[str] = []
+    for raw in requested:
+        version_id = str(raw or "").strip()
+        if version_id and version_id not in normalized:
+            normalized.append(version_id)
+    return normalized
+
+
 def _selected_version_ids(review: dict, requested: List[str] | None) -> List[str]:
     versions = [version for version in review.get("versions", []) or [] if isinstance(version, dict)]
     available = {str(version.get("version_id") or "") for version in versions}
     if requested is None:
         selected = [str(review.get("current_version_id") or "")]
     else:
-        selected = []
-        for raw in requested:
-            version_id = str(raw or "").strip()
-            if version_id and version_id not in selected:
-                selected.append(version_id)
+        selected = _normalize_requested_version_ids(requested)
     if not selected or any(version_id not in available for version_id in selected):
         raise ValueError("version_ids must select one or more existing review versions")
     return selected
@@ -309,8 +317,9 @@ def resolve_portal_review(
     token = str(review.get("token") or "")
     if review.get("expires_at") and time.time() > float(review["expires_at"]):
         raise PermissionError("review link has expired")
-    selected_version_ids = _selected_version_ids(review, version_ids)
-    signed_version_ids = selected_version_ids if version_ids is not None else None
+    # Verify the signature before validating version IDs so unauthenticated
+    # callers cannot use the 400-vs-403 split as a version-ID existence oracle.
+    signed_version_ids = _normalize_requested_version_ids(version_ids)
     if not verify_portal_signature(
         review_id,
         int(expires_at),
@@ -319,6 +328,7 @@ def resolve_portal_review(
         version_ids=signed_version_ids,
     ):
         raise PermissionError("invalid or expired portal signature")
+    selected_version_ids = _selected_version_ids(review, version_ids)
     selected = set(selected_version_ids)
     comments: List[dict] = []
     for raw in review.get("comments", []) or []:
@@ -395,6 +405,26 @@ def resolve_portal_media(
             video_path = str(version.get("video_path") or "")
             if not os.path.isfile(video_path):
                 raise FileNotFoundError(f"Review artifact not found: {media_version_id}")
+            # Cheap integrity fast-path: refuse to serve an artifact whose
+            # on-disk size no longer matches the size recorded at snapshot
+            # time. Legacy records without a size are served as before.
+            expected_size = int(version.get("size_bytes") or 0)
+            if expected_size > 0 and os.path.getsize(video_path) != expected_size:
+                from opencut.errors import OpenCutError
+
+                raise OpenCutError(
+                    code="ARTIFACT_INTEGRITY_ERROR",
+                    message=(
+                        f"Review artifact {media_version_id} does not match "
+                        "its recorded size."
+                    ),
+                    suggestion=(
+                        "The stored artifact was modified or truncated on "
+                        "disk. Re-create the review version from the "
+                        "original render."
+                    ),
+                    status=500,
+                )
             return video_path
     raise KeyError(f"Review version not found: {media_version_id}")
 

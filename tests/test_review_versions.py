@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -106,6 +107,27 @@ def test_legacy_migration_backup_and_rollback_are_lossless(tmp_path, monkeypatch
     assert json.loads(reviews_file.read_text(encoding="utf-8")) == legacy
 
 
+def test_corrupt_reviews_file_is_quarantined_not_overwritten(tmp_path, monkeypatch):
+    from opencut.core.review_links import _load_reviews, create_review_link
+
+    reviews_file = _use_review_store(tmp_path, monkeypatch)
+    corrupt_bytes = b'{"half-written": '
+    reviews_file.write_bytes(corrupt_bytes)
+
+    assert _load_reviews() == {}
+    quarantine = tmp_path / "reviews.json.corrupt"
+    assert quarantine.is_file()
+    assert quarantine.read_bytes() == corrupt_bytes
+    assert not reviews_file.exists()
+
+    # The next save starts a fresh store without touching the quarantined bytes.
+    render = tmp_path / "fresh.mp4"
+    render.write_bytes(b"fresh render")
+    review = create_review_link(str(render), title="Fresh start")
+    assert review.review_id in json.loads(reviews_file.read_text(encoding="utf-8"))
+    assert quarantine.read_bytes() == corrupt_bytes
+
+
 def test_guest_link_scopes_versions_and_renders_comparison(tmp_path, monkeypatch):
     from opencut.core.review_links import add_review_comment, add_review_version, create_review_link
     from opencut.core.review_portal import (
@@ -159,6 +181,69 @@ def test_guest_link_scopes_versions_and_renders_comparison(tmp_path, monkeypatch
     assert 'aria-label="Version comparison"' in page
     assert "/media/v1" in page and "/media/v2" in page
     assert "Version A" in page and "Version B" in page
+
+
+def test_invalid_signature_with_bogus_version_id_is_not_an_existence_oracle(
+    client, tmp_path, monkeypatch
+):
+    """An unauthenticated caller must get the signature error (403), never the
+    version-selection 400 that would reveal whether a version ID exists."""
+    from opencut.core.review_links import create_review_link
+    from opencut.core.review_portal import resolve_portal_review
+
+    _use_review_store(tmp_path, monkeypatch)
+    render = tmp_path / "oracle.mp4"
+    render.write_bytes(b"oracle artifact")
+    review = create_review_link(str(render), title="Oracle")
+    expires = int(time.time()) + 3600
+
+    with pytest.raises(PermissionError):
+        resolve_portal_review(review.review_id, expires, "sha256=bogus", ["does-not-exist"])
+
+    response = client.get(
+        f"/review/portal/{review.review_id}?expires={expires}"
+        "&sig=sha256%3Dbogus&versions=does-not-exist&format=json"
+    )
+    assert response.status_code == 403
+
+
+def test_tampered_artifact_is_not_served_by_the_portal(client, tmp_path, monkeypatch):
+    from opencut.core.review_links import create_review_link
+    from opencut.core.review_portal import build_portal_share, resolve_portal_media
+    from opencut.errors import OpenCutError
+
+    reviews_file = _use_review_store(tmp_path, monkeypatch)
+    render = tmp_path / "tamper.mp4"
+    render.write_bytes(b"pristine artifact bytes")
+    review = create_review_link(str(render), title="Tamper check")
+    share = build_portal_share(
+        review_id=review.review_id, host="review.local", port=5679, version_ids=["v1"]
+    )
+    parsed = urlparse(share.url)
+    query = parse_qs(parsed.query)
+
+    stored_artifact = review.versions[0].video_path
+    with open(stored_artifact, "ab") as handle:
+        handle.write(b"appended tamper bytes")
+
+    with pytest.raises(OpenCutError) as exc_info:
+        resolve_portal_media(
+            review.review_id, int(query["expires"][0]), query["sig"][0], "v1", ["v1"]
+        )
+    assert exc_info.value.code == "ARTIFACT_INTEGRITY_ERROR"
+
+    response = client.get(f"{parsed.path}?{parsed.query}&media=v1")
+    assert response.status_code == 500
+    assert response.get_json()["code"] == "ARTIFACT_INTEGRITY_ERROR"
+
+    # Legacy records without a recorded size are served as before.
+    reviews = json.loads(reviews_file.read_text(encoding="utf-8"))
+    reviews[review.review_id]["versions"][0]["size_bytes"] = 0
+    reviews_file.write_text(json.dumps(reviews), encoding="utf-8")
+    resolved = resolve_portal_media(
+        review.review_id, int(query["expires"][0]), query["sig"][0], "v1", ["v1"]
+    )
+    assert resolved == stored_artifact
 
 
 def test_portal_route_serves_only_signed_version_media(client, csrf_token, tmp_path, monkeypatch):

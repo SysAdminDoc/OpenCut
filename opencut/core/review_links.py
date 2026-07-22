@@ -8,9 +8,11 @@ are migrated in place after an exact pre-migration backup is written.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
 import os
+import secrets
 import shutil
 import tempfile
 import threading
@@ -250,8 +252,25 @@ def _load_reviews() -> Dict[str, dict]:
                 reviews = json.load(stream)
             if not isinstance(reviews, dict):
                 raise ValueError("reviews root must be an object")
-        except (json.JSONDecodeError, OSError, ValueError):
-            logger.warning("Corrupt reviews file, starting fresh")
+        except (json.JSONDecodeError, ValueError):
+            # Quarantine before returning the fresh structure: the next save
+            # would otherwise overwrite the corrupt file and permanently
+            # destroy every review record.
+            quarantine = f"{path}.corrupt"
+            try:
+                os.replace(path, quarantine)
+                logger.warning(
+                    "Corrupt reviews file quarantined to %s; starting fresh",
+                    quarantine,
+                )
+            except OSError as exc:
+                logger.warning(
+                    "Corrupt reviews file could not be quarantined (%s); "
+                    "starting fresh", exc,
+                )
+            return {}
+        except OSError:
+            logger.warning("Could not read reviews file, starting fresh")
             return {}
 
         original = json.loads(json.dumps(reviews))
@@ -295,8 +314,14 @@ def export_review_data(output_path: str) -> str:
 
 
 def _generate_token(video_path: str) -> str:
-    raw = f"{video_path}-{time.time()}-{os.getpid()}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+    """Return a CSPRNG bearer token.
+
+    The token doubles as the portal HMAC signing key, so it must be
+    unpredictable. Previously stored hash-of-timestamp tokens keep working:
+    verification is a plain string comparison, not format-dependent.
+    """
+    del video_path  # kept for call-site compatibility; no longer an input
+    return secrets.token_urlsafe(24)
 
 
 def _generate_id(video_path: str) -> str:
@@ -410,33 +435,60 @@ def add_review_version(
         reviews = _load_reviews()
         if review_id not in reviews:
             raise KeyError(f"Review not found: {review_id}")
-        record = reviews[review_id]
-        versions = record.get("versions") or []
+        versions = reviews[review_id].get("versions") or []
         number = (
             max((int(version.get("number") or 0) for version in versions if isinstance(version, dict)), default=0) + 1
         )
-        version_id = f"v{number}"
-        managed_path, digest, size_bytes = _snapshot_artifact(video_path, review_id, version_id, on_progress)
-        version = ReviewVersion(
-            version_id=version_id,
-            number=number,
-            video_path=managed_path,
-            label=label.strip() or f"Version {number}",
-            artifact_sha256=digest,
-            size_bytes=size_bytes,
-            managed=True,
-        )
-        versions.append(asdict(version))
-        record["versions"] = versions
-        record["current_version_id"] = version_id
-        record["video_path"] = managed_path
-        record["status"] = version.status
-        record["status_updated_at"] = None
-        record["schema_version"] = REVIEW_SCHEMA_VERSION
-        if title.strip():
-            record["title"] = title.strip()
-        _save_reviews(reviews)
-        link = _link_from_record(record)
+    version_id = f"v{number}"
+    # Snapshot outside the lock (mirrors create_review_link): the potentially
+    # multi-GB copy+hash must not block concurrent review reads.
+    managed_path, digest, size_bytes = _snapshot_artifact(video_path, review_id, version_id, on_progress)
+    try:
+        with _reviews_lock:
+            reviews = _load_reviews()
+            if review_id not in reviews:
+                raise KeyError(f"Review not found: {review_id}")
+            record = reviews[review_id]
+            versions = record.get("versions") or []
+            current_number = (
+                max((int(version.get("number") or 0) for version in versions if isinstance(version, dict)), default=0) + 1
+            )
+            if current_number != number:
+                # A concurrent append claimed our version slot while the copy
+                # ran; move the artifact to the next free version ID.
+                number = current_number
+                version_id = f"v{number}"
+                renamed_path = _artifact_path(review_id, version_id, video_path)
+                os.replace(managed_path, renamed_path)
+                managed_path = renamed_path
+            version = ReviewVersion(
+                version_id=version_id,
+                number=number,
+                video_path=managed_path,
+                label=label.strip() or f"Version {number}",
+                artifact_sha256=digest,
+                size_bytes=size_bytes,
+                managed=True,
+            )
+            versions.append(asdict(version))
+            record["versions"] = versions
+            record["current_version_id"] = version_id
+            record["video_path"] = managed_path
+            record["status"] = version.status
+            record["status_updated_at"] = None
+            record["schema_version"] = REVIEW_SCHEMA_VERSION
+            if title.strip():
+                record["title"] = title.strip()
+            _save_reviews(reviews)
+            link = _link_from_record(record)
+    except Exception:
+        # The review vanished (or the save failed) after the snapshot was
+        # taken — do not leave an orphan artifact in managed storage.
+        try:
+            os.remove(managed_path)
+        except OSError:
+            pass
+        raise
     if on_progress:
         on_progress(100, f"Review {version_id} created")
     logger.info("Created review %s version %s for %s", review_id, version_id, video_path)
@@ -546,7 +598,7 @@ def get_review(review_id: str, token: str, version_id: str = "") -> ReviewLink:
     if review_id not in reviews:
         raise KeyError(f"Review not found: {review_id}")
     record = reviews[review_id]
-    if record["token"] != token:
+    if not hmac.compare_digest(str(record["token"] or ""), str(token or "")):
         raise PermissionError("Invalid review token")
     if record.get("expires_at") and time.time() > record["expires_at"]:
         raise PermissionError("Review link has expired")
