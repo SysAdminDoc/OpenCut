@@ -43,6 +43,10 @@ EXPECTED_INNER_HTML_SINKS = Counter(
         ("renderPlan", "list"): 1,
         ("renderReview", "notes"): 1,
         ("populateSelects", "sel"): 1,
+        # Recovery empty/error/populated states escape every persisted label,
+        # transaction ID, diagnostic string, and localized action before the
+        # reviewed markup is assigned.
+        ("loadJournalRecoveryUxp", "list"): 3,
         # Plugin-trust dashboard sinks: empty-state/loading/error branches
         # interpolate only escaped static i18n strings; the populated grid
         # assigns the pre-escaped `html` built by the plugin row helpers.

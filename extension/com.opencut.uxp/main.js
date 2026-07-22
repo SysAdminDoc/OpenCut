@@ -1767,6 +1767,58 @@ const BackendClient = createBackendClient({
   onCapabilities: updateCapabilityHints,
 });
 
+async function runCheckpointedUxpHostWrite(spec, writeHost) {
+  const created = await BackendClient.post("/journal/checkpoints", {
+    action: spec.action,
+    label: spec.label || "",
+    clip_path: spec.clipPath || "",
+    inverse: spec.inverse || {},
+    forward: spec.forward || undefined,
+    preview: spec.preview || {},
+  });
+  if (!created.ok || !created.data?.transaction_id) {
+    const error = created.data?.error || created.error || t("uxp.journal.checkpoint_unknown_error", "unknown checkpoint error");
+    UIController.showToast(
+      formatI18n("uxp.journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.", { error }),
+      "error"
+    );
+    return { ok: false, reason: error, checkpoint_failed: true };
+  }
+
+  const checkpoint = created.data;
+  let result;
+  try {
+    result = await writeHost();
+  } catch (err) {
+    result = { ok: false, reason: err?.message || String(err) };
+  }
+
+  if (!result?.ok) {
+    await BackendClient.post(`/journal/checkpoints/${encodeURIComponent(checkpoint.transaction_id)}/recovery-failed`, {
+      error: result?.reason || t("uxp.journal.host_write_failed", "Host write failed"),
+      diagnostics: { host_result: result || {} },
+    });
+    await loadJournalRecoveryUxp();
+    return result || { ok: false, reason: t("uxp.journal.host_write_failed", "Host write failed") };
+  }
+
+  const inverse = typeof spec.inverseFromResult === "function"
+    ? (spec.inverseFromResult(result) || spec.inverse || {})
+    : (spec.inverse || {});
+  const completed = await BackendClient.post(
+    `/journal/checkpoints/${encodeURIComponent(checkpoint.transaction_id)}/complete`,
+    { inverse, diagnostics: { host_result: result } }
+  );
+  if (!completed.ok) {
+    UIController.showToast(
+      t("uxp.journal.completion_failed", "Premiere changed, but the recovery checkpoint could not be completed. It remains available for review."),
+      "warning"
+    );
+  }
+  await loadJournalRecoveryUxp();
+  return result;
+}
+
 const JobPoller = createJobController({
   client: BackendClient,
   state: runtimeState,
@@ -4542,7 +4594,15 @@ async function applyTimelineCuts(cuts) {
     UIController.setButtonLoading("applyTimelineCutsBtn", true);
     let result;
     try {
-      result = await PProBridge.applyCuts(cutsToApply);
+      result = await runCheckpointedUxpHostWrite({
+        action: "apply_cuts",
+        label: t("uxp.journal.apply_cuts_label", "Apply reviewed timeline cuts"),
+        clipPath: getWorkspaceSource(),
+        preview: {
+          clips: getWorkspaceSource() ? [getWorkspaceSource()] : [],
+          settings: { cuts: cutsToApply },
+        },
+      }, () => PProBridge.applyCuts(cutsToApply));
     } finally {
       UIController.setButtonLoading("applyTimelineCutsBtn", false);
     }
@@ -4612,7 +4672,20 @@ async function addSequenceMarkers(markers, color) {
     UIController.setButtonLoading("addBeatMarkersBtn", true);
     let result;
     try {
-      result = await PProBridge.addMarkers(formatted);
+      const inverseMarkers = formatted.map((marker) => ({
+        time: marker.time,
+        comment: marker.label,
+      }));
+      result = await runCheckpointedUxpHostWrite({
+        action: "add_markers",
+        label: formatI18n("uxp.journal.add_markers_label", "Add {count} sequence marker(s)", { count: formatted.length }),
+        clipPath: getWorkspaceSource(),
+        inverse: { markers: inverseMarkers },
+        preview: {
+          clips: getWorkspaceSource() ? [getWorkspaceSource()] : [],
+          settings: { markers: inverseMarkers },
+        },
+      }, () => PProBridge.addMarkers(formatted));
     } finally {
       UIController.setButtonLoading("addBeatMarkersBtn", false);
     }
@@ -4706,7 +4779,7 @@ async function runBatchExport() {
 // applies. After a successful rename the button offers a one-click undo that
 // applies the recorded inverse.
 let _renameArmed = null;      // { renames } pending apply
-let _renameUndo = null;       // { inverse } available to revert
+let _renameUndo = null;       // { inverse, redo } available to revert safely
 
 function _setBtnLabel(btnId, label) {
   const el = document.getElementById(btnId);
@@ -4721,12 +4794,26 @@ async function runBatchRename() {
 
   // Undo phase: the button is offering to revert the last rename.
   if (_renameUndo) {
-    const inverse = _renameUndo;
-    _renameUndo = null;
-    _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
+    const undoPlan = _renameUndo;
     UIController.setButtonLoading("runBatchRenameBtn", true);
-    const res = await PProBridge.batchRenameProjectItems({ renames: inverse });
+    const res = await runCheckpointedUxpHostWrite({
+      action: "batch_rename",
+      label: formatI18n("uxp.journal.batch_rename_undo_label", "Undo {count} project-item rename(s)", { count: undoPlan.inverse.length }),
+      inverse: { renames: undoPlan.redo },
+      preview: {
+        items: undoPlan.inverse.map((item) => ({
+          nodeId: item.nodeId,
+          before: item.currentName || item.oldName,
+          after: item.newName || item.oldName,
+        })),
+        settings: { operation: "undo_batch_rename" },
+      },
+    }, () => PProBridge.batchRenameProjectItems({ renames: undoPlan.inverse }));
     UIController.setButtonLoading("runBatchRenameBtn", false);
+    if (res?.ok) {
+      _renameUndo = null;
+      _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
+    }
     UIController.showToast(formatI18n("uxp.timeline.runtime.rename_undone", "Reverted {count} rename(s).", { count: res?.renamed ?? 0 }), res?.ok ? "success" : "warning");
     return;
   }
@@ -4763,10 +4850,16 @@ async function runBatchRename() {
 
   // Second click: apply.
   const pending = _renameArmed.renames;
+  const pendingInverse = computeInverseRenames(pending);
   _renameArmed = null;
   _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.run_batch_rename", "Run batch rename"));
   UIController.setButtonLoading("runBatchRenameBtn", true);
-  const result = await PProBridge.batchRenameProjectItems({ renames: pending });
+  const result = await runCheckpointedUxpHostWrite({
+    action: "batch_rename",
+    label: formatI18n("uxp.journal.batch_rename_label", "Rename {count} project item(s)", { count: pending.length }),
+    inverse: { renames: pendingInverse },
+    preview: { items: pending.map((item) => ({ nodeId: item.nodeId, before: item.oldName, after: item.newName })) },
+  }, () => PProBridge.batchRenameProjectItems({ renames: pending }));
   UIController.setButtonLoading("runBatchRenameBtn", false);
 
   const renamed = result?.renamed ?? 0;
@@ -4776,7 +4869,10 @@ async function runBatchRename() {
   }
 
   // Record the inverse (limited to what applied) so the next click can undo.
-  _renameUndo = computeInverseRenames(pending.slice(0, renamed));
+  _renameUndo = {
+    inverse: pendingInverse.slice(0, renamed),
+    redo: pending.slice(0, renamed),
+  };
   _setBtnLabel("runBatchRenameBtn", t("uxp.timeline.runtime.undo_rename", "Undo last rename"));
 
   const partial = renamed < pending.length;
@@ -4814,7 +4910,11 @@ async function runSmartBins() {
   }
 
   UIController.setButtonLoading("runSmartBinsBtn", true);
-  const result = await PProBridge.createSmartBins({ bins: rules });
+  const result = await runCheckpointedUxpHostWrite({
+    action: "create_smart_bins",
+    label: formatI18n("uxp.journal.create_bins_label", "Create {count} smart bin(s)", { count: rules.length }),
+    preview: { settings: { strategy, rules } },
+  }, () => PProBridge.createSmartBins({ bins: rules }));
   UIController.setButtonLoading("runSmartBinsBtn", false);
 
   const created = result?.created ?? 0;
@@ -5879,6 +5979,7 @@ function bindEvents() {
     if (details) details.open = true;
     document.getElementById("connectionStatus")?.focus();
   });
+  document.getElementById("uxpRefreshRecoveryBtn")?.addEventListener("click", () => loadJournalRecoveryUxp());
   document.getElementById("workspaceGuideAction")?.addEventListener("click", (event) => {
     handleWorkspaceAction(event.currentTarget?.dataset?.action || "");
   });
@@ -6631,6 +6732,160 @@ async function uxpWsStopBridge() {
 // ─────────────────────────────────────────────────────────────
 // Engine Registry UI
 // ─────────────────────────────────────────────────────────────
+function journalActionLabelUxp(action) {
+  return ({
+    add_markers: t("uxp.journal.action_add_markers", "Add markers"),
+    batch_rename: t("uxp.journal.action_batch_rename", "Batch rename"),
+    import_sequence: t("uxp.journal.action_import_sequence", "Import sequence"),
+    import_overlay: t("uxp.journal.action_import_overlay", "Import overlay"),
+    import_captions: t("uxp.journal.action_import_captions", "Import captions"),
+    import_media: t("uxp.journal.action_import_media", "Import media"),
+    create_smart_bins: t("uxp.journal.action_create_bins", "Create bins"),
+    apply_cuts: t("uxp.journal.action_apply_cuts", "Apply cuts"),
+  })[action] || action || t("uxp.journal.unknown_action", "Unknown action");
+}
+
+function journalPreviewUxp(entry) {
+  const preview = entry?.preview || {};
+  const parts = [];
+  if (Array.isArray(preview.clips) && preview.clips.length) {
+    parts.push(formatI18n("uxp.journal.affected_clips", "Affected clips: {clips}", { clips: preview.clips.slice(0, 3).join(", ") }));
+  }
+  if (Array.isArray(preview.items) && preview.items.length) {
+    parts.push(formatI18n("uxp.journal.affected_items", "Affected items: {count}", { count: preview.items.length }));
+  }
+  const settings = preview.settings && typeof preview.settings === "object" ? Object.keys(preview.settings) : [];
+  if (settings.length) {
+    parts.push(formatI18n("uxp.journal.saved_plan", "Saved plan: {settings}", { settings: settings.slice(0, 5).join(", ") }));
+  }
+  return parts.join(" | ") || t("uxp.journal.saved_checkpoint", "Saved host-write checkpoint");
+}
+
+function canRestoreJournalEntryUxp(entry) {
+  return Boolean(
+    entry?.automatic_recovery_available &&
+    ["add_markers", "batch_rename", "import_sequence", "import_overlay"].includes(entry.action)
+  );
+}
+
+async function recoverJournalCheckpointUxp(transactionId) {
+  const fetched = await BackendClient.get(`/journal/checkpoints/${encodeURIComponent(transactionId)}?resolve=1`);
+  if (!fetched.ok || !fetched.data) {
+    UIController.showToast(fetched.data?.error || fetched.error || t("uxp.journal.recovery_payload_failed", "Could not verify the saved recovery payload."), "error");
+    return;
+  }
+  const entry = fetched.data;
+  const inverse = entry.inverse || {};
+  let result;
+  if (entry.action === "add_markers") {
+    result = await PProBridge.removeSequenceMarkers({ fingerprints: inverse.markers || inverse.fingerprints || [] });
+  } else if (entry.action === "batch_rename") {
+    const renames = (inverse.renames || []).map((item) => ({
+      ...item,
+      newName: item.newName || item.oldName,
+    }));
+    result = await PProBridge.batchRenameProjectItems({ renames });
+  } else if (entry.action === "import_sequence" || entry.action === "import_overlay") {
+    result = await PProBridge.removeImportedProjectItem(inverse);
+  } else {
+    result = { ok: false, reason: t("uxp.journal.cep_restore_required", "Open the CEP panel to restore this checkpoint.") };
+  }
+
+  if (!result?.ok) {
+    await BackendClient.post(`/journal/checkpoints/${encodeURIComponent(transactionId)}/recovery-failed`, {
+      error: result?.reason || t("uxp.journal.restore_failed", "Restore failed"),
+      diagnostics: { host_result: result || {} },
+    });
+    UIController.showToast(
+      formatI18n("uxp.journal.restore_failed_detail", "Restore failed: {error}", { error: result?.reason || t("common.unknown", "unknown") }),
+      "error"
+    );
+    await loadJournalRecoveryUxp();
+    return;
+  }
+
+  const marked = await BackendClient.post(`/journal/checkpoints/${encodeURIComponent(transactionId)}/recovered`, {});
+  if (!marked.ok) {
+    UIController.showToast(t("uxp.journal.restore_mark_failed", "Premiere was restored, but the checkpoint state could not be updated."), "warning");
+  } else {
+    UIController.showToast(t("uxp.journal.restore_complete", "Interrupted host write restored."), "success");
+  }
+  await loadJournalRecoveryUxp();
+}
+
+async function copyJournalDiagnosticsUxp(transactionId) {
+  const response = await BackendClient.get(`/journal/checkpoints/${encodeURIComponent(transactionId)}/diagnostics`);
+  if (!response.ok || !response.data) {
+    UIController.showToast(response.data?.error || response.error || t("uxp.journal.diagnostics_failed", "Could not load recovery diagnostics."), "error");
+    return;
+  }
+  await copyTextToClipboard(JSON.stringify(response.data, null, 2), {
+    successLabel: t("uxp.journal.recovery_diagnostics", "Recovery diagnostics"),
+  });
+}
+
+async function loadJournalRecoveryUxp() {
+  const list = document.getElementById("uxpRecoveryList");
+  if (!list) return;
+  const response = await BackendClient.get("/journal/recovery?limit=50");
+  if (!response.ok) {
+    setTextAndTitle("settingsRecoveryCountValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.journal.recovery_unavailable", "Recovery checkpoints could not be loaded."));
+    setTextAndTitle("settingsRecoveryAutoValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.journal.recovery_unavailable", "Recovery checkpoints could not be loaded."));
+    setSettingsStatus("settingsRecoveryStatus", t("uxp.journal.recovery_unavailable", "Recovery checkpoints could not be loaded."), "error");
+    list.innerHTML = `<div class="oc-empty-state oc-empty-state-inline"><div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.journal.recovery_unavailable_title", "Recovery unavailable"))}</div><p>${UIController.escapeHtml(t("uxp.journal.recovery_unavailable_hint", "Reconnect the local backend, then refresh recovery."))}</p></div>`;
+    return;
+  }
+
+  const entries = Array.isArray(response.data?.checkpoints) ? response.data.checkpoints : [];
+  const autoCount = entries.filter(canRestoreJournalEntryUxp).length;
+  setTextAndTitle("settingsRecoveryCountValue", String(entries.length), formatI18n("uxp.journal.interrupted_count_title", "{count} interrupted host write(s) need review.", { count: entries.length }));
+  setTextAndTitle("settingsRecoveryAutoValue", String(autoCount), formatI18n("uxp.journal.auto_restore_count_title", "{count} checkpoint(s) have a verified UXP inverse.", { count: autoCount }));
+  setSettingsStatus(
+    "settingsRecoveryStatus",
+    entries.length
+      ? formatI18n("uxp.journal.recovery_needed", "{count} interrupted host write(s) need review.", { count: entries.length })
+      : t("uxp.journal.recovery_clear", "No interrupted host writes. Every checkpoint reached completion."),
+    entries.length ? "warning" : "success"
+  );
+
+  if (!entries.length) {
+    list.innerHTML = `<div class="oc-empty-state oc-empty-state-inline"><div class="oc-empty-state-kicker">${UIController.escapeHtml(t("uxp.journal.recovery_clear_title", "Recovery is clear"))}</div><p>${UIController.escapeHtml(t("uxp.journal.recovery_clear_hint", "No incomplete host-write transactions were found."))}</p></div>`;
+    return;
+  }
+  list.innerHTML = entries.map((entry) => {
+    const canRestore = canRestoreJournalEntryUxp(entry);
+    const error = entry.recovery_error ? `<p class="oc-plugin-action-contract">${UIController.escapeHtml(entry.recovery_error)}</p>` : "";
+    return `<div class="oc-engine-row oc-recovery-row" data-transaction-id="${UIController.escapeHtml(entry.transaction_id || "")}">
+      <div class="oc-engine-copy">
+      <div class="oc-engine-title-row">
+        <span class="oc-engine-domain">${UIController.escapeHtml(journalActionLabelUxp(entry.action))}</span>
+        <span class="oc-engine-state is-warning">${UIController.escapeHtml(entry.status === "recovery_failed" ? t("uxp.journal.recovery_failed", "Recovery failed") : t("uxp.journal.interrupted", "Interrupted"))}</span>
+      </div>
+      <p class="oc-plugin-action-contract">${UIController.escapeHtml(entry.label || journalPreviewUxp(entry))}</p>
+      <p class="oc-plugin-action-contract">${UIController.escapeHtml(journalPreviewUxp(entry))}</p>
+      ${error}
+      <div class="oc-btn-row">
+        ${canRestore ? `<button type="button" class="oc-btn oc-btn-primary oc-btn-sm oc-recovery-restore">${UIController.escapeHtml(t("uxp.journal.restore", "Restore"))}</button>` : ""}
+        <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm oc-recovery-diagnostics">${UIController.escapeHtml(t("uxp.journal.copy_diagnostics", "Copy Diagnostics"))}</button>
+      </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".oc-recovery-restore").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const txid = event.currentTarget.closest("[data-transaction-id]")?.dataset?.transactionId;
+      if (txid) await recoverJournalCheckpointUxp(txid);
+    });
+  });
+  list.querySelectorAll(".oc-recovery-diagnostics").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const txid = event.currentTarget.closest("[data-transaction-id]")?.dataset?.transactionId;
+      if (txid) await copyJournalDiagnosticsUxp(txid);
+    });
+  });
+}
+
 async function uxpLoadEngines() {
   const grid = document.getElementById("uxpEngineGrid");
   if (!grid) return;
@@ -7690,6 +7945,7 @@ async function initApp() {
     runtimeState.healthBackoffMs = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
     await loadOtioCapabilities();
+    await loadJournalRecoveryUxp();
     await loadInterruptedProxyRecovery();
     await loadCaptionStyleCatalog({ silent: true });
     await loadLlmSettings();

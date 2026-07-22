@@ -1574,6 +1574,31 @@
         </div>
         </section>
 
+        <section class="oc-settings-group oc-settings-group--recovery">
+        <div class="oc-section-title" data-i18n="uxp.journal.recovery">Timeline Recovery</div>
+        <div class="oc-card">
+          <p class="oc-hint" data-i18n="uxp.journal.recovery_hint">Review host writes that began but did not record completion after a panel or Premiere restart.</p>
+          <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Timeline recovery summary" data-i18n-aria-label="uxp.journal.recovery_summary">
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.journal.interrupted">Interrupted</span>
+              <span class="oc-inline-value" id="settingsRecoveryCountValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label" data-i18n="uxp.journal.auto_restore">Auto-restore</span>
+              <span class="oc-inline-value" id="settingsRecoveryAutoValue" data-i18n="uxp.settings.loading">Loading...</span>
+            </div>
+          </div>
+          <div class="oc-status-line" id="settingsRecoveryStatus" role="status" aria-live="polite" data-i18n="uxp.journal.checking">Checking interrupted host writes...</div>
+          <div id="uxpRecoveryList" class="oc-engine-grid">
+            <div class="oc-empty-state oc-empty-state-inline">
+              <div class="oc-empty-state-kicker" data-i18n="uxp.journal.recovery">Timeline recovery</div>
+              <p data-i18n="uxp.journal.checking_hint">Loading durable checkpoints and saved inverse plans...</p>
+            </div>
+          </div>
+          <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshRecoveryBtn" data-i18n="uxp.journal.refresh">Refresh Recovery</button>
+        </div>
+        </section>
+
         <section class="oc-settings-group oc-settings-group--engines">
         <div class="oc-section-title" data-i18n="uxp.settings.engine_routing">Engine Routing</div>
         <div class="oc-card">

@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-07-22T12:41:14Z",
-  "total_routes": 1559,
-  "shipped_route_count": 1534,
+  "generated_at": "2026-07-22T13:30:19Z",
+  "total_routes": 1566,
+  "shipped_route_count": 1541,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 398,
+    "GET": 401,
     "PATCH": 1,
-    "POST": 1145,
+    "POST": 1149,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1505,
+    "implemented": 1512,
     "stub": 25
   },
   "blueprints": {
@@ -510,16 +510,16 @@
       ]
     },
     "journal": {
-      "route_count": 6,
+      "route_count": 13,
       "method_counts": {
         "DELETE": 1,
-        "GET": 2,
-        "POST": 3
+        "GET": 5,
+        "POST": 7
       },
       "sample_rules": [
         "/journal/db-diagnostics",
         "/journal/list",
-        "/journal/record"
+        "/journal/recovery"
       ]
     },
     "mcp_bridge": {
@@ -8529,6 +8529,60 @@
       "readiness": "implemented"
     },
     {
+      "rule": "/journal/checkpoints",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "journal.journal_checkpoint_begin",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints/<transaction_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "journal.journal_checkpoint_get",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints/<transaction_id>/complete",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "journal.journal_checkpoint_complete",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints/<transaction_id>/diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "journal.journal_checkpoint_diagnostics",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints/<transaction_id>/recovered",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "journal.journal_checkpoint_recovered",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints/<transaction_id>/recovery-failed",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "journal.journal_checkpoint_recovery_failed",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
       "rule": "/journal/clear",
       "methods": [
         "POST"
@@ -8570,6 +8624,15 @@
         "POST"
       ],
       "endpoint": "journal.journal_record",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/recovery",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "journal.journal_recovery",
       "blueprint": "journal",
       "readiness": "implemented"
     },

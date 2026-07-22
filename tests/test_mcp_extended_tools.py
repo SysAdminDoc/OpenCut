@@ -55,7 +55,7 @@ def test_extended_tools_are_opt_in_and_do_not_change_curated_default(monkeypatch
     assert len(mcp_server.get_mcp_tools()) == extended_count
 
 
-def test_queue_recovery_interchange_stays_rest_only():
+def test_recovery_interchange_stays_rest_only():
     route_keys = {
         (entry["metadata"]["method"], entry["metadata"]["path"])
         for entry in mcp_extended_tools.get_extended_tools()
@@ -65,6 +65,13 @@ def test_queue_recovery_interchange_stays_rest_only():
         ("GET", "/queue/export"),
         ("POST", "/queue/import"),
         ("POST", "/queue/replay/<queue_id>"),
+        ("GET", "/journal/recovery"),
+        ("POST", "/journal/checkpoints"),
+        ("GET", "/journal/checkpoints/<transaction_id>"),
+        ("POST", "/journal/checkpoints/<transaction_id>/complete"),
+        ("POST", "/journal/checkpoints/<transaction_id>/recovery-failed"),
+        ("POST", "/journal/checkpoints/<transaction_id>/recovered"),
+        ("GET", "/journal/checkpoints/<transaction_id>/diagnostics"),
     })
 
 

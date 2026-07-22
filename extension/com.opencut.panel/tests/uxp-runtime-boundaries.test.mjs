@@ -244,6 +244,21 @@ describe("UXP host theme boundary", () => {
 });
 
 describe("UXP source ownership", () => {
+  it("checkpoints direct UXP host writes and exposes restart recovery", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
+    for (const name of ["applyTimelineCuts", "addSequenceMarkers", "runBatchRename", "runSmartBins"]) {
+      const start = main.indexOf(`function ${name}`);
+      const next = main.indexOf("\nasync function ", start + 1);
+      const source = main.slice(start, next > start ? next : start + 5000);
+      expect(source, name).toContain("runCheckpointedUxpHostWrite");
+    }
+    expect(main).toContain('BackendClient.post("/journal/checkpoints"');
+    expect(main).toContain("loadJournalRecoveryUxp");
+    expect(index).toContain('id="uxpRecoveryList"');
+    expect(index).toContain('id="uxpRefreshRecoveryBtn"');
+  });
+
   it("keeps extracted runtime implementations out of main.js", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
     expect(main).toContain("createBackendClient");

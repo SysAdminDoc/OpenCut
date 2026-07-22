@@ -21,10 +21,11 @@ _SPECIAL_CURATED_ROUTES = {
     ("GET", "/search/ai/index/status"),
 }
 
-# Queue recovery and interchange stay REST/CLI-only. Export exposes complete
-# persisted payloads (including local media paths), while import/replay mutate
-# durable recovery state without the MCP registry's destructive confirmation
-# contract. Agents can still use the established add/list/clear queue tools.
+# Queue and host-write recovery stay REST/UI-only. These routes expose complete
+# persisted payloads (including local media paths and host diagnostics), while
+# their mutations alter durable recovery state without the MCP registry's
+# destructive confirmation contract. Agents can still use established curated
+# queue and journal tools where their confirmation contract is explicit.
 _REST_ONLY_ROUTES = {
     # Diagnostic cache identity is intentionally not an agent action. Keeping
     # this REST/CLI-only also avoids making local cache keys discoverable via
@@ -33,6 +34,13 @@ _REST_ONLY_ROUTES = {
     ("GET", "/queue/export"),
     ("POST", "/queue/import"),
     ("POST", "/queue/replay/<queue_id>"),
+    ("GET", "/journal/recovery"),
+    ("POST", "/journal/checkpoints"),
+    ("GET", "/journal/checkpoints/<transaction_id>"),
+    ("POST", "/journal/checkpoints/<transaction_id>/complete"),
+    ("POST", "/journal/checkpoints/<transaction_id>/recovery-failed"),
+    ("POST", "/journal/checkpoints/<transaction_id>/recovered"),
+    ("GET", "/journal/checkpoints/<transaction_id>/diagnostics"),
 }
 
 

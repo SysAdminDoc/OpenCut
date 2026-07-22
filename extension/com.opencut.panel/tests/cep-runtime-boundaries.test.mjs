@@ -248,6 +248,29 @@ describe("CEP bootstrap", () => {
 });
 
 describe("CEP source ownership", () => {
+  it("persists recovery checkpoints before every journalled host mutation", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const functionSlice = (name, nextName) => main.slice(
+      main.indexOf(`function ${name}`),
+      main.indexOf(`function ${nextName}`, main.indexOf(`function ${name}`) + 1),
+    );
+    for (const [name, nextName, hostCall] of [
+      ["applySequenceCuts", "runBeatMarkers", "ocApplySequenceCuts"],
+      ["addBeatMarkersToSequence", "runMulticamCuts", "ocAddSequenceMarkers"],
+      ["renameAll", "createSmartBins", "ocBatchRenameProjectItems"],
+      ["createSmartBins", "runRepeatDetect", "ocCreateSmartBins"],
+      ["addChaptersAsMarkers", "runSrtImport", "ocAddSequenceMarkers"],
+      ["runSrtImport", "runLoudMatch", "ocAddNativeCaptionTrack"],
+    ]) {
+      const source = functionSlice(name, nextName);
+      expect(source.indexOf("journalCheckpointedHostWrite"), name).toBeGreaterThanOrEqual(0);
+      expect(source.indexOf("journalCheckpointedHostWrite"), name).toBeLessThan(source.indexOf(hostCall));
+    }
+    expect(main).toContain('"/journal/checkpoints"');
+    expect(main).toContain('"/recovery-failed"');
+    expect(main).toContain('"/complete"');
+  });
+
   it("keeps extracted responsibilities out of the orchestration entrypoint", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
     expect(main).toContain("OpenCutBackendClient.createBackendClient");
