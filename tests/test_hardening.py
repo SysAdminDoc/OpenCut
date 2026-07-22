@@ -552,7 +552,7 @@ def test_standard_install_routes_skip_real_installs_in_testing(client, csrf_toke
 
 
 def test_models_delete_allows_custom_model_cache_file(client, csrf_token, tmp_path, monkeypatch):
-    import opencut.routes.system as system_routes
+    import opencut.routes.system_model_routes as system_routes
 
     model_dir = tmp_path / "models"
     model_dir.mkdir()

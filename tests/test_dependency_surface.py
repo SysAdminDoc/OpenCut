@@ -59,7 +59,7 @@ def test_deep_translator_removed_from_install_surfaces():
         REPO_ROOT / "pyproject.toml",
         REPO_ROOT / "requirements.txt",
         REPO_ROOT / "README.md",
-        REPO_ROOT / "opencut" / "routes" / "system.py",
+        REPO_ROOT / "opencut" / "routes" / "system_runtime_routes.py",
         REPO_ROOT / "opencut" / "core" / "dub_pipeline.py",
     ]
 
@@ -322,7 +322,7 @@ def test_runtime_security_floors_cover_bootstrap_installers():
     assert '"--require-hashes"' in install_source
     assert "Pillow>=10.0" not in install_source
 
-    dashboard_source = (REPO_ROOT / "opencut" / "routes" / "system.py").read_text(encoding="utf-8")
+    dashboard_source = (REPO_ROOT / "opencut" / "routes" / "system_runtime_routes.py").read_text(encoding="utf-8")
     assert f'pip install "{expected}"' in dashboard_source
 
     unsafe_runtime_installs = []

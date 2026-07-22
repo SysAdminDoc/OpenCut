@@ -98,7 +98,7 @@ def test_user_writable_package_dir_is_not_sys_path_priority():
         "opencut/helpers.py": "_sys.path.append(_opencut_pkg_dir)",
         "opencut/security.py": "sys.path.append(_target_dir)",
         "opencut/server.py": "sys.path.append(_opencut_packages)",
-        "opencut/routes/system.py": "sys.path.append(_target_dir)",
+        "opencut/routes/system_whisper_routes.py": "sys.path.append(_target_dir)",
     }
 
     for relative_path, expected_append in checked.items():
