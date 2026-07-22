@@ -7,8 +7,8 @@ legacy Windows players that require a UTF-8 signature.
 
 from typing import List, Optional
 
-from ..core.caption_line_breaks import split_caption_text_chunks, wrap_caption_text
 from ..core.asr_provenance import provenance_to_dict
+from ..core.caption_line_breaks import split_caption_text_chunks, wrap_caption_text
 from ..core.captions import CaptionSegment, TranscriptionResult, caption_segment_to_dict
 
 UTF8_NO_BOM = "utf-8"

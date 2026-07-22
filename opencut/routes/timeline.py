@@ -573,13 +573,13 @@ def timeline_export_otio():
             return jsonify({"error": str(e)}), 400
 
     try:
+        from opencut.export.otio_compat import adapter_output_suffix
         from opencut.export.otio_export import (
             check_otio_available,
             export_otio,
             export_otio_from_cuts,
             export_otio_markers,
         )
-        from opencut.export.otio_compat import adapter_output_suffix
 
         if not check_otio_available():
             return jsonify({

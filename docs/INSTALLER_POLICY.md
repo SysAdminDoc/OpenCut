@@ -34,8 +34,8 @@
 
 | Path | Source | Output | When used |
 |---|---|---|---|
-| **WPF / .NET 9 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, signed by the OpenCut Authenticode cert, embeds the bundled FFmpeg + manifest writer (F207). |
-| **Inno Setup installer** (`OpenCut.iss` + `Install.bat`) | `OpenCut.iss` + the helper `Install.bat` / `Install.ps1` | `dist/OpenCut-Setup-X.Y.Z.exe` (legacy filename collision) | Available as a fallback for builders without the .NET 9 SDK. Pre-dates the WPF path; was the only installer through v1.10.x. |
+| **WPF / .NET 10 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, signed by the OpenCut Authenticode cert, embeds the bundled FFmpeg + manifest writer (F207). |
+| **Inno Setup installer** (`OpenCut.iss` + `Install.bat`) | `OpenCut.iss` + the helper `Install.bat` / `Install.ps1` | `dist/OpenCut-Setup-X.Y.Z.exe` (legacy filename collision) | Available as a fallback for builders without the .NET 10 SDK. Pre-dates the WPF path; was the only installer through v1.10.x. |
 
 Both installers produce the same on-disk layout (FFmpeg under
 `{app}\ffmpeg`, server entry under `{app}\server`, registry CEP
