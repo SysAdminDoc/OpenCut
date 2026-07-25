@@ -61,6 +61,20 @@ describe("CEP panel utility escaping", () => {
   });
 });
 
+describe("CEP backend version comparison", () => {
+  it("accepts checkpoint-capable releases and common version prefixes", () => {
+    expect(utils.isVersionAtLeast("1.42.0", "1.42.0")).toBe(true);
+    expect(utils.isVersionAtLeast("v1.43.0-beta.1", "1.42.0")).toBe(true);
+    expect(utils.isVersionAtLeast("2.0.0", "1.42.0")).toBe(true);
+  });
+
+  it("rejects older and malformed releases", () => {
+    expect(utils.isVersionAtLeast("1.41.9", "1.42.0")).toBe(false);
+    expect(utils.isVersionAtLeast("", "1.42.0")).toBe(false);
+    expect(utils.isVersionAtLeast("development", "1.42.0")).toBe(false);
+  });
+});
+
 describe("CEP lazy DOM proxy", () => {
   it("caches successful element lookups by id", () => {
     const node = { id: "runButton" };

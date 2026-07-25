@@ -1,5 +1,6 @@
 const DEFAULT_STATE = Object.freeze({
   backendUrl: "http://127.0.0.1:5679",
+  backendVersion: "",
   csrfToken: null,
   activeJobId: null,
   jobStartInFlight: false,
@@ -37,6 +38,7 @@ export function createUxpState(initial = {}) {
   };
   state.resetTransport = ({ backendUrl, healthBackoffMs } = {}) => {
     state.backendUrl = backendUrl || DEFAULT_STATE.backendUrl;
+    state.backendVersion = "";
     state.csrfToken = null;
     state.healthBackoffMs = healthBackoffMs ?? DEFAULT_STATE.healthBackoffMs;
     state.clearJob();

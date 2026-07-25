@@ -9,6 +9,9 @@ record also lives in the git commit messages.
 
 - Declared the public route exports for the decomposed captions, system, and
   Wave L modules so facade imports cannot silently shadow same-named helpers.
+- CEP and UXP now read the connected backend version and fail closed with an
+  explicit upgrade message before any host write when recovery checkpoints
+  are unavailable on a pre-1.42.0 backend.
 
 ### Changed - Premium editorial interface
 
