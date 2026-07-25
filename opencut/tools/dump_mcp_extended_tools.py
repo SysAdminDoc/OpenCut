@@ -41,6 +41,9 @@ _REST_ONLY_ROUTES = {
     ("POST", "/journal/checkpoints/<transaction_id>/recovery-failed"),
     ("POST", "/journal/checkpoints/<transaction_id>/recovered"),
     ("GET", "/journal/checkpoints/<transaction_id>/diagnostics"),
+    # Full artifact hashing reads managed local media and updates durable
+    # integrity state; keep this owner-initiated maintenance action REST-only.
+    ("POST", "/review/integrity/verify"),
 }
 
 
