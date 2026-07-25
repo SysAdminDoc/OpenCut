@@ -61,6 +61,32 @@ describe("CEP panel utility escaping", () => {
   });
 });
 
+describe("CEP OAuth URL boundary", () => {
+  it("preserves secure authorization URLs byte-for-byte", () => {
+    const url = "https://accounts.example.test/oauth?scope=read&state=a^b%20c%22d#return";
+    expect(utils.normalizeOAuthUrl(url)).toBe(url);
+  });
+
+  it("permits only explicit loopback hosts over HTTP", () => {
+    const localhost = "http://localhost:5679/oauth/callback?code=a&state=b";
+    const ipv4 = "http://127.0.0.1:5679/oauth/callback";
+    const ipv6 = "http://[::1]:5679/oauth/callback";
+
+    expect(utils.normalizeOAuthUrl(localhost)).toBe(localhost);
+    expect(utils.normalizeOAuthUrl(ipv4)).toBe(ipv4);
+    expect(utils.normalizeOAuthUrl(ipv6)).toBe(ipv6);
+    expect(utils.normalizeOAuthUrl("http://example.test/oauth")).toBe("");
+    expect(utils.normalizeOAuthUrl("http://localhost.example.test/oauth")).toBe("");
+  });
+
+  it("rejects malformed, non-web, and control-character URLs", () => {
+    expect(utils.normalizeOAuthUrl("javascript:alert(1)")).toBe("");
+    expect(utils.normalizeOAuthUrl("file:///C:/secrets.txt")).toBe("");
+    expect(utils.normalizeOAuthUrl("https://example.test/\ncmd")).toBe("");
+    expect(utils.normalizeOAuthUrl("not a url")).toBe("");
+  });
+});
+
 describe("CEP backend version comparison", () => {
   it("accepts checkpoint-capable releases and common version prefixes", () => {
     expect(utils.isVersionAtLeast("1.42.0", "1.42.0")).toBe(true);

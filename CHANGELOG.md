@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - External authorization boundary
+
+- CEP social authorization now validates HTTPS and explicit loopback callback
+  URLs, preserves the authorization URL unchanged, and opens it through the
+  bundled CSInterface browser API without creating a command shell.
+
 ## [1.43.0] — 2026-07-25 — Premium panel experience
 
 ### Changed - Cohesive visual system and navigation
