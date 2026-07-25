@@ -26,6 +26,26 @@
             .replace(/\t/g, "\\t");
     }
 
+    function normalizeOAuthUrl(value) {
+        var raw = value === undefined || value === null ? "" : String(value);
+        if (!raw || /[\u0000-\u001F\u007F]/.test(raw) || typeof URL === "undefined") return "";
+        var parsed;
+        try {
+            parsed = new URL(raw);
+        } catch (error) {
+            return "";
+        }
+        var protocol = String(parsed.protocol || "").toLowerCase();
+        var hostname = String(parsed.hostname || "").toLowerCase();
+        if (protocol === "https:" && hostname) return raw;
+        if (protocol === "http:" && (
+            hostname === "localhost"
+            || hostname === "127.0.0.1"
+            || hostname === "[::1]"
+        )) return raw;
+        return "";
+    }
+
     function isVersionAtLeast(version, minimum) {
         function parse(value) {
             var match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)/i);
@@ -337,6 +357,7 @@
     return {
         escapeHtml: escapeHtml,
         escapeJsxDoubleQuotedString: escapeJsxDoubleQuotedString,
+        normalizeOAuthUrl: normalizeOAuthUrl,
         isVersionAtLeast: isVersionAtLeast,
         createLazyDomProxy: createLazyDomProxy,
         normalizePaletteText: normalizePaletteText,

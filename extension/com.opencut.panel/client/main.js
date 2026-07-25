@@ -13,6 +13,7 @@
     var CHECKPOINT_MIN_BACKEND_VERSION = "1.42.0";
     var SSE_OK = typeof EventSource !== "undefined";
     var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {};
+    var normalizeOAuthUrl = PanelUtils.normalizeOAuthUrl;
     var OpenCutFormat = (typeof window !== "undefined" && window.OpenCutFormat) ? window.OpenCutFormat : {};
     var safeFixed = OpenCutFormat.safeFixed,
         escSingleQuote = OpenCutFormat.escSingleQuote,
@@ -5406,17 +5407,22 @@
         api("POST", "/social/auth-url", { platform: platform }, function(err, r) {
             if (err) { showAlert(t("toast.oauth_error", "OAuth error: {error}").replace("{error}", err.message)); return; }
             if (r && r.auth_url) {
-                // Validate auth URL before passing to shell — prevent command injection
-                var authUrl = String(r.auth_url);
-                if (!/^https?:\/\//i.test(authUrl)) {
+                var authUrl = normalizeOAuthUrl(r.auth_url);
+                if (!authUrl) {
                     showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from server."));
                     return;
                 }
-                // Open OAuth URL in user's browser
-                if (window.cep_node && window.cep_node.require) {
-                    window.cep_node.require("child_process").execFile("cmd", ["/c", "start", "", authUrl]);
-                } else {
-                    window.open(authUrl, "_blank");
+                try {
+                    if (cs && cs.openURLInDefaultBrowser) {
+                        cs.openURLInDefaultBrowser(authUrl);
+                    } else if (window.open) {
+                        window.open(authUrl, "_blank");
+                    } else {
+                        throw new Error("No browser launch API is available.");
+                    }
+                } catch (openError) {
+                    showAlert(t("toast.oauth_invalid_url", "Invalid authorization URL received from server."));
+                    return;
                 }
                 var _oauthOpeningTemplate = t("toast.oauth_opening_auth_page", "Opening {platform} authorization page…");
                 showToast(_oauthOpeningTemplate.replace("{platform}", platform), "info");
