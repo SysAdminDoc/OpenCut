@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SYNC_VERSION_PATH = REPO_ROOT / "scripts" / "sync_version.py"
 
@@ -58,8 +60,7 @@ def test_security_policy_targets_sync_minor_series(monkeypatch, tmp_path):
     security_targets = _targets(module, "SECURITY.md")
     assert security_targets
     assert not all(
-        module.check_file(path, pattern, replacement, "1.33.0")
-        for path, pattern, replacement in security_targets
+        module.check_file(path, pattern, replacement, "1.33.0") for path, pattern, replacement in security_targets
     )
 
     for path, pattern, replacement in security_targets:
@@ -75,8 +76,7 @@ def test_security_policy_targets_sync_minor_series(monkeypatch, tmp_path):
     assert "+90 days after 1.33" in text
     assert "+30 days after 1.33" in text
     assert all(
-        module.check_file(path, pattern, replacement, "1.33.0")
-        for path, pattern, replacement in security_targets
+        module.check_file(path, pattern, replacement, "1.33.0") for path, pattern, replacement in security_targets
     )
 
 
@@ -115,10 +115,7 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
         *_targets(module, "opencut/core/c2pa_sidecar.py"),
     ]
     assert targets
-    assert not all(
-        module.check_file(path, pattern, replacement, "1.33.0")
-        for path, pattern, replacement in targets
-    )
+    assert not all(module.check_file(path, pattern, replacement, "1.33.0") for path, pattern, replacement in targets)
 
     for path, pattern, replacement in targets:
         module.sync_file(path, pattern, replacement, "1.33.0")
@@ -126,12 +123,9 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
     lock_text = lock.read_text(encoding="utf-8")
     c2pa_text = c2pa.read_text(encoding="utf-8")
     assert '"version": "1.33.0"' in lock_text
-    assert 'OpenCut/1.33.0 (sidecar; c2pa-spec 2.4)' in c2pa_text
+    assert "OpenCut/1.33.0 (sidecar; c2pa-spec 2.4)" in c2pa_text
     assert '"node_modules/lightningcss": {\n      "version": "1.32.0"' in lock_text
-    assert all(
-        module.check_file(path, pattern, replacement, "1.33.0")
-        for path, pattern, replacement in targets
-    )
+    assert all(module.check_file(path, pattern, replacement, "1.33.0") for path, pattern, replacement in targets)
 
 
 def test_sync_file_preserves_crlf_bytes(monkeypatch, tmp_path):
@@ -143,7 +137,7 @@ def test_sync_file_preserves_crlf_bytes(monkeypatch, tmp_path):
     changed = module.sync_file(
         "version.txt",
         r'^(version\s*=\s*")[^"]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
         "1.42.0",
     )
 
@@ -155,3 +149,26 @@ def test_smoke_manifest_version_is_tracked():
     module = _sync_version_module()
 
     assert _targets(module, "installer/src/OpenCut.Installer/Properties/app.smoke.manifest")
+
+
+def test_version_bump_refuses_invalid_release_receipt(monkeypatch, capsys):
+    module = _sync_version_module()
+    calls = []
+
+    def reject_receipt(_path):
+        raise module.ReleaseGateError("receipt is stale")
+
+    monkeypatch.setattr(module, "validate_receipt", reject_receipt)
+    monkeypatch.setattr(module, "set_version", lambda version: calls.append(version))
+    monkeypatch.setattr(
+        module.sys,
+        "argv",
+        ["sync_version.py", "--set", "1.44.0", "--receipt", "missing.json"],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        module.main()
+
+    assert exc.value.code == 1
+    assert calls == []
+    assert "Version bump refused: receipt is stale" in capsys.readouterr().out

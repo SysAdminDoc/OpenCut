@@ -85,6 +85,24 @@ def test_step_dependency_matrix_runs_contract_check(monkeypatch):
     assert any("scripts/check_dependency_matrix.py" in " ".join(cmd) for cmd in calls)
 
 
+def test_step_ffmpeg_provenance_runs_fail_closed_verifier(monkeypatch):
+    module = load_module()
+    calls = []
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        calls.append((cmd, cwd))
+        return subprocess.CompletedProcess(cmd, 0, "RESULT: OK", "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_ffmpeg_provenance(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert result.message == "bundled FFmpeg meets the provenance security floor"
+    assert calls
+    assert calls[0][0][1].endswith("verify_ffmpeg_provenance.py")
+
+
 def test_step_generated_docs_runs_all_doc_generators(monkeypatch):
     module = load_module()
     calls = []

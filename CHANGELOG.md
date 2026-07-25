@@ -13,6 +13,10 @@ record also lives in the git commit messages.
 - The CEP development toolchain now resolves patched `brace-expansion` and
   `postcss` releases; clean installs report zero npm advisories without
   suppressing or allow-listing findings.
+- Local release verification now emits a short-lived receipt bound to a clean
+  `main` commit; version changes, installer smoke promotion, and local tag
+  creation fail closed when required evidence is missing, stale, skipped, or
+  source-drifted.
 
 ## [1.43.0] — 2026-07-25 — Premium panel experience
 

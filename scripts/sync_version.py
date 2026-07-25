@@ -15,6 +15,12 @@ import re
 import sys
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_gate import DEFAULT_RECEIPT, ReleaseGateError, validate_receipt  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 INIT_PY = ROOT / "opencut" / "__init__.py"
 
@@ -25,101 +31,101 @@ TARGETS = [
     (
         "pyproject.toml",
         r'^(version\s*=\s*")[^"]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     (
         "opencut/server.py",
-        r'(OpenCut Backend Server v)[0-9]+\.[0-9]+\.[0-9]+',
-        r'\g<1>{v}',
+        r"(OpenCut Backend Server v)[0-9]+\.[0-9]+\.[0-9]+",
+        r"\g<1>{v}",
     ),
     (
         "extension/com.opencut.panel/client/index.html",
         r'(<span class="settings-value">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     (
         "extension/com.opencut.panel/client/main.js",
-        r'(OpenCut CEP Panel - Main Controller v)[0-9]+\.[0-9]+\.[0-9]+',
-        r'\g<1>{v}',
+        r"(OpenCut CEP Panel - Main Controller v)[0-9]+\.[0-9]+\.[0-9]+",
+        r"\g<1>{v}",
     ),
     (
         "extension/com.opencut.panel/client/style.css",
-        r'(OpenCut CEP Panel v)[0-9]+\.[0-9]+\.[0-9]+',
-        r'\g<1>{v}',
+        r"(OpenCut CEP Panel v)[0-9]+\.[0-9]+\.[0-9]+",
+        r"\g<1>{v}",
     ),
     # CEP manifest (both bundle and extension version)
     (
         "extension/com.opencut.panel/CSXS/manifest.xml",
         r'(ExtensionBundleVersion=")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     (
         "extension/com.opencut.panel/CSXS/manifest.xml",
         r'(<Extension Id="com\.opencut\.panel\.main" Version=")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # Installer C# project
     (
         "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
-        r'(<Version>)[0-9]+\.[0-9]+\.[0-9]+(</Version>)',
-        r'\g<1>{v}\g<2>',
+        r"(<Version>)[0-9]+\.[0-9]+\.[0-9]+(</Version>)",
+        r"\g<1>{v}\g<2>",
     ),
     (
         "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
-        r'(<FileVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</FileVersion>)',
-        r'\g<1>{v}.0\g<2>',
+        r"(<FileVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</FileVersion>)",
+        r"\g<1>{v}.0\g<2>",
     ),
     (
         "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
-        r'(<AssemblyVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</AssemblyVersion>)',
-        r'\g<1>{v}.0\g<2>',
+        r"(<AssemblyVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</AssemblyVersion>)",
+        r"\g<1>{v}.0\g<2>",
     ),
     # Installer AppConstants.cs
     (
         "installer/src/OpenCut.Installer/Models/AppConstants.cs",
         r'(Version\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # Installer app.manifest
     (
         "installer/src/OpenCut.Installer/Properties/app.manifest",
         r'(assemblyIdentity version=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}.0\g<2>',
+        r"\g<1>{v}.0\g<2>",
     ),
     (
         "installer/src/OpenCut.Installer/Properties/app.smoke.manifest",
         r'(assemblyIdentity version=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}.0\g<2>',
+        r"\g<1>{v}.0\g<2>",
     ),
     # Install.ps1 dev installer banner
     (
         "Install.ps1",
-        r'(Installer v)[0-9]+\.[0-9]+\.[0-9]+',
-        r'\g<1>{v}',
+        r"(Installer v)[0-9]+\.[0-9]+\.[0-9]+",
+        r"\g<1>{v}",
     ),
     # install.py dev installer
     (
         "install.py",
         r'(VERS\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # requirements.txt header comment
     (
         "requirements.txt",
-        r'(# OpenCut v)[0-9]+\.[0-9]+\.[0-9]+',
-        r'\g<1>{v}',
+        r"(# OpenCut v)[0-9]+\.[0-9]+\.[0-9]+",
+        r"\g<1>{v}",
     ),
     # Inno Setup
     (
         "OpenCut.iss",
         r'(#define MyAppVersion\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # CEP package.json
     (
         "extension/com.opencut.panel/package.json",
         r'("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # CEP package-lock.json root package metadata. Keep these patterns scoped
     # to the package root so dependency versions such as lightningcss 1.32.0
@@ -127,41 +133,41 @@ TARGETS = [
     (
         "extension/com.opencut.panel/package-lock.json",
         r'(^\s*"version":\s*")[0-9]+\.[0-9]+\.[0-9]+(",\s*$)',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     (
         "extension/com.opencut.panel/package-lock.json",
         r'("":\s*\{\s*"name":\s*"opencut-panel",\s*"version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # UXP manifest.json
     (
         "extension/com.opencut.uxp/manifest.json",
         r'("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # UXP main.js VERSION constant
     (
         "extension/com.opencut.uxp/main.js",
         r'(const VERSION\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # UXP index.html version display
     (
         "extension/com.opencut.uxp/index.html",
         r'(<span class="oc-version"[^>]*>v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     (
         "extension/com.opencut.uxp/index.html",
         r'(<span id="uxpVersionDisplay">)[0-9]+\.[0-9]+\.[0-9]+( \(UXP\)</span>)',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # Security support policy tracks minor series, not full patch releases.
     (
         "SECURITY.md",
-        r'(latest minor\*\* \(`)[0-9]+\.[0-9]+\.x(`\) and the one immediately preceding it \(`)[0-9]+\.[0-9]+\.x(`\))',
-        r'\g<1>{series}\g<2>{previous_series}\g<3>',
+        r"(latest minor\*\* \(`)[0-9]+\.[0-9]+\.x(`\) and the one immediately preceding it \(`)[0-9]+\.[0-9]+\.x(`\))",
+        r"\g<1>{series}\g<2>{previous_series}\g<3>",
     ),
     # NOTE: this row is matched and rebuilt as a full single line. The previous
     # pattern used `\|\s*)[^\n|]+(\s*\|` for the last cell; `\s*` could swallow
@@ -169,28 +175,28 @@ TARGETS = [
     # trailing whitespace, leaving `|—` residue after the closing pipe.
     (
         "SECURITY.md",
-        r'^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n]*$',
-        r'| {series}  | ✅ Active         | —                    |',
+        r"^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n]*$",
+        r"| {series}  | ✅ Active         | —                    |",
     ),
     (
         "SECURITY.md",
-        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Previous[^\n]*\|\s*)\+90 days after [0-9]+\.[0-9]+(\s*\|)',
-        r'\g<1>{previous_series}\g<2>+90 days after {latest_minor}\g<3>',
+        r"(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Previous[^\n]*\|\s*)\+90 days after [0-9]+\.[0-9]+(\s*\|)",
+        r"\g<1>{previous_series}\g<2>+90 days after {latest_minor}\g<3>",
     ),
     (
         "SECURITY.md",
-        r'(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Critical only[^\n]*\|\s*)\+30 days after [0-9]+\.[0-9]+(\s*\|)',
-        r'\g<1>{critical_series}\g<2>+30 days after {latest_minor}\g<3>',
+        r"(\| )[0-9]+\.[0-9]+\.x(\s+\|[^\n]*Critical only[^\n]*\|\s*)\+30 days after [0-9]+\.[0-9]+(\s*\|)",
+        r"\g<1>{critical_series}\g<2>+30 days after {latest_minor}\g<3>",
     ),
     (
         "SECURITY.md",
-        r'(\| )[≤<=>\s]*[0-9]+\.[0-9]+(\s+\|[^\n]*End of life[^\n]*\|\s*)n/a(\s*\|)',
-        r'\g<1>≤ {eol_minor}\g<2>n/a\g<3>',
+        r"(\| )[≤<=>\s]*[0-9]+\.[0-9]+(\s+\|[^\n]*End of life[^\n]*\|\s*)n/a(\s*\|)",
+        r"\g<1>≤ {eol_minor}\g<2>n/a\g<3>",
     ),
     (
         "opencut/core/c2pa_sidecar.py",
         r'(CLAIM_GENERATOR_DEFAULT\s*=\s*"OpenCut/)[0-9]+\.[0-9]+\.[0-9]+( \(sidecar; c2pa-spec 2\.4\)")',
-        r'\g<1>{v}\g<2>',
+        r"\g<1>{v}\g<2>",
     ),
     # NOTE: packaging/linux/*.metainfo.xml is deliberately NOT a sync target.
     # Its newest <release> entry tracks the last Flathub-PUBLISHED build
@@ -200,13 +206,13 @@ TARGETS = [
     # README.md version badge and feature-overview heading
     (
         "README.md",
-        r'(!\[Version\]\(https://img\.shields\.io/badge/version-)[0-9]+\.[0-9]+\.[0-9]+(-blue\))',
-        r'\g<1>{v}\g<2>',
+        r"(!\[Version\]\(https://img\.shields\.io/badge/version-)[0-9]+\.[0-9]+\.[0-9]+(-blue\))",
+        r"\g<1>{v}\g<2>",
     ),
     (
         "README.md",
-        r'(OpenCut v)[0-9]+\.[0-9]+\.[0-9]+( includes \*\*)',
-        r'\g<1>{v}\g<2>',
+        r"(OpenCut v)[0-9]+\.[0-9]+\.[0-9]+( includes \*\*)",
+        r"\g<1>{v}\g<2>",
     ),
 ]
 
@@ -270,7 +276,7 @@ def set_version(new_ver: str) -> None:
     text = _read_text(INIT_PY)
     updated = re.sub(
         r'(__version__\s*=\s*")[^"]+(")',
-        rf'\g<1>{new_ver}\g<2>',
+        rf"\g<1>{new_ver}\g<2>",
         text,
     )
     _write_text(INIT_PY, updated)
@@ -320,15 +326,28 @@ def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bo
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sync OpenCut version across all files")
-    parser.add_argument("--set", dest="new_version", metavar="X.Y.Z",
-                        help="Set a new version in __init__.py before syncing")
-    parser.add_argument("--check", action="store_true",
-                        help="Check all files are in sync (exit 1 if not). Does not modify files.")
+    parser.add_argument(
+        "--set", dest="new_version", metavar="X.Y.Z", help="Set a new version in __init__.py before syncing"
+    )
+    parser.add_argument(
+        "--receipt",
+        type=Path,
+        default=DEFAULT_RECEIPT,
+        help="Fresh successful release-gate receipt required with --set",
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Check all files are in sync (exit 1 if not). Does not modify files."
+    )
     args = parser.parse_args()
 
     if args.new_version:
-        if not re.match(r'^\d+\.\d+\.\d+$', args.new_version):
+        if not re.match(r"^\d+\.\d+\.\d+$", args.new_version):
             print(f"ERROR: Invalid version format '{args.new_version}' (expected X.Y.Z)")
+            sys.exit(1)
+        try:
+            validate_receipt(args.receipt)
+        except ReleaseGateError as exc:
+            print(f"ERROR: Version bump refused: {exc}")
             sys.exit(1)
         set_version(args.new_version)
 

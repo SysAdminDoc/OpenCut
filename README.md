@@ -778,6 +778,39 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
+### Fail-closed local releases
+
+Release actions use a short-lived receipt bound to a clean `main` commit. Run
+the complete Python, Node, rendered-panel, manifest, lock, provenance, and
+source checks with:
+
+```bash
+python scripts/release_gate.py verify --receipt build/release-receipt.json
+```
+
+The command writes a machine-readable receipt only when every required check
+passes. A version change must consume that fresh receipt:
+
+```bash
+python scripts/sync_version.py --set 1.44.0 --receipt build/release-receipt.json
+```
+
+After committing the synchronized version and generating a fresh receipt,
+smoke-test an unsigned installer before creating its local tag:
+
+```powershell
+python scripts/release_gate.py promote `
+  --receipt build/release-receipt.json `
+  --artifact installer/dist/wpf/OpenCut-WPF-Setup-1.44.0.exe `
+  --artifact-kind wpf `
+  --promotion-receipt build/release-promotion.json `
+  --tag v1.44.0
+```
+
+Missing, stale, skipped, failed, wrong-branch, source-drifted, or
+artifact-unsmoked evidence refuses the action. The driver never signs
+artifacts or pushes tags.
+
 11,800+ estimated tests across 297 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---

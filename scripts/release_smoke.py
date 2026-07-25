@@ -674,6 +674,30 @@ def step_subprocess_timeouts(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_ffmpeg_provenance(_args: argparse.Namespace) -> StepResult:
+    script = REPO_ROOT / "scripts" / "verify_ffmpeg_provenance.py"
+    if not script.exists():
+        return StepResult(
+            "ffmpeg-provenance",
+            "fail",
+            skipped_reason="scripts/verify_ffmpeg_provenance.py missing",
+        )
+    result = _run([sys.executable, str(script)], cwd=REPO_ROOT)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "ffmpeg-provenance",
+        status,
+        exit_code=result.returncode,
+        message=(
+            "bundled FFmpeg meets the provenance security floor"
+            if status == "ok"
+            else "bundled FFmpeg provenance verification failed"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_doc_sizes(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "check_doc_sizes.py"
@@ -923,6 +947,8 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_release_sbom.py",
     "tests/test_release_provenance_attestation.py",
     "tests/test_local_release_policy.py",
+    "tests/test_release_gate.py",
+    "tests/test_sync_version.py",
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_ffmpeg_provenance.py",
@@ -1289,6 +1315,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Gate model cards and hash-locked release requirements"),
     StepDefinition("release-lock", step_release_lock, "Check exact pins and SHA-256 hashes for release inputs"),
+    StepDefinition("ffmpeg-provenance", step_ffmpeg_provenance, "Verify bundled FFmpeg provenance and security floor"),
     StepDefinition("dependency-matrix", step_dependency_matrix, "Check optional dependency support contract"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
