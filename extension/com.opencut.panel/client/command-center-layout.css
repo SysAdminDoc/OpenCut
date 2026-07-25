@@ -154,7 +154,7 @@ textarea,
 .text-input {
     min-height: 38px;
     border-color: var(--cc-border);
-    border-radius: 9px;
+    border-radius: 8px;
     background: var(--cc-control);
     color: var(--cc-text);
     box-shadow: none;

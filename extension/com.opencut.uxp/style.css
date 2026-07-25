@@ -544,7 +544,7 @@ body {
   appearance: none;
   height: 4px;
   background: var(--border);
-  border-radius: 2px;
+  border-radius: 4px;
   outline: none;
   cursor: pointer;
   min-width: 0;
@@ -946,7 +946,7 @@ body {
 .oc-content::-webkit-scrollbar { width: 4px; }
 .oc-content::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 2px;
+  border-radius: 4px;
 }
 .oc-content::-webkit-scrollbar-track { background: transparent; }
 
@@ -1034,7 +1034,7 @@ body {
   --info:          #8fb8ff;
   --radius-sm:     8px;
   --radius:        12px;
-  --radius-lg:     16px;
+  --radius-lg:     12px;
   --font:          "Aptos", "Segoe UI Variable Text", "Segoe UI", "SF Pro Display", sans-serif;
   --font-mono:     "Cascadia Code", "JetBrains Mono", "Consolas", monospace;
   --shadow-sm:     0 8px 16px rgba(3, 8, 14, 0.10);
@@ -1074,7 +1074,7 @@ body {
 
 .oc-version {
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-secondary);
@@ -1083,7 +1083,7 @@ body {
 .oc-connection {
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -1110,7 +1110,7 @@ body {
   margin: 8px 12px 0;
   padding: 10px 12px 12px;
   border: 1px solid rgba(214, 223, 235, 0.08);
-  border-radius: 14px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(19, 31, 45, 0.98), rgba(13, 21, 31, 0.96));
   box-shadow: var(--shadow);
 }
@@ -1127,7 +1127,7 @@ body {
   gap: 4px;
   padding: 10px 10px 9px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--text-secondary);
 }
@@ -1168,7 +1168,7 @@ body {
 }
 
 .oc-card {
-  border-radius: 18px;
+  border-radius: 12px;
   margin-bottom: 10px;
 }
 
@@ -1242,7 +1242,7 @@ body {
 }
 
 .oc-toast {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .oc-btn:focus-visible,
@@ -1309,7 +1309,7 @@ body {
   margin: 12px 0 16px;
   padding: 18px 16px;
   border: 1px solid rgba(214, 223, 235, 0.08);
-  border-radius: 22px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(17, 28, 41, 0.98), rgba(12, 20, 30, 0.95));
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -1337,7 +1337,7 @@ body {
   align-items: center;
   min-height: 22px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.05);
   color: rgba(233, 239, 247, 0.7);
@@ -1373,7 +1373,7 @@ body {
 .oc-workspace-meta-item {
   min-width: 0;
   padding: 12px 12px 13px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.04);
 }
@@ -1491,7 +1491,7 @@ body {
 
 .oc-tabs::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+  border-radius: 6px;
 }
 
 .oc-tabs::-webkit-scrollbar-track {
@@ -1509,7 +1509,7 @@ body {
   left: 12px;
   z-index: 30;
   padding: 8px 12px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(143, 184, 255, 0.24);
   background: rgba(9, 16, 25, 0.98);
   color: #f7f9fc;
@@ -1547,7 +1547,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 15px 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(216, 224, 233, 0.08);
   background:
     linear-gradient(180deg, rgba(10, 18, 27, 0.78), rgba(12, 21, 31, 0.92)),
@@ -1564,7 +1564,7 @@ body {
   align-items: center;
   min-height: 22px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: rgba(219, 226, 235, 0.74);
@@ -1613,7 +1613,7 @@ body {
   align-items: center;
   min-height: 22px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(143, 184, 255, 0.10);
   border: 1px solid rgba(143, 184, 255, 0.16);
   color: #dfeafb;
@@ -1634,7 +1634,7 @@ body {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(216, 224, 233, 0.08);
   background: rgba(255, 255, 255, 0.035);
 }
@@ -1645,7 +1645,7 @@ body {
   align-items: center;
   min-height: 24px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(216, 183, 130, 0.12);
   border: 1px solid rgba(216, 183, 130, 0.2);
   color: #f1d9af;
@@ -1676,7 +1676,7 @@ body {
 .oc-empty-state {
   width: 100%;
   padding: 14px 15px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px dashed rgba(216, 224, 233, 0.12);
   background: rgba(255, 255, 255, 0.025);
 }
@@ -1719,7 +1719,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(216, 224, 233, 0.08);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-primary);
@@ -1771,7 +1771,7 @@ body {
   align-items: center;
   min-height: 22px;
   padding: 0 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: rgba(219, 227, 236, 0.82);
@@ -1806,7 +1806,7 @@ body {
 .oc-deliv-btn {
   justify-content: flex-start;
   padding: 12px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(216, 224, 233, 0.08);
   text-align: left;
@@ -1852,7 +1852,7 @@ body {
 .oc-chip {
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(216, 224, 233, 0.08);
   background: rgba(255, 255, 255, 0.035);
   color: rgba(232, 238, 245, 0.82);
@@ -1930,7 +1930,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 13px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(216, 224, 233, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -2319,7 +2319,7 @@ body[data-active-tab="settings"] {
 .oc-version {
   min-height: 22px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: 6px;
   border-color: rgba(171, 189, 214, 0.16);
   background: rgba(255, 255, 255, 0.045);
   color: rgba(237, 244, 255, 0.72);
@@ -2329,7 +2329,7 @@ body[data-active-tab="settings"] {
 .oc-connection {
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(171, 189, 214, 0.12);
   background: rgba(255, 255, 255, 0.04);
   transition:
@@ -2391,7 +2391,7 @@ body[data-active-tab="settings"] {
   padding: 8px 10px 9px;
   border: 1px solid transparent;
   border-bottom-color: transparent;
-  border-radius: 14px;
+  border-radius: 12px;
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -2423,7 +2423,7 @@ body[data-active-tab="settings"] {
   position: relative;
   margin-bottom: 18px;
   border: 1px solid rgba(171, 189, 214, 0.12);
-  border-radius: 22px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
   box-shadow:
@@ -2519,7 +2519,7 @@ body.oc-has-source .oc-workspace-guide {
 .oc-card,
 .oc-result-area {
   border-color: rgba(171, 189, 214, 0.12);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.024));
   box-shadow:
@@ -2713,7 +2713,7 @@ body.oc-has-source .oc-workspace-guide {
 
 .oc-toast {
   border-color: rgba(171, 189, 214, 0.12);
-  border-radius: 16px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(15, 21, 30, 0.98), rgba(11, 17, 24, 0.94));
   box-shadow:
@@ -2824,7 +2824,7 @@ body.oc-disconnected .oc-btn-primary {
   justify-content: center;
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(171, 189, 214, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(240, 245, 252, 0.82);
@@ -2872,7 +2872,7 @@ body.oc-disconnected .oc-btn-primary {
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding: 13px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(171, 189, 214, 0.12);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.024));
@@ -2899,7 +2899,7 @@ body.oc-disconnected .oc-btn-primary {
   align-items: center;
   min-height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(171, 189, 214, 0.14);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(230, 237, 246, 0.84);
@@ -2989,7 +2989,7 @@ body.oc-disconnected .oc-btn-primary {
   align-items: center;
   min-height: 24px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(171, 189, 214, 0.14);
   background: rgba(255, 255, 255, 0.04);
   font-size: 9.5px;
@@ -3046,7 +3046,7 @@ body.oc-disconnected .oc-btn-primary {
   width: 7px;
   height: 7px;
   margin-right: 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   vertical-align: middle;
 }
 
@@ -3100,7 +3100,7 @@ body.oc-disconnected .oc-btn-primary {
 .oc-inline-summary-grid .oc-inline-stat {
   min-height: 48px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(171, 189, 214, 0.12);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.024));
@@ -3385,7 +3385,7 @@ body.oc-disconnected .oc-btn-primary {
   --info: #87baff;
   --radius-sm: 8px;
   --radius: 12px;
-  --radius-lg: 18px;
+  --radius-lg: 12px;
   --shadow-sm: 0 10px 18px rgba(4, 8, 14, 0.14);
   --shadow: 0 18px 32px rgba(4, 8, 14, 0.18);
   --shadow-lg: 0 28px 48px rgba(4, 8, 14, 0.22);
@@ -3419,7 +3419,7 @@ body {
 .oc-version {
   min-height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   border-color: rgba(182, 195, 212, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(228, 235, 244, 0.78);
@@ -3428,7 +3428,7 @@ body {
 .oc-connection {
   padding: 4px 8px;
   border: 1px solid rgba(182, 195, 212, 0.1);
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -3444,7 +3444,7 @@ body {
 .oc-processing-banner {
   margin: 10px 12px 0;
   border: 1px solid rgba(182, 195, 212, 0.12);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(19, 27, 39, 0.96), rgba(13, 19, 29, 0.92));
   box-shadow:
@@ -3456,7 +3456,7 @@ body {
   margin: 10px 12px 0;
   padding: 6px;
   border: 1px solid rgba(182, 195, 212, 0.12);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(17, 24, 35, 0.94), rgba(12, 18, 27, 0.9));
   box-shadow:
@@ -3491,7 +3491,7 @@ body {
 
 .oc-workspace-overview {
   padding: 22px;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background:
     radial-gradient(circle at top right, rgba(215, 177, 112, 0.1), transparent 32%),
@@ -3518,7 +3518,7 @@ body {
 }
 
 .oc-workspace-guide {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(15, 22, 32, 0.94), rgba(10, 15, 23, 0.9));
@@ -3527,7 +3527,7 @@ body {
 
 .oc-card,
 .oc-result-area {
-  border-radius: 22px;
+  border-radius: 12px;
   border-color: rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(19, 27, 39, 0.96), rgba(13, 18, 27, 0.92));
@@ -3546,7 +3546,7 @@ body {
 .oc-select,
 .oc-textarea {
   min-height: 40px;
-  border-radius: 14px;
+  border-radius: 12px;
   border-color: rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(10, 16, 24, 0.94), rgba(8, 13, 20, 0.9));
@@ -3569,7 +3569,7 @@ body {
 
 .oc-btn {
   min-height: 40px;
-  border-radius: 14px;
+  border-radius: 12px;
   font-weight: 680;
   letter-spacing: -0.01em;
 }
@@ -3597,7 +3597,7 @@ body {
 }
 
 .oc-status-line {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(14, 20, 29, 0.92), rgba(10, 15, 22, 0.9));
@@ -3611,7 +3611,7 @@ body {
 }
 
 .oc-empty-state {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px dashed rgba(182, 195, 212, 0.18);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.016));
@@ -3623,7 +3623,7 @@ body {
 }
 
 .oc-toast {
-  border-radius: 18px;
+  border-radius: 12px;
   border-color: rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(17, 24, 35, 0.96), rgba(11, 16, 24, 0.92));
@@ -3642,7 +3642,7 @@ body {
   .oc-workspace-overview,
   .oc-card,
   .oc-result-area {
-    border-radius: 18px;
+    border-radius: 12px;
   }
 
   .oc-workspace-actions .oc-btn {
@@ -3728,7 +3728,7 @@ body {
 .oc-result-insight {
   min-width: 0;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.022));
@@ -3779,7 +3779,7 @@ body {
   align-items: center;
   min-height: 20px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background: rgba(255, 255, 255, 0.045);
   color: rgba(220, 229, 239, 0.78);
@@ -3859,7 +3859,7 @@ body {
   width: 24px;
   min-height: 24px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   color: rgba(225, 233, 242, 0.64);
   font-size: 14px;
@@ -3920,7 +3920,7 @@ body {
 #seqInfoGrid .oc-info-pair {
   min-width: 0;
   padding: 12px 12px 13px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(182, 195, 212, 0.12);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));

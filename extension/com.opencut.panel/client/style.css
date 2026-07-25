@@ -620,7 +620,7 @@ input, textarea, [contenteditable] {
     width: 100%;
     height: 2px;
     background: var(--border);
-    border-radius: 1px;
+    border-radius: 4px;
     margin-top: 4px;
     overflow: hidden;
 }
@@ -629,7 +629,7 @@ input, textarea, [contenteditable] {
     height: 100%;
     width: 0%;
     background: var(--accent-grad);
-    border-radius: 1px;
+    border-radius: 4px;
     transition: width 0.3s ease;
     box-shadow: 0 0 4px var(--cyan-glow);
 }
@@ -827,7 +827,7 @@ body.job-active .checkbox-row {
     width: 2px;
     height: 20px;
     background: var(--neon-cyan);
-    border-radius: 0 2px 2px 0;
+    border-radius: 0 4px 4px 0;
     box-shadow: 0 0 8px var(--cyan-glow);
 }
 
@@ -938,7 +938,7 @@ body.job-active .checkbox-row {
 }
 .sub-tabs::-webkit-scrollbar { height: 3px; }
 .sub-tabs::-webkit-scrollbar-track { background: transparent; }
-.sub-tabs::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+.sub-tabs::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
 
 /* Fade indicator when sub-tabs overflow (e.g. Video panel's 18 tabs) */
 .sub-tabs.has-overflow::after {
@@ -1546,7 +1546,7 @@ input[type="range"] {
     width: 100%;
     height: 4px;
     background: var(--bg-elevated);
-    border-radius: 2px;
+    border-radius: 4px;
     margin: 8px 0;
     box-shadow: var(--shadow-inner);
     outline: 2px solid transparent;
@@ -2145,7 +2145,7 @@ input[type="checkbox"]:disabled {
     flex: 1;
     height: 10px;
     background: var(--bg-elevated);
-    border-radius: 5px;
+    border-radius: 6px;
     overflow: hidden;
     position: relative;
     box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
@@ -2156,7 +2156,7 @@ input[type="checkbox"]:disabled {
     width: 0%;
     background: linear-gradient(90deg, var(--neon-cyan-dark), var(--neon-cyan), var(--neon-magenta));
     background-size: 200% 100%;
-    border-radius: 5px;
+    border-radius: 6px;
     transition: width 0.4s ease;
     position: relative;
     animation: progressGradient 3s linear infinite;
@@ -2360,7 +2360,7 @@ input[type="checkbox"]:disabled {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb-color, rgba(255,255,255,0.08));
-    border-radius: 3px;
+    border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-hover-color, rgba(255,255,255,0.15));
@@ -2885,7 +2885,7 @@ input[type="checkbox"]:disabled {
     cursor: pointer;
     padding: 2px 6px;
     font-size: 11px;
-    border-radius: 3px;
+    border-radius: 4px;
     opacity: 0.6;
     flex-shrink: 0;
 }
@@ -3776,7 +3776,7 @@ input[type="range"][title] {
         linear-gradient(180deg, rgba(24, 30, 42, 0.98), rgba(10, 13, 20, 0.99));
     border: 1px solid rgba(236, 230, 218, 0.1);
     border-top-color: rgba(255, 255, 255, 0.08);
-    border-radius: 26px;
+    border-radius: 12px;
     box-shadow: 0 34px 80px rgba(3, 6, 12, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     overflow: hidden;
     color: var(--text-primary);
@@ -3825,7 +3825,7 @@ input[type="range"][title] {
     justify-content: center;
     min-height: 30px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-secondary);
@@ -3847,7 +3847,7 @@ input[type="range"][title] {
     padding: 15px 18px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(236, 230, 218, 0.1);
-    border-radius: 18px;
+    border-radius: 12px;
     color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;
@@ -3919,7 +3919,7 @@ input[type="range"][title] {
     font-size: 13px;
     display: block;
     transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
-    border-radius: 18px;
+    border-radius: 12px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
@@ -4002,7 +4002,7 @@ input[type="range"][title] {
     align-items: center;
     min-height: 20px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-faint);
@@ -4042,7 +4042,7 @@ input[type="range"][title] {
     margin: 10px 6px 0;
     padding: 28px 18px;
     border: 1px dashed rgba(236, 230, 218, 0.1);
-    border-radius: 22px;
+    border-radius: 12px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
     text-align: center;
 }
@@ -4071,7 +4071,7 @@ input[type="range"][title] {
         padding-top: 28px;
     }
     .command-palette {
-        border-radius: 22px;
+        border-radius: 12px;
     }
     .command-palette-title-row,
     .command-palette-item-top,
@@ -4107,7 +4107,7 @@ input[type="range"][title] {
     background: linear-gradient(180deg, rgba(18, 24, 34, 0.96), rgba(10, 14, 21, 0.98));
     border: 1px solid rgba(236, 230, 218, 0.1);
     border-top-color: rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     box-shadow: 0 28px 60px rgba(3, 6, 12, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     z-index: 500;
     padding: 8px;
@@ -4148,7 +4148,7 @@ input[type="range"][title] {
     min-height: 28px;
     padding: 0 11px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-secondary);
     font: inherit;
@@ -4182,7 +4182,7 @@ input[type="range"][title] {
     color: var(--text-primary);
     cursor: pointer;
     transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
-    border-radius: 16px;
+    border-radius: 12px;
     touch-action: manipulation;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
@@ -4569,7 +4569,7 @@ input[type="range"][title] {
 .logo-mark {
     width: 24px;
     height: 24px;
-    border-radius: 9px;
+    border-radius: 8px;
     filter: drop-shadow(0 6px 18px rgba(198, 164, 111, 0.18));
 }
 
@@ -4595,7 +4595,7 @@ input[type="range"][title] {
     gap: 7px;
     padding: 10px 8px;
     border: 1px solid transparent;
-    border-radius: 18px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.015);
     transition: color var(--t-med), background var(--t-med), border-color var(--t-med), transform var(--t-fast), box-shadow var(--t-med);
 }
@@ -4640,7 +4640,7 @@ input[type="range"][title] {
     transform: translateX(-50%);
     width: 18px;
     height: 2px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(90deg, rgba(216, 198, 166, 0.2), var(--neon-cyan), rgba(216, 198, 166, 0.2));
     box-shadow: 0 0 10px rgba(198, 164, 111, 0.24);
 }
@@ -4708,7 +4708,7 @@ input[type="range"][title] {
     max-width: min(280px, 100%);
     min-height: 28px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.03);
     color: var(--text-muted);
@@ -4759,7 +4759,7 @@ input[type="range"][title] {
     min-width: 40px;
     min-height: 40px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.035);
     color: var(--text-secondary);
@@ -4813,7 +4813,7 @@ input[type="range"][title] {
 .quick-action-btn {
     min-height: 46px;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
     color: var(--text-primary);
@@ -4830,14 +4830,14 @@ input[type="range"][title] {
 .sub-tabs {
     gap: 6px;
     padding: 6px;
-    border-radius: 18px;
+    border-radius: 12px;
     background: rgba(15, 20, 29, 0.68);
     border: 1px solid rgba(236, 230, 218, 0.08);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .sub-tab {
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 9px 14px;
     font-size: 11px;
     font-weight: 700;
@@ -4857,7 +4857,7 @@ input[type="range"][title] {
 
 .card,
 #clipSection {
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: linear-gradient(180deg, rgba(24, 32, 45, 0.9) 0%, rgba(18, 24, 35, 0.82) 100%);
     backdrop-filter: blur(22px);
@@ -4939,7 +4939,7 @@ input[type="password"],
 textarea,
 .text-input,
 .custom-dropdown-trigger {
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 11px 14px;
     border-color: rgba(236, 230, 218, 0.08);
     background: rgba(9, 13, 20, 0.7);
@@ -4974,7 +4974,7 @@ textarea:focus,
 }
 
 .clip-thumb {
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
     box-shadow: var(--shadow-sm);
@@ -4987,7 +4987,7 @@ textarea:focus,
 .file-info {
     margin-top: 10px;
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: 12px;
     border-left: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.03);
 }
@@ -5011,7 +5011,7 @@ textarea:focus,
     gap: 10px;
     padding: 12px 14px;
     border: 1px dashed rgba(236, 230, 218, 0.14);
-    border-radius: 18px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.025);
     color: var(--text-muted);
 }
@@ -5030,7 +5030,7 @@ textarea:focus,
 
 .favorites-bar {
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.03);
     box-shadow: var(--shadow-sm);
@@ -5040,7 +5040,7 @@ textarea:focus,
 .btn-outline,
 .btn-secondary {
     min-height: 42px;
-    border-radius: 15px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -5105,7 +5105,7 @@ textarea:focus,
     flex: 0 0 auto;
     padding: 4px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -5149,7 +5149,7 @@ textarea:focus,
     height: 28px;
     padding: 0;
     border: none;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(198, 164, 111, 0.08);
     color: var(--text-muted);
     font-size: 11px;
@@ -5191,7 +5191,7 @@ textarea:focus,
     min-height: 32px;
     padding: 0 12px;
     border: 1px solid rgba(208, 133, 120, 0.26);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(132, 48, 34, 0.16);
     color: var(--text-danger-control);
     font-size: 10.5px;
@@ -5225,7 +5225,7 @@ textarea:focus,
     width: 100%;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.03);
     box-shadow: var(--shadow-sm);
     text-align: left;
@@ -5476,7 +5476,7 @@ textarea,
     min-height: 350px;
     gap: 18px;
     padding: 24px;
-    border-radius: 28px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.1);
     background:
         radial-gradient(circle at top left, rgba(198, 164, 111, 0.16), transparent 34%),
@@ -5552,7 +5552,7 @@ body.has-clip .workspace-stage {
     justify-content: center;
     min-height: 42px;
     padding: 0 16px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(242, 236, 223, 0.1);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-primary);
@@ -5592,7 +5592,7 @@ body.has-clip .workspace-stage {
 
 .workspace-stage-card {
     padding: 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.04);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -5635,7 +5635,7 @@ body.has-clip .workspace-stage {
     width: min(760px, calc(100vw - 36px));
     max-width: 760px;
     padding: 0;
-    border-radius: 30px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.12);
     background:
         linear-gradient(180deg, rgba(25, 36, 51, 0.98), rgba(17, 24, 35, 0.98));
@@ -5684,7 +5684,7 @@ body.has-clip .workspace-stage {
     align-items: center;
     min-height: 28px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(242, 236, 223, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-secondary);
@@ -5705,7 +5705,7 @@ body.has-clip .workspace-stage {
 .wizard-logo {
     width: 48px;
     height: 48px;
-    border-radius: 14px;
+    border-radius: 12px;
     filter: drop-shadow(0 10px 20px rgba(198, 164, 111, 0.18));
 }
 
@@ -5745,7 +5745,7 @@ body.has-clip .workspace-stage {
     flex-direction: column;
     gap: 6px;
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.04);
 }
@@ -5772,7 +5772,7 @@ body.has-clip .workspace-stage {
     align-items: flex-start;
     gap: 14px;
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.03);
     transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
@@ -5815,7 +5815,7 @@ body.has-clip .workspace-stage {
 .wizard-support {
     margin: 16px 26px 0;
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.035);
 }
@@ -5909,7 +5909,7 @@ body.has-clip .workspace-stage {
 
     .workspace-stage {
         padding: 18px;
-        border-radius: 24px;
+        border-radius: 12px;
     }
 
     .workspace-stage-title {
@@ -5927,7 +5927,7 @@ body.has-clip .workspace-stage {
 
     .wizard-card {
         width: min(100vw - 20px, 760px);
-        border-radius: 24px;
+        border-radius: 12px;
     }
 
     .wizard-hero,
@@ -6029,7 +6029,7 @@ body:not(.has-clip) #panel-export.active::before {
     content: "Choose media to unlock this preset, then run it from the active panel.";
     display: block;
     padding: 14px 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.1);
     background:
         linear-gradient(135deg, rgba(198, 164, 111, 0.12), transparent 42%),
@@ -6151,7 +6151,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     body:not(.has-clip) #panel-video.active::before,
     body:not(.has-clip) #panel-export.active::before {
         padding: 13px 14px;
-        border-radius: 18px;
+        border-radius: 12px;
         font-size: 11px;
     }
 }
@@ -6188,7 +6188,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     gap: 8px;
     min-height: 38px;
     padding: 0 13px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -6274,7 +6274,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     min-height: 36px;
     padding: 0;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-secondary);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -6345,7 +6345,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     width: 24px;
     height: 24px;
     flex: 0 0 24px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.06);
     color: rgba(244, 236, 223, 0.94);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -6400,7 +6400,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     gap: 7px;
     min-height: 36px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(236, 230, 218, 0.08);
     color: var(--text-secondary);
@@ -6452,7 +6452,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
 
 .footer-toggle-btn .toggle-count {
     padding: 3px 7px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(236, 230, 218, 0.08);
     color: rgba(198, 206, 219, 0.78);
@@ -6488,7 +6488,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     min-width: 30px;
     min-height: 30px;
     padding: 0;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 0;
     line-height: 1;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -6597,7 +6597,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     min-height: 62px;
     gap: 8px;
     padding: 12px 8px 11px;
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.012));
 }
@@ -6772,7 +6772,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     align-items: center;
     min-height: 42px;
     padding: 0 16px 0 34px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.09);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
@@ -6834,7 +6834,7 @@ body:not(.has-clip) #panel-export.active .btn-secondary:disabled {
     justify-content: flex-start;
     text-align: left;
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.09);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
@@ -6873,7 +6873,7 @@ body:not(.has-clip) #panel-audio.active::before,
 body:not(.has-clip) #panel-video.active::before,
 body:not(.has-clip) #panel-export.active::before {
     padding: 15px 18px;
-    border-radius: 22px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.12);
     background:
         radial-gradient(circle at left top, rgba(216, 184, 135, 0.12), transparent 32%),
@@ -6911,7 +6911,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     align-items: center;
     min-height: 18px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(216, 184, 135, 0.14);
     border: 1px solid rgba(216, 184, 135, 0.2);
     color: rgba(248, 232, 204, 0.9);
@@ -6925,7 +6925,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     margin: 0 24px 16px;
     padding: 12px 16px 10px;
     border: 1px solid rgba(122, 207, 255, 0.14);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at left center, rgba(122, 207, 255, 0.12), transparent 24%),
         linear-gradient(180deg, rgba(20, 29, 41, 0.96), rgba(14, 20, 29, 0.92));
@@ -6965,7 +6965,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     align-items: center;
     min-height: 30px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(236, 230, 218, 0.08);
     color: rgba(205, 213, 224, 0.86);
@@ -6975,7 +6975,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .processing-cancel {
     min-height: 30px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border-color: rgba(255, 138, 138, 0.16);
     background: rgba(128, 48, 48, 0.18);
     letter-spacing: 0.12em;
@@ -6984,12 +6984,12 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .processing-track {
     height: 4px;
     margin-top: 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
 }
 
 .processing-fill {
-    border-radius: 999px;
+    border-radius: 6px;
     box-shadow: 0 0 10px rgba(122, 207, 255, 0.22);
 }
 
@@ -7001,7 +7001,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     gap: 6px;
     margin: 0 24px 16px;
     padding: 12px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 138, 138, 0.16);
     background:
         radial-gradient(circle at left center, rgba(255, 138, 138, 0.12), transparent 24%),
@@ -7087,7 +7087,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     min-height: 28px;
     max-width: 100%;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(214, 221, 231, 0.84);
@@ -7194,7 +7194,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
 .command-palette {
     width: min(760px, calc(100vw - 36px));
-    border-radius: 30px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.12), transparent 30%),
         linear-gradient(180deg, rgba(22, 29, 40, 0.99), rgba(9, 13, 19, 0.995));
@@ -7226,7 +7226,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
 .command-palette input {
     padding: 16px 18px;
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(10, 16, 24, 0.96), rgba(15, 21, 30, 0.9));
     box-shadow:
@@ -7260,7 +7260,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .command-palette-item {
     position: relative;
     padding: 14px 16px 14px 18px;
-    border-radius: 20px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
@@ -7276,7 +7276,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     top: 12px;
     bottom: 12px;
     width: 3px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, rgba(216, 184, 135, 0.9), rgba(122, 207, 255, 0.38));
     opacity: 0.72;
 }
@@ -7323,7 +7323,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .recent-clips-dropdown {
     top: calc(100% + 12px);
     width: min(380px, calc(100vw - 40px));
-    border-radius: 22px;
+    border-radius: 12px;
     padding: 10px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.1), transparent 34%),
@@ -7356,7 +7356,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     position: relative;
     gap: 5px;
     padding: 11px 12px 11px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
 }
@@ -7368,7 +7368,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     top: 10px;
     bottom: 10px;
     width: 3px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, rgba(216, 184, 135, 0.84), rgba(122, 207, 255, 0.34));
     opacity: 0.7;
 }
@@ -7387,7 +7387,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .output-browser {
     margin: 0 14px 8px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 22px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(17, 23, 33, 0.96), rgba(11, 15, 23, 0.94));
     box-shadow:
@@ -7412,7 +7412,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .job-history-item,
 .output-item {
     border: 1px solid rgba(236, 230, 218, 0.07);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -7468,7 +7468,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .job-history-rerun {
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.045);
     color: var(--text-primary);
@@ -7504,7 +7504,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .preview-pane {
     gap: 10px;
     padding: 14px;
-    border-radius: 24px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(11, 15, 23, 0.9));
@@ -7515,13 +7515,13 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 }
 
 .preview-img {
-    border-radius: 18px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.08);
 }
 
 .preview-divider {
     width: 2px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, transparent, rgba(236, 230, 218, 0.18), transparent);
 }
 
@@ -7540,7 +7540,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 }
 
 .waveform-container {
-    border-radius: 20px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.94), rgba(10, 14, 22, 0.92));
@@ -7562,7 +7562,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
     .command-palette {
         width: min(100%, calc(100vw - 24px));
-        border-radius: 24px;
+        border-radius: 12px;
     }
 
     .job-history,
@@ -7586,7 +7586,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     position: relative;
     gap: 8px;
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(14, 20, 29, 0.92), rgba(10, 15, 23, 0.88));
     border-color: rgba(236, 230, 218, 0.08);
@@ -7604,7 +7604,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     align-items: center;
     min-height: 18px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(11, 16, 24, 0.96);
     border: 1px solid rgba(236, 230, 218, 0.08);
     color: rgba(203, 211, 223, 0.68);
@@ -7621,7 +7621,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     justify-content: center;
     min-height: 38px;
     padding: 10px 14px;
-    border-radius: 14px;
+    border-radius: 12px;
     color: rgba(205, 213, 224, 0.78);
     font-size: 11px;
     font-weight: 680;
@@ -7658,7 +7658,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     bottom: 6px;
     width: 18px;
     height: 2px;
-    border-radius: 999px;
+    border-radius: 6px;
     transform: translateX(-50%);
     background: linear-gradient(90deg, rgba(216, 184, 135, 0.2), rgba(216, 184, 135, 0.96), rgba(122, 207, 255, 0.45));
 }
@@ -7684,7 +7684,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 }
 
 .card {
-    border-radius: 24px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(22, 30, 42, 0.92) 0%, rgba(17, 23, 34, 0.86) 100%);
     box-shadow:
@@ -7772,7 +7772,7 @@ textarea:hover,
 .hint {
     position: relative;
     padding: 12px 14px 12px 38px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(216, 184, 135, 0.14);
     background:
         linear-gradient(180deg, rgba(216, 184, 135, 0.08), rgba(216, 184, 135, 0.03));
@@ -7809,7 +7809,7 @@ textarea:hover,
 }
 
 .favorites-bar {
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(18, 25, 36, 0.94), rgba(13, 19, 28, 0.9));
 }
@@ -7820,7 +7820,7 @@ textarea:hover,
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 10px;
     padding: 22px 12px 12px;
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(16, 22, 31, 0.92), rgba(12, 17, 25, 0.88));
@@ -7838,7 +7838,7 @@ textarea:hover,
     align-items: center;
     min-height: 18px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(11, 16, 24, 0.96);
     border: 1px solid rgba(236, 230, 218, 0.08);
     color: rgba(203, 211, 223, 0.68);
@@ -7852,7 +7852,7 @@ textarea:hover,
 .quick-action-btn {
     min-height: 56px;
     padding: 16px 16px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -7895,7 +7895,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     align-items: center;
     gap: 14px;
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.94), rgba(12, 17, 25, 0.9));
@@ -7912,7 +7912,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     min-width: 72px;
     min-height: 30px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.14);
     background: rgba(216, 184, 135, 0.08);
     color: rgba(242, 231, 209, 0.92);
@@ -7925,7 +7925,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.94), rgba(12, 17, 25, 0.9));
@@ -7990,7 +7990,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     flex-direction: column;
     gap: 4px;
     padding: 11px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.09);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
@@ -8045,7 +8045,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     justify-content: center;
     width: 26px;
     height: 26px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(242, 236, 223, 0.1);
     color: inherit;
@@ -8146,7 +8146,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     gap: 12px;
     min-width: 0;
     padding: 16px;
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.1);
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.14), transparent 34%),
@@ -8202,7 +8202,7 @@ body.has-clip .media-sidecar-empty {
     align-items: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.045);
     color: rgba(214, 221, 231, 0.84);
@@ -8225,7 +8225,7 @@ body.has-clip .media-sidecar-empty {
 .media-sidecar .clip-thumb {
     width: 100%;
     height: 168px;
-    border-radius: 20px;
+    border-radius: 12px;
     overflow: hidden;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
@@ -8242,7 +8242,7 @@ body.has-clip .media-sidecar-empty {
     align-items: center;
     min-height: 32px;
     padding: 0 10px;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(229, 234, 241, 0.88);
@@ -8260,7 +8260,7 @@ body.has-clip .media-sidecar-empty {
     margin-top: 0;
     padding: 12px 14px;
     border-left: 0;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background: rgba(255, 255, 255, 0.04);
 }
@@ -8565,7 +8565,7 @@ body.has-clip .media-sidecar-empty {
 .logo-mark {
     width: 30px;
     height: 30px;
-    border-radius: 11px;
+    border-radius: 10px;
 }
 
 .brand-copy {
@@ -8593,7 +8593,7 @@ body.has-clip .media-sidecar-empty {
 .nav-tab {
     min-height: 66px;
     padding: 13px 10px 12px;
-    border-radius: 21px;
+    border-radius: 12px;
 }
 
 .nav-tab span {
@@ -8658,7 +8658,7 @@ body.has-clip .media-sidecar-empty {
     min-height: 372px;
     gap: 28px;
     padding: 32px;
-    border-radius: 32px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.13);
     background:
         radial-gradient(circle at top left, rgba(216, 184, 135, 0.22), transparent 35%),
@@ -8698,7 +8698,7 @@ body.has-clip .media-sidecar-empty {
 
 .workspace-stage-session-item {
     padding: 13px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.11);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.028));
@@ -8740,7 +8740,7 @@ body.has-clip .media-sidecar-empty {
 .workspace-stage-card {
     min-height: 108px;
     padding: 18px 18px 18px 58px;
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.1);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.082), rgba(255, 255, 255, 0.03));
@@ -8795,7 +8795,7 @@ body.has-clip .media-sidecar-empty {
 .media-intake-main {
     gap: 12px;
     padding: 14px;
-    border-radius: 24px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background:
         linear-gradient(180deg, rgba(14, 19, 28, 0.34), rgba(10, 14, 22, 0.18));
@@ -8804,7 +8804,7 @@ body.has-clip .media-sidecar-empty {
 .clip-select,
 .custom-dropdown-trigger {
     min-height: 48px;
-    border-radius: 16px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.11);
     background:
         linear-gradient(180deg, rgba(11, 16, 24, 0.92), rgba(8, 12, 19, 0.84));
@@ -8834,7 +8834,7 @@ body.has-clip .media-sidecar-empty {
 
 .drop-zone {
     min-height: 68px;
-    border-radius: 18px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.1);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.018));
@@ -8862,7 +8862,7 @@ body.has-clip .media-sidecar-empty {
 
 .media-sidecar {
     padding: 22px 20px;
-    border-radius: 26px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.12);
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.17), transparent 34%),
@@ -8904,7 +8904,7 @@ body.has-clip .media-sidecar-empty {
 .quick-actions {
     gap: 14px;
     padding: 26px 16px 16px;
-    border-radius: 24px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.1);
     background:
         radial-gradient(circle at top left, rgba(216, 184, 135, 0.08), transparent 30%),
@@ -8926,7 +8926,7 @@ body.has-clip .media-sidecar-empty {
 
 .quick-action-btn {
     min-height: 60px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
@@ -8943,7 +8943,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled {
 
 .sub-tabs {
     padding: 10px;
-    border-radius: 22px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.1);
     background:
         radial-gradient(circle at top left, rgba(216, 184, 135, 0.06), transparent 34%),
@@ -8953,7 +8953,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled {
 .sub-tab {
     position: relative;
     min-height: 40px;
-    border-radius: 15px;
+    border-radius: 12px;
     border: 1px solid transparent;
 }
 
@@ -9120,7 +9120,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled {
     min-height: 22px;
     flex: 0 0 auto;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.18);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(248, 232, 204, 0.88);
@@ -9170,7 +9170,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     max-width: 980px;
     padding: 0;
     overflow: hidden;
-    border-radius: 30px;
+    border-radius: 12px;
     border: 1px solid rgba(242, 236, 223, 0.12);
     background:
         radial-gradient(circle at top left, rgba(216, 184, 135, 0.14), transparent 30%),
@@ -9194,7 +9194,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .wizard-logo {
     width: 54px;
     height: 54px;
-    border-radius: 16px;
+    border-radius: 12px;
 }
 
 .wizard-header-copy {
@@ -9220,7 +9220,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 
 .wizard-highlight {
     padding: 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.1);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028));
@@ -9244,7 +9244,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .wizard-step {
     min-height: 148px;
     padding: 16px;
-    border-radius: 20px;
+    border-radius: 12px;
 }
 
 .wizard-step.active {
@@ -9261,7 +9261,7 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
 .wizard-support {
     margin: 18px 30px 0;
     padding: 16px 18px;
-    border-radius: 20px;
+    border-radius: 12px;
     border-color: rgba(242, 236, 223, 0.1);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
@@ -9368,7 +9368,7 @@ textarea,
 .custom-dropdown-trigger {
     min-height: 44px;
     padding: 11px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.11);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.98), rgba(18, 25, 35, 0.92));
@@ -9449,7 +9449,7 @@ textarea::placeholder,
 .btn-browse {
     min-width: 92px;
     padding: 0 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.11);
     background:
         linear-gradient(180deg, rgba(34, 44, 58, 0.82), rgba(26, 34, 46, 0.88));
@@ -9471,7 +9471,7 @@ textarea::placeholder,
 
 .hint {
     padding: 13px 15px 13px 40px;
-    border-radius: 18px;
+    border-radius: 12px;
     border-color: rgba(216, 184, 135, 0.16);
     background:
         linear-gradient(180deg, rgba(216, 184, 135, 0.1), rgba(216, 184, 135, 0.035));
@@ -9496,13 +9496,13 @@ textarea::placeholder,
 .result-area {
     margin-top: 16px;
     padding: 16px 18px;
-    border-radius: 18px;
+    border-radius: 12px;
 }
 
 .slider-row {
     gap: 16px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background:
         linear-gradient(180deg, rgba(17, 24, 34, 0.96), rgba(13, 19, 28, 0.92));
@@ -9514,7 +9514,7 @@ textarea::placeholder,
 input[type="range"] {
     height: 6px;
     margin: 6px 0;
-    border-radius: 999px;
+    border-radius: 6px;
     background:
         linear-gradient(90deg, rgba(216, 184, 135, 0.2), rgba(255, 255, 255, 0.12));
     box-shadow:
@@ -9549,7 +9549,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 input[type="range"]::-moz-range-track {
     height: 6px;
     border: none;
-    border-radius: 999px;
+    border-radius: 6px;
     background:
         linear-gradient(90deg, rgba(216, 184, 135, 0.2), rgba(255, 255, 255, 0.12));
     box-shadow:
@@ -9583,7 +9583,7 @@ input[type="range"]::-moz-range-thumb {
 .input-pair {
     gap: 12px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background:
         linear-gradient(180deg, rgba(17, 24, 34, 0.96), rgba(13, 19, 28, 0.92));
@@ -9622,7 +9622,7 @@ input[type="range"]::-moz-range-thumb {
 
 .progress-track {
     height: 14px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(10, 14, 20, 0.92), rgba(16, 21, 31, 0.88));
@@ -9632,7 +9632,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .progress-fill {
-    border-radius: 999px;
+    border-radius: 6px;
     background:
         linear-gradient(90deg, rgba(153, 122, 79, 0.95), rgba(236, 219, 186, 0.98), rgba(211, 176, 127, 0.96));
     background-size: 160% 100%;
@@ -9669,7 +9669,7 @@ input[type="range"]::-moz-range-thumb {
 .progress-elapsed {
     min-width: 74px;
     padding: 9px 11px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.035);
     color: rgba(241, 229, 205, 0.88);
@@ -9692,7 +9692,7 @@ input[type="range"]::-moz-range-thumb {
 .btn-cancel {
     min-height: 34px;
     padding: 0 13px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, rgba(147, 66, 61, 0.96), rgba(111, 47, 44, 0.96));
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
@@ -9719,7 +9719,7 @@ input[type="range"]::-moz-range-thumb {
     width: fit-content;
     min-height: 32px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(241, 244, 248, 0.92);
@@ -9755,7 +9755,7 @@ input[type="range"]::-moz-range-thumb {
 .results-path {
     margin-bottom: 0;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(16, 23, 33, 0.96), rgba(12, 17, 25, 0.92));
@@ -9853,7 +9853,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .card {
     min-height: 0;
     padding: 22px 22px 24px;
-    border-radius: 24px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.1), transparent 34%),
         linear-gradient(180deg, rgba(34, 46, 62, 0.98), rgba(22, 31, 44, 0.96));
@@ -9884,7 +9884,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding: 11px 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(14, 20, 29, 0.9));
     box-shadow:
@@ -9910,7 +9910,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.16);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(244, 232, 207, 0.9);
@@ -9924,7 +9924,7 @@ input[type="range"]::-moz-range-thumb {
     gap: 12px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(14, 20, 29, 0.9));
     box-shadow:
@@ -9963,7 +9963,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .btn-ghost,
 #panel-settings .utility-btn {
     min-height: 38px;
-    border-radius: 16px;
+    border-radius: 12px;
 }
 
 #panel-settings .btn-sm:not(.btn-outline):not(.btn-primary):not(.btn-secondary):not(.btn-ghost):not(.utility-btn) {
@@ -9973,7 +9973,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 38px;
     padding: 0 14px;
     border: 1px solid rgba(216, 184, 135, 0.18);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(216, 184, 135, 0.2), rgba(160, 122, 72, 0.16));
     color: rgba(248, 235, 209, 0.92);
@@ -10033,7 +10033,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 52px;
     gap: 10px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(14, 20, 29, 0.9));
@@ -10060,7 +10060,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 24px;
     margin-left: auto;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.045);
     color: rgba(197, 206, 218, 0.78);
     font-size: 9.5px;
@@ -10069,7 +10069,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .model-list {
     max-height: 284px;
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(17, 23, 33, 0.96), rgba(12, 18, 27, 0.94));
@@ -10080,7 +10080,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding: 12px;
     border: 1px solid rgba(236, 230, 218, 0.06);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
 }
@@ -10102,7 +10102,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 30px;
     padding: 0 10px;
     border: 1px solid rgba(187, 92, 88, 0.16);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(147, 66, 61, 0.08);
     color: rgba(246, 219, 218, 0.86);
     font-size: 9px;
@@ -10121,7 +10121,7 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 14px;
     padding: 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.08), transparent 34%),
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(14, 20, 29, 0.9));
@@ -10130,7 +10130,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .gpu-rec-notes {
     margin-top: 12px;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
@@ -10145,7 +10145,7 @@ input[type="range"]::-moz-range-thumb {
 #panel-settings .shortcut-row {
     padding: 10px 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(14, 20, 29, 0.9));
 }
@@ -10172,7 +10172,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: center;
     min-height: 34px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(232, 238, 244, 0.84);
@@ -10237,7 +10237,7 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 18px;
     padding: 16px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 22px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.08), transparent 34%),
         linear-gradient(180deg, rgba(18, 24, 34, 0.92), rgba(13, 19, 28, 0.9));
@@ -10259,7 +10259,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     min-height: 30px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.16);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(242, 231, 209, 0.88);
@@ -10284,7 +10284,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 34px;
     padding: 0 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.045);
     color: rgba(234, 239, 245, 0.86);
     font-size: 9.5px;
@@ -10306,7 +10306,7 @@ input[type="range"]::-moz-range-thumb {
 .transcript-search {
     gap: 8px;
     padding: 10px;
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
     border: 1px solid rgba(236, 230, 218, 0.08);
@@ -10325,7 +10325,7 @@ input[type="range"]::-moz-range-thumb {
     min-width: 62px;
     min-height: 32px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(200, 209, 221, 0.76);
     font-size: 9.5px;
@@ -10338,7 +10338,7 @@ input[type="range"]::-moz-range-thumb {
 .merge-file-list,
 .scrollable-md {
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -10354,7 +10354,7 @@ input[type="range"]::-moz-range-thumb {
 
 .transcript-seg {
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -10373,7 +10373,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 26px;
     margin-bottom: 10px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(216, 184, 135, 0.1);
     color: rgba(243, 229, 201, 0.88);
     font-size: 9.5px;
@@ -10393,7 +10393,7 @@ input[type="range"]::-moz-range-thumb {
 
 .summary-content {
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -10419,7 +10419,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -10458,7 +10458,7 @@ input[type="range"]::-moz-range-thumb {
     width: 28px;
     height: 28px;
     margin-right: 0;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.16);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(244, 232, 208, 0.9);
@@ -10488,7 +10488,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 30px;
     padding: 0 10px;
     border: 1px solid rgba(187, 92, 88, 0.16);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(147, 66, 61, 0.08);
     color: rgba(246, 218, 217, 0.84);
     font-size: 9px;
@@ -10524,7 +10524,7 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 8px;
     padding: 0;
     border: 1px solid transparent;
-    border-radius: 22px;
+    border-radius: 12px;
     background: transparent;
     max-height: 0;
 }
@@ -10545,7 +10545,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
 }
@@ -10581,7 +10581,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(200, 209, 221, 0.76);
     font-size: 9.5px;
@@ -10608,7 +10608,7 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 10px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     border-bottom: 1px solid rgba(236, 230, 218, 0.08);
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.08), transparent 34%),
@@ -10637,7 +10637,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
 }
@@ -10666,7 +10666,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 28px;
     min-width: 0;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(205, 214, 225, 0.8);
     font-size: 9.5px;
@@ -10693,7 +10693,7 @@ input[type="range"]::-moz-range-thumb {
 #cutReviewPanel .form-actions .btn-primary,
 #cutReviewPanel .form-actions .btn-secondary {
     min-height: 38px;
-    border-radius: 16px;
+    border-radius: 12px;
 }
 
 @media (max-width: 720px) {
@@ -10747,7 +10747,7 @@ input[type="range"]::-moz-range-thumb {
     display: grid;
     gap: 12px;
     padding: 16px 18px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.09);
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.08), transparent 34%),
@@ -10790,7 +10790,7 @@ input[type="range"]::-moz-range-thumb {
 
 #nlpCommandOutput {
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -10804,7 +10804,7 @@ input[type="range"]::-moz-range-thumb {
 
 #footageSearchResults {
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -10817,7 +10817,7 @@ input[type="range"]::-moz-range-thumb {
     gap: 8px;
     margin-bottom: 8px;
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -10866,7 +10866,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     min-height: 26px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(201, 209, 221, 0.78);
     font-size: 9.5px;
@@ -10888,7 +10888,7 @@ input[type="range"]::-moz-range-thumb {
 
 #renameItemsList {
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -10906,7 +10906,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: space-between;
     gap: 12px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -10920,7 +10920,7 @@ input[type="range"]::-moz-range-thumb {
     width: 28px;
     height: 28px;
     flex: 0 0 28px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.16);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(244, 232, 208, 0.9);
@@ -10974,7 +10974,7 @@ input[type="range"]::-moz-range-thumb {
     min-height: 30px;
     padding: 0 10px;
     border: 1px solid rgba(187, 92, 88, 0.16);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(147, 66, 61, 0.08);
     color: rgba(246, 218, 217, 0.84);
     font-size: 9px;
@@ -11025,7 +11025,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(201, 209, 221, 0.78);
     font-size: 9.5px;
@@ -11064,7 +11064,7 @@ input[type="range"]::-moz-range-thumb {
 #ytChaptersText {
     min-height: 132px;
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -11092,7 +11092,7 @@ input[type="range"]::-moz-range-thumb {
 #repeatList,
 #loudMatchTable {
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
@@ -11108,7 +11108,7 @@ input[type="range"]::-moz-range-thumb {
     gap: 12px;
     margin-bottom: 8px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -11143,7 +11143,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(216, 184, 135, 0.12);
     color: rgba(244, 232, 206, 0.88);
     font-size: 9px;
@@ -11163,7 +11163,7 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -11198,7 +11198,7 @@ input[type="range"]::-moz-range-thumb {
     justify-content: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 9px;
     font-weight: 760;
     letter-spacing: 0.08em;
@@ -11366,7 +11366,7 @@ input[type="range"]::-moz-range-thumb {
     margin: 10px auto 0;
     padding: 14px 16px;
     border: 1px solid rgba(236, 230, 218, 0.12);
-    border-radius: 22px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(18, 25, 35, 0.97), rgba(13, 18, 27, 0.94));
     box-shadow:
@@ -11428,7 +11428,7 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 4px;
     padding: 0 12px;
     border: 1px solid rgba(236, 230, 218, 0.1);
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
     color: rgba(244, 239, 229, 0.9);
     font-size: 9.5px;
@@ -11535,7 +11535,7 @@ input[type="range"]::-moz-range-thumb {
     max-width: none;
     padding: 14px 16px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(15, 21, 30, 0.96), rgba(11, 16, 24, 0.92));
     box-shadow:
@@ -11758,7 +11758,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     align-content: start;
     padding: 16px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 22px;
+    border-radius: 12px;
     background:
         radial-gradient(circle at top right, rgba(216, 184, 135, 0.08), transparent 32%),
         linear-gradient(180deg, rgba(18, 25, 35, 0.94), rgba(12, 18, 26, 0.92));
@@ -11801,7 +11801,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-height: 30px;
     max-width: 34ch;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(214, 222, 232, 0.76);
@@ -11822,7 +11822,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-height: 58px;
     padding: 10px 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -11869,7 +11869,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     position: relative;
     height: 96px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(9, 14, 21, 0.92), rgba(12, 17, 24, 0.96));
     overflow: auto hidden;
@@ -11925,7 +11925,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     left: 50%;
     width: 8px;
     height: 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(245, 215, 164, 0.94);
     transform: translate(-50%, 0);
     box-shadow: 0 0 0 3px rgba(216, 184, 135, 0.09);
@@ -11949,7 +11949,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-width: 18px;
     padding: 0;
     border: 1px solid rgba(216, 184, 135, 0.12);
-    border-radius: 999px;
+    border-radius: 6px;
     background:
         linear-gradient(180deg, rgba(75, 101, 135, 0.72), rgba(42, 58, 79, 0.92));
     box-shadow:
@@ -11983,7 +11983,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-width: 18px;
     height: 100%;
     padding: 0 7px;
-    border-radius: 999px;
+    border-radius: 6px;
     color: rgba(246, 248, 251, 0.94);
     font-size: 8.5px;
     font-weight: 760;
@@ -12044,7 +12044,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     top: 12px;
     bottom: 12px;
     width: 3px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(216, 184, 135, 0.18);
     opacity: 0;
     transition: opacity 140ms ease, background-color 140ms ease;
@@ -12104,7 +12104,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-width: 26px;
     height: 26px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.14);
     background: rgba(216, 184, 135, 0.1);
     color: rgba(244, 232, 208, 0.9);
@@ -12121,7 +12121,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     align-items: center;
     min-height: 26px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.045);
     color: rgba(202, 211, 223, 0.78);
     font-size: 9.5px;
@@ -12133,7 +12133,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-height: 74px;
     padding: 12px 14px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background: rgba(8, 13, 20, 0.34);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
     resize: none;
@@ -12154,7 +12154,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     min-height: 180px;
     padding: 24px;
     border: 1px dashed rgba(216, 184, 135, 0.16);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(216, 184, 135, 0.06), rgba(255, 255, 255, 0.02));
     color: rgba(206, 216, 228, 0.72);
@@ -12209,7 +12209,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 .cut-review-track {
     position: relative;
     height: 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
     overflow: hidden;
 }
@@ -12219,7 +12219,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     top: 0;
     height: 100%;
     min-width: 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background:
         linear-gradient(90deg, rgba(216, 184, 135, 0.92), rgba(123, 95, 55, 0.96));
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
@@ -12285,7 +12285,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     margin: 10px auto 0;
     padding: 16px 18px;
     border: 1px solid rgba(136, 178, 255, 0.22);
-    border-radius: 22px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(21, 30, 48, 0.97), rgba(14, 20, 32, 0.94));
     box-shadow:
@@ -12608,7 +12608,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 .journal-pill {
     display: inline-block;
     padding: 3px 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -12818,7 +12818,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     overflow: auto;
     background: linear-gradient(180deg, rgba(22, 30, 48, 0.98), rgba(14, 20, 32, 0.96));
     border: 1px solid rgba(236, 230, 218, 0.12);
-    border-radius: 18px;
+    border-radius: 12px;
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
@@ -12929,7 +12929,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     width: min(520px, calc(100vw - 32px));
     max-height: min(620px, calc(100vh - 48px));
     overflow: auto;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.13);
     background:
         radial-gradient(circle at top left, rgba(216, 184, 135, 0.12), transparent 34%),
@@ -12966,7 +12966,7 @@ body:not(.has-clip) .media-sidecar .file-info {
 
 .panel-dialog-detail,
 .panel-dialog-help {
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background: rgba(255, 255, 255, 0.035);
     color: var(--text-secondary);
@@ -13053,7 +13053,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     width: 8px;
     height: 8px;
     margin-right: 9px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(122, 207, 255, 0.92);
     box-shadow: 0 0 0 5px rgba(122, 207, 255, 0.12);
 }
@@ -13077,7 +13077,7 @@ body:not(.has-clip) .media-sidecar .file-info {
     .panel-dialog-card {
         width: 100%;
         max-height: calc(100vh - 28px);
-        border-radius: 18px;
+        border-radius: 12px;
     }
 
     .panel-dialog-actions {
@@ -13380,7 +13380,7 @@ html.theme-light .panel-dialog-input {
     left: 20px;
     z-index: 600;
     padding: 10px 14px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: #e9f0ff;
     color: #0b1520;
     font-size: 12px;
@@ -13482,7 +13482,7 @@ html.theme-light .panel-dialog-input {
     min-height: 50px;
     padding: 0 14px;
     border: 1px solid transparent;
-    border-radius: 16px;
+    border-radius: 12px;
     background: transparent;
     color: var(--text-muted);
     flex-direction: row;
@@ -13528,7 +13528,7 @@ html.theme-light .panel-dialog-input {
     top: 50%;
     width: 3px;
     height: 22px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, #9ac0f3 0%, #d9ba83 100%);
     box-shadow: none;
 }
@@ -13576,7 +13576,7 @@ html.theme-light .panel-dialog-input {
     align-items: center;
     min-height: 24px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: rgba(216, 184, 135, 0.08);
     color: #e5c494;
     font-size: 10px;
@@ -13588,7 +13588,7 @@ html.theme-light .panel-dialog-input {
 .workspace-chip {
     min-height: 32px;
     padding: 0 14px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.04);
     color: var(--text-secondary);
@@ -13645,7 +13645,7 @@ html.theme-light .panel-dialog-input {
     max-width: var(--workspace-shell-max);
     margin-left: auto;
     margin-right: auto;
-    border-radius: 18px;
+    border-radius: 12px;
 }
 
 .processing-banner {
@@ -13665,7 +13665,7 @@ html.theme-light .panel-dialog-input {
     gap: 20px;
     min-height: auto;
     padding: 34px;
-    border-radius: 30px;
+    border-radius: 12px;
     border: 1px solid rgba(214, 223, 235, 0.09);
     background: linear-gradient(180deg, rgba(18, 28, 42, 0.96), rgba(13, 21, 31, 0.94));
     box-shadow: 0 32px 60px rgba(3, 8, 14, 0.18);
@@ -13692,7 +13692,7 @@ html.theme-light .panel-dialog-input {
     align-items: center;
     min-height: 24px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -13728,7 +13728,7 @@ html.theme-light .panel-dialog-input {
 
 .workspace-stage-session-item {
     padding: 14px 16px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.04);
 }
@@ -13757,7 +13757,7 @@ html.theme-light .panel-dialog-input {
     min-height: 48px;
     padding: 0 16px;
     gap: 10px;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.045);
     color: var(--text-primary);
@@ -13792,7 +13792,7 @@ html.theme-light .panel-dialog-input {
 .workspace-stage-card {
     min-height: 118px;
     padding: 18px 18px 18px 62px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.028));
     box-shadow: none;
@@ -13804,7 +13804,7 @@ html.theme-light .panel-dialog-input {
     justify-content: center;
     width: 32px;
     height: 32px;
-    border-radius: 11px;
+    border-radius: 10px;
     background: rgba(217, 186, 131, 0.12);
     color: #e8c791;
 }
@@ -13842,7 +13842,7 @@ html.theme-light .panel-dialog-input {
 }
 
 .card {
-    border-radius: 24px;
+    border-radius: 12px;
     padding: 22px;
     padding-bottom: 24px;
 }
@@ -13905,14 +13905,14 @@ html.theme-light .panel-dialog-input {
 
 .media-intake-main {
     padding: 16px;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.015));
 }
 
 .media-sidecar {
     padding: 24px 22px;
-    border-radius: 24px;
+    border-radius: 12px;
     background: linear-gradient(180deg, rgba(26, 38, 56, 0.98), rgba(17, 26, 38, 0.96));
 }
 
@@ -13946,7 +13946,7 @@ input[type="text"],
 input[type="number"],
 input[type="password"],
 textarea {
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(214, 223, 235, 0.08);
     background: linear-gradient(180deg, rgba(10, 17, 26, 0.94), rgba(9, 15, 23, 0.88));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
@@ -14003,7 +14003,7 @@ textarea:focus-visible,
 
 .quick-actions {
     padding: 22px;
-    border-radius: 24px;
+    border-radius: 12px;
     gap: 14px;
     background: linear-gradient(180deg, rgba(19, 31, 45, 0.96), rgba(13, 21, 31, 0.95));
 }
@@ -14017,7 +14017,7 @@ textarea:focus-visible,
 
 .quick-action-btn {
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 18px;
+    border-radius: 12px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.022));
     box-shadow: none;
 }
@@ -14057,7 +14057,7 @@ textarea:focus-visible,
 
 .sub-tabs {
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 12px;
     background: linear-gradient(180deg, rgba(11, 17, 26, 0.94), rgba(8, 13, 20, 0.92));
     box-shadow: none;
 }
@@ -14409,7 +14409,7 @@ body[data-active-nav="settings"] {
 .quick-action-btn {
     min-height: 126px;
     padding: 18px 18px 16px;
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(214, 223, 235, 0.08);
     background:
         radial-gradient(circle at top right, rgba(var(--workspace-accent-rgb), 0.08), transparent 40%),
@@ -14452,7 +14452,7 @@ body[data-active-nav="settings"] {
 .quick-action-tag {
     min-height: 24px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(var(--workspace-accent-rgb), 0.18);
     background: rgba(var(--workspace-accent-rgb), 0.12);
     color: rgba(236, 242, 249, 0.94);
@@ -14463,7 +14463,7 @@ body[data-active-nav="settings"] {
     top: 8px;
     z-index: 18;
     padding: 6px;
-    border-radius: 22px;
+    border-radius: 12px;
     border: 1px solid rgba(214, 223, 235, 0.08);
     background: rgba(8, 13, 20, 0.82);
     backdrop-filter: blur(18px);
@@ -14483,7 +14483,7 @@ body[data-active-nav="settings"] {
 .sub-tab {
     min-height: 40px;
     padding: 0 14px;
-    border-radius: 15px;
+    border-radius: 12px;
     border: 1px solid transparent;
     font-size: 11px;
     font-weight: 650;
@@ -14511,7 +14511,7 @@ body[data-active-nav="settings"] {
 #progressSection,
 #resultsSection,
 .polish-result {
-    border-radius: 26px;
+    border-radius: 12px;
 }
 
 .card-header {
@@ -14550,7 +14550,7 @@ input[type="url"],
 select,
 textarea {
     min-height: 42px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(214, 223, 235, 0.10);
     background: rgba(8, 14, 22, 0.9);
     color: #f5f7fb;
@@ -14592,7 +14592,7 @@ textarea:focus-visible {
     position: relative;
     padding: 14px 16px 14px 18px;
     border: 1px solid rgba(214, 223, 235, 0.08);
-    border-radius: 18px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(21, 30, 42, 0.94), rgba(16, 24, 34, 0.92));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -14605,7 +14605,7 @@ textarea:focus-visible {
     bottom: 14px;
     left: 0;
     width: 3px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: linear-gradient(180deg, rgba(var(--workspace-secondary-rgb), 0.9), rgba(var(--workspace-accent-rgb), 0.9));
 }
 
@@ -14615,7 +14615,7 @@ textarea:focus-visible {
     width: fit-content;
     min-height: 22px;
     padding: 0 9px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.045);
     color: rgba(232, 238, 246, 0.76);
@@ -14638,7 +14638,7 @@ textarea:focus-visible {
     align-content: center;
     min-height: 108px;
     padding: 18px;
-    border-radius: 18px;
+    border-radius: 12px;
     border: 1px dashed rgba(214, 223, 235, 0.12);
     background: rgba(255, 255, 255, 0.03);
     font-size: 11.5px;
@@ -14653,7 +14653,7 @@ textarea:focus-visible {
     width: fit-content;
     min-height: 22px;
     padding: 0 9px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: rgba(255, 255, 255, 0.045);
     color: rgba(232, 238, 246, 0.72);
@@ -14755,7 +14755,7 @@ body:not(.has-clip) #panel-settings.active::before {
     justify-content: center;
     min-height: 28px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(171, 189, 214, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(240, 245, 252, 0.84);
@@ -14812,7 +14812,7 @@ body:not(.has-clip) #panel-settings.active::before {
     display: grid;
     gap: 10px;
     padding: 13px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(171, 189, 214, 0.12);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.024));
@@ -14846,7 +14846,7 @@ body:not(.has-clip) #panel-settings.active::before {
     align-items: center;
     min-height: 24px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(171, 189, 214, 0.14);
     background: rgba(255, 255, 255, 0.04);
     font-size: 10px;
@@ -14887,7 +14887,7 @@ body:not(.has-clip) #panel-settings.active::before {
     display: grid;
     gap: 8px;
     padding: 13px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px solid rgba(171, 189, 214, 0.12);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.022));
 }
@@ -14916,7 +14916,7 @@ body:not(.has-clip) #panel-settings.active::before {
     align-items: center;
     min-height: 22px;
     padding: 0 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(171, 189, 214, 0.14);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(230, 237, 246, 0.84);
@@ -15012,7 +15012,7 @@ body:not(.has-clip) #panel-settings.active::before {
     gap: 12px;
     min-height: 48px;
     padding: 10px 12px;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -15045,7 +15045,7 @@ body:not(.has-clip) #panel-settings.active::before {
     justify-content: center;
     min-height: 26px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background: rgba(255, 255, 255, 0.04);
     font-size: 10px;
@@ -15185,7 +15185,7 @@ body:not(.has-clip) #panel-settings.active::before {
 
 #sub-exp-workflow .batch-file-item,
 #sub-exp-workflow .workflow-step-item {
-    border-radius: 20px;
+    border-radius: 12px;
 }
 
 #sub-exp-workflow .workflow-step-copy {
@@ -15206,7 +15206,7 @@ body:not(.has-clip) #panel-settings.active::before {
     margin-top: 10px;
     border-left-width: 0;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 16px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
     color: rgba(224, 232, 240, 0.8);
@@ -15219,7 +15219,7 @@ body:not(.has-clip) #panel-settings.active::before {
 #journalCard .journal-row {
     gap: 14px;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     border-color: rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
@@ -15271,7 +15271,7 @@ body:not(.has-clip) #panel-settings.active::before {
 
 .job-history.open,
 .output-browser {
-    border-radius: 24px;
+    border-radius: 12px;
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(17, 24, 35, 0.96), rgba(11, 16, 24, 0.92));
@@ -15291,7 +15291,7 @@ body:not(.has-clip) #panel-settings.active::before {
     align-items: start;
     padding: 14px 16px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
     transition:
@@ -15371,7 +15371,7 @@ body:not(.has-clip) #panel-settings.active::before {
     align-items: center;
     min-height: 24px;
     padding: 0 10px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(231, 238, 247, 0.76);
@@ -15437,7 +15437,7 @@ body:not(.has-clip) #panel-settings.active::before {
 .output-item-btn {
     min-height: 32px;
     padding: 0 11px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(236, 230, 218, 0.1);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(237, 242, 249, 0.86);
@@ -15496,7 +15496,7 @@ body:not(.has-clip) #panel-settings.active::before {
     gap: 12px;
     padding: 14px 16px;
     border: 1px solid rgba(236, 230, 218, 0.08);
-    border-radius: 20px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.02));
     transition:
@@ -15541,7 +15541,7 @@ body:not(.has-clip) #panel-settings.active::before {
     align-items: center;
     min-height: 22px;
     padding: 0 9px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(216, 184, 135, 0.2);
     background: rgba(216, 184, 135, 0.14);
     color: rgba(248, 228, 188, 0.94);
@@ -16174,7 +16174,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .wizard-chip {
     min-height: 26px;
-    border-radius: 999px;
+    border-radius: 6px;
     border-color: rgba(220, 230, 244, 0.14);
     background: rgba(255, 255, 255, 0.045);
     color: var(--text-muted);
@@ -16603,7 +16603,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .alert-action-link {
     margin-left: 12px;
     padding: 7px 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.06);
     color: var(--text-primary, #eef2ff);
@@ -18044,7 +18044,7 @@ html.theme-light .status-bar .status-separator {
     display: inline-block;
     margin-left: 6px;
     padding: 1px 6px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 0.65rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
