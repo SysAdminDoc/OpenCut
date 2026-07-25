@@ -387,11 +387,8 @@
                         <button type="button" class="btn btn-secondary btn-lg hidden" id="polishBatchBtn" title="Polish every file in the batch picker, one after another" data-i18n-title="interview.batch_title">
                             <span data-i18n="interview.polish_batch_button">Polish batch</span> (<span id="polishBatchCount">0</span>)
                         </button>
-                        <span class="interview-polish-hint" id="interviewPolishHint" data-i18n="interview.source_required_hint">Choose a source clip to unlock the full polish pass.</span>
-                    </div>
-                    <!-- v1.10.5 (Q): clear the cached transcript if the user wants Whisper to re-run -->
-                    <div class="interview-polish-footer">
                         <button type="button" class="btn btn-ghost btn-sm" id="polishClearCacheBtn" title="Force a fresh Whisper transcription on the next run" data-i18n="interview.retranscribe_next" data-i18n-title="interview.retranscribe_title">Re-transcribe next run</button>
+                        <span class="interview-polish-hint" id="interviewPolishHint" data-i18n="interview.source_required_hint">Choose a source clip to unlock the full polish pass.</span>
                     </div>
                     <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress" data-i18n-aria-label="interview.pipeline_progress">
                         <!-- populated by renderPolishSteps() -->
@@ -3472,7 +3469,7 @@
             <!-- ======== TAB: SETTINGS ======== -->
             <div class="nav-panel" id="panel-settings" role="tabpanel" aria-label="Settings" data-i18n-aria-label="headers.settings">
                 <section class="card settings-overview-card">
-                    <div class="card-header"><div class="card-title" data-i18n="settings.studio_readiness_title">Studio Readiness</div></div>
+                    <div class="card-header"><div class="card-title" data-i18n="settings.studio_readiness_title">System Readiness</div></div>
                     <p class="card-desc" data-i18n="settings.studio_readiness_desc">Verify the backend, speech engine, live updates, and routing.</p>
                     <div class="oc-inline-summary-grid" aria-label="Studio readiness" data-i18n-aria-label="settings.studio_readiness_aria">
                         <div class="oc-inline-stat">
@@ -3498,9 +3495,9 @@
                 <!-- Wave H — Commercial Parity & Content-Creator Polish (v1.25.0) -->
                 <section class="card oc-wave-h-card" id="waveHCard" aria-labelledby="waveHCardTitle">
                     <div class="card-header">
-                        <div class="card-title" id="waveHCardTitle" data-i18n="wave_h.card_title">Panel Polish</div>
+                        <div class="card-title" id="waveHCardTitle" data-i18n="wave_h.card_title">Tools &amp; Support</div>
                     </div>
-                    <p class="card-desc" data-i18n="wave_h.card_desc">Demo media, preset sharing, creator scoring, and support tools.</p>
+                    <p class="card-desc" data-i18n="wave_h.card_desc">Demo media, preset transfer, diagnostics, and creator utilities.</p>
                     <div class="oc-wave-h-grid">
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHTryDemo" data-i18n="wave_h.try_demo">Try on demo footage</button>
                         <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHRestartTour" data-i18n="wave_h.restart_tour">Restart onboarding tour</button>

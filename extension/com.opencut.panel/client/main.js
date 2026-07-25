@@ -3270,7 +3270,7 @@
 
         if (!connected) {
             stageKicker = t("workspace.backend_offline", "Backend Offline");
-            stageTitle = t("workspace.reconnect_title", "Reconnect OpenCut to run processing jobs.");
+            stageTitle = t("workspace.reconnect_title", "Reconnect to run processing.");
             stageCopy = t(
                 "workspace.reconnect_copy",
                 "The workspace is still available, but processing, model checks, write-back, and timeline handoff need the local backend."
@@ -17753,7 +17753,7 @@
                 {
                     title: function () { return t("onboarding.welcome_title", "Welcome to OpenCut"); },
                     body: function () {
-                        return t("onboarding.welcome_body", "AI-powered video editing automation, local-first, no cloud.");
+                        return t("onboarding.welcome_body", "Edit faster with local automation that keeps your media on this machine.");
                     }
                 },
                 {

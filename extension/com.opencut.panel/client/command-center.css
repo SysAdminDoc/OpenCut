@@ -956,6 +956,122 @@ select:hover,
     }
 }
 
+/* Editorial hierarchy: keep actions grouped, labels quiet, and disabled states legible. */
+html body .quick-actions {
+    min-height: 0;
+    background: transparent !important;
+}
+
+html body .quick-action-btn,
+html body .quick-action-btn:disabled,
+html body:not(.has-clip) .nav-panel.active .quick-action-btn:disabled {
+    min-height: 50px !important;
+    padding: 6px 14px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body .quick-action-btn + .quick-action-btn {
+    border-left: 1px solid var(--cc-border) !important;
+}
+
+html body #stageCommandPaletteBtn {
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+}
+
+html body #stageCommandPaletteBtn .stage-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+html body label,
+html body .param-label {
+    color: var(--cc-text);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 560;
+    line-height: 1.35;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+html body label::before {
+    display: none !important;
+    content: none !important;
+}
+
+html body .interview-polish-options {
+    gap: 2px;
+    margin-block: 8px;
+}
+
+html body .checkbox-row {
+    min-height: 28px;
+    gap: 8px;
+    padding: 3px 0;
+}
+
+html body .checkbox-row span {
+    color: var(--cc-text);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+html body .interview-polish-run {
+    display: grid;
+    grid-template-columns: auto minmax(140px, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+html body .interview-polish-run #polishBatchBtn:not(.hidden) {
+    grid-column: 1;
+}
+
+html body .interview-polish-run #polishClearCacheBtn {
+    justify-self: end;
+    white-space: nowrap;
+}
+
+html body button:disabled,
+html body .btn-primary:disabled {
+    border-color: var(--cc-border) !important;
+    background: var(--cc-control) !important;
+    color: var(--cc-disabled) !important;
+    box-shadow: none !important;
+    opacity: 0.76;
+}
+
+@media (max-width: 700px) {
+    html body .quick-action-btn + .quick-action-btn {
+        border-left: 0 !important;
+    }
+
+    html body .quick-action-btn:nth-child(even) {
+        border-left: 1px solid var(--cc-border) !important;
+    }
+
+    html body .interview-polish-run {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    html body .interview-polish-run .interview-polish-hint {
+        grid-column: 1 / -1;
+    }
+}
+
 /* Premium parity: navigation reads as an editorial rail, not a button stack. */
 @media (min-width: 701px) {
     .sidebar {
@@ -2002,5 +2118,111 @@ html body .footer-toggle-btn {
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
+    }
+}
+
+/* Final composition overrides live last so legacy layout layers cannot reintroduce wrapping. */
+html body .workspace-stage-actions,
+html body.is-disconnected .workspace-stage-actions,
+html body.has-clip .workspace-stage-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px 12px;
+    overflow: hidden;
+}
+
+html body .workspace-stage-actions .stage-action {
+    flex: none;
+    white-space: nowrap;
+}
+
+html body .interview-polish-run {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+html body .interview-polish-run #polishBatchBtn:not(.hidden) {
+    order: 1;
+}
+
+html body .interview-polish-run #polishClearCacheBtn {
+    order: 2;
+    margin-left: 0;
+    white-space: nowrap;
+}
+
+html body .interview-polish-run .interview-polish-hint {
+    order: 3;
+}
+
+html body .oc-inline-label,
+html body .settings-label,
+html body .workspace-stage-session-label {
+    color: var(--cc-muted) !important;
+    opacity: 1 !important;
+}
+
+html body .oc-inline-value,
+html body .settings-value,
+html body .workspace-stage-session-value {
+    color: var(--cc-text) !important;
+    opacity: 1 !important;
+}
+
+html body .oc-status-line {
+    color: var(--cc-muted);
+    opacity: 1;
+}
+
+html body .oc-status-line[data-state="ready"],
+html body .oc-status-line[data-state="success"],
+html body .oc-status-pill[data-state="ready"],
+html body .oc-status-pill[data-state="success"],
+html body .oc-status-pill[data-state="connected"] {
+    color: var(--cc-success) !important;
+}
+
+html body .oc-status-line[data-state="working"],
+html body .oc-status-line[data-state="warning"],
+html body .oc-status-pill[data-state="working"],
+html body .oc-status-pill[data-state="warning"],
+html body .oc-status-pill[data-state="empty"] {
+    color: var(--cc-warning) !important;
+}
+
+html body .oc-status-line[data-state="error"],
+html body .oc-status-line[data-state="stopped"],
+html body .oc-status-pill[data-state="error"],
+html body .oc-status-pill[data-state="stopped"] {
+    color: var(--cc-danger) !important;
+}
+
+html body .nav-tab.active {
+    color: var(--cc-text);
+}
+
+html body .nav-tab.active .nav-icon,
+html body .nav-tab.active svg {
+    color: var(--cc-accent);
+    opacity: 1;
+}
+
+@media (max-width: 700px) {
+    html body .workspace-stage-actions,
+    html body.is-disconnected .workspace-stage-actions,
+    html body.has-clip .workspace-stage-actions {
+        display: grid;
+        overflow: visible;
+    }
+
+    html body .interview-polish-run {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    html body .interview-polish-run .interview-polish-hint {
+        grid-column: 1 / -1;
     }
 }
