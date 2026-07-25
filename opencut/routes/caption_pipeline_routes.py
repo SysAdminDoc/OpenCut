@@ -1,5 +1,7 @@
 """Full caption and edit pipeline routes."""
 
+__all__ = ["full_pipeline"]
+
 from .captions import (
     CaptionConfig,
     ExportConfig,

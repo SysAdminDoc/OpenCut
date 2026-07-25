@@ -1,5 +1,13 @@
 """System social routes registered on the shared system blueprint."""
 
+__all__ = [
+    "social_platforms",
+    "social_auth_url",
+    "social_connect",
+    "social_disconnect",
+    "social_upload",
+]
+
 from .system import (
     _update_job,
     async_job,

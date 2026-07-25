@@ -1,5 +1,19 @@
 """System integration routes registered on the shared system blueprint."""
 
+__all__ = [
+    "resolve_status",
+    "resolve_media",
+    "resolve_import",
+    "resolve_markers",
+    "resolve_timeline",
+    "chat_message",
+    "chat_clear",
+    "chat_sessions",
+    "video_multimodal_diarize",
+    "video_broll_generate",
+    "video_broll_backends",
+]
+
 from .system import (
     _is_cancelled,
     _update_job,

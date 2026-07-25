@@ -1,5 +1,14 @@
 """Runtime status and dependency routes registered on the shared system blueprint."""
 
+__all__ = [
+    "shutdown_server",
+    "media_info",
+    "system_gpu",
+    "system_status",
+    "gpu_recommend",
+    "check_dependencies",
+]
+
 from .system import (
     __version__,
     _cancel_running_jobs,

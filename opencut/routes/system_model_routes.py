@@ -1,5 +1,16 @@
 """System model routes registered on the shared system blueprint."""
 
+__all__ = [
+    "install_demucs",
+    "install_watermark",
+    "list_models",
+    "delete_model",
+    "llm_status",
+    "llm_test",
+    "openapi_spec",
+    "check_for_update",
+]
+
 from .system import (
     _MODELS_CACHE_TTL,
     WHISPER_MODELS_DIR,

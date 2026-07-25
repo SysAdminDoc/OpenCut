@@ -1,5 +1,17 @@
 """System workspace routes registered on the shared system blueprint."""
 
+__all__ = [
+    "project_media",
+    "open_path",
+    "assistant_suggest",
+    "assistant_dismiss",
+    "assistant_dismiss_clear",
+    "preview_audio",
+    "preflight_check",
+    "serve_file",
+    "recent_outputs",
+]
+
 from .system import (
     _OPEN_PATH_ALLOWED_EXTS,
     _list_jobs_copy,

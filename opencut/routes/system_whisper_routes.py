@@ -1,5 +1,12 @@
 """System whisper routes registered on the shared system blueprint."""
 
+__all__ = [
+    "install_whisper",
+    "whisper_settings",
+    "whisper_clear_cache",
+    "whisper_reinstall",
+]
+
 from .system import (
     VALID_WHISPER_MODELS,
     _build_whisper_cache_plan,

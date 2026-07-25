@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "route_music_acestep",
+    "route_music_acestep_edit",
+    "route_music_acestep_info",
+    "route_music_diffrhythm",
+    "route_music_diffrhythm_styles",
+    "route_music_diffrhythm_info",
+    "route_yue_music",
+    "route_yue_info",
+]
+
 from flask import jsonify
 
 from opencut.errors import safe_error
