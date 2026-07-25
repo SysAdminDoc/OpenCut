@@ -73,6 +73,43 @@ def review_create(job_id, filepath, data):
     }
 
 
+@platform_infra_bp.route("/review/integrity/verify", methods=["POST"])
+@require_csrf
+@async_job("review-integrity", filepath_required=False)
+def review_verify_integrity(job_id, filepath, data):
+    """Fully re-hash one or more immutable review artifacts."""
+    review_id = str(data.get("review_id") or "").strip()
+    if not review_id:
+        raise ValueError("review_id is required")
+    version_ids = data.get("version_ids")
+    version_id = str(data.get("version_id") or "").strip()
+    if version_ids is not None and not isinstance(version_ids, list):
+        raise ValueError("version_ids must be an array")
+    if version_ids is None and version_id:
+        version_ids = [version_id]
+
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+
+    from opencut.core.review_links import verify_review_artifacts
+
+    results = verify_review_artifacts(
+        review_id,
+        version_ids=version_ids,
+        on_progress=_on_progress,
+    )
+    status_counts = {}
+    for result in results:
+        status = result["integrity_status"]
+        status_counts[status] = status_counts.get(status, 0) + 1
+    return {
+        "review_id": review_id,
+        "verified_count": len(results),
+        "status_counts": status_counts,
+        "versions": results,
+    }
+
+
 def _fire_review_notification(event_type, review_id, *, comment=None, status="", version_id=""):
     """Best-effort review webhook dispatch; never fail the user action."""
     try:
@@ -155,6 +192,9 @@ def review_get_comments():
                     "video_basename": os.path.basename(version.video_path),
                     "artifact_sha256": version.artifact_sha256,
                     "size_bytes": version.size_bytes,
+                    "integrity_status": version.integrity_status,
+                    "integrity_verified_at": version.integrity_verified_at,
+                    "integrity_error": version.integrity_error,
                 }
                 for version in versions
             ],

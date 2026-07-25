@@ -177,6 +177,7 @@ MAX_QUEUE_SIZE = 100
 
 # Only processing-oriented routes may be invoked via the queue.
 _ALLOWED_QUEUE_ENDPOINTS = frozenset({
+    "/review/create", "/review/integrity/verify",
     "/silence", "/silence/speed-up", "/fillers",
     "/audio/denoise", "/audio/normalize", "/audio/enhance",
     "/audio/pro/apply", "/audio/separate", "/audio/tts/generate",

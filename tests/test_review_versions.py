@@ -246,6 +246,105 @@ def test_tampered_artifact_is_not_served_by_the_portal(client, tmp_path, monkeyp
     assert resolved == stored_artifact
 
 
+def test_full_hash_verification_detects_same_size_tampering(tmp_path, monkeypatch):
+    from opencut.core.review_links import (
+        create_review_link,
+        get_review_versions,
+        verify_review_artifacts,
+    )
+    from opencut.core.review_portal import (
+        build_portal_share,
+        resolve_portal_media,
+        resolve_portal_review,
+    )
+    from opencut.errors import OpenCutError
+
+    _use_review_store(tmp_path, monkeypatch)
+    render = tmp_path / "same-size.mp4"
+    render.write_bytes(b"pristine-review")
+    review = create_review_link(str(render), title="Full hash check")
+    stored_artifact = review.versions[0].video_path
+    with open(stored_artifact, "wb") as handle:
+        handle.write(b"tampered-review")
+
+    results = verify_review_artifacts(review.review_id, ["v1"])
+    assert results[0]["integrity_status"] == "mismatch"
+    assert results[0]["observed_size_bytes"] == results[0]["expected_size_bytes"]
+    assert results[0]["observed_sha256"] != results[0]["expected_sha256"]
+
+    persisted = get_review_versions(review.review_id)[0]
+    assert persisted.integrity_status == "mismatch"
+    assert persisted.integrity_verified_at
+    assert "SHA-256" in persisted.integrity_error
+
+    share = build_portal_share(
+        review_id=review.review_id,
+        host="review.local",
+        port=5679,
+        version_ids=["v1"],
+    )
+    query = parse_qs(urlparse(share.url).query)
+    payload = resolve_portal_review(
+        review.review_id,
+        int(query["expires"][0]),
+        query["sig"][0],
+        ["v1"],
+    )
+    assert payload["versions"][0]["integrity_status"] == "mismatch"
+    assert payload["versions"][0]["integrity_verified_at"]
+    with pytest.raises(OpenCutError) as exc_info:
+        resolve_portal_media(
+            review.review_id,
+            int(query["expires"][0]),
+            query["sig"][0],
+            "v1",
+            ["v1"],
+        )
+    assert exc_info.value.code == "ARTIFACT_INTEGRITY_ERROR"
+
+
+def test_full_hash_verification_route_runs_as_a_queueable_job(
+    client, csrf_token, tmp_path, monkeypatch
+):
+    from opencut.core.review_links import create_review_link
+    from opencut.routes.jobs_routes import _ALLOWED_QUEUE_ENDPOINTS
+
+    _use_review_store(tmp_path, monkeypatch)
+    render = tmp_path / "route-integrity.mp4"
+    render.write_bytes(b"route-pristine")
+    review = create_review_link(str(render), title="Route hash check")
+    with open(review.versions[0].video_path, "wb") as handle:
+        handle.write(b"route-tampered")
+
+    response = client.post(
+        "/review/integrity/verify",
+        json={"review_id": review.review_id, "version_id": "v1"},
+        headers=csrf_headers(csrf_token),
+    )
+    assert response.status_code == 200, response.get_json()
+    job_id = response.get_json()["job_id"]
+    deadline = time.time() + 10
+    job = {}
+    while time.time() < deadline:
+        job = client.get(f"/status/{job_id}").get_json() or {}
+        if job.get("status") in {"complete", "error", "cancelled"}:
+            break
+        time.sleep(0.05)
+
+    assert job["status"] == "complete", job
+    assert job["result"]["status_counts"] == {"mismatch": 1}
+    assert job["result"]["versions"][0]["version_id"] == "v1"
+    assert "/review/integrity/verify" in _ALLOWED_QUEUE_ENDPOINTS
+
+    metadata = client.post(
+        "/review/comments",
+        json={"review_id": review.review_id},
+        headers=csrf_headers(csrf_token),
+    )
+    assert metadata.status_code == 200, metadata.get_json()
+    assert metadata.get_json()["versions"][0]["integrity_status"] == "mismatch"
+
+
 def test_portal_route_serves_only_signed_version_media(client, csrf_token, tmp_path, monkeypatch):
     from opencut.core.review_links import add_review_version, create_review_link
 

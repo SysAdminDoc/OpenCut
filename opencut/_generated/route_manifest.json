@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-07-22T13:30:19Z",
-  "total_routes": 1566,
-  "shipped_route_count": 1541,
+  "generated_at": "2026-07-25T21:06:14Z",
+  "total_routes": 1567,
+  "shipped_route_count": 1542,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 401,
     "PATCH": 1,
-    "POST": 1149,
+    "POST": 1150,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1512,
+    "implemented": 1513,
     "stub": 25
   },
   "blueprints": {
@@ -185,9 +185,9 @@
         "POST": 22
       },
       "sample_rules": [
-        "/caption-styles",
-        "/captions",
-        "/captions/display-settings/tokens"
+        "/captions/chapters",
+        "/captions/repeat-detect",
+        "/transcript/summarize"
       ]
     },
     "cloud_distrib": {
@@ -652,15 +652,15 @@
       ]
     },
     "platform_infra": {
-      "route_count": 56,
+      "route_count": 57,
       "method_counts": {
         "GET": 18,
-        "POST": 38
+        "POST": 39
       },
       "sample_rules": [
         "/review/comment",
-        "/review/comments",
-        "/review/create"
+        "/review/create",
+        "/review/integrity/verify"
       ]
     },
     "platform_ux": {
@@ -1228,9 +1228,9 @@
         "POST": 43
       },
       "sample_rules": [
-        "/audio/tts/elevenlabs",
-        "/audio/tts/elevenlabs/info",
-        "/audio/tts/elevenlabs/voices"
+        "/generate/cogvideox",
+        "/generate/cogvideox/i2v",
+        "/generate/cogvideox/info"
       ]
     },
     "wave_qrs": {
@@ -10460,6 +10460,15 @@
         "GET"
       ],
       "endpoint": "platform_infra.review_feed_atom",
+      "blueprint": "platform_infra",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/review/integrity/verify",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "platform_infra.review_verify_integrity",
       "blueprint": "platform_infra",
       "readiness": "implemented"
     },
