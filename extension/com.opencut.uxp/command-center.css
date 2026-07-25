@@ -85,7 +85,7 @@
 .oc-select,
 .oc-textarea {
   min-height: 38px;
-  border-radius: 9px;
+  border-radius: 8px;
 }
 
 .oc-btn-primary {
@@ -130,7 +130,7 @@
 .oc-status-line {
   border: 0;
   border-left: 2px solid var(--cc-border-strong);
-  border-radius: 3px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -1057,7 +1057,7 @@ body.oc-disconnected .oc-connection {
   padding: 8px 10px;
   border: 0;
   border-left: 3px solid var(--cc-border-strong);
-  border-radius: 5px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.025);
 }
 
@@ -1259,7 +1259,7 @@ body.oc-disconnected .oc-connection {
   min-height: 40px;
   padding: 0 36px 0 12px;
   border: 1px solid var(--cc-border);
-  border-radius: 7px;
+  border-radius: 6px;
   background-color: var(--cc-control);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23a2a9b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-position: right 12px center;
@@ -1300,7 +1300,7 @@ html.theme-light .oc-select {
   gap: 10px;
   padding: 9px 10px 9px 12px;
   border: 1px solid var(--cc-border-strong);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--cc-surface-raised);
   color: var(--cc-muted);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
@@ -1783,7 +1783,7 @@ input.oc-input:focus-visible,
   .oc-workspace-guide {
     border: 0;
     border-left: 2px solid rgba(215, 173, 98, 0.65);
-    border-radius: 3px;
+    border-radius: 4px;
   }
 }
 
@@ -2011,7 +2011,7 @@ html.theme-light .oc-workspace-meta-item[data-state] {
 .oc-deliv-btn,
 .oc-cancel-btn,
 .oc-icon-btn {
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 @media (min-width: 821px) {
@@ -2196,5 +2196,372 @@ html body .oc-header .oc-connection:focus-visible {
     width: 36px;
     min-width: 36px;
     min-height: 36px;
+  }
+}
+
+/* Premium product contract: compact structure, legible controls, and calm feedback. */
+html body {
+  color: var(--cc-text);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.oc-workspace-title {
+  font-size: 22px;
+  font-weight: 690;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.oc-workspace-subtitle,
+.oc-hint,
+.oc-card-copy,
+.oc-caption-intro {
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.oc-section-title {
+  padding: 12px 0 5px;
+  font-size: 14px;
+  font-weight: 660;
+  line-height: 1.3;
+}
+
+.oc-card {
+  padding-block: 10px;
+}
+
+.oc-card-header {
+  min-height: 28px;
+  margin-bottom: 5px;
+}
+
+.oc-card-header span,
+.oc-shortcut-label {
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.oc-card-body {
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.oc-label,
+.oc-field-row .oc-label,
+.oc-slider-label,
+.oc-info-label {
+  color: var(--cc-text);
+  font-size: 12px;
+  font-weight: 560;
+}
+
+.oc-status-line {
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+html body .oc-btn,
+html body .oc-deliv-btn,
+html body .oc-cancel-btn,
+html body .oc-icon-btn {
+  min-height: 34px;
+  border-radius: var(--cc-radius);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+html body .oc-workspace-guide .oc-btn {
+  min-height: 34px;
+  font-size: 12px;
+}
+
+html body .oc-input,
+html body input.oc-input,
+html body .oc-select,
+html body .oc-textarea {
+  min-height: 36px;
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius);
+  background-color: var(--cc-control);
+  color: var(--cc-text);
+  font-size: 13px;
+  box-shadow: none;
+}
+
+html body .oc-input:hover:not(:disabled),
+html body input.oc-input:hover:not(:disabled),
+html body .oc-select:hover:not(:disabled),
+html body .oc-textarea:hover:not(:disabled) {
+  border-color: var(--cc-border-strong);
+  background-color: var(--cc-surface-raised);
+}
+
+html body button:focus-visible,
+html body input:focus-visible,
+html body select:focus-visible,
+html body textarea:focus-visible,
+html body a[href]:focus-visible,
+html body [role="button"]:focus-visible,
+html body [role="tab"]:focus-visible,
+html body [role="menuitem"]:focus-visible {
+  outline: 2px solid var(--cc-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--cc-focus-ring);
+}
+
+html body .oc-input:focus-visible,
+html body input.oc-input:focus-visible,
+html body .oc-select:focus-visible,
+html body .oc-textarea:focus-visible {
+  border-color: var(--cc-accent);
+  outline-offset: 1px;
+}
+
+html body .oc-btn:active:not(:disabled),
+html body .oc-deliv-btn:active:not(:disabled),
+html body .oc-cancel-btn:active:not(:disabled),
+html body .oc-icon-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+html body .oc-btn:disabled,
+html body .oc-deliv-btn:disabled,
+html body .oc-cancel-btn:disabled,
+html body .oc-icon-btn:disabled {
+  border-color: var(--cc-border);
+  background: transparent;
+  color: var(--cc-disabled);
+  opacity: 0.72;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.oc-btn-row .oc-btn-secondary:not(:disabled):hover,
+.oc-btn-row .oc-btn-secondary:not(:disabled):focus-visible {
+  background: var(--cc-hover);
+}
+
+.oc-empty-state {
+  min-height: 62px;
+  padding: 12px 0;
+  border-block: 1px solid var(--cc-border);
+}
+
+.oc-empty-state-kicker {
+  color: var(--cc-text);
+  font-size: 12px;
+  font-weight: 640;
+}
+
+.oc-empty-state p {
+  margin-top: 3px;
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.oc-status-pill::before {
+  width: 6px;
+  height: 6px;
+}
+
+.oc-connection-detail-panel,
+.oc-toast {
+  border: 1px solid var(--cc-border-strong);
+  border-radius: 8px;
+  background: var(--cc-surface-raised);
+  box-shadow: var(--cc-shadow-float);
+}
+
+.oc-toast {
+  padding: 10px 12px;
+}
+
+.oc-toast-title {
+  font-size: 12px;
+  font-weight: 660;
+}
+
+.oc-toast .oc-toast-msg,
+.oc-toast-detail {
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.oc-processing-banner:not(.hidden),
+.oc-recovery-banner:not(.hidden) {
+  padding: 8px 12px;
+  border: 0;
+  border-left: 2px solid var(--cc-accent);
+  border-radius: 0;
+  background: var(--cc-bg);
+  box-shadow: var(--cc-shadow-float);
+}
+
+.oc-recovery-banner:not(.hidden) {
+  border-left-color: var(--cc-warning);
+}
+
+.oc-shortcut-grid {
+  gap: 0;
+  border-block: 1px solid var(--cc-border);
+}
+
+.oc-shortcut-item {
+  min-height: 48px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cc-border);
+}
+
+.oc-shortcut-item:last-child {
+  border-bottom: 0;
+}
+
+.oc-shortcut-text {
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (min-width: 821px) {
+  #app {
+    grid-template-columns: 152px minmax(0, 1fr);
+  }
+
+  .oc-tab-nav-shell {
+    padding: 10px 8px;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    min-height: 38px;
+    padding-inline: 10px;
+    border: 0;
+    border-left: 2px solid transparent;
+    background: transparent;
+    font-size: 12px;
+  }
+
+  .oc-tab-nav-shell .oc-tab:hover,
+  .oc-tab-nav-shell .oc-tab:focus-visible {
+    border-left-color: var(--cc-border-strong);
+    background: var(--cc-hover);
+  }
+
+  .oc-tab-nav-shell .oc-tab.active {
+    border-left-color: var(--cc-accent);
+    background: var(--cc-selected);
+    color: var(--cc-text);
+  }
+
+  .oc-content {
+    padding: 12px 24px 30px;
+  }
+
+  .oc-workspace-overview,
+  body[data-active-tab="settings"] .oc-workspace-overview {
+    min-height: 72px;
+    padding-bottom: 10px;
+  }
+
+  .oc-workspace-meta {
+    min-width: 300px;
+  }
+
+  .oc-workspace-meta-item,
+  .oc-workspace-meta-item + .oc-workspace-meta-item {
+    padding-inline: 12px;
+  }
+
+  #tab-settings.active {
+    grid-template-columns: 152px minmax(0, 1fr);
+    gap: 0 28px;
+  }
+
+  .oc-settings-nav {
+    gap: 1px;
+    padding: 0 18px 6px 0;
+  }
+
+  .oc-settings-nav-item {
+    min-height: 36px;
+    padding-inline: 12px;
+    color: var(--cc-muted);
+    font-size: 12px;
+  }
+
+  .oc-settings-nav-item:hover,
+  .oc-settings-nav-item:focus-visible {
+    background: var(--cc-hover);
+    color: var(--cc-text);
+  }
+
+  .oc-settings-nav-item.active {
+    background: var(--cc-selected);
+    color: var(--cc-text);
+  }
+
+  #tab-settings .oc-settings-group:not([hidden]) {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 820px) {
+  .oc-header {
+    min-height: 44px;
+    height: 44px;
+    padding-inline: 12px;
+  }
+
+  .oc-content {
+    padding: 10px 14px 24px;
+  }
+
+  .oc-workspace-overview {
+    min-height: 0;
+    padding: 4px 0 8px;
+  }
+
+  .oc-workspace-title {
+    font-size: 19px;
+  }
+
+  .oc-workspace-meta {
+    display: none;
+  }
+
+  .oc-tab-nav-shell {
+    padding-inline: 8px;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    min-height: 38px;
+  }
+
+  .oc-settings-nav {
+    margin-inline: -14px;
+    padding-inline: 14px;
+  }
+
+  .oc-settings-nav-item {
+    min-height: 34px;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body *,
+  html body *::before,
+  html body *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

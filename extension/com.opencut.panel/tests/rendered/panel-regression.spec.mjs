@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const THEMES = ["dark", "light", "auto"];
 const SURFACES = {
@@ -569,6 +570,92 @@ async function assertNoPageOverflow(page) {
   );
 }
 
+test("panel styles use the compact radius scale without pill geometry", async () => {
+  const styleUrls = [
+    new URL("../../client/style.css", import.meta.url),
+    new URL("../../client/command-center-layout.css", import.meta.url),
+    new URL("../../client/command-center.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/style.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/command-center-layout.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/command-center.css", import.meta.url),
+  ];
+  const allowed = new Set([0, 4, 6, 8, 10, 12]);
+
+  for (const styleUrl of styleUrls) {
+    const source = await readFile(styleUrl, "utf8");
+    expect(source, styleUrl.pathname).not.toMatch(
+      /(?:border-radius\s*:\s*(?:999|9999)px|rounded-full|capsule\s*\()/i,
+    );
+    const declarations = source.matchAll(/border-radius\s*:\s*([^;]+);/gi);
+    for (const declaration of declarations) {
+      if (declaration[1].includes("%")) continue;
+      for (const token of declaration[1].matchAll(/(\d+(?:\.\d+)?)px/g)) {
+        expect(
+          allowed.has(Number(token[1])),
+          `${styleUrl.pathname}: ${declaration[0]}`,
+        ).toBe(true);
+      }
+    }
+  }
+});
+
+async function assertPremiumControlContract(page, surfaceName) {
+  const violations = await page.evaluate(() => {
+    const allowedRadii = new Set([0, 4, 6, 8, 10, 12]);
+    const visible = (element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return (
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        !element.closest("[aria-hidden='true']")
+      );
+    };
+    return Array.from(
+      document.querySelectorAll(
+        "button, input:not([type='hidden']), select, textarea, [role='tab'], [role='menuitem']",
+      ),
+    )
+      .filter(visible)
+      .flatMap((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const radii = style.borderRadius.match(/[\d.]+/g)?.map(Number) || [0];
+        const hasText = Boolean(
+          (element.textContent || element.getAttribute("value") || "").trim(),
+        );
+        const issues = [];
+        if (
+          radii.some((radius) => !allowedRadii.has(radius)) &&
+          !(rect.width <= 24 && rect.height <= 24)
+        ) {
+          issues.push(`radius=${style.borderRadius}`);
+        }
+        const fontSize = Number.parseFloat(style.fontSize);
+        if (hasText && fontSize > 0 && fontSize < 12) {
+          issues.push(`font=${style.fontSize}`);
+        }
+        if (
+          element.tagName !== "INPUT" ||
+          !["checkbox", "radio", "range"].includes(element.type)
+        ) {
+          if (rect.height < 28) issues.push(`height=${rect.height}`);
+        }
+        return issues.length
+          ? [{
+              tag: element.tagName.toLowerCase(),
+              id: element.id,
+              className: element.className,
+              issues,
+            }]
+          : [];
+      });
+  });
+  expect(violations, `${surfaceName} control contract`).toEqual([]);
+}
+
 for (const [surfaceName, surface] of Object.entries(SURFACES)) {
   for (const theme of THEMES) {
     for (const width of surface.widths) {
@@ -612,6 +699,7 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
             ).toBeVisible();
           }
           await assertNoPageOverflow(page);
+          await assertPremiumControlContract(page, surfaceName);
           expect(
             await visibleControlsWithoutNames(page),
             `unnamed controls in ${surfaceName}/${tabName}`,
@@ -1116,10 +1204,10 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
       selectArrow: selectStyle.backgroundImage,
     };
   });
-  expect(menuGeometry.detailRadius).toBe("4px");
+  expect(menuGeometry.detailRadius).toBe("8px");
   expect(menuGeometry.detailFontSize).toBeGreaterThanOrEqual(12);
-  expect(menuGeometry.selectRadius).toBe("0px");
-  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(38);
+  expect(menuGeometry.selectRadius).toBe("6px");
+  expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(36);
   expect(menuGeometry.selectAppearance).toBe("none");
   expect(menuGeometry.selectArrow).toContain("data:image/svg+xml");
   expect(pageErrors).toEqual([]);
@@ -1203,8 +1291,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
         .map((title) => title.textContent?.trim()),
     };
   });
-  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
-  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(164);
+  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(148);
+  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(48);
   expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(90);
@@ -1266,11 +1354,11 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     };
   });
   expect(fieldGrammar).toEqual({
-    inputRadius: "0px",
-    inputTop: "0px",
+    inputRadius: "6px",
+    inputTop: "1px",
     inputBottom: "1px",
-    selectRadius: "0px",
-    selectTop: "0px",
+    selectRadius: "6px",
+    selectTop: "1px",
     selectBottom: "1px",
   });
   await page.locator("#clipPathCut").fill("C:/media/interview.mov");
@@ -1408,7 +1496,7 @@ test("CEP listboxes and clip context menu share focus-safe menu behavior", async
     selectedState: node.querySelector(".custom-dropdown-item.selected")?.getAttribute("aria-selected"),
   }));
   expect(dropdownGeometry.radius).toBe("8px");
-  expect(dropdownGeometry.itemHeight).toBeGreaterThanOrEqual(36);
+  expect(dropdownGeometry.itemHeight).toBeGreaterThanOrEqual(34);
   expect(dropdownGeometry.selectedState).toBe("true");
   const dropdownBounds = await page.evaluate((id) => {
     const menu = document.getElementById(id)?.getBoundingClientRect();

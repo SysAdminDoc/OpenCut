@@ -17,8 +17,14 @@ html.theme-darkest {
   --cc-success: #76b99e;
   --cc-warning: #d7ad62;
   --cc-danger: #d68680;
+  --cc-hover: rgba(255, 255, 255, 0.045);
+  --cc-selected: rgba(134, 168, 247, 0.13);
+  --cc-overlay: rgba(2, 4, 7, 0.72);
+  --cc-focus-ring: rgba(134, 168, 247, 0.30);
+  --cc-disabled: #747c89;
   --cc-radius: 6px;
   --cc-shadow: none;
+  --cc-shadow-float: 0 18px 48px rgba(0, 0, 0, 0.42);
 }
 
 html.theme-dark {
@@ -37,8 +43,14 @@ html.theme-dark {
   --cc-success: #7bc2a5;
   --cc-warning: #e1ba70;
   --cc-danger: #df918a;
+  --cc-hover: rgba(255, 255, 255, 0.055);
+  --cc-selected: rgba(145, 175, 247, 0.15);
+  --cc-overlay: rgba(8, 10, 14, 0.68);
+  --cc-focus-ring: rgba(145, 175, 247, 0.32);
+  --cc-disabled: #858c97;
   --cc-radius: 6px;
   --cc-shadow: none;
+  --cc-shadow-float: 0 18px 48px rgba(0, 0, 0, 0.36);
 
   --bg-primary: #1b1e23;
   --bg-secondary: #20242a;
@@ -69,8 +81,14 @@ html.theme-light {
   --cc-success: #287f64;
   --cc-warning: #895d0c;
   --cc-danger: #a83f3c;
+  --cc-hover: rgba(24, 33, 50, 0.055);
+  --cc-selected: rgba(70, 111, 211, 0.13);
+  --cc-overlay: rgba(15, 20, 29, 0.54);
+  --cc-focus-ring: rgba(70, 111, 211, 0.30);
+  --cc-disabled: #778294;
   --cc-radius: 6px;
   --cc-shadow: 0 14px 32px rgba(38, 52, 73, 0.10);
+  --cc-shadow-float: 0 18px 48px rgba(38, 52, 73, 0.18);
 
   --bg-primary: #edf1f6;
   --bg-secondary: #f7f9fc;

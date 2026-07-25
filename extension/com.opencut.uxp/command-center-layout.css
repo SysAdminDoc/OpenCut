@@ -38,7 +38,7 @@ body {
   min-height: 32px;
   padding: 4px 10px;
   border: 1px solid var(--cc-border);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--cc-surface);
 }
 
@@ -121,7 +121,7 @@ html.theme-light .oc-tab.active {
   min-height: 22px;
   padding: 3px 8px;
   border: 1px solid var(--cc-border);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--cc-control);
   color: var(--cc-muted);
   letter-spacing: 0.04em;
