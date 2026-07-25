@@ -731,36 +731,36 @@
                     <div class="caption-display-grid">
                         <div class="form-group">
                             <label for="capDispFont" data-i18n="forms.font">Font</label>
-                            <select id="capDispFont"></select>
+                            <select id="capDispFont" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispSize" data-i18n="captions.display_size">Size</label>
-                            <select id="capDispSize"></select>
+                            <select id="capDispSize" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispTextColor" data-i18n="captions.display_text_color">Text Color</label>
-                            <select id="capDispTextColor"></select>
+                            <select id="capDispTextColor" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispTextOpacity" data-i18n="captions.display_text_opacity">Text Opacity</label>
-                            <select id="capDispTextOpacity"></select>
+                            <select id="capDispTextOpacity" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispBgColor" data-i18n="captions.display_background_color">Background Color</label>
-                            <select id="capDispBgColor"></select>
+                            <select id="capDispBgColor" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispBgOpacity" data-i18n="captions.display_background_opacity">Background Opacity</label>
-                            <select id="capDispBgOpacity"></select>
+                            <select id="capDispBgOpacity" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                         <div class="form-group">
                             <label for="capDispEdge" data-i18n="captions.display_edge_style">Edge Style</label>
-                            <select id="capDispEdge"></select>
+                            <select id="capDispEdge" disabled title="Start or reconnect the local OpenCut backend service" data-i18n-title="workspace.status_reconnect_title"><option value="" data-i18n="palette.unavailable">Unavailable</option></select>
                         </div>
                     </div>
                     <div class="btn-row">
-                        <button type="button" class="btn-primary btn-sm" id="capDispPreviewBtn" data-i18n="captions.display_preview_action">Preview</button>
-                        <button type="button" class="btn-secondary btn-sm" id="capDispResetBtn" data-i18n="captions.display_reset_action">Reset Defaults</button>
+                        <button type="button" class="btn-primary btn-sm" id="capDispPreviewBtn" disabled title="Start or reconnect the local OpenCut backend service" data-i18n="captions.display_preview_action" data-i18n-title="workspace.status_reconnect_title">Preview</button>
+                        <button type="button" class="btn-secondary btn-sm" id="capDispResetBtn" disabled title="Start or reconnect the local OpenCut backend service" data-i18n="captions.display_reset_action" data-i18n-title="workspace.status_reconnect_title">Reset Defaults</button>
                     </div>
                     <div class="hint caption-display-status" id="capDispStatus" role="status" aria-live="polite" data-i18n="captions.display_loading_tokens">Loading tokens...</div>
                     <div class="caption-display-preview" id="capDispPreviewBox" hidden>
@@ -1330,10 +1330,10 @@
                         <div class="form-group">
                             <label for="stemVocals" data-i18n="forms.output_stems">Output Stems</label>
                             <div class="stem-checks">
-                                <label class="stem-check"><input type="checkbox" id="stemVocals" checked><span class="stem-icon">🎤</span> <span data-i18n="audio.stem_vocals">Vocals</span></label>
-                                <label class="stem-check"><input type="checkbox" id="stemInstrumental" checked><span class="stem-icon">🎵</span> <span data-i18n="audio.stem_instrumental">Instrumental</span></label>
-                                <label class="stem-check"><input type="checkbox" id="stemDrums"><span class="stem-icon">🥁</span> <span data-i18n="audio.stem_drums">Drums</span></label>
-                                <label class="stem-check"><input type="checkbox" id="stemBass"><span class="stem-icon">🎸</span> <span data-i18n="audio.stem_bass">Bass</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemVocals" checked><span class="stem-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="3" width="6" height="9" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5M7 17.5h6"/></svg></span> <span data-i18n="audio.stem_vocals">Vocals</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemInstrumental" checked><span class="stem-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 5.5v8.25a2.25 2.25 0 1 1-1.5-2.12M8 6l7-1.5v7.25a2.25 2.25 0 1 1-1.5-2.12"/></svg></span> <span data-i18n="audio.stem_instrumental">Instrumental</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemDrums"><span class="stem-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><ellipse cx="10" cy="7" rx="5.5" ry="2.5"/><path d="M4.5 7v5.5c0 1.38 2.46 2.5 5.5 2.5s5.5-1.12 5.5-2.5V7M7 4l-2-2M13 4l2-2"/></svg></span> <span data-i18n="audio.stem_drums">Drums</span></label>
+                                <label class="stem-check"><input type="checkbox" id="stemBass"><span class="stem-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m12.5 3.5 4 4M14.5 5.5l-6.2 6.2M7.8 9.8c-1.4-.65-3.1-.36-4.2.74a3.65 3.65 0 0 0 5.16 5.16c1.1-1.1 1.39-2.8.74-4.2M5.2 13.8l1 1"/></svg></span> <span data-i18n="audio.stem_bass">Bass</span></label>
                                 <label class="stem-check"><input type="checkbox" id="stemOther"><span class="stem-icon">🎹</span> <span data-i18n="audio.stem_other">Other</span></label>
                             </div>
                         </div>

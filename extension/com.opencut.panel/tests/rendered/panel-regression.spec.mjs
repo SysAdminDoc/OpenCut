@@ -691,6 +691,20 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
             await expect(
               page.locator("#contentTitle, .content-header h1").first(),
             ).toBeVisible();
+            if (tabName === "captions") {
+              const captionDisplaySelects = page.locator(
+                "#captionDisplaySettingsCard select",
+              );
+              await expect(captionDisplaySelects).toHaveCount(7);
+              for (let optionIndex = 0; optionIndex < 7; optionIndex += 1) {
+                await expect(captionDisplaySelects.nth(optionIndex)).toBeDisabled();
+                await expect(captionDisplaySelects.nth(optionIndex)).toHaveValue("");
+              }
+              await expect(page.locator("#capDispFont option:checked")).toHaveText(
+                "Unavailable",
+              );
+              await expect(page.locator("#capDispPreviewBtn")).toBeDisabled();
+            }
           } else {
             await expect(
               activePanel
