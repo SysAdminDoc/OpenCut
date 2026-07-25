@@ -5,6 +5,32 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+## [1.43.0] — 2026-07-25 — Premium panel experience
+
+### Changed - Cohesive visual system and navigation
+
+- Unified CEP and UXP around a readable 14px type scale, compact headers,
+  tighter section rhythm, open hairline-divided surfaces, restrained elevation,
+  and a shared 0/4/6/8/10/12px radius scale with no pill-shaped controls.
+- Reworked all 17 primary tool views, both settings experiences, onboarding,
+  menus, dialogs, activity/output chrome, and narrow layouts so navigation,
+  hierarchy, action priority, and control grouping remain consistent.
+- Simplified workspace copy and status language, shortened settings navigation,
+  grouped transcription recovery with its primary action, and replaced
+  decorative form labels and audio emoji with quieter product-native treatment.
+
+### Fixed - Accessibility and non-default states
+
+- Added shared hover, selected, pressed, disabled, focus, overlay, and semantic
+  status tokens with legible light/dark treatment and reduced-motion support.
+- Caption display controls now expose a deliberate disabled state and recovery
+  explanation when their backend schema is unavailable instead of rendering as
+  empty, apparently interactive fields.
+- Expanded rendered regression coverage to enforce readable control sizing,
+  accessible names, compact geometry, radius discipline, keyboard behavior,
+  offline/loading/error/permission/confirmation states, and every page across
+  supported themes and panel widths.
+
 ## [1.42.2] — 2026-07-25 — Premium interface and integrity verification
 
 ### Changed - Route module contracts
