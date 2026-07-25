@@ -1217,6 +1217,27 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   page,
 }) => {
   const cep = await openSurface(page, "cep", "dark", 1200, { height: 800 });
+  const cepActionGrammar = await page.evaluate(() => {
+    const quickActions = document.querySelector(".quick-actions")?.getBoundingClientRect();
+    const stageActions = Array.from(document.querySelectorAll(".workspace-stage-actions .stage-action"))
+      .map((action) => action.getBoundingClientRect());
+    const label = document.querySelector("#panel-cut label");
+    const labelStyle = label ? getComputedStyle(label) : null;
+    const labelMarker = label ? getComputedStyle(label, "::before") : null;
+    return {
+      quickActionHeight: quickActions?.height || 0,
+      stageActionRowSpread: stageActions.length
+        ? Math.max(...stageActions.map((action) => action.top))
+          - Math.min(...stageActions.map((action) => action.top))
+        : 0,
+      labelLetterSpacing: labelStyle?.letterSpacing || "",
+      labelMarkerDisplay: labelMarker?.display || "",
+    };
+  });
+  expect(cepActionGrammar.quickActionHeight).toBeLessThanOrEqual(54);
+  expect(cepActionGrammar.stageActionRowSpread).toBeLessThan(2);
+  expect(["normal", "0px"]).toContain(cepActionGrammar.labelLetterSpacing);
+  expect(cepActionGrammar.labelMarkerDisplay).toBe("none");
   await page.locator(".nav-tab[data-nav='settings']").click();
   const cepGeometry = await page.evaluate(() => {
     const sidebar = document.querySelector(".sidebar")?.getBoundingClientRect();
