@@ -5,6 +5,8 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+## [1.42.2] — 2026-07-25 — Premium interface and integrity verification
+
 ### Changed - Route module contracts
 
 - Declared the public route exports for the decomposed captions, system, and
