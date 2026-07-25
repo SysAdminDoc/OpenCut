@@ -12188,8 +12188,12 @@
     function renderFavorites() {
         if (!el.favoritesItems || !el.favoritesBar) return;
         if (_favorites.length === 0) {
-            el.favoritesBar.classList.add("hidden");
-            el.favoritesItems.innerHTML = "";
+            el.favoritesBar.classList.remove("hidden");
+            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
+                t("favorites.empty_title", "No favorites pinned"),
+                t("favorites.empty_body", "Pinned tools appear here once you save them."),
+                "info"
+            );
             return;
         }
         el.favoritesBar.classList.remove("hidden");
@@ -12242,8 +12246,12 @@
             visibleCount++;
         }
         if (!visibleCount) {
-            el.favoritesBar.classList.add("hidden");
-            el.favoritesItems.innerHTML = "";
+            el.favoritesBar.classList.remove("hidden");
+            el.favoritesItems.innerHTML = buildEmptyHintMarkup(
+                t("favorites.empty_title", "No favorites pinned"),
+                t("favorites.empty_body", "Pinned tools appear here once you save them."),
+                "info"
+            );
             return;
         }
         el.favoritesItems.innerHTML = "";
