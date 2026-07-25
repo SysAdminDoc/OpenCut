@@ -25,6 +25,9 @@ record also lives in the git commit messages.
 - Tightened the shared UXP workspace header, metadata row, result summaries,
   and processing states against the generated direction board; status markers
   now stay inline while the desktop shell gives more room to the active tool.
+- Compact follow-through pass aligned CEP and UXP navigation, flattened CEP
+  result surfaces and secondary actions, and kept connection/settings context
+  readable without pill-shaped chrome or off-screen active tabs.
 
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 
