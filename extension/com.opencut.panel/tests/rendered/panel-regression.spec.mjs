@@ -1162,20 +1162,31 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     const rail = document.getElementById("tabNavShell")?.getBoundingClientRect();
     const tabs = getComputedStyle(document.getElementById("tabNav"));
     const header = document.querySelector(".oc-header")?.getBoundingClientRect();
+    const overview = document.querySelector(".oc-workspace-overview")?.getBoundingClientRect();
     const commandBar = document.querySelector(".oc-workspace-actions")?.getBoundingClientRect();
     const settingsNav = document.querySelector("#tab-settings .oc-settings-nav")?.getBoundingClientRect();
     const visibleGroup = document.querySelector("#tab-settings.active > .oc-settings-group:not([hidden])");
     const group = visibleGroup?.getBoundingClientRect();
+    const meta = getComputedStyle(document.querySelector(".oc-workspace-meta"));
+    const metaItem = getComputedStyle(document.querySelector(".oc-workspace-meta-item"));
+    const statusPill = getComputedStyle(document.querySelector("#tab-settings .oc-status-pill"));
     return {
       railWidth: rail?.width || 0,
       tabDirection: tabs.flexDirection,
+      headerHeight: header?.height || 0,
+      overviewHeight: overview?.height || 0,
       settingsColumns: settingsNav && group ? group.left - settingsNav.left : 0,
       settingsNavItems: document.querySelectorAll("#tab-settings .oc-settings-nav-item").length,
       visibleGroups: document.querySelectorAll("#tab-settings.active > .oc-settings-group:not([hidden])").length,
       bodyFontSize: Number.parseFloat(getComputedStyle(document.body).fontSize),
       groupShadow: getComputedStyle(visibleGroup).boxShadow,
       groupRadius: getComputedStyle(visibleGroup).borderRadius,
-      statusPillBorder: getComputedStyle(document.querySelector("#tab-settings .oc-status-pill")).borderTopWidth,
+      statusPillBorder: statusPill.borderTopWidth,
+      statusPillRadius: statusPill.borderRadius,
+      statusPillBackground: statusPill.backgroundColor,
+      metaBackground: meta.backgroundColor,
+      metaItemBackground: metaItem.backgroundColor,
+      metaItemBorderTop: metaItem.borderTopWidth,
       commandBarInHeader: !!header && !!commandBar
         && commandBar.top >= header.top
         && commandBar.bottom <= header.bottom,
@@ -1186,6 +1197,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   });
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
   expect(uxpGeometry.tabDirection).toBe("column");
+  expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(48);
+  expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(90);
   expect(uxpGeometry.settingsColumns).toBeGreaterThan(170);
   expect(uxpGeometry.settingsNavItems).toBe(9);
   expect(uxpGeometry.visibleGroups).toBe(1);
@@ -1193,6 +1206,11 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(uxpGeometry.groupShadow).toBe("none");
   expect(uxpGeometry.groupRadius).toBe("0px");
   expect(uxpGeometry.statusPillBorder).toBe("0px");
+  expect(uxpGeometry.statusPillRadius).toBe("0px");
+  expect(uxpGeometry.statusPillBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(uxpGeometry.metaBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(uxpGeometry.metaItemBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(uxpGeometry.metaItemBorderTop).toBe("0px");
   expect(uxpGeometry.commandBarInHeader).toBe(true);
   expect(uxpGeometry.guideDisplay).toBe("none");
   expect(uxpGeometry.groupTitles).toEqual(["Workspace"]);

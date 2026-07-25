@@ -22,6 +22,9 @@ record also lives in the git commit messages.
 - Flattened tertiary action groups, suggested-search controls, fallback notices,
   and light-theme chrome; removed the duplicate rail footer and restored full-
   width Settings content in compact panels.
+- Tightened the shared UXP workspace header, metadata row, result summaries,
+  and processing states against the generated direction board; status markers
+  now stay inline while the desktop shell gives more room to the active tool.
 
 ## [1.42.1] — 2026-07-22 — Recovery correctness and hardening audit
 

@@ -1925,3 +1925,171 @@ html.theme-light .oc-workspace-actions .oc-btn:focus-visible {
     background: transparent;
   }
 }
+
+/* Visual direction parity: compact the shell and keep state language inline. */
+.oc-status-pill,
+.oc-result-summary,
+.oc-result-chip,
+.oc-result-list-item-badge,
+.oc-chip {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.oc-status-pill::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.oc-result-summary,
+.oc-result-chip,
+.oc-result-list-item-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.oc-result-row,
+.oc-command-state-list {
+  border: 0;
+  border-block: 1px solid var(--cc-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-workspace-meta-item,
+.oc-workspace-meta-item[data-state],
+html.theme-light .oc-workspace-meta-item,
+html.theme-light .oc-workspace-meta-item[data-state] {
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-result-row {
+  padding-inline: 0;
+}
+
+.oc-processing-banner:not(.hidden) {
+  margin-inline: 0;
+  padding: 8px 0 8px 10px;
+  border: 0;
+  border-left: 2px solid var(--cc-accent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-processing-banner:not(.hidden) .oc-progress-track {
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.oc-card {
+  padding-block: 12px;
+}
+
+.oc-card-header {
+  min-height: 34px;
+}
+
+.oc-btn,
+.oc-deliv-btn,
+.oc-cancel-btn,
+.oc-icon-btn {
+  border-radius: 3px;
+}
+
+@media (min-width: 821px) {
+  #app {
+    grid-template-rows: 44px minmax(0, 1fr);
+  }
+
+  .oc-header {
+    min-height: 44px;
+    height: 44px;
+    padding-inline: 16px;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    border-radius: 0;
+  }
+
+  .oc-content {
+    padding: 14px 30px 32px;
+  }
+
+  .oc-workspace-overview {
+    min-height: 82px;
+    margin-bottom: 0;
+    padding: 0 0 12px;
+  }
+
+  body[data-active-tab="settings"] .oc-workspace-overview {
+    min-height: 82px;
+    padding-bottom: 10px;
+  }
+
+  .oc-workspace-title {
+    font-size: 27px;
+    line-height: 1.05;
+  }
+
+  .oc-workspace-subtitle {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .oc-workspace-meta {
+    top: 2px;
+    right: 0;
+    min-width: 320px;
+    border: 0;
+  }
+
+  .oc-workspace-meta-item,
+  .oc-workspace-meta-item + .oc-workspace-meta-item {
+    display: flex;
+    min-height: 0;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0 14px;
+    border: 0;
+    border-left: 1px solid var(--cc-border);
+  }
+
+  .oc-workspace-meta-item:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .oc-workspace-meta-label {
+    margin: 0;
+    font-size: 10px;
+  }
+
+  .oc-workspace-meta-value {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .oc-workspace-actions,
+  body[data-active-tab="settings"] .oc-workspace-actions {
+    height: 44px;
+  }
+}
