@@ -297,6 +297,13 @@ describe("CEP source ownership", () => {
     expect(main).toContain('"/journal/checkpoints"');
     expect(main).toContain('"/recovery-failed"');
     expect(main).toContain('"/complete"');
+    const checkpointStart = main.indexOf("function journalCheckpointedHostWrite");
+    const checkpointSource = main.slice(checkpointStart, checkpointStart + 2400);
+    expect(checkpointSource.indexOf("isVersionAtLeast")).toBeGreaterThanOrEqual(0);
+    expect(checkpointSource.indexOf("isVersionAtLeast")).toBeLessThan(
+      checkpointSource.indexOf('api("POST", "/journal/checkpoints"'),
+    );
+    expect(main).toContain('backendVersion = String(data.version || "")');
   });
 
   it("keeps extracted responsibilities out of the orchestration entrypoint", () => {

@@ -10,6 +10,7 @@
     var BACKEND_MAX_PORT = 5689;
     var POLL_MS = 700;
     var HEALTH_MS = 4000;
+    var CHECKPOINT_MIN_BACKEND_VERSION = "1.42.0";
     var SSE_OK = typeof EventSource !== "undefined";
     var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {};
     var OpenCutFormat = (typeof window !== "undefined" && window.OpenCutFormat) ? window.OpenCutFormat : {};
@@ -70,6 +71,7 @@
     var cs = null;
     var inPremiere = false;
     var connected = false;
+    var backendVersion = "";
     var capabilities = {};
     var selectedPath = "";
     var selectedName = "";
@@ -108,6 +110,7 @@
 
     function setConnected(value) {
         connected = !!value;
+        if (!connected) backendVersion = "";
         panelState.setConnected(connected);
     }
 
@@ -2427,6 +2430,7 @@
             var ok = !err && data && data.status === "ok";
             if (ok) {
                 var wasDisconnected = !connected;
+                backendVersion = String(data.version || "");
                 // Reset backoff on success
                 if (healthBackoff !== HEALTH_MS) {
                     healthBackoff = HEALTH_MS;
@@ -2509,6 +2513,7 @@
                         var data = JSON.parse(xhr.responseText);
                         if (data.status === "ok") {
                             found = true;
+                            backendVersion = String(data.version || "");
                             setBackendUrl(testUrl);
                             setConnected(true);
                             if (data.csrf_token) setCsrfToken(data.csrf_token);
@@ -11715,6 +11720,15 @@
         if (!connected) {
             showAlert(t("journal.checkpoint_backend_required", "The backend must be connected before Premiere can be changed safely."));
             if (done) done({ error: "backend unavailable" }, "", null);
+            return;
+        }
+        if (backendVersion &&
+                !PanelUtils.isVersionAtLeast(backendVersion, CHECKPOINT_MIN_BACKEND_VERSION)) {
+            var versionError = "backend v" + backendVersion + " is too old; OpenCut v" +
+                CHECKPOINT_MIN_BACKEND_VERSION + " or newer is required for recovery checkpoints";
+            showAlert(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.")
+                .replace("{error}", versionError));
+            if (done) done({ error: versionError }, "", null);
             return;
         }
         var body = {

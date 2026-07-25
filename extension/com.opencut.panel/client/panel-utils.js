@@ -26,6 +26,22 @@
             .replace(/\t/g, "\\t");
     }
 
+    function isVersionAtLeast(version, minimum) {
+        function parse(value) {
+            var match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)/i);
+            if (!match) return null;
+            return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+        }
+        var current = parse(version);
+        var required = parse(minimum);
+        if (!current || !required) return false;
+        for (var i = 0; i < required.length; i++) {
+            if (current[i] > required[i]) return true;
+            if (current[i] < required[i]) return false;
+        }
+        return true;
+    }
+
     function createLazyDomProxy(documentRef, cache) {
         var doc = documentRef || (typeof document !== "undefined" ? document : null);
         var target = cache || {};
@@ -321,6 +337,7 @@
     return {
         escapeHtml: escapeHtml,
         escapeJsxDoubleQuotedString: escapeJsxDoubleQuotedString,
+        isVersionAtLeast: isVersionAtLeast,
         createLazyDomProxy: createLazyDomProxy,
         normalizePaletteText: normalizePaletteText,
         normalizeLocalSettings: normalizeLocalSettings,

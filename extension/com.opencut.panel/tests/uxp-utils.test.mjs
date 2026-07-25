@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { escapeHtml, safeDomIdSegment } from "../../com.opencut.uxp/uxp-utils.js";
+import {
+  escapeHtml,
+  isVersionAtLeast,
+  safeDomIdSegment,
+} from "../../com.opencut.uxp/uxp-utils.js";
 
 describe("UXP utility escaping", () => {
   it("escapes HTML consistently with the CEP panel helper", () => {
@@ -16,5 +20,19 @@ describe("UXP safe DOM id segments", () => {
     expect(safeDomIdSegment(" Video / AI Quality ")).toBe("video-ai-quality");
     expect(safeDomIdSegment("speech_to-text")).toBe("speech_to-text");
     expect(safeDomIdSegment("!!!")).toBe("item");
+  });
+});
+
+describe("UXP backend version comparison", () => {
+  it("accepts checkpoint-capable releases and common version prefixes", () => {
+    expect(isVersionAtLeast("1.42.0", "1.42.0")).toBe(true);
+    expect(isVersionAtLeast("v1.43.0-beta.1", "1.42.0")).toBe(true);
+    expect(isVersionAtLeast("2.0.0", "1.42.0")).toBe(true);
+  });
+
+  it("rejects older and malformed releases", () => {
+    expect(isVersionAtLeast("1.41.9", "1.42.0")).toBe(false);
+    expect(isVersionAtLeast("", "1.42.0")).toBe(false);
+    expect(isVersionAtLeast("development", "1.42.0")).toBe(false);
   });
 });

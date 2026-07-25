@@ -6,6 +6,7 @@ import {
   shortsBundleFileNameUxp,
   normalizeHttpsExternalUrl,
   isTimeoutError,
+  isVersionAtLeast,
   getSearchResultPath,
   getSearchResultPreview,
   normalizeCaptionStyleCatalog,
@@ -52,6 +53,7 @@ const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
+const CHECKPOINT_MIN_BACKEND_VERSION = "1.42.0";
 const WS_BRIDGE_DEFAULT_PORT = 5680;
 const WS_RECONNECT_BASE_MS = 5000;
 const WS_RECONNECT_MAX_MS = 30000;
@@ -1777,6 +1779,15 @@ const BackendClient = createBackendClient({
 });
 
 async function runCheckpointedUxpHostWrite(spec, writeHost) {
+  if (runtimeState.backendVersion &&
+      !isVersionAtLeast(runtimeState.backendVersion, CHECKPOINT_MIN_BACKEND_VERSION)) {
+    const error = `backend v${runtimeState.backendVersion} is too old; OpenCut v${CHECKPOINT_MIN_BACKEND_VERSION} or newer is required for recovery checkpoints`;
+    UIController.showToast(
+      formatI18n("uxp.journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.", { error }),
+      "error"
+    );
+    return { ok: false, reason: error, checkpoint_failed: true, backend_too_old: true };
+  }
   const created = await BackendClient.post("/journal/checkpoints", {
     action: spec.action,
     label: spec.label || "",
@@ -5769,7 +5780,12 @@ async function checkConnection({ rescan = false, background = false } = {}) {
     }
   }
   const alive = r.ok;
-  if (alive && r.data?.csrf_token) runtimeState.csrfToken = r.data.csrf_token;
+  if (alive) {
+    runtimeState.backendVersion = String(r.data?.version || "");
+    if (r.data?.csrf_token) runtimeState.csrfToken = r.data.csrf_token;
+  } else {
+    runtimeState.backendVersion = "";
+  }
   UIController.setConnection(alive ? "connected" : "disconnected");
 
   const wasAlive = _lastConnectionState;

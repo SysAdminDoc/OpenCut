@@ -327,6 +327,13 @@ describe("UXP source ownership", () => {
     expect(main).toContain("loadJournalRecoveryUxp");
     expect(index).toContain('id="uxpRecoveryList"');
     expect(index).toContain('id="uxpRefreshRecoveryBtn"');
+    const checkpointStart = main.indexOf("async function runCheckpointedUxpHostWrite");
+    const checkpointSource = main.slice(checkpointStart, checkpointStart + 2200);
+    expect(checkpointSource.indexOf("isVersionAtLeast")).toBeGreaterThanOrEqual(0);
+    expect(checkpointSource.indexOf("isVersionAtLeast")).toBeLessThan(
+      checkpointSource.indexOf('BackendClient.post("/journal/checkpoints"'),
+    );
+    expect(main).toContain('runtimeState.backendVersion = String(r.data?.version || "")');
   });
 
   it("keeps extracted runtime implementations out of main.js", () => {
