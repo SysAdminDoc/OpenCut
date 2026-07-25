@@ -365,6 +365,9 @@ def resolve_portal_review(
                 "video_basename": os.path.basename(str(raw.get("video_path") or "")),
                 "artifact_sha256": str(raw.get("artifact_sha256") or ""),
                 "size_bytes": int(raw.get("size_bytes") or 0),
+                "integrity_status": str(raw.get("integrity_status") or "unverified"),
+                "integrity_verified_at": raw.get("integrity_verified_at"),
+                "integrity_error": str(raw.get("integrity_error") or ""),
                 "comment_count": sum(1 for comment in comments if comment["version_id"] == version_id),
             }
         )
@@ -402,6 +405,22 @@ def resolve_portal_media(
     review = _review_data(review_id)
     for version in review.get("versions", []) or []:
         if isinstance(version, dict) and version.get("version_id") == media_version_id:
+            integrity_status = str(version.get("integrity_status") or "unverified")
+            if integrity_status in {"mismatch", "missing"}:
+                from opencut.errors import OpenCutError
+
+                raise OpenCutError(
+                    code="ARTIFACT_INTEGRITY_ERROR",
+                    message=(
+                        f"Review artifact {media_version_id} failed its last "
+                        f"full integrity verification ({integrity_status})."
+                    ),
+                    suggestion=(
+                        "Re-create the review version from the original render "
+                        "before sharing or downloading it."
+                    ),
+                    status=500,
+                )
             video_path = str(version.get("video_path") or "")
             if not os.path.isfile(video_path):
                 raise FileNotFoundError(f"Review artifact not found: {media_version_id}")

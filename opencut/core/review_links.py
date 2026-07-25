@@ -57,6 +57,9 @@ class ReviewVersion:
     artifact_sha256: str = ""
     size_bytes: int = 0
     managed: bool = False
+    integrity_status: str = "unverified"
+    integrity_verified_at: Optional[float] = None
+    integrity_error: str = ""
 
 
 @dataclass
@@ -179,6 +182,7 @@ def _legacy_version(review_id: str, record: dict) -> dict:
         except OSError as exc:
             logger.warning("Could not snapshot legacy review %s: %s", review_id, exc)
     created_at = record.get("created_at")
+    integrity_verified_at = time.time() if artifact_sha256 else None
     return {
         "version_id": "v1",
         "number": 1,
@@ -190,6 +194,9 @@ def _legacy_version(review_id: str, record: dict) -> dict:
         "artifact_sha256": artifact_sha256,
         "size_bytes": size_bytes,
         "managed": managed,
+        "integrity_status": "verified" if artifact_sha256 else "unverified",
+        "integrity_verified_at": integrity_verified_at,
+        "integrity_error": "",
     }
 
 
@@ -204,6 +211,18 @@ def _migrate_reviews(reviews: Dict[str, dict]) -> tuple[Dict[str, dict], bool]:
             versions = [_legacy_version(review_id, record)]
             record["versions"] = versions
             migrated = True
+        for version in versions:
+            if not isinstance(version, dict):
+                continue
+            if "integrity_status" not in version:
+                version["integrity_status"] = "unverified"
+                migrated = True
+            if "integrity_verified_at" not in version:
+                version["integrity_verified_at"] = None
+                migrated = True
+            if "integrity_error" not in version:
+                version["integrity_error"] = ""
+                migrated = True
 
         current_version_id = str(record.get("current_version_id") or versions[-1].get("version_id") or "v1")
         version_ids = {str(version.get("version_id") or "") for version in versions if isinstance(version, dict)}
@@ -395,6 +414,8 @@ def create_review_link(
         artifact_sha256=digest,
         size_bytes=size_bytes,
         managed=True,
+        integrity_status="verified",
+        integrity_verified_at=time.time(),
     )
     link = ReviewLink(
         review_id=review_id,
@@ -469,6 +490,8 @@ def add_review_version(
                 artifact_sha256=digest,
                 size_bytes=size_bytes,
                 managed=True,
+                integrity_status="verified",
+                integrity_verified_at=time.time(),
             )
             versions.append(asdict(version))
             record["versions"] = versions
@@ -502,6 +525,142 @@ def get_review_versions(review_id: str) -> List[ReviewVersion]:
         raise KeyError(f"Review not found: {review_id}")
     versions = [_version_from_dict(raw) for raw in reviews[review_id].get("versions", []) if isinstance(raw, dict)]
     return sorted(versions, key=lambda version: (version.number, version.created_at))
+
+
+def verify_review_artifacts(
+    review_id: str,
+    version_ids: Optional[List[str]] = None,
+    on_progress: Optional[Callable] = None,
+) -> List[dict]:
+    """Re-hash selected review artifacts and persist their integrity state."""
+    requested = None
+    if version_ids is not None:
+        requested = []
+        for raw_version_id in version_ids:
+            version_id = str(raw_version_id or "").strip()
+            if version_id and version_id not in requested:
+                requested.append(version_id)
+        if not requested:
+            raise ValueError("version_ids must select at least one review version")
+
+    with _reviews_lock:
+        reviews = _load_reviews()
+        if review_id not in reviews:
+            raise KeyError(f"Review not found: {review_id}")
+        record = reviews[review_id]
+        raw_versions = [
+            version for version in record.get("versions", []) if isinstance(version, dict)
+        ]
+        if requested is None:
+            selected = raw_versions
+        else:
+            available = {
+                str(version.get("version_id") or ""): version for version in raw_versions
+            }
+            missing = [version_id for version_id in requested if version_id not in available]
+            if missing:
+                raise KeyError(f"Review version not found: {missing[0]}")
+            selected = [available[version_id] for version_id in requested]
+        snapshots = [
+            {
+                "version_id": str(version.get("version_id") or ""),
+                "video_path": str(version.get("video_path") or ""),
+                "artifact_sha256": str(version.get("artifact_sha256") or ""),
+                "size_bytes": int(version.get("size_bytes") or 0),
+            }
+            for version in selected
+        ]
+
+    if not snapshots:
+        raise ValueError("review has no versions to verify")
+
+    results: List[dict] = []
+    total_versions = len(snapshots)
+    for index, snapshot in enumerate(snapshots):
+        version_id = snapshot["version_id"]
+        video_path = snapshot["video_path"]
+        expected_digest = snapshot["artifact_sha256"]
+        expected_size = snapshot["size_bytes"]
+        checked_at = time.time()
+        observed_digest = ""
+        observed_size = 0
+        status = "unverifiable"
+        error = ""
+
+        if not video_path or not os.path.isfile(video_path):
+            status = "missing"
+            error = "review artifact is missing"
+        elif not expected_digest:
+            status = "unverifiable"
+            error = "review artifact has no recorded SHA-256 digest"
+        else:
+            digest = hashlib.sha256()
+            source_size = max(1, os.path.getsize(video_path))
+            with open(video_path, "rb") as source:
+                while True:
+                    chunk = source.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+                    observed_size += len(chunk)
+                    if on_progress:
+                        fraction = (index + min(1.0, observed_size / source_size)) / total_versions
+                        on_progress(
+                            min(95, 5 + int(90 * fraction)),
+                            f"Verifying review artifact {version_id}",
+                        )
+            observed_digest = digest.hexdigest()
+            size_matches = expected_size <= 0 or observed_size == expected_size
+            digest_matches = hmac.compare_digest(observed_digest, expected_digest)
+            if size_matches and digest_matches:
+                status = "verified"
+            else:
+                status = "mismatch"
+                mismatch_parts = []
+                if not size_matches:
+                    mismatch_parts.append("size")
+                if not digest_matches:
+                    mismatch_parts.append("SHA-256")
+                error = f"review artifact does not match recorded {' and '.join(mismatch_parts)}"
+
+        results.append(
+            {
+                "review_id": review_id,
+                "version_id": version_id,
+                "integrity_status": status,
+                "integrity_verified_at": checked_at,
+                "integrity_error": error,
+                "expected_sha256": expected_digest,
+                "observed_sha256": observed_digest,
+                "expected_size_bytes": expected_size,
+                "observed_size_bytes": observed_size,
+            }
+        )
+
+    with _reviews_lock:
+        reviews = _load_reviews()
+        if review_id not in reviews:
+            raise KeyError(f"Review not found: {review_id}")
+        record = reviews[review_id]
+        snapshots_by_id = {snapshot["version_id"]: snapshot for snapshot in snapshots}
+        for result in results:
+            version = _version_for(record, result["version_id"])
+            snapshot = snapshots_by_id[result["version_id"]]
+            if (
+                str(version.get("video_path") or "") != snapshot["video_path"]
+                or str(version.get("artifact_sha256") or "") != snapshot["artifact_sha256"]
+            ):
+                result["integrity_status"] = "unverifiable"
+                result["integrity_error"] = "review artifact metadata changed during verification"
+            version["integrity_status"] = result["integrity_status"]
+            version["integrity_verified_at"] = result["integrity_verified_at"]
+            version["integrity_error"] = result["integrity_error"]
+        _save_reviews(reviews)
+
+    if on_progress:
+        on_progress(100, "Review artifact verification complete")
+    logger.info("Verified %s artifact(s) for review %s", len(results), review_id)
+    return results
 
 
 def add_review_comment(

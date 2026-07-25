@@ -12,6 +12,9 @@ record also lives in the git commit messages.
 - CEP and UXP now read the connected backend version and fail closed with an
   explicit upgrade message before any host write when recovery checkpoints
   are unavailable on a pre-1.42.0 backend.
+- Review versions now persist full-hash verification state, expose it through
+  owner and guest metadata, and can be re-verified asynchronously per version;
+  known missing or SHA-256-mismatched artifacts are no longer served.
 
 ### Changed - Premium editorial interface
 
