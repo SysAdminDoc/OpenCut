@@ -103,11 +103,22 @@ def test_failed_smoke_never_writes_receipt(monkeypatch, tmp_path):
         module,
         "_run",
         lambda *args, **kwargs: module.subprocess.CompletedProcess(
-            args[0], 1, json.dumps({"status": "fail", "steps": []}), ""
+            args[0],
+            1,
+            json.dumps(
+                {
+                    "status": "fail",
+                    "steps": [
+                        {"name": "panel-rendered", "status": "fail"},
+                        {"name": "adobe-premierepro-versions", "status": "warn"},
+                    ],
+                }
+            ),
+            "",
         ),
     )
 
-    with pytest.raises(module.ReleaseGateError):
+    with pytest.raises(module.ReleaseGateError, match=r"panel-rendered(?!.*adobe)"):
         module.run_verification(target)
     assert not target.exists()
 
