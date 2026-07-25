@@ -112,6 +112,37 @@ def test_failed_smoke_never_writes_receipt(monkeypatch, tmp_path):
     assert not target.exists()
 
 
+def test_source_drift_during_smoke_never_writes_receipt(monkeypatch, tmp_path):
+    module = _module()
+    target = tmp_path / "receipt.json"
+    source_states = iter(
+        [
+            {"commit": "abc123", "branch": "main", "dirty_paths": []},
+            {"commit": "different", "branch": "main", "dirty_paths": []},
+        ]
+    )
+    monkeypatch.setattr(module, "current_source_state", lambda: next(source_states))
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda *args, **kwargs: module.subprocess.CompletedProcess(
+            args[0],
+            0,
+            json.dumps(
+                {
+                    "status": "ok",
+                    "steps": [{"name": name, "status": "ok"} for name in sorted(module.REQUIRED_STEPS)],
+                }
+            ),
+            "",
+        ),
+    )
+
+    with pytest.raises(module.ReleaseGateError, match="source changed"):
+        module.run_verification(target)
+    assert not target.exists()
+
+
 def test_artifact_promotion_requires_smoke_before_tag(monkeypatch, tmp_path):
     module = _module()
     receipt = tmp_path / "receipt.json"

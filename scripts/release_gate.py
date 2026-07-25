@@ -195,7 +195,17 @@ def run_verification(receipt_path: Path) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise ReleaseGateError("release smoke did not emit valid JSON") from exc
     if result.returncode != 0 or smoke.get("status") != "ok":
-        raise ReleaseGateError("release smoke failed; no receipt was written")
+        failed_steps = [
+            str(step.get("name"))
+            for step in smoke.get("steps") or []
+            if isinstance(step, dict) and step.get("status") != "ok"
+        ]
+        detail = f": {', '.join(failed_steps)}" if failed_steps else ""
+        raise ReleaseGateError(f"release smoke failed{detail}; no receipt was written")
+
+    verified_source = current_source_state()
+    if verified_source != source:
+        raise ReleaseGateError("source changed while release verification was running; no receipt was written")
 
     receipt = {
         "schema_version": RECEIPT_SCHEMA_VERSION,
@@ -206,8 +216,13 @@ def run_verification(receipt_path: Path) -> dict[str, Any]:
         "source": source,
         "steps": smoke.get("steps") or [],
     }
-    _write_json(receipt_path, receipt)
-    validate_receipt(receipt_path, source_state=source)
+    temporary_receipt = receipt_path.with_name(f".{receipt_path.name}.tmp")
+    try:
+        _write_json(temporary_receipt, receipt)
+        validate_receipt(temporary_receipt)
+        temporary_receipt.replace(receipt_path)
+    finally:
+        temporary_receipt.unlink(missing_ok=True)
     return receipt
 
 

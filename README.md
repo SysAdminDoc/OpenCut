@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1542-orange)
-![Tests](https://img.shields.io/badge/Tests-11800+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-11900+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -811,7 +811,9 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-11,800+ estimated tests across 297 root test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+11,900+ estimated tests across 299 root test files covering route smoke tests,
+core module unit tests, feature integration tests, plugin tests, and the
+ExtendScript mock harness.
 
 ---
 
@@ -876,7 +878,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (11,800+ estimated tests, 297 root test files)
+tests/               # pytest test suite (11,900+ estimated tests, 299 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
