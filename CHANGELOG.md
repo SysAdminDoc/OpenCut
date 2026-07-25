@@ -10,6 +10,9 @@ record also lives in the git commit messages.
 - CEP social authorization now validates HTTPS and explicit loopback callback
   URLs, preserves the authorization URL unchanged, and opens it through the
   bundled CSInterface browser API without creating a command shell.
+- The CEP development toolchain now resolves patched `brace-expansion` and
+  `postcss` releases; clean installs report zero npm advisories without
+  suppressing or allow-listing findings.
 
 ## [1.43.0] — 2026-07-25 — Premium panel experience
 
