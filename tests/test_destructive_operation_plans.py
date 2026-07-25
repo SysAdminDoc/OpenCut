@@ -120,6 +120,16 @@ def test_logs_clear_requires_confirm_token_after_dry_run(client, csrf_token, mon
     assert crash_log.read_text(encoding="utf-8") == ""
     assert server_log.read_text(encoding="utf-8") == ""
 
+    replayed = client.post(
+        "/logs/clear",
+        json={"confirm_token": preview_data["plan"]["confirm_token"]},
+        headers=_headers(csrf_token),
+    )
+    assert replayed.status_code == 409
+    assert replayed.get_json()["code"] == "DESTRUCTIVE_CONFIRMATION_REQUIRED"
+    assert crash_log.read_text(encoding="utf-8") == ""
+    assert server_log.read_text(encoding="utf-8") == ""
+
 
 def test_render_cache_cleanup_requires_confirm_token(client, csrf_token, monkeypatch, tmp_path):
     cache_dir = _isolate_render_cache(

@@ -331,6 +331,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         "/models/delete",
         "/queue/clear",
         "/workflow/delete",
+        "/logs/clear",
       ]);
       if (destructivePaths.has(url.pathname) && method !== "GET") {
         const body = route.request().postDataJSON() || {};
@@ -367,6 +368,15 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             targets: [],
             reversible: true,
           },
+          "/logs/clear": {
+            operation: "logs.clear",
+            records: [],
+            targets: [
+              { name: "crash.log", path: "C:/OpenCut/crash.log", bytes: 5 },
+              { name: "opencut.log", path: "C:/OpenCut/opencut.log", bytes: 10 },
+            ],
+            reversible: false,
+          },
         };
         if (body.dry_run) {
           const previewCount =
@@ -379,15 +389,25 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
             metadata: { route: url.pathname },
             confirm_token: token,
           };
-          const payload =
-            url.pathname === "/queue/clear"
-              ? { success: true, dry_run: true, removed: 0, plan }
-              : {
+          let payload;
+          if (url.pathname === "/queue/clear") {
+            payload = { success: true, dry_run: true, removed: 0, plan };
+          } else if (url.pathname === "/logs/clear") {
+            payload = {
+              success: true,
+              dry_run: true,
+              plan,
+              total_bytes: 15,
+              cleared: [],
+            };
+          } else {
+            payload = {
                   success: true,
                   dry_run: true,
                   destructive_plan: plan,
                   confirm_token: token,
                 };
+          }
           return route.fulfill({
             status: 200,
             contentType: "application/json",
@@ -414,6 +434,11 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           "/models/delete": { success: true, deleted: [body.path] },
           "/queue/clear": { success: true, removed: 1 },
           "/workflow/delete": { success: true, deleted: body.name },
+          "/logs/clear": {
+            success: true,
+            cleared: ["crash.log", "opencut.log"],
+            total_bytes: 15,
+          },
         };
         return route.fulfill({
           status: 200,
@@ -1707,6 +1732,27 @@ test("CEP destructive controls preview signed plans before confirmation", async 
   const dialog = page.locator(".panel-dialog-overlay");
 
   await page.locator("#navTabSettings").click();
+  const clearLogs = page.locator("#clearLogsBtn");
+  await clearLogs.click();
+  await expect(dialog).toContainText("Clear diagnostic logs?");
+  await expect(dialog).toContainText("crash.log");
+  await expect(dialog).toContainText("opencut.log");
+  await expect(dialog).toContainText("5 bytes");
+  await expect(dialog).toContainText("10 bytes");
+  await expect(dialog).toContainText("permanent and cannot be undone");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    capturedRequests.filter((request) => request.path === "/logs/clear"),
+  ).toHaveLength(1);
+  await clearLogs.click();
+  await dialog.getByRole("button", { name: "Clear Logs" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".toast-notification[role='status']")).toContainText(
+    "Cleared 2 diagnostic log files",
+  );
+
   await expect(page.locator("#presetSelect option[value='Editorial Clean']")).toHaveCount(1);
   await page.locator("#presetSelect").evaluate((select) => {
     select.value = "Editorial Clean";
@@ -1799,6 +1845,7 @@ test("CEP destructive controls preview signed plans before confirmation", async 
     "/models/delete",
     "/queue/clear",
     "/workflow/delete",
+    "/logs/clear",
   ]) {
     const requests = destructiveRequests.filter(
       (request) => request.path === path,

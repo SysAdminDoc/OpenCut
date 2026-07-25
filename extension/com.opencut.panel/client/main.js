@@ -12953,9 +12953,24 @@
         }
         if (clearLogsBtn) {
             clearLogsBtn.addEventListener("click", function () {
-                api("POST", "/logs/clear", {}, function (err, data) {
-                    if (err) { showToast(t("settings.clear_log_failed", "Couldn't clear the log file"), "error"); return; }
-                    showToast(t("settings.crash_log_cleared", "Crash log cleared"), "success");
+                runDestructiveAction({
+                    method: "POST",
+                    path: "/logs/clear",
+                    payload: {},
+                    trigger: clearLogsBtn,
+                    title: t("destructive.clear_logs_title", "Clear diagnostic logs?"),
+                    message: t("destructive.clear_logs_message", "Review the exact log files that will be emptied. This cannot be undone."),
+                    confirmLabel: t("destructive.clear_logs_confirm", "Clear Logs"),
+                    previewBusyLabel: t("settings.reviewing_logs", "Reviewing…"),
+                    executeBusyLabel: t("settings.clearing_logs", "Clearing…"),
+                    executeError: t("settings.clear_log_failed", "Couldn't clear the log files: {error}"),
+                    onSuccess: function (data) {
+                        showToast(
+                            t("settings.logs_cleared", "Cleared {count} diagnostic log files")
+                                .replace("{count}", (data.cleared || []).length),
+                            "success"
+                        );
+                    }
                 });
             });
         }

@@ -17,6 +17,9 @@ record also lives in the git commit messages.
   `main` commit; version changes, installer smoke promotion, and local tag
   creation fail closed when required evidence is missing, stale, skipped, or
   source-drifted.
+- Clear Log now previews the exact diagnostic files and byte totals, requires
+  the shared signed confirmation flow, preserves files on cancel, and rejects
+  stale confirmation-token replay.
 
 ## [1.43.0] — 2026-07-25 — Premium panel experience
 
