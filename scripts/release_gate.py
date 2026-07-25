@@ -198,7 +198,11 @@ def run_verification(receipt_path: Path) -> dict[str, Any]:
         failed_steps = [
             str(step.get("name"))
             for step in smoke.get("steps") or []
-            if isinstance(step, dict) and step.get("status") != "ok"
+            if isinstance(step, dict)
+            and (
+                step.get("status") == "fail"
+                or (step.get("status") == "skipped" and step.get("name") in REQUIRED_STEPS)
+            )
         ]
         detail = f": {', '.join(failed_steps)}" if failed_steps else ""
         raise ReleaseGateError(f"release smoke failed{detail}; no receipt was written")
