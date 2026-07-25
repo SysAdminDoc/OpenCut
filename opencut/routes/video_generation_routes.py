@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "route_framepack_generate",
+    "route_framepack_info",
+    "route_wan22_t2v",
+    "route_wan22_i2v",
+    "route_wan22_info",
+    "route_fastvideo",
+    "route_fastvideo_info",
+    "route_lightx2v",
+    "route_lightx2v_info",
+]
+
 from flask import jsonify
 
 from opencut.errors import safe_error

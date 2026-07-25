@@ -1,5 +1,14 @@
 """Transcript summarization, chapter, repeat, QC, and export-preflight routes."""
 
+__all__ = [
+    "transcript_summarize",
+    "captions_chapters",
+    "captions_repeat_detect",
+    "captions_qc",
+    "captions_export_preflight",
+    "captions_qc_reading_profiles",
+]
+
 from .captions import (
     VALID_WHISPER_MODELS,
     CaptionConfig,

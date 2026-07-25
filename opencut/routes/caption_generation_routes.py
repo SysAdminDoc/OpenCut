@@ -1,5 +1,16 @@
 """Caption generation, styling, display settings, and cache routes."""
 
+__all__ = [
+    "generate_captions",
+    "get_caption_styles",
+    "caption_display_setting_tokens",
+    "caption_display_setting_preview",
+    "caption_cache_stats",
+    "caption_cache_provenance",
+    "caption_cache_clear",
+    "styled_captions_route",
+]
+
 from .captions import (
     VALID_WHISPER_MODELS,
     CaptionConfig,

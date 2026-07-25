@@ -2,6 +2,29 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "route_tts_elevenlabs",
+    "route_tts_elevenlabs_voices",
+    "route_tts_elevenlabs_info",
+    "route_tts_spark",
+    "route_tts_spark_voices",
+    "route_tts_spark_info",
+    "route_moonshine_transcribe",
+    "route_moonshine_info",
+    "route_tts_kokoro",
+    "route_tts_kokoro_voices",
+    "route_tts_kokoro_info",
+    "route_tts_chatterbox",
+    "route_tts_chatterbox_info",
+    "route_csm_speech",
+    "route_csm_info",
+    "route_dia_speech",
+    "route_dia_info",
+    "route_parler_speech",
+    "route_parler_speakers",
+    "route_parler_info",
+]
+
 from flask import jsonify
 
 from opencut.errors import safe_error

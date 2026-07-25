@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "route_upscale_smart",
+    "route_upscale_smart_info",
+    "route_face_reshape",
+    "route_face_reshape_info",
+    "route_skin_retouch",
+    "route_skin_retouch_info",
+    "route_sam2_segment",
+    "route_sam2_info",
+    "route_depth_estimate",
+    "route_depth_parallax",
+    "route_depth_info",
+    "route_depth_segment_compose",
+    "route_compose_info",
+]
+
 from flask import jsonify
 
 from opencut.errors import safe_error

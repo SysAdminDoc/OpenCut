@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "route_wan22_s2v",
+    "route_wan22_s2v_info",
+    "route_wan22_animate",
+    "route_wan22_animate_info",
+    "route_digital_twin",
+    "route_digital_twin_info",
+    "route_digital_twin_stages",
+    "route_consisid",
+    "route_consisid_info",
+]
+
 from flask import jsonify
 
 from opencut.errors import safe_error

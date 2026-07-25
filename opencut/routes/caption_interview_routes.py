@@ -1,5 +1,10 @@
 """Resumable interview-polish workflow routes."""
 
+__all__ = [
+    "interview_polish",
+    "interview_polish_clear_state",
+]
+
 from .captions import (
     CaptionConfig,
     ExportConfig,

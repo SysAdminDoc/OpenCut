@@ -1,5 +1,14 @@
 """WhisperX, translation, karaoke, and caption conversion routes."""
 
+__all__ = [
+    "captions_enhanced_capabilities",
+    "captions_whisperx",
+    "captions_translate",
+    "captions_karaoke",
+    "captions_convert",
+    "captions_enhanced_install",
+]
+
 from .captions import (
     _VALID_SUBTITLE_FORMATS,
     VALID_WHISPER_MODELS,

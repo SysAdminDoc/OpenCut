@@ -5,6 +5,11 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Route module contracts
+
+- Declared the public route exports for the decomposed captions, system, and
+  Wave L modules so facade imports cannot silently shadow same-named helpers.
+
 ### Changed - Premium editorial interface
 
 - Reworked the CEP and UXP panels around a shared 14px type scale, compact

@@ -1,5 +1,13 @@
 """Transcript creation, editing, export, and round-trip routes."""
 
+__all__ = [
+    "get_transcript",
+    "export_edited_transcript",
+    "captions_round_trip_diff",
+    "captions_round_trip_apply",
+    "get_emoji_map",
+]
+
 from .captions import (
     VALID_WHISPER_MODELS,
     CaptionConfig,

@@ -1,5 +1,21 @@
 """System diagnostics routes registered on the shared system blueprint."""
 
+__all__ = [
+    "system_ai_eval",
+    "system_ai_eval_list",
+    "system_eval_datasets",
+    "system_eval_dataset_detail",
+    "system_ai_eval_compare_backends",
+    "system_crash_packet",
+    "system_project_health",
+    "system_ocio_validate",
+    "system_capabilities",
+    "system_route_readiness",
+    "system_audit_log",
+    "check_failures",
+    "feature_state",
+]
+
 from .system import (
     jsonify,
     request,

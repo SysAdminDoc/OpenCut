@@ -1,5 +1,13 @@
 """Caption burn-in and animated rendering routes."""
 
+__all__ = [
+    "burnin_styles",
+    "burnin_from_file",
+    "burnin_from_segments",
+    "animated_caption_presets",
+    "animated_caption_render",
+]
+
 from .captions import (
     _VALID_ANIMATIONS,
     _VALID_BURNIN_STYLES,

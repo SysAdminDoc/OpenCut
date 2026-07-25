@@ -1,5 +1,17 @@
 """System realtime routes registered on the shared system blueprint."""
 
+__all__ = [
+    "ws_status",
+    "ws_start",
+    "ws_stop",
+    "engine_list",
+    "engine_set_preference",
+    "engine_get_preferences",
+    "engine_resolve",
+    "auth_info",
+    "auth_rotate",
+]
+
 from .system import (
     get_json_dict,
     jsonify,
