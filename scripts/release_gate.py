@@ -79,10 +79,11 @@ def _git(*args: str) -> str:
     return result.stdout.strip()
 
 
-def _status_paths() -> list[str]:
-    status = _git("status", "--porcelain=v1", "--untracked-files=all")
+def _parse_status_paths(status: str) -> list[str]:
     paths: list[str] = []
     for line in status.splitlines():
+        if len(line) < 4:
+            continue
         raw = line[3:].strip()
         if " -> " in raw:
             raw = raw.split(" -> ", 1)[1]
@@ -90,6 +91,13 @@ def _status_paths() -> list[str]:
         if path and path not in LOCAL_STATE_PATHS:
             paths.append(path)
     return sorted(set(paths))
+
+
+def _status_paths() -> list[str]:
+    result = _run(["git", "status", "--porcelain=v1", "--untracked-files=all"], timeout=60)
+    if result.returncode != 0:
+        raise ReleaseGateError(result.stderr.strip() or "git status failed")
+    return _parse_status_paths(result.stdout)
 
 
 def current_source_state() -> dict[str, Any]:

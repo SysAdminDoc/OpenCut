@@ -39,6 +39,15 @@ def _write(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def test_porcelain_parser_preserves_status_columns_and_ignores_local_docs():
+    module = _module()
+
+    assert module._parse_status_paths(" M RESEARCH.md\n M ROADMAP.md\n M opencut/server.py\n?? new file.txt\n") == [
+        "new file.txt",
+        "opencut/server.py",
+    ]
+
+
 def test_valid_receipt_is_bound_to_current_clean_commit(tmp_path):
     module = _module()
     now = datetime(2026, 7, 25, 12, 0, tzinfo=timezone.utc)
