@@ -1116,7 +1116,7 @@ test("UXP wide shell keeps overflow controls hidden and expands offline details"
       selectArrow: selectStyle.backgroundImage,
     };
   });
-  expect(menuGeometry.detailRadius).toBe("9px");
+  expect(menuGeometry.detailRadius).toBe("4px");
   expect(menuGeometry.detailFontSize).toBeGreaterThanOrEqual(12);
   expect(menuGeometry.selectRadius).toBe("0px");
   expect(menuGeometry.selectHeight).toBeGreaterThanOrEqual(38);
@@ -1144,6 +1144,9 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       cardShadow: getComputedStyle(document.querySelector("#panel-settings.active > .card")).boxShadow,
       cardRadius: getComputedStyle(document.querySelector("#panel-settings.active > .card")).borderRadius,
       statusRadius: getComputedStyle(document.getElementById("statusBar")).borderRadius,
+      utilityRadius: getComputedStyle(document.querySelector("#ocWaveHTryDemo")).borderRadius,
+      utilityBackground: getComputedStyle(document.querySelector("#ocWaveHTryDemo")).backgroundColor,
+      journalClearRadius: getComputedStyle(document.getElementById("journalClearBtn")).borderRadius,
     };
   });
   expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
@@ -1154,6 +1157,9 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(cepGeometry.cardShadow).toBe("none");
   expect(cepGeometry.cardRadius).toBe("0px");
   expect(cepGeometry.statusRadius).toBe("0px");
+  expect(cepGeometry.utilityRadius).toBe("0px");
+  expect(cepGeometry.utilityBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(cepGeometry.journalClearRadius).toBe("0px");
   expect(cep.pageErrors).toEqual([]);
 
   const uxp = await openSurface(page, "uxp", "dark", 1200, { height: 800 });
@@ -1175,6 +1181,8 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       tabDirection: tabs.flexDirection,
       headerHeight: header?.height || 0,
       overviewHeight: overview?.height || 0,
+      connectionRadius: getComputedStyle(document.querySelector(".oc-connection")).borderRadius,
+      connectionBackground: getComputedStyle(document.querySelector(".oc-connection")).backgroundColor,
       settingsColumns: settingsNav && group ? group.left - settingsNav.left : 0,
       settingsNavItems: document.querySelectorAll("#tab-settings .oc-settings-nav-item").length,
       visibleGroups: document.querySelectorAll("#tab-settings.active > .oc-settings-group:not([hidden])").length,
@@ -1196,9 +1204,12 @@ test("wide command-center shells expose editorial rails and settings grids", asy
     };
   });
   expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(160);
+  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(164);
   expect(uxpGeometry.tabDirection).toBe("column");
   expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(48);
   expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(90);
+  expect(uxpGeometry.connectionRadius).toBe("0px");
+  expect(uxpGeometry.connectionBackground).toBe("rgba(0, 0, 0, 0)");
   expect(uxpGeometry.settingsColumns).toBeGreaterThan(170);
   expect(uxpGeometry.settingsNavItems).toBe(9);
   expect(uxpGeometry.visibleGroups).toBe(1);

@@ -7983,6 +7983,10 @@ function initSettingsNavigation() {
       pane.hidden = !selected;
     });
 
+    if (typeof nextButton.scrollIntoView === "function") {
+      nextButton.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+
     if (focus) nextButton.focus();
   };
 

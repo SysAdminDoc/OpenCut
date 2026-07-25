@@ -2093,3 +2093,108 @@ html.theme-light .oc-workspace-meta-item[data-state] {
     height: 44px;
   }
 }
+
+/* Final shell pass: make context quiet and keep navigation compact. */
+.oc-connection {
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oc-connection:hover,
+.oc-connection:focus-visible {
+  border: 0;
+  border-bottom: 1px solid var(--cc-border-strong);
+  background: transparent;
+  outline: 0;
+}
+
+.oc-conn-dot,
+.oc-conn-dot.disconnected {
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+}
+
+.oc-connection-detail-panel {
+  border-radius: 4px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+}
+
+html body .oc-header .oc-connection,
+html body .oc-connection-details[open] .oc-connection {
+  border-radius: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+html body .oc-header .oc-connection:hover,
+html body .oc-header .oc-connection:focus-visible {
+  border-bottom-color: var(--cc-border-strong);
+}
+
+@media (min-width: 821px) {
+  #app {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+
+  .oc-tab-nav-shell {
+    padding: 10px 8px 12px;
+  }
+
+  .oc-tab-nav-shell .oc-tabs {
+    gap: 4px;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    min-height: 38px;
+    gap: 10px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .oc-tab-nav-shell .oc-tab svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .oc-content {
+    padding-inline: 24px;
+  }
+
+  .oc-processing-banner:not(.hidden),
+  .oc-recovery-banner:not(.hidden) {
+    left: 184px;
+  }
+}
+
+@media (max-width: 620px) {
+  .oc-tab-nav-shell .oc-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .oc-tab-nav-shell .oc-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .oc-tab-nav-shell .oc-tab {
+    scroll-snap-align: center;
+  }
+}
+
+@media (max-width: 390px) {
+  .oc-tab-nav-shell .oc-tab {
+    flex-basis: 36px;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+}

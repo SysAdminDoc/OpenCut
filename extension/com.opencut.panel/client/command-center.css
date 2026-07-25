@@ -1314,3 +1314,190 @@ label,
         border-top: 1px solid var(--cc-border);
     }
 }
+
+/* Final shell override: keep the compact grammar last in the cascade. */
+html body .result-area,
+html body #progressSection,
+html body #resultsSection,
+html body .polish-result {
+    border: 0;
+    border-top: 1px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html body .sidebar {
+    width: 160px;
+    min-width: 160px;
+    padding: 10px 8px 12px;
+}
+
+html body .sidebar-brand {
+    min-height: 42px;
+    gap: 8px;
+    padding: 0 10px 12px;
+}
+
+html body .nav-tabs {
+    gap: 4px;
+    padding: 14px 0;
+}
+
+html body .nav-tab {
+    min-height: 38px;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 0;
+    font-size: 12px;
+}
+
+html body .nav-tab span {
+    font-size: 12px;
+}
+
+html body .content-header {
+    min-height: 52px;
+    padding: 7px 24px;
+}
+
+html body .main {
+    padding: 0 24px 64px;
+}
+
+html body .workspace-stage {
+    padding: 12px 0;
+}
+
+html body .workspace-stage-primary {
+    gap: 8px 20px;
+}
+
+html body .workspace-stage-actions .stage-action:not(:first-child) {
+    min-height: 34px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--cc-muted);
+}
+
+html body .workspace-stage-actions .stage-action:not(:first-child):hover:not(:disabled),
+html body .workspace-stage-actions .stage-action:not(:first-child):focus-visible {
+    border: 0;
+    background: transparent;
+    color: var(--cc-text);
+    box-shadow: inset 0 -1px 0 var(--cc-border-strong);
+    transform: none;
+}
+
+html body .workspace-stage-actions .stage-action:first-child {
+    min-height: 36px;
+    border-radius: 3px;
+}
+
+html body .card {
+    padding: 12px 0;
+}
+
+html body .oc-status-line {
+    border-radius: 0;
+    background: transparent;
+}
+
+html body .btn,
+html body .btn-primary,
+html body .btn-secondary,
+html body .btn-outline,
+html body .btn-ghost,
+html body .btn-install,
+html body .btn-cancel,
+html body .btn-browse,
+html body .header-btn,
+html body .utility-btn,
+html body .stage-action,
+html body .oc-wave-h-btn,
+html body .footer-toggle-btn {
+    border-radius: 3px !important;
+}
+
+html body .footer-toggle-btn {
+    min-height: 32px;
+    border-color: transparent;
+    background: transparent;
+}
+
+html body .footer-toggle-btn:hover:not(:disabled),
+html body .footer-toggle-btn:focus-visible {
+    border-color: transparent;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+@media (max-width: 700px) {
+    html body .main {
+        padding-inline: 12px;
+    }
+
+    html body .content-header {
+        padding-inline: 14px;
+    }
+}
+
+/* Keep dense settings utilities readable without turning every action into a card. */
+html body .oc-wave-h-grid {
+    gap: 0;
+    margin-top: 10px;
+    border-block: 1px solid var(--cc-border);
+}
+
+html body .oc-wave-h-grid .oc-wave-h-btn {
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cc-border);
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--cc-text);
+    box-shadow: none !important;
+    text-align: left;
+    transform: none;
+}
+
+html body .oc-wave-h-grid .oc-wave-h-btn:nth-child(even) {
+    border-left: 1px solid var(--cc-border) !important;
+}
+
+html body .oc-wave-h-grid .oc-wave-h-btn:last-child,
+html body .oc-wave-h-grid .oc-wave-h-btn:nth-last-child(2) {
+    border-bottom: 0;
+}
+
+html body .oc-wave-h-grid .oc-wave-h-btn:hover:not(:disabled),
+html body .oc-wave-h-grid .oc-wave-h-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.035) !important;
+    color: var(--cc-text);
+    box-shadow: inset 0 -1px 0 var(--cc-border-strong) !important;
+}
+
+html body .oc-wave-h-note {
+    margin-top: 8px;
+    padding: 6px 0 6px 10px;
+    border-left: 2px solid var(--cc-border);
+    border-radius: 0;
+    background: transparent;
+}
+
+html body #journalClearBtn {
+    min-height: 30px;
+    padding-inline: 6px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--cc-muted);
+    box-shadow: none !important;
+}
+
+html body #journalClearBtn:hover:not(:disabled),
+html body #journalClearBtn:focus-visible {
+    color: var(--cc-text);
+    box-shadow: inset 0 -1px 0 var(--cc-border-strong) !important;
+}
