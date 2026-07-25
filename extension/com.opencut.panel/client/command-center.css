@@ -2209,6 +2209,30 @@ html body .nav-tab.active svg {
     opacity: 1;
 }
 
+html body .stem-icon {
+    display: inline-grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    color: var(--cc-muted);
+}
+
+html body .stem-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+html body .stem-check input:checked + .stem-icon {
+    color: var(--cc-accent);
+}
+
+html body #captionDisplaySettingsCard select:disabled {
+    border-color: var(--cc-border) !important;
+    background: var(--cc-bg) !important;
+    color: var(--cc-muted) !important;
+    opacity: 0.82;
+}
+
 @media (max-width: 700px) {
     html body .workspace-stage-actions,
     html body.is-disconnected .workspace-stage-actions,

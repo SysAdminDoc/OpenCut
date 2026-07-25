@@ -285,7 +285,7 @@
   "captions.display_reset_action": "Reset Defaults",
   "captions.display_reset_defaults": "Reset to FCC defaults. Click Preview to re-render.",
   "captions.display_sample_text": "The quick brown fox jumps over the lazy dog.",
-  "captions.display_schema_load_failed": "Could not load FCC token schema.",
+  "captions.display_schema_load_failed": "Reconnect the backend to load caption display options.",
   "captions.display_settings_title": "Caption Display Settings (FCC)",
   "captions.display_size": "Size",
   "captions.display_text_color": "Text Color",

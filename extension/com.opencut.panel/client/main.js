@@ -8218,6 +8218,26 @@
         if (state) el.capDispStatus.setAttribute("data-state", state);
     }
 
+    function setCaptionDisplayControlsDisabled(disabled, title) {
+        for (var i = 0; i < CAPTION_DISPLAY_SELECTS.length; i++) {
+            var select = el[CAPTION_DISPLAY_SELECTS[i].id];
+            if (!select) continue;
+            select.disabled = disabled;
+            if (disabled && title) select.title = title;
+            else select.removeAttribute("title");
+        }
+        if (el.capDispPreviewBtn) {
+            el.capDispPreviewBtn.disabled = disabled;
+            if (disabled && title) el.capDispPreviewBtn.title = title;
+            else el.capDispPreviewBtn.removeAttribute("title");
+        }
+        if (el.capDispResetBtn) {
+            el.capDispResetBtn.disabled = disabled;
+            if (disabled && title) el.capDispResetBtn.title = title;
+            else el.capDispResetBtn.removeAttribute("title");
+        }
+    }
+
     function populateCaptionDisplaySelects(schema) {
         captionDisplaySettingsSchema = schema || {};
         var tokens = captionDisplaySettingsSchema.tokens || {};
@@ -8245,6 +8265,7 @@
                 select.value = opts[0].id;
             }
         }
+        setCaptionDisplayControlsDisabled(false);
     }
 
     function readCaptionDisplaySettings() {
@@ -8306,10 +8327,13 @@
     }
 
     function loadCaptionDisplayTokens() {
+        var reconnectTitle = t("workspace.status_reconnect_title", "Start or reconnect the local OpenCut backend service");
+        setCaptionDisplayControlsDisabled(true, reconnectTitle);
         setCaptionDisplayStatus(t("captions.display_loading_tokens", "Loading tokens..."), "working");
         api("GET", "/captions/display-settings/tokens", null, function (err, data) {
             if (err || !data || data.error) {
-                setCaptionDisplayStatus(t("captions.display_schema_load_failed", "Could not load FCC token schema."), "error");
+                setCaptionDisplayControlsDisabled(true, reconnectTitle);
+                setCaptionDisplayStatus(t("captions.display_schema_load_failed", "Reconnect the backend to load caption display options."), "error");
                 return;
             }
             populateCaptionDisplaySelects(data);
