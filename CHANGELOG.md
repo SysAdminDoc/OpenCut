@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Version-sync gate on CRLF checkouts
+
+- `scripts/sync_version.py --check` reported a permanent `SECURITY.md`
+  mismatch on a CRLF checkout that no `--set` could clear: the support-table
+  row pattern ended in `[^\n]*$`, which pulls the `\r` into the match while
+  the rebuilt row carries none, so an already-correct file always compared
+  unequal. The row end is now asserted with a lookahead instead of consumed.
+
 ### Security - CEP panel ships without Node privileges
 
 - The CEP manifest no longer requests `--enable-nodejs` or `--mixed-context`.
