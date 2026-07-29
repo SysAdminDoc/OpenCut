@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Generated feature readiness fails closed
+
+- Generated feature records carried no implementation identity, which made
+  them structurally incapable of being graded as stubs: with no adapter module
+  to scan, a terminal `NotImplementedError` adapter whose optional dependency
+  happened to be installed was advertised as `available`. `auto.deblur-motion`,
+  `auto.searaft`, and `auto.track-cutie` all resolved that way on a live probe.
+- The readiness generator now derives each probe's adapter modules from the
+  imports inside its `opencut.checks` function and records them as
+  `impl_module`, so those three now resolve to `stub`. Derivation is used
+  rather than a naming convention because the mapping is not always
+  mechanical — `check_searaft` lives in `flow_searaft`.
+- Probes that genuinely have no adapter (direct third-party dependency checks)
+  are unaffected and keep reporting their real dependency state.
+
 ### Fixed - Auto theme follows Premiere, not the OS
 
 - The CEP panel's Auto theme read `prefers-color-scheme`, which is the

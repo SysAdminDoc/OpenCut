@@ -260,6 +260,62 @@ def _derive_feature_state(
     return STATE_AVAILABLE
 
 
+_IMPL_MODULES_BY_PROBE: Optional[Dict[str, List[str]]] = None
+
+
+def _build_impl_module_index() -> Dict[str, List[str]]:
+    """Map each ``checks.check_*`` probe to the adapter modules it imports.
+
+    Generated records used to carry no implementation identity at all, which
+    made them structurally incapable of being graded as stubs: with no module
+    to scan, a terminal ``NotImplementedError`` adapter whose optional
+    dependency happened to be installed was advertised as available.
+
+    The mapping is derived rather than hand-maintained because the naming is
+    not always mechanical — ``check_searaft`` lives in ``flow_searaft`` — so
+    guessing ``opencut.core.<probe stem>`` silently misses adapters.
+    """
+    index: Dict[str, List[str]] = {}
+    try:
+        source = Path(inspect.getsourcefile(checks) or "").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except (OSError, SyntaxError, TypeError, ValueError):  # pragma: no cover - defensive
+        logging.getLogger("opencut").warning(
+            "feature readiness: could not index opencut.checks adapters"
+        )
+        return index
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not node.name.startswith("check_"):
+            continue
+        modules: List[str] = []
+        for child in ast.walk(node):
+            if isinstance(child, ast.ImportFrom) and child.module:
+                if child.module.startswith("opencut.core."):
+                    stem = child.module[len("opencut.core."):]
+                    if stem and stem not in modules:
+                        modules.append(stem)
+            elif isinstance(child, ast.Import):
+                for alias in child.names:
+                    if alias.name.startswith("opencut.core."):
+                        stem = alias.name[len("opencut.core."):]
+                        if stem and stem not in modules:
+                            modules.append(stem)
+        if modules:
+            index[node.name] = modules
+    return index
+
+
+def impl_modules_for_probe(probe: str) -> List[str]:
+    """Adapter module stems backing ``probe``; empty when none can be derived."""
+    global _IMPL_MODULES_BY_PROBE
+    if _IMPL_MODULES_BY_PROBE is None:
+        _IMPL_MODULES_BY_PROBE = _build_impl_module_index()
+    return list(_IMPL_MODULES_BY_PROBE.get(probe, ()))
+
+
 def _record_for_probe(
     probe: str,
     routes: Iterable[str],
@@ -308,6 +364,7 @@ def _record_for_probe(
         "docs": docs,
         "routes": routes_sorted,
         "check_name": probe,
+        "impl_module": ",".join(impl_modules_for_probe(probe)),
         "source": "generated",
         "notes": "Auto-derived from route functions that call this check probe.",
         "hardware": hardware,

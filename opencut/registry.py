@@ -1061,6 +1061,7 @@ def _record_from_generated(payload: dict) -> FeatureRecord:
         routes=_unique_routes(payload.get("routes") or []),
         probe=_check(check_name),
         check_name=check_name,
+        impl_module=str(payload.get("impl_module") or ""),
         source=str(payload.get("source") or "generated"),
         notes=str(payload.get("notes") or ""),
         hardware=str(payload.get("hardware") or ""),
