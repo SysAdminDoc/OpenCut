@@ -11,6 +11,7 @@ export default [
       "client/backend-client.js",
       "client/job-runtime.js",
       "client/component-utils.js",
+      "client/announce-utils.js",
       "client/timeline-utils.js",
       "client/bootstrap.js",
     ],

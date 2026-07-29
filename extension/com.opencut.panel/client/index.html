@@ -3960,7 +3960,9 @@
             </section>
 
             <!-- ======== RESULTS ======== -->
-            <section class="card hidden" id="resultsSection">
+            <section class="card hidden" id="resultsSection" tabindex="-1">
+                <p class="results-announce" id="resultsAnnouncePolite" role="status" aria-live="polite" aria-atomic="true"></p>
+                <p class="results-announce" id="resultsAnnounceAssertive" role="alert" aria-live="assertive" aria-atomic="true"></p>
                 <div class="results-card" id="resultsCard">
                     <div class="results-title" id="resultsTitle" data-i18n="progress.complete">Complete</div>
                     <div class="results-stats" id="resultsStats"></div>
@@ -4218,6 +4220,7 @@
     <script src="backend-client.js"></script>
     <script src="job-runtime.js"></script>
     <script src="component-utils.js"></script>
+    <script src="announce-utils.js"></script>
     <script src="timeline-utils.js"></script>
     <script src="onboarding-state.js"></script>
     <script src="bootstrap.js"></script>

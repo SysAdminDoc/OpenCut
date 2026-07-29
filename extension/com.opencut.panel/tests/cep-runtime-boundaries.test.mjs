@@ -321,6 +321,41 @@ describe("CEP source ownership", () => {
     expect(main).not.toContain("function initWizard(");
   });
 
+  it("announces every terminal job result through the live regions", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
+
+    // Two regions, not one with a swapped politeness: assistive technology
+    // reads aria-live when it first sees the node, so flipping it is unreliable.
+    expect(index).toContain(
+      '<p class="results-announce" id="resultsAnnouncePolite" role="status" aria-live="polite" aria-atomic="true"></p>',
+    );
+    expect(index).toContain(
+      '<p class="results-announce" id="resultsAnnounceAssertive" role="alert" aria-live="assertive" aria-atomic="true"></p>',
+    );
+    expect(index).toContain('id="resultsSection" tabindex="-1"');
+    expect(index.indexOf("announce-utils.js")).toBeLessThan(index.indexOf("main.js"));
+
+    // Success is polite, failure is assertive and names the recovery route.
+    expect(main).toContain('announceJobResult("polite", t("progress.announce_finished"');
+    expect(main).toContain('announceJobResult("error", failureTemplate.replace("{reason}", failureReason));');
+    expect(main).toContain('t("progress.announce_failed_retry"');
+    expect(main).toContain('announceJobResult("polite", t("progress.announce_cancelled"');
+
+    // Focus is rescued only when finishing the job stranded it — moving it
+    // on every result would yank the user out of wherever they were.
+    const start = main.indexOf("function announceJobResult(");
+    const end = main.indexOf("function settleJobLifecycle(");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const helper = main.slice(start, end);
+    expect(helper).toContain("Announce.focusWasStranded(document.activeElement, document)");
+    expect(helper).toContain("Announce.focusResultsRegion(el.resultsSection)");
+
+    // A dismissed card must not leave a stale result to be re-read.
+    expect(main.match(/clearResultAnnouncement\(\);/g).length).toBeGreaterThanOrEqual(3);
+  });
+
   it("keeps token and shell layout rules in their ordered CSS owners", () => {
     const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
     const tokens = readFileSync(new URL("../client/command-center-tokens.css", import.meta.url), "utf8");

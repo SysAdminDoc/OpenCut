@@ -2072,6 +2072,8 @@
         el.resultsTitle = $("resultsTitle");
         el.resultsStats = $("resultsStats");
         el.resultsPath = $("resultsPath");
+        el.resultsAnnouncePolite = $("resultsAnnouncePolite");
+        el.resultsAnnounceAssertive = $("resultsAnnounceAssertive");
         el.newJobBtn = $("newJobBtn");
         el.retryJobBtn = $("retryJobBtn");
 
@@ -4043,6 +4045,31 @@
         }
     }
 
+    // ---- Terminal-result announcements (WCAG 2.2) ----
+    // Showing the results card is a silent DOM change, so a screen-reader user
+    // gets no completion signal. Toasts are not a substitute: they are
+    // transient and suppressed entirely when notifications are turned off.
+    var Announce = (typeof window !== "undefined" && window.OpenCutAnnounce) ? window.OpenCutAnnounce : null;
+
+    function _resultsRegions() {
+        return { polite: el.resultsAnnouncePolite, assertive: el.resultsAnnounceAssertive };
+    }
+
+    function clearResultAnnouncement() {
+        if (Announce) Announce.clearAnnouncements(_resultsRegions());
+    }
+
+    function announceJobResult(tone, message) {
+        if (!Announce || !message) return;
+        Announce.announceResult(_resultsRegions(), tone, message);
+        // Rescue focus only when finishing the job left it with nowhere to
+        // go — e.g. the Run button that had focus is now disabled. Moving it
+        // unconditionally would yank the user out of wherever they were.
+        if (Announce.focusWasStranded(document.activeElement, document)) {
+            Announce.focusResultsRegion(el.resultsSection);
+        }
+    }
+
     function settleJobLifecycle(job) {
         var jobId = job && (job.id || job.job_id);
         if (!jobId || !jobLifecycleHandlers[jobId]) return;
@@ -4242,6 +4269,7 @@
         // Show inline progress section too
         el.progressSection.classList.remove("hidden");
         el.resultsSection.classList.add("hidden");
+        clearResultAnnouncement();
         el.progressBar.style.width = "0%";
         el.progressBar.setAttribute("aria-valuenow", "0");
         el.progressLabel.textContent = preparingMessage;
@@ -4541,12 +4569,20 @@
             if (job.code) {
                 showErrorWithAction(job);
             }
+            // Assertive: a failure carries a recovery action the user needs
+            // before continuing, so name the retry route in the announcement.
+            var failureReason = el.resultsStats.textContent || t("progress.unknown_error", "Unknown error");
+            var failureTemplate = lastJobEndpoint
+                ? t("progress.announce_failed_retry", "Run failed: {reason} Use the Retry button in the results card to run it again.")
+                : t("progress.announce_failed", "Run failed: {reason}");
+            announceJobResult("error", failureTemplate.replace("{reason}", failureReason));
             settleJobLifecycle(job);
             return;
         }
 
         if (job.status === "cancelled") {
             hideProgress();
+            announceJobResult("polite", t("progress.announce_cancelled", "Run cancelled."));
             settleJobLifecycle(job);
             return;
         }
@@ -4842,6 +4878,12 @@
         el.resultsStats.innerHTML = stats || t("progress.success_summary", "The run finished successfully.");
         el.resultsPath.textContent = resultPath;
         el.resultsPath.title = resultPath || "";
+
+        // Polite: success must not interrupt whatever the user is reading.
+        // Read the rendered summary back so the announcement carries the same
+        // detail the sighted user sees, not a generic "done".
+        announceJobResult("polite", t("progress.announce_finished", "Run finished. {summary}")
+            .replace("{summary}", el.resultsStats.textContent || ""));
     }
 
     function cancelJob() {
@@ -17378,10 +17420,12 @@
         if (el.newJobBtn) el.newJobBtn.addEventListener("click", function () {
             if (el.resultsSection) el.resultsSection.classList.add("hidden");
             if (el.retryJobBtn) el.retryJobBtn.classList.add("hidden");
+            clearResultAnnouncement();
         });
         if (el.retryJobBtn) el.retryJobBtn.addEventListener("click", function () {
             if (el.resultsSection) el.resultsSection.classList.add("hidden");
             if (el.retryJobBtn) el.retryJobBtn.classList.add("hidden");
+            clearResultAnnouncement();
             if (lastJobEndpoint && lastJobPayload) {
                 startJob(lastJobEndpoint, lastJobPayload);
             }

@@ -2003,6 +2003,91 @@ for (const surfaceName of ["cep", "uxp"]) {
   });
 }
 
+test("CEP terminal job results announce through live regions without trapping focus", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "cep", "dark", 900);
+
+  const polite = page.locator("#resultsAnnouncePolite");
+  const assertive = page.locator("#resultsAnnounceAssertive");
+
+  await expect(polite).toHaveAttribute("role", "status");
+  await expect(polite).toHaveAttribute("aria-live", "polite");
+  await expect(assertive).toHaveAttribute("role", "alert");
+  await expect(assertive).toHaveAttribute("aria-live", "assertive");
+
+  // Present to assistive technology but not to the sighted layout. A
+  // display:none region is skipped by screen readers entirely.
+  const geometry = await polite.evaluate((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return { display: style.display, visibility: style.visibility, width: rect.width };
+  });
+  expect(geometry.display).not.toBe("none");
+  expect(geometry.visibility).not.toBe("hidden");
+  expect(geometry.width).toBeLessThanOrEqual(2);
+
+  // Drive the production announce module against the production markup.
+  const run = (tone, message) =>
+    page.evaluate(
+      ([t, m]) =>
+        window.OpenCutAnnounce.announceResult(
+          {
+            polite: document.getElementById("resultsAnnouncePolite"),
+            assertive: document.getElementById("resultsAnnounceAssertive"),
+          },
+          t,
+          m,
+        ),
+      [tone, message],
+    );
+
+  await run("polite", "Run finished. 3 segments");
+  await expect(polite).toHaveText("Run finished. 3 segments");
+  await expect(assertive).toHaveText("");
+
+  // A later failure must not leave the stale success text behind.
+  await run("error", "Run failed: disk full Use the Retry button.");
+  await expect(assertive).toContainText("Run failed: disk full");
+  await expect(polite).toHaveText("");
+
+  // Focus is only rescued when it was stranded; a usable control keeps it.
+  const stranded = await page.evaluate(() => {
+    const doc = document;
+    // A control the user can actually still reach right now.
+    const usable = Array.from(doc.querySelectorAll("button")).find(
+      (node) => !node.disabled && node.getBoundingClientRect().width > 0,
+    );
+    // The Retry button lives inside the results card, which is hidden until
+    // a run fails — focus parked there has genuinely nowhere to go.
+    const inHiddenCard = doc.getElementById("newJobBtn");
+    return {
+      onBody: window.OpenCutAnnounce.focusWasStranded(doc.body, doc),
+      onUsable: window.OpenCutAnnounce.focusWasStranded(usable, doc),
+      onHidden: window.OpenCutAnnounce.focusWasStranded(inHiddenCard, doc),
+      usableId: usable ? usable.id || usable.className : null,
+    };
+  });
+  expect(stranded.usableId).toBeTruthy();
+  expect(stranded.onBody).toBe(true);
+  expect(stranded.onUsable).toBe(false);
+  expect(stranded.onHidden).toBe(true);
+
+  // Rescuing focus must not leave a permanent tab stop behind.
+  const tabindex = await page.locator("#resultsSection").getAttribute("tabindex");
+  expect(tabindex).toBe("-1");
+
+  await page.evaluate(() =>
+    window.OpenCutAnnounce.clearAnnouncements({
+      polite: document.getElementById("resultsAnnouncePolite"),
+      assertive: document.getElementById("resultsAnnounceAssertive"),
+    }),
+  );
+  await expect(polite).toHaveText("");
+  await expect(assertive).toHaveText("");
+  expect(pageErrors).toEqual([]);
+});
+
 test("UXP timeline reports the rendered CEP fallback honestly", async ({
   page,
 }) => {
