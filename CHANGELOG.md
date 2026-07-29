@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.44.0 - Local trust boundaries
 
 ### Fixed - Version-sync gate on CRLF checkouts
 
