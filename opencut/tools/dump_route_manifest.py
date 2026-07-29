@@ -296,7 +296,11 @@ def build_manifest(app=None) -> dict:
         # Import lazily so unit tests can avoid the full server boot.
         from opencut.server import create_app
 
-        app = create_app()
+        # Describing the route graph must not mutate the machine being
+        # described. A production boot here swept temp files, started the
+        # disk-monitor thread, ran credential migrations, and imported
+        # whatever plugins were installed locally.
+        app = create_app(introspection=True)
 
     entries = _collect_routes(app)
     return _summarise(entries).as_dict()

@@ -304,18 +304,31 @@ def _init_sentry_if_configured() -> bool:
 # ---------------------------------------------------------------------------
 # Flask App Factory
 # ---------------------------------------------------------------------------
-def create_app(config=None, testing=False):
+def create_app(config=None, testing=False, introspection=False):
     """Create and configure the Flask application.
 
     Args:
         config: An ``OpenCutConfig`` instance.  When *None* (the default),
             the module-level ``_default_config`` built from env vars is used.
+        testing: Skip the background/startup work that tests do not want.
+        introspection: Build a read-only app suitable for generating route,
+            readiness, and OpenAPI contracts. Contract generation is supposed
+            to be an inspection of the registration graph, but it used to boot
+            a production app: that swept the user's temp files, started the
+            disk-monitor thread, ran credential migrations, initialised Sentry,
+            and imported and registered whatever plugins happened to be in
+            ``~/.opencut/plugins``. Introspection registers the built-in
+            blueprints and nothing else, so a manifest check cannot mutate the
+            machine it is describing.
 
     Returns:
         Configured Flask app with all blueprints registered.
     """
     if config is None:
         config = _default_config
+    # Introspection is a strict superset of the test-mode skips.
+    if introspection:
+        testing = True
 
     # Keep jobs.py runtime limits in sync with the app config used for this
     # process, including tests that supply a custom OpenCutConfig instance.
@@ -330,7 +343,8 @@ def create_app(config=None, testing=False):
     # deployments opt in without the module dependency becoming a hard
     # requirement. Safe to call multiple times (sentry_sdk.init is
     # idempotent-ish — subsequent calls just reconfigure the hub).
-    _init_sentry_if_configured()
+    if not introspection:
+        _init_sentry_if_configured()
 
     # Startup + periodic sweep of stale opencut_* temp files. Best-effort;
     # failure never blocks app startup.
@@ -463,14 +477,17 @@ def create_app(config=None, testing=False):
     from opencut.routes import assert_no_route_collisions, register_blueprints  # noqa: E402
     register_blueprints(_app)
 
-    # Load Plugins
-    try:
-        from opencut.core.plugins import load_all_plugins
-        plugin_result = load_all_plugins(_app)
-        if plugin_result["loaded"]:
-            logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
-    except Exception as e:
-        logger.warning("Plugin loading failed: %s", e)
+    # Load Plugins. Skipped for introspection: a contract describes what
+    # OpenCut ships, and importing third-party plugin modules to build it
+    # would both run their code and make the manifest machine-dependent.
+    if not introspection:
+        try:
+            from opencut.core.plugins import load_all_plugins
+            plugin_result = load_all_plugins(_app)
+            if plugin_result["loaded"]:
+                logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
+        except Exception as e:
+            logger.warning("Plugin loading failed: %s", e)
 
     # Route ownership must stay unambiguous. Fail fast if any later blueprint or
     # plugin registration reintroduces a method/path collision.

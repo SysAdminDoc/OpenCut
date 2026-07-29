@@ -44,13 +44,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1 — 2026-07-29
 
-- [ ] P1 — Make contract and readiness introspection side-effect free
-  Why: A manifest check can execute production app startup, touching user data and starting cleanup, migrations, workers, or plugins during an ostensibly read-only operation.
-  Evidence: `opencut/tools/dump_route_manifest.py:289-302`, `opencut/server.py:335-375,463-471`; observed stale-job cleanup and worker startup while building a manifest.
-  Touches: Flask app factory/blueprint registration, route/readiness/OpenAPI generators, generator tests, release checks.
-  Acceptance: Contract generators use an explicit introspection app or registration graph; tests sentinel filesystem, user-data, subprocess, thread, network, migration, cleanup, and plugin boundaries; repeated generation is deterministic and leaves no runtime state changes.
-  Complexity: M
-
 - [ ] P1 — Finish UXP Sequence Index as an accessible working table
   Why: The UI promises a spreadsheet view but discards returned rows and shows only a summary, leaving backend filter/sort and host locators unusable.
   Evidence: `extension/com.opencut.uxp/index.html:1502-1512`, `extension/com.opencut.uxp/main.js:8460-8504`, `opencut/core/sequence_index.py:343-525`, `opencut/routes/sequence_index_routes.py:51-179`; Adobe Premiere 26.3 Sequence Index.

@@ -5,6 +5,21 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Contract generation no longer mutates the machine
+
+- Building a route or readiness manifest booted a production app, so an
+  ostensibly read-only `--check` swept the user's temp directory, started the
+  disk-monitor thread, ran credential-vault migrations, initialised Sentry,
+  and imported and registered whatever plugins were installed under
+  `~/.opencut/plugins`.
+- `create_app()` gained an explicit `introspection=True` mode that registers
+  the built-in blueprints and nothing else, and the generators now use it.
+  Plugin loading is skipped so a contract describes what OpenCut ships rather
+  than what one machine happens to have installed.
+- Sentinel tests assert that an introspection build crosses none of those
+  boundaries and starts no threads, that a production boot still performs all
+  of them, and that repeated generation is deterministic.
+
 ### Fixed - Generated feature readiness fails closed
 
 - Generated feature records carried no implementation identity, which made
