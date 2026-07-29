@@ -67,13 +67,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P2 — 2026-07-25
 
-- [ ] P2 — Validate command-palette destinations
-  Why: Several commands promise a specific destination but target nonexistent sub-tab IDs and silently land on a broad default page.
-  Evidence: `extension/com.opencut.panel/client/main.js:4425,13695-13698`; `extension/com.opencut.panel/client/index.html`.
-  Touches: CEP command registry, tab/sub-tab activation, HTML IDs, navigation unit/rendered tests.
-  Acceptance: Every registered command resolves to exactly one visible, focusable destination; missing targets fail the test suite; Workflow Presets, Project Templates, Keyboard Shortcuts, Job History, and dependency recovery open the promised control.
-  Complexity: S
-
 - [ ] P2 — Complete UXP first-run and settings portability
   Why: UXP lacks the CEP panel’s recoverable onboarding, full settings import/export, support-bundle export, and issue-report path.
   Evidence: CEP onboarding/settings implementation and rendered tests; `extension/com.opencut.uxp/index.html` nine-pane Settings surface.

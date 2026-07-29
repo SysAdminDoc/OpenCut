@@ -4452,7 +4452,7 @@
                 return t("error.gpu_out_of_memory", "GPU ran out of memory. Try CPU mode in Settings.");
             }
         },
-        "MISSING_DEPENDENCY": { tab: "settings", sub: "dependencies", msg: null },
+        "MISSING_DEPENDENCY": { tab: "settings", focusId: "depsStatusLine", msg: null },
         "FILE_NOT_FOUND": {
             msg: function () {
                 return t("error.file_not_found_reselect", "File not found. Re-select your clip.");
@@ -9123,7 +9123,7 @@
             var targetLabel = action.sub ? getPaletteSubLabel(action.sub) : getPaletteTabLabel(action.tab);
             link.textContent = t("alert.open_target", "Open {target}").replace("{target}", targetLabel);
             link.addEventListener("click", function () {
-                navigateToTab(action.tab, action.sub || null);
+                navigateToTab(action.tab, action.sub || null, action.focusId || null);
                 el.alertBanner.classList.add("hidden");
             });
             el.alertText.parentNode.appendChild(link);
@@ -12337,9 +12337,43 @@
         el.favoritesItems.appendChild(frag);
     }
 
-    function navigateToTab(tab, sub) {
+    // Some destinations are a specific control rather than a sub-tab. The
+    // Settings and Export panels have no sub-tab for Project Templates,
+    // Keyboard Shortcuts, Job History, dependency recovery, or Workflow
+    // Presets, so commands that promised one silently landed on the broad
+    // panel instead. `focusId` names the control the command actually
+    // advertises, and it is scrolled into view and focused.
+    function focusPanelTarget(focusId) {
+        var target = focusId ? $(focusId) : null;
+        if (!target) return false;
+        if (typeof target.scrollIntoView === "function") {
+            try {
+                target.scrollIntoView({ block: "center", behavior: "auto" });
+            } catch (err) {
+                target.scrollIntoView();
+            }
+        }
+        // Static cards are not focusable by default; give them a
+        // programmatic-only tab stop so the command can land on them without
+        // adding a permanent stop to the tab order.
+        if (typeof target.focus === "function") {
+            if (target.getAttribute && target.getAttribute("tabindex") === null) {
+                var focusable = /^(A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(target.tagName || "");
+                if (!focusable) target.setAttribute("tabindex", "-1");
+            }
+            try {
+                target.focus({ preventScroll: true });
+            } catch (err) {
+                target.focus();
+            }
+        }
+        return true;
+    }
+
+    function navigateToTab(tab, sub, focusId) {
         var navBtn = activateNavTab(tab, { sub: sub, focus: false });
         if (!navBtn) return;
+        if (focusId && focusPanelTarget(focusId)) return;
         if (sub) {
             var panel = $("panel-" + tab);
             var subBtn = panel ? panel.querySelector('.sub-tab[data-sub="' + sub + '"]') : null;
@@ -13805,10 +13839,10 @@
         { name: "AI Command", displayName: function () { return t("palette.tool_ai_command", "AI Command"); }, tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
         { name: "Deliverables", displayName: function () { return t("palette.tool_deliverables", "Deliverables"); }, tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
         { name: "Auto Shorts", displayName: function () { return t("palette.tool_auto_shorts", "Auto Shorts"); }, tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
-        { name: "Workflow Presets", displayName: function () { return t("palette.tool_workflow_presets", "Workflow Presets"); }, tab: "export",   sub: "exp-workflow",     keywords: "workflow preset pipeline chain steps auto" },
-        { name: "Project Templates", displayName: function () { return t("palette.tool_project_templates", "Project Templates"); }, tab: "settings", sub: "set-prefs",       keywords: "template project youtube podcast broadcast cinema preset" },
-        { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Keyboard Shortcuts"); }, tab: "settings", sub: "set-prefs",       keywords: "keyboard shortcut hotkey keybind" },
-        { name: "Job History", displayName: function () { return t("palette.tool_job_history", "Job History"); }, tab: "settings", sub: "set-system",      keywords: "job history log past completed failed" },
+        { name: "Workflow Presets", displayName: function () { return t("palette.tool_workflow_presets", "Workflow Presets"); }, tab: "export",   focusId: "workflowPreset", keywords: "workflow preset pipeline chain steps auto" },
+        { name: "Project Templates", displayName: function () { return t("palette.tool_project_templates", "Project Templates"); }, tab: "settings", focusId: "templateSelect", keywords: "template project youtube podcast broadcast cinema preset" },
+        { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Keyboard Shortcuts"); }, tab: "settings", focusId: "shortcutReference", keywords: "keyboard shortcut hotkey keybind" },
+        { name: "Job History", displayName: function () { return t("palette.tool_job_history", "Job History"); }, tab: "settings", focusId: "jobHistory", keywords: "job history log past completed failed" },
     ];
 
     var PALETTE_HISTORY_KEY = "opencut_palette_history";
@@ -14402,7 +14436,7 @@
         }
         rememberPaletteItem(item);
         closeCommandPalette();
-        navigateToTab(item.tab, item.sub);
+        navigateToTab(item.tab, item.sub, item.focusId);
     }
 
     function paletteNavigate(dir) {
