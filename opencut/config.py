@@ -68,6 +68,13 @@ class OpenCutConfig:
     # The default stays closed because /health is the CSRF bootstrap endpoint.
     cors_origins: list[str] = field(default_factory=list)
 
+    # Bind address and the ``Host`` values this server answers for. Loopback
+    # names/literals plus ``bind_host`` are always trusted; every other name
+    # must be listed in OPENCUT_TRUSTED_HOSTS so a rebound DNS name cannot
+    # reach the local API. See opencut/trusted_hosts.py.
+    bind_host: str = "127.0.0.1"
+    trusted_hosts: list[str] = field(default_factory=list)
+
     # Job system defaults (single source of truth; mirrored as module-level
     # constants in opencut/jobs.py for use outside Flask app context)
     job_max_age: int = 3600              # Auto-clean jobs older than 1 hour
@@ -97,6 +104,8 @@ class OpenCutConfig:
                 max_val=2 * 1024 * 1024 * 1024,  # 2 GB hard cap
             ),
             cors_origins=_env_csv("OPENCUT_CORS_ORIGINS", []),  # see field comment above
+            bind_host=os.environ.get("OPENCUT_HOST", "127.0.0.1").strip() or "127.0.0.1",
+            trusted_hosts=_env_csv("OPENCUT_TRUSTED_HOSTS", []),
             job_max_age=_env_int("OPENCUT_JOB_MAX_AGE", 3600, min_val=60, max_val=86400),
             max_concurrent_jobs=_env_int("OPENCUT_MAX_CONCURRENT_JOBS", 10, min_val=1, max_val=100),
             max_batch_files=_env_int("OPENCUT_MAX_BATCH_FILES", 100, min_val=1, max_val=10000),

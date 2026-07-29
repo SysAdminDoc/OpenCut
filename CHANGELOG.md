@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Security - Host-header trust gate closes DNS rebinding
+
+- Requests whose `Host` header does not name an authority this server answers
+  for are now rejected with `400 UNTRUSTED_HOST` before request correlation,
+  remote-auth, CSRF, or `/health` processing runs. Previously a page on a name
+  that resolved to `127.0.0.1` reached `/health` from a loopback socket with a
+  matching `Origin` and was handed the CSRF bootstrap token, which put every
+  authenticated mutation one rebind away.
+- Loopback names and literals (`localhost`, `127.0.0.0/8`, `::1`, bracketed or
+  not, any valid port) and a non-wildcard `OPENCUT_HOST` are trusted by
+  default. Other names must be listed in the new `OPENCUT_TRUSTED_HOSTS`,
+  where a leading dot trusts a subtree. Non-loopback IP literals are accepted
+  only under `OPENCUT_ALLOW_REMOTE=1`; they cannot be produced by rebinding,
+  so LAN-by-IP access keeps working without trusting unknown names.
+- Rejections are recorded as `untrusted_host_rejected` security-audit events.
+
 ### Fixed - Truthful panel execution and bridge states
 
 - UXP Timeline rename and smart-bin cards now report the execution path that

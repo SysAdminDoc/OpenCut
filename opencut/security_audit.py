@@ -189,6 +189,17 @@ def record_auth_token_rejection() -> dict[str, Any]:
     )
 
 
+def record_untrusted_host_rejection(host: Any) -> dict[str, Any]:
+    return record_security_event(
+        "untrusted_host_rejected",
+        "Request Host header is not a trusted authority",
+        metadata={
+            "host_preview": _safe_preview(host, limit=120),
+            "host_sha256": _hash_value(host),
+        },
+    )
+
+
 def read_security_events(limit: int = 100) -> list[dict[str, Any]]:
     """Read the most recent audit entries in chronological order."""
     try:
