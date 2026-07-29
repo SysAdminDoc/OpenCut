@@ -3,6 +3,25 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed - Terminal job results are announced
+
+- Finishing a job previously only unhid the results card, which is a silent
+  DOM change: assistive technology had no reason to read it, so a
+  screen-reader user could get no completion signal and no route to the
+  recovery action. Toasts were not a substitute — they are transient and are
+  suppressed entirely when notifications are turned off.
+- Success now announces politely, failure announces assertively and names the
+  Retry control, and cancellation announces politely. Separate polite and
+  assertive live regions are used rather than one region whose politeness is
+  swapped, because assistive technology reads `aria-live` when it first sees
+  the node.
+- Focus is moved to the results card only when finishing the job stranded it
+  (the control that had focus is now disabled or hidden). A still-usable
+  control keeps focus, and the card never becomes a permanent tab stop.
+- Dismissing or retrying clears the regions so a stale result is not re-read.
+
 ## 1.44.0 - Local trust boundaries
 
 ### Fixed - Version-sync gate on CRLF checkouts

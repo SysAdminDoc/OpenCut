@@ -2218,6 +2218,31 @@ input[type="checkbox"]:disabled {
 /* ============================================================
    RESULTS - Celebration Animation
    ============================================================ */
+/* Screen-reader-only announcement regions for terminal job results.
+   Kept in the accessibility tree (never display:none) so assistive tech
+   reads them, but removed from the visual layout. */
+.results-announce {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+#resultsSection:focus {
+    outline: none;
+}
+
+#resultsSection:focus-visible {
+    outline: 2px solid var(--cyan-subtle);
+    outline-offset: 2px;
+}
+
 .results-card {
     text-align: center;
     padding: 16px 0;
