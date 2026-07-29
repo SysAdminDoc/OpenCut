@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Command-palette destinations resolve
+
+- Workflow Presets, Project Templates, Keyboard Shortcuts, Job History, and
+  dependency recovery named sub-tab IDs that are not in the markup — the
+  Settings panel has no sub-tabs at all — so each silently landed on a broad
+  default page instead of the control it advertised.
+- Commands can now name the control itself, which is scrolled into view and
+  focused. Static cards get a programmatic-only tab stop so landing on them
+  does not add a permanent stop to the tab order.
+- A parametrized test now checks every registered command against the live
+  markup, so a destination that stops existing fails the suite.
+
 ### Fixed - Contract generation no longer mutates the machine
 
 - Building a route or readiness manifest booted a production app, so an
