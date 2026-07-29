@@ -5,6 +5,22 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Auto theme follows Premiere, not the OS
+
+- The CEP panel's Auto theme read `prefers-color-scheme`, which is the
+  operating system's setting rather than Premiere's skin. A dark OS with
+  Premiere's light skin (or the reverse) left the panel clashing with its
+  host, and changing the skin inside Premiere did nothing until reload.
+- Auto now resolves from `appSkinInfo.panelBackgroundColor` and repaints on
+  `CSInterface.THEME_COLOR_CHANGED_EVENT`. The listener is registered once
+  (reconnects cannot stack duplicates) and unregistered on panel teardown.
+- Explicit Light/Dark choices still outrank the host and survive a host skin
+  change. Outside Premiere, where there is no host skin, Auto keeps following
+  the OS; the OS listener is no longer registered while docked so it cannot
+  fight the host event.
+- The resolved skin is published as `data-premiere-theme` on the root element,
+  matching the UXP theme vocabulary.
+
 ### Fixed - Terminal job results are announced
 
 - Finishing a job previously only unhid the results card, which is a silent

@@ -21,7 +21,12 @@ const SURFACES = {
   },
 };
 
-function hostEnvironment() {
+// Panel greys Premiere reports for its skins. "auto" must resolve from the
+// host skin, so the fixture has to carry a real one rather than a fixed dark.
+const HOST_SKIN_GREY = { light: 180, dark: 50, darkest: 24 };
+
+function hostEnvironment(skin = "darkest") {
+  const grey = HOST_SKIN_GREY[skin] ?? HOST_SKIN_GREY.darkest;
   return JSON.stringify({
     appId: "PPRO",
     appName: "Premiere Pro",
@@ -32,7 +37,7 @@ function hostEnvironment() {
       baseFontFamily: "Arial",
       baseFontSize: 12,
       panelBackgroundColor: {
-        color: { red: 24, green: 25, blue: 28, alpha: 255 },
+        color: { red: grey, green: grey, blue: grey, alpha: 255 },
       },
     },
   });
@@ -77,9 +82,23 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           }),
         );
         const callbacks = new Map();
+        let currentEnvironment = environment;
+        window.__opencutCepThemeHarness = {
+          setEnvironment(next) {
+            currentEnvironment = next;
+          },
+          emit() {
+            const listener = callbacks.get(
+              "com.adobe.csxs.events.ThemeColorChanged",
+            );
+            if (listener) listener({ type: "com.adobe.csxs.events.ThemeColorChanged" });
+          },
+          listenerCount: () =>
+            callbacks.has("com.adobe.csxs.events.ThemeColorChanged") ? 1 : 0,
+        };
         window.__adobe_cep__ = new Proxy(
           {
-            getHostEnvironment: () => environment,
+            getHostEnvironment: () => currentEnvironment,
             getHostCapabilities: () =>
               JSON.stringify({ EXTENDED_PANEL_MENU: true }),
             getSystemPath: () => "C:/OpenCut/fixture",
@@ -168,7 +187,9 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
     {
       surfaceName: surface,
       selectedTheme: theme,
-      environment: hostEnvironment(),
+      environment: hostEnvironment(
+        theme === "light" ? "light" : theme === "dark" ? "dark" : "darkest",
+      ),
       localeTag: locale,
       forceEventSourceError: Boolean(backendFixtures.boundaryReview),
       hostTheme: theme === "light" ? "light" : theme === "dark" ? "dark" : "darkest",
@@ -2002,6 +2023,56 @@ for (const surfaceName of ["cep", "uxp"]) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+test("CEP Auto theme tracks the Premiere host skin, not the OS", async ({
+  page,
+}) => {
+  // The OS is emulated light while the host skin is dark. Auto must follow
+  // the host — that mismatch is the whole defect.
+  const { pageErrors } = await openSurface(page, "cep", "auto", 900);
+  const root = page.locator("html");
+
+  await expect(root).toHaveAttribute("data-theme-source", "host");
+  await expect(root).toHaveAttribute("data-premiere-theme", "darkest");
+  expect(await root.evaluate((n) => n.classList.contains("theme-light"))).toBe(false);
+
+  const listeners = await page.evaluate(() =>
+    window.__opencutCepThemeHarness.listenerCount(),
+  );
+  expect(listeners).toBe(1);
+
+  // Switching the skin inside Premiere must repaint without a reload.
+  await page.evaluate(() => {
+    const env = JSON.parse(window.__adobe_cep__.getHostEnvironment());
+    env.appSkinInfo.panelBackgroundColor.color = {
+      red: 180,
+      green: 180,
+      blue: 180,
+      alpha: 255,
+    };
+    window.__opencutCepThemeHarness.setEnvironment(JSON.stringify(env));
+    window.__opencutCepThemeHarness.emit();
+  });
+  await expect(root).toHaveAttribute("data-premiere-theme", "light");
+  expect(await root.evaluate((n) => n.classList.contains("theme-light"))).toBe(true);
+
+  // An explicit choice outranks the host and survives a further skin change.
+  // The native select is replaced by a custom dropdown, so drive the same
+  // change event the dropdown dispatches rather than the hidden control.
+  await page.evaluate(() => {
+    const select = document.getElementById("settingsTheme");
+    select.value = "dark";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(root).toHaveAttribute("data-theme-source", "user");
+  expect(await root.evaluate((n) => n.classList.contains("theme-light"))).toBe(false);
+
+  await page.evaluate(() => window.__opencutCepThemeHarness.emit());
+  await expect(root).toHaveAttribute("data-theme-source", "user");
+  expect(await root.evaluate((n) => n.classList.contains("theme-light"))).toBe(false);
+
+  expect(pageErrors).toEqual([]);
+});
 
 test("CEP terminal job results announce through live regions without trapping focus", async ({
   page,

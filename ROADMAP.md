@@ -42,13 +42,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: One OpenAPI 3.1.x schema source feeds the canonical endpoint and explicit compatibility adapters; panel- and MCP-exposed operations have typed request, success, and stable error schemas sourced from shared validators; contract tests exercise generated valid/invalid payloads; a coverage ratchet prevents typed-operation regression.
   Complexity: XL
 
-- [ ] P1 — Make CEP Auto theme follow Premiere
-  Why: CEP Auto follows the operating-system color scheme rather than Premiere’s skin, producing a mismatched panel and ignoring live host-theme changes.
-  Evidence: `extension/com.opencut.panel/client/main.js:8807-8816`, `CSInterface.THEME_COLOR_CHANGED_EVENT`, UXP host-theme implementation.
-  Touches: CEP theme controller, CSS tokens, settings persistence, unit/rendered theme tests.
-  Acceptance: Auto initializes from Premiere host skin, responds to host theme events, unregisters listeners on teardown, preserves explicit Light/Dark overrides, and passes contrast/screenshot checks for every mapped host theme.
-  Complexity: M
-
 ### P1 — 2026-07-29
 
 - [ ] P1 — Make generated feature readiness fail closed
