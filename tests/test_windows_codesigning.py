@@ -48,9 +48,8 @@ def test_codesigning_script_has_renewal_warning_gate():
     assert "renew before release" in text
 
 
-def test_codesigning_doc_and_policy_reference_f203():
+def test_codesigning_doc_documents_the_optional_tooling():
     doc = _read(DOC)
-    policy = _read(POLICY_DOC)
 
     for token in (
         "WINDOWS_CODESIGN_PFX_BASE64",
@@ -63,5 +62,22 @@ def test_codesigning_doc_and_policy_reference_f203():
     assert "Required Environment Variables" in doc
     assert "GitHub Actions" not in doc
     assert ".github/workflows" not in doc
-    assert "F203 status" in policy
-    assert "docs/WINDOWS_CODESIGNING.md" in policy
+
+
+def test_installer_policy_does_not_gate_releases_on_signing():
+    """Signing tooling may exist, but it must not read as a release gate.
+
+    OpenCut publishes unsigned artifacts, so a policy that made the Inno
+    retirement wait on "one signed-release verification" described a gate
+    that will never be satisfied and blocked the decision indefinitely.
+    """
+    policy = _read(POLICY_DOC).lower()
+
+    assert "unsigned" in policy
+    for gate_phrase in (
+        "signed wpf release",
+        "signed-release verification",
+        "signing cert expiry",
+        "f203 status",
+    ):
+        assert gate_phrase not in policy, f"installer policy still gates on: {gate_phrase}"
