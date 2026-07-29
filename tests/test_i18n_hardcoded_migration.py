@@ -2132,7 +2132,7 @@ MIGRATED_KEYS = (
     "search.task_in_progress_status",
     # Forty-sixth batch (settings diagnostics/dependency feedback).
     "settings.clear_log_failed",
-    "settings.crash_log_cleared",
+    "settings.logs_cleared",
     "settings.deps_checking_body",
     "settings.deps_checking_status",
     "settings.deps_checking_title",
@@ -6175,8 +6175,8 @@ EXPECTED_CALLS = (
         re.compile(r'showToast\("Couldn\'t clear the log file"'),
     ),
     (
-        "settings.crash_log_cleared",
-        re.compile(r't\(\s*"settings\.crash_log_cleared"'),
+        "settings.logs_cleared",
+        re.compile(r't\(\s*"settings\.logs_cleared"'),
         re.compile(r'showToast\("Crash log cleared"'),
     ),
     (
