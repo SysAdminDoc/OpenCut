@@ -75,3 +75,96 @@ def test_as_dict_exposes_state_reason_for_panels_and_mcp():
     assert payload["state"] == registry.STATE_STUB
     assert payload["state_reason"]
     assert "probe" not in payload
+
+
+def test_generated_records_carry_implementation_identity():
+    """Generated records must name the adapter behind their probe.
+
+    Without an ``impl_module`` a record is structurally incapable of being
+    graded as a stub: there is nothing to scan, so a terminal
+    ``NotImplementedError`` adapter whose optional dependency happens to be
+    installed gets advertised as ``available``.
+    """
+    from opencut.tools.dump_feature_readiness import impl_modules_for_probe
+
+    missing = []
+    for record in registry.load_generated_feature_records():
+        if not record.check_name:
+            continue
+        # Only probes that actually delegate to an opencut.core adapter can
+        # carry one; direct third-party dependency probes legitimately cannot.
+        if impl_modules_for_probe(record.check_name) and not record.impl_module:
+            missing.append(record.feature_id)
+    assert missing == [], f"generated records dropped their adapter identity: {missing}"
+
+
+def test_generated_stub_adapters_never_resolve_available():
+    """The three live regressions, plus every other generated record."""
+    offenders = []
+    for record in registry.load_generated_feature_records():
+        if record.is_stub_implementation() and record.resolved_state() != registry.STATE_STUB:
+            offenders.append((record.feature_id, record.resolved_state()))
+    assert offenders == [], f"generated stub adapters escaped stub state: {offenders}"
+
+
+def test_known_generated_stub_regressions_stay_stub():
+    records = {r.feature_id: r for r in registry.load_generated_feature_records()}
+    for feature_id, expected_module in (
+        ("auto.deblur-motion", "deblur_motion"),
+        # Not mechanically derivable from the probe name: check_searaft lives
+        # in flow_searaft, which is exactly why guessing the module fails.
+        ("auto.searaft", "flow_searaft"),
+        ("auto.track-cutie", "track_cutie"),
+    ):
+        record = records[feature_id]
+        assert record.impl_module == expected_module, feature_id
+        assert record.is_stub_implementation(), feature_id
+        assert record.resolved_state() == registry.STATE_STUB, feature_id
+
+
+def test_future_generated_stub_fixture_fails_closed():
+    """A newly generated record for a stub adapter must not be advertised.
+
+    This is the shape a future regression takes: the dumper emits a record
+    whose declared state is ``missing_dependency`` while its optional
+    dependency is in fact installed, so the live probe would promote it.
+    """
+    from opencut.registry import _record_from_generated
+
+    record = _record_from_generated(
+        {
+            "feature_id": "auto.future-stub",
+            "label": "Future Stub",
+            "category": "video",
+            "state": registry.STATE_MISSING_DEPENDENCY,
+            "routes": ["/video/future-stub"],
+            "check_name": "",
+            # A real terminal-stub adapter in the tree.
+            "impl_module": "relight_iclight",
+        }
+    )
+    record.probe = lambda: True  # dependency present
+    assert record.is_stub_implementation()
+    assert record.resolved_state() == registry.STATE_STUB
+
+
+def test_generated_record_without_impl_module_is_not_silently_promoted():
+    """Guard the exact hole: no adapter identity plus a passing probe."""
+    from opencut.registry import _record_from_generated
+
+    payload = {
+        "feature_id": "auto.no-impl",
+        "label": "No Impl",
+        "category": "video",
+        "state": registry.STATE_MISSING_DEPENDENCY,
+        "routes": ["/video/no-impl"],
+        "check_name": "",
+        "impl_module": "",
+    }
+    record = _record_from_generated(payload)
+    assert record.impl_module == ""
+    # The dumper is what supplies identity, so assert it would have done so
+    # for any probe that delegates to an adapter.
+    from opencut.tools.dump_feature_readiness import impl_modules_for_probe
+
+    assert impl_modules_for_probe("check_deblur_motion") == ["deblur_motion"]

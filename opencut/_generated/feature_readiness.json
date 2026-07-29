@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-22T06:17:53Z",
+  "generated_at": "2026-07-29T18:46:13Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 72,
   "total_routes": 98,
@@ -16,6 +16,7 @@
         "/video/encode/vmaf-target/info"
       ],
       "check_name": "check_ab_av1_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -35,6 +36,7 @@
         "/audio/music/acestep/info"
       ],
       "check_name": "check_acestep_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 8 GB VRAM)",
@@ -54,6 +56,7 @@
         "/tts/amphion"
       ],
       "check_name": "check_amphion_tts",
+      "impl_module": "tts_amphion",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -71,6 +74,7 @@
         "/video/audio-reactive"
       ],
       "check_name": "check_audio_reactive_fx",
+      "impl_module": "audio_reactive_fx",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -88,6 +92,7 @@
         "/audio/watermark/info"
       ],
       "check_name": "check_audio_watermark",
+      "impl_module": "audio_watermark",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -105,6 +110,7 @@
         "/video/auto-edit"
       ],
       "check_name": "check_auto_editor_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -122,6 +128,7 @@
         "/system/dependencies"
       ],
       "check_name": "check_auto_zoom_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -139,6 +146,7 @@
         "/video/cinefocus"
       ],
       "check_name": "check_cinefocus",
+      "impl_module": "cinefocus",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -156,6 +164,7 @@
         "/system/dependencies"
       ],
       "check_name": "check_color_match_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -173,6 +182,7 @@
         "/video/scopes/pro/info"
       ],
       "check_name": "check_colour_science_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -190,6 +200,7 @@
         "/tts/cosyvoice2"
       ],
       "check_name": "check_cosyvoice2",
+      "impl_module": "tts_cosyvoice2",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -207,6 +218,7 @@
         "/video/restore/backends"
       ],
       "check_name": "check_ddcolor_available",
+      "impl_module": "colorize_ddcolor",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -224,6 +236,7 @@
         "/video/deblur"
       ],
       "check_name": "check_deblur_motion",
+      "impl_module": "deblur_motion",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -241,6 +254,7 @@
         "/audio/separate"
       ],
       "check_name": "check_demucs_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -258,6 +272,7 @@
         "/video/depth/depthpro"
       ],
       "check_name": "check_depth_depthpro",
+      "impl_module": "depth_depthpro",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -275,6 +290,7 @@
         "/video/depth-flow"
       ],
       "check_name": "check_depth_flow",
+      "impl_module": "depth_flow",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -292,6 +308,7 @@
         "/video/restore/diffbir"
       ],
       "check_name": "check_diffbir",
+      "impl_module": "restore_diffbir",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -311,6 +328,7 @@
         "/audio/music/diffrhythm/styles"
       ],
       "check_name": "check_diffrhythm_available",
+      "impl_module": "music_diffrhythm",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 8 GB VRAM)",
@@ -328,6 +346,7 @@
         "/video/lipsync/echomimic"
       ],
       "check_name": "check_echomimic",
+      "impl_module": "lipsync_echomimic",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -345,6 +364,7 @@
         "/audio/tts/voices"
       ],
       "check_name": "check_edge_tts_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -364,6 +384,7 @@
         "/audio/tts/elevenlabs/voices"
       ],
       "check_name": "check_elevenlabs_available",
+      "impl_module": "tts_elevenlabs",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu (client)",
@@ -382,6 +403,7 @@
         "/video/face/reshape/info"
       ],
       "check_name": "check_face_reshape_available",
+      "impl_module": "face_reshape",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -400,6 +422,7 @@
         "/video/upscale/flashvsr/info"
       ],
       "check_name": "check_flashvsr_available",
+      "impl_module": "upscale_flashvsr",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 12 GB VRAM)",
@@ -417,6 +440,7 @@
         "/system/dependencies"
       ],
       "check_name": "check_footage_search_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -435,6 +459,7 @@
         "/generate/framepack/info"
       ],
       "check_name": "check_framepack_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 6 GB VRAM)",
@@ -452,6 +477,7 @@
         "/generate/ltx/v2"
       ],
       "check_name": "check_gen_video_ltx",
+      "impl_module": "gen_video_ltx",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -469,6 +495,7 @@
         "/generate/opensora"
       ],
       "check_name": "check_gen_video_opensora",
+      "impl_module": "gen_video_opensora",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -487,6 +514,7 @@
         "/tts/gptsovits/voices"
       ],
       "check_name": "check_gptsovits",
+      "impl_module": "tts_gptsovits",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -504,6 +532,7 @@
         "/video/stabilize/gyroflow"
       ],
       "check_name": "check_gyroflow",
+      "impl_module": "stabilize_gyroflow",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -522,6 +551,7 @@
         "/video/relight/iclight/info"
       ],
       "check_name": "check_iclight_available",
+      "impl_module": "relight_iclight",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 4 GB VRAM)",
@@ -542,6 +572,7 @@
         "/audio/tts/voices"
       ],
       "check_name": "check_kokoro_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -559,6 +590,7 @@
         "/image/edit/kontext"
       ],
       "check_name": "check_kontext_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -576,6 +608,7 @@
         "/ai/lip-sync"
       ],
       "check_name": "check_latentsync_available",
+      "impl_module": "lipsync_latentsync",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 6 GB VRAM)",
@@ -593,6 +626,7 @@
         "/video/lottie/render"
       ],
       "check_name": "check_lottie_import",
+      "impl_module": "lottie_import",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -610,6 +644,7 @@
         "/system/dependencies"
       ],
       "check_name": "check_loudness_match_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -627,6 +662,7 @@
         "/video/reframe/face"
       ],
       "check_name": "check_mediapipe_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -645,6 +681,7 @@
         "/audio/transcribe/moonshine/info"
       ],
       "check_name": "check_moonshine_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -662,6 +699,7 @@
         "/video/restore/backends"
       ],
       "check_name": "check_neural_deflicker_available",
+      "impl_module": "deflicker_neural",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -679,6 +717,7 @@
         "/captions/enhanced/capabilities"
       ],
       "check_name": "check_nllb_available",
+      "impl_module": "captions_enhanced",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -697,6 +736,7 @@
         "/system/dependencies"
       ],
       "check_name": "check_ollama_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -714,6 +754,7 @@
         "/audio/tts/omnivoice"
       ],
       "check_name": "check_omnivoice_available",
+      "impl_module": "tts_omnivoice",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -731,6 +772,7 @@
         "/timeline/export-otio"
       ],
       "check_name": "check_otio_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -748,6 +790,7 @@
         "/audio/pro/effects"
       ],
       "check_name": "check_pedalboard_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -765,6 +808,7 @@
         "/captions/karaoke-adv/presets"
       ],
       "check_name": "check_pyonfx_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -782,6 +826,7 @@
         "/video/quality/backends"
       ],
       "check_name": "check_quality_metrics_available",
+      "impl_module": "quality_metrics",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -799,6 +844,7 @@
         "/video/style/reezsynth"
       ],
       "check_name": "check_reezsynth_available",
+      "impl_module": "style_reezsynth",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -816,6 +862,7 @@
         "/audio/enhance"
       ],
       "check_name": "check_resemble_enhance_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -833,6 +880,7 @@
         "/video/inpaint/rose"
       ],
       "check_name": "check_rose_available",
+      "impl_module": "inpaint_rose",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -850,6 +898,7 @@
         "/cloud/runpod/info"
       ],
       "check_name": "check_runpod_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -869,6 +918,7 @@
         "/video/segment/sam2/info"
       ],
       "check_name": "check_sam2_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -886,6 +936,7 @@
         "/video/object-remove/engines"
       ],
       "check_name": "check_sam3_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -903,6 +954,7 @@
         "/video/matte/sammie"
       ],
       "check_name": "check_sammie_available",
+      "impl_module": "matte_sammie",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -920,6 +972,7 @@
         "/video/flow/searaft"
       ],
       "check_name": "check_searaft",
+      "impl_module": "flow_searaft",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -937,6 +990,7 @@
         "/video/ai/upscale"
       ],
       "check_name": "check_seedvr2_available",
+      "impl_module": "upscale_seedvr2",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 8 GB VRAM)",
@@ -954,6 +1008,7 @@
         "/audio/sfx/generate"
       ],
       "check_name": "check_sfx_audiogen",
+      "impl_module": "sfx_audiogen",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -971,6 +1026,7 @@
         "/delivery/shaka/info"
       ],
       "check_name": "check_shaka_available",
+      "impl_module": "shaka_pkg",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -989,6 +1045,7 @@
         "/video/face/retouch/info"
       ],
       "check_name": "check_skin_retouch_available",
+      "impl_module": "skin_retouch",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -1008,6 +1065,7 @@
         "/audio/tts/spark/voices"
       ],
       "check_name": "check_sparktts_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu",
@@ -1027,6 +1085,7 @@
         "/audio/spectral-match/preview"
       ],
       "check_name": "check_spectral_match",
+      "impl_module": "spectral_match",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1044,6 +1103,7 @@
         "/video/stream/srt/info"
       ],
       "check_name": "check_srt_available",
+      "impl_module": "srt_streaming",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1061,6 +1121,7 @@
         "/video/encode/svtav1-psy/info"
       ],
       "check_name": "check_svtav1_psy_available",
+      "impl_module": "svtav1_psy",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1078,6 +1139,7 @@
         "/video/style/tokenflow"
       ],
       "check_name": "check_tokenflow",
+      "impl_module": "style_tokenflow",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1095,6 +1157,7 @@
         "/video/track/cutie"
       ],
       "check_name": "check_track_cutie",
+      "impl_module": "track_cutie",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1112,6 +1175,7 @@
         "/video/track/deva"
       ],
       "check_name": "check_track_deva",
+      "impl_module": "track_deva",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1129,6 +1193,7 @@
         "/audio/singing/vevo2"
       ],
       "check_name": "check_vevo2",
+      "impl_module": "singing_vevo2",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1147,6 +1212,7 @@
         "/audio/music/vidmuse/info"
       ],
       "check_name": "check_vidmuse_available",
+      "impl_module": "music_vidmuse",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -1164,6 +1230,7 @@
         "/video/multicam-cuts"
       ],
       "check_name": "check_visual_multicam_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "cpu/gpu",
@@ -1181,6 +1248,7 @@
         "/video/quality/backends"
       ],
       "check_name": "check_vmaf_available",
+      "impl_module": "quality_metrics",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1198,6 +1266,7 @@
         "/video/restore/backends"
       ],
       "check_name": "check_vrt_available",
+      "impl_module": "restore_vrt",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu (>= 16 GB VRAM for VRT)",
@@ -1215,6 +1284,7 @@
         "/video/encode/vvc/info"
       ],
       "check_name": "check_vvc_available",
+      "impl_module": "vvc_export",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
@@ -1232,6 +1302,7 @@
         "/video/watermark"
       ],
       "check_name": "check_watermark_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "gpu",
@@ -1249,6 +1320,7 @@
         "/ws/start"
       ],
       "check_name": "check_websocket_available",
+      "impl_module": "",
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",

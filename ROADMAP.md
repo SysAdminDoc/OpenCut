@@ -44,13 +44,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P1 — 2026-07-29
 
-- [ ] P1 — Make generated feature readiness fail closed
-  Why: Generated feature records drop their implementation-module identity, so installed dependencies can turn terminal `NotImplementedError` adapters into false “available” capabilities.
-  Evidence: Live probe resolved `auto.deblur-motion`, `auto.searaft`, and `auto.track-cutie` as available with empty `impl_module`; `opencut/registry.py:145-166,1052-1069`, `opencut/tools/dump_feature_readiness.py:263-316`, corresponding adapters and `tests/test_feature_impl_readiness.py`.
-  Touches: feature/readiness generation and loading, stub scanner, route/MCP/panel manifests and counts, readiness tests.
-  Acceptance: Generated records preserve or derive implementation modules; every terminal stub remains `stub` regardless of installed imports; all surfaces report the same state/reason/count; the three regressions and a future generated-stub fixture fail if advertised available.
-  Complexity: M
-
 - [ ] P1 — Make contract and readiness introspection side-effect free
   Why: A manifest check can execute production app startup, touching user data and starting cleanup, migrations, workers, or plugins during an ostensibly read-only operation.
   Evidence: `opencut/tools/dump_route_manifest.py:289-302`, `opencut/server.py:335-375,463-471`; observed stale-job cleanup and worker startup while building a manifest.
