@@ -12,6 +12,9 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
       - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
+      # Loopback names and IP literals are trusted here. Add any DNS name
+      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
+      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
     deploy:
       resources:
         limits:
@@ -45,6 +48,9 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
       - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
+      # Loopback names and IP literals are trusted here. Add any DNS name
+      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
+      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
     deploy:
       resources:
@@ -85,6 +91,9 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
       - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
+      # Loopback names and IP literals are trusted here. Add any DNS name
+      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
+      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
       - OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679
     depends_on:
       opencut-server:

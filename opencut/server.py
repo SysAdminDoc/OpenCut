@@ -360,6 +360,11 @@ def create_app(config=None, testing=False):
 
     register_error_handlers(_app)
 
+    # Host-header trust gate. Registered before correlation, auth, and CSRF so
+    # an attacker-chosen ``Host`` can never reach /health, the auth check, or
+    # the CSRF bootstrap. See opencut/trusted_hosts.py for the policy.
+    _install_trusted_host_middleware(_app, config, _error_response)
+
     if not testing:
         try:
             from opencut.credential_store import run_startup_migrations
@@ -680,6 +685,50 @@ def _serve_wsgi_app(app, *, host: str, port: int, debug: bool) -> None:
 
 def _should_use_production_wsgi(*, host: str, debug: bool) -> bool:
     return not debug and not _is_loopback_host(host)
+
+
+def _install_trusted_host_middleware(app, config, error_response):
+    """Reject requests whose ``Host`` header is not an authority we serve.
+
+    Loopback peers are trusted by default, so without this gate a rebound DNS
+    name (``evil.example`` resolving to 127.0.0.1) reaches ``/health`` with a
+    matching ``Origin`` and harvests the CSRF bootstrap token. IP literals are
+    exempt from rebinding, so non-loopback literals are accepted only when the
+    operator opted into a remote bind.
+    """
+    from opencut import trusted_hosts as _trusted_hosts
+
+    allowed = _trusted_hosts.build_trusted_hosts(
+        configured=getattr(config, "trusted_hosts", ()) or (),
+        bind_host=getattr(config, "bind_host", "") or "",
+    )
+    allow_ip_literals = _trusted_hosts.remote_bind_enabled()
+    app.config["OPENCUT_TRUSTED_HOSTS"] = allowed
+
+    @app.before_request
+    def _enforce_trusted_host():  # noqa: D401 - tiny middleware
+        raw_host = request.headers.get("Host", "")
+        if _trusted_hosts.is_trusted_host(
+            raw_host,
+            allowed,
+            allow_ip_literals=allow_ip_literals,
+        ):
+            return None
+        try:
+            from opencut.security_audit import record_untrusted_host_rejection
+
+            record_untrusted_host_rejection(raw_host)
+        except Exception:  # noqa: BLE001 - auditing must never block the gate
+            pass
+        return error_response(
+            "UNTRUSTED_HOST",
+            "Request rejected: unrecognized Host header",
+            status=400,
+            suggestion=(
+                "Reach OpenCut at http://127.0.0.1:<port>, or add the hostname "
+                "to OPENCUT_TRUSTED_HOSTS before using it."
+            ),
+        )
 
 
 def _install_remote_auth_middleware(app, error_response):

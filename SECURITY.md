@@ -69,6 +69,9 @@ OpenCut's security model leans on a handful of intentional choices:
 Operators running OpenCut in a shared-network environment should:
 
 1. Bind to `127.0.0.1` only (default) — the service is single-user. Non-loopback binds require `OPENCUT_ALLOW_REMOTE=1`.
+   Reaching the service by a hostname other than a loopback name or
+   `OPENCUT_HOST` requires listing it in `OPENCUT_TRUSTED_HOSTS`; see
+   *Host-header trust* below.
 2. **Use the persistent local auth token when binding non-loopback.**
    Setting `OPENCUT_ALLOW_REMOTE=1` automatically issues a token under
    `~/.opencut/auth.json` (POSIX: mode `0600`). Every non-loopback
@@ -88,6 +91,42 @@ Operators running OpenCut in a shared-network environment should:
 6. Configure `OPENCUT_TEMP_CLEANUP_*` to fit the expected workload.
 7. Use the bundled FFmpeg or build FFmpeg explicitly — distro builds can lag on CVE fixes.
 8. Keep `~/.opencut/plugins/` empty until you've audited each plugin manifest.
+
+### Host-header trust (DNS-rebinding defence)
+
+Loopback peers are trusted by default, so the browser's origin model is the
+only thing separating a hostile page from the local API — and DNS rebinding
+defeats it. An attacker page on `evil.example` whose name resolves to
+`127.0.0.1` arrives from a loopback socket carrying its own `Host` and
+`Origin`. Everything derived from `request.host` is then attacker-controlled,
+including the value `/health` compares the `Origin` against before issuing the
+CSRF bootstrap token.
+
+OpenCut therefore decides which authorities it serves before any other
+processing. A `before_request` gate registered ahead of request correlation,
+the remote-auth check, and CSRF validation rejects unrecognized `Host` values
+with a `400 UNTRUSTED_HOST` response and records a `untrusted_host_rejected`
+security-audit event. No health payload, capability list, or CSRF token is
+produced for a rejected request.
+
+Trusted by default:
+
+- Loopback names (`localhost`) and loopback literals — the full IPv4
+  `127.0.0.0/8` range and IPv6 `::1`, bracketed or not, with any valid port.
+- `OPENCUT_HOST` when it names a single authority. Wildcard binds
+  (`0.0.0.0`, `::`) name no authority and contribute nothing.
+
+Everything else must be configured:
+
+```bash
+OPENCUT_TRUSTED_HOSTS="studio.lan,.render.studio.lan"
+```
+
+A leading dot trusts a subtree. Non-loopback **IP literals** are accepted only
+when `OPENCUT_ALLOW_REMOTE=1`, because a browser sends an IP `Host` only when
+the user navigated to that IP — rebinding needs a name, so literals stay safe
+while LAN-by-IP access keeps working. Names are never implicitly trusted, even
+with a remote bind.
 
 ### Threat model for non-loopback binds
 

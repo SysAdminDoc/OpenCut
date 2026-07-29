@@ -599,6 +599,7 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
 | `OPENCUT_LOCAL_ONLY` | `0` | Set to `1` to deny all non-loopback outbound network access before DNS, socket, browser-launch, or network-capable subprocess I/O |
 | `OPENCUT_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-loopback bind; remote requests require the OS-vault or secure secret-file token |
+| `OPENCUT_TRUSTED_HOSTS` | unset | Comma-separated hostnames this server answers for, beyond loopback and `OPENCUT_HOST`. Any other `Host` header is rejected with `UNTRUSTED_HOST` before auth, CSRF, or `/health` runs, which blocks DNS rebinding. A leading dot (`.studio.lan`) trusts that subtree |
 | `OPENCUT_REMOTE_AUTH_TOKEN_FILE` | unset | Absolute owner-only regular token file for headless remote binds; minimum 32 characters, no symlinks or group/world permissions |
 | `OPENCUT_ALLOW_INSECURE_SECRET_STORAGE` | `0` | Explicitly permit plaintext credential metadata only when no supported OS vault is available; leave unset for fail-closed persistence |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |

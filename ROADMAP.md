@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P0 — 2026-07-29
 
-- [ ] P0 — Fail closed on untrusted Host headers
-  Why: A loopback request with an arbitrary matching `Host` and `Origin` receives `/health` plus a CSRF token, enabling DNS rebinding to cross the local trust boundary.
-  Evidence: Live probe returned HTTP 200 and `csrf_token` for `attacker.invalid:5680`; `opencut/server.py:387-402,682-716`, `opencut/routes/system.py:378-428`, `opencut/auth.py:402-439`; Flask `TRUSTED_HOSTS` guidance.
-  Touches: `opencut/server.py`, host/bind configuration, health/auth middleware, security/config tests, `SECURITY.md`.
-  Acceptance: Unconfigured Host values are rejected before health, auth, or CSRF processing; loopback IPv4/IPv6/hostname forms and ports work; explicitly configured LAN/remote hosts and trusted proxies work without widening defaults; tests cover matching attacker Host/Origin, DNS-rebinding shape, and token non-disclosure.
-  Complexity: M
-
 - [ ] P0 — Replace the FFmpeg 8.1.2 security floor
   Why: OpenCut accepts and bundles 8.1.2 even though four published memory-safety CVEs include 8.1.2, and the local full build exposes every implicated component.
   Evidence: CVE-2026-64832 (NVDEC), CVE-2026-64833 (S/PDIF), CVE-2026-64835 (ADX/AAX), CVE-2026-66041 (`vf_quirc`); `opencut/core/ffmpeg_provenance.py:45-85`; installer constants/scripts; local `ffmpeg` inventories; FFmpeg still lists 8.1.2 as latest stable on 2026-07-29.
