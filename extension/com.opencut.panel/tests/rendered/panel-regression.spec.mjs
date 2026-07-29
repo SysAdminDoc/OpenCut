@@ -44,6 +44,10 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   const destructiveTokens = new Map();
   const destructivePreviewCounts = new Map();
   let queueTokenExpired = false;
+  const liveBridgeState = {
+    running: true,
+    stopOutcomes: [...(backendFixtures.liveBridge?.stopOutcomes || [])],
+  };
   const onboardingState = {
     seen: true,
     step: 0,
@@ -54,7 +58,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.emulateMedia({ colorScheme: theme === "auto" ? "light" : theme });
   await page.addInitScript(
-    ({ surfaceName, selectedTheme, environment, localeTag, forceEventSourceError, hostTheme }) => {
+    ({ surfaceName, selectedTheme, environment, localeTag, forceEventSourceError, hostTheme, liveBridge }) => {
       localStorage.clear();
       localStorage.setItem("opencut_debug", "0");
       Object.defineProperty(navigator, "language", {
@@ -131,15 +135,22 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         };
       }
       window.WebSocket = class RenderedWebSocket {
+        static CONNECTING = 0;
         static OPEN = 1;
         static CLOSED = 3;
         constructor() {
-          this.readyState = RenderedWebSocket.CLOSED;
+          this.readyState = liveBridge
+            ? RenderedWebSocket.OPEN
+            : RenderedWebSocket.CLOSED;
+          if (liveBridge) {
+            setTimeout(() => this.onopen?.(), 0);
+          }
         }
         addEventListener() {}
         removeEventListener() {}
         close() {
           this.readyState = RenderedWebSocket.CLOSED;
+          queueMicrotask(() => this.onclose?.());
         }
         send() {}
       };
@@ -161,6 +172,7 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
       localeTag: locale,
       forceEventSourceError: Boolean(backendFixtures.boundaryReview),
       hostTheme: theme === "light" ? "light" : theme === "dark" ? "dark" : "darkest",
+      liveBridge: Boolean(backendFixtures.liveBridge),
     },
   );
   await page.route("http://127.0.0.1:*/**", async (route) => {
@@ -259,6 +271,55 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
           status: 200,
           contentType: "audio/wav",
           body: "RIFF....WAVEfmt ",
+        });
+      }
+    }
+    if (backendFixtures.liveBridge) {
+      const method = route.request().method();
+      if (url.pathname === "/health" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: { "X-OpenCut-Token": "fixture-token" },
+          body: JSON.stringify({
+            status: "ok",
+            csrf_token: "fixture-token",
+            capabilities: { websocket: true },
+          }),
+        });
+      }
+      if (url.pathname === "/ws/status" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            running: liveBridgeState.running,
+            clients: liveBridgeState.running ? 1 : 0,
+            port: 5680,
+          }),
+        });
+      }
+      if (url.pathname === "/ws/stop" && method === "POST") {
+        capturedRequests.push({ liveBridgeStop: true });
+        await new Promise((resolve) =>
+          setTimeout(resolve, backendFixtures.liveBridge.stopDelayMs || 0),
+        );
+        const outcome = liveBridgeState.stopOutcomes.shift() || "success";
+        if (outcome === "fail") {
+          return route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({
+              error: "Rendered fixture: bridge process did not stop",
+              code: "BRIDGE_STOP_FAILED",
+            }),
+          });
+        }
+        liveBridgeState.running = false;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true }),
         });
       }
     }
@@ -1859,6 +1920,102 @@ test("CEP destructive controls preview signed plans before confirmation", async 
   expect(
     destructiveRequests.filter((request) => request.path === "/queue/clear"),
   ).toHaveLength(4);
+  expect(pageErrors).toEqual([]);
+});
+
+for (const surfaceName of ["cep", "uxp"]) {
+  test(`${surfaceName} live bridge stop waits for confirmation and recovers`, async ({
+    page,
+  }) => {
+    const width = surfaceName === "cep" ? 900 : 520;
+    const { surface, pageErrors, capturedRequests } = await openSurface(
+      page,
+      surfaceName,
+      "dark",
+      width,
+      {
+        liveBridge: {
+          stopDelayMs: 150,
+          stopOutcomes: ["fail", "success"],
+        },
+      },
+    );
+    await page
+      .locator(`${surface.tabSelector}[${surface.tabAttribute}='settings']`)
+      .click();
+    if (surfaceName === "uxp") {
+      await page.locator("#settingsNavLiveUpdates").click();
+    }
+
+    const status = page.locator(
+      surfaceName === "cep" ? "#wsStatusText" : "#uxpWsStatus",
+    );
+    const hint = page.locator(
+      surfaceName === "cep" ? "#wsHint" : "#settingsBridgeStatus",
+    );
+    const connect = page.locator(
+      surfaceName === "cep" ? "#wsConnectBtn" : "#uxpWsConnectBtn",
+    );
+    const stop = page.locator(
+      surfaceName === "cep" ? "#wsStopBtn" : "#uxpWsStopBtn",
+    );
+    const errorToast = page
+      .locator(
+        surfaceName === "cep"
+          ? ".toast-notification[role='alert']"
+          : ".oc-toast[role='alert']",
+      )
+      .filter({ hasText: /still connected/i });
+    const successToast = page
+      .locator(
+        surfaceName === "cep"
+          ? ".toast-notification[role='status']"
+          : ".oc-toast[role='status']",
+      )
+      .filter({ hasText: /bridge stopped/i });
+
+    // The fixture bridge is already running, so the panel connects on load.
+    await expect(status).toContainText(/connected/i);
+    await expect(connect).toBeDisabled();
+    await expect(stop).toBeEnabled();
+
+    await stop.click();
+    await expect(stop).toBeDisabled();
+    await expect(status).toContainText(/connected/i);
+    await expect(hint).toContainText(/stopping/i);
+    await expect(hint).toContainText(/still connected/i);
+    await expect(errorToast).toContainText(/still connected/i);
+    await expect(stop).toBeEnabled();
+    await expect(status).toContainText(/connected/i);
+
+    await stop.click();
+    await expect(stop).toBeDisabled();
+    await expect(status).toContainText(/connected/i);
+    await expect(successToast).toContainText(/bridge stopped/i);
+    await expect(status).toContainText(/bridge stopped/i);
+    await expect
+      .poll(
+        () =>
+          capturedRequests.filter((request) => request.liveBridgeStop).length,
+      )
+      .toBe(2);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+test("UXP timeline reports the rendered CEP fallback honestly", async ({
+  page,
+}) => {
+  const { pageErrors } = await openSurface(page, "uxp", "dark", 520);
+  await page.locator("#tabBtnTimeline").click();
+
+  for (const selector of ["#timelineRenamePill", "#timelineSmartBinsPill"]) {
+    await expect(page.locator(selector)).toHaveText("CEP fallback");
+    await expect(page.locator(selector)).toHaveAttribute("data-state", "warning");
+    await expect(page.locator(selector)).toHaveAttribute("title", /CEP panel/i);
+  }
+  await expect(page.locator("#runBatchRenameBtn")).toBeDisabled();
+  await expect(page.locator("#runSmartBinsBtn")).toBeDisabled();
   expect(pageErrors).toEqual([]);
 });
 

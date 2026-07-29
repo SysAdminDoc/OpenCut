@@ -128,6 +128,7 @@
     var editDebounceTimer = null;
     var _alertTimer = null;
     var _wsReconnectTimer = null;
+    var _wsManualDisconnect = false;
     var _navScrollPersistTimer = null;
     var _overlayStack = [];
     var _overlayFocusManagementBound = false;
@@ -5485,6 +5486,7 @@
             showToast(t("toast.live_updates_already_connected", "Live updates are already connected"), "info");
             return;
         }
+        _wsManualDisconnect = false;
         var port = 5680;
         var url = "ws://127.0.0.1:" + port;
         try {
@@ -5514,7 +5516,7 @@
             _ws = null;
             _updateWsStatus();
             // Auto-reconnect after 5s
-            if (!_wsReconnectTimer) {
+            if (!_wsManualDisconnect && !_wsReconnectTimer) {
                 _wsReconnectTimer = setTimeout(function () {
                     _wsReconnectTimer = null;
                     wsConnect();
@@ -5528,6 +5530,7 @@
     }
 
     function wsDisconnect() {
+        _wsManualDisconnect = true;
         if (_wsReconnectTimer) { clearTimeout(_wsReconnectTimer); _wsReconnectTimer = null; }
         if (_ws) { _ws.close(); _ws = null; }
         _wsConnected = false;
@@ -5714,13 +5717,38 @@
     }
 
     function wsStopBridge() {
-        wsDisconnect();
+        var stopBtn = document.getElementById("wsStopBtn");
+        var stoppingMessage = t("ws.hint_stopping", "Stopping the live-updates bridge…");
+        if (stopBtn) stopBtn.disabled = true;
+        setStatusLine("wsHint", stoppingMessage, "working", stoppingMessage);
+        setSettingsStudioState(
+            "bridge",
+            t("ws.status_stopping", "Stopping bridge…"),
+            "working",
+            stoppingMessage
+        );
         api("POST", "/ws/stop", {}, function (err, r) {
-            if (err) return;
-            if (r && r.success) {
-                showToast(t("toast.live_updates_bridge_stopped", "Live-updates bridge stopped"), "success");
-                _updateWsStatus();
+            if (err || !r || !r.success) {
+                var reason = r && r.error
+                    ? r.error
+                    : (err && err.message ? err.message : t("toast.unknown_error", "Unknown error"));
+                var failure = t(
+                    "ws.hint_stop_failed",
+                    "Couldn't stop the live-updates bridge. The panel is still connected; check the backend and try again. {reason}"
+                ).replace("{reason}", reason);
+                setStatusLine("wsHint", failure, "error", failure);
+                setSettingsStudioState(
+                    "bridge",
+                    t("ws.status_stop_failed", "Stop failed"),
+                    "error",
+                    failure
+                );
+                if (stopBtn) stopBtn.disabled = false;
+                showToast(failure, "error");
+                return;
             }
+            wsDisconnect();
+            showToast(t("toast.live_updates_bridge_stopped", "Live-updates bridge stopped"), "success");
         });
     }
 

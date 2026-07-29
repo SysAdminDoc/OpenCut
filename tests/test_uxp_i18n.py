@@ -285,7 +285,7 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.timeline.apply_cuts_to_sequence",
         "uxp.timeline.export_otio_file",
         "uxp.timeline.batch_export_readiness",
-        "uxp.timeline.cep_panel_required",
+        "uxp.timeline.checking_host",
         "uxp.timeline.smart_bins",
         "uxp.timeline.srt_file_placeholder",
         "uxp.timeline.validate_srt_file",
@@ -536,6 +536,11 @@ def test_uxp_timeline_runtime_feedback_uses_locale_helpers():
     assert "uxp.timeline.runtime.export_window_ready_many" in readiness_js
     assert "uxp.timeline.runtime.backend_reconnect_timeline_status" in readiness_js
     assert "uxp.timeline.runtime.assets_ready_actions_status" in readiness_js
+    assert 't("uxp.timeline.direct_uxp", "Direct UXP")' in readiness_js
+    assert 't("uxp.timeline.cep_fallback", "CEP fallback")' in readiness_js
+    assert 'bridgeReady ? "success" : "warning"' in readiness_js
+    assert "uxp.timeline.runtime.batch_rename_uxp_title" in readiness_js
+    assert "uxp.timeline.runtime.smart_bins_uxp_title" in readiness_js
 
     assert 'UIController.showToast("No cuts to apply.' not in combined
     assert 'UIController.setStatus("Applying cuts to timeline' not in combined
