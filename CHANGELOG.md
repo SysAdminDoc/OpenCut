@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Truthful panel execution and bridge states
+
+- UXP Timeline rename and smart-bin cards now report the execution path that
+  will actually run — "Direct UXP" when the host bridge is available and
+  "CEP fallback" otherwise — instead of a fixed "CEP panel required" warning
+  next to controls that were sometimes enabled.
+- Stopping the live-updates bridge in both panels now stays connected until the
+  backend confirms termination. A failed stop restores the control, announces
+  the failure with the reason, and leaves the panel in a recoverable state
+  rather than disconnecting locally and hiding the error.
+
 ### Fixed - External authorization boundary
 
 - CEP social authorization now validates HTTPS and explicit loopback callback

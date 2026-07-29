@@ -2930,9 +2930,18 @@ function updateTimelineReadiness() {
   setTextAndTitle("timelineExportSourceValue", exportSourceLabel, exportSourceTitle);
   setTextAndTitle("timelineExportOutputValue", outputDir ? formatWorkspaceSource(outputDir) : t("uxp.timeline.choose_output_folder", "Choose output folder"), outputDir || t("uxp.timeline.runtime.choose_export_destination_title", "Choose an export destination for marker-based segments."));
 
-  setStatusPill("timelineRenamePill", t("uxp.timeline.cep_panel_required", "CEP panel required"), "warning", t("uxp.timeline.runtime.batch_rename_cep_title", "Batch rename still executes through the CEP panel on this build."));
+  const hostActionLabel = bridgeReady
+    ? t("uxp.timeline.direct_uxp", "Direct UXP")
+    : t("uxp.timeline.cep_fallback", "CEP fallback");
+  const renameHostTitle = bridgeReady
+    ? t("uxp.timeline.runtime.batch_rename_uxp_title", "Batch rename will execute directly through the active UXP host bridge.")
+    : t("uxp.timeline.runtime.batch_rename_cep_title", "Open the CEP panel to run batch rename on this Premiere build.");
+  const binsHostTitle = bridgeReady
+    ? t("uxp.timeline.runtime.smart_bins_uxp_title", "Smart bins will execute directly through the active UXP host bridge.")
+    : t("uxp.timeline.runtime.smart_bins_cep_title", "Open the CEP panel to create smart bins on this Premiere build.");
+  setStatusPill("timelineRenamePill", hostActionLabel, bridgeReady ? "success" : "warning", renameHostTitle);
   setTextAndTitle("timelineRenamePatternValue", renamePattern, renamePattern);
-  setStatusPill("timelineSmartBinsPill", t("uxp.timeline.cep_panel_required", "CEP panel required"), "warning", t("uxp.timeline.runtime.smart_bins_cep_title", "Smart bin execution still runs through the CEP panel on this build."));
+  setStatusPill("timelineSmartBinsPill", hostActionLabel, bridgeReady ? "success" : "warning", binsHostTitle);
   setTextAndTitle("timelineSmartBinsValue", smartBinsStrategy, smartBinsStrategy);
 
   setTextAndTitle("timelineSrtValue", srtPath ? formatWorkspaceSource(srtPath) : t("uxp.timeline.choose_srt_file", "Choose .srt file"), srtPath || t("uxp.timeline.runtime.choose_srt_file_title", "Choose an .srt file to validate before the CEP ocAddNativeCaptionTrack bridge places it."));
@@ -6785,13 +6794,28 @@ async function uxpWsStartBridge() {
 }
 
 async function uxpWsStopBridge() {
-  uxpWsDisconnect();
+  const stopBtn = document.getElementById("uxpWsStopBtn");
+  const stoppingMessage = t("uxp.settings.stopping_live_updates_bridge", "Stopping the live-updates bridge…");
+  if (stopBtn) stopBtn.disabled = true;
+  setSettingsStatus("settingsBridgeStatus", stoppingMessage, "working", stoppingMessage);
+  UIController.setStatus(stoppingMessage, "working");
   const r = await BackendClient.post("/ws/stop", {});
-  if (r.ok) {
+  if (r.ok && r.data?.success) {
+    uxpWsDisconnect();
     UIController.setStatus(t("uxp.settings.live_updates_bridge_stopped", "Live-updates bridge stopped."), "neutral");
     UIController.showToast(t("uxp.settings.live_updates_bridge_stopped", "Live-updates bridge stopped."), "success");
-    uxpUpdateWsStatus();
+    void uxpUpdateWsStatus();
+    return;
   }
+  const failure = formatI18n(
+    "uxp.settings.stop_live_updates_bridge_failed",
+    "Couldn't stop the live-updates bridge. The panel is still connected; check the backend and try again. {reason}",
+    { reason: r.error || r.data?.error || t("uxp.status.unknown_error", "Unknown error") }
+  );
+  setSettingsStatus("settingsBridgeStatus", failure, "error", failure);
+  UIController.setStatus(failure, "error");
+  UIController.showToast(failure, "error");
+  if (stopBtn) stopBtn.disabled = false;
 }
 
 // ─────────────────────────────────────────────────────────────
