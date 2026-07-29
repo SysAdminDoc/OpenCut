@@ -5,21 +5,15 @@ verified engineering/product audits through 2026-07-29 (with file locations);
 fixes already shipped are recorded in CHANGELOG.md and git
 history, not here.
 
-Blocked items (credential/license/hardware-gated) live in
-[`Roadmap_Blocked.md`](Roadmap_Blocked.md).
+Blocked items (credential/license/hardware-gated) are tracked separately in a
+maintainer-local `Roadmap_Blocked.md`, which is deliberately untracked — it is
+a working file, not part of a clone. This file is the tracked queue.
 
 ## Research-Driven Additions
 
 ### P0 — 2026-07-29
 
 ### P1 — 2026-07-25
-
-- [ ] P1 — Enforce fresh-clone packaging and documentation integrity
-  Why: Tracked entry points and docs reference ignored, retired, or stale surfaces, so a clean clone cannot reproduce the documented build topology.
-  Evidence: `BUILD.bat`, root `InstallerBuilder.ps1` hardcoded `0.6.5`, `opencut_server.spec` retired hidden imports, `README.md:465`, `docs/INSTALLER_POLICY.md`; tracked `ROADMAP.md` links to ignored `Roadmap_Blocked.md`.
-  Touches: `BUILD.bat`, `InstallerBuilder.ps1`, `opencut_server.spec`, `README.md`, tracked `docs/`, generated-doc/release checks.
-  Acceptance: A clean detached clone follows every tracked relative link, required guidance does not depend on ignored local files, `BUILD.bat` invokes the maintained WPF builder and produces the current artifact name, PyInstaller imports are source/dependency-derived, and docs no longer present signing or obsolete .NET/output paths as release gates.
-  Complexity: M
 
 - [ ] P1 — Add public-installer-to-current upgrade conformance
   Why: The latest public installer is v1.25.1 while source is v1.43.0, but no automated fixture proves that accumulated local state survives that upgrade.
