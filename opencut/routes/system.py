@@ -70,6 +70,37 @@ _OPEN_PATH_ALLOWED_EXTS = frozenset({
     ".txt", ".vtt", ".wav", ".webm", ".webp", ".wmv", ".xml",
 })
 
+def _user_data_dir() -> str:
+    """Return the OpenCut user-data directory (resolved at call time)."""
+    from opencut.user_data import OPENCUT_DIR
+
+    return OPENCUT_DIR
+
+
+#: Server-owned diagnostic targets the panels may open by name.
+#:
+#: The panels must never assemble a filesystem path themselves — doing so was
+#: the only reason the CEP panel held Node privileges. Each entry maps a fixed
+#: identifier to a resolver that returns a path this server owns, so the
+#: browser context only ever sends an opaque name.
+_OPEN_PATH_FIXED_TARGETS = {
+    "server_log": lambda: os.path.join(_user_data_dir(), "server.log"),
+    "crash_log": lambda: os.path.join(_user_data_dir(), "crash.log"),
+    "security_audit_log": lambda: os.path.join(_user_data_dir(), "security_audit.jsonl"),
+    "log_dir": _user_data_dir,
+}
+
+
+def resolve_fixed_open_target(name: str) -> str:
+    """Resolve a fixed diagnostic target name to an absolute path.
+
+    Raises ``KeyError`` for unknown names so callers fail closed rather than
+    falling back to a caller-supplied path.
+    """
+    key = str(name or "").strip().lower()
+    resolver = _OPEN_PATH_FIXED_TARGETS[key]
+    return os.path.abspath(resolver())
+
 system_bp = Blueprint("system", __name__)
 
 # ---------------------------------------------------------------------------

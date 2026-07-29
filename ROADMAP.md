@@ -19,13 +19,6 @@ Blocked items (credential/license/hardware-gated) live in
   Acceptance: Release and snapshot lanes use a per-CVE matrix of affected versions, upstream fix commits, and compiled capabilities; accepted builds contain every applicable fix or prove the component absent; installer/source/receipt/docs agree on one audited build; 8.1.2 full and applicable essentials configurations fail closed.
   Complexity: M
 
-- [ ] P0 — Remove unnecessary CEP Node and mixed-context privileges
-  Why: The panel grants Node globals to its browser context only to launch a log file/folder, expanding compromise impact and invalidating the intended browser boundary.
-  Evidence: `extension/com.opencut.panel/CSXS/manifest.xml:32-33`, `extension/com.opencut.panel/client/main.js:8783-8833`, `opencut/core/ae_extension.py:200-201`; Adobe CEP Cookbook; aliased `localRequire("child_process")` is missed by `tests/test_cep_external_launch_boundary.py:16`.
-  Touches: CEP and generated AE manifests, log-open/reveal UI and a server-owned fixed-target action, `tests/test_platform_ux.py`, source-safety and packaged-manifest tests.
-  Acceptance: Shipped manifests contain neither flag; production panel code imports no Node/process/filesystem modules; Open/Reveal Log uses an allowlisted server-owned target on Windows/macOS/Linux; tests detect direct and aliased Node imports and verify packaged manifests.
-  Complexity: M
-
 ### P1 — 2026-07-25
 
 - [ ] P1 — Enforce fresh-clone packaging and documentation integrity

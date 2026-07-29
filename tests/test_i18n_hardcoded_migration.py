@@ -1626,7 +1626,7 @@ MIGRATED_KEYS = (
     "toast.ws_start_error",
     "toast.engine_preference_error",
     "toast.preference_save_failed",
-    "toast.log_file_path",
+    "toast.log_open_failed",
     "toast.settings_saved",
     "toast.refreshed",
     # Twelfth batch (path open and journal revert feedback).
@@ -2680,7 +2680,7 @@ MIGRATED_KEYS = (
     "error.network",
     "error.timeout",
     # Ninety-third batch (CEP bridge/output type fallbacks).
-    "error.cep_node_bridge_unavailable",
+    "toast.log_folder_opened",
     "output.type_generic",
     # Ninety-fourth batch (footer, palette, preview, and wizard shell keys).
     "activity.label",
@@ -3733,8 +3733,8 @@ EXPECTED_CALLS = (
         re.compile(r':\s*"Failed to save preference"'),
     ),
     (
-        "toast.log_file_path",
-        re.compile(r't\(\s*"toast\.log_file_path"'),
+        "toast.log_open_failed",
+        re.compile(r't\(\s*"toast\.log_open_failed"'),
         re.compile(r'showAlert\(\s*"Log file: "'),
     ),
     (
@@ -8740,8 +8740,8 @@ EXPECTED_CALLS = (
     ),
     # --- Ninety-third batch ---------------------------------------
     (
-        "error.cep_node_bridge_unavailable",
-        re.compile(r't\(\s*"error\.cep_node_bridge_unavailable"'),
+        "toast.log_folder_opened",
+        re.compile(r't\(\s*"toast\.log_folder_opened"'),
         re.compile(r'new Error\("CEP Node bridge unavailable"\)'),
     ),
     (

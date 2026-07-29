@@ -8780,59 +8780,29 @@
         });
     }
 
+    // Opening the log is a server-owned action. The panel names an opaque
+    // target and the backend resolves and launches it, so this browser
+    // context needs no Node privileges and no filesystem knowledge.
     function openLogs() {
-        var isWin = navigator.platform.indexOf("Win") !== -1;
-        var localRequire = window.cep_node && window.cep_node.require ? window.cep_node.require : null;
-        var localProcess = window.cep_node && window.cep_node.process ? window.cep_node.process : null;
-        try {
-            if (!localRequire) throw new Error(t("error.cep_node_bridge_unavailable", "CEP Node bridge unavailable"));
-            var childProcess = localRequire("child_process");
-            var os = localRequire("os");
-            var home = os.homedir ? os.homedir() : ((localProcess && localProcess.env && (localProcess.env.USERPROFILE || localProcess.env.HOME)) || "");
-            var logPath = home ? home + (isWin ? "\\.opencut\\server.log" : "/.opencut/server.log") : "";
-            var logDir = home ? home + (isWin ? "\\.opencut" : "/.opencut") : "";
-
-            function spawnDetached(command, args, onError) {
-                try {
-                    var child = childProcess.spawn(command, args, {
-                        detached: true,
-                        stdio: "ignore"
-                    });
-                    child.on("error", function (err) {
-                        if (onError) onError(err);
-                    });
-                    child.unref();
-                    return true;
-                } catch (err) {
-                    if (onError) onError(err);
-                    return false;
+        api("POST", "/system/open-path", { target: "server_log", mode: "open" }, function (err, r) {
+            if (!err && r && r.ok) {
+                showToast(t("toast.log_opened", "Opened the server log"), "success");
+                return;
+            }
+            // The log may not exist yet, or the OS handler may have refused.
+            // Fall back to revealing the diagnostics folder before giving up.
+            api("POST", "/system/open-path", { target: "log_dir", mode: "reveal" }, function (dirErr, dirResp) {
+                if (!dirErr && dirResp && dirResp.ok) {
+                    showToast(t("toast.log_folder_opened", "Opened the diagnostics folder"), "info");
+                    return;
                 }
-            }
-
-            if (isWin) {
-                spawnDetached("notepad", [logPath], function () {
-                    spawnDetached("explorer", [logDir]);
-                });
-            } else {
-                var openCommand = navigator.platform.indexOf("Mac") !== -1 ? "open" : "xdg-open";
-                var fallbackCommand = openCommand === "open" ? "xdg-open" : "open";
-                spawnDetached(openCommand, [logPath], function () {
-                    if (!spawnDetached(fallbackCommand, [logPath], function () {
-                        spawnDetached(openCommand, [logDir], function () {
-                            spawnDetached(fallbackCommand, [logDir]);
-                        });
-                    })) {
-                        spawnDetached(openCommand, [logDir], function () {
-                            spawnDetached(fallbackCommand, [logDir]);
-                        });
-                    }
-                });
-            }
-        } catch (e) {
-            // Node not available - show path as fallback
-            var fallback = isWin ? "%USERPROFILE%\\.opencut\\server.log" : "~/.opencut/server.log";
-            showAlert(t("toast.log_file_path", "Log file: {path}").replace("{path}", fallback));
-        }
+                var reason = (r && r.error) || (err && err.message) || "";
+                showAlert(
+                    t("toast.log_open_failed", "Couldn't open the log file. {reason}")
+                        .replace("{reason}", reason)
+                );
+            });
+        });
     }
 
     // ================================================================

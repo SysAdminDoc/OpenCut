@@ -5,6 +5,24 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Security - CEP panel ships without Node privileges
+
+- The CEP manifest no longer requests `--enable-nodejs` or `--mixed-context`.
+  Adobe disables Node in CEP by default; OpenCut held it solely so the panel
+  could build a log path and spawn an OS process, which widened what a
+  compromised panel could reach and voided the intended browser boundary.
+- Open Log now names a server-owned target instead. `POST /system/open-path`
+  accepts an opaque `target` (`server_log`, `crash_log`, `security_audit_log`,
+  `log_dir`) that the backend resolves and launches itself on Windows, macOS,
+  and Linux, so the panel never assembles a filesystem path. Caller-supplied
+  `path` requests keep their existing validation and extension allowlist, and
+  the two forms are mutually exclusive.
+- The generated After Effects panel manifest drops the same flags.
+- Source-safety tests now reject aliased Node access (`window.cep_node.require`
+  stashed in a local) across every production panel source, not just a literal
+  `require("child_process")`, and assert that packaged manifests carry no
+  `CEFCommandLine` privileges.
+
 ### Security - Host-header trust gate closes DNS rebinding
 
 - Requests whose `Host` header does not name an authority this server answers

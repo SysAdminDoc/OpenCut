@@ -196,10 +196,6 @@ def generate_ae_manifest() -> str:
                 <Resources>
                     <MainPath>./index.html</MainPath>
                     <ScriptPath>./jsx/host.jsx</ScriptPath>
-                    <CEFCommandLine>
-                        <Parameter>--enable-nodejs</Parameter>
-                        <Parameter>--mixed-context</Parameter>
-                    </CEFCommandLine>
                 </Resources>
                 <Lifecycle>
                     <AutoVisible>true</AutoVisible>
