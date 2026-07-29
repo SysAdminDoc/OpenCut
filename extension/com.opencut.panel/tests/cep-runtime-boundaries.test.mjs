@@ -356,6 +356,33 @@ describe("CEP source ownership", () => {
     expect(main.match(/clearResultAnnouncement\(\);/g).length).toBeGreaterThanOrEqual(3);
   });
 
+  it("binds Auto theme to the Premiere host skin rather than the OS", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
+
+    expect(index.indexOf("cep-theme.js")).toBeLessThan(index.indexOf("main.js"));
+
+    // Auto resolves against the host skin; the OS is only the no-host fallback.
+    expect(main).toContain("CepTheme.readHostTheme(cs)");
+    expect(main).toContain("CepTheme.resolveTheme(pref, hostTheme, _osPrefersLight())");
+    expect(main).toContain("startHostThemeSync();");
+
+    // The OS media query must not fight the host event while docked.
+    expect(main).toContain("if (window.matchMedia && !inPremiere) {");
+
+    // The listener is unregistered with the rest of the panel teardown.
+    expect(main).toContain("stopHostThemeSync();");
+    const teardown = main.indexOf('window.addEventListener("beforeunload"');
+    expect(teardown).toBeGreaterThan(-1);
+    expect(main.slice(teardown, teardown + 200)).toContain("stopHostThemeSync();");
+
+    // An explicit Light/Dark choice must survive a host skin change.
+    const start = main.indexOf("function startHostThemeSync(");
+    const end = main.indexOf("function stopHostThemeSync(");
+    expect(end).toBeGreaterThan(start);
+    expect(main.slice(start, end)).toContain("_applyTheme(_currentThemePref(), hostTheme);");
+  });
+
   it("keeps token and shell layout rules in their ordered CSS owners", () => {
     const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
     const tokens = readFileSync(new URL("../client/command-center-tokens.css", import.meta.url), "utf8");

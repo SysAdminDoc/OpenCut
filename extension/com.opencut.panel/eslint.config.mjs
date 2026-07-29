@@ -12,6 +12,7 @@ export default [
       "client/job-runtime.js",
       "client/component-utils.js",
       "client/announce-utils.js",
+      "client/cep-theme.js",
       "client/timeline-utils.js",
       "client/bootstrap.js",
     ],

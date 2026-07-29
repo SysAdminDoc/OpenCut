@@ -8850,16 +8850,55 @@
     // ================================================================
     // Appearance / Theme
     // ================================================================
-    function _applyTheme(pref) {
-        var isLight;
-        if (pref === "light") {
-            isLight = true;
-        } else if (pref === "dark") {
-            isLight = false;
-        } else {
-            isLight = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+    // Auto follows Premiere's skin, not the operating system. A dark OS with
+    // Premiere's light skin (or the reverse) used to leave the panel clashing
+    // with its host, and switching skins inside Premiere changed nothing until
+    // the panel reloaded.
+    var CepTheme = (typeof window !== "undefined" && window.OpenCutCepTheme) ? window.OpenCutCepTheme : null;
+    var _hostThemeSync = null;
+
+    function _osPrefersLight() {
+        return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+    }
+
+    function _currentThemePref() {
+        return el.settingsTheme ? el.settingsTheme.value : "auto";
+    }
+
+    function _applyTheme(pref, hostThemeOverride) {
+        if (!CepTheme) {
+            // Development fallback only: outside Premiere there is no host skin.
+            var legacyLight = pref === "light" || (pref !== "dark" && _osPrefersLight());
+            document.documentElement.classList.toggle("theme-light", legacyLight);
+            return;
         }
-        document.documentElement.classList.toggle("theme-light", isLight);
+        var hostTheme = hostThemeOverride !== undefined
+            ? hostThemeOverride
+            : (_hostThemeSync ? _hostThemeSync.current() : CepTheme.readHostTheme(cs));
+        CepTheme.applyTheme(
+            document.documentElement,
+            CepTheme.resolveTheme(pref, hostTheme, _osPrefersLight())
+        );
+    }
+
+    // Registered once; reconnects must not stack duplicate host listeners.
+    function startHostThemeSync() {
+        if (!CepTheme || _hostThemeSync) return;
+        _hostThemeSync = CepTheme.createHostThemeSync({
+            csInterface: cs,
+            logger: window.console,
+            onChange: function (hostTheme) {
+                // An explicit Light/Dark choice must survive a host skin change.
+                _applyTheme(_currentThemePref(), hostTheme);
+            }
+        });
+        _hostThemeSync.start();
+    }
+
+    function stopHostThemeSync() {
+        if (!_hostThemeSync) return;
+        _hostThemeSync.dispose();
+        _hostThemeSync = null;
     }
 
     // ================================================================
@@ -13510,12 +13549,17 @@
             });
         }
 
-        // Re-apply theme when OS preference changes (for "auto" mode)
-        if (window.matchMedia) {
+        // Follow Premiere's skin while the panel is docked in the host.
+        startHostThemeSync();
+        _applyTheme(_currentThemePref());
+
+        // Outside Premiere there is no host skin to follow, so Auto falls back
+        // to the OS preference. Inside Premiere the host event owns the change,
+        // and reacting to the OS too would fight it.
+        if (window.matchMedia && !inPremiere) {
             try {
                 window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
-                    var pref = el.settingsTheme ? el.settingsTheme.value : "auto";
-                    if (pref === "auto") _applyTheme("auto");
+                    if (_currentThemePref() === "auto") _applyTheme("auto");
                 });
             } catch (e) {}
         }
@@ -17607,6 +17651,7 @@
 
         // Cleanup SSE/WS connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {
+            stopHostThemeSync();
             wsDisconnect();
             if (activeStream) {
                 activeStream.close();
