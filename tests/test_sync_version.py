@@ -145,6 +145,55 @@ def test_sync_file_preserves_crlf_bytes(monkeypatch, tmp_path):
     assert target.read_bytes() == b'version = "1.42.0"\r\nnext = true\r\n'
 
 
+def test_security_policy_check_passes_on_a_crlf_checkout(monkeypatch, tmp_path):
+    """``--check`` must not report a mismatch a ``--set`` can never clear.
+
+    ``$`` under ``re.MULTILINE`` matches before the ``\\n``, so a pattern ending
+    in ``[^\\n]*$`` pulls the ``\\r`` of a CRLF row into the match while the
+    rebuilt replacement carries none. The comparison then comes out unequal on
+    an already-correct file, on every run.
+    """
+    module = _sync_version_module()
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    security = tmp_path / "SECURITY.md"
+    security.write_bytes(
+        "\r\n".join(
+            [
+                "OpenCut ships rapidly. We actively support the **latest minor** (`1.43.x`) "
+                "and the one immediately preceding it (`1.42.x`).",
+                "",
+                "| Version | Supported         | Security fixes until |",
+                "|---------|-------------------|----------------------|",
+                "| 1.43.x  | ✅ Active         | —                    |",
+                "| 1.42.x  | ✅ Previous       | +90 days after 1.43  |",
+                "| 1.41.x  | ⚠️ Critical only  | +30 days after 1.43  |",
+                "| ≤ 1.40  | ❌ End of life    | n/a                  |",
+                "",
+            ]
+        ).encode("utf-8")
+    )
+
+    security_targets = _targets(module, "SECURITY.md")
+    assert security_targets
+    assert all(
+        module.check_file(path, pattern, replacement, "1.43.0")
+        for path, pattern, replacement in security_targets
+    ), "an in-sync CRLF SECURITY.md must not report a mismatch"
+
+    # And a real bump still rewrites the row without stranding the CR.
+    for path, pattern, replacement in security_targets:
+        module.sync_file(path, pattern, replacement, "1.44.0")
+
+    raw = security.read_bytes()
+    assert b"| 1.44.x  | \xe2\x9c\x85 Active" in raw
+    assert b"\r\r" not in raw
+    assert raw.count(b"\n") == raw.count(b"\r\n"), "CRLF endings must survive the rewrite"
+    assert all(
+        module.check_file(path, pattern, replacement, "1.44.0")
+        for path, pattern, replacement in security_targets
+    )
+
+
 def test_smoke_manifest_version_is_tracked():
     module = _sync_version_module()
 

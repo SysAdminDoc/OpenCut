@@ -12,13 +12,6 @@ Blocked items (credential/license/hardware-gated) live in
 
 ### P0 — 2026-07-29
 
-- [ ] P0 — Replace the FFmpeg 8.1.2 security floor
-  Why: OpenCut accepts and bundles 8.1.2 even though four published memory-safety CVEs include 8.1.2, and the local full build exposes every implicated component.
-  Evidence: CVE-2026-64832 (NVDEC), CVE-2026-64833 (S/PDIF), CVE-2026-64835 (ADX/AAX), CVE-2026-66041 (`vf_quirc`); `opencut/core/ffmpeg_provenance.py:45-85`; installer constants/scripts; local `ffmpeg` inventories; FFmpeg still lists 8.1.2 as latest stable on 2026-07-29.
-  Touches: `opencut/core/ffmpeg_provenance.py`, bundled binaries/metadata, `installer/`, Docker/install/release scripts, `README.md`, provenance and composition tests.
-  Acceptance: Release and snapshot lanes use a per-CVE matrix of affected versions, upstream fix commits, and compiled capabilities; accepted builds contain every applicable fix or prove the component absent; installer/source/receipt/docs agree on one audited build; 8.1.2 full and applicable essentials configurations fail closed.
-  Complexity: M
-
 ### P1 — 2026-07-25
 
 - [ ] P1 — Enforce fresh-clone packaging and documentation integrity

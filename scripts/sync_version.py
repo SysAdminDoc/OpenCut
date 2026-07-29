@@ -173,9 +173,14 @@ TARGETS = [
     # pattern used `\|\s*)[^\n|]+(\s*\|` for the last cell; `\s*` could swallow
     # the newline and match the next row's leading pipe when the row carried
     # trailing whitespace, leaving `|—` residue after the closing pipe.
+    #
+    # The end of the row is asserted with a lookahead rather than consumed. On a
+    # CRLF checkout `[^\n]*$` swallows the `\r` into the match while the rebuilt
+    # replacement has none, so `--check` compared `row + "\r"` against `row` and
+    # reported a permanent mismatch that no `--set` could clear.
     (
         "SECURITY.md",
-        r"^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n]*$",
+        r"^\| [0-9]+\.[0-9]+\.x\s+\| ✅ Active\s+\|[^\n\r]*(?=\r?$)",
         r"| {series}  | ✅ Active         | —                    |",
     ),
     (
