@@ -12,11 +12,7 @@
 > **F201 status (2026-05-18):** the recommended WPF installer now has
 > a reusable Windows build wrapper via `scripts/build_wpf_installer_ci.ps1`
 > and publishes separately from the Inno fallback.
->
-> **F203 status (2026-05-18):** Windows release scripts now call
-> `scripts/sign_windows_artifacts.ps1` to Authenticode-sign WPF and
-> Inno installer outputs when signing variables are configured. See
-> `docs/WINDOWS_CODESIGNING.md`.
+
 >
 > **F212 status (2026-05-18):** the recommended WPF installer now has
 > `installer/tests/OpenCut.Installer.Tests` xUnit coverage plus guarded
@@ -24,7 +20,7 @@
 >
 > **Tracking F-number:** F200 (Now-tier doc deliverable).
 > Related F-numbers: **F201** (local build wrapper for the recommended path, DONE),
-> **F203** (Authenticode code-signing renewal, DONE tooling), **F207** (bundled
+> **F207** (bundled
 > FFmpeg version embedded in installer manifest, DONE Pass 12),
 > **F212** (WPF installer xUnit + headless smoke, DONE).
 
@@ -34,7 +30,7 @@
 
 | Path | Source | Output | When used |
 |---|---|---|---|
-| **WPF / .NET 10 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, signed by the OpenCut Authenticode cert, embeds the bundled FFmpeg + manifest writer (F207). |
+| **WPF / .NET 10 installer** (`installer/`) | `installer/src/OpenCut.Installer/*` + `installer/InstallerBuilder.ps1` | `installer/dist/OpenCut-Setup-X.Y.Z.exe` | Default download from the Releases page. Custom UI, shipped unsigned, embeds the bundled FFmpeg + manifest writer (F207). |
 | **Inno Setup installer** (`OpenCut.iss` + `Install.bat`) | `OpenCut.iss` + the helper `Install.bat` / `Install.ps1` | `dist/OpenCut-Setup-X.Y.Z.exe` (legacy filename collision) | Available as a fallback for builders without the .NET 10 SDK. Pre-dates the WPF path; was the only installer through v1.10.x. |
 
 Both installers produce the same on-disk layout (FFmpeg under
@@ -56,9 +52,8 @@ repo for two specific use cases:
    F201 now closes the official local build-wrapper gap; the Inno path remains
    a local fallback for contributors without the .NET SDK.
 2. **Emergency hot-fix releases.** If an issue blocks the WPF path
-   (e.g. signing cert expiry or missing F203 secrets), the Inno path
-   can still produce a self-signed installer for users who already
-   trust the OpenCut publisher fingerprint.
+   (e.g. a broken .NET SDK toolchain on the build host), the Inno path
+   can still produce an installer.
 
 Both installer outputs ship under the **same** filename pattern
 (`OpenCut-Setup-X.Y.Z.exe`) and the **same** install-tree layout.
@@ -84,14 +79,14 @@ Only one binary is published per release.
 | Milestone | Trigger | Action |
 |---|---|---|
 | **Now** | (this document) | Designate WPF as recommended; Inno as deprecated-but-supported fallback. |
-| **F201 close** | WPF local wrapper | DONE — WPF builds through the Windows wrapper and archives `OpenCut-WPF-Setup-X.Y.Z.exe`; Inno stays deprecated-but-supported until signed WPF release verification is complete. |
-| **F213 close** | Inno install/uninstall smoke | DONE — keep Inno as a deprecated-but-supported fallback with guarded smoke coverage until signed WPF release verification is complete. |
-| **F212 close** | WPF xUnit + headless smoke | DONE — WPF now has xUnit coverage and guarded quiet install/uninstall smoke. Keep Inno as an emergency fallback until at least one signed WPF release completes with the smoke green. |
+| **F201 close** | WPF local wrapper | DONE — WPF builds through the Windows wrapper and archives `OpenCut-WPF-Setup-X.Y.Z.exe`; Inno stays deprecated-but-supported until the WPF release path is verified. |
+| **F213 close** | Inno install/uninstall smoke | DONE — keep Inno as a deprecated-but-supported fallback with guarded smoke coverage until the WPF release path is verified. |
+| **F212 close** | WPF xUnit + headless smoke | DONE — WPF now has xUnit coverage and guarded quiet install/uninstall smoke. Keep Inno as an emergency fallback until at least one WPF release completes with the smoke green. |
 
-The retirement gate is **not** a calendar date — it is the WPF
-coverage milestone plus one signed-release verification. Don't retire
-the Inno script until WPF can catch the regressions the Inno path
-historically caught and the signed artifact path has been exercised.
+The retirement gate is **not** a calendar date, and it is **not** code
+signing — OpenCut ships unsigned artifacts by policy. It is the WPF coverage
+milestone plus one verified release. Don't retire the Inno script until WPF
+can catch the regressions the Inno path historically caught.
 
 ---
 
@@ -122,16 +117,17 @@ When you add a fifth invariant, document it here and add a test in
 
 One risk forces keeping the fallback for now:
 
-1. **Operational signing credentials** — F203 tooling is wired, but
-   production releases still require valid `WINDOWS_CODESIGN_*`
-   signing variables and timely certificate renewal. A botched renewal
-   would block signed WPF releases; the Inno path stays as a fallback.
-   F212 now covers the WPF behavior gap with xUnit tests and quiet
-   install/uninstall smoke wiring, but a signed WPF release still needs
-   live GitHub secrets to validate the final production path.
+1. **Build-host toolchain** — the WPF path needs the .NET 10 SDK on the
+   machine doing the build. The Inno path is single-binary and SDK-free, so
+   it stays available for contributors and for a build host whose SDK
+   install is broken. F212 covers the WPF behaviour gap with xUnit tests and
+   quiet install/uninstall smoke wiring.
 
-When the signed WPF release path completes cleanly, reassess the
-retirement schedule in §2.
+Code signing is **not** a factor: OpenCut publishes unsigned artifacts by
+policy, so no certificate or signing secret gates a release.
+
+When the WPF release path completes cleanly, reassess the retirement
+schedule in §2.
 
 ---
 

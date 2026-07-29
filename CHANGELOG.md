@@ -5,6 +5,24 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - A fresh clone can reproduce the build
+
+- `BUILD.bat` invoked a deprecated root `InstallerBuilder.ps1` that hardcoded
+  version `0.6.5` and produced an Inno artifact, so the repository's own build
+  entry point did not build the shipped installer. It now delegates to the
+  maintained WPF builder, which derives the version from `opencut/__init__.py`
+  and writes `installer/dist/OpenCut-Setup-<version>.exe`, and it propagates
+  the builder's exit code instead of swallowing it. The deprecated script is
+  removed.
+- PyInstaller hidden imports are derived from the `_try_import` call sites in
+  `opencut/` rather than hand-maintained. The old list had drifted badly: it
+  named 25 modules while the source lazily imports about 100, and it missed
+  `transnetv2_pytorch` entirely.
+- The tracked roadmap no longer links to a deliberately untracked file, and
+  `docs/INSTALLER_POLICY.md` no longer presents code signing as a release
+  gate — OpenCut publishes unsigned artifacts by policy, so the real reason
+  to keep the Inno fallback is the .NET SDK requirement on the build host.
+
 ### Fixed - Command-palette destinations resolve
 
 - Workflow Presets, Project Templates, Keyboard Shortcuts, Job History, and

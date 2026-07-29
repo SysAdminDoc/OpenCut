@@ -10,35 +10,63 @@ block_cipher = None
 # Collect all opencut submodules (lazy imports in route handlers)
 opencut_hiddenimports = collect_submodules('opencut')
 
-# External deps that are lazily imported inside route handlers
-external_hiddenimports = [
-    'faster_whisper',
-    'ctranslate2',
-    'huggingface_hub',
-    'cv2',
-    'PIL',
-    'PIL.Image',
-    'PIL.ImageDraw',
-    'PIL.ImageFont',
-    'numpy',
-    'librosa',
-    'pydub',
-    'noisereduce',
-    'deep_translator',
-    'scenedetect',
+# External deps that are lazily imported inside route handlers.
+#
+# This list used to be hand-maintained and had drifted from reality: the
+# source lazily imports ~90 optional modules while the list named 25, and it
+# still carried names the code no longer uses while missing ones it does
+# (``transnetv2_pytorch``). Derive it from the source instead, so a new
+# optional backend is bundled without anyone remembering to edit this file.
+#
+# Every optional backend is reached through ``helpers._try_import("name")``,
+# which makes that call the authoritative record of what may need bundling.
+import ast
+import re as _re
+
+_SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
+_OPENCUT_DIR = os.path.join(_SPEC_DIR, "opencut")
+
+# Framework and first-party runtime deps that are imported normally rather
+# than through _try_import, so the scan below would not see them.
+_ALWAYS_BUNDLE = [
     'flask',
     'flask_cors',
     'click',
     'rich',
-    'soundfile',
-    'tokenizers',
-    'sentencepiece',
-    # v1.3.0 additions
-    'mediapipe',
-    'auto_editor',
-    'transnetv2',
-    'resemble_enhance',
+    'numpy',
+    'PIL',
+    'PIL.Image',
+    'PIL.ImageDraw',
+    'PIL.ImageFont',
 ]
+
+
+def _discover_lazy_imports(root):
+    """Collect every module name passed to helpers._try_import() in the tree."""
+    found = set()
+    pattern = _re.compile("_try_import\\(\\s*[\"']([A-Za-z0-9_.]+)[\"']")
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for filename in filenames:
+            if not filename.endswith('.py'):
+                continue
+            path = os.path.join(dirpath, filename)
+            try:
+                with open(path, 'r', encoding='utf-8', errors='replace') as handle:
+                    source = handle.read()
+            except OSError:
+                continue
+            found.update(pattern.findall(source))
+    return found
+
+
+try:
+    external_hiddenimports = sorted(
+        set(_ALWAYS_BUNDLE) | _discover_lazy_imports(_OPENCUT_DIR)
+    )
+except Exception:
+    # A frozen build must never fail because discovery hit something odd;
+    # fall back to the framework set, which the app cannot start without.
+    external_hiddenimports = list(_ALWAYS_BUNDLE)
 
 # Filter to only actually installed packages
 valid_imports = []
@@ -46,7 +74,9 @@ for mod in external_hiddenimports:
     try:
         __import__(mod)
         valid_imports.append(mod)
-    except ImportError:
+    except Exception:
+        # ImportError is the common case, but a half-installed optional
+        # backend can raise anything at import time; never fail the build.
         pass
 
 all_hiddenimports = opencut_hiddenimports + valid_imports
