@@ -420,10 +420,17 @@ class TestAEExtension(unittest.TestCase):
         manifest = generate_ae_manifest()
         self.assertIn("CSXS", manifest)
 
-    def test_manifest_has_nodejs(self):
+    def test_manifest_grants_no_node_or_mixed_context_privilege(self):
+        """The generated AE panel is a plain browser context.
+
+        Adobe disables Node in CEP by default; granting it widens what a
+        compromised panel can reach for no functional gain.
+        """
         from opencut.core.ae_extension import generate_ae_manifest
         manifest = generate_ae_manifest()
-        self.assertIn("--enable-nodejs", manifest)
+        self.assertNotIn("--enable-nodejs", manifest)
+        self.assertNotIn("--mixed-context", manifest)
+        self.assertNotIn("CEFCommandLine", manifest)
 
     def test_generate_ae_extendscript(self):
         from opencut.core.ae_extension import generate_ae_extendscript

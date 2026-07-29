@@ -14,6 +14,7 @@ __all__ = [
 
 from .system import (
     _OPEN_PATH_ALLOWED_EXTS,
+    _OPEN_PATH_FIXED_TARGETS,
     _list_jobs_copy,
     _sp,
     build_destructive_plan,
@@ -26,6 +27,7 @@ from .system import (
     os,
     request,
     require_csrf,
+    resolve_fixed_open_target,
     safe_bool,
     safe_float,
     safe_int,
@@ -58,45 +60,77 @@ def project_media():
 def open_path():
     """Open a file (``mode=open``) or reveal it in the OS file manager
     (``mode=reveal``). Used by the session-context overlay's job-result
-    quick actions.
+    quick actions and by the panels' diagnostic-log actions.
 
-    The path must pass ``validate_filepath`` — no traversal, null bytes,
-    or UNC paths. Non-existent files are rejected early.
+    Callers supply either ``path`` (a caller-owned file, which must pass
+    ``validate_filepath`` — no traversal, null bytes, or UNC paths, and an
+    allowlisted extension in open mode) or ``target`` (an opaque name from
+    ``_OPEN_PATH_FIXED_TARGETS`` that this server resolves itself).
+
+    The ``target`` form exists so panels never assemble a filesystem path or
+    launch a process of their own; that was the sole reason the CEP panel held
+    Node privileges.
     """
     data = request.get_json(force=True, silent=True) or {}
     raw_path = data.get("path", "")
+    raw_target = data.get("target", "")
     mode = str(data.get("mode", "open")).strip().lower()
     if mode not in ("open", "reveal"):
         return jsonify({"error": "mode must be 'open' or 'reveal'"}), 400
-    if not raw_path:
-        return jsonify({"error": "path is required"}), 400
+    if raw_target and raw_path:
+        return jsonify({"error": "Provide either 'path' or 'target', not both"}), 400
 
-    try:
-        filepath = validate_filepath(raw_path)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    if raw_target:
+        try:
+            filepath = resolve_fixed_open_target(raw_target)
+        except KeyError:
+            allowed = ", ".join(sorted(_OPEN_PATH_FIXED_TARGETS))
+            return jsonify({"error": f"Unknown target. Allowed targets: {allowed}"}), 400
+        if not os.path.exists(filepath):
+            return jsonify({
+                "error": "That diagnostic file does not exist yet",
+                "path": filepath,
+            }), 404
+        if mode == "open" and os.path.isdir(filepath):
+            mode = "reveal"
+    else:
+        if not raw_path:
+            return jsonify({"error": "path or target is required"}), 400
+        try:
+            filepath = validate_filepath(raw_path)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
-    ext = os.path.splitext(filepath)[1].lower()
-    if mode == "open" and ext not in _OPEN_PATH_ALLOWED_EXTS:
-        return jsonify({"error": f"Cannot open unsupported file type: {ext or '(none)'}"}), 403
+        ext = os.path.splitext(filepath)[1].lower()
+        if mode == "open" and ext not in _OPEN_PATH_ALLOWED_EXTS:
+            return jsonify({"error": f"Cannot open unsupported file type: {ext or '(none)'}"}), 403
 
+    is_directory = os.path.isdir(filepath)
     try:
         if sys.platform == "win32":
-            if mode == "reveal":
+            if is_directory:
+                _sp.Popen(["explorer", filepath],
+                          creationflags=_sp.CREATE_NEW_PROCESS_GROUP
+                          if hasattr(_sp, "CREATE_NEW_PROCESS_GROUP") else 0)
+            elif mode == "reveal":
                 _sp.Popen(["explorer", "/select,", filepath],
                           creationflags=_sp.CREATE_NEW_PROCESS_GROUP
                           if hasattr(_sp, "CREATE_NEW_PROCESS_GROUP") else 0)
             else:
                 os.startfile(filepath)  # noqa: S606 — validated path, open-mode extension allowlisted above
         elif sys.platform == "darwin":
-            if mode == "reveal":
+            if mode == "reveal" and not is_directory:
                 _sp.Popen(["open", "-R", filepath], start_new_session=True)
             else:
                 _sp.Popen(["open", filepath], start_new_session=True)
         else:
             # Linux / BSD — xdg-open has no "reveal" equivalent; open the
             # containing directory when reveal is requested.
-            target = os.path.dirname(filepath) if mode == "reveal" else filepath
+            target = (
+                filepath
+                if is_directory or mode != "reveal"
+                else os.path.dirname(filepath)
+            )
             _sp.Popen(["xdg-open", target], start_new_session=True)
     except Exception as e:
         logger.exception("open_path failed for %s", filepath)
