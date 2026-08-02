@@ -80,16 +80,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Catch job-poll rejections in the UXP social upload flow
-  Category: correctness
-  Where: `extension/com.opencut.uxp/main.js:5836-5861` (`runSocialUpload`); `extension/com.opencut.uxp/job-controller.js:178-192` (`poll`).
-  Problem: `JobPoller.poll()` rejects on job error (`onError = (message) => reject(new Error(message))`) and also when another job is already active (`markJobStarting()` returns false). `runSocialUpload` is the only `JobPoller.poll` call site without a surrounding try/catch, so on upload failure — unconfigured OAuth, a mid-upload network drop — the async function throws past the trailing `UIController.hideProcessing()` and `UIController.setButtonLoading("socialUploadBtnUxp", false)`. The processing banner stays up with `aria-busy="true"`, the Upload button stays disabled in its loading state, no error toast appears, and the rejection is unhandled. Cancel cannot recover it (`cancel()` returns false with no active job), so only a panel reload clears it.
-  Evidence: Of the 12 `JobPoller.poll(` call sites in `main.js`, a `try {` appears within the preceding 14 lines for all of them except line 5849 (`runSocialUpload`). `runUpscaleUxp` at `:7814-7830` shows the correct pattern.
-  Fix: Wrap the poll in try/catch/finally mirroring `runUpscaleUxp`, showing an error toast and clearing the processing/loading state in `finally`.
-  Acceptance: A test rejects the poll for the upload flow and asserts the processing banner is hidden, the button is re-enabled, and an error toast is shown.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Re-check the active job id after an awaited status fetch (cancel race)
   Category: correctness
   Where: `extension/com.opencut.uxp/job-controller.js:127-163` (`pollJob`), `:165-176` (`cancel`).

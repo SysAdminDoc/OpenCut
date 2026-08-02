@@ -5927,22 +5927,28 @@ async function runSocialUpload() {
   const privacy = document.getElementById("socialPrivacyUxp")?.value ?? "private";
   UIController.setButtonLoading("socialUploadBtnUxp", true);
   UIController.showProcessing(formatI18n("uxp.video.runtime.uploading_to_platform", "Uploading to {platform}...", { platform }));
-  const r = await BackendClient.post("/social/upload", {
-    filepath: clipPath, platform, title, description, privacy,
-  });
-  if (r.ok && r.data?.job_id) {
-    const result = await JobPoller.poll(r.data.job_id);
-    if (result?.url) {
-      UIController.showToast(formatI18n("uxp.video.runtime.uploaded_view_url", "Uploaded. View at: {url}", { url: result.url }), "success");
-    } else if (result) {
-      UIController.showToast(formatI18n("uxp.video.runtime.uploaded_to_platform", "Uploaded to {platform}.", { platform }), "success");
+  try {
+    const r = await BackendClient.post("/social/upload", {
+      filepath: clipPath, platform, title, description, privacy,
+    });
+    if (r.ok && r.data?.job_id) {
+      const result = await JobPoller.poll(r.data.job_id);
+      if (result?.url) {
+        UIController.showToast(formatI18n("uxp.video.runtime.uploaded_view_url", "Uploaded. View at: {url}", { url: result.url }), "success");
+      } else if (result) {
+        UIController.showToast(formatI18n("uxp.video.runtime.uploaded_to_platform", "Uploaded to {platform}.", { platform }), "success");
+      }
+    } else if (!r.ok) {
+      const error = r.error || r.data?.error || t("common.unknown", "unknown");
+      UIController.showToast(formatI18n("uxp.video.runtime.upload_failed", "Upload failed: {error}", { error }), "error");
     }
-  } else if (!r.ok) {
-    const error = r.error || r.data?.error || t("common.unknown", "unknown");
+  } catch (e) {
+    const error = e.message || t("common.unknown", "unknown");
     UIController.showToast(formatI18n("uxp.video.runtime.upload_failed", "Upload failed: {error}", { error }), "error");
+  } finally {
+    UIController.hideProcessing();
+    UIController.setButtonLoading("socialUploadBtnUxp", false);
   }
-  UIController.hideProcessing();
-  UIController.setButtonLoading("socialUploadBtnUxp", false);
 }
 
 async function socialConnectUxp() {
