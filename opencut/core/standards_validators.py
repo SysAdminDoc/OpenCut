@@ -349,7 +349,7 @@ def build_reference_tone(
             "-i", f"aevalsrc={expression}:s=48000:d={duration}",
             "-c:a", "pcm_s24le", path,
         ],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, check=True, timeout=120,
     )
     return path
 
