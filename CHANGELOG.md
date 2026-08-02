@@ -14,6 +14,14 @@ record also lives in the git commit messages.
   caller context is limited to inert data. Regression coverage exercises the
   exploit payload through all three scripting route aliases.
 
+### Fixed - Settings bundle workflow round-trip
+
+- Settings imports now validate workflows through the canonical endpoint
+  validator, preserving exported `{endpoint, params}` steps without requiring
+  cosmetic labels. Import responses report per-section imported/skipped counts
+  and reasons, and both CEP and UXP panels surface skipped items in their
+  import toasts.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

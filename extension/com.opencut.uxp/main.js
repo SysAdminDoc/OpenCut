@@ -8231,6 +8231,113 @@ function initSettingsNavigation() {
   activate(buttons.find((button) => button.classList.contains("active"))?.dataset.settingsSection || "workspace");
 }
 
+function describeSettingsImport(result) {
+  const imported = Array.isArray(result?.imported) ? result.imported : [];
+  let skippedCount = 0;
+  let reasons = [];
+  for (const section of ["presets", "favorites", "workflows"]) {
+    const details = result?.[section];
+    if (!details?.skipped) continue;
+    skippedCount += Number(details.skipped) || 0;
+    if (Array.isArray(details.reasons)) reasons = reasons.concat(details.reasons);
+  }
+  const items = imported.join(", ") || t("uxp.settings.settings_none_imported", "none");
+  if (skippedCount > 0) {
+    let reasonText = reasons.slice(0, 3).join("; ");
+    if (reasons.length > 3) reasonText += "…";
+    return {
+      message: formatI18n(
+        "uxp.settings.settings_import_skipped",
+        "Settings imported: {items}. Skipped {count} item(s){reasons}",
+        { items, count: skippedCount, reasons: reasonText ? `: ${reasonText}` : "" },
+      ),
+      type: "warning",
+    };
+  }
+  return {
+    message: formatI18n("uxp.settings.settings_imported", "Settings imported: {items}.", { items }),
+    type: "success",
+  };
+}
+
+async function initSettingsIO() {
+  const exportButton = document.getElementById("uxpExportSettingsBtn");
+  const importButton = document.getElementById("uxpImportSettingsBtn");
+  const status = document.getElementById("uxpSettingsIOStatus");
+  if (!exportButton && !importButton) return;
+
+  const setBusy = (busy) => {
+    for (const button of [exportButton, importButton]) {
+      if (button) button.disabled = busy;
+    }
+  };
+  const getLocalFileSystem = async () => {
+    const uxp = await import("uxp").catch(() => null);
+    return uxp?.localFileSystem || uxp?.storage?.localFileSystem || null;
+  };
+  const responseData = (response) => response?.data ?? response ?? {};
+  const responseError = (response) => response?.error || responseData(response)?.error || t("common.unknown", "unknown");
+
+  exportButton?.addEventListener("click", async () => {
+    setBusy(true);
+    try {
+      const response = await BackendClient.get("/settings/export");
+      if (!response?.ok) throw new Error(responseError(response));
+      const bundle = { ...responseData(response) };
+      try {
+        bundle.localStorage = JSON.parse(window.localStorage?.getItem("opencut_settings") || "{}");
+      } catch (_) { /* local panel state is optional */ }
+      const localFileSystem = await getLocalFileSystem();
+      if (!localFileSystem) throw new Error(t("uxp.settings.settings_file_api_unavailable", "UXP file storage is unavailable."));
+      const date = new Date().toISOString().slice(0, 10);
+      const folder = await localFileSystem.getFolder();
+      if (!folder) return;
+      const file = await folder.createFile(`opencut_settings_${date}.json`, { overwrite: true });
+      await file.write(JSON.stringify(bundle, null, 2));
+      if (status) status.textContent = t("uxp.settings.settings_exported", "Settings exported.");
+      UIController.showToast(t("uxp.settings.settings_exported", "Settings exported."), "success");
+    } catch (error) {
+      if (status) status.textContent = formatI18n("uxp.settings.settings_export_failed", "Settings export failed: {error}", { error: error?.message || error });
+      UIController.showToast(formatI18n("uxp.settings.settings_export_failed", "Settings export failed: {error}", { error: error?.message || error }), "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  importButton?.addEventListener("click", async () => {
+    setBusy(true);
+    try {
+      const localFileSystem = await getLocalFileSystem();
+      if (!localFileSystem) throw new Error(t("uxp.settings.settings_file_api_unavailable", "UXP file storage is unavailable."));
+      const file = await localFileSystem.getFileForOpening({ allowMultiple: false, types: ["json"] });
+      if (!file) return;
+      const raw = await file.read();
+      const bundle = JSON.parse(typeof raw === "string" ? raw : String(raw));
+      if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+        throw new Error(t("uxp.settings.settings_import_invalid", "This file does not contain valid OpenCut settings."));
+      }
+      const response = await BackendClient.post("/settings/import", bundle);
+      if (!response?.ok) throw new Error(responseError(response));
+      if (bundle.localStorage) {
+        try {
+          window.localStorage?.setItem("opencut_settings", JSON.stringify(bundle.localStorage));
+        } catch (_) {
+          UIController.showToast(t("uxp.settings.settings_import_local_failed", "Settings imported, but local panel preferences could not be saved."), "warning");
+        }
+      }
+      const summary = describeSettingsImport(responseData(response));
+      if (status) status.textContent = summary.message;
+      UIController.showToast(summary.message, summary.type);
+    } catch (error) {
+      const message = error?.message || String(error);
+      if (status) status.textContent = message;
+      UIController.showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+}
+
 async function initApp() {
   console.log(`[OpenCut UXP] v${VERSION} initialising...`);
   UXPThemeSync.start();
@@ -8249,6 +8356,7 @@ async function initApp() {
   // migration metadata load in the background.
   UIController.initCollapsibles();
   initSettingsNavigation();
+  await initSettingsIO();
   bindSliders();
   bindEvents();
   syncQuickActionButtons();

@@ -14,6 +14,7 @@ from importlib import resources
 from flask import Blueprint, jsonify, request, send_file
 
 from opencut import __version__, credential_store
+from opencut.core.workflow import validate_workflow_steps
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import (
@@ -479,67 +480,126 @@ def import_settings():
     if error:
         return error
     imported = []
-    if "presets" in data and isinstance(data["presets"], dict):
-        valid_presets = {}
-        for name, preset in data["presets"].items():
-            if not isinstance(name, str):
-                continue
-            clean_name = name.strip()
-            if not clean_name or len(clean_name) > 100:
-                continue
-            if not isinstance(preset, dict):
-                continue
-            valid_presets[clean_name] = preset
-        existing = load_presets()
-        existing.update(valid_presets)
-        if len(existing) > 500:
-            return jsonify({"error": "Too many presets (max 500)"}), 400
-        save_presets(existing)
-        imported.append("presets")
-    if "favorites" in data and isinstance(data["favorites"], list):
-        # Validate each favorite is a string (endpoint path) and within size limits
-        valid_favs = []
-        for fav in data["favorites"][:200]:
-            if isinstance(fav, str) and len(fav) <= 200:
-                valid_favs.append(fav)
-            elif isinstance(fav, dict) and isinstance(fav.get("id"), str):
-                # Structured favorites with id + optional label
-                valid_favs.append({
-                    k: v for k, v in fav.items()
-                    if isinstance(k, str) and len(str(k)) <= 100
-                    and isinstance(v, (str, int, float, bool))
-                })
-        save_favorites(valid_favs)
-        imported.append("favorites")
-    if "workflows" in data and isinstance(data["workflows"], list):
-        wfs = data["workflows"][:100]  # Cap at 100 workflows
-        # Validate workflow steps before importing
-        valid_wfs = []
-        for wf in wfs:
-            if not isinstance(wf, dict):
-                continue
-            if not wf.get("name"):
-                continue
-            steps = wf.get("steps", [])
-            if isinstance(steps, list) and all(
-                isinstance(s, dict) and s.get("endpoint") and s.get("label")
-                for s in steps
-            ):
-                valid_wfs.append(wf)
-        # Merge with existing workflows (update by name, append new ones)
-        existing_wfs = load_workflows()
-        existing_names = {wf.get("name"): i for i, wf in enumerate(existing_wfs)}
-        for wf in valid_wfs:
-            name = wf.get("name")
-            if name in existing_names:
-                existing_wfs[existing_names[name]] = wf
-            else:
-                existing_wfs.append(wf)
-        if len(existing_wfs) > 100:
-            existing_wfs = existing_wfs[:100]
-        save_workflows(existing_wfs)
-        imported.append("workflows")
-    return jsonify({"success": True, "imported": imported})
+    sections = {}
+
+    def new_section():
+        return {"imported": 0, "skipped": 0, "reasons": []}
+
+    def record_skip(section, reason, count=1):
+        section["skipped"] += count
+        if len(section["reasons"]) < 20:
+            section["reasons"].append(str(reason))
+
+    if "presets" in data:
+        preset_section = new_section()
+        sections["presets"] = preset_section
+        if not isinstance(data["presets"], dict):
+            record_skip(preset_section, "Presets must be an object")
+        else:
+            valid_presets = {}
+            for name, preset in data["presets"].items():
+                if not isinstance(name, str):
+                    record_skip(preset_section, "Preset name is not a string")
+                    continue
+                clean_name = name.strip()
+                if not clean_name or len(clean_name) > 100:
+                    record_skip(preset_section, f"Invalid preset name: {name!r}")
+                    continue
+                if not isinstance(preset, dict):
+                    record_skip(preset_section, f"Preset '{clean_name}' is not an object")
+                    continue
+                valid_presets[clean_name] = preset
+            preset_section["imported"] = len(valid_presets)
+            existing = load_presets()
+            existing.update(valid_presets)
+            if len(existing) > 500:
+                return jsonify({"error": "Too many presets (max 500)"}), 400
+            save_presets(existing)
+            if preset_section["imported"]:
+                imported.append("presets")
+
+    if "favorites" in data:
+        favorite_section = new_section()
+        sections["favorites"] = favorite_section
+        if not isinstance(data["favorites"], list):
+            record_skip(favorite_section, "Favorites must be a list")
+        else:
+            favorites = data["favorites"]
+            if len(favorites) > 200:
+                record_skip(
+                    favorite_section,
+                    f"{len(favorites) - 200} favorite(s) skipped; maximum is 200",
+                    len(favorites) - 200,
+                )
+            valid_favs = []
+            for fav in favorites[:200]:
+                if isinstance(fav, str) and len(fav) <= 200:
+                    valid_favs.append(fav)
+                elif isinstance(fav, dict) and isinstance(fav.get("id"), str):
+                    # Structured favorites with id + optional label
+                    valid_favs.append({
+                        k: v for k, v in fav.items()
+                        if isinstance(k, str) and len(str(k)) <= 100
+                        and isinstance(v, (str, int, float, bool))
+                    })
+                else:
+                    record_skip(favorite_section, "Favorite must be a short string or an object with a string id")
+            favorite_section["imported"] = len(valid_favs)
+            save_favorites(valid_favs)
+            if favorite_section["imported"]:
+                imported.append("favorites")
+
+    if "workflows" in data:
+        workflow_section = new_section()
+        sections["workflows"] = workflow_section
+        if not isinstance(data["workflows"], list):
+            record_skip(workflow_section, "Workflows must be a list")
+        else:
+            workflows = data["workflows"]
+            if len(workflows) > 100:
+                record_skip(
+                    workflow_section,
+                    f"{len(workflows) - 100} workflow(s) skipped; maximum is 100",
+                    len(workflows) - 100,
+                )
+            valid_wfs = []
+            for index, wf in enumerate(workflows[:100], start=1):
+                if not isinstance(wf, dict):
+                    record_skip(workflow_section, f"Workflow {index} is not an object")
+                    continue
+                name = wf.get("name")
+                if not isinstance(name, str) or not name.strip() or len(name.strip()) > 100:
+                    record_skip(workflow_section, f"Workflow {index} has an invalid name")
+                    continue
+                valid, reason = validate_workflow_steps(wf.get("steps", []))
+                if not valid:
+                    record_skip(workflow_section, f"Workflow '{name.strip()}': {reason}")
+                    continue
+                clean_workflow = dict(wf)
+                clean_workflow["name"] = name.strip()
+                valid_wfs.append(clean_workflow)
+            # Merge with existing workflows (update by name, append new ones)
+            existing_wfs = load_workflows()
+            existing_names = {wf.get("name"): i for i, wf in enumerate(existing_wfs)}
+            for wf in valid_wfs:
+                name = wf["name"]
+                if name in existing_names:
+                    existing_wfs[existing_names[name]] = wf
+                    workflow_section["imported"] += 1
+                elif len(existing_wfs) >= 100:
+                    record_skip(
+                        workflow_section,
+                        f"Workflow '{name}' skipped; maximum is 100",
+                    )
+                else:
+                    existing_names[name] = len(existing_wfs)
+                    existing_wfs.append(wf)
+                    workflow_section["imported"] += 1
+            save_workflows(existing_wfs)
+            if workflow_section["imported"]:
+                imported.append("workflows")
+
+    return jsonify({"success": True, "imported": imported, **sections})
 
 
 # ---------------------------------------------------------------------------

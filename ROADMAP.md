@@ -73,19 +73,7 @@ finding, not a pre-existing failure): `py -3.12 -m pytest tests/ -q` →
 generated manifests report in-sync; `npx playwright test` (panel rendered
 suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
-### P0 — 2026-08-02
-
 ### P1 — 2026-08-02
-
-- [ ] P1 — Make the settings bundle survive its own import (workflows are silently dropped)
-  Category: correctness
-  Where: `opencut/routes/settings.py:514-528` (`import_settings` workflow branch) vs `opencut/core/workflow.py:163-180` (`validate_workflow_steps`, the canonical validator) and `opencut/routes/workflow.py:42-63` (`POST /workflow/save`).
-  Problem: Import requires every workflow step to have both `endpoint` **and** `label` (`all(isinstance(s, dict) and s.get("endpoint") and s.get("label") for s in steps)`), but `label` is a purely cosmetic UI string that the engine never reads — `run_workflow` consumes only `endpoint` (`workflow.py:175`) and `params` (`:232`). Every workflow created through the documented `/workflow/save` API, the CLI, or MCP is persisted as `{endpoint, params}` with no `label`, so it fails this check, is dropped, and the route still reports `{"success": true, "imported": ["workflows"]}`. The user restoring a backup on a new machine is told the import succeeded and silently loses their workflows. Steps carrying real configuration (`params`) are exactly the ones rejected; label-only steps that cannot run are accepted.
-  Evidence: Reproduced in-process against an isolated data dir (`user_data.OPENCUT_DIR` repointed to a temp dir). Posting a bundle in the exact shape `GET /settings/export` emits — `{"version":"1.46.0","presets":{},"favorites":[],"workflows":[{"name":"Podcast Polish","description":"d","steps":[{"endpoint":"/silence","params":{}},{"endpoint":"/audio/normalize","params":{}}],"created":1.0,"updated":2.0}]}` — returned HTTP 200 `{"imported":["presets","favorites","workflows"],"success":true}` while `load_workflows()` went from `[]` before to `[]` after. The CEP panel's own builder produces `{endpoint, label}` (`extension/com.opencut.panel/client/main.js:13114-13117`), which is why the break was never seen through that one surface.
-  Fix: Validate imported steps with `validate_workflow_steps` from `opencut/core/workflow.py` (single source of truth) instead of the local predicate, so `label` becomes optional. Separately, stop reporting success for work that did not happen: have `import_settings` return per-section counts (e.g. `{"workflows": {"imported": 2, "skipped": 1, "reasons": [...]}}`) and surface skipped items in both panels' import toasts (`main.js:13031-13045` CEP).
-  Acceptance: A test round-trips `GET /settings/export` → `POST /settings/import` against an empty data dir and asserts every exported workflow, preset, and favorite is present afterwards. A second test asserts a genuinely malformed workflow is reported as skipped with a reason rather than counted as imported.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P1 — Stop the worker error path from overwriting a cancelled job with "error"
   Category: correctness

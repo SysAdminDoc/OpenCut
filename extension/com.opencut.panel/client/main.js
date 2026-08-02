@@ -12998,6 +12998,36 @@
     // ================================================================
     // Settings Import / Export
     // ================================================================
+    function describeSettingsImport(result) {
+        var imported = Array.isArray(result && result.imported) ? result.imported : [];
+        var skippedCount = 0;
+        var reasons = [];
+        ["presets", "favorites", "workflows"].forEach(function (section) {
+            var details = result && result[section];
+            if (!details || !details.skipped) return;
+            skippedCount += Number(details.skipped) || 0;
+            if (Array.isArray(details.reasons)) {
+                reasons = reasons.concat(details.reasons);
+            }
+        });
+        if (skippedCount > 0) {
+            var reasonText = reasons.slice(0, 3).join("; ");
+            if (reasons.length > 3) reasonText += "…";
+            return {
+                message: t("settings.import_skipped", "Settings imported: {items}. Skipped {count} item(s){reasons}")
+                    .replace("{items}", imported.join(", ") || t("settings.none_imported", "none"))
+                    .replace("{count}", skippedCount)
+                    .replace("{reasons}", reasonText ? ": " + reasonText : ""),
+                type: "warning"
+            };
+        }
+        return {
+            message: t("settings.imported", "Settings imported: {items}")
+                .replace("{items}", imported.join(", ") || t("settings.none_imported", "none")),
+            type: "success"
+        };
+    }
+
     function initSettingsIO() {
         if (el.exportSettingsBtn) {
             el.exportSettingsBtn.addEventListener("click", function () {
@@ -13041,7 +13071,8 @@
                                     showToast(t("settings.import_local_failed", "Settings imported, but local panel preferences could not be saved."), "warning");
                                 }
                             }
-                            showToast(t("settings.imported", "Settings imported: {items}").replace("{items}", (result.imported || []).join(", ")), "success");
+                            var importSummary = describeSettingsImport(result);
+                            showToast(importSummary.message, importSummary.type);
                             if (typeof initPresets === "function") initPresets();
                         });
                     } catch (ex) {
