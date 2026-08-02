@@ -5,6 +5,43 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - VMAF was unavailable on Windows and lossless PSNR read as a failure
+
+- `measure_vmaf()` interpolated the JSON log path straight into the
+  filtergraph, so the drive colon in `C:/...` broke the lavfi parser and every
+  VMAF measurement failed with "No option name near ...". The path is now
+  single-quoted *and* colon-escaped, which is what the parser actually needs.
+- `measure_ssim()` / `measure_psnr()` required identical dimensions and
+  produced an opaque "Invalid argument" for a proxy-versus-original pair. The
+  distorted input is now scaled to the reference the way the VMAF path already
+  was, so proxy parity is measurable.
+- A lossless comparison reports `PSNR average:inf`, which the result regex
+  rejected — a perfect match looked like a parse failure. `inf` is accepted.
+
+### Added - VMAF receipts identify the model
+
+- `QualityReport` carries `vmaf_model`, `vmaf_version`, `vmaf_scaling`, and
+  `vmaf_mode`, and the model is pinned to `vmaf_v0.6.1` instead of inheriting
+  whatever the local FFmpeg build defaults to. A VMAF number without its model
+  is not comparable across machines.
+
+### Added - Release-gated media conformance corpus
+
+- `tests/media_corpus.py` synthesizes a deterministic, licence-free corpus
+  covering CFR at 25/23.976/29.97-drop-frame/59.94, true VFR, delayed PTS,
+  mid-file decode corruption, mono/5.1/no-audio, subtitle/data/attachment
+  streams, 10-bit HDR colour metadata, display-matrix rotation, Unicode and
+  spaced paths, and a proxy/original pair. Each entry declares the properties
+  it must carry, and a test verifies the declaration against real ffprobe
+  output so a fixture cannot silently stop being interesting.
+- `tests/test_media_conformance.py` runs trims and stream copies across the
+  corpus and asserts duration, timecode frame position (drop-frame aware),
+  A/V sync, channel layout, pixel format and colour metadata, rotation, error
+  accounting on corrupt input, and VMAF model identity — within tolerances
+  declared once in the corpus module.
+- A new `media-conformance` release-smoke step runs the corpus, and skips
+  truthfully rather than passing when FFmpeg is unavailable.
+
 ### Added - Public-installer-to-current upgrade conformance
 
 - `tests/legacy_user_data_fixture.py` materializes a v1.25.1-shaped
