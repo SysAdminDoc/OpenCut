@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-08-02T07:17:54Z",
-  "total_routes": 1568,
-  "shipped_route_count": 1543,
+  "generated_at": "2026-08-02T08:25:57Z",
+  "total_routes": 1569,
+  "shipped_route_count": 1544,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 401,
+    "GET": 402,
     "PATCH": 1,
     "POST": 1151,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1514,
+    "implemented": 1515,
     "stub": 25
   },
   "blueprints": {
@@ -677,14 +677,14 @@
       ]
     },
     "plugins": {
-      "route_count": 10,
+      "route_count": 11,
       "method_counts": {
-        "GET": 5,
+        "GET": 6,
         "POST": 5
       },
       "sample_rules": [
+        "/plugins/doctor",
         "/plugins/list",
-        "/plugins/loaded",
         "/plugins/trust"
       ]
     },
@@ -9444,6 +9444,15 @@
       ],
       "endpoint": "vfx_advanced.planar_track_track",
       "blueprint": "vfx_advanced",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/doctor",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "plugins.plugins_doctor",
+      "blueprint": "plugins",
       "readiness": "implemented"
     },
     {

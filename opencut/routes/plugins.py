@@ -444,6 +444,17 @@ def plugin_trust_dashboard():
     })
 
 
+@plugins_bp.route("/plugins/doctor", methods=["GET"])
+def plugins_doctor():
+    """Report compatibility and validity for every installed plugin.
+
+    Answers the question the loader's log lines could not: *why* was a plugin
+    refused, and what should be done about it.
+    """
+    from opencut.core.plugin_manifest import doctor
+    return jsonify(doctor())
+
+
 @plugins_bp.route("/plugins/loaded", methods=["GET"])
 def loaded_plugins():
     """List only currently loaded plugins."""

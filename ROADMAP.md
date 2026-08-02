@@ -15,49 +15,7 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P1 — 2026-07-25
 
-- [ ] P1 — Add public-installer-to-current upgrade conformance
-  Why: The latest public installer is v1.25.1 while source is v1.43.0, but no automated fixture proves that accumulated local state survives that upgrade.
-  Evidence: `README.md:71`, GitHub v1.25.1 release, installer migration/store code, Descript version history, OpenShot recovery documentation.
-  Touches: `installer/`, user-data migration helpers, queue/journal/index/review/plugin/settings stores, installer smoke tests.
-  Acceptance: An isolated v1.25.1-shaped user-data fixture upgrades to the current build without network access; settings, queue, journal, indexes, review versions, plugin trust, and secrets references remain valid or migrate with explicit backups; rollback/uninstall leaves user data recoverable.
-  Complexity: L
-
-- [ ] P1 — Add a release-gated media conformance corpus
-  Why: Real FFmpeg integration tests cover basic 24 fps H.264/AAC media but not the timing, channel, color-depth, and path combinations that commonly break automated edits.
-  Evidence: `tests/test_integration_ffmpeg.py`; ASR boundary fixture; LosslessCut metadata/timestamp issues; WhisperX alignment issues; Stack Overflow VFR/concat sync cases; Meta FFmpeg engineering; Netflix VMAF model guidance.
-  Touches: `tests/fixtures/`, FFmpeg integration tests, trim/merge/caption/interchange/export modules, release smoke.
-  Acceptance: Deterministic synthetic or permissively licensed fixtures cover CFR/VFR and non-zero/delayed PTS, 23.976/29.97 drop-frame/59.94, corrupt/decode-error continuation, mono/stereo/multichannel/no-audio, subtitle/data/attachment streams, 8/10-bit HDR/color metadata, rotation, Unicode/space paths, and proxy/original parity; operations assert duration/timecode, A/V sync, stream/channel/pixel metadata, error accounting, and VMAF model identity within declared tolerances.
-  Complexity: L
-
-- [ ] P1 — Turn OpenAPI into a typed executable contract
-  Why: The generated spec inventories 1,570 operations but omits most request bodies and reduces most responses to an unbounded object, forcing clients to re-read source.
-  Evidence: `opencut/openapi.py` emits 3.0.3 at `/openapi.json`; `opencut/core/openapi_spec.py` emits 3.1.0 at `/api/openapi.json`; `opencut/core/fastapi_app.py:558` has another generation adapter; OpenAPI 3.1.1 and MCP 2026-07-28 require JSON Schema 2020-12 semantics.
-  Touches: all OpenAPI generation adapters/endpoints, route validation/schema registries, MCP registry, generated spec/tests, client fixtures.
-  Acceptance: One OpenAPI 3.1.x schema source feeds the canonical endpoint and explicit compatibility adapters; panel- and MCP-exposed operations have typed request, success, and stable error schemas sourced from shared validators; contract tests exercise generated valid/invalid payloads; a coverage ratchet prevents typed-operation regression.
-  Complexity: XL
-
 ### P1 — 2026-07-29
-
-- [ ] P1 — Finish UXP Sequence Index as an accessible working table
-  Why: The UI promises a spreadsheet view but discards returned rows and shows only a summary, leaving backend filter/sort and host locators unusable.
-  Evidence: `extension/com.opencut.uxp/index.html:1502-1512`, `extension/com.opencut.uxp/main.js:8460-8504`, `opencut/core/sequence_index.py:343-525`, `opencut/routes/sequence_index_routes.py:51-179`; Adobe Premiere 26.3 Sequence Index.
-  Touches: UXP Sequence Index markup/controller/styles/locales and host payload, `opencut/core/sequence_index.py`, filter routes/client, host jump action, CSV export, rendered/unit tests.
-  Acceptance: Rows render with correct table/grid semantics and keyboard navigation; search, sortable columns, offline/flash/effects filters, result count, loading/empty/error states, column persistence, host jump, and filtered CSV export work without re-walking the timeline; large indexes remain responsive.
-  Complexity: L
-
-- [ ] P1 — Migrate MCP across the 2026-07-28 protocol boundary
-  Why: OpenCut hardcodes `2024-11-05` and excludes SDK 2 while the final 2026-07-28 specification changes discovery, stateless metadata, result envelopes, subscriptions, caching, schemas, tracing, and transport security.
-  Evidence: `pyproject.toml:147`, `opencut/mcp_server.py:1641,1787`, generated MCP registries; MCP 2026-07-28 specification/changelog and Python SDK 2.0.0 supersede the expired 2026-07-20 date gate in the ignored blocker ledger.
-  Touches: MCP dependency and server/transports, REST/OpenAPI schema registry, generated tool registry, auth/origin tests, CEP/UXP MCP status/counts, conformance fixtures, `Roadmap_Blocked.md`.
-  Acceptance: The obsolete local blocker row is retired; one conformance matrix proves supported legacy handshakes and the 2026-07-28 `server/discover`/per-request era; modern results carry required `resultType`, identity/capability metadata, cache hints, JSON Schema 2020-12, tracing, and appropriate subscription behavior; legacy clients remain functional; UI counts are generated, not hardcoded; optional extensions are not claimed without tests.
-  Complexity: L
-
-- [ ] P1 — Gate standards-labelled outputs with reference validators
-  Why: OpenCut labels IMF and IMSC 1.3 output as conformant and presents loudness/VMAF thresholds without independent reference proof, so invalid edge cases can leave with authoritative-looking claims.
-  Evidence: `opencut/core/imf_package.py:1-82,421-688`, `opencut/core/caption_interchange.py:361-759`, `README.md:289`; Netflix Photon, W3C IMSC 1.3 test/HRM suites, `imschrm`, EBU Loudness Test Set, ITU-R BS.1770, Netflix VMAF model guidance.
-  Touches: IMF/caption/loudness/VMAF modules, isolated validator adapters, conformance fixtures/reports, release smoke, README capability wording.
-  Acceptance: Representative IMPs pass Photon `IMPAnalyzer`; IMSC output passes the W3C `imsc1_3` corpus and `imschrm` against the W3C HRM pass/fail suite, including Japanese/style cases; loudness passes applicable EBU reference signals; VMAF receipts identify model/version/scaling/mode; every validator emits a machine-readable report, and unsupported profiles are downgraded from “validated” rather than silently shipped.
-  Complexity: L
 
 ### P2 — 2026-07-25
 
@@ -80,13 +38,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Evidence: CEP/UXP CSS lacks `forced-colors` rules; WCAG 2.2 non-text contrast and focus criteria; Playwright forced-colors emulation.
   Touches: shared panel tokens/styles, icon/status semantics, Playwright rendered matrix.
   Acceptance: Both panels remain navigable with `forced-colors: active`; text, focus, selected, disabled, error, and success states remain distinguishable without color alone; screenshots and existing semantic/keyboard checks cover the mode.
-  Complexity: M
-
-- [ ] P2 — Version the plugin compatibility contract
-  Why: Plugin trust and isolation are strong, but `api_version == 1` is a hard equality check with no host-version range or migration diagnostic for future ecosystem growth.
-  Evidence: `opencut/core/plugin_manifest.py:150`, example plugins, OpenTimelineIO schema-versioning guidance, OpenCut-app plugin-first architecture.
-  Touches: plugin manifest schema/loader/marketplace, plugin diagnostics CLI/API, examples, compatibility tests.
-  Acceptance: Manifests declare schema and supported OpenCut plugin-API ranges; install/start rejects incompatibility before activation with an actionable report; a doctor command validates installed plugins; v1 fixtures remain readable and a documented migration path is test-backed.
   Complexity: M
 
 - [ ] P2 — Split the remaining panel controller hotspots

@@ -40,6 +40,25 @@ LOCK_FILENAME = "plugin.lock.json"
 SIGNATURE_FILENAME = "plugin.signature.json"
 MANIFEST_VERSION = 1
 
+# --- Compatibility contract -------------------------------------------------
+# `api_version == 1` used to be a hard equality check, which meant the first
+# host API bump would reject every installed plugin with "unsupported value 1"
+# and no way to say "I work on 1 and 2". Plugins now declare a *range* and the
+# host declares what it implements, so an incompatibility is reported before
+# activation with something the author can act on.
+
+#: The plugin API generation this host implements.
+PLUGIN_API_VERSION = 1
+
+#: Oldest plugin API generation this host still honours.
+MIN_SUPPORTED_PLUGIN_API = 1
+
+#: Manifest *schema* version — how the manifest file itself is written. It
+#: moves independently of the API version: a manifest can gain fields without
+#: the runtime contract changing.
+MANIFEST_SCHEMA_VERSION = 1
+MIN_SUPPORTED_MANIFEST_SCHEMA = 1
+
 # Capabilities the host knows how to honour. Anything else is rejected so
 # new permissions land alongside the runtime that enforces them.
 SUPPORTED_CAPABILITIES = (
@@ -64,6 +83,133 @@ _LOCK_IGNORE = frozenset(
         ".DS_Store",
     }
 )
+
+
+@dataclass
+class CompatibilityReport:
+    """Whether a plugin's declared API range overlaps this host's."""
+
+    compatible: bool
+    host_api_version: int = PLUGIN_API_VERSION
+    host_min_api_version: int = MIN_SUPPORTED_PLUGIN_API
+    plugin_min_api_version: int = PLUGIN_API_VERSION
+    plugin_max_api_version: int = PLUGIN_API_VERSION
+    manifest_schema_version: int = MANIFEST_SCHEMA_VERSION
+    reason: str = ""
+    remediation: str = ""
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+def host_api_range() -> tuple[int, int]:
+    """``(min, max)`` plugin API generations this host honours."""
+    return (MIN_SUPPORTED_PLUGIN_API, PLUGIN_API_VERSION)
+
+
+def _declared_api_range(manifest: dict) -> tuple[int, int] | None:
+    """Resolve the plugin's supported host-API range.
+
+    A v1 manifest only has ``api_version``; that is read as the single-point
+    range ``[api_version, api_version]`` so existing plugins keep their exact
+    semantics without being rewritten.
+    """
+    api = manifest.get("api_version")
+    if not isinstance(api, int) or isinstance(api, bool):
+        return None
+    low = manifest.get("min_api_version", api)
+    high = manifest.get("max_api_version", api)
+    if not isinstance(low, int) or isinstance(low, bool):
+        return None
+    if not isinstance(high, int) or isinstance(high, bool):
+        return None
+    if low > high:
+        return None
+    return (low, high)
+
+
+def check_api_compatibility(manifest: dict) -> CompatibilityReport:
+    """Report whether *manifest* can run on this host, and what to do if not."""
+    host_min, host_max = host_api_range()
+
+    schema_version = manifest.get("schema_version", MANIFEST_SCHEMA_VERSION)
+    if not isinstance(schema_version, int) or isinstance(schema_version, bool):
+        return CompatibilityReport(
+            compatible=False,
+            manifest_schema_version=MANIFEST_SCHEMA_VERSION,
+            reason=f"schema_version must be an integer, got {schema_version!r}",
+            remediation=(
+                f"Set \"schema_version\": {MANIFEST_SCHEMA_VERSION} in plugin.json, "
+                "or omit it to accept the default."
+            ),
+        )
+    if schema_version > MANIFEST_SCHEMA_VERSION:
+        return CompatibilityReport(
+            compatible=False,
+            manifest_schema_version=schema_version,
+            reason=(
+                f"manifest schema {schema_version} is newer than this host "
+                f"understands ({MANIFEST_SCHEMA_VERSION})"
+            ),
+            remediation=(
+                "Upgrade OpenCut, or install a build of the plugin that targets "
+                f"manifest schema {MANIFEST_SCHEMA_VERSION}."
+            ),
+        )
+    if schema_version < MIN_SUPPORTED_MANIFEST_SCHEMA:
+        return CompatibilityReport(
+            compatible=False,
+            manifest_schema_version=schema_version,
+            reason=f"manifest schema {schema_version} is no longer supported",
+            remediation=(
+                f"Regenerate plugin.json against schema {MANIFEST_SCHEMA_VERSION}."
+            ),
+        )
+
+    declared = _declared_api_range(manifest)
+    if declared is None:
+        return CompatibilityReport(
+            compatible=False,
+            manifest_schema_version=schema_version,
+            reason=(
+                "api_version / min_api_version / max_api_version must be integers "
+                "with min <= max"
+            ),
+            remediation=(
+                f"Declare \"api_version\": {PLUGIN_API_VERSION}, and optionally "
+                "\"min_api_version\"/\"max_api_version\" to span several host "
+                "generations."
+            ),
+        )
+
+    plugin_min, plugin_max = declared
+    report = CompatibilityReport(
+        compatible=True,
+        plugin_min_api_version=plugin_min,
+        plugin_max_api_version=plugin_max,
+        manifest_schema_version=schema_version,
+    )
+    if plugin_max < host_min:
+        report.compatible = False
+        report.reason = (
+            f"plugin targets OpenCut plugin API {plugin_min}-{plugin_max}; this "
+            f"host no longer supports anything below {host_min}"
+        )
+        report.remediation = (
+            f"Update the plugin to support API {host_min}-{host_max}, or install "
+            "an OpenCut release that still honours the older API."
+        )
+    elif plugin_min > host_max:
+        report.compatible = False
+        report.reason = (
+            f"plugin requires OpenCut plugin API {plugin_min}; this host "
+            f"implements up to {host_max}"
+        )
+        report.remediation = (
+            "Upgrade OpenCut, or install a build of the plugin that targets API "
+            f"{host_max}."
+        )
+    return report
 
 
 @dataclass
@@ -147,11 +293,19 @@ def validate_manifest_schema(manifest: dict) -> ManifestValidationResult:
     if "description" not in manifest or not isinstance(manifest["description"], str):
         result.errors.append("description: required string")
 
-    api = manifest.get("api_version")
-    if api is None:
-        result.errors.append("api_version: required (current schema version is 1)")
-    elif api != 1:
-        result.errors.append(f"api_version: unsupported value {api!r}; expected 1")
+    if manifest.get("api_version") is None:
+        result.errors.append(
+            f"api_version: required (this host implements plugin API "
+            f"{PLUGIN_API_VERSION})"
+        )
+    else:
+        compatibility = check_api_compatibility(manifest)
+        if not compatibility.compatible:
+            # Carry the remediation into the error so the loader's refusal
+            # message tells the operator what to do about it.
+            result.errors.append(
+                f"api_version: {compatibility.reason}. {compatibility.remediation}"
+            )
 
     capabilities = manifest.get("capabilities") or []
     if not isinstance(capabilities, list):
@@ -307,3 +461,83 @@ def validate_plugin_manifest(plugin_dir: str | os.PathLike) -> ManifestValidatio
 
     result.valid = not result.errors
     return result
+
+
+def doctor(plugins_dir: str | os.PathLike | None = None) -> dict:
+    """Report the health of every installed plugin.
+
+    Returns a machine-readable summary so both the CLI and the API can render
+    the same verdict: what is installed, what is compatible, and for anything
+    that is not, what the author or operator should do about it.
+    """
+    if plugins_dir is None:
+        plugins_dir = Path(os.path.expanduser("~")) / ".opencut" / "plugins"
+    base = Path(plugins_dir)
+
+    host_min, host_max = host_api_range()
+    summary = {
+        "plugins_dir": str(base),
+        "host_api_version": PLUGIN_API_VERSION,
+        "host_min_api_version": host_min,
+        "manifest_schema_version": MANIFEST_SCHEMA_VERSION,
+        "total": 0,
+        "healthy": 0,
+        "incompatible": 0,
+        "invalid": 0,
+        "plugins": [],
+    }
+    if not base.is_dir():
+        return summary
+
+    for entry in sorted(base.iterdir()):
+        if not entry.is_dir():
+            continue
+        manifest_path = entry / MANIFEST_FILENAME
+        if not manifest_path.is_file():
+            continue
+
+        summary["total"] += 1
+        record = {
+            "name": entry.name,
+            "path": str(entry),
+            "version": "",
+            "compatible": False,
+            "valid": False,
+            "errors": [],
+            "warnings": [],
+            "reason": "",
+            "remediation": "",
+        }
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            record["errors"].append(f"plugin.json unreadable: {exc}")
+            record["remediation"] = "Repair or reinstall the plugin."
+            summary["invalid"] += 1
+            summary["plugins"].append(record)
+            continue
+
+        record["version"] = str(manifest.get("version") or "")
+        compatibility = check_api_compatibility(manifest)
+        record["compatible"] = compatibility.compatible
+        record["reason"] = compatibility.reason
+        record["remediation"] = compatibility.remediation
+        record["api_range"] = [
+            compatibility.plugin_min_api_version,
+            compatibility.plugin_max_api_version,
+        ]
+
+        validation = validate_plugin_manifest(entry)
+        record["valid"] = validation.valid
+        record["errors"].extend(validation.errors)
+        record["warnings"].extend(validation.warnings)
+
+        if not compatibility.compatible:
+            summary["incompatible"] += 1
+        elif not validation.valid:
+            summary["invalid"] += 1
+        else:
+            summary["healthy"] += 1
+        summary["plugins"].append(record)
+
+    return summary

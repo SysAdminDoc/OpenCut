@@ -5,6 +5,30 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - The plugin compatibility contract is versioned
+
+- `api_version == 1` was a hard equality check: the first host API bump would
+  have rejected every installed plugin with "unsupported value 1", and an
+  author had no way to declare support for more than one generation. Plugins
+  now declare a range (`min_api_version`/`max_api_version`, defaulting to the
+  single-point range a v1 manifest already implies) and the host publishes
+  `host_api_range()`. Existing v1 manifests keep their exact semantics and
+  load untouched.
+- `schema_version` versions the manifest *file* separately from the runtime
+  API, so a manifest can gain fields without a contract change. A manifest
+  schema newer than the host understands is refused rather than partially
+  read.
+- Incompatibility is reported before activation with a remediation line — what
+  the plugin targets, what the host implements, and whether to upgrade OpenCut
+  or the plugin — instead of a bare validation failure.
+
+### Added - `plugins doctor`
+
+- `opencut plugins doctor` (and `GET /plugins/doctor`) validate every
+  installed plugin against this host's plugin API and report healthy /
+  incompatible / invalid counts with per-plugin reasons and fixes. The CLI
+  exits non-zero when anything is unhealthy so scripts can gate on it.
+
 ### Fixed - "Validated IMSC 1.3" output was rejected by the reference implementation
 
 - The default caption style emitted `tts:backgroundColor="rgba(0,0,0,0.8)"`.
