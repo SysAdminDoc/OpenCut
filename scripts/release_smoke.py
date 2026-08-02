@@ -1300,6 +1300,50 @@ def step_panel_source(_args: argparse.Namespace) -> StepResult:
     return res
 
 
+def step_media_conformance(args: argparse.Namespace) -> StepResult:
+    """Run the synthetic media corpus against real FFmpeg operations.
+
+    Skips truthfully (rather than passing) when FFmpeg is unavailable, so a
+    host without FFmpeg cannot look like it proved media conformance.
+    """
+    start = time.time()
+    try:
+        from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
+        has_ffmpeg = bool(get_ffmpeg_path()) and bool(get_ffprobe_path())
+    except Exception:  # noqa: BLE001
+        has_ffmpeg = False
+    if not has_ffmpeg:
+        return StepResult(
+            "media-conformance",
+            "skipped",
+            skipped_reason="FFmpeg/ffprobe unavailable",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+    cmd = [
+        sys.executable, "-m", "pytest", "-q", "--tb=short",
+        "tests/test_media_conformance.py",
+    ]
+    if getattr(args, "pytest_extra", None):
+        cmd.extend(args.pytest_extra)
+    result = _run(cmd, cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "media-conformance",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "media corpus conformance passed"
+            if status == "ok"
+            else "media corpus conformance failed"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
@@ -1326,6 +1370,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("contrast-audit", step_contrast_audit, "Check CEP/UXP panel token contrast"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
+    StepDefinition("media-conformance", step_media_conformance, "Run the synthetic media corpus against real FFmpeg"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
     StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
     StepDefinition("panel-rendered", step_panel_rendered, "Run headless CEP/UXP rendered regression tests"),

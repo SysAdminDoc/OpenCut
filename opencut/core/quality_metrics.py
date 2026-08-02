@@ -49,6 +49,13 @@ class QualityReport:
     threshold_vmaf: Optional[float] = None
     frames: Optional[int] = None
     duration: Optional[float] = None
+    # A VMAF number without its model is not a comparable measurement, so the
+    # receipt names the model, the libvmaf build, the scaling that was applied
+    # to both inputs, and the pooling mode.
+    vmaf_model: Optional[str] = None
+    vmaf_version: Optional[str] = None
+    vmaf_scaling: Optional[str] = None
+    vmaf_mode: Optional[str] = None
     notes: List[str] = field(default_factory=list)
 
     def __getitem__(self, key):
@@ -90,8 +97,28 @@ def check_vmaf_available() -> bool:
 # Parsers
 # ---------------------------------------------------------------------------
 
-_SSIM_RE = re.compile(r"SSIM\s+.*?All:\s*([\d.]+)", re.IGNORECASE)
-_PSNR_RE = re.compile(r"PSNR\s+.*?average:\s*([\d.]+)", re.IGNORECASE)
+_SSIM_RE = re.compile(r"SSIM\s+.*?All:\s*([\d.]+|inf)", re.IGNORECASE)
+# A lossless match reports ``average:inf``; without the alternative the metric
+# looks like it failed exactly when it succeeded perfectly.
+_PSNR_RE = re.compile(r"PSNR\s+.*?average:\s*([\d.]+|inf)", re.IGNORECASE)
+
+
+def _escape_filter_path(path: str) -> str:
+    """Quote a filesystem path for use as an FFmpeg *filter option* value.
+
+    A bare Windows path breaks the filtergraph parser on the drive colon, and
+    escaping the colon alone is not enough — the value has to be single-quoted
+    *and* the colon escaped. Without both, ``libvmaf=log_path=C:/...`` fails
+    with "No option name near ..." and VMAF is unavailable on Windows.
+    """
+    forward = str(path).replace("\\", "/")
+    return "'" + forward.replace(":", "\\:") + "'"
+
+
+# Pinned so a receipt means the same thing across machines and FFmpeg builds.
+VMAF_MODEL = "vmaf_v0.6.1"
+VMAF_SCALING = "1920x1080 bicubic yuv420p"
+VMAF_MODE = "hd"
 
 
 def _parse_vmaf_json(path: str) -> Dict[str, float]:
@@ -120,6 +147,7 @@ def _parse_vmaf_json(path: str) -> Dict[str, float]:
         "min": float(min_val) if min_val is not None else float("nan"),
         "harmonic": float(harmonic) if harmonic is not None else float("nan"),
         "frame_count": len(frames),
+        "version": str(data.get("version") or ""),
     }
 
 
@@ -154,11 +182,37 @@ def _run_ffmpeg_filter_complex(
     return proc.stderr or ""
 
 
+def _reference_scaled_graph(reference: str, metric: str) -> str:
+    """Build a ``metric`` graph that resizes the distorted input to *reference*.
+
+    ``ssim``/``psnr`` require identical dimensions and simply produce no
+    packets otherwise, which surfaces as an opaque "Invalid argument". Proxy
+    workflows compare a smaller proxy against its original, so scale the
+    distorted input up to the reference the way the VMAF path already does.
+    """
+    width = height = 0
+    try:
+        from opencut.helpers import get_video_info
+        info = get_video_info(reference) or {}
+        width = int(info.get("width") or 0)
+        height = int(info.get("height") or 0)
+    except Exception:  # noqa: BLE001
+        width = height = 0
+
+    if width > 0 and height > 0:
+        return (
+            f"[0:v]scale={width}:{height}:flags=bicubic,format=yuv420p[dist];"
+            "[1:v]format=yuv420p[ref];"
+            f"[dist][ref]{metric}"
+        )
+    return f"[0:v]format=yuv420p[dist];[1:v]format=yuv420p[ref];[dist][ref]{metric}"
+
+
 def measure_ssim(distorted: str, reference: str, timeout: int = 3600) -> float:
     """Return the mean SSIM (0..1) of ``distorted`` against ``reference``."""
     stderr = _run_ffmpeg_filter_complex(
         distorted, reference,
-        "[0:v][1:v]ssim=stats_file=-",
+        _reference_scaled_graph(reference, "ssim"),
         timeout=timeout,
     )
     match = _SSIM_RE.search(stderr)
@@ -171,7 +225,7 @@ def measure_psnr(distorted: str, reference: str, timeout: int = 3600) -> float:
     """Return the mean PSNR (dB) of ``distorted`` against ``reference``."""
     stderr = _run_ffmpeg_filter_complex(
         distorted, reference,
-        "[0:v][1:v]psnr=stats_file=-",
+        _reference_scaled_graph(reference, "psnr"),
         timeout=timeout,
     )
     match = _PSNR_RE.search(stderr)
@@ -195,20 +249,22 @@ def measure_vmaf(distorted: str, reference: str, timeout: int = 3600) -> Dict[st
     fd, json_path = tempfile.mkstemp(suffix=".json", prefix="opencut_vmaf_")
     os.close(fd)
     try:
-        # libvmaf escape: colons need \: on Windows paths but FFmpeg's
-        # lavfi parser accepts forward slashes everywhere, so prefer
-        # those.
-        log_path = json_path.replace("\\", "/")
+        log_path = _escape_filter_path(json_path)
+        model = "model=version\\=" + VMAF_MODEL
         fc = (
             "[0:v]scale=1920:1080:flags=bicubic,format=yuv420p[dist];"
             "[1:v]scale=1920:1080:flags=bicubic,format=yuv420p[ref];"
-            f"[dist][ref]libvmaf=log_fmt=json:log_path={log_path}"
+            f"[dist][ref]libvmaf={model}:log_fmt=json:log_path={log_path}"
         )
         _run_ffmpeg_filter_complex(distorted, reference, fc, timeout=timeout)
 
         if not os.path.isfile(json_path):
             raise RuntimeError("VMAF JSON log not written")
-        return _parse_vmaf_json(json_path)
+        result = _parse_vmaf_json(json_path)
+        result["model"] = VMAF_MODEL
+        result["scaling"] = VMAF_SCALING
+        result["mode"] = VMAF_MODE
+        return result
     finally:
         try:
             os.unlink(json_path)
@@ -295,6 +351,10 @@ def compare_videos(
                     report.vmaf_harmonic = round(v["harmonic"], 3)
                 if v.get("frame_count"):
                     report.frames = int(v["frame_count"])
+                report.vmaf_model = str(v.get("model") or "")
+                report.vmaf_version = str(v.get("version") or "")
+                report.vmaf_scaling = str(v.get("scaling") or "")
+                report.vmaf_mode = str(v.get("mode") or "")
             elif name == "ssim":
                 report.ssim = round(measure_ssim(distorted, reference, timeout=timeout), 4)
             elif name == "psnr":
