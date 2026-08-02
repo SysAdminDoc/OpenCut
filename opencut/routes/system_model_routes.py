@@ -322,11 +322,18 @@ _UPDATE_CACHE_TTL = 3600  # 1 hour
 
 @system_bp.route("/openapi.json", methods=["GET"])
 def openapi_spec():
-    """Return the OpenAPI 3.0 specification for this server."""
+    """Return the OpenAPI 3.0.3 rendering of the canonical 3.1 contract.
+
+    This is a compatibility adapter, not a second generator: the document is
+    the one built by ``opencut.core.openapi_source`` with 3.1-only constructs
+    rewritten, so the two endpoints can never describe different operations.
+    """
     from flask import current_app
 
-    from opencut.openapi import generate_openapi_spec
-    return jsonify(generate_openapi_spec(current_app))
+    from opencut.core import openapi_source
+    return jsonify(
+        openapi_source.downgrade_to_30(openapi_source.build_spec(current_app))
+    )
 
 
 @system_bp.route("/system/update-check", methods=["GET"])

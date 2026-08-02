@@ -143,6 +143,11 @@ def require_csrf(f):
         if csrf_error is not None:
             return csrf_error
         return f(*args, **kwargs)
+
+    # `functools.wraps` copies the wrapped function's name over the wrapper,
+    # so name-based introspection can never see this decorator. Introspection
+    # (OpenAPI security, /api/routes) reads this explicit marker instead.
+    wrapper._opencut_requires_csrf = True
     return wrapper
 
 

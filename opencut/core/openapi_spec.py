@@ -107,6 +107,12 @@ def _route_uses_csrf(view_func) -> bool:
     cur = view_func
     while cur is not None and id(cur) not in seen:
         seen.add(id(cur))
+        # `require_csrf` stamps this marker explicitly: `functools.wraps`
+        # copies the wrapped name over the wrapper, so the name heuristic
+        # below never fired on a real route and every operation was reported
+        # as needing no token.
+        if getattr(cur, "_opencut_requires_csrf", False):
+            return True
         name = getattr(cur, "__name__", "") or ""
         qual = getattr(cur, "__qualname__", "") or ""
         if "require_csrf" in name or "require_csrf" in qual:

@@ -1151,11 +1151,14 @@ class TestArchitectureRoutes(unittest.TestCase):
         }
 
     def test_openapi_endpoint(self):
+        """This endpoint now renders the one canonical schema source."""
+        from opencut.core import openapi_source
+
         resp = self.client.get("/architecture/openapi")
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
-        self.assertIn("openapi", data)
-        self.assertEqual(data["openapi"], "3.1.0")
+        self.assertEqual(data["openapi"], openapi_source.OPENAPI_VERSION)
+        self.assertIn("components", data)
 
     def test_routes_endpoint(self):
         resp = self.client.get("/architecture/routes")
