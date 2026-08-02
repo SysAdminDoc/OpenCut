@@ -37,13 +37,12 @@ def test_run_ffmpeg_tags_env_and_logs_prefixed_failure(monkeypatch, caplog):
             stderr=b"first failure line\nsecond failure line\n",
         )
 
-    # Warm the FFmpeg security-floor cache *before* the subprocess stub lands.
-    # `get_ffmpeg_path()` re-verifies the binary on every call unless the cache
-    # already holds its identity, so with `_sp.run` stubbed the verifier would
-    # be handed this test's fake stderr and try to parse it as a version
-    # banner. Without this the test only passes when some earlier test in the
-    # same process happened to warm the cache first.
-    helpers.get_ffmpeg_path()
+    # `get_ffmpeg_path()` re-verifies the binary through the same subprocess
+    # layer this test stubs, so the security-floor probe would be handed the
+    # fake stderr and try to parse it as a version banner. Bypass verification
+    # outright: this test is about request-ID tagging, not provenance, and
+    # relying on a warm cache made it pass or fail on collection order.
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda path: path)
     monkeypatch.setattr(helpers._sp, "run", fake_run)
     monkeypatch.setattr(helpers, "_ffmpeg_path", "ffmpeg")
     caplog.set_level(logging.WARNING, logger="opencut")
@@ -94,9 +93,9 @@ def test_progress_runner_tags_env_but_returns_unprefixed_stderr(monkeypatch, cap
         def kill(self):
             self.returncode = -9
 
-    # Same reason as above: resolve and verify the real binary before the
-    # subprocess layer is stubbed out.
-    helpers.get_ffmpeg_path()
+    # Same reason as above: skip provenance verification so the stubbed
+    # subprocess layer is never asked to produce a version banner.
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda path: path)
     monkeypatch.setattr(helpers._sp, "Popen", FakeProc)
     caplog.set_level(logging.WARNING, logger="opencut")
     set_request_id("r-progress")

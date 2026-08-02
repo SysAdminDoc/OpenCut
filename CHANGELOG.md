@@ -3,7 +3,7 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
-## Unreleased
+## 1.46.0 - Earned claims
 
 ### Added - Windows High Contrast (forced-colors) coverage
 
