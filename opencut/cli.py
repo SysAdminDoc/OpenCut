@@ -1630,6 +1630,53 @@ def polish(input_file, output, port, no_repeats, no_fillers, no_chapters, timeou
                       f"{result.get('original_duration', 0):.1f}s)[/dim]\n")
 
 
+@cli.group("plugins")
+def plugins_group():
+    """Inspect installed OpenCut plugins."""
+    pass
+
+
+@plugins_group.command("doctor")
+@click.option("--json", "as_json", is_flag=True, help="Emit the raw report as JSON.")
+def plugins_doctor(as_json):
+    """Validate every installed plugin against this host's plugin API."""
+    import json as _json
+
+    from opencut.core.plugin_manifest import doctor
+
+    report = doctor()
+    if as_json:
+        click.echo(_json.dumps(report, indent=2))
+    else:
+        print_banner()
+        click.echo(
+            f"Plugin API {report['host_min_api_version']}-{report['host_api_version']}"
+            f"  manifest schema {report['manifest_schema_version']}"
+        )
+        click.echo(f"Scanned {report['plugins_dir']}")
+        if not report["total"]:
+            click.echo("No plugins installed.")
+        for plugin in report["plugins"]:
+            if plugin["compatible"] and plugin["valid"]:
+                click.echo(f"  OK          {plugin['name']} {plugin['version']}")
+                continue
+            state = "INCOMPATIBLE" if not plugin["compatible"] else "INVALID"
+            click.echo(f"  {state:<11} {plugin['name']} {plugin['version']}")
+            if plugin["reason"]:
+                click.echo(f"      why:  {plugin['reason']}")
+            for error in plugin["errors"][:5]:
+                click.echo(f"      error: {error}")
+            if plugin["remediation"]:
+                click.echo(f"      fix:  {plugin['remediation']}")
+        click.echo(
+            f"{report['healthy']} healthy, {report['incompatible']} incompatible, "
+            f"{report['invalid']} invalid"
+        )
+    # Non-zero exit so scripts can gate on plugin health.
+    if report["incompatible"] or report["invalid"]:
+        raise SystemExit(1)
+
+
 @cli.group()
 def config():
     """Manage ~/.opencut configuration files."""
