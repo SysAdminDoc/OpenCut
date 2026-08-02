@@ -131,6 +131,7 @@ export function createJobController({
     } catch (err) {
       result = { ok: false, error: err?.message ?? "Polling error" };
     }
+    if (state.activeJobId !== jobId) return;
     if (!result.ok) {
       const nextFailures = statusFailures + 1;
       if (nextFailures < maxStatusFailures) {
