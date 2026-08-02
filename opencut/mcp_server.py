@@ -29,6 +29,7 @@ resources/list, resources/templates/list, prompts/list.
 """
 
 import argparse
+import hmac
 import ipaddress
 import json
 import logging
@@ -43,6 +44,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from opencut import __version__, mcp_extended_tools
 from opencut import auth as _auth
+from opencut import trusted_hosts as _trusted_hosts
 
 logger = logging.getLogger("opencut.mcp")
 
@@ -53,6 +55,7 @@ _csrf_fetched_at: float = 0.0
 # before expiry so long-running MCP sessions never hit a 403 mid-operation.
 _CSRF_TTL_SECONDS = 3300  # 55 minutes
 _LOOPBACK_BINDS = {"localhost"}
+_MCP_HTTP_MAX_BODY_BYTES = 4 * 1024 * 1024
 
 
 def _csrf_is_fresh() -> bool:
@@ -73,6 +76,15 @@ def _refresh_csrf():
                 _csrf_fetched_at = time.time()
     except Exception as exc:
         logger.warning("CSRF refresh failed: %s", exc)
+
+
+def _mcp_http_csrf_token_is_valid(header_token: str) -> bool:
+    """Validate the backend CSRF token cached by this sidecar process."""
+    if not header_token:
+        return False
+    if not _csrf_is_fresh():
+        _refresh_csrf()
+    return bool(_csrf_token) and hmac.compare_digest(header_token, _csrf_token)
 
 
 def _backend_requires_auth() -> bool:
@@ -147,14 +159,60 @@ def _mcp_http_bind_requires_auth(bind: str) -> bool:
         return True
 
 
-def _mcp_http_request_is_authorized(headers, *, auth_required: bool) -> bool:
-    # Tokens are accepted from the X-OpenCut-Auth header only. A ?auth=
+def _mcp_http_request_is_authorized(
+    headers,
+    *,
+    auth_required: bool,
+    require_token: bool = False,
+) -> bool:
+    # Auth tokens are accepted from the X-OpenCut-Auth header only. A ?auth=
     # query fallback used to exist but leaked tokens into access logs and
-    # history; MCP HTTP clients are plain JSON-RPC callers (no SSE), so
-    # they can always set headers.
-    if not auth_required:
+    # history; loopback POSTs additionally accept the backend CSRF header.
+    auth_valid = _auth.is_token_valid(_auth.extract_request_token(headers))
+    if auth_required:
+        return auth_valid
+    if require_token:
+        csrf_token = headers.get("X-OpenCut-Token", "")
+        return auth_valid or _mcp_http_csrf_token_is_valid(csrf_token)
+    return True
+
+
+def _mcp_http_host_is_allowed(headers, *, allowed_hosts, allow_ip_literals: bool) -> bool:
+    return _trusted_hosts.is_trusted_host(
+        headers.get("Host", ""),
+        allowed_hosts,
+        allow_ip_literals=allow_ip_literals,
+    )
+
+
+def _mcp_http_origin_is_allowed(
+    origin: str,
+    *,
+    allowed_hosts,
+    allow_ip_literals: bool,
+) -> bool:
+    """Allow absent or local origins, rejecting browser origins elsewhere."""
+    if not origin:
         return True
-    return _auth.is_token_valid(_auth.extract_request_token(headers))
+    if origin.strip().lower() == "null" or "," in origin:
+        return False
+    try:
+        parsed = urllib.parse.urlsplit(origin.strip())
+        if parsed.scheme.lower() not in {"http", "https"}:
+            return False
+        if not parsed.hostname or parsed.username or parsed.password:
+            return False
+        if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+            return False
+        # Accessing .port validates malformed/non-numeric ports.
+        parsed.port
+    except ValueError:
+        return False
+    return _trusted_hosts.is_trusted_host(
+        parsed.netloc,
+        allowed_hosts,
+        allow_ip_literals=allow_ip_literals,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1870,6 +1928,147 @@ def run_mcp_stdio():
 # ---------------------------------------------------------------------------
 # HTTP transport (JSON-RPC 2.0 over HTTP on port 5681)
 # ---------------------------------------------------------------------------
+class _McpHttpPayloadTooLarge(ValueError):
+    """Raised before reading a request body that exceeds the transport cap."""
+
+
+class _McpHttpHandler(BaseHTTPRequestHandler):
+    """HTTP transport handler with shared host, origin, and token policy."""
+
+    def log_message(self, fmt, *args):
+        logger.debug("MCP HTTP: " + fmt, *args)
+
+    def _send_json(self, data: dict, status: int = 200) -> None:
+        body = json.dumps(data).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_json(self) -> dict:
+        raw_length = self.headers.get("Content-Length", "0")
+        try:
+            length = int(raw_length)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Invalid Content-Length") from exc
+        if length < 0:
+            raise ValueError("Invalid Content-Length")
+        if length > self.server.mcp_max_body_bytes:
+            raise _McpHttpPayloadTooLarge(
+                f"Request body exceeds {self.server.mcp_max_body_bytes} bytes"
+            )
+        raw = self.rfile.read(length) if length else b""
+        if len(raw) != length:
+            raise ValueError("Incomplete request body")
+        return json.loads(raw) if raw else {}
+
+    def _request_path(self) -> str:
+        return urllib.parse.urlsplit(self.path).path
+
+    def _authorize(self, *, require_token: bool = False) -> bool:
+        if not _mcp_http_host_is_allowed(
+            self.headers,
+            allowed_hosts=self.server.mcp_allowed_hosts,
+            allow_ip_literals=self.server.mcp_allow_ip_literals,
+        ):
+            self._send_json(
+                {"error": "Untrusted Host header", "code": "HOST_NOT_ALLOWED"},
+                status=403,
+            )
+            return False
+        if not _mcp_http_origin_is_allowed(
+            self.headers.get("Origin", ""),
+            allowed_hosts=self.server.mcp_allowed_hosts,
+            allow_ip_literals=self.server.mcp_allow_ip_literals,
+        ):
+            self._send_json(
+                {"error": "Untrusted Origin header", "code": "ORIGIN_NOT_ALLOWED"},
+                status=403,
+            )
+            return False
+        if _mcp_http_request_is_authorized(
+            self.headers,
+            auth_required=self.server.mcp_auth_required,
+            require_token=require_token,
+        ):
+            return True
+        self._send_json(
+            {
+                "error": "Missing or invalid X-OpenCut-Auth or CSRF token",
+                "code": "TOKEN_REQUIRED",
+            },
+            status=401,
+        )
+        return False
+
+    def do_GET(self):
+        if not self._authorize():
+            return
+
+        path = self._request_path()
+        if path in ("/health", "/"):
+            self._send_json({"status": "ok", "server": "opencut-mcp",
+                             "version": __version__, "tools": len(get_mcp_tools())})
+        elif path == "/tools":
+            self._send_json({"tools": get_mcp_tools()})
+        else:
+            self._send_json({"error": "Not found"}, status=404)
+
+    def do_POST(self):
+        if not self._authorize(require_token=True):
+            return
+
+        try:
+            body = self._read_json()
+        except _McpHttpPayloadTooLarge as exc:
+            self._send_json(
+                {
+                    "error": str(exc),
+                    "code": "PAYLOAD_TOO_LARGE",
+                    "max_bytes": self.server.mcp_max_body_bytes,
+                },
+                status=413,
+            )
+            return
+        except Exception:
+            self._send_json({"error": "Invalid JSON"}, status=400)
+            return
+
+        response = dispatch_jsonrpc(body)
+        if response is None:
+            # A notification carries no reply; 202 says "accepted".
+            self.send_response(202)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        status = 404 if response.get("error", {}).get("code") == -32601 else 200
+        self._send_json(response, status=status)
+
+
+class _McpHttpServer(HTTPServer):
+    """HTTPServer carrying the immutable policy used by its handler."""
+
+    allow_reuse_address = True
+
+    def __init__(self, server_address, *, auth_required, allowed_hosts, allow_ip_literals):
+        self.mcp_auth_required = auth_required
+        self.mcp_allowed_hosts = allowed_hosts
+        self.mcp_allow_ip_literals = allow_ip_literals
+        self.mcp_max_body_bytes = _MCP_HTTP_MAX_BODY_BYTES
+        super().__init__(server_address, _McpHttpHandler)
+
+
+def _create_mcp_http_server(bind: str, port: int, *, auth_required: bool):
+    return _McpHttpServer(
+        (bind, port),
+        auth_required=auth_required,
+        allowed_hosts=_trusted_hosts.build_trusted_hosts(bind_host=bind),
+        allow_ip_literals=_trusted_hosts.remote_bind_enabled(),
+    )
+
+
 def run_http_server(
     backend_url: str = BACKEND_URL,
     port: int = 5681,
@@ -1886,76 +2085,7 @@ def run_http_server(
     if auth_required:
         _auth.ensure_token(label="mcp-http")
 
-    class _Handler(BaseHTTPRequestHandler):
-        def log_message(self, fmt, *args):
-            logger.debug("MCP HTTP: " + fmt, *args)
-
-        def _send_json(self, data: dict, status: int = 200) -> None:
-            body = json.dumps(data).encode()
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-        def _read_json(self) -> dict:
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b""
-            return json.loads(raw) if raw else {}
-
-        def _request_path(self) -> str:
-            return urllib.parse.urlsplit(self.path).path
-
-        def _authorize(self) -> bool:
-            if _mcp_http_request_is_authorized(
-                self.headers,
-                auth_required=auth_required,
-            ):
-                return True
-            self._send_json(
-                {
-                    "error": "Missing or invalid X-OpenCut-Auth token",
-                    "code": "AUTH_REQUIRED",
-                },
-                status=401,
-            )
-            return False
-
-        def do_GET(self):
-            if not self._authorize():
-                return
-
-            path = self._request_path()
-            if path in ("/health", "/"):
-                self._send_json({"status": "ok", "server": "opencut-mcp",
-                                  "version": __version__, "tools": len(get_mcp_tools())})
-            elif path == "/tools":
-                self._send_json({"tools": get_mcp_tools()})
-            else:
-                self._send_json({"error": "Not found"}, status=404)
-
-        def do_POST(self):
-            if not self._authorize():
-                return
-
-            try:
-                body = self._read_json()
-            except Exception:
-                self._send_json({"error": "Invalid JSON"}, status=400)
-                return
-
-            response = dispatch_jsonrpc(body)
-            if response is None:
-                # A notification carries no reply; 202 says "accepted".
-                self.send_response(202)
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-                return
-
-            status = 404 if response.get("error", {}).get("code") == -32601 else 200
-            self._send_json(response, status=status)
-
-    httpd = HTTPServer((bind, port), _Handler)
+    httpd = _create_mcp_http_server(bind, port, auth_required=auth_required)
     print(f"OpenCut MCP HTTP server on http://{bind}:{port}", file=sys.stderr)
     if auth_required:
         print(

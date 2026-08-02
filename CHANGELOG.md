@@ -51,6 +51,12 @@ record also lives in the git commit messages.
 - Expression validation now refuses unbounded or nested exponentiation before
   evaluation, and the sandbox `pow()` helper applies the same magnitude cap.
 
+### Fixed - MCP HTTP transport policy
+
+- The MCP HTTP sidecar now validates Host and Origin headers, requires an auth
+  or backend CSRF token for POST requests on loopback, and rejects oversized
+  JSON bodies before reading them.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

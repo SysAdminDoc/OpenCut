@@ -1,4 +1,7 @@
+import http.client
+import json
 import re
+import threading
 from types import SimpleNamespace
 
 from opencut import mcp_server
@@ -56,6 +59,31 @@ def _capture_api(monkeypatch):
 
     monkeypatch.setattr(mcp_server, "_api", fake_api)
     return calls
+
+
+def _mcp_http_post(server, *, body=b"{}", headers=None):
+    """Serve one request through the real loopback MCP HTTP handler."""
+    server.timeout = 3
+    thread = threading.Thread(target=server.handle_request, daemon=True)
+    thread.start()
+    connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+    try:
+        connection.request("POST", "/", body=body, headers=headers or {})
+        response = connection.getresponse()
+        payload = json.loads(response.read() or b"{}")
+    finally:
+        connection.close()
+    thread.join(timeout=3)
+    assert not thread.is_alive()
+    return response.status, payload
+
+
+def _new_loopback_mcp_http_server():
+    return mcp_server._create_mcp_http_server(
+        "127.0.0.1",
+        0,
+        auth_required=False,
+    )
 
 
 def test_f195_tools_are_registered_and_mapped():
@@ -116,6 +144,74 @@ def test_mcp_http_auth_accepts_header_token_only(monkeypatch):
         {},
         auth_required=False,
     )
+
+
+def test_mcp_http_rejects_foreign_host(monkeypatch):
+    monkeypatch.setattr(mcp_server, "dispatch_jsonrpc", lambda _body: {"ok": True})
+    server = _new_loopback_mcp_http_server()
+    try:
+        status, payload = _mcp_http_post(server, headers={"Host": "evil.example"})
+    finally:
+        server.server_close()
+
+    assert status == 403
+    assert payload["code"] == "HOST_NOT_ALLOWED"
+
+
+def test_mcp_http_rejects_foreign_origin(monkeypatch):
+    monkeypatch.setattr(mcp_server, "dispatch_jsonrpc", lambda _body: {"ok": True})
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "Origin": "https://evil.example",
+        }
+        status, payload = _mcp_http_post(server, headers=headers)
+    finally:
+        server.server_close()
+
+    assert status == 403
+    assert payload["code"] == "ORIGIN_NOT_ALLOWED"
+
+
+def test_mcp_http_requires_token_for_loopback_post(monkeypatch):
+    monkeypatch.setattr(mcp_server._auth, "is_token_valid", lambda _token: False)
+    monkeypatch.setattr(mcp_server, "dispatch_jsonrpc", lambda _body: {"ok": True})
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {"Host": f"127.0.0.1:{server.server_port}"}
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {},
+        }).encode()
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 401
+    assert payload["code"] == "TOKEN_REQUIRED"
+
+
+def test_mcp_http_rejects_body_over_cap_before_reading(monkeypatch):
+    monkeypatch.setattr(mcp_server._auth, "is_token_valid", lambda _token: False)
+    monkeypatch.setattr(mcp_server, "_mcp_http_csrf_token_is_valid", lambda token: token == "csrf")
+    monkeypatch.setattr(mcp_server, "dispatch_jsonrpc", lambda _body: {"ok": True})
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+        }
+        body = b"x" * (mcp_server._MCP_HTTP_MAX_BODY_BYTES + 1)
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 413
+    assert payload["code"] == "PAYLOAD_TOO_LARGE"
+    assert payload["max_bytes"] == mcp_server._MCP_HTTP_MAX_BODY_BYTES
 
 
 def test_remote_backend_requests_read_and_forward_current_secret(monkeypatch):
