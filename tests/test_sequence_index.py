@@ -272,6 +272,68 @@ class TestSortAndFilter(unittest.TestCase):
         self.assertEqual(names, ["interview-take-3.mp4", "voiceover.wav"])
 
 
+class TestCsvExport(unittest.TestCase):
+    def setUp(self):
+        from opencut.core.sequence_index import build_index
+        self.rows = build_index(SAMPLE_SEQ, transcript_segments=SAMPLE_TRANSCRIPT).rows
+
+    def test_header_matches_column_order(self):
+        from opencut.core.sequence_index import CSV_COLUMNS, rows_to_csv
+        header = rows_to_csv(self.rows).splitlines()[0]
+        self.assertEqual(header.split(","), list(CSV_COLUMNS))
+
+    def test_one_line_per_row(self):
+        from opencut.core.sequence_index import rows_to_csv
+        import csv
+        import io
+        parsed = list(csv.reader(io.StringIO(rows_to_csv(self.rows))))
+        self.assertEqual(len(parsed), len(self.rows) + 1)
+
+    def test_column_subset_is_respected(self):
+        from opencut.core.sequence_index import rows_to_csv
+        text = rows_to_csv(self.rows, ["name", "timecode_in"])
+        self.assertEqual(text.splitlines()[0], "name,timecode_in")
+
+    def test_unknown_column_raises(self):
+        from opencut.core.sequence_index import rows_to_csv
+        with self.assertRaises(ValueError):
+            rows_to_csv(self.rows, ["name", "nope"])
+
+    def test_empty_column_list_raises(self):
+        from opencut.core.sequence_index import rows_to_csv
+        with self.assertRaises(ValueError):
+            rows_to_csv(self.rows, [])
+
+    def test_list_columns_are_joined_not_repr(self):
+        from opencut.core.sequence_index import rows_to_csv
+        import csv
+        import io
+        rows = list(csv.DictReader(io.StringIO(rows_to_csv(self.rows))))
+        blur = [r for r in rows if r["name"] == "B-roll-intro.mp4"][0]
+        self.assertEqual(blur["effects"], "Gaussian Blur")
+
+    def test_commas_in_text_are_quoted_not_split(self):
+        from opencut.core.sequence_index import rows_to_csv
+        import csv
+        import io
+        rows = list(csv.DictReader(io.StringIO(rows_to_csv(self.rows))))
+        intro = [r for r in rows if r["name"] == "B-roll-intro.mp4"][0]
+        # The overlapping transcript segment contains a comma-free sentence,
+        # but the field must still survive the round trip verbatim.
+        self.assertIn("Welcome back", intro["transcript_excerpt"])
+
+    def test_export_csv_writes_file(self):
+        import tempfile
+        from opencut.core.sequence_index import export_csv
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "index.csv")
+            result = export_csv(self.rows, out)
+            self.assertEqual(result["rows"], len(self.rows))
+            self.assertTrue(os.path.isfile(out))
+            with open(out, encoding="utf-8-sig") as fh:
+                self.assertIn("timecode_in", fh.readline())
+
+
 class TestJsonifyProtocol(unittest.TestCase):
     def test_result_subscriptable(self):
         from opencut.core.sequence_index import build_index
@@ -358,6 +420,92 @@ class TestRoutes(unittest.TestCase):
             headers={"X-OpenCut-Token": self.token},
         )
         self.assertEqual(resp.status_code, 400)
+
+    def _built_rows(self):
+        build = self.client.post(
+            "/timeline/sequence-index",
+            json={"sequence": SAMPLE_SEQ},
+            headers={"X-OpenCut-Token": self.token},
+        )
+        return json.loads(build.data.decode("utf-8"))["rows"]
+
+    def test_filter_pagination_reports_full_match_count(self):
+        rows = self._built_rows()
+        resp = self.client.post(
+            "/timeline/sequence-index/filter",
+            json={"rows": rows, "limit": 2, "offset": 1, "sort_key": "start_s"},
+            headers={"X-OpenCut-Token": self.token},
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        body = json.loads(resp.data.decode("utf-8"))
+        self.assertEqual(body["total_rows"], 4)
+        self.assertEqual(body["returned_rows"], 2)
+        self.assertEqual(len(body["rows"]), 2)
+        self.assertEqual(body["offset"], 1)
+
+    def test_filter_without_limit_returns_everything(self):
+        rows = self._built_rows()
+        resp = self.client.post(
+            "/timeline/sequence-index/filter",
+            json={"rows": rows},
+            headers={"X-OpenCut-Token": self.token},
+        )
+        body = json.loads(resp.data.decode("utf-8"))
+        self.assertEqual(body["total_rows"], 4)
+        self.assertEqual(len(body["rows"]), 4)
+
+    def test_info_reports_csv_columns(self):
+        body = json.loads(
+            self.client.get("/timeline/sequence-index/info").data.decode("utf-8")
+        )
+        self.assertIn("timecode_in", body["csv_columns"])
+        self.assertIn("path", body["hideable_columns"])
+        # Identity columns must never be hideable.
+        self.assertNotIn("name", body["hideable_columns"])
+        self.assertNotIn("locator_id", body["hideable_columns"])
+
+    def test_export_csv_applies_the_active_filter(self):
+        import csv
+        import io
+        import tempfile
+
+        rows = self._built_rows()
+        with tempfile.TemporaryDirectory() as tmp:
+            resp = self.client.post(
+                "/timeline/sequence-index/export-csv",
+                json={
+                    "rows": rows,
+                    "track_type": "audio",
+                    "output_dir": tmp,
+                    "sequence_name": "Sequence 01",
+                    "columns": ["name", "timecode_in", "duration_s"],
+                },
+                headers={"X-OpenCut-Token": self.token},
+            )
+            self.assertEqual(resp.status_code, 200, resp.data)
+            body = json.loads(resp.data.decode("utf-8"))
+            self.assertEqual(body["rows"], 1)
+            self.assertTrue(os.path.isfile(body["output"]))
+            with open(body["output"], encoding="utf-8-sig") as fh:
+                parsed = list(csv.reader(io.StringIO(fh.read())))
+            self.assertEqual(parsed[0], ["name", "timecode_in", "duration_s"])
+            self.assertEqual(parsed[1][0], "voiceover.wav")
+
+    def test_export_csv_rejects_unknown_column(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            resp = self.client.post(
+                "/timeline/sequence-index/export-csv",
+                json={"rows": [], "columns": ["name", "not_a_column"], "output_dir": tmp},
+                headers={"X-OpenCut-Token": self.token},
+            )
+            self.assertEqual(resp.status_code, 400)
+
+    def test_export_csv_requires_csrf(self):
+        resp = self.client.post(
+            "/timeline/sequence-index/export-csv", json={"rows": []}
+        )
+        self.assertEqual(resp.status_code, 403)
 
 
 if __name__ == "__main__":

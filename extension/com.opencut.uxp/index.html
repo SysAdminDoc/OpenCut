@@ -1505,10 +1505,67 @@
           <div class="oc-btn-row">
             <button type="button" class="oc-btn oc-btn-primary" id="sequenceIndexBuildBtn" data-i18n="uxp.agent.build_index">Build Index</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="sequenceIndexInfoBtn" data-i18n="uxp.agent.capability">Capability</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="sequenceIndexExportBtn" disabled data-i18n="uxp.agent.export_csv">Export CSV</button>
           </div>
           <div class="oc-status-line" id="sequenceIndexStatus" role="status" aria-live="polite" data-i18n="uxp.agent.no_index_yet">No index yet.</div>
           <div class="oc-card oc-card--nested" id="sequenceIndexBox" hidden>
             <div class="oc-status-line" id="sequenceIndexSummary"></div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="sequenceIndexSearch" data-i18n="uxp.agent.index_search">Search</label>
+              <input type="search" class="oc-input" id="sequenceIndexSearch" placeholder="Name, path, transcript, tag..." data-i18n-placeholder="uxp.agent.index_search_placeholder">
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="sequenceIndexTrackType" data-i18n="uxp.agent.index_track">Track</label>
+              <select class="oc-select" id="sequenceIndexTrackType">
+                <option value="" selected data-i18n="uxp.agent.index_track_any">All tracks</option>
+                <option value="video" data-i18n="uxp.agent.index_track_video">Video only</option>
+                <option value="audio" data-i18n="uxp.agent.index_track_audio">Audio only</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="sequenceIndexEffects" data-i18n="uxp.agent.index_effects">Effects</label>
+              <select class="oc-select" id="sequenceIndexEffects">
+                <option value="" selected data-i18n="uxp.agent.index_effects_any">Any</option>
+                <option value="with" data-i18n="uxp.agent.index_effects_with">With effects</option>
+                <option value="without" data-i18n="uxp.agent.index_effects_without">Without effects</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="sequenceIndexOffline" data-i18n="uxp.agent.index_media">Media</label>
+              <select class="oc-select" id="sequenceIndexOffline">
+                <option value="" selected data-i18n="uxp.agent.index_media_any">Any</option>
+                <option value="online" data-i18n="uxp.agent.index_media_online">Linked only</option>
+                <option value="offline" data-i18n="uxp.agent.index_media_offline">Offline only</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="sequenceIndexMinRating" data-i18n="uxp.agent.index_min_rating">Min rating</label>
+              <select class="oc-select" id="sequenceIndexMinRating">
+                <option value="0" selected data-i18n="uxp.agent.index_rating_any">Any</option>
+                <option value="1">1+</option>
+                <option value="2">2+</option>
+                <option value="3">3+</option>
+                <option value="4">4+</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <fieldset class="oc-column-toggles" id="sequenceIndexColumns">
+              <legend class="oc-label" data-i18n="uxp.agent.index_columns">Columns</legend>
+            </fieldset>
+            <div class="oc-status-line" id="sequenceIndexCount" role="status" aria-live="polite"></div>
+            <div class="oc-table-scroll" id="sequenceIndexTableWrap">
+              <table class="oc-table" id="sequenceIndexTable" role="grid" aria-labelledby="sequenceIndexCount" aria-rowcount="0">
+                <caption class="oc-visually-hidden" data-i18n="uxp.agent.index_table_caption">Clips in the active sequence. Use the arrow keys to move between cells.</caption>
+                <thead>
+                  <tr role="row" id="sequenceIndexHeadRow"></tr>
+                </thead>
+                <tbody id="sequenceIndexBody"></tbody>
+              </table>
+            </div>
+            <div class="oc-empty-state oc-empty-state-inline" id="sequenceIndexEmpty" hidden>
+              <div class="oc-empty-state-kicker" data-i18n="uxp.agent.index_empty_kicker">No matching clips</div>
+              <p data-i18n="uxp.agent.index_empty_body">Clear the search box or relax the filters to see the rest of the timeline.</p>
+            </div>
           </div>
         </div>
 

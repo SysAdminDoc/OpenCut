@@ -557,6 +557,183 @@ const PProBridge = (() => {
     }
   }
 
+  // --- Sequence Index timeline walk ------------------------------
+  // `getSequenceInfo()` returns a *summary* (track counts, not tracks), so it
+  // can never feed /timeline/sequence-index, which needs one entry per clip.
+  // These helpers walk the real track lists and emit the ocGetSequenceInfo
+  // shape the backend indexes.
+  async function _trackListEntries(list) {
+    if (!list) return [];
+    const entries = [];
+    let count = null;
+    if (typeof list.getTrackCount === "function") {
+      try { count = Number(await list.getTrackCount()); } catch (_) { count = null; }
+    }
+    if (!Number.isFinite(count)) count = Number(list.length);
+    if (!Number.isFinite(count) || count <= 0) return entries;
+    for (let i = 0; i < count; i += 1) {
+      let track = null;
+      if (typeof list.getTrackAtIndex === "function") {
+        try { track = await list.getTrackAtIndex(i); } catch (_) { track = null; }
+      }
+      if (!track && list[i]) track = list[i];
+      if (track) entries.push({ index: i, track });
+    }
+    return entries;
+  }
+
+  async function _trackItems(track) {
+    if (typeof track?.getTrackItems !== "function") return [];
+    // The signature varies across Premiere builds; try the documented shapes
+    // and fall back to the no-argument form rather than dropping the track.
+    const attempts = [[1, false], [0, false], [1], [0], []];
+    for (const args of attempts) {
+      try {
+        const items = await track.getTrackItems(...args);
+        if (items) return Array.from(items);
+      } catch (_) { /* try the next observed shape */ }
+    }
+    return [];
+  }
+
+  async function _clipMediaPath(item) {
+    let projectItem = null;
+    if (typeof item?.getProjectItem === "function") {
+      try { projectItem = await item.getProjectItem(); } catch (_) { projectItem = null; }
+    }
+    if (!projectItem) return { path: "", offline: false, projectItemId: "" };
+    const pathValue = await _captionItemField(
+      projectItem,
+      ["getMediaFilePath", "getMediaPath", "getPath"],
+      ["mediaFilePath", "path"]
+    );
+    let offline = false;
+    for (const name of ["isOffline", "getIsOffline", "isMediaOffline"]) {
+      if (typeof projectItem?.[name] !== "function") continue;
+      try {
+        offline = Boolean(await projectItem[name]());
+        break;
+      } catch (_) { /* try the next observed shape */ }
+    }
+    const projectItemId = await _captionItemField(
+      projectItem,
+      ["getNodeId", "getId"],
+      ["nodeId", "id", "guid"]
+    );
+    return {
+      path: pathValue ? String(pathValue) : "",
+      offline,
+      projectItemId: projectItemId ? String(projectItemId) : "",
+    };
+  }
+
+  async function _clipEffects(item) {
+    if (typeof item?.getComponentChain !== "function") return [];
+    try {
+      const chain = await item.getComponentChain();
+      const count = Number(await chain?.getComponentCount?.() ?? chain?.length ?? 0);
+      if (!Number.isFinite(count) || count <= 0) return [];
+      const names = [];
+      for (let i = 0; i < count; i += 1) {
+        const component = await chain.getComponentAtIndex?.(i) ?? chain[i];
+        const label = await _captionItemField(
+          component,
+          ["getDisplayName", "getName", "getMatchName"],
+          ["displayName", "name"]
+        );
+        if (label) names.push(String(label));
+      }
+      return names;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function _sequenceIndexTrack(entry, trackType) {
+    const items = await _trackItems(entry.track);
+    const clips = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      const name = await _captionItemField(item, ["getName"], ["name"]);
+      const startValue = await _captionItemField(
+        item, ["getStartTime", "getStart", "getInPoint"], ["start", "startTime"]
+      );
+      const endValue = await _captionItemField(
+        item, ["getEndTime", "getEnd", "getOutPoint"], ["end", "endTime"]
+      );
+      const nodeId = await _captionItemField(item, ["getNodeId", "getId"], ["nodeId", "id", "guid"]);
+      const start = _timeValueToSeconds(startValue) ?? 0;
+      const media = await _clipMediaPath(item);
+      clips.push({
+        name: name ? String(name) : "",
+        path: media.path,
+        start,
+        end: _timeValueToSeconds(endValue) ?? start,
+        effects: trackType === "video" ? await _clipEffects(item) : [],
+        offline: media.offline,
+        nodeId: nodeId ? String(nodeId) : "",
+        projectItemId: media.projectItemId,
+      });
+    }
+    return { index: entry.index, clips };
+  }
+
+  /**
+   * Walks the active sequence and returns the ``ocGetSequenceInfo`` payload
+   * shape that ``POST /timeline/sequence-index`` consumes.
+   */
+  async function getSequenceIndexPayload() {
+    const seq = await getActiveSequence();
+    if (!seq) {
+      return { ok: false, reason: "No active sequence or UXP API unavailable.", reason_code: "no_active_sequence" };
+    }
+    try {
+      let settings = null;
+      try { settings = await seq.getSettings(); } catch (_) { settings = null; }
+      const videoEntries = await _trackListEntries(await seq.getVideoTrackList?.());
+      const audioEntries = await _trackListEntries(await seq.getAudioTrackList?.());
+      const videoTracks = [];
+      for (const entry of videoEntries) videoTracks.push(await _sequenceIndexTrack(entry, "video"));
+      const audioTracks = [];
+      for (const entry of audioEntries) audioTracks.push(await _sequenceIndexTrack(entry, "audio"));
+
+      let markers = [];
+      try {
+        const markerResult = await getSequenceMarkers();
+        if (markerResult?.ok) {
+          markers = markerResult.markers.map(m => ({
+            time: m.time,
+            name: m.name,
+            type: "comment",
+            color: m.colorIndex ?? 0,
+            comments: m.comment,
+          }));
+        }
+      } catch (_) { /* markers are enrichment, never fatal */ }
+
+      let guid = "";
+      try { guid = String(await seq.getGuid?.() ?? seq.guid ?? ""); } catch (_) { guid = ""; }
+
+      return {
+        ok: true,
+        sequence: {
+          name: String(await seq.getName?.() ?? ""),
+          guid,
+          duration: _timeValueToSeconds(await seq.getEnd?.()) ?? 0,
+          fps: Number(settings?.videoFrameRate ?? 0) || 0,
+          width: Number(settings?.videoFrameWidth ?? 0) || 0,
+          height: Number(settings?.videoFrameHeight ?? 0) || 0,
+          videoTracks,
+          audioTracks,
+          markers,
+        },
+      };
+    } catch (e) {
+      console.warn("[PProBridge] getSequenceIndexPayload failed:", e.message);
+      return { ok: false, reason: e.message, reason_code: "sequence_index_walk_failed" };
+    }
+  }
+
   /**
    * Returns basic info about the active sequence as a plain object.
    * Results are cached for PPRO_CACHE_TTL ms to reduce UXP API round-trips.
@@ -1738,6 +1915,7 @@ const PProBridge = (() => {
     getTranscriptState,
     getObjectMaskState,
     setSequencePlayhead,
+    getSequenceIndexPayload,
     createSubsequenceFromRange,
     exportSubsequenceWithEncoder,
     exportAafSequence,
@@ -8458,29 +8636,377 @@ function initAgentTab() {
   $("variantsRunBtn")?.addEventListener("click", () => runVariants(false));
 
   // --- Sequence Index wiring -------------------------------------
-  $("sequenceIndexBuildBtn")?.addEventListener("click", async () => {
-    const btn = $("sequenceIndexBuildBtn");
-    if (btn) btn.disabled = true;
-    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence..."));
+  // Column keys map 1:1 onto IndexRow fields. `sortKey` is the backend
+  // SORT_KEYS entry the column sorts by (timecode sorts by seconds, not by
+  // the formatted string).
+  const SEQUENCE_INDEX_COLUMNS = [
+    { key: "name", sortKey: "name", labelKey: "uxp.agent.index_col_name", fallback: "Clip" },
+    { key: "track_type", sortKey: "track_type", labelKey: "uxp.agent.index_col_track", fallback: "Track" },
+    { key: "track_index", sortKey: "track_index", labelKey: "uxp.agent.index_col_track_index", fallback: "#", numeric: true },
+    { key: "timecode_in", sortKey: "start_s", labelKey: "uxp.agent.index_col_tc_in", fallback: "TC In" },
+    { key: "timecode_out", sortKey: "end_s", labelKey: "uxp.agent.index_col_tc_out", fallback: "TC Out" },
+    { key: "duration_s", sortKey: "duration_s", labelKey: "uxp.agent.index_col_duration", fallback: "Duration", numeric: true },
+    { key: "effects", sortKey: null, labelKey: "uxp.agent.index_col_effects", fallback: "Effects" },
+    { key: "rating", sortKey: "rating", labelKey: "uxp.agent.index_col_rating", fallback: "Rating", numeric: true },
+    { key: "tags", sortKey: null, labelKey: "uxp.agent.index_col_tags", fallback: "Tags" },
+    { key: "offline", sortKey: null, labelKey: "uxp.agent.index_col_offline", fallback: "Offline" },
+    { key: "flash_frame", sortKey: null, labelKey: "uxp.agent.index_col_flash", fallback: "Flash" },
+    { key: "path", sortKey: "path", labelKey: "uxp.agent.index_col_path", fallback: "Path" },
+    { key: "transcript_excerpt", sortKey: null, labelKey: "uxp.agent.index_col_transcript", fallback: "Transcript" },
+  ];
+  // Identity columns the backend refuses to drop from an export.
+  const SEQUENCE_INDEX_PINNED_COLUMNS = ["name", "timecode_in"];
+  const SEQUENCE_INDEX_DEFAULT_COLUMNS = [
+    "name", "track_type", "track_index", "timecode_in", "timecode_out",
+    "duration_s", "effects", "rating",
+  ];
+  const SEQUENCE_INDEX_COLUMN_STORE = "opencut.uxp.sequenceIndex.columns";
+  // Rows past this cap stay in memory but out of the DOM; the count line
+  // always reports the real match total so nothing is silently truncated.
+  const SEQUENCE_INDEX_PAGE_SIZE = 250;
+
+  const sequenceIndexState = {
+    built: false,
+    rows: [],
+    visibleRows: [],
+    summary: null,
+    sortKey: "start_s",
+    descending: false,
+    columns: SEQUENCE_INDEX_DEFAULT_COLUMNS.slice(),
+    focusRow: 0,
+    focusCol: 0,
+    searchTimer: null,
+  };
+
+  function sequenceIndexReadStoredColumns() {
     try {
-      // PProBridge.getSequenceInfo() returns the same JSON shape that
-      // host/index.jsx::ocGetSequenceInfo() produces, which is exactly
-      // what /timeline/sequence-index expects.
-      const sequence = await PProBridge.getSequenceInfo();
-      if (!sequence || sequence.error) {
-        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.no_active_sequence", "No active sequence: {error}", { error: sequence?.error || t("common.unknown", "unknown") }));
-        return;
+      const raw = window.localStorage?.getItem(SEQUENCE_INDEX_COLUMN_STORE);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      const known = parsed.filter((key) => SEQUENCE_INDEX_COLUMNS.some((c) => c.key === key));
+      return known.length ? known : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function sequenceIndexPersistColumns() {
+    try {
+      window.localStorage?.setItem(
+        SEQUENCE_INDEX_COLUMN_STORE,
+        JSON.stringify(sequenceIndexState.columns)
+      );
+    } catch (_) { /* column layout is a convenience, never a hard failure */ }
+  }
+
+  function sequenceIndexActiveColumns() {
+    return SEQUENCE_INDEX_COLUMNS.filter((c) => sequenceIndexState.columns.includes(c.key));
+  }
+
+  function clearChildren(node) {
+    if (!node) return;
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function sequenceIndexCellText(row, column) {
+    const value = row?.[column.key];
+    if (value == null) return "";
+    if (Array.isArray(value)) return value.join(", ");
+    if (typeof value === "boolean") {
+      return value
+        ? t("uxp.agent.index_yes", "Yes")
+        : t("uxp.agent.index_no", "No");
+    }
+    if (column.key === "duration_s") return `${Number(value).toFixed(2)}s`;
+    return String(value);
+  }
+
+  function sequenceIndexSetBusy(busy) {
+    const wrap = $("sequenceIndexTableWrap");
+    if (wrap) wrap.setAttribute("aria-busy", busy ? "true" : "false");
+    const exportBtn = $("sequenceIndexExportBtn");
+    if (exportBtn) {
+      exportBtn.disabled = busy || !sequenceIndexState.visibleRows.length;
+    }
+  }
+
+  function sequenceIndexFilterPayload() {
+    const effects = $("sequenceIndexEffects")?.value || "";
+    const media = $("sequenceIndexOffline")?.value || "";
+    const payload = {
+      rows: sequenceIndexState.rows,
+      query: $("sequenceIndexSearch")?.value || "",
+      track_type: $("sequenceIndexTrackType")?.value || "",
+      min_rating: Number($("sequenceIndexMinRating")?.value || 0),
+      sort_key: sequenceIndexState.sortKey,
+      descending: sequenceIndexState.descending,
+    };
+    if (effects === "with") payload.has_effects = true;
+    if (effects === "without") payload.has_effects = false;
+    if (media === "offline") payload.offline = true;
+    if (media === "online") payload.offline = false;
+    return payload;
+  }
+
+  function sequenceIndexRenderHead() {
+    const headRow = $("sequenceIndexHeadRow");
+    if (!headRow) return;
+    clearChildren(headRow);
+    for (const column of sequenceIndexActiveColumns()) {
+      const th = document.createElement("th");
+      th.setAttribute("scope", "col");
+      th.setAttribute("role", "columnheader");
+      const label = t(column.labelKey, column.fallback);
+      if (column.sortKey) {
+        const active = sequenceIndexState.sortKey === column.sortKey;
+        th.setAttribute("aria-sort", active ? (sequenceIndexState.descending ? "descending" : "ascending") : "none");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "oc-table-sort";
+        button.textContent = label;
+        button.setAttribute("aria-label", formatI18n(
+          "uxp.agent.index_sort_by", "Sort by {column}", { column: label }
+        ));
+        button.addEventListener("click", () => {
+          if (sequenceIndexState.sortKey === column.sortKey) {
+            sequenceIndexState.descending = !sequenceIndexState.descending;
+          } else {
+            sequenceIndexState.sortKey = column.sortKey;
+            sequenceIndexState.descending = false;
+          }
+          sequenceIndexApplyFilter();
+        });
+        th.appendChild(button);
+      } else {
+        th.setAttribute("aria-sort", "none");
+        th.textContent = label;
       }
-      const resp = await BackendClient.post("/timeline/sequence-index", { sequence });
+      headRow.appendChild(th);
+    }
+    const actions = document.createElement("th");
+    actions.setAttribute("scope", "col");
+    actions.setAttribute("role", "columnheader");
+    actions.textContent = t("uxp.agent.index_col_actions", "Jump");
+    headRow.appendChild(actions);
+  }
+
+  function sequenceIndexFocusCell(rowIdx, colIdx) {
+    const body = $("sequenceIndexBody");
+    if (!body) return;
+    const rows = body.children;
+    if (!rows.length) return;
+    const clampedRow = Math.max(0, Math.min(rowIdx, rows.length - 1));
+    const cells = rows[clampedRow].children;
+    if (!cells.length) return;
+    const clampedCol = Math.max(0, Math.min(colIdx, cells.length - 1));
+    for (const row of rows) {
+      for (const cell of row.children) cell.tabIndex = -1;
+    }
+    sequenceIndexState.focusRow = clampedRow;
+    sequenceIndexState.focusCol = clampedCol;
+    const target = cells[clampedCol];
+    target.tabIndex = 0;
+    target.focus();
+  }
+
+  function sequenceIndexHandleGridKey(event) {
+    const body = $("sequenceIndexBody");
+    if (!body || !body.children.length) return;
+    const lastRow = body.children.length - 1;
+    const lastCol = body.children[sequenceIndexState.focusRow]?.children.length - 1 || 0;
+    let handled = true;
+    switch (event.key) {
+      case "ArrowDown": sequenceIndexFocusCell(sequenceIndexState.focusRow + 1, sequenceIndexState.focusCol); break;
+      case "ArrowUp": sequenceIndexFocusCell(sequenceIndexState.focusRow - 1, sequenceIndexState.focusCol); break;
+      case "ArrowRight": sequenceIndexFocusCell(sequenceIndexState.focusRow, sequenceIndexState.focusCol + 1); break;
+      case "ArrowLeft": sequenceIndexFocusCell(sequenceIndexState.focusRow, sequenceIndexState.focusCol - 1); break;
+      case "Home": sequenceIndexFocusCell(event.ctrlKey ? 0 : sequenceIndexState.focusRow, 0); break;
+      case "End": sequenceIndexFocusCell(event.ctrlKey ? lastRow : sequenceIndexState.focusRow, lastCol); break;
+      case "PageDown": sequenceIndexFocusCell(sequenceIndexState.focusRow + 10, sequenceIndexState.focusCol); break;
+      case "PageUp": sequenceIndexFocusCell(sequenceIndexState.focusRow - 10, sequenceIndexState.focusCol); break;
+      default: handled = false;
+    }
+    if (handled) event.preventDefault();
+  }
+
+  async function sequenceIndexJumpToRow(row) {
+    const seconds = Number(row?.start_s ?? 0);
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_jumping", "Moving the playhead..."));
+    try {
+      const result = await PProBridge.setSequencePlayhead({ seconds });
+      if (result?.ok) {
+        setStatus("sequenceIndexStatus", formatI18n(
+          "uxp.agent.runtime.index_jumped", "Playhead moved to {timecode}.",
+          { timecode: row?.timecode_in || `${seconds.toFixed(2)}s` }
+        ));
+      } else {
+        setStatus("sequenceIndexStatus", formatI18n(
+          "uxp.agent.runtime.index_jump_failed", "Could not move the playhead: {error}",
+          { error: result?.reason || t("common.unknown", "unknown") }
+        ));
+      }
+    } catch (err) {
+      setStatus("sequenceIndexStatus", formatI18n(
+        "uxp.agent.runtime.index_jump_failed", "Could not move the playhead: {error}",
+        { error: err?.message || err }
+      ));
+    }
+  }
+
+  function sequenceIndexRenderRows() {
+    const body = $("sequenceIndexBody");
+    const empty = $("sequenceIndexEmpty");
+    const table = $("sequenceIndexTable");
+    if (!body) return;
+    clearChildren(body);
+
+    const columns = sequenceIndexActiveColumns();
+    const rows = sequenceIndexState.visibleRows.slice(0, SEQUENCE_INDEX_PAGE_SIZE);
+    if (empty) empty.hidden = rows.length > 0;
+    if (table) {
+      table.hidden = rows.length === 0;
+      table.setAttribute("aria-rowcount", String(sequenceIndexState.visibleRows.length));
+    }
+
+    rows.forEach((row, rowIdx) => {
+      const tr = document.createElement("tr");
+      tr.setAttribute("role", "row");
+      columns.forEach((column, colIdx) => {
+        const td = document.createElement("td");
+        td.setAttribute("role", "gridcell");
+        td.tabIndex = (rowIdx === 0 && colIdx === 0) ? 0 : -1;
+        td.textContent = sequenceIndexCellText(row, column);
+        if (column.numeric) td.className = "oc-table-numeric";
+        td.addEventListener("focus", () => {
+          sequenceIndexState.focusRow = rowIdx;
+          sequenceIndexState.focusCol = colIdx;
+        });
+        tr.appendChild(td);
+      });
+      const actions = document.createElement("td");
+      actions.setAttribute("role", "gridcell");
+      actions.tabIndex = -1;
+      const jump = document.createElement("button");
+      jump.type = "button";
+      jump.className = "oc-btn oc-btn-ghost oc-btn-xs";
+      jump.textContent = t("uxp.agent.index_jump", "Go");
+      jump.setAttribute("aria-label", formatI18n(
+        "uxp.agent.index_jump_to", "Jump to {clip} at {timecode}",
+        { clip: row.name || t("uxp.agent.index_untitled_clip", "clip"), timecode: row.timecode_in || "" }
+      ));
+      jump.addEventListener("click", () => sequenceIndexJumpToRow(row));
+      actions.appendChild(jump);
+      tr.appendChild(actions);
+      body.appendChild(tr);
+    });
+
+    sequenceIndexState.focusRow = 0;
+    sequenceIndexState.focusCol = 0;
+  }
+
+  function sequenceIndexRenderCount(truncated) {
+    const count = $("sequenceIndexCount");
+    if (!count) return;
+    const shown = Math.min(sequenceIndexState.visibleRows.length, SEQUENCE_INDEX_PAGE_SIZE);
+    count.textContent = truncated
+      ? formatI18n("uxp.agent.index_count_truncated",
+          "Showing {shown} of {matched} matching clips ({total} in the sequence).",
+          { shown, matched: sequenceIndexState.visibleRows.length, total: sequenceIndexState.rows.length })
+      : formatI18n("uxp.agent.index_count",
+          "{matched} of {total} clips match.",
+          { matched: sequenceIndexState.visibleRows.length, total: sequenceIndexState.rows.length });
+  }
+
+  function sequenceIndexRenderColumnToggles() {
+    const host = $("sequenceIndexColumns");
+    if (!host) return;
+    const legend = host.querySelector("legend");
+    clearChildren(host);
+    if (legend) host.appendChild(legend);
+    for (const column of SEQUENCE_INDEX_COLUMNS) {
+      const label = document.createElement("label");
+      label.className = "oc-column-toggle";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = sequenceIndexState.columns.includes(column.key);
+      input.disabled = SEQUENCE_INDEX_PINNED_COLUMNS.includes(column.key);
+      input.addEventListener("change", () => {
+        const next = new Set(sequenceIndexState.columns);
+        if (input.checked) next.add(column.key);
+        else next.delete(column.key);
+        for (const pinned of SEQUENCE_INDEX_PINNED_COLUMNS) next.add(pinned);
+        sequenceIndexState.columns = SEQUENCE_INDEX_COLUMNS
+          .map((c) => c.key)
+          .filter((key) => next.has(key));
+        sequenceIndexPersistColumns();
+        sequenceIndexRenderHead();
+        sequenceIndexRenderRows();
+      });
+      const text = document.createElement("span");
+      text.textContent = t(column.labelKey, column.fallback);
+      label.appendChild(input);
+      label.appendChild(text);
+      host.appendChild(label);
+    }
+  }
+
+  async function sequenceIndexApplyFilter() {
+    if (!sequenceIndexState.built) return;
+    sequenceIndexSetBusy(true);
+    try {
+      const resp = await BackendClient.post("/timeline/sequence-index/filter", sequenceIndexFilterPayload());
       if (!resp || resp.error || resp.ok === false) {
         setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
         return;
       }
       const data = responseData(resp);
+      sequenceIndexState.visibleRows = Array.isArray(data.rows) ? data.rows : [];
+      sequenceIndexRenderHead();
+      sequenceIndexRenderRows();
+      sequenceIndexRenderCount(sequenceIndexState.visibleRows.length > SEQUENCE_INDEX_PAGE_SIZE);
+    } catch (err) {
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+    } finally {
+      sequenceIndexSetBusy(false);
+    }
+  }
+
+  function sequenceIndexScheduleFilter() {
+    if (sequenceIndexState.searchTimer) clearTimeout(sequenceIndexState.searchTimer);
+    sequenceIndexState.searchTimer = setTimeout(() => {
+      sequenceIndexState.searchTimer = null;
+      sequenceIndexApplyFilter();
+    }, 200);
+  }
+
+  $("sequenceIndexBuildBtn")?.addEventListener("click", async () => {
+    const btn = $("sequenceIndexBuildBtn");
+    if (btn) btn.disabled = true;
+    sequenceIndexSetBusy(true);
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence..."));
+    try {
+      // getSequenceInfo() only reports track *counts*; the index needs one
+      // entry per clip, so walk the timeline explicitly.
+      const walk = await PProBridge.getSequenceIndexPayload();
+      if (!walk || walk.ok === false || !walk.sequence) {
+        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.no_active_sequence", "No active sequence: {error}", { error: walk?.reason || t("common.unknown", "unknown") }));
+        return;
+      }
+      const resp = await BackendClient.post("/timeline/sequence-index", { sequence: walk.sequence });
+      if (!resp || resp.error || resp.ok === false) {
+        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
+        return;
+      }
+      const data = responseData(resp);
+      sequenceIndexState.built = true;
+      sequenceIndexState.rows = Array.isArray(data.rows) ? data.rows : [];
+      sequenceIndexState.visibleRows = sequenceIndexState.rows.slice();
+      sequenceIndexState.summary = data;
       const summary = $("sequenceIndexSummary");
       const box = $("sequenceIndexBox");
-      if (summary && box) {
-        box.hidden = false;
+      if (box) box.hidden = false;
+      if (summary) {
         summary.textContent =
           formatI18n("uxp.agent.runtime.sequence_index_summary", "{name} - {rows} clips ({duration}s @ {fps}fps), {markers} markers.", {
             name: data.sequence_name || t("uxp.agent.runtime.sequence", "Sequence"),
@@ -8490,18 +9016,67 @@ function initAgentTab() {
             markers: data.marker_count ?? 0,
           });
       }
+      sequenceIndexRenderColumnToggles();
       setStatus("sequenceIndexStatus",
         formatI18n("uxp.agent.runtime.sequence_index_built", "Index built: {rows} rows across {width}x{height} sequence.", {
           rows: data.total_rows ?? 0,
           width: data.width ?? 0,
           height: data.height ?? 0,
         }));
+      await sequenceIndexApplyFilter();
     } catch (err) {
       setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
     } finally {
       if (btn) btn.disabled = false;
+      sequenceIndexSetBusy(false);
     }
   });
+
+  $("sequenceIndexExportBtn")?.addEventListener("click", async () => {
+    const btn = $("sequenceIndexExportBtn");
+    if (!sequenceIndexState.built) return;
+    if (btn) btn.disabled = true;
+    setStatus("sequenceIndexStatus", t("uxp.agent.runtime.index_exporting", "Writing CSV..."));
+    try {
+      const payload = sequenceIndexFilterPayload();
+      payload.columns = sequenceIndexActiveColumns().map((c) => c.key);
+      payload.sequence_name = sequenceIndexState.summary?.sequence_name || "";
+      const resp = await BackendClient.post("/timeline/sequence-index/export-csv", payload);
+      if (!resp || resp.error || resp.ok === false) {
+        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
+        return;
+      }
+      const data = responseData(resp);
+      setStatus("sequenceIndexStatus", formatI18n(
+        "uxp.agent.runtime.index_exported", "Exported {rows} row(s) to {output}.",
+        { rows: data.rows ?? 0, output: data.output || "" }
+      ));
+    } catch (err) {
+      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
+    } finally {
+      if (btn) btn.disabled = !sequenceIndexState.visibleRows.length;
+    }
+  });
+
+  $("sequenceIndexSearch")?.addEventListener("input", sequenceIndexScheduleFilter);
+  $("sequenceIndexTrackType")?.addEventListener("change", sequenceIndexApplyFilter);
+  $("sequenceIndexEffects")?.addEventListener("change", sequenceIndexApplyFilter);
+  $("sequenceIndexOffline")?.addEventListener("change", sequenceIndexApplyFilter);
+  $("sequenceIndexMinRating")?.addEventListener("change", sequenceIndexApplyFilter);
+  $("sequenceIndexBody")?.addEventListener("keydown", sequenceIndexHandleGridKey);
+
+  {
+    const storedColumns = sequenceIndexReadStoredColumns();
+    if (storedColumns) {
+      const withPinned = new Set(storedColumns);
+      for (const pinned of SEQUENCE_INDEX_PINNED_COLUMNS) withPinned.add(pinned);
+      sequenceIndexState.columns = SEQUENCE_INDEX_COLUMNS
+        .map((c) => c.key)
+        .filter((key) => withPinned.has(key));
+    }
+    sequenceIndexRenderColumnToggles();
+    sequenceIndexRenderHead();
+  }
 
   $("sequenceIndexInfoBtn")?.addEventListener("click", async () => {
     try {
