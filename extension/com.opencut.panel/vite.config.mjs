@@ -25,6 +25,7 @@ const classicScriptPlaceholders = [
   "job-meta-utils.js", "classify-utils.js", "data-shape-utils.js",
   "string-utils.js", "lookup-utils.js", "i18n-utils.js", "panel-state.js",
   "backend-client.js", "job-runtime.js", "component-utils.js",
+  "job-lifecycle.js",
   "timeline-utils.js", "onboarding-state.js", "bootstrap.js", "main.js",
 ];
 

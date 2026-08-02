@@ -75,16 +75,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P1 — 2026-08-02
 
-- [ ] P1 — Settle job lifecycle hooks on user cancel (features latch permanently)
-  Category: correctness
-  Where: `extension/com.opencut.panel/client/main.js:4889-4917` (`cancelJob`), `:4073-4096` (`settleJobLifecycle`), callers at `:4579,4586,4594` (all inside `onJobDone`).
-  Problem: `cancelJob()` deliberately closes the SSE stream and clears `pollTimer` *before* clearing the job, so no terminal event can ever reach `onJobDone()` — which is the only caller of `settleJobLifecycle`. It then never settles the lifecycle itself, so `jobLifecycleHandlers[jobId]` leaks and the registered `onCancel`/`onFinally` hooks never run. The `job.status === "cancelled"` branch at `:4583-4588` is therefore unreachable via user cancel. Every feature that resets its guard flag in `onFinally` stays latched until the panel is reloaded.
-  Evidence: `settleJobLifecycle` appears exactly 4 times in `main.js` (1 definition + 3 calls, all in `onJobDone`); `cancelJob` calls `jobRuntime.cancel()` (`client/job-runtime.js:39-44`, which only nulls the id) and returns. Traced consequences: Interview Polish sets `_polishActive = true` at `:10000` and clears it *only* in `onFinally` at `:10032`, while `:9989` early-returns on `_polishActive` — so after a cancel the feature is dead and `polishInterviewBtn` stays disabled reading "Polishing…". Same shape for Batch Polish (`:10520/10551`) and footage indexing (`:16295-16321`). The WebSocket path cannot rescue it: `_handleWsMessage` (`:5589-5594`) gates on `jobRuntime.current()`, already null.
-  Fix: At the end of `cancelJob()`, after `jobRuntime.cancel()`, call `settleJobLifecycle({ id: cancellingJob, status: "cancelled" })`.
-  Acceptance: A rendered/unit test starts a job with an `onFinally` hook, cancels it, and asserts the hook ran and `jobLifecycleHandlers` is empty. Manually: cancel an Interview Polish run, then start another — it must run.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P1 — Send real clip data to deliverables from the UXP panel (every CSV is empty)
   Category: correctness
   Where: `extension/com.opencut.uxp/main.js:741-763` (`PProBridge.getSequenceInfo`), `:3925-3942` (`ensureSequenceInfo`), payload sites `:5591` and `:5689`; backend `opencut/core/deliverables.py:97,149,228,232,308,312`.

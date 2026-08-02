@@ -62,6 +62,7 @@
     var OpenCutPanelState = (typeof window !== "undefined" && window.OpenCutPanelState) ? window.OpenCutPanelState : {};
     var OpenCutBackendClient = (typeof window !== "undefined" && window.OpenCutBackendClient) ? window.OpenCutBackendClient : {};
     var OpenCutJobRuntime = (typeof window !== "undefined" && window.OpenCutJobRuntime) ? window.OpenCutJobRuntime : {};
+    var OpenCutJobLifecycle = (typeof window !== "undefined" && window.OpenCutJobLifecycle) ? window.OpenCutJobLifecycle : {};
     var OpenCutComponents = (typeof window !== "undefined" && window.OpenCutComponents) ? window.OpenCutComponents : {};
     var OpenCutTimeline = (typeof window !== "undefined" && window.OpenCutTimeline) ? window.OpenCutTimeline : {};
     var OpenCutBootstrap = (typeof window !== "undefined" && window.OpenCutBootstrap) ? window.OpenCutBootstrap : {};
@@ -98,7 +99,7 @@
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
-    var jobLifecycleHandlers = {};
+    var jobLifecycleHandlers = OpenCutJobLifecycle.createJobLifecycleRegistry();
     var _utilityJobSeq = 0;
     var _waveformRequestSeq = 0;
     var _previewModalRequestSeq = 0;
@@ -4071,28 +4072,7 @@
     }
 
     function settleJobLifecycle(job) {
-        var jobId = job && (job.id || job.job_id);
-        if (!jobId || !jobLifecycleHandlers[jobId]) return;
-        var hooks = jobLifecycleHandlers[jobId];
-        delete jobLifecycleHandlers[jobId];
-        try {
-            if (job.status === "complete" && typeof hooks.onComplete === "function") {
-                hooks.onComplete(job.result || {}, job);
-            } else if (job.status === "error" && typeof hooks.onError === "function") {
-                hooks.onError(job);
-            } else if (job.status === "cancelled" && typeof hooks.onCancel === "function") {
-                hooks.onCancel(job);
-            }
-        } catch (hookErr) {
-            console.error("startJob lifecycle hook failed:", hookErr);
-        }
-        if (typeof hooks.onFinally === "function") {
-            try {
-                hooks.onFinally(job);
-            } catch (finalErr) {
-                console.error("startJob onFinally hook failed:", finalErr);
-            }
-        }
+        jobLifecycleHandlers.settle(job);
     }
 
     function startUtilityJob(endpoint, payload, options) {
@@ -4308,7 +4288,7 @@
                 // Activate atomically so a second click cannot race the job id.
                 jobRuntime.activate(data.job_id);
                 if (opts.onComplete || opts.onError || opts.onCancel || opts.onFinally) {
-                    jobLifecycleHandlers[data.job_id] = opts;
+                    jobLifecycleHandlers.register(data.job_id, opts);
                 }
 
                 if (SSE_OK) {
@@ -4906,6 +4886,7 @@
             }
             // Now safe to clear the job — no more event handlers can fire.
             jobRuntime.cancel();
+            settleJobLifecycle({ id: cancellingJob, status: "cancelled" });
             hideProgress();
             // Fire cancel to backend (best-effort, UI already updated)
             api("POST", "/cancel/" + cancellingJob, {}, function (err) {
