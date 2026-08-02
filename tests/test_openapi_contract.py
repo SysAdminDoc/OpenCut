@@ -64,13 +64,39 @@ def _schema_nodes(schema: dict[str, Any]):
                 yield from _schema_nodes(item)
 
 
-def _assert_response_schema(response: dict[str, Any], pointer: str) -> None:
+def _resolve(spec: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
+    """Follow a local ``$ref`` into ``components``.
+
+    The canonical spec emits each schema once and references it, so response
+    bodies and error responses arrive as ``$ref`` pointers rather than inline
+    copies.
+    """
+    seen = set()
+    while isinstance(node, dict) and "$ref" in node:
+        ref = node["$ref"]
+        assert ref.startswith("#/"), ref
+        assert ref not in seen, f"circular $ref: {ref}"
+        seen.add(ref)
+        target: Any = spec
+        for part in ref.lstrip("#/").split("/"):
+            target = target[part]
+        node = target
+    return node
+
+
+def _assert_response_schema(
+    response: dict[str, Any], pointer: str, spec: dict[str, Any] | None = None
+) -> None:
     assert isinstance(response, dict), pointer
+    if spec is not None:
+        response = _resolve(spec, response)
     assert response.get("description"), pointer
     content = response.get("content", {})
     assert "application/json" in content, pointer
     schema = content["application/json"].get("schema")
     assert isinstance(schema, dict), pointer
+    if spec is not None:
+        schema = _resolve(spec, schema)
 
     for node in _schema_nodes(schema):
         node_type = node.get("type")
@@ -148,7 +174,7 @@ def test_root_openapi_operations_have_valid_ids_and_responses(client):
         responses = operation.get("responses")
         assert isinstance(responses, dict), pointer
         assert "200" in responses, pointer
-        _assert_response_schema(responses["200"], f"{pointer} 200")
+        _assert_response_schema(responses["200"], f"{pointer} 200", spec)
 
         if method in MUTATING_METHODS:
             for status_code in ("400", "403"):
@@ -156,6 +182,7 @@ def test_root_openapi_operations_have_valid_ids_and_responses(client):
                 _assert_response_schema(
                     responses[status_code],
                     f"{pointer} {status_code}",
+                    spec,
                 )
 
     counts = Counter(operation_ids)
@@ -229,15 +256,15 @@ def test_f193_bulk_response_schema_mapping_covers_top_routes(client):
         ("/system/ocio", "get"): {"available", "version", "roles", "findings"},
     }
     for (path, method), expected_properties in examples.items():
-        schema = spec["paths"][path][method]["responses"]["200"]["content"][
-            "application/json"
-        ]["schema"]
+        schema = _resolve(spec, spec["paths"][path][method]["responses"]["200"][
+            "content"
+        ]["application/json"]["schema"])
         assert schema["type"] == "object", path
         assert expected_properties <= set(schema["properties"]), path
 
-    transfer_schema = spec["paths"]["/delivery/transfer-bundle"]["post"][
+    transfer_schema = _resolve(spec, spec["paths"]["/delivery/transfer-bundle"]["post"][
         "responses"
-    ]["200"]["content"]["application/json"]["schema"]
+    ]["200"]["content"]["application/json"]["schema"])
     command_items = transfer_schema["properties"]["commands"]["items"]
     assert {"method", "available", "argv"} <= set(command_items["properties"])
 
@@ -247,6 +274,6 @@ def test_api_openapi_catalogue_uses_openapi_path_parameters(client):
     assert response.status_code == 200
     spec = response.get_json()
 
-    assert spec["openapi"] == "3.1.0"
+    assert spec["openapi"].startswith("3.1.")
     assert len(spec["paths"]) >= 1300
     assert not [path for path in spec["paths"] if RAW_FLASK_PARAM_RE.search(path)]

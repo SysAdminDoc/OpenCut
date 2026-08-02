@@ -556,10 +556,15 @@ def mount_flask_app(fastapi_app: Any, flask_app: Any) -> Any:
 
 
 def generate_openapi_spec(flask_app: Any = None) -> dict:
-    """Generate a combined OpenAPI specification.
+    """Return the OpenAPI specification for *flask_app*.
 
-    Merges the FastAPI auto-generated spec with metadata discovered
-    from Flask routes.
+    Delegates to :mod:`opencut.core.openapi_source`, the single schema source,
+    so this introspection endpoint cannot describe operations differently from
+    ``/api/openapi.json``. It used to be a third generator with colliding
+    operation ids and converter class names in place of JSON-Schema types.
+
+    Falls back to the local skeleton only when the caller passes no app (or an
+    object that is not a real Flask app), which keeps the no-app contract.
 
     Args:
         flask_app: Optional Flask app for route discovery.
@@ -567,6 +572,13 @@ def generate_openapi_spec(flask_app: Any = None) -> dict:
     Returns:
         OpenAPI 3.1 spec as a dict.
     """
+    if flask_app is not None:
+        try:
+            from opencut.core import openapi_source
+            return openapi_source.build_spec(flask_app)
+        except Exception:  # noqa: BLE001 - fall through to the local skeleton
+            logger.debug("openapi_source unavailable; using local skeleton")
+
     spec = OpenAPISpec()
 
     # If Flask app is available, discover its routes

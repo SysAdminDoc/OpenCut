@@ -53,15 +53,15 @@ def route_openapi_json():
     - ``server=URL`` — advertise a custom ``servers`` entry
     """
     try:
-        from opencut.core import openapi_spec
+        from opencut.core import openapi_source
 
         server = request.args.get("server", "")
         refresh = request.args.get("refresh", "").lower() in ("1", "true", "yes")
 
         if _OPENAPI_CACHE["spec"] is None or refresh or server:
-            _OPENAPI_CACHE["spec"] = openapi_spec.generate_spec(
+            _OPENAPI_CACHE["spec"] = openapi_source.build_spec(
                 current_app,
-                server_url=server,
+                server_url=server or openapi_source.DEFAULT_SERVER_URL,
             )
         return jsonify(_OPENAPI_CACHE["spec"])
     except Exception as exc:  # noqa: BLE001

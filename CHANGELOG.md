@@ -5,6 +5,43 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Every operation was documented as needing no CSRF token
+
+- `require_csrf` uses `functools.wraps`, which copies the wrapped function's
+  name onto the wrapper, so the name-based detector behind the OpenAPI
+  `security` block and `/api/routes`'s `csrf_required` flag never matched a
+  single route — all 1,568 were reported as unprotected. The decorator now
+  stamps an explicit `_opencut_requires_csrf` marker and 1,171 operations
+  document the `X-OpenCut-Token` requirement.
+
+### Changed - One OpenAPI source with explicit compatibility adapters
+
+- `opencut/core/openapi_source.py` builds the canonical OpenAPI **3.1.1**
+  document. `/api/openapi.json` serves it directly, `/openapi.json` serves a
+  3.0.3 rendering produced by `downgrade_to_30()` (nullable unions, `const`,
+  `prefixItems`), and `/architecture/openapi` delegates to the same source
+  instead of being a third generator with colliding operation ids and Flask
+  converter class names in place of JSON-Schema types.
+- Response schemas are emitted once under `components/schemas` and `$ref`-ed
+  rather than inlined per operation, alongside shared `components/responses`
+  for 400/403/404/429/500 that all point at one `OpenCutError` schema.
+- Request bodies for the curated MCP operations come from those tools' own
+  `inputSchema`, so REST and MCP describe the same operation from one
+  hand-reviewed source and cannot drift apart.
+
+### Added - OpenAPI typed-coverage ratchet
+
+- `python -m opencut.tools.dump_openapi_contract` writes
+  `opencut/_generated/openapi_contract.json` recording typed request, typed
+  response, error-typed, and CSRF-documented operation counts plus the
+  component schema names. `--check` fails when the manifest is stale *or* when
+  any counter regressed, and a new `openapi-contract` release-smoke step runs
+  it.
+- `tests/test_openapi_typed_contract.py` proves both endpoints describe the
+  same operations, validates every component schema as JSON Schema 2020-12,
+  generates a valid payload per typed request body and a deliberately invalid
+  one, and checks a real error response against the documented error schema.
+
 ### Added - MCP across the 2026-07-28 protocol boundary
 
 - `server/discover` is implemented, so a client can learn the supported

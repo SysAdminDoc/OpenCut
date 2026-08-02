@@ -934,6 +934,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_error_logging.py",
     "tests/test_seed_github_issues.py",
     "tests/test_route_manifest.py",
+    "tests/test_openapi_typed_contract.py",
     "tests/test_route_collisions.py",
     "tests/test_openapi_contract.py",
     "tests/test_api_aliases.py",
@@ -1301,6 +1302,30 @@ def step_panel_source(_args: argparse.Namespace) -> StepResult:
     return res
 
 
+def step_openapi_contract(_args: argparse.Namespace) -> StepResult:
+    """Verify the typed-contract manifest and its coverage ratchet."""
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.dump_openapi_contract", "--check"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "openapi-contract",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "typed OpenAPI contract in sync"
+            if status == "ok"
+            else "typed OpenAPI contract is stale or coverage regressed"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_media_conformance(args: argparse.Namespace) -> StepResult:
     """Run the synthetic media corpus against real FFmpeg operations.
 
@@ -1356,6 +1381,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),
     StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
+    StepDefinition("openapi-contract", step_openapi_contract, "Check typed OpenAPI contract manifest + coverage ratchet"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
     StepDefinition("mcp-registry", step_mcp_registry, "Check MCP server registry manifest is in sync (F147)"),
