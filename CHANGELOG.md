@@ -57,6 +57,11 @@ record also lives in the git commit messages.
   or backend CSRF token for POST requests on loopback, and rejects oversized
   JSON bodies before reading them.
 
+### Fixed - Forced-colors selector liveness
+
+- Forced-colors rules now target the panels' live toast and progress classes,
+  and regression coverage rejects selectors that match no rendered markup.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the
