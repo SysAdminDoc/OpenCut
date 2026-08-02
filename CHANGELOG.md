@@ -78,6 +78,11 @@ record also lives in the git commit messages.
 - Cancelling a workflow now cancels its active child job and registered
   process, and timed-out workflow steps cancel their child before returning.
 
+### Fixed - UXP social upload cleanup
+
+- Social upload now catches job-poll failures, shows the upload error, and
+  always clears its processing banner and loading button state.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

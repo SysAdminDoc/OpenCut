@@ -253,6 +253,28 @@ def test_job_poller_rejects_concurrent_jobs_and_locks_job_buttons():
     )
 
 
+def test_social_upload_catches_poll_rejection_and_always_cleans_up():
+    text = _read_main_js()
+    match = re.search(
+        r"async function runSocialUpload\(\)\s*\{(?P<body>.*?)\n\}\n\nasync function socialConnectUxp",
+        text,
+        re.S,
+    )
+    assert match, "runSocialUpload must remain a standalone async handler"
+    body = match.group("body")
+    assert "try {" in body
+    assert "await JobPoller.poll(r.data.job_id)" in body
+    assert re.search(r"catch \(e\).*?upload_failed", body, re.S), (
+        "social upload must turn poll rejection into an upload error toast"
+    )
+    assert re.search(
+        r"finally\s*\{.*?UIController\.hideProcessing\(\);.*?"
+        r'UIController\.setButtonLoading\("socialUploadBtnUxp", false\);',
+        body,
+        re.S,
+    ), "social upload cleanup must run in finally after start or poll failure"
+
+
 # ---------------------------------------------------------------------------
 # Server-side contract — exercise the routes the UXP panel calls
 # ---------------------------------------------------------------------------
