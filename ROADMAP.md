@@ -79,15 +79,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 ### P2 — 2026-08-02
 
 
-- [ ] P2 — Escape colons (and backslashes) in every drawtext text value
-  Category: correctness
-  Where: `opencut/core/instant_replay.py:210` (`text_esc = config.overlay_text.replace("'", "\\'")`); `opencut/core/motion_graphics.py:98-99,231-232`. The correct helper already exists: `opencut/helpers.py:447` (`escape_drawtext`).
-  Problem: These sites escape only `'` (and sometimes `\`), never `:`. In an FFmpeg filtergraph the parser strips quotes before the option parser splits on `:`, so single-quoting does **not** protect a colon — which is precisely why `helpers.escape_drawtext` escapes it even inside quotes. Colons are routine in titles and overlays, so the user gets an opaque job failure for ordinary input. None of these sites sets `expansion=none`, so literal `%{...}` in user text is also evaluated as a drawtext expression.
-  Evidence: Probed the bundled `ffmpeg/ffmpeg.exe` directly. `-vf "drawtext=text='Round 2: FIGHT'"` fails with `No option name near ' FIGHT'` / `Error parsing filterchain`. The same command with the colon escaped (`'Round 2\: FIGHT'`) succeeds (only fontconfig warnings). Reachable via `POST /gaming/instant-replay` (`opencut/routes/gaming_routes.py:442`) with `overlay_text: "REPLAY: Goal #2"`, and via `POST /video/title-card` (`opencut/routes/video_specialty.py:124`) with `text: "Episode 2: The Return"`.
-  Fix: Route both modules through `helpers.escape_drawtext` and pair it with `expansion=none`, as that helper's docstring already mandates. A wider sweep of modules with their own local escapers is filed separately below.
-  Acceptance: A test renders drawtext with `Round 2: FIGHT`, `C:\media\clip`, and `100%{x}` through each affected entry point and asserts FFmpeg exits 0 and the rendered text is literal.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P2 — Make the queue allowlist reject sync routes (queued work runs, then reports failure)
   Category: correctness
