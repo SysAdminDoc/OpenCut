@@ -7,6 +7,7 @@ const require = createRequire(import.meta.url);
 const { createPanelState } = require("../client/panel-state.js");
 const { createBackendClient } = require("../client/backend-client.js");
 const { createJobRuntime, isTerminalStatus } = require("../client/job-runtime.js");
+const { createJobLifecycleRegistry } = require("../client/job-lifecycle.js");
 const components = require("../client/component-utils.js");
 const timeline = require("../client/timeline-utils.js");
 const onboarding = require("../client/onboarding-state.js");
@@ -135,6 +136,23 @@ describe("CEP job runtime", () => {
   it("recognizes all backend terminal statuses", () => {
     expect(["complete", "error", "cancelled"].every(isTerminalStatus)).toBe(true);
     expect(isTerminalStatus("running")).toBe(false);
+  });
+});
+
+describe("CEP job lifecycle", () => {
+  it("settles cancellation hooks once and clears the registry", () => {
+    const registry = createJobLifecycleRegistry();
+    const onCancel = vi.fn();
+    const onFinally = vi.fn();
+    registry.register("job-cancel", { onCancel, onFinally });
+
+    registry.settle({ id: "job-cancel", status: "cancelled" });
+    registry.settle({ id: "job-cancel", status: "cancelled" });
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onCancel).toHaveBeenCalledWith({ id: "job-cancel", status: "cancelled" });
+    expect(onFinally).toHaveBeenCalledOnce();
+    expect(registry.pendingCount()).toBe(0);
   });
 });
 
@@ -354,6 +372,21 @@ describe("CEP source ownership", () => {
 
     // A dismissed card must not leave a stale result to be re-read.
     expect(main.match(/clearResultAnnouncement\(\);/g).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("settles the registered lifecycle before sending a user cancel", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const cancelStart = main.indexOf("function cancelJob()");
+    const settled = main.indexOf(
+      'settleJobLifecycle({ id: cancellingJob, status: "cancelled" });',
+      cancelStart,
+    );
+    const backendCancel = main.indexOf('api("POST", "/cancel/" + cancellingJob', cancelStart);
+
+    expect(cancelStart).toBeGreaterThan(-1);
+    expect(settled).toBeGreaterThan(cancelStart);
+    expect(settled).toBeLessThan(backendCancel);
+    expect(main).toContain("jobLifecycleHandlers.register(data.job_id, opts);");
   });
 
   it("binds Auto theme to the Premiere host skin rather than the OS", () => {

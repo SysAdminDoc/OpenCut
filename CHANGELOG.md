@@ -28,6 +28,13 @@ record also lives in the git commit messages.
   the live or persisted job back to `error`. Late resource-sampler peaks are
   retained, and cancellation emits exactly one terminal webhook.
 
+### Fixed - CEP cancellation lifecycle cleanup
+
+- User cancellation now settles registered `onCancel` and `onFinally` hooks
+  immediately after the active job is cleared, so feature guards and controls
+  reset even when the backend terminal event is intentionally no longer
+  polled.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the
