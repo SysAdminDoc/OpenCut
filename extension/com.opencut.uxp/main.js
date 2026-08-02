@@ -3641,7 +3641,13 @@ function updateDeliverablesSummary() {
 
   if (_lastDeliverableActivity) {
     const activity = _lastDeliverableActivity;
-    const label = activity.count
+    const label = activity.empty
+      ? formatI18n(
+          "uxp.deliverables.runtime.activity_no_clips",
+          "{label} | no clips found",
+          { label: activity.label }
+        )
+      : activity.count
       ? formatCountI18n(
           activity.count,
           "uxp.deliverables.runtime.activity_docs_one",
@@ -3939,6 +3945,38 @@ async function ensureSequenceInfo(options = {}) {
   }
 
   return _lastSequenceInfo;
+}
+
+/**
+ * Build the snake_case sequence shape consumed by the deliverables backend.
+ * `getSequenceInfo()` is intentionally a summary, so deliverables must use
+ * the full sequence walk to include every clip on every track.
+ */
+async function getDeliverablesSequenceData() {
+  if (!PProBridge.available()) return null;
+  const walked = await PProBridge.getSequenceIndexPayload();
+  if (!walked?.ok || !walked.sequence) return null;
+  const sequence = walked.sequence;
+  return {
+    name: String(sequence.name || ""),
+    guid: String(sequence.guid || ""),
+    duration: Number(sequence.duration) || 0,
+    fps: Number(sequence.fps) || 0,
+    framerate: Number(sequence.fps) || 0,
+    width: Number(sequence.width) || 0,
+    height: Number(sequence.height) || 0,
+    video_tracks: Array.isArray(sequence.videoTracks) ? sequence.videoTracks : [],
+    audio_tracks: Array.isArray(sequence.audioTracks) ? sequence.audioTracks : [],
+    markers: Array.isArray(sequence.markers) ? sequence.markers : [],
+  };
+}
+
+function getDeliverableRowCount(result) {
+  if (!result || typeof result !== "object" || !Object.prototype.hasOwnProperty.call(result, "rows")) {
+    return null;
+  }
+  const rows = Number(result.rows);
+  return Number.isFinite(rows) ? Math.max(0, rows) : null;
 }
 
 /**
@@ -5572,7 +5610,8 @@ async function runDeliverables(type) {
     UIController.setStatus(t("uxp.deliverables.runtime.reconnect_before_generating_docs", "Reconnect the backend before generating deliverables."), "error");
     return;
   }
-  const seqData = await ensureSequenceInfo({ silent: true });
+  const seqInfo = await ensureSequenceInfo({ silent: true });
+  const seqData = seqInfo ? await getDeliverablesSequenceData() : null;
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
   if (!seqData) {
     setDeliverablesStatus(formatI18n("uxp.deliverables.runtime.load_active_sequence_before_label", "Load the active Premiere sequence before generating {label}.", { label: deliverableLabel }), "warning");
@@ -5595,24 +5634,50 @@ async function runDeliverables(type) {
       if (btnId) UIController.setButtonLoading(btnId, false);
       const outputPath = result.output ?? result.output_path ?? "";
       const outputLabel = outputPath ? formatWorkspaceSource(outputPath) : t("uxp.deliverables.runtime.saved", "saved");
-      const documentCount = Math.max(
-        1,
-        Number(
-          result.count
-          ?? result.generated
-          ?? result.documents?.length
-          ?? result.outputs?.length
-          ?? result.files?.length
-          ?? 1
-        ) || 1
-      );
+      const rowCount = getDeliverableRowCount(result);
+      const documentCount = rowCount === null
+        ? Math.max(
+            1,
+            Number(
+              result.count
+              ?? result.generated
+              ?? result.documents?.length
+              ?? result.outputs?.length
+              ?? result.files?.length
+              ?? 1
+            ) || 1
+          )
+        : (rowCount > 0 ? 1 : 0);
       _lastDeliverableActivity = {
         label: deliverableLabel,
         output: outputPath,
         time: Date.now(),
         count: documentCount,
+        empty: rowCount === 0,
       };
       updateDeliverablesSummary();
+      if (rowCount === 0) {
+        const noClipsDetail = formatI18n(
+          "uxp.deliverables.runtime.no_clips_found_detail",
+          "{label} generated an empty sheet because no clips were found in the active sequence.",
+          { label: deliverableLabel }
+        );
+        setDeliverablesStatus(
+          noClipsDetail,
+          "warning",
+          outputPath || deliverableLabel
+        );
+        UIController.showToast(
+          formatI18n(
+            "uxp.deliverables.runtime.no_clips_found_toast",
+            "No clips found for {label}; the CSV contains headers only.",
+            { label: deliverableLabel }
+          ),
+          "warning"
+        );
+        UIController.setStatus(noClipsDetail, "warning");
+        return;
+      }
       setDeliverablesStatus(
         formatI18n("uxp.deliverables.runtime.deliverable_ready_detail", "{label} is ready. Review the file and continue building the handoff package.", { label: deliverableLabel }),
         "success",
@@ -5642,7 +5707,8 @@ async function runFullReport() {
     UIController.setStatus(t("uxp.deliverables.runtime.reconnect_before_report_package", "Reconnect the backend before generating the report package."), "error");
     return;
   }
-  const seqData = await ensureSequenceInfo({ silent: true });
+  const seqInfo = await ensureSequenceInfo({ silent: true });
+  const seqData = seqInfo ? await getDeliverablesSequenceData() : null;
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
   const selectedTypes = getSelectedReportTypes();
   const packageSummary = getDeliverablesSelectionSummary(selectedTypes);
@@ -5675,6 +5741,7 @@ async function runFullReport() {
 
   let generated = 0;
   let errors = 0;
+  let emptyRows = 0;
   const outputPaths = [];
   for (let index = 0; index < types.length; index += 1) {
     const type = types[index];
@@ -5692,6 +5759,7 @@ async function runFullReport() {
     });
     if (r.ok) {
       generated++;
+      if (getDeliverableRowCount(r.data) === 0) emptyRows++;
       if (r.data?.output) outputPaths.push(r.data.output);
     } else {
       errors++;
@@ -5705,9 +5773,10 @@ async function runFullReport() {
     output: outputPaths[0] || outputDir || "",
     time: Date.now(),
     count: generated,
+    empty: emptyRows > 0,
   };
   updateDeliverablesSummary();
-  if (errors === 0) {
+  if (errors === 0 && emptyRows === 0) {
     setDeliverablesStatus(
       formatCountI18n(
         generated,
@@ -5730,9 +5799,34 @@ async function runFullReport() {
       ),
       "success"
     );
+    UIController.setStatus(
+      formatCountI18n(
+        generated,
+        "uxp.deliverables.runtime.package_ready_status_one",
+        "{label} ready - {count} CSV document.",
+        "uxp.deliverables.runtime.package_ready_status_many",
+        "{label} ready - {count} CSV documents.",
+        { label: packageLabel }
+      ),
+      "success"
+    );
+  } else if (errors === 0) {
+    const noClipsMessage = formatI18n(
+      "uxp.deliverables.runtime.package_generated_no_clips",
+      "{label} generated {generated} CSV document(s), but {empty} had no clips and contain headers only.",
+      { label: packageLabel, generated, empty: emptyRows }
+    );
+    setDeliverablesStatus(noClipsMessage, "warning", outputPaths[0] || outputDir || packageSummary.title);
+    UIController.showToast(noClipsMessage, "warning");
+    UIController.setStatus(noClipsMessage, "warning");
   } else {
+    const gapsMessage = formatI18n(
+      "uxp.deliverables.runtime.package_generated_with_gaps",
+      "{label} generated with a few gaps. {generated} documents completed and {errors} step(s) need attention.",
+      { label: packageLabel, generated, errors }
+    );
     setDeliverablesStatus(
-      formatI18n("uxp.deliverables.runtime.package_generated_with_gaps", "{label} generated with a few gaps. {generated} documents completed and {errors} step(s) need attention.", { label: packageLabel, generated, errors }),
+      gapsMessage,
       "warning",
       outputPaths[0] || outputDir || packageSummary.title
     );
@@ -5740,17 +5834,8 @@ async function runFullReport() {
       formatI18n("uxp.deliverables.runtime.generated_csv_with_gaps", "Generated {generated} CSV documents; {errors} step(s) need attention.", { generated, errors }),
       "warning"
     );
+    UIController.setStatus(gapsMessage, "warning");
   }
-  UIController.setStatus(
-    formatCountI18n(
-      generated,
-      "uxp.deliverables.runtime.package_ready_status_one",
-      "{label} ready - {count} CSV document.",
-      "uxp.deliverables.runtime.package_ready_status_many",
-      "{label} ready - {count} CSV documents.",
-      { label: packageLabel }
-    )
-  );
 }
 
 // ─────────────────────────────────────────────────────────────

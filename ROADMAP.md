@@ -75,16 +75,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P1 — 2026-08-02
 
-- [ ] P1 — Send real clip data to deliverables from the UXP panel (every CSV is empty)
-  Category: correctness
-  Where: `extension/com.opencut.uxp/main.js:741-763` (`PProBridge.getSequenceInfo`), `:3925-3942` (`ensureSequenceInfo`), payload sites `:5591` and `:5689`; backend `opencut/core/deliverables.py:97,149,228,232,308,312`.
-  Problem: `deliverables.py` iterates `sequence_data.get("video_tracks", [])` / `.get("audio_tracks", [])` — snake_case keys holding per-clip arrays. UXP sends `getSequenceInfo()` output, which is camelCase and carries only **track counts**: `audioTracks: (await seq.getAudioTrackList())?.length`. Every VFX sheet, ADR list, music cue sheet, and asset list generated from the UXP panel therefore iterates zero tracks and writes a header-only CSV, while the panel reports success. `documentCount` is floor-coerced to 1 (`Math.max(1, Number(result.count ?? ... ?? 1))`, `:5598-5608`), which hides the backend's honest `rows: 0`.
-  Evidence: Verified end-to-end against a live server. UXP-shaped payload `{"sequence_data":{"name":"Seq 01","duration":120,"framerate":25,"videoTracks":2,"audioTracks":4}}` → `POST /deliverables/vfx-sheet` returned `{"rows":0}`. CEP-shaped payload `{"sequence_data":{"video_tracks":[{"index":0,"clips":[{"name":"shotA.mov","path":"C:/m/shotA.mov","start":0,"end":5,"effects":["Lumetri Color"]}]}],"audio_tracks":[]}}` returned `{"rows":1}`. Note the CEP panel is **not** affected: `host/index.jsx::ocGetSequenceInfo` emits `video_tracks`/`audio_tracks` with real clips (see its `JSON.stringify` return) — this is a UXP-only defect.
-  Fix: Build the deliverables payload in UXP from `getSequenceIndexPayload()` (`main.js:683+`), which already walks real clips per track and was written for exactly this shape; map it to `video_tracks`/`audio_tracks`. Stop floor-coercing `documentCount` past the server's `rows`, so a 0-row result reports honestly. Optionally accept both key styles in `deliverables.py` as a compatibility fallback.
-  Acceptance: A UXP unit test asserts the deliverables payload contains `video_tracks` as an array of `{index, clips[]}`. A backend test asserts a 0-row result is surfaced to the user as "no clips found", not as success.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P1 — Fix the `output_path()` misuse that breaks default beat-synced assembly
   Category: correctness
   Where: `opencut/core/beat_cuts.py:379`; helper signature `opencut/helpers.py:119-124` (`output_path(input_path, suffix, output_dir="")`).
