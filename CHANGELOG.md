@@ -5,6 +5,26 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Public-installer-to-current upgrade conformance
+
+- `tests/legacy_user_data_fixture.py` materializes a v1.25.1-shaped
+  `~/.opencut` from that tag's own DDL and document shapes — jobs, journal
+  (including the out-of-band `forward_json` ALTER that left `user_version` at
+  0), footage index, a bare-list job queue, unversioned settings, a plaintext
+  LLM key, a pre-versioning review record, an installed plugin, and the
+  installer stamp.
+- `tests/test_upgrade_conformance.py` drives the current build over that tree
+  with sockets disabled and asserts the upgrade is offline, idempotent, and
+  non-destructive: every store reaches its current schema, pre-upgrade rows
+  and FTS search results survive, the legacy queue list becomes a versioned
+  document, review records migrate with a `.pre-versioning.json` backup, a
+  missing publisher trust store is not treated as tampering, a plaintext key
+  is vaulted or disabled rather than silently kept, and no user file is
+  removed. Uninstall's preserve-by-default and backup-before-removal
+  guarantees are pinned against the installer sources.
+- Both this module and `tests/test_local_db_migrations.py` now run in the
+  release gate's `pytest-fast` step.
+
 ### Fixed - UXP Sequence Index is a working table
 
 - The UXP Sequence Index posted `PProBridge.getSequenceInfo()`, which reports
