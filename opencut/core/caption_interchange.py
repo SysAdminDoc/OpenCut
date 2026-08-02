@@ -185,7 +185,11 @@ def default_styles() -> dict[str, CaptionStyle]:
                 "fontFamily": "proportionalSansSerif",
                 "fontSize": "100%",
                 "color": "white",
-                "backgroundColor": "rgba(0,0,0,0.8)",
+                # TTML <color> takes an integer 0-255 alpha, not CSS's 0-1
+                # float. `rgba(0,0,0,0.8)` is a syntax error the W3C reference
+                # implementation rejects, which made the "validated IMSC 1.3"
+                # label untrue. 204 == 0.8 * 255.
+                "backgroundColor": "rgba(0,0,0,204)",
                 "textAlign": "center",
             },
         ),

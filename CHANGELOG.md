@@ -5,6 +5,34 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - "Validated IMSC 1.3" output was rejected by the reference implementation
+
+- The default caption style emitted `tts:backgroundColor="rgba(0,0,0,0.8)"`.
+  TTML's `<color>` takes an integer 0-255 alpha, not CSS's 0-1 float, so
+  `ttconv` — the W3C reference implementation — reported "Bad Syntax" and
+  discarded the property on **every** document OpenCut labelled conformant.
+  The style now emits `rgba(0,0,0,204)`.
+
+### Added - Standards labels are earned from independent validators
+
+- `opencut/core/standards_validators.py` adapts three reference
+  implementations and returns a machine-readable `ValidationReport`:
+  `ttconv` + `imschrm` for IMSC 1.3 and the IMSC Hypothetical Render Model,
+  Netflix Photon's `IMPAnalyzer` for IMF packages (`OPENCUT_PHOTON_JAR`), and
+  a BS.1770 loudness check against a tone whose expected LUFS is derived from
+  the standard's own K-weighting coefficients rather than fitted to what
+  OpenCut measures.
+- The IMSC adapter captures `ttconv`'s own log output as findings. That
+  matters because the reader reports malformed properties through its logger
+  instead of raising — a parse that "succeeded" can still have silently
+  dropped an invalid attribute, which is exactly how the defect above
+  survived.
+- An absent validator reports `available: false` and `passed: null`. "Not
+  checked" never reads as "passed", and the new `standards-conformance`
+  release step reports `warn` rather than `ok` when a validator is missing.
+- New `opencut[standards]` extra installs the caption validators; the README
+  capability claim now names what validated it.
+
 ### Fixed - Every operation was documented as needing no CSRF token
 
 - `require_csrf` uses `functools.wraps`, which copies the wrapped function's

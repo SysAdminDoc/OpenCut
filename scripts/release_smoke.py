@@ -958,6 +958,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_contrast_audit.py",
     "tests/test_caption_line_breaks.py",
     "tests/test_caption_unicode_validation.py",
+    "tests/test_standards_validators.py",
     "tests/test_srt_encoding.py",
     "tests/test_caption_language_confidence.py",
     "tests/test_captions_translate_srt.py",
@@ -1326,6 +1327,54 @@ def step_openapi_contract(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_standards_conformance(args: argparse.Namespace) -> StepResult:
+    """Run the independent reference validators over OpenCut's own output.
+
+    Reports ``warn`` — not ``ok`` — when a validator is missing, so a host
+    without the optional validators cannot look like it proved conformance.
+    """
+    start = time.time()
+    try:
+        from opencut.core import standards_validators
+        status = standards_validators.validator_status()
+    except Exception as exc:  # noqa: BLE001
+        return StepResult(
+            "standards-conformance", "fail",
+            duration_ms=int((time.time() - start) * 1000),
+            message=f"validator status unavailable: {exc}",
+        )
+
+    missing = sorted(name for name, entry in status.items() if not entry["available"])
+    cmd = [
+        sys.executable, "-m", "pytest", "-q", "--tb=short",
+        "tests/test_standards_validators.py",
+    ]
+    if getattr(args, "pytest_extra", None):
+        cmd.extend(args.pytest_extra)
+    result = _run(cmd, cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+
+    if result.returncode != 0:
+        status_word = "fail"
+        message = "standards conformance failed"
+    elif missing:
+        status_word = "warn"
+        message = "validators unavailable: " + ", ".join(missing)
+    else:
+        status_word = "ok"
+        message = "IMSC, IMF, and loudness validated by reference implementations"
+
+    return StepResult(
+        "standards-conformance",
+        status_word,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_media_conformance(args: argparse.Namespace) -> StepResult:
     """Run the synthetic media corpus against real FFmpeg operations.
 
@@ -1398,6 +1447,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("media-conformance", step_media_conformance, "Run the synthetic media corpus against real FFmpeg"),
+    StepDefinition("standards-conformance", step_standards_conformance, "Validate standards-labelled output with reference implementations"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt, requirements-lock.txt, and pyproject[all]"),
     StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
     StepDefinition("panel-rendered", step_panel_rendered, "Run headless CEP/UXP rendered regression tests"),

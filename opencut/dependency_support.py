@@ -28,6 +28,7 @@ EXTRA_SUPPORT: Mapping[str, Mapping[str, tuple[str, ...]]] = {
     "scene-ml": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
     "reframe": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
     "mcp": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
+    "standards": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
     "otio": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
     "tts": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
     "depth": {"python": PYTHON_VERSIONS, "platforms": PLATFORMS},
