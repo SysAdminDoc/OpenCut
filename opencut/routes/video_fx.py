@@ -20,7 +20,6 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
-    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -676,21 +675,30 @@ def video_lut_ai(job_id, filepath, data):
     return {"lut_path": cube_path}
 
 
+def _validate_lut_blend_request(data):
+    if not isinstance(data.get("lut_a"), str) or not data["lut_a"].strip():
+        return "A source LUT is required"
+    if not isinstance(data.get("lut_b"), str) or not data["lut_b"].strip():
+        return "A second source LUT is required"
+    return None
+
+
 @video_fx_bp.route("/video/lut/blend", methods=["POST"])
 @require_csrf
-def video_lut_blend():
+@async_job(
+    "lut-blend",
+    filepath_required=False,
+    pre_validate=_validate_lut_blend_request,
+)
+def video_lut_blend(job_id, filepath, data):
     """Blend two LUTs into a new LUT with a single slider."""
-    data = get_json_dict()
     lut_a = data.get("lut_a", "").strip()
     lut_b = data.get("lut_b", "").strip()
     blend_val = safe_float(data.get("blend", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    if not lut_a or not lut_b:
-        return jsonify({"error": "Two LUT names required"}), 400
-
     try:
         from opencut.core.lut_library import blend_luts
         cube_path = blend_luts(lut_a, lut_b, blend=blend_val, output_name=data.get("output_name", ""))
-        return jsonify({"success": True, "lut_path": cube_path})
+        return {"success": True, "lut_path": cube_path}
     except Exception as e:
-        return safe_error(e, "video_lut_blend")
+        raise RuntimeError(f"LUT blend failed: {e}") from e

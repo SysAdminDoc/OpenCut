@@ -67,6 +67,12 @@ record also lives in the git commit messages.
 - Instant replay and motion-graphics renderers now escape colons, backslashes,
   and apostrophes through the shared helper with drawtext expansion disabled.
 
+### Fixed - Queueable multicam and LUT routes
+
+- LUT blending and multicam cut/XML routes now use tracked async jobs, so
+  queued work completes with a terminal job status instead of running
+  synchronously and being reported as missing a job ID.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

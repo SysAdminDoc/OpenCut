@@ -60,7 +60,7 @@
     "error_typed_operations": 1572,
     "operations": 1572,
     "typed_requests": 77,
-    "typed_responses": 136
+    "typed_responses": 138
   },
   "json_schema_dialect": "https://json-schema.org/draft/2020-12/schema",
   "typed_request_operations": [
@@ -269,7 +269,9 @@
     "POST /video/face/blur",
     "POST /video/face/enhance",
     "POST /video/face/swap",
+    "POST /video/lut/blend",
     "POST /video/multicam-cuts",
+    "POST /video/multicam-xml",
     "POST /video/remove/watermark",
     "POST /video/shorts-pipeline",
     "POST /video/style/apply",

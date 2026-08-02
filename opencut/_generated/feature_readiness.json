@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-29T18:46:13Z",
+  "generated_at": "2026-08-02T21:36:13Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 72,
   "total_routes": 98,
@@ -1223,7 +1223,7 @@
       "feature_id": "video.multicam.visual-cues",
       "label": "MediaPipe visual multicam cues",
       "category": "video",
-      "state": "missing_dependency",
+      "state": "available",
       "install_hint": "pip install mediapipe opencv-python-headless",
       "docs": "docs/MODELS.md",
       "routes": [
