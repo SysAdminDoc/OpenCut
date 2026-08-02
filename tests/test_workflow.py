@@ -181,6 +181,135 @@ class TestWorkflowValidation:
         assert job["status"] == "complete"
         assert captured["steps"] == [{"endpoint": "/silence", "params": {}}]
 
+    def test_parent_cancellation_cancels_active_step_and_stops_workflow(
+        self, app, monkeypatch
+    ):
+        import opencut.core.workflow as workflow_core
+        import opencut.jobs as jobs
+        from unittest.mock import Mock
+
+        class _Response:
+            status_code = 200
+
+            @staticmethod
+            def get_json():
+                return {"job_id": "workflow-step-1"}
+
+        class _Client:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def post(self, *_args, **_kwargs):
+                return _Response()
+
+        class _App:
+            def test_client(self):
+                return _Client()
+
+        fake_process = Mock()
+        fake_process.wait.return_value = None
+        with jobs.job_lock:
+            jobs.jobs.clear()
+            jobs._job_processes.clear()
+            jobs.jobs["workflow-step-1"] = {
+                "id": "workflow-step-1",
+                "status": "running",
+                "progress": 40,
+            }
+            jobs._job_processes["workflow-step-1"] = fake_process
+
+        parent_cancel_checks = {"count": 0}
+
+        def fake_is_cancelled(job_id):
+            if job_id != "parent-job":
+                return False
+            parent_cancel_checks["count"] += 1
+            return parent_cancel_checks["count"] >= 2
+
+        monkeypatch.setattr(jobs, "_is_cancelled", fake_is_cancelled)
+        monkeypatch.setattr(jobs, "_persist_job", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(jobs, "_emit_job_webhook", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr("opencut.workers.cancel_job", lambda _job_id: False)
+
+        result = workflow_core.run_workflow(
+            _App(),
+            __file__,
+            [
+                {"endpoint": "/silence", "params": {}},
+                {"endpoint": "/audio/normalize", "params": {}},
+            ],
+            "csrf-token",
+            parent_job_id="parent-job",
+        )
+
+        assert result["success"] is False
+        assert result["steps_completed"] == 0
+        with jobs.job_lock:
+            assert jobs.jobs["workflow-step-1"]["status"] == "cancelled"
+            assert jobs.jobs["workflow-step-1"]["message"] == (
+                "Cancelled because the parent workflow was cancelled"
+            )
+            assert "workflow-step-1" not in jobs._job_processes
+        fake_process.terminate.assert_called_once_with()
+        fake_process.wait.assert_called_once_with(timeout=3)
+
+    def test_workflow_step_timeout_cancels_active_subjob(self, monkeypatch):
+        import opencut.core.workflow as workflow_core
+        import opencut.jobs as jobs
+
+        class _Response:
+            status_code = 200
+
+            @staticmethod
+            def get_json():
+                return {"job_id": "workflow-step-1"}
+
+        class _Client:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def post(self, *_args, **_kwargs):
+                return _Response()
+
+        class _App:
+            def test_client(self):
+                return _Client()
+
+        calls = []
+
+        def fake_cancel(job_id, **kwargs):
+            calls.append((job_id, kwargs))
+            return None, "not_running"
+
+        monkeypatch.setattr(jobs, "_cancel_job", fake_cancel)
+        monkeypatch.setattr(
+            workflow_core,
+            "_wait_for_job",
+            lambda *_args, **_kwargs: None,
+        )
+
+        result = workflow_core.run_workflow(
+            _App(),
+            __file__,
+            [{"endpoint": "/silence", "params": {}}],
+            "csrf-token",
+            parent_job_id="parent-job",
+        )
+
+        assert result["success"] is False
+        assert calls == [
+            (
+                "workflow-step-1",
+                {"message": "Workflow step timed out", "persist_sync": True},
+            )
+        ]
+
 
 # =====================================================================
 # PRESETS

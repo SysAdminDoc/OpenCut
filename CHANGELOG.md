@@ -73,6 +73,11 @@ record also lives in the git commit messages.
   queued work completes with a terminal job status instead of running
   synchronously and being reported as missing a job ID.
 
+### Fixed - Workflow cancellation propagation
+
+- Cancelling a workflow now cancels its active child job and registered
+  process, and timed-out workflow steps cancel their child before returning.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

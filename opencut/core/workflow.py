@@ -290,8 +290,25 @@ def run_workflow(
         # If the endpoint returned a job_id, we need to poll for completion.
         job_id = resp_data.get("job_id")
         if job_id:
-            result = _wait_for_job(app, job_id, csrf_token, step_num, label, on_progress, total)
+            result = _wait_for_job(
+                app,
+                job_id,
+                csrf_token,
+                step_num,
+                label,
+                on_progress,
+                total,
+                parent_job_id=parent_job_id,
+            )
             if result is None:
+                if parent_job_id:
+                    from opencut.jobs import _cancel_job
+
+                    _cancel_job(
+                        job_id,
+                        message="Workflow step timed out",
+                        persist_sync=True,
+                    )
                 error_msg = "Step %d (%s) job timed out" % (step_num, label)
                 step_results.append({"step": step_num, "endpoint": endpoint, "success": False, "error": error_msg})
                 return {
@@ -376,18 +393,34 @@ def _extract_output_path(result: Any, fallback: str) -> str:
 
 
 def _wait_for_job(app, job_id: str, csrf_token: str, step_num: int,
-                  label: str, on_progress, total: int,
-                  timeout: float = 3600, poll_interval: float = 0.5) -> Optional[Dict]:
+                   label: str, on_progress, total: int,
+                   timeout: float = 3600, poll_interval: float = 0.5,
+                   parent_job_id: str = "") -> Optional[Dict]:
     """Poll the /jobs/<job_id> endpoint until the job completes or times out.
 
     Instead of HTTP polling, we read from the in-memory job store directly
     for efficiency.
     """
-    from opencut.jobs import _get_job_copy
+    from opencut.jobs import _cancel_job, _get_job_copy, _is_cancelled
 
     deadline = time.time() + timeout
     none_count = 0
     while time.time() < deadline:
+        if parent_job_id and _is_cancelled(parent_job_id):
+            _cancel_job(
+                job_id,
+                message="Cancelled because the parent workflow was cancelled",
+                persist_sync=True,
+            )
+            cancelled_job = _get_job_copy(job_id)
+            if cancelled_job is not None:
+                return cancelled_job
+            return {
+                "id": job_id,
+                "status": "cancelled",
+                "error": "Cancelled because the parent workflow was cancelled",
+            }
+
         job = _get_job_copy(job_id)
         if job is None:
             none_count += 1
