@@ -2306,3 +2306,110 @@ for (const surfaceName of ["cep", "uxp"]) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Windows High Contrast / forced-colors
+//
+// In this mode the OS replaces every author colour, so any state the panels
+// expressed only as a background tint — active tab, disabled control, focus
+// ring, status severity — collapses into the same surface. These tests drive
+// the panels with `forcedColors: "active"` and assert each distinction still
+// resolves to a *different* computed value, which is the only thing that
+// proves the rules took effect rather than merely existing in the stylesheet.
+// ---------------------------------------------------------------------------
+for (const surfaceName of Object.keys(SURFACES)) {
+  test.describe(`${surfaceName} forced-colors`, () => {
+    test.use({ forcedColors: "active" });
+
+    test(`${surfaceName} keeps the active tab distinguishable`, async ({ page }) => {
+      const width = surfaceName === "cep" ? 900 : 520;
+      const { surface, pageErrors } = await openSurface(
+        page,
+        surfaceName,
+        "dark",
+        width,
+      );
+      const active = page.locator(surface.activeTabSelector).first();
+      await expect(active).toBeVisible();
+
+      const [activeStyle, inactiveStyle] = await Promise.all([
+        active.evaluate((el) => {
+          const s = getComputedStyle(el);
+          return { bg: s.backgroundColor, color: s.color, border: s.borderTopColor };
+        }),
+        page
+          .locator(`${surface.tabSelector}:not(${surface.activeTabSelector})`)
+          .first()
+          .evaluate((el) => {
+            const s = getComputedStyle(el);
+            return { bg: s.backgroundColor, color: s.color, border: s.borderTopColor };
+          }),
+      ]);
+
+      // Selection must differ by something the OS palette actually renders.
+      const differs =
+        activeStyle.bg !== inactiveStyle.bg ||
+        activeStyle.color !== inactiveStyle.color ||
+        activeStyle.border !== inactiveStyle.border;
+      expect(differs, JSON.stringify({ activeStyle, inactiveStyle })).toBe(true);
+      expect(pageErrors).toEqual([]);
+    });
+
+    test(`${surfaceName} shows a focus indicator that is not a tint`, async ({ page }) => {
+      const width = surfaceName === "cep" ? 900 : 520;
+      const { surface } = await openSurface(page, surfaceName, "dark", width);
+      const tab = page.locator(surface.tabSelector).first();
+      await tab.focus();
+      const outline = await tab.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { width: s.outlineWidth, style: s.outlineStyle };
+      });
+      expect(outline.style).not.toBe("none");
+      expect(parseFloat(outline.width)).toBeGreaterThan(0);
+    });
+
+    test(`${surfaceName} distinguishes disabled controls without a tint`, async ({ page }) => {
+      const width = surfaceName === "cep" ? 900 : 520;
+      await openSurface(page, surfaceName, "dark", width);
+      // Compare like with like: two controls of the same class, one disabled.
+      // Comparing across classes would prove nothing about the disabled cue.
+      const klass = surfaceName === "cep" ? "quick-action-btn" : "oc-btn";
+      const disabled = page.locator(`button.${klass}:disabled`).first();
+      const enabled = page.locator(`button.${klass}:not(:disabled)`).first();
+      test.skip(
+        (await disabled.count()) === 0 || (await enabled.count()) === 0,
+        `initial view has no enabled/disabled .${klass} pair`,
+      );
+      const read = (locator) =>
+        locator.evaluate((el) => {
+          const s = getComputedStyle(el);
+          return { color: s.color, border: s.borderTopColor };
+        });
+      const disabledStyle = await read(disabled);
+      const enabledStyle = await read(enabled);
+      // The tinted background that carried "disabled" is replaced by the OS,
+      // so text or border has to carry it instead.
+      expect(
+        disabledStyle.color !== enabledStyle.color ||
+          disabledStyle.border !== enabledStyle.border,
+        JSON.stringify({ disabledStyle, enabledStyle }),
+      ).toBe(true);
+    });
+
+    test(`${surfaceName} keeps the shell navigable`, async ({ page }) => {
+      const width = surfaceName === "cep" ? 900 : 520;
+      const { surface, pageErrors } = await openSurface(
+        page,
+        surfaceName,
+        "dark",
+        width,
+      );
+      const tabs = page.locator(surface.tabSelector);
+      const total = await tabs.count();
+      expect(total).toBeGreaterThan(1);
+      await tabs.nth(1).click();
+      await expect(page.locator(surface.activePanelSelector)).toBeVisible();
+      expect(pageErrors).toEqual([]);
+    });
+  });
+}
