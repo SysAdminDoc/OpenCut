@@ -22,6 +22,12 @@ record also lives in the git commit messages.
   and reasons, and both CEP and UXP panels surface skipped items in their
   import toasts.
 
+### Fixed - Cancellation terminal-state race
+
+- A worker exception raised while a job is being cancelled no longer changes
+  the live or persisted job back to `error`. Late resource-sampler peaks are
+  retained, and cancellation emits exactly one terminal webhook.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

@@ -75,16 +75,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P1 — 2026-08-02
 
-- [ ] P1 — Stop the worker error path from overwriting a cancelled job with "error"
-  Category: correctness
-  Where: `opencut/jobs.py:993-1023` (the `except` branch of `_process`), compare the guarded success path at `:987`; `_update_job` at `:265-290` has no terminal-state guard; `_cancel_job` at `:554-571`.
-  Problem: Cancelling a job is *designed* to make the worker raise — `_cancel_job` sets `status="cancelled"` then calls `_kill_job_process(job_id)`, which kills the registered FFmpeg child, so `run_ffmpeg` raises `RuntimeError` (`opencut/helpers.py:349,369,406`). The success path checks `_is_cancelled(job_id)` before writing `complete`, but the `except` branch unconditionally writes `status="error"`, and `_update_job` happily overwrites a terminal state and re-persists it. Result: a user cancel lands as a failure in the UI, in `~/.opencut/jobs.db`, in `/jobs/history`, and in `/jobs/stats`, and `_emit_job_webhook` fires `job.cancelled` followed by `job.error` for the same job. Cancelled workflows hit this deterministically (`run_workflow` returns `success: False` → `routes/workflow.py:173-174` raises).
-  Evidence: Reproduced against the real module: `_new_job` → `_update_job(status="running")` → `_cancel_job` gives `status="cancelled"`; the subsequent `_update_job(job_id, status="error", error="FFmpeg error: pipe closed")` (byte-for-byte what the except branch does) yields `status="error"`, `error="FFmpeg error: pipe closed"`, `exit_reason="error"`.
-  Fix: In the `except` branch, mirror the line-987 guard — skip the status/error/message write when `_is_cancelled(job_id)` (still merge `resource_update`, which the late-sampler path needs). Add a belt-and-braces guard in `_update_job` refusing to move a job out of a terminal state (`cancelled`/`complete`) into `error`.
-  Acceptance: A test cancels a job whose worker then raises, and asserts the in-memory job, the persisted `jobs.db` row, and `exit_reason` all remain `cancelled`; and that exactly one terminal webhook fires.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P1 — Settle job lifecycle hooks on user cancel (features latch permanently)
   Category: correctness
   Where: `extension/com.opencut.panel/client/main.js:4889-4917` (`cancelJob`), `:4073-4096` (`settleJobLifecycle`), callers at `:4579,4586,4594` (all inside `onJobDone`).
