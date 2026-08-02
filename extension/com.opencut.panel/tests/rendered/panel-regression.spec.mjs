@@ -604,6 +604,14 @@ async function openSurface(
   return { surface, pageErrors, capturedRequests };
 }
 
+async function openForcedColorSurface(page, ...args) {
+  const result = await openSurface(page, ...args);
+  // preparePage emulates the requested colour scheme after the test context
+  // is created, so set forced-colors again after the document is loaded.
+  await page.emulateMedia({ forcedColors: "active" });
+  return result;
+}
+
 async function visibleControlsWithoutNames(page) {
   return page
     .locator(
@@ -2323,7 +2331,7 @@ for (const surfaceName of Object.keys(SURFACES)) {
 
     test(`${surfaceName} keeps the active tab distinguishable`, async ({ page }) => {
       const width = surfaceName === "cep" ? 900 : 520;
-      const { surface, pageErrors } = await openSurface(
+      const { surface, pageErrors } = await openForcedColorSurface(
         page,
         surfaceName,
         "dark",
@@ -2357,7 +2365,7 @@ for (const surfaceName of Object.keys(SURFACES)) {
 
     test(`${surfaceName} shows a focus indicator that is not a tint`, async ({ page }) => {
       const width = surfaceName === "cep" ? 900 : 520;
-      const { surface } = await openSurface(page, surfaceName, "dark", width);
+      const { surface } = await openForcedColorSurface(page, surfaceName, "dark", width);
       const tab = page.locator(surface.tabSelector).first();
       await tab.focus();
       const outline = await tab.evaluate((el) => {
@@ -2368,9 +2376,45 @@ for (const surfaceName of Object.keys(SURFACES)) {
       expect(parseFloat(outline.width)).toBeGreaterThan(0);
     });
 
+    test(`${surfaceName} keeps toast and progress boundaries visible`, async ({ page }) => {
+      const width = surfaceName === "cep" ? 900 : 520;
+      await openForcedColorSurface(page, surfaceName, "dark", width);
+      const progressSelector = surfaceName === "cep" ? ".processing-track" : ".oc-progress-track";
+      const toastClass = surfaceName === "cep" ? "toast-notification" : "oc-toast";
+
+      await page.locator("#processingBanner").evaluate((element) => {
+        element.classList.remove("hidden");
+      });
+      await page.evaluate((className) => {
+        const toast = document.createElement("div");
+        toast.className = className;
+        toast.textContent = "Forced-colors boundary probe";
+        (document.querySelector("#toastArea") || document.body).append(toast);
+      }, toastClass);
+
+      for (const selector of [progressSelector, `.${toastClass}`]) {
+        const element = page.locator(selector).last();
+        await expect(element).toBeVisible();
+        const boundary = await element.evaluate((node) => {
+          const style = getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          return {
+            width: style.borderTopWidth,
+            style: style.borderTopStyle,
+            visibleWidth: rect.width,
+            visibleHeight: rect.height,
+          };
+        });
+        expect(boundary.style, JSON.stringify({ selector, boundary })).toBe("solid");
+        expect(parseFloat(boundary.width), JSON.stringify({ selector, boundary })).toBeGreaterThan(0);
+        expect(boundary.visibleWidth, JSON.stringify({ selector, boundary })).toBeGreaterThan(0);
+        expect(boundary.visibleHeight, JSON.stringify({ selector, boundary })).toBeGreaterThan(0);
+      }
+    });
+
     test(`${surfaceName} distinguishes disabled controls without a tint`, async ({ page }) => {
       const width = surfaceName === "cep" ? 900 : 520;
-      await openSurface(page, surfaceName, "dark", width);
+      await openForcedColorSurface(page, surfaceName, "dark", width);
       // Compare like with like: two controls of the same class, one disabled.
       // Comparing across classes would prove nothing about the disabled cue.
       const klass = surfaceName === "cep" ? "quick-action-btn" : "oc-btn";
@@ -2398,7 +2442,7 @@ for (const surfaceName of Object.keys(SURFACES)) {
 
     test(`${surfaceName} keeps the shell navigable`, async ({ page }) => {
       const width = surfaceName === "cep" ? 900 : 520;
-      const { surface, pageErrors } = await openSurface(
+      const { surface, pageErrors } = await openForcedColorSurface(
         page,
         surfaceName,
         "dark",

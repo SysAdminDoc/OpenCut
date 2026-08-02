@@ -2272,10 +2272,11 @@ html body #captionDisplaySettingsCard select:disabled {
   .card,
   .alert-banner,
   .result-area,
-  .modal,
+  .preview-modal,
+  .preflight-modal,
   .command-palette,
   .context-menu,
-  .toast {
+  .toast-notification {
     border: 1px solid CanvasText;
     background: Canvas;
     color: CanvasText;
@@ -2351,13 +2352,16 @@ html body #captionDisplaySettingsCard select:disabled {
 
   /* Progress and range tracks need explicit system colours or they vanish. */
   progress,
-  .progress-bar,
+  .processing-track,
+  .progress-track,
+  .processing-fill,
   .progress-fill {
     forced-color-adjust: none;
     background: Canvas;
     border: 1px solid CanvasText;
   }
 
+  .processing-fill,
   .progress-fill {
     background: Highlight;
   }

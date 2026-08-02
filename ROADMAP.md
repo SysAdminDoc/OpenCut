@@ -79,16 +79,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 ### P2 — 2026-08-02
 
 
-- [ ] P2 — Point the forced-colors rules at class names that actually exist
-  Category: a11y
-  Where: `extension/com.opencut.panel/client/command-center.css:2278` (`.toast`) and `:2354` (`.progress-bar`); `extension/com.opencut.uxp/style.css:5139` (`.oc-progress-bar`, `.oc-progress`). Real markup: `extension/com.opencut.panel/client/main.js:11929` sets `toast.className = "toast-notification …"`; `extension/com.opencut.panel/client/index.html:104` uses `.processing-track`/`.processing-fill` and `:3953` uses `.progress-track`/`.progress-fill`; `extension/com.opencut.uxp/index.html:53` uses `.oc-progress-track`/`.oc-progress-fill`.
-  Problem: The Windows High Contrast support shipped in `835b4801` styles selectors that match no element, so the components it was written to rescue still collapse into the system surface. In CEP, `.toast` matches nothing (toasts are `.toast-notification`), so toasts get no `Canvas`/`CanvasText` border — the exact failure the commit set out to fix; `.progress-bar` matches nothing, and while `.progress-fill` is covered, the `.progress-track` container is not, and the always-visible top processing bar (`.processing-track`/`.processing-fill`) is covered by neither selector. In UXP, `.oc-progress` and `.oc-progress-bar` match nothing and the real `.oc-progress-track` container is unstyled.
-  Evidence: `grep -cE 'class="[^"]*\btoast\b[^"]*"'` over `index.html` returns 0, as does the same query for `progress-bar`; `.oc-progress-bar` appears exactly once in the whole UXP directory — in the forced-colors block itself, with no markup counterpart. Neither `tests/test_forced_colors_coverage.py` (which asserts only that `border: 1px solid CanvasText` and `::before`/`content:` strings appear inside the block) nor the Playwright `forced-colors` describes catch this: the full rendered suite passes 57/57 with the dead selectors in place.
-  Fix: In CEP, change `.toast` → `.toast-notification`, `.progress-bar` → `.progress-track, .processing-track`, and add `.processing-fill` to the `Highlight` fill rule. In UXP, replace `.oc-progress, .oc-progress-bar` with `.oc-progress-track`. Then close the gap that let this ship: extend the forced-colors test so each selector inside the block is asserted to match at least one element in the panel markup (parse `index.html` and the `className`/`classList` assignments in `main.js`).
-  Acceptance: The new selector-liveness test fails if a forced-colors rule targets a class that appears nowhere in the panel, and passes after the renames. A rendered assertion confirms a toast and the processing bar both have a visible boundary under `forcedColors: "active"`.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Escape colons (and backslashes) in every drawtext text value
   Category: correctness
   Where: `opencut/core/instant_replay.py:210` (`text_esc = config.overlay_text.replace("'", "\\'")`); `opencut/core/motion_graphics.py:98-99,231-232`. The correct helper already exists: `opencut/helpers.py:447` (`escape_drawtext`).

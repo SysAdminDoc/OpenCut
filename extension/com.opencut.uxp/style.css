@@ -5135,8 +5135,7 @@ textarea:focus-visible,
     content: "\26A0 ";
   }
 
-  .oc-progress,
-  .oc-progress-bar,
+  .oc-progress-track,
   .oc-progress-fill {
     forced-color-adjust: none;
     background: Canvas;

@@ -20,6 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CEP_DIR = REPO_ROOT / "extension" / "com.opencut.panel" / "client"
 UXP_CSS = REPO_ROOT / "extension" / "com.opencut.uxp" / "style.css"
+UXP_DIR = REPO_ROOT / "extension" / "com.opencut.uxp"
 RENDERED_SPEC = (
     REPO_ROOT / "extension" / "com.opencut.panel" / "tests" / "rendered"
     / "panel-regression.spec.mjs"
@@ -29,6 +30,14 @@ FORCED_COLORS_RE = re.compile(r"@media\s*\(\s*forced-colors:\s*active\s*\)\s*\{"
 
 #: System colour keywords are the only values that survive the mode.
 SYSTEM_COLOURS = ("CanvasText", "Canvas", "Highlight", "GrayText")
+CLASS_SELECTOR_RE = re.compile(r"(?<![\w-])\.([A-Za-z_][\w-]*)")
+CLASS_ASSIGNMENT_RE = re.compile(
+    r"\bclass(?:Name)?\s*=\s*([\"'`])(?P<value>.*?)(?:\1)",
+    re.DOTALL,
+)
+CLASS_LIST_RE = re.compile(
+    r"\bclassList\.(?:add|remove|toggle)\s*\(\s*([\"'`])(?P<value>[^\"'`]+)\1"
+)
 
 
 def _cep_css() -> str:
@@ -53,6 +62,40 @@ def _forced_colors_blocks(css: str) -> str:
             index += 1
         bodies.append(css[match.end():index])
     return "\n".join(bodies)
+
+
+def _forced_color_class_selectors(block: str) -> set[str]:
+    """Return class names referenced by selectors in a forced-colors block."""
+    block = re.sub(r"/\*.*?\*/", "", block, flags=re.DOTALL)
+    selectors = set()
+    for match in re.finditer(r"([^{}]+)\{", block):
+        selectors.update(CLASS_SELECTOR_RE.findall(match.group(1)))
+    return selectors
+
+
+def _panel_markup_classes(panel: str) -> set[str]:
+    """Collect static classes from panel HTML and JavaScript markup builders."""
+    if panel == "cep":
+        sources = [*CEP_DIR.glob("*.html"), *CEP_DIR.glob("*.js")]
+    else:
+        sources = [UXP_DIR / "index.html", *UXP_DIR.glob("*.js")]
+
+    classes = set()
+    for path in sources:
+        markup = path.read_text(encoding="utf-8", errors="replace")
+        values = [
+            *(
+                match.group("value")
+                for match in CLASS_ASSIGNMENT_RE.finditer(markup)
+            ),
+            *(
+                match.group("value")
+                for match in CLASS_LIST_RE.finditer(markup)
+            ),
+        ]
+        for value in values:
+            classes.update(re.findall(r"[A-Za-z_][\w-]*", value))
+    return classes
 
 
 class TestForcedColorsRulesExist(unittest.TestCase):
@@ -116,6 +159,19 @@ class TestForcedColorsRulesExist(unittest.TestCase):
                 self.assertLessEqual(
                     opt_outs, 4,
                     f"{name} opts out of the forced palette {opt_outs} times",
+                )
+
+    def test_every_forced_color_class_selector_is_live(self):
+        """A palette rule must target markup that the panel can actually render."""
+        for name, block in self.panels.items():
+            with self.subTest(panel=name):
+                selectors = _forced_color_class_selectors(block)
+                live_classes = _panel_markup_classes(name)
+                missing = sorted(selectors - live_classes)
+                self.assertEqual(
+                    missing,
+                    [],
+                    f"{name} forced-colors selectors have no live markup: {missing}",
                 )
 
 
