@@ -46,6 +46,11 @@ record also lives in the git commit messages.
 - Beat-synced assembly now places its implicit `.mp4` output beside the source
   music file instead of treating the extension as a directory name.
 
+### Fixed - Expression exponentiation bound
+
+- Expression validation now refuses unbounded or nested exponentiation before
+  evaluation, and the sandbox `pow()` helper applies the same magnitude cap.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

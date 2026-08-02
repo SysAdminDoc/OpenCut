@@ -78,16 +78,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P2 — 2026-08-02
 
-- [ ] P2 — Bound expression evaluation so the timeout is actually enforceable
-  Category: security
-  Where: `opencut/core/expression_engine.py:347-362` (`ast.Pow` in `_ALLOWED_NODE_TYPES`), `:706-731` (the `sys.settrace` deadline around `eval`). Reachable from `opencut/routes/batch_data_routes.py:574-617` (`POST /expression/evaluate`), `:620-663` (`/expression/evaluate-batch`), and `opencut/routes/motion_design_routes.py:322-345`.
-  Problem: The deadline is enforced with `sys.settrace`, which only fires on Python frame events. A single expression that spends all its time inside one bytecode operation never yields to the trace function, so `timeout_ms` cannot interrupt it. `ast.Pow` is whitelisted and `_MAX_EXPRESSION_LENGTH` is 2000, so `9**9**9` passes validation. These are synchronous routes, so each such request wedges one WSGI worker thread (`_waitress_thread_count()` defaults to 8, `opencut/server.py:775-781`) with no cancellation path, plus heavy memory allocation.
-  Evidence: Measured directly. `evaluate_expression('9**9**7', timeout_ms=100)` raised `TimeoutError` only after **1550 ms** (15x the budget — the trace fires after the operation completes, not during). `evaluate_expression('9**9**9', timeout_ms=100)` was still running when killed at a 25 s external wall-clock cap. So the advertised budget is not an upper bound at all.
-  Fix: Reject or bound `ast.Pow` in `_check_ast_safety` — this is the only layer that can catch it, since the trace hook fundamentally cannot interrupt a C-level operation. Cap the magnitude of constant operands (and reject non-constant exponents above a small bound). Keep the trace deadline for the cases it does cover.
-  Acceptance: A test asserts `evaluate_expression('9**9**9', timeout_ms=100)` returns a validation refusal in well under the budget, and that a legitimate expression with a small exponent still evaluates.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Apply Host/Origin/CSRF policy to the MCP HTTP transport on loopback binds
   Category: security
   Where: `opencut/mcp_server.py:138-157` (`_mcp_http_bind_requires_auth`, `_mcp_http_request_is_authorized`), `:1889-1956` (`_Handler.do_GET`/`do_POST`), `:1873-1887` (`run_http_server`).

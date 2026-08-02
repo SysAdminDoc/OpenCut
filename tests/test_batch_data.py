@@ -645,6 +645,29 @@ class TestExpressionEngine:
         r = validate_expression("100 if t > 1.0 else 0")
         assert r["valid"] is True
 
+    def test_rejects_unbounded_power_before_evaluation(self):
+        from opencut.core.expression_engine import (
+            ExpressionError,
+            evaluate_expression,
+            validate_expression,
+        )
+
+        started = time.perf_counter()
+        validation = validate_expression("9**9**9")
+        elapsed = time.perf_counter() - started
+        assert validation["valid"] is False
+        assert "Forbidden power" in validation["error"]
+        assert elapsed < 1.0
+        with pytest.raises(ExpressionError, match="Forbidden power"):
+            evaluate_expression("9**9**9", timeout_ms=100)
+
+    def test_allows_small_bounded_power(self):
+        from opencut.core.expression_engine import ExpressionError, evaluate_expression
+        assert evaluate_expression("2 ** 3") == 8
+        assert evaluate_expression("pow(2, 3)") == 8
+        with pytest.raises(ExpressionError, match="safe limit"):
+            evaluate_expression("pow(2, 999999)")
+
     def test_validate_empty_expression(self):
         from opencut.core.expression_engine import validate_expression
         r = validate_expression("")
