@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## 1.46.0 - Earned claims
 
+### Fixed - Scripting-console reflection escape
+
+- The scripting console now refuses reflection modules (`operator` and
+  `functools`), private/dunder attribute access, and dunder strings assembled
+  from literals before execution. OpenCut namespace helpers and JSON/time
+  helpers are callable proxies without reachable Python `__globals__`, and
+  caller context is limited to inert data. Regression coverage exercises the
+  exploit payload through all three scripting route aliases.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the
