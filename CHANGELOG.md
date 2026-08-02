@@ -5,6 +5,38 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - MCP across the 2026-07-28 protocol boundary
+
+- `server/discover` is implemented, so a client can learn the supported
+  protocol versions, capabilities, identity, and JSON Schema dialect without
+  any handshake or session state.
+- Clients state their protocol version per request in `_meta`
+  (`io.modelcontextprotocol/protocolVersion`). Results for `2026-07-28` carry
+  the required `resultType: "complete"` and `_meta` server identity; list
+  results also carry the `ttlMs`/`cacheScope` cache hints. OpenTelemetry
+  `traceparent`/`tracestate`/`baggage` values are echoed back.
+- A request naming an unsupported protocol version is rejected with `-32022`
+  (`UnsupportedProtocolVersion`, inside the range the spec reserves) and the
+  supported list, instead of being answered on a guess.
+- Legacy clients are unaffected: `initialize` and `notifications/initialized`
+  still work, `initialize` echoes the requested version when supported, and
+  pre-2026 results deliberately omit the newer fields.
+- Capabilities are reported closed. `subscriptions/listen`, the tasks
+  extension, sampling, and roots are **not** advertised and return `-32601`,
+  because none of them are implemented.
+- The `mcp` extra no longer caps at `<2`. OpenCut never imports the SDK — the
+  server speaks JSON-RPC directly — and a test now enforces that no-import
+  invariant, which is what makes the open range safe.
+- `GET /mcp/info` reports the protocol versions, schema dialect, and
+  capabilities alongside the already-generated tool counts, and the UXP MCP
+  card no longer bakes stale counts into its copy.
+
+### Fixed - The MCP stdio and HTTP transports had drifted apart
+
+- Both transports now share one `dispatch_jsonrpc()`. The HTTP handler was
+  missing `notifications/initialized` entirely and answered notifications as
+  if they were requests.
+
 ### Fixed - VMAF was unavailable on Windows and lossless PSNR read as a failure
 
 - `measure_vmaf()` interpolated the JSON log path straight into the
