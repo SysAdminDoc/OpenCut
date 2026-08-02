@@ -32,7 +32,7 @@ _execution_state = threading.local()
 # Modules allowed in the sandbox
 _ALLOWED_MODULES = {
     "math", "statistics", "json", "re", "datetime", "collections",
-    "itertools", "functools", "operator", "string", "textwrap",
+    "itertools", "string", "textwrap",
     "copy", "pprint", "decimal", "fractions", "random", "hashlib",
     "base64", "uuid", "dataclasses", "enum", "typing", "time",
 }
@@ -45,6 +45,9 @@ _BLOCKED_MODULES = {
     "signal", "multiprocessing", "threading", "asyncio",
     "pickle", "shelve", "marshal", "tempfile", "io",
     "webbrowser", "ftplib", "smtplib", "telnetlib",
+    # These modules expose reflection helpers such as attrgetter/methodcaller
+    # that can resolve dunder names supplied as runtime strings.
+    "operator", "functools",
 }
 
 # Builtins blocked in sandbox
@@ -65,6 +68,31 @@ _BLOCKED_PATTERNS = (
     "__func__", "__closure__",
 )
 
+
+def _constant_string_value(node: ast.AST) -> Optional[str]:
+    """Return a statically-known string value, if *node* has one.
+
+    ``ast.Constant`` checks alone miss a dunder assembled from literals, such
+    as ``"__glo" + "bals__"``. Keep this deliberately small and only fold
+    operations whose operands are already known string literals; user code is
+    never executed while validating the tree.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    if isinstance(node, ast.JoinedStr):
+        parts = []
+        for value in node.values:
+            if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
+                return None
+            parts.append(value.value)
+        return "".join(parts)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _constant_string_value(node.left)
+        right = _constant_string_value(node.right)
+        if left is not None and right is not None:
+            return left + right
+    return None
+
 def _check_ast_safety(code: str) -> Optional[str]:
     """Validate parsed script structure against sandbox-escape patterns.
 
@@ -83,27 +111,37 @@ def _check_ast_safety(code: str) -> Optional[str]:
         return None
 
     for node in ast.walk(tree):
-        # Any dunder attribute access is an escape vector (__class__,
-        # __globals__, __reduce__, __getattribute__, ...). Block them all.
+        # Any private attribute access is an escape vector. Blocking the
+        # complete underscore-prefixed namespace also keeps implementation
+        # details on callable proxies unreachable (not only familiar dunders).
         if isinstance(node, ast.Attribute):
             attr = node.attr
-            if attr.startswith("__") and attr.endswith("__"):
+            if attr.startswith("_"):
                 return f"Use of '{attr}' is not allowed in the sandbox"
+        # Reflection helpers can turn a runtime string into an attribute name,
+        # so reject literal dunders and fragments that can be concatenated into
+        # one. This closes obfuscations the raw source scan cannot see.
+        elif isinstance(node, (ast.Constant, ast.JoinedStr, ast.BinOp)):
+            literal = _constant_string_value(node)
+            if literal is not None and "__" in literal:
+                return "Dunder names in strings are not allowed in the sandbox"
         # Direct references to blocked builtins, even when shadowed or aliased
         # syntactically (e.g. ``g = getattr``).
         elif isinstance(node, ast.Name):
             if node.id in _BLOCKED_BUILTINS:
                 return f"Use of '{node.id}' is not allowed in the sandbox"
-        # Imports of blocked modules — _safe_import enforces this at runtime,
-        # but rejecting at parse time gives a clearer, earlier error.
+        # Imports must be from the explicit allowlist. _safe_import enforces
+        # this at runtime too, but rejecting at parse time gives a clearer,
+        # earlier refusal and keeps blocked reflection modules out of the
+        # execution thread entirely.
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 top = alias.name.split(".")[0]
-                if top in _BLOCKED_MODULES:
+                if top in _BLOCKED_MODULES or top not in _ALLOWED_MODULES:
                     return f"Import of '{alias.name}' is not allowed in the sandbox"
         elif isinstance(node, ast.ImportFrom):
             top = (node.module or "").split(".")[0]
-            if top in _BLOCKED_MODULES:
+            if top in _BLOCKED_MODULES or top not in _ALLOWED_MODULES:
                 return f"Import of '{node.module}' is not allowed in the sandbox"
 
     return None
@@ -139,6 +177,60 @@ def _safe_sleep(seconds: float) -> None:
         remaining -= chunk
 
 
+# Python functions carry a ``__globals__`` reference. Exposing one directly
+# in a restricted ``exec`` scope makes the scope's own module imports
+# reachable, even when the function only appears to be a harmless wrapper.
+# Callable proxies keep the implementation registry private to this module;
+# the user-visible object has no function attribute and no ``__globals__``.
+_SANDBOX_IMPLEMENTATIONS: Dict[str, Callable[..., Any]] = {}
+
+
+class _SandboxCallable:
+    """Callable object whose implementation is not reachable from the scope."""
+
+    __slots__ = ("_name", "_doc")
+
+    def __init__(self, name: str, doc: str = "") -> None:
+        self._name = name
+        self._doc = doc
+
+    def __call__(self, *args, **kwargs):
+        implementation = _SANDBOX_IMPLEMENTATIONS.get(self._name)
+        if implementation is None:
+            raise RuntimeError("Sandbox callable is unavailable")
+        return implementation(*args, **kwargs)
+
+
+def _make_sandbox_callable(
+    name: str, implementation: Callable[..., Any]
+) -> _SandboxCallable:
+    _SANDBOX_IMPLEMENTATIONS[name] = implementation
+    return _SandboxCallable(name, (implementation.__doc__ or "").strip())
+
+
+def _is_safe_context_value(value: Any, *, depth: int = 0) -> bool:
+    """Return whether a context value is inert data rather than executable code."""
+    if value is None or isinstance(value, (bool, int)):
+        return True
+    if isinstance(value, float):
+        return math.isfinite(value)
+    if isinstance(value, str):
+        return "__" not in value
+    if depth >= 8:
+        return False
+    if isinstance(value, list):
+        return all(_is_safe_context_value(item, depth=depth + 1) for item in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str)
+            and not key.startswith("_")
+            and "__" not in key
+            and _is_safe_context_value(item, depth=depth + 1)
+            for key, item in value.items()
+        )
+    return False
+
+
 def _build_safe_time_module() -> types.ModuleType:
     """Expose a constrained time module to sandboxed scripts."""
     safe_time = types.ModuleType("time")
@@ -147,7 +239,7 @@ def _build_safe_time_module() -> types.ModuleType:
         "strftime", "gmtime", "localtime", "ctime",
     ):
         setattr(safe_time, attr, getattr(time, attr))
-    safe_time.sleep = _safe_sleep
+    safe_time.sleep = _make_sandbox_callable("safe_sleep", _safe_sleep)
     return safe_time
 
 
@@ -272,11 +364,14 @@ def _build_opencut_namespace() -> Dict[str, Any]:
         except Exception as exc:
             return {"error": str(exc)}
 
-    ns["get_video_info"] = _safe_get_video_info
-    ns["detect_silences"] = _safe_detect_silences
-    ns["generate_chapters"] = _safe_generate_chapters
-    ns["get_scenes"] = _safe_get_scenes
-    ns["get_loudness"] = _safe_get_loudness
+    for name, implementation in (
+        ("get_video_info", _safe_get_video_info),
+        ("detect_silences", _safe_detect_silences),
+        ("generate_chapters", _safe_generate_chapters),
+        ("get_scenes", _safe_get_scenes),
+        ("get_loudness", _safe_get_loudness),
+    ):
+        ns[name] = _make_sandbox_callable(name, implementation)
 
     return ns
 
@@ -343,17 +438,22 @@ def create_sandbox(
         "pi": math.pi,
         "e": math.e,
         # String/JSON helpers
-        "dumps": _json.dumps,
-        "loads": _json.loads,
+        "dumps": _make_sandbox_callable("json_dumps", _json.dumps),
+        "loads": _make_sandbox_callable("json_loads", _json.loads),
         # OpenCut namespace
         "opencut": types.SimpleNamespace(**_build_opencut_namespace()),
     }
 
-    # Inject caller context — reject dunder keys and non-data values
-    # to prevent sandbox escapes like context={"__builtins__": ...}
-    if context:
+    # Inject caller context — reject dunder keys and non-data values to prevent
+    # sandbox escapes through caller-owned functions, modules, or objects.
+    if isinstance(context, dict):
         for key, value in context.items():
-            if "__" in key or key.startswith("_"):
+            if (
+                not isinstance(key, str)
+                or "__" in key
+                or key.startswith("_")
+                or not _is_safe_context_value(value)
+            ):
                 continue
             sandbox[key] = value
 
@@ -534,9 +634,10 @@ def get_available_functions() -> List[Dict[str, str]]:
     funcs = []
     for name, obj in sorted(ns.items()):
         if callable(obj):
+            doc = obj._doc if isinstance(obj, _SandboxCallable) else (obj.__doc__ or "")
             funcs.append({
                 "name": f"opencut.{name}",
-                "doc": (obj.__doc__ or "").strip(),
+                "doc": doc.strip(),
             })
     return funcs
 

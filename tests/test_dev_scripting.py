@@ -284,6 +284,37 @@ class TestScriptingConsoleCore:
         result = execute_script("import io")
         assert result.success is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            (
+                "import operator\n"
+                "g = operator.attrgetter('__glo' + 'bals__')(opencut.get_video_info)\n"
+                "print(g['os'].name)"
+            ),
+            (
+                "import operator\n"
+                "operator.methodcaller('__glo' + 'bals__')(opencut.get_video_info)"
+            ),
+            "import functools\nprint(functools.partial(opencut.get_video_info))",
+        ],
+    )
+    def test_sandbox_rejects_reflection_escape_vectors(self, code):
+        from opencut.core.scripting_console import execute_script
+
+        result = execute_script(code)
+        assert result.success is False
+        assert "not allowed" in result.error.lower()
+        assert "python" not in result.output.lower()
+
+    def test_sandbox_namespace_does_not_expose_python_globals(self):
+        from opencut.core.scripting_console import create_sandbox
+
+        sandbox = create_sandbox()
+        namespace = vars(sandbox["opencut"])
+        assert namespace
+        assert all(not hasattr(value, "__globals__") for value in namespace.values())
+
     def test_sandbox_allows_re(self):
         from opencut.core.scripting_console import execute_script
         result = execute_script("import re\nprint(re.match(r'\\d+', '123').group())")
@@ -1415,6 +1446,33 @@ class TestScriptingRoutes:
         data = resp.get_json()
         assert data["success"] is True
         assert "7" in data["output"]
+
+    @pytest.mark.parametrize(
+        "path",
+        (
+            "/api/scripting/execute",
+            "/api/dev/scripting/execute",
+            "/api/workflow/scripting/execute",
+        ),
+    )
+    def test_all_execute_route_aliases_reject_reflection_escape(
+        self, client, csrf_token, path
+    ):
+        code = (
+            "import operator\n"
+            "g = operator.attrgetter('__glo' + 'bals__')(opencut.get_video_info)\n"
+            "print(g['os'].listdir('.'))"
+        )
+        resp = client.post(
+            path,
+            headers=csrf_headers(csrf_token),
+            json={"code": code},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is False
+        assert not data["output"]
+        assert "not allowed" in data["error"].lower()
 
     def test_history_route(self, client):
         resp = client.get("/api/scripting/history")
