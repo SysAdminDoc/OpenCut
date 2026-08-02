@@ -349,6 +349,23 @@ describe("UXP source ownership", () => {
     expect(main).not.toContain("function buildSmartBinRules(");
   });
 
+  it("sends walked UXP clips to deliverables and reports empty sheets", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const start = main.indexOf("async function getDeliverablesSequenceData");
+    const end = main.indexOf("// ─────────────────────────────────────────────────────────────\n// AI B-Roll Generation", start);
+    const source = main.slice(start, end);
+
+    expect(source).toContain("getSequenceIndexPayload");
+    expect(source).toContain("video_tracks: Array.isArray(sequence.videoTracks)");
+    expect(source).toContain("audio_tracks: Array.isArray(sequence.audioTracks)");
+    expect(source).toContain("sequence_data: seqData");
+    expect(source).toContain("getDeliverableRowCount(result)");
+    expect(source).toContain("getDeliverableRowCount(r.data)");
+    expect(source).toContain('"uxp.deliverables.runtime.no_clips_found_toast"');
+    expect(source).toContain('"uxp.deliverables.runtime.package_generated_no_clips"');
+    expect(source).toContain("empty: emptyRows > 0");
+  });
+
   it("keeps token and workspace layout rules outside component CSS", () => {
     const root = "../../com.opencut.uxp/";
     const index = readFileSync(new URL(`${root}index.html`, import.meta.url), "utf8");

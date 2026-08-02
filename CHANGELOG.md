@@ -35,6 +35,12 @@ record also lives in the git commit messages.
   reset even when the backend terminal event is intentionally no longer
   polled.
 
+### Fixed - UXP deliverable clip payloads
+
+- UXP deliverables now walk the active sequence and send real clip arrays in
+  the backend's canonical track shape. Header-only exports report that no
+  clips were found instead of claiming a populated handoff document.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the
