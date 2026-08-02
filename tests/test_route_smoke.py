@@ -1237,6 +1237,77 @@ class TestSettingsRoutes:
         # Should handle gracefully -- either 200 (no-op) or 400, never 500
         assert resp.status_code in (200, 400)
 
+    def test_settings_export_import_round_trip_preserves_user_data(
+        self, client, csrf_token, monkeypatch, tmp_path
+    ):
+        from opencut import user_data
+
+        monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+        preset = {"settings": {"target_lufs": -16}, "saved": 1.0}
+        favorites = ["/silence", {"id": "audio-normalize", "label": "Normalize"}]
+        workflow = {
+            "name": "Podcast Polish",
+            "description": "Round-trip workflow",
+            "steps": [
+                {"endpoint": "/silence", "params": {}},
+                {"endpoint": "/audio/normalize", "params": {}},
+            ],
+            "created": 1.0,
+            "updated": 2.0,
+        }
+        user_data.save_presets({"Podcast": preset})
+        user_data.save_favorites(favorites)
+        user_data.save_workflows([workflow])
+
+        exported = client.get("/settings/export")
+        assert exported.status_code == 200
+        bundle = exported.get_json()
+
+        user_data.save_presets({})
+        user_data.save_favorites([])
+        user_data.save_workflows([])
+        imported = client.post(
+            "/settings/import",
+            json=bundle,
+            headers=csrf_headers(csrf_token),
+        )
+        assert imported.status_code == 200
+        result = imported.get_json()
+        assert set(result["imported"]) == {"presets", "favorites", "workflows"}
+        assert result["presets"] == {"imported": 1, "skipped": 0, "reasons": []}
+        assert result["favorites"] == {"imported": 2, "skipped": 0, "reasons": []}
+        assert result["workflows"] == {"imported": 1, "skipped": 0, "reasons": []}
+        assert user_data.load_presets() == {"Podcast": preset}
+        assert user_data.load_favorites() == favorites
+        assert user_data.load_workflows() == [workflow]
+
+    def test_settings_import_reports_malformed_workflow_skip(
+        self, client, csrf_token, monkeypatch, tmp_path
+    ):
+        from opencut import user_data
+
+        monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+        malformed = {
+            "name": "Broken",
+            "steps": [{"endpoint": "/not-a-workflow-endpoint", "params": {}}],
+        }
+        valid = {
+            "name": "Valid",
+            "steps": [{"endpoint": "/silence", "params": {}}],
+        }
+        imported = client.post(
+            "/settings/import",
+            json={"workflows": [malformed, valid]},
+            headers=csrf_headers(csrf_token),
+        )
+        assert imported.status_code == 200
+        result = imported.get_json()
+        assert result["imported"] == ["workflows"]
+        assert result["workflows"]["imported"] == 1
+        assert result["workflows"]["skipped"] == 1
+        assert any("unknown endpoint" in reason for reason in result["workflows"]["reasons"])
+        assert user_data.load_workflows() == [valid]
+
     def test_logs_export(self, client):
         resp = client.get("/logs/export")
         # May return 200 (logs exist) or 404 (no logs)

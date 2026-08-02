@@ -1620,6 +1620,14 @@
             <button type="button" class="oc-btn oc-btn-secondary" id="settingsWorkspaceTimelineBtn" data-workspace-command="open-timeline" data-i18n="uxp.workspace.timeline_tools">Timeline Tools</button>
           </div>
         </div>
+        <div class="oc-card">
+          <p class="oc-hint" data-i18n="uxp.settings.settings_io_hint">Back up presets, favorites, and workflows for use on another OpenCut machine.</p>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary" id="uxpExportSettingsBtn" data-i18n="uxp.settings.export_settings">Export Settings</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="uxpImportSettingsBtn" data-i18n="uxp.settings.import_settings">Import Settings</button>
+          </div>
+          <div class="oc-status-line" id="uxpSettingsIOStatus" role="status" aria-live="polite" data-i18n="uxp.settings.settings_io_ready">Settings backup is ready.</div>
+        </div>
         </section>
 
         <section class="oc-settings-group oc-settings-group--recovery" id="settingsPaneRecovery" data-settings-pane="recovery" role="tabpanel" aria-labelledby="settingsNavRecovery">
