@@ -7,13 +7,17 @@ non-ASCII names). These string-level assertions lock that behavior in for CI
 where ffmpeg is not available.
 """
 import os
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from opencut.helpers import (
     _concat_file_line,
     _concat_quote,
     escape_drawtext,
     escape_filter_path,
+    get_ffmpeg_path,
     write_concat_list,
 )
 
@@ -63,8 +67,10 @@ DRAWTEXT_LITERAL_MODULES = (
     "click_overlay",
     "end_screen",
     "guest_compilation",
+    "instant_replay",
     "news_ticker",
     "quiz_overlay",
+    "motion_graphics",
     "telemetry_overlay",
 )
 
@@ -102,6 +108,88 @@ class TestEscapeDrawtext:
 
     def test_backslash_escaped_first(self):
         assert escape_drawtext("a\\b") == "a\\\\b"
+
+
+class TestDrawtextEntrypoints:
+    """The affected public renderers must accept literal hostile text."""
+
+    def test_literal_text_renders_through_title_and_replay_entrypoints(self, tmp_path):
+        try:
+            ffmpeg = get_ffmpeg_path()
+        except (FileNotFoundError, RuntimeError) as exc:
+            pytest.skip(f"FFmpeg unavailable for drawtext smoke: {exc}")
+
+        source = tmp_path / "source.mp4"
+        subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=160x90:r=6:d=1",
+                "-f",
+                "lavfi",
+                "-i",
+                "anullsrc=r=44100:cl=mono",
+                "-t",
+                "1",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                str(source),
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        from opencut.core.instant_replay import ReplayConfig, create_replay
+        from opencut.core.motion_graphics import overlay_title, render_title_card
+
+        texts = ("Round 2: FIGHT", r"C:\media\clip", "100%{x}")
+        for index, text in enumerate(texts):
+            title_output = tmp_path / f"title-{index}.mp4"
+            render_title_card(
+                text,
+                output_path=str(title_output),
+                width=160,
+                height=90,
+                duration=0.4,
+                fps=6,
+            )
+            assert title_output.stat().st_size > 0
+
+            overlay_output = tmp_path / f"overlay-{index}.mp4"
+            overlay_title(
+                str(source),
+                text,
+                output_path=str(overlay_output),
+                duration=0.4,
+            )
+            assert overlay_output.stat().st_size > 0
+
+            replay_output = tmp_path / f"replay-{index}.mp4"
+            create_replay(
+                str(source),
+                timestamp=0.5,
+                output_path_str=str(replay_output),
+                config=ReplayConfig(
+                    pre_roll=0.1,
+                    post_roll=0.3,
+                    slow_factor=1.0,
+                    transition="none",
+                    include_original=False,
+                    overlay_text=text,
+                    font_size=18,
+                ),
+            )
+            assert replay_output.stat().st_size > 0
 
 
 class TestConcatList:

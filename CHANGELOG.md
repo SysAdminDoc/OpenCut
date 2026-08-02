@@ -62,6 +62,11 @@ record also lives in the git commit messages.
 - Forced-colors rules now target the panels' live toast and progress classes,
   and regression coverage rejects selectors that match no rendered markup.
 
+### Fixed - Literal drawtext text
+
+- Instant replay and motion-graphics renderers now escape colons, backslashes,
+  and apostrophes through the shared helper with drawtext expansion disabled.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

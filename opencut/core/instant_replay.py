@@ -18,6 +18,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_ffmpeg_path,
     get_video_info,
     output_path,
@@ -207,12 +208,12 @@ def create_replay(
 
         # Step 3: Add text overlay to slow-motion clip
         overlay_clip = os.path.join(tmp_dir, "overlay.mp4")
-        text_esc = config.overlay_text.replace("'", "\\'")
+        text_esc = escape_drawtext(config.overlay_text)
         border_esc = config.border_color.replace("#", "0x")
 
         # Build drawtext filter
         drawtext = (
-            f"drawtext=text='{text_esc}'"
+            f"drawtext=expansion=none:text='{text_esc}'"
             f":fontsize={config.font_size}"
             f":fontcolor={config.font_color}"
             f":borderw=3:bordercolor={border_esc}"
