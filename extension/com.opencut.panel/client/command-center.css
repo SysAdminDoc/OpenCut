@@ -2250,3 +2250,121 @@ html body #captionDisplaySettingsCard select:disabled {
         grid-column: 1 / -1;
     }
 }
+
+/* The forced-colors overrides live here, in the last stylesheet the panel
+   loads, so they win the cascade against the command-center sheets that
+   follow style.css. */
+
+/* ==========================================================================
+   Windows High Contrast / forced-colors
+   --------------------------------------------------------------------------
+   In forced-colors mode the OS replaces every author colour with a small
+   system palette. Anything the panel expressed *only* as a background tint —
+   the active tab, a selected row, a disabled control, the connection dot,
+   error and success banners — collapses into the same surface and stops being
+   distinguishable. These rules restore each of those distinctions using
+   system colour keywords plus a non-colour cue (border, outline, or generated
+   glyph), so the panel stays navigable without relying on hue.
+   ========================================================================== */
+@media (forced-colors: active) {
+  /* Custom surfaces lose their background; give them an edge so the layout
+     is still readable. */
+  .card,
+  .alert-banner,
+  .result-area,
+  .modal,
+  .command-palette,
+  .context-menu,
+  .toast {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  /* Focus must never be a tinted background alone. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* Selected / active navigation. The accent bar is a colour-only cue in the
+     default theme, so add a border and a marker glyph. */
+  .nav-tab.active,
+  .sub-tab.active {
+    border: 1px solid Highlight;
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .nav-tab.active::after,
+  .sub-tab.active::after {
+    content: "";
+    forced-color-adjust: auto;
+  }
+
+  /* Disabled controls: grey-on-grey is not available, GrayText is. */
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  .btn:disabled,
+  .btn.disabled {
+    /* GrayText is the one disabled cue the system palette guarantees; the
+       default theme's tinted background is replaced and cannot carry it.
+       `!important` is deliberate: per-variant rules like `.btn-primary:disabled`
+       outrank this one, and in an accessibility override mode the system
+       colour has to win. */
+    color: GrayText !important;
+    border-color: GrayText !important;
+  }
+
+  /* Status and connection state must read without colour. The dot is purely
+     decorative in this mode; the adjacent text carries the state. */
+  .conn-status .status-dot,
+  .status-dot {
+    forced-color-adjust: none;
+    background: CanvasText;
+    border: 1px solid CanvasText;
+  }
+
+  .conn-status[data-state="online"] .status-dot {
+    background: Canvas;
+  }
+
+  /* Error / success are hue-only in the default theme. Prefix a glyph so the
+     severity survives. */
+  .alert-banner[data-severity="error"] .alert-eyebrow::before,
+  .alert-banner.error .alert-eyebrow::before {
+    content: "! ";
+  }
+
+  .alert-banner[data-severity="success"] .alert-eyebrow::before,
+  .alert-banner.success .alert-eyebrow::before {
+    content: "\2713 ";
+  }
+
+  /* Progress and range tracks need explicit system colours or they vanish. */
+  progress,
+  .progress-bar,
+  .progress-fill {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  .progress-fill {
+    background: Highlight;
+  }
+
+  /* Decorative animation carries no information and only adds motion noise
+     against the system palette. */
+  * {
+    animation-duration: 0.001s !important;
+  }
+}

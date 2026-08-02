@@ -5068,3 +5068,86 @@ textarea:focus-visible,
     outline: 2px solid Highlight;
   }
 }
+
+/* ==========================================================================
+   Windows High Contrast / forced-colors
+   --------------------------------------------------------------------------
+   Same reasoning as the CEP panel: in forced-colors mode the OS discards
+   author colours, so any state expressed only as a tint (active tab, status
+   pill severity, disabled button, progress fill) becomes invisible. Each one
+   is restored with a system colour plus a non-colour cue.
+   ========================================================================== */
+@media (forced-colors: active) {
+  .oc-card,
+  .oc-card--nested,
+  .oc-processing-banner,
+  .oc-result-area,
+  .oc-empty-state,
+  .oc-toast {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .oc-tab.active {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border: 1px solid Highlight;
+  }
+
+  .oc-btn:disabled,
+  button:disabled,
+  input:disabled,
+  select:disabled {
+    /* GrayText is the one disabled cue the system palette guarantees.
+       `!important` so per-variant rules cannot outrank the system colour. */
+    color: GrayText !important;
+    border-color: GrayText !important;
+  }
+
+  /* Status pills encode severity in `data-state`; give each one a leading
+     glyph so the state survives without its colour. */
+  .oc-status-pill {
+    border: 1px solid CanvasText;
+  }
+
+  .oc-status-pill[data-state="error"]::before {
+    content: "! ";
+  }
+
+  .oc-status-pill[data-state="success"]::before,
+  .oc-status-pill[data-state="ok"]::before {
+    content: "\2713 ";
+  }
+
+  .oc-status-pill[data-state="warning"]::before {
+    content: "\26A0 ";
+  }
+
+  .oc-progress,
+  .oc-progress-bar,
+  .oc-progress-fill {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  .oc-progress-fill {
+    background: Highlight;
+  }
+
+  * {
+    animation-duration: 0.001s !important;
+  }
+}

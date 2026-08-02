@@ -33,13 +33,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: Available updates persist in Settings/About with current/available versions, release notes and a validated browser action; dismissed state is version-scoped; offline/error states retain retry guidance; no update launches automatically.
   Complexity: M
 
-- [ ] P2 — Add forced-colors and high-contrast regression coverage
-  Why: Existing light/dark contrast tests do not cover Windows forced-colors behavior, where custom surfaces and focus indicators can disappear.
-  Evidence: CEP/UXP CSS lacks `forced-colors` rules; WCAG 2.2 non-text contrast and focus criteria; Playwright forced-colors emulation.
-  Touches: shared panel tokens/styles, icon/status semantics, Playwright rendered matrix.
-  Acceptance: Both panels remain navigable with `forced-colors: active`; text, focus, selected, disabled, error, and success states remain distinguishable without color alone; screenshots and existing semantic/keyboard checks cover the mode.
-  Complexity: M
-
 - [ ] P2 — Split the remaining panel controller hotspots
   Why: CEP and UXP controllers still centralize lifecycle, bridge state, navigation, settings, and result rendering, and were among the highest-churn files in the last 200 commits.
   Evidence: `extension/com.opencut.panel/client/main.js` (~18,200 lines), `extension/com.opencut.uxp/main.js` (~8,700 lines), recent decomposition commits.

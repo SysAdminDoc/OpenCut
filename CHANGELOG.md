@@ -5,6 +5,24 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Windows High Contrast (forced-colors) coverage
+
+- Both panels gained `@media (forced-colors: active)` rules. In that mode the
+  OS discards author colours, so every state the panels carried as a
+  background tint alone — active tab, disabled control, focus ring, status
+  severity, progress fill, card edges — became indistinguishable. Each is
+  restored with a system colour plus a non-colour cue (border, outline, or a
+  leading glyph for error/warning/success).
+- The CEP overrides live in `command-center.css`, the last stylesheet the
+  panel loads, because the three sheets after `style.css` otherwise won the
+  cascade and the disabled cue never applied.
+- `panel-regression.spec.mjs` gained forced-colors describes that drive both
+  surfaces with the mode emulated and assert selection, focus, disabled state,
+  and navigation still resolve to *different* computed values — proving the
+  rules take effect rather than merely existing.
+- `tests/test_forced_colors_coverage.py` is the always-on guard for hosts
+  without a browser, and runs in the release gate.
+
 ### Changed - The plugin compatibility contract is versioned
 
 - `api_version == 1` was a hard equality check: the first host API bump would
