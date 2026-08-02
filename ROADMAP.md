@@ -78,15 +78,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P2 — 2026-08-02
 
-- [ ] P2 — Apply Host/Origin/CSRF policy to the MCP HTTP transport on loopback binds
-  Category: security
-  Where: `opencut/mcp_server.py:138-157` (`_mcp_http_bind_requires_auth`, `_mcp_http_request_is_authorized`), `:1889-1956` (`_Handler.do_GET`/`do_POST`), `:1873-1887` (`run_http_server`).
-  Problem: On the default loopback bind, `_mcp_http_bind_requires_auth` returns `False` and `_mcp_http_request_is_authorized` short-circuits to `True` for every request; the handler then performs no `Host` validation, no `Origin` check, and no CSRF check before `dispatch_jsonrpc(body)` executes `tools/call`. This is a regression against protections the main Flask app already carries — the trusted-host middleware at `opencut/server.py:707-748` (added in `2a3027b5`) and the global CSRF `before_request` at `:419-421` — and against the in-app bridge, which does require CSRF on `POST /mcp/call` (`opencut/routes/mcp_bridge_routes.py`). Consequence: a web page open in the user's browser can `fetch("http://127.0.0.1:<mcp-port>", {method:"POST", body: ...})` with `Content-Type: text/plain` (a CORS *simple* request, no preflight) and drive arbitrary MCP tools; the response is unreadable cross-origin but the side effects land. Because `Host` is unvalidated, a DNS-rebinding attacker can also read responses, which include transcripts, file paths, and job results.
-  Evidence: Confirmed statically: `_mcp_http_bind_requires_auth` returns `False` for any address in `_LOOPBACK_BINDS`, and `_mcp_http_request_is_authorized` begins `if not auth_required: return True` — so no token is consulted. The `_Handler` methods contain no `Host`/`Origin` handling.
-  Fix: Reuse `opencut/trusted_hosts.py` inside `_Handler` so both transports share one policy: validate `Host` against `is_trusted_host`, reject requests carrying a browser `Origin` that is not allowlisted, and require the `X-OpenCut-Auth`/CSRF token for `tools/call` even on loopback. Also cap `_read_json` by `Content-Length` (currently unbounded) — `HTTPServer` is single-threaded, so one large POST stalls the sidecar.
-  Acceptance: Tests assert that a POST with a foreign `Host` header is rejected, that a POST carrying a browser `Origin` is rejected, that `tools/call` without a token is rejected on a loopback bind, and that a body over the cap is refused.
-  Confidence: Verified (auth short-circuit reproduced statically; the cross-origin scenario is the documented consequence, not separately executed)
-  Effort: M
 
 - [ ] P2 — Point the forced-colors rules at class names that actually exist
   Category: a11y
