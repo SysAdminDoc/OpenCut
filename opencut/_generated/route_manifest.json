@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generated_at": "2026-08-02T09:06:04Z",
+  "generated_at": "2026-08-02T21:36:17Z",
   "total_routes": 1569,
   "shipped_route_count": 1544,
   "blueprint_count": 107,
@@ -12,8 +12,8 @@
     "PUT": 2
   },
   "readiness_counts": {
-    "dependency-gated": 29,
-    "implemented": 1515,
+    "dependency-gated": 28,
+    "implemented": 1516,
     "stub": 25
   },
   "blueprints": {
@@ -14141,7 +14141,7 @@
       ],
       "endpoint": "video_editing.video_multicam_cuts",
       "blueprint": "video_editing",
-      "readiness": "dependency-gated"
+      "readiness": "implemented"
     },
     {
       "rule": "/video/multicam-xml",

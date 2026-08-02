@@ -80,16 +80,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Make the queue allowlist reject sync routes (queued work runs, then reports failure)
-  Category: correctness
-  Where: `opencut/routes/jobs_routes.py:205,211,221` (entries in `_ALLOWED_QUEUE_ENDPOINTS`) and `:989-997` (`_dispatch_queue_entry`).
-  Problem: `/video/lut/blend`, `/video/multicam-cuts`, and `/video/multicam-xml` are queueable but are not `@async_job` routes. `_dispatch_queue_entry` requires a `job_id` in the response; a sync route returns its full result with none, so the entry is marked `error: "Route did not return a job ID"` **after the work has already executed and written its output**. The user sees a failed queue entry for work that succeeded. If a sync handler exceeds `QUEUE_DISPATCH_TIMEOUT` (60 s), the timeout fires while the dispatch thread keeps executing it untracked.
-  Evidence: Enumerated against the live `url_map`: of 216 allowlist entries, exactly these 3 resolve to view functions whose `_opencut_async_job` attribute is `False`; all three exist and accept POST.
-  Fix: Either promote the three routes to `@async_job`, or teach `_dispatch_queue_entry` to treat a 2xx response without a `job_id` as `complete` — the workflow engine already handles exactly this shape at `opencut/core/workflow.py:290-291`. Then add a release-gate test that diffs the allowlist against the live route table and fails on any entry that is not an async job.
-  Acceptance: The new test fails while any allowlist entry is a sync route and passes afterwards; queuing `/video/multicam-cuts` completes as `complete`, not `error`.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Propagate workflow cancellation to the running sub-job
   Category: reliability
   Where: `opencut/core/workflow.py:378-416` (`_wait_for_job`) and `:216-228` (the between-steps cancel check).

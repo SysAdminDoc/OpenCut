@@ -95,6 +95,84 @@ def test_queue_sync_failure_does_not_leave_started_entry(client, csrf_token):
             jobs_routes._queue_state["running"] = False
 
 
+def test_queue_allowlist_contains_only_async_post_routes(app):
+    from opencut.routes.jobs_routes import _ALLOWED_QUEUE_ENDPOINTS
+
+    routes = {}
+    for rule in app.url_map.iter_rules():
+        if rule.rule not in _ALLOWED_QUEUE_ENDPOINTS or "POST" not in (rule.methods or set()):
+            continue
+        routes.setdefault(rule.rule, []).append(app.view_functions.get(rule.endpoint))
+
+    missing = sorted(_ALLOWED_QUEUE_ENDPOINTS - routes.keys())
+    sync_routes = sorted(
+        path for path, views in routes.items()
+        if not any(getattr(view, "_opencut_async_job", False) for view in views)
+    )
+    assert not missing, f"Queue allowlist routes are not registered: {missing}"
+    assert not sync_routes, f"Queue allowlist contains synchronous routes: {sync_routes}"
+
+
+def test_queue_multicam_cuts_completes_as_a_tracked_job(
+    client, csrf_token, monkeypatch
+):
+    import opencut.jobs as jobs
+    import opencut.routes.jobs_routes as jobs_routes
+
+    monkeypatch.setattr(jobs_routes, "_queue_persistence_enabled", False)
+    with jobs.job_lock:
+        jobs.jobs.clear()
+        jobs._job_processes.clear()
+    with jobs_routes.job_queue_lock:
+        jobs_routes.job_queue.clear()
+        jobs_routes._queue_state["running"] = False
+
+    response = client.post(
+        "/queue/add",
+        data=json.dumps({
+            "endpoint": "/video/multicam-cuts",
+            "payload": {
+                "segments": [
+                    {"start": 0, "end": 2, "speaker": "SPEAKER_00", "text": "one"},
+                    {"start": 2, "end": 4, "speaker": "SPEAKER_01", "text": "two"},
+                ],
+            },
+        }),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert response.status_code == 200
+    queue_id = response.get_json()["queue_id"]
+    deadline = time.time() + 10
+    completed_job = None
+    while time.time() < deadline:
+        with jobs.job_lock:
+            candidates = [
+                dict(job) for job in jobs.jobs.values()
+                if job.get("_endpoint") == "/video/multicam-cuts"
+            ]
+        completed_job = next(
+            (job for job in candidates if job.get("status") in {"complete", "error", "cancelled"}),
+            None,
+        )
+        if completed_job is not None:
+            break
+        time.sleep(0.05)
+
+    assert completed_job is not None, "multicam queue job did not reach a terminal state"
+    assert completed_job["status"] == "complete"
+    assert completed_job["result"]["total_cuts"] >= 1
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        with jobs_routes.job_queue_lock:
+            if not any(entry["id"] == queue_id for entry in jobs_routes.job_queue):
+                break
+        time.sleep(0.05)
+    with jobs_routes.job_queue_lock:
+        assert not any(entry["id"] == queue_id for entry in jobs_routes.job_queue)
+
+
 def test_cancel_route_persists_terminal_state(client, csrf_token):
     from opencut.jobs import _new_job, job_lock, jobs
 

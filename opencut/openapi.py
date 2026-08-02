@@ -30,6 +30,7 @@ _JOB_ENDPOINTS = {
     "/silence", "/search/index", "/timeline/export-from-markers",
     "/install-whisper", "/whisper/reinstall",
     "/video/color-match", "/video/auto-zoom", "/video/multicam-cuts",
+    "/video/lut/blend", "/video/multicam-xml",
     "/audio/loudness-match", "/audio/beat-markers",
     "/captions/chapters", "/captions/repeat-detect",
     "/workflow/run",
