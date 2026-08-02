@@ -107,6 +107,45 @@ describe("UXP job controller", () => {
     await controller.start("/render", {}, vi.fn(), vi.fn(), error);
     expect(error).toHaveBeenCalledWith("Another OpenCut job is already running.");
   });
+
+  it("ignores a status response that resolves after cancellation", async () => {
+    const state = createUxpState();
+    let resolveStatus;
+    const client = {
+      get: vi.fn(() => new Promise((resolve) => { resolveStatus = resolve; })),
+      post: vi.fn(async () => ({ ok: true, data: {} })),
+    };
+    const hook = vi.fn();
+    const locked = [];
+    const controller = createJobController({
+      state,
+      client,
+      setLocked: (value) => locked.push(value),
+    });
+    controller.onJobFinished(hook);
+
+    let settled = false;
+    const pollPromise = controller.poll("job-1");
+    void pollPromise.then(
+      () => { settled = true; },
+      () => { settled = true; },
+    );
+    await vi.waitFor(() => expect(client.get).toHaveBeenCalledOnce());
+    await controller.cancel();
+
+    resolveStatus({
+      ok: true,
+      data: { status: "complete", result: { output: "late.mp4" } },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(settled).toBe(false);
+    expect(hook).toHaveBeenCalledOnce();
+    expect(client.post).toHaveBeenCalledWith("/cancel/job-1", {});
+    expect(locked).toEqual([true, false]);
+    expect(state.hasActiveJob()).toBe(false);
+  });
 });
 
 describe("UXP i18n runtime", () => {

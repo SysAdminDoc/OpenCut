@@ -83,6 +83,11 @@ record also lives in the git commit messages.
 - Social upload now catches job-poll failures, shows the upload error, and
   always clears its processing banner and loading button state.
 
+### Fixed - UXP cancellation race
+
+- A status response that resolves after a UXP job is cancelled no longer
+  triggers completion callbacks or a second completion-hook pass.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the

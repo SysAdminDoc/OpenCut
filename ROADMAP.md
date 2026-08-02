@@ -80,15 +80,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Re-check the active job id after an awaited status fetch (cancel race)
-  Category: correctness
-  Where: `extension/com.opencut.uxp/job-controller.js:127-163` (`pollJob`), `:165-176` (`cancel`).
-  Problem: `schedulePoll` checks `state.activeJobId === jobId` before starting a poll, but `pollJob` never re-checks after its `await client.get(...)` resolves. If the user cancels while a status request is in flight, the response still drives `finishSuccess`/`finishError`, so the feature's `onComplete` runs after "Job cancelled." — producing a success toast that contradicts the cancel — and `fireCompletionHooks()` fires a second time. This is the same race the CEP panel patched in v1.9.20 ("close SSE/poll before nulling `currentJob`"); the extracted UXP controller lost the guard.
-  Evidence: `pollJob` dispatches terminal handlers immediately after the awaited fetch with no interleaving `state.activeJobId` comparison.
-  Fix: Add `if (state.activeJobId !== jobId) return;` immediately after the awaited status fetch, before dispatching any terminal handler.
-  Acceptance: A test cancels a job while a status response is in flight and asserts no completion hook fires and no success toast is shown.
-  Confidence: Verified
-  Effort: S
 
 - [ ] P2 — Stop tests from writing into the developer's real `~/.opencut`
   Category: testing
