@@ -80,16 +80,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Propagate workflow cancellation to the running sub-job
-  Category: reliability
-  Where: `opencut/core/workflow.py:378-416` (`_wait_for_job`) and `:216-228` (the between-steps cancel check).
-  Problem: The parent-cancel check runs only *between* steps. `_wait_for_job` polls a sub-job for up to 3600 s without ever checking the parent, and cancelling the parent kills only the process registered under the parent's job id — the sub-job has its own id and its own registered FFmpeg child, which is untouched. Cancelling a workflow during a long step returns control to the user immediately while the heavy work keeps running, holding a worker slot and a concurrency slot to completion. The same applies on step timeout: the workflow errors out and abandons a still-running sub-job.
-  Evidence: `_wait_for_job`'s loop has no reference to `parent_job_id` (the parameter is not consulted inside the polling loop); `_cancel_job(parent)` → `_kill_job_process(parent)` looks up only the parent's registered process.
-  Fix: Check `_is_cancelled(parent_job_id)` inside `_wait_for_job`'s poll loop, and call `_cancel_job(sub_job_id)` on parent-cancel and on step timeout.
-  Acceptance: A test starts a two-step workflow, cancels the parent during step 1, and asserts the sub-job reaches `cancelled` and its process is no longer registered.
-  Confidence: Verified (code trace)
-  Effort: S
-
 - [ ] P2 — Catch job-poll rejections in the UXP social upload flow
   Category: correctness
   Where: `extension/com.opencut.uxp/main.js:5836-5861` (`runSocialUpload`); `extension/com.opencut.uxp/job-controller.js:178-192` (`poll`).
