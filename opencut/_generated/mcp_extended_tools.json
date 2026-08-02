@@ -6,12 +6,12 @@
     "DELETE": 16,
     "GET": 380,
     "PATCH": 1,
-    "POST": 1054,
+    "POST": 1055,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1453,
+  "tool_count": 1454,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -36609,6 +36609,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_timeline_sequence_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /timeline/sequence-index/export-csv"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/sequence-index/export-csv.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "sequence_index",
+        "endpoint": "sequence_index.route_export_sequence_index_csv",
+        "generated": true,
+        "method": "POST",
+        "path": "/timeline/sequence-index/export-csv",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_timeline_sequence_index_export_csv"
     },
     {
       "annotations": {

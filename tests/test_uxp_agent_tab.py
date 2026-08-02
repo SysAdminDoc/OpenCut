@@ -45,6 +45,7 @@ AGENT_BUTTON_IDS = (
     "variantsRunBtn",
     "sequenceIndexBuildBtn",
     "sequenceIndexInfoBtn",
+    "sequenceIndexExportBtn",
     "mcpBridgeInfoBtn",
     "mcpBridgeListBtn",
 )
@@ -58,6 +59,8 @@ AGENT_ENDPOINTS = (
     "/shorts/variants/dry-run",
     "/shorts/variants",
     "/timeline/sequence-index",
+    "/timeline/sequence-index/filter",
+    "/timeline/sequence-index/export-csv",
     "/timeline/sequence-index/info",
     "/mcp/info",
     "/mcp/tools",

@@ -4926,3 +4926,145 @@ textarea:focus-visible,
     padding: 4px 7px;
   }
 }
+
+/* ==========================================================================
+   Sequence Index — accessible data grid
+   ========================================================================== */
+.oc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.oc-column-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+.oc-column-toggles legend {
+  padding: 0 4px;
+}
+
+.oc-column-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.oc-column-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.oc-table-scroll {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+}
+
+.oc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.oc-table caption {
+  text-align: left;
+}
+
+.oc-table th,
+.oc-table td {
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.oc-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-card-hdr);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.oc-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.oc-table td:focus-visible,
+.oc-table td:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+.oc-table-numeric {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+.oc-table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.oc-table-sort:hover {
+  color: var(--accent);
+}
+
+.oc-table-sort:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.oc-table th[aria-sort="ascending"] .oc-table-sort::after {
+  content: "\2191";
+}
+
+.oc-table th[aria-sort="descending"] .oc-table-sort::after {
+  content: "\2193";
+}
+
+.oc-table-scroll[aria-busy="true"] {
+  opacity: 0.6;
+}
+
+@media (forced-colors: active) {
+  .oc-table th,
+  .oc-table td {
+    border-bottom: 1px solid CanvasText;
+  }
+
+  .oc-table td:focus,
+  .oc-table td:focus-visible,
+  .oc-table-sort:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}

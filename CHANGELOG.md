@@ -3,6 +3,35 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed - UXP Sequence Index is a working table
+
+- The UXP Sequence Index posted `PProBridge.getSequenceInfo()`, which reports
+  track *counts* rather than tracks, so the backend indexed zero clips and the
+  panel could only ever show a summary. `PProBridge.getSequenceIndexPayload()`
+  now walks the active sequence's video and audio track items and emits the
+  per-clip payload `/timeline/sequence-index` expects, including media path,
+  offline state, project/track item ids, and effect names.
+- The card renders the returned rows as an accessible data grid: sortable
+  column headers with `aria-sort`, arrow/Home/End/PageUp/PageDown navigation
+  over a roving `tabindex`, a live result count, an empty state, a busy state,
+  per-row host jump that moves the playhead, and column visibility that
+  persists across reloads (identity columns stay pinned).
+
+### Added - Sequence Index filters and CSV export
+
+- `IndexRow` carries `offline` and `flash_frame`, and `filter_rows()` accepts
+  both as facets, so the panel can isolate missing media and accidental
+  frame-length slivers. `build_index(flash_frame_frames=...)` sets the flash
+  threshold (default 2 frames).
+- `POST /timeline/sequence-index/export-csv` writes the *filtered* view to a
+  CSV file with a caller-chosen column subset; unknown columns are rejected
+  rather than silently dropped.
+- `POST /timeline/sequence-index/filter` accepts `offset`/`limit` and reports
+  `total_rows` as the full match count alongside `returned_rows`, so a paged
+  panel never misreports how much matched.
+
 ## 1.45.0 - Truthful surfaces
 
 ### Fixed - A fresh clone can reproduce the build

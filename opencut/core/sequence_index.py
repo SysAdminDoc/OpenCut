@@ -62,6 +62,8 @@ class IndexRow:
     transcript_excerpt: str = ""  # joined text of overlapping transcript segments
     locator_id: str = ""          # stable timeline-instance key for ratings/tags
     host_locators: dict[str, Any] = field(default_factory=dict)
+    offline: bool = False         # host reported the source media as offline
+    flash_frame: bool = False     # shorter than the flash-frame threshold
 
     def to_dict(self) -> dict:
         return {
@@ -81,6 +83,8 @@ class IndexRow:
             "transcript_excerpt": self.transcript_excerpt,
             "locator_id": self.locator_id,
             "host_locators": dict(self.host_locators),
+            "offline": bool(self.offline),
+            "flash_frame": bool(self.flash_frame),
         }
 
 
@@ -312,12 +316,35 @@ def _normalise_markers(seq: dict[str, Any]) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+_OFFLINE_KEYS = ("offline", "isOffline", "is_offline", "mediaOffline", "media_offline")
+
+# Premiere calls a clip a "flash frame" when it is shorter than a couple of
+# frames — long enough to exist on the timeline, too short to be intentional.
+DEFAULT_FLASH_FRAME_FRAMES = 2
+
+
+def _safe_bool_field(clip: dict, keys: tuple) -> bool:
+    """Read the first present truthy-ish key, tolerating host JSON strings."""
+    for key in keys:
+        if key not in clip:
+            continue
+        value = clip[key]
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in ("1", "true", "yes", "on")
+    return False
+
+
 def build_index(
     sequence_payload: dict,
     transcript_segments: Optional[List[dict]] = None,
     ratings: Optional[dict] = None,
     tags: Optional[dict] = None,
     excerpt_chars: int = 240,
+    flash_frame_frames: int = DEFAULT_FLASH_FRAME_FRAMES,
 ) -> SequenceIndexResult:
     """Convert a Premiere sequence JSON blob to a flat row list.
 
@@ -331,6 +358,8 @@ def build_index(
             keyed by sequence locator first, with clip ``path`` as fallback.
         tags: Optional ``{locator_id|clip_path: [str, ...]}`` — free-form tags.
         excerpt_chars: Cap transcript excerpt length per clip (0 = no cap).
+        flash_frame_frames: Clips shorter than this many frames are flagged
+            ``flash_frame`` so the panel can filter for accidental slivers.
 
     Returns:
         :class:`SequenceIndexResult`.
@@ -339,29 +368,34 @@ def build_index(
     fps = seq["fps"] or 24.0
     ratings = ratings or {}
     tags = tags or {}
+    flash_frames = max(0, _safe_int(flash_frame_frames, DEFAULT_FLASH_FRAME_FRAMES))
+    flash_threshold_s = (flash_frames / fps) if (flash_frames and fps > 0) else 0.0
 
     rows: List[IndexRow] = []
     markers = _normalise_markers(seq)
 
-    for vt in seq["videoTracks"]:
-        if not isinstance(vt, dict):
-            continue
-        ti = _safe_int(vt.get("index"), 0)
-        for ci, clip in enumerate(vt.get("clips") or []):
+    def _rows_for_track(track: Any, track_type: str) -> None:
+        if not isinstance(track, dict):
+            return
+        ti = _safe_int(track.get("index"), 0)
+        for ci, clip in enumerate(track.get("clips") or []):
             if not isinstance(clip, dict):
                 continue
             start = _safe_float(clip.get("start"), 0.0)
             end = _safe_float(clip.get("end"), start)
+            duration = max(0.0, end - start)
             path = str(clip.get("path") or "")
             name = str(clip.get("name") or "")
-            track_item_id = str(clip.get("nodeId") or clip.get("node_id") or clip.get("id") or clip.get("guid") or "")
+            track_item_id = str(
+                clip.get("nodeId") or clip.get("node_id") or clip.get("id") or clip.get("guid") or ""
+            )
             project_item_id = str(
                 clip.get("projectItemId") or clip.get("project_item_id") or clip.get("projectNodeId") or ""
             )
             locators = _host_locators(
                 sequence_name=seq["name"],
                 sequence_guid=seq["sequence_guid"],
-                track_type="video",
+                track_type=track_type,
                 track_index=ti,
                 clip_index=ci,
                 name=name,
@@ -373,71 +407,34 @@ def build_index(
             )
             locator_id = _locator_id(locators)
             rows.append(IndexRow(
-                track_type="video",
+                track_type=track_type,
                 track_index=ti,
                 clip_index=ci,
                 name=name,
                 path=path,
                 start_s=start,
                 end_s=end,
-                duration_s=max(0.0, end - start),
+                duration_s=duration,
                 timecode_in=_seconds_to_timecode(start, fps),
                 timecode_out=_seconds_to_timecode(end, fps),
+                # Audio clips don't ship 'effects' in the JSX payload; the
+                # .get() below yields [] for them without a second branch.
                 effects=[str(x) for x in (clip.get("effects") or []) if x],
                 rating=_safe_int(_metadata_value(ratings, locator_id, path, 0), 0),
                 tags=list(_metadata_value(tags, locator_id, path, []) or []),
-                transcript_excerpt=_transcript_excerpt_for(start, end, transcript_segments, excerpt_chars),
+                transcript_excerpt=_transcript_excerpt_for(
+                    start, end, transcript_segments, excerpt_chars
+                ),
                 locator_id=locator_id,
                 host_locators=locators,
+                offline=_safe_bool_field(clip, _OFFLINE_KEYS),
+                flash_frame=bool(flash_threshold_s) and duration < flash_threshold_s,
             ))
 
+    for vt in seq["videoTracks"]:
+        _rows_for_track(vt, "video")
     for at in seq["audioTracks"]:
-        if not isinstance(at, dict):
-            continue
-        ti = _safe_int(at.get("index"), 0)
-        for ci, clip in enumerate(at.get("clips") or []):
-            if not isinstance(clip, dict):
-                continue
-            start = _safe_float(clip.get("start"), 0.0)
-            end = _safe_float(clip.get("end"), start)
-            path = str(clip.get("path") or "")
-            name = str(clip.get("name") or "")
-            track_item_id = str(clip.get("nodeId") or clip.get("node_id") or clip.get("id") or clip.get("guid") or "")
-            project_item_id = str(
-                clip.get("projectItemId") or clip.get("project_item_id") or clip.get("projectNodeId") or ""
-            )
-            locators = _host_locators(
-                sequence_name=seq["name"],
-                sequence_guid=seq["sequence_guid"],
-                track_type="audio",
-                track_index=ti,
-                clip_index=ci,
-                name=name,
-                path=path,
-                start_s=start,
-                end_s=end,
-                track_item_id=track_item_id,
-                project_item_id=project_item_id,
-            )
-            locator_id = _locator_id(locators)
-            rows.append(IndexRow(
-                track_type="audio",
-                track_index=ti,
-                clip_index=ci,
-                name=name,
-                path=path,
-                start_s=start,
-                end_s=end,
-                duration_s=max(0.0, end - start),
-                timecode_in=_seconds_to_timecode(start, fps),
-                timecode_out=_seconds_to_timecode(end, fps),
-                effects=[],  # audio clips don't ship 'effects' in the JSX payload
-                rating=_safe_int(_metadata_value(ratings, locator_id, path, 0), 0),
-                tags=list(_metadata_value(tags, locator_id, path, []) or []),
-                transcript_excerpt=_transcript_excerpt_for(start, end, transcript_segments, excerpt_chars),
-                locator_id=locator_id,
-                host_locators=locators,
-            ))
+        _rows_for_track(at, "audio")
 
     return SequenceIndexResult(
         sequence_name=seq["name"],
@@ -477,6 +474,8 @@ def filter_rows(
     track_type: Optional[str] = None,
     min_rating: int = 0,
     has_effects: Optional[bool] = None,
+    offline: Optional[bool] = None,
+    flash_frame: Optional[bool] = None,
 ) -> List[IndexRow]:
     """Free-text + faceted filter.
 
@@ -487,6 +486,8 @@ def filter_rows(
         track_type: ``"video"`` | ``"audio"`` | None for both.
         min_rating: Drop rows with rating below this.
         has_effects: True = only clips with effects; False = only without.
+        offline: True = only offline media; False = only linked media.
+        flash_frame: True = only flash frames; False = only normal-length clips.
     """
     q = (query or "").strip().lower()
     out: List[IndexRow] = []
@@ -498,6 +499,10 @@ def filter_rows(
         if has_effects is True and not r.effects:
             continue
         if has_effects is False and r.effects:
+            continue
+        if offline is not None and bool(r.offline) is not offline:
+            continue
+        if flash_frame is not None and bool(r.flash_frame) is not flash_frame:
             continue
         if q:
             haystack = " ".join([
@@ -514,13 +519,105 @@ def filter_rows(
     return out
 
 
+# ---------------------------------------------------------------------------
+# CSV export (the panel exports exactly what the user is looking at, so the
+# column list and row order are both caller-supplied).
+# ---------------------------------------------------------------------------
+CSV_COLUMNS = (
+    "track_type",
+    "track_index",
+    "clip_index",
+    "name",
+    "path",
+    "start_s",
+    "end_s",
+    "duration_s",
+    "timecode_in",
+    "timecode_out",
+    "effects",
+    "rating",
+    "tags",
+    "offline",
+    "flash_frame",
+    "transcript_excerpt",
+    "locator_id",
+)
+
+# Columns the panel is allowed to hide. Identity columns stay pinned so an
+# exported sheet is always traceable back to a timeline instance.
+HIDEABLE_COLUMNS = frozenset(CSV_COLUMNS) - {"name", "timecode_in", "locator_id"}
+
+_LIST_COLUMNS = ("effects", "tags")
+
+
+def _csv_cell(row: IndexRow, column: str) -> str:
+    value = getattr(row, column)
+    if column in _LIST_COLUMNS:
+        return "; ".join(str(v) for v in (value or []))
+    if isinstance(value, bool):
+        # Spreadsheets read "true"/"false" as booleans; "True" stays text.
+        return "true" if value else "false"
+    if isinstance(value, float):
+        # Timeline seconds are millisecond-meaningful at most; keep the sheet
+        # readable instead of emitting float noise like 12.300000000000001.
+        return f"{value:.3f}"
+    return "" if value is None else str(value)
+
+
+def rows_to_csv(rows: List[IndexRow], columns: Optional[List[str]] = None) -> str:
+    """Render rows as CSV text using :data:`CSV_COLUMNS` order.
+
+    Raises ``ValueError`` on an unknown column so a panel typo cannot
+    silently drop a column from the sheet.
+    """
+    import csv
+    import io
+
+    cols = list(columns) if columns is not None else list(CSV_COLUMNS)
+    unknown = [c for c in cols if c not in CSV_COLUMNS]
+    if unknown:
+        raise ValueError(
+            f"Unknown CSV column(s) {unknown}. Valid: {list(CSV_COLUMNS)}"
+        )
+    if not cols:
+        raise ValueError("At least one CSV column is required")
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(cols)
+    for row in rows:
+        writer.writerow([_csv_cell(row, c) for c in cols])
+    return buf.getvalue()
+
+
+def export_csv(
+    rows: List[IndexRow],
+    output: str,
+    columns: Optional[List[str]] = None,
+) -> dict:
+    """Write :func:`rows_to_csv` to ``output`` and report what was written."""
+    text = rows_to_csv(rows, columns)
+    with open(output, "w", encoding="utf-8-sig", newline="") as fh:
+        fh.write(text)
+    return {
+        "output": output,
+        "rows": len(rows),
+        "columns": list(columns) if columns is not None else list(CSV_COLUMNS),
+        "bytes": len(text.encode("utf-8")),
+    }
+
+
 __all__ = [
     "IndexRow",
     "SequenceIndexResult",
     "SORT_KEYS",
+    "CSV_COLUMNS",
+    "HIDEABLE_COLUMNS",
     "INSTALL_HINT",
     "check_sequence_index_available",
     "build_index",
     "sort_rows",
     "filter_rows",
+    "rows_to_csv",
+    "export_csv",
 ]

@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "generated_at": "2026-07-25T21:06:14Z",
-  "total_routes": 1567,
-  "shipped_route_count": 1542,
+  "generated_at": "2026-08-02T07:17:54Z",
+  "total_routes": 1568,
+  "shipped_route_count": 1543,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 401,
     "PATCH": 1,
-    "POST": 1150,
+    "POST": 1151,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 29,
-    "implemented": 1513,
+    "implemented": 1514,
     "stub": 25
   },
   "blueprints": {
@@ -806,15 +806,15 @@
       ]
     },
     "sequence_index": {
-      "route_count": 3,
+      "route_count": 4,
       "method_counts": {
         "GET": 1,
-        "POST": 2
+        "POST": 3
       },
       "sample_rules": [
         "/timeline/sequence-index",
-        "/timeline/sequence-index/filter",
-        "/timeline/sequence-index/info"
+        "/timeline/sequence-index/export-csv",
+        "/timeline/sequence-index/filter"
       ]
     },
     "settings": {
@@ -12313,6 +12313,15 @@
         "POST"
       ],
       "endpoint": "sequence_index.route_build_sequence_index",
+      "blueprint": "sequence_index",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/sequence-index/export-csv",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "sequence_index.route_export_sequence_index_csv",
       "blueprint": "sequence_index",
       "readiness": "implemented"
     },
