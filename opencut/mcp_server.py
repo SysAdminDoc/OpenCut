@@ -15,8 +15,17 @@ Usage:
 The MCP server proxies requests to the running OpenCut Flask backend
 on localhost:5679. Start the backend first:  opencut server
 
-Protocol: JSON-RPC 2.0 over stdio (one JSON object per line).
-Supports: initialize, tools/list, tools/call, resources/list, prompts/list.
+Protocol: JSON-RPC 2.0 over stdio (one JSON object per line) or HTTP.
+
+The server speaks the stateless 2026-07-28 revision — ``server/discover``
+advertises supported versions, capabilities, and identity, every modern result
+carries ``resultType`` plus ``_meta`` server identity, and list results carry
+``ttlMs``/``cacheScope`` cache hints. Clients state their protocol version
+per request in ``_meta``; the legacy ``initialize``/``notifications/initialized``
+handshake is still accepted so pre-2026 clients keep working unchanged.
+
+Methods: server/discover, initialize (legacy), tools/list, tools/call,
+resources/list, resources/templates/list, prompts/list.
 """
 
 import argparse
@@ -1579,6 +1588,220 @@ def handle_tool_call(tool_name, arguments):
 
 
 # ---------------------------------------------------------------------------
+# MCP protocol
+#
+# The 2026-07-28 revision removed the stateful `initialize` handshake: every
+# request carries its own protocol version and client identity in `_meta`, and
+# `server/discover` advertises what the server supports. Legacy clients that
+# still send `initialize` keep working — the handshake is accepted and answered,
+# it is simply no longer required.
+# ---------------------------------------------------------------------------
+LATEST_PROTOCOL_VERSION = "2026-07-28"
+LEGACY_PROTOCOL_VERSION = "2024-11-05"
+
+#: Newest first. A request naming any of these is served; anything else is
+#: rejected with ``UNSUPPORTED_PROTOCOL_VERSION`` rather than answered on a
+#: guess about what the client meant.
+SUPPORTED_PROTOCOL_VERSIONS = (
+    LATEST_PROTOCOL_VERSION,
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    LEGACY_PROTOCOL_VERSION,
+)
+
+#: Revisions that require `resultType`, `_meta` identity, and cache hints.
+_MODERN_PROTOCOL_VERSIONS = frozenset({LATEST_PROTOCOL_VERSION})
+
+JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
+
+META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
+META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
+META_LOG_LEVEL = "io.modelcontextprotocol/logLevel"
+
+#: OpenTelemetry context keys the spec documents for `_meta` propagation.
+_TRACE_META_KEYS = ("traceparent", "tracestate", "baggage")
+
+# The 2026-07-28 error-code allocation policy reserves -32020..-32099 for the
+# specification; -32022 is UnsupportedProtocolVersion.
+ERROR_UNSUPPORTED_PROTOCOL_VERSION = -32022
+
+#: `CacheableResult` hints. The tool catalogue is generated from a static
+#: registry, so it is safe for shared intermediaries to cache briefly.
+_LIST_CACHE_TTL_MS = 60_000
+_LIST_CACHE_SCOPE = "public"
+
+_CACHEABLE_METHODS = frozenset({
+    "tools/list",
+    "prompts/list",
+    "resources/list",
+    "resources/templates/list",
+    "resources/read",
+})
+
+
+def server_info() -> dict:
+    """Identity the server attaches to every modern result."""
+    return {"name": "opencut", "title": "OpenCut", "version": __version__}
+
+
+def server_capabilities() -> dict:
+    """Capabilities OpenCut actually implements.
+
+    Deliberately narrow: subscriptions, tasks, and sampling are *not*
+    advertised because they are not implemented, and a claimed capability the
+    client then calls is worse than an absent one.
+    """
+    return {
+        "tools": {"listChanged": False},
+        "resources": {"listChanged": False, "subscribe": False},
+        "prompts": {"listChanged": False},
+        "extensions": {},
+    }
+
+
+def _request_meta(params) -> dict:
+    meta = params.get("_meta") if isinstance(params, dict) else None
+    return meta if isinstance(meta, dict) else {}
+
+
+def negotiated_protocol_version(params) -> str:
+    """Protocol version for this request, defaulting to the legacy revision.
+
+    A stateless client states its version per request. One that says nothing
+    is a pre-2026-07-28 client, so it gets the legacy shape and none of the
+    newer required fields it would not understand.
+    """
+    requested = _request_meta(params).get(META_PROTOCOL_VERSION)
+    if isinstance(requested, str) and requested:
+        return requested
+    return LEGACY_PROTOCOL_VERSION
+
+
+def _result_meta(params) -> dict:
+    """`_meta` for a result: server identity plus echoed trace context."""
+    meta = {META_SERVER_INFO: server_info()}
+    request_meta = _request_meta(params)
+    for key in _TRACE_META_KEYS:
+        value = request_meta.get(key)
+        if isinstance(value, str) and value:
+            meta[key] = value
+    return meta
+
+
+def decorate_result(result: dict, method: str, params) -> dict:
+    """Apply the revision-appropriate envelope to a result payload."""
+    version = negotiated_protocol_version(params)
+    if version not in _MODERN_PROTOCOL_VERSIONS:
+        # Older clients must not receive fields their schema rejects.
+        return result
+    decorated = dict(result)
+    decorated["resultType"] = "complete"
+    decorated["_meta"] = _result_meta(params)
+    if method in _CACHEABLE_METHODS:
+        decorated["ttlMs"] = _LIST_CACHE_TTL_MS
+        decorated["cacheScope"] = _LIST_CACHE_SCOPE
+    return decorated
+
+
+def handle_discover(params) -> dict:
+    """`server/discover` — stateless advertisement of versions and identity."""
+    return {
+        "protocolVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
+        "capabilities": server_capabilities(),
+        "serverInfo": server_info(),
+        "schemaDialect": JSON_SCHEMA_DIALECT,
+    }
+
+
+def _unsupported_version_error(msg_id, requested: str) -> dict:
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "error": {
+            "code": ERROR_UNSUPPORTED_PROTOCOL_VERSION,
+            "message": f"Unsupported protocol version: {requested}",
+            "data": {"supported": list(SUPPORTED_PROTOCOL_VERSIONS)},
+        },
+    }
+
+
+def _tool_call_result(params) -> dict:
+    tool_name = params.get("name", "")
+    arguments = params.get("arguments", {})
+    if not isinstance(arguments, dict):
+        arguments = {}
+    result = handle_tool_call(tool_name, arguments)
+    return {"content": [{"type": "text", "text": json.dumps(result, indent=2)}]}
+
+
+def dispatch_jsonrpc(msg: dict):
+    """Handle one JSON-RPC message; return a response dict, or None.
+
+    Shared by the stdio and HTTP transports so the two cannot drift — the
+    HTTP handler used to be missing `notifications/initialized` entirely.
+    """
+    msg_id = msg.get("id")
+    method = msg.get("method", "")
+    params = msg.get("params") or {}
+    if not isinstance(params, dict):
+        params = {}
+
+    # JSON-RPC 2.0: a message without an ``id`` is a notification and must
+    # not produce a response, whatever its method name.
+    if "id" not in msg:
+        return None
+
+    requested_version = _request_meta(params).get(META_PROTOCOL_VERSION)
+    if (
+        isinstance(requested_version, str)
+        and requested_version
+        and requested_version not in SUPPORTED_PROTOCOL_VERSIONS
+    ):
+        return _unsupported_version_error(msg_id, requested_version)
+
+    if method == "server/discover":
+        result = handle_discover(params)
+    elif method == "initialize":
+        # Legacy handshake. Answer with the version the client asked for when
+        # we support it, so a 2024-11-05 client is not handed a 2026 shape.
+        client_version = params.get("protocolVersion")
+        if not isinstance(client_version, str) or client_version not in SUPPORTED_PROTOCOL_VERSIONS:
+            client_version = LEGACY_PROTOCOL_VERSION
+        result = {
+            "protocolVersion": client_version,
+            "capabilities": server_capabilities(),
+            "serverInfo": server_info(),
+        }
+    elif method == "tools/list":
+        result = {"tools": get_mcp_tools()}
+    elif method == "tools/call":
+        result = _tool_call_result(params)
+    elif method == "resources/list":
+        result = {"resources": []}
+    elif method == "resources/templates/list":
+        result = {"resourceTemplates": []}
+    elif method == "prompts/list":
+        result = {"prompts": []}
+    elif method == "notifications/initialized":
+        return None
+    else:
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "error": {"code": -32601, "message": f"Method not found: {method}"},
+        }
+
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "result": decorate_result(result, method, params),
+    }
+
+
+# ---------------------------------------------------------------------------
 # MCP Protocol (stdio JSON-RPC)
 # ---------------------------------------------------------------------------
 _MAX_STDIO_LINE_BYTES = 4 * 1024 * 1024  # 4 MB — generous for huge JSON-RPC payloads
@@ -1625,66 +1848,9 @@ def run_mcp_stdio():
             continue
 
         msg_id = msg.get("id")
-        method = msg.get("method", "")
-        params = msg.get("params", {})
-
-        # JSON-RPC 2.0: messages without an ``id`` field are notifications
-        # and must not produce a response, regardless of method name.
-        if "id" not in msg:
+        response = dispatch_jsonrpc(msg)
+        if response is None:
             continue
-
-        if method == "initialize":
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
-                    "serverInfo": {
-                        "name": "opencut",
-                        "version": __version__,
-                    },
-                },
-            }
-        elif method == "tools/list":
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"tools": get_mcp_tools()},
-            }
-        elif method == "tools/call":
-            tool_name = params.get("name", "")
-            arguments = params.get("arguments", {})
-            if not isinstance(arguments, dict):
-                arguments = {}
-            result = handle_tool_call(tool_name, arguments)
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
-                },
-            }
-        elif method == "resources/list":
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"resources": []},
-            }
-        elif method == "prompts/list":
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"prompts": []},
-            }
-        elif method == "notifications/initialized":
-            continue  # No response needed for notifications
-        else:
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "error": {"code": -32601, "message": f"Method not found: {method}"},
-            }
 
         # Fall back to an error response if the result contained a
         # non-JSON-serializable value — never leave the client hanging
@@ -1778,34 +1944,16 @@ def run_http_server(
                 self._send_json({"error": "Invalid JSON"}, status=400)
                 return
 
-            method = body.get("method", "")
-            params = body.get("params") or {}
-            rpc_id = body.get("id")
+            response = dispatch_jsonrpc(body)
+            if response is None:
+                # A notification carries no reply; 202 says "accepted".
+                self.send_response(202)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
 
-            if method == "initialize":
-                self._send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "opencut", "version": __version__},
-                }})
-            elif method == "tools/list":
-                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
-                                  "result": {"tools": get_mcp_tools()}})
-            elif method == "tools/call":
-                name = params.get("name", "")
-                arguments = params.get("arguments") or {}
-                result = handle_tool_call(name, arguments)
-                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
-                                  "result": {"content": [{"type": "text",
-                                                          "text": json.dumps(result, indent=2)}]}})
-            elif method in ("resources/list", "prompts/list"):
-                key = method.split("/")[0]
-                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
-                                  "result": {key: []}})
-            else:
-                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
-                                  "error": {"code": -32601,
-                                            "message": f"Method not found: {method}"}}, status=404)
+            status = 404 if response.get("error", {}).get("code") == -32601 else 200
+            self._send_json(response, status=status)
 
     httpd = HTTPServer((bind, port), _Handler)
     print(f"OpenCut MCP HTTP server on http://{bind}:{port}", file=sys.stderr)

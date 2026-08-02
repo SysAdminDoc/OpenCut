@@ -148,6 +148,10 @@ def route_mcp_info():
             "extended_enabled_by_default": extended_tools_enabled(),
             "transport": "uxp-bridge",  # vs "json-rpc-stdio" or "json-rpc-http"
             "endpoints": ["/mcp/tools", "/mcp/call", "/mcp/info"],
+            "protocol_versions": list(mcp_server.SUPPORTED_PROTOCOL_VERSIONS),
+            "latest_protocol_version": mcp_server.LATEST_PROTOCOL_VERSION,
+            "schema_dialect": mcp_server.JSON_SCHEMA_DIALECT,
+            "capabilities": mcp_server.server_capabilities(),
             "webhook_event_types": {
                 "endpoint": "/webhooks/event-types",
                 "api_endpoint": "/api/webhooks/event-types",

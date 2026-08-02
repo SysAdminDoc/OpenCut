@@ -47,6 +47,29 @@ plus the F112 auth token; the MCP server reads the same token.)
 | Discovery | `opencut-mcp-server --list-tools` | Dump the curated `MCP_TOOLS` array as JSON — useful for client install screens. |
 | Extended discovery | `OPENCUT_MCP_EXTENDED_TOOLS=1 opencut-mcp-server --list-tools` or `opencut-mcp-server --extended-tools --list-tools` | Include generated lower-priority `opencut_route_*` tools. |
 
+## 2.1 Protocol revisions
+
+OpenCut serves both sides of the 2026-07-28 boundary from one dispatcher, so
+the stdio and HTTP transports cannot drift apart.
+
+| Revision | How a client opens | What results look like |
+|---|---|---|
+| `2026-07-28` | Call `server/discover`, or send nothing and state the version per request in `_meta` under `io.modelcontextprotocol/protocolVersion`. No `initialize`, no session id. | Every result carries `resultType: "complete"` and `_meta` with `io.modelcontextprotocol/serverInfo`. `tools/list`, `prompts/list`, `resources/list`, and `resources/templates/list` also carry `ttlMs` and `cacheScope`. |
+| `2025-11-25` … `2024-11-05` | The `initialize` / `notifications/initialized` handshake, still accepted. | Unchanged — the newer required fields are deliberately omitted so an older client's schema still validates the response. |
+
+- `server/discover` returns `protocolVersions`, `capabilities`, `serverInfo`,
+  and `schemaDialect` (JSON Schema 2020-12).
+- A request naming an unsupported version is rejected with
+  `-32022` (`UnsupportedProtocolVersion`) and the supported list, rather than
+  answered on a guess.
+- OpenTelemetry `traceparent` / `tracestate` / `baggage` values supplied in a
+  request's `_meta` are echoed back in the result's `_meta`.
+- **Not claimed, because not implemented:** `subscriptions/listen`, the
+  `io.modelcontextprotocol/tasks` extension, sampling, and roots. Calling them
+  returns `-32601` rather than a half-working stub.
+- The `mcp` SDK is not imported by OpenCut — the server speaks JSON-RPC
+  directly — so both the 1.x and 2.x SDK lines work as client-side tooling.
+
 ## 3. Tool catalogue (86 tools)
 
 The full schema for each tool lives in

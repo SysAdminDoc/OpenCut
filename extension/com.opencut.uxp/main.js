@@ -9097,8 +9097,9 @@ function initAgentTab() {
       const info = await BackendClient.get("/mcp/info");
       const data = responseData(info);
       setStatus("mcpBridgeStatus",
-        formatI18n("uxp.agent.runtime.mcp_bridge_info", "v{version}: {curated} curated + {extended} extended (extended {state} by default).", {
+        formatI18n("uxp.agent.runtime.mcp_bridge_info", "v{version} (MCP {protocol}): {curated} curated + {extended} extended (extended {state} by default).", {
           version: data.version || t("common.unknown", "unknown"),
+          protocol: data.latest_protocol_version || t("common.unknown", "unknown"),
           curated: data.curated_count ?? 0,
           extended: data.extended_count ?? 0,
           state: data.extended_enabled_by_default ? t("uxp.agent.runtime.on", "on") : t("uxp.agent.runtime.off", "off"),
