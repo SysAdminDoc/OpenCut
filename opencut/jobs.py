@@ -255,17 +255,29 @@ def _list_jobs_copy() -> list:
 def _update_job(job_id: str, **kwargs):
     """Update job fields. Records timing data on completion."""
     job_copy_to_persist = None
-    status_update = kwargs.get("status")
-    if status_update in _TERMINAL_JOB_STATUSES and not kwargs.get("exit_reason"):
-        kwargs["exit_reason"] = _classify_exit_reason(
-            status_update,
-            error=kwargs.get("error", ""),
-            code=kwargs.get("code", ""),
-        )
+    emit_terminal_webhook = False
     with job_lock:
-        if job_id in jobs:
-            jobs[job_id].update(kwargs)
-            job = jobs[job_id]
+        job = jobs.get(job_id)
+        if job is not None:
+            status_update = kwargs.get("status")
+            existing_status = job.get("status")
+            if status_update == "error" and existing_status in _TERMINAL_JOB_STATUSES:
+                # Cancellation (or another terminal transition) can race with
+                # a worker exception. Preserve the terminal record while
+                # retaining late resource-sampler peaks.
+                kwargs = {
+                    field: value
+                    for field, value in kwargs.items()
+                    if field in _JOB_RESOURCE_FIELDS
+                }
+                status_update = None
+            if status_update in _TERMINAL_JOB_STATUSES and not kwargs.get("exit_reason"):
+                kwargs["exit_reason"] = _classify_exit_reason(
+                    status_update,
+                    error=kwargs.get("error", ""),
+                    code=kwargs.get("code", ""),
+                )
+            job.update(kwargs)
             if status_update in _TERMINAL_JOB_STATUSES and not job.get("completed_at"):
                 job["completed_at"] = time.time()
             # Record timing data when a job completes for future estimates.
@@ -281,21 +293,25 @@ def _update_job(job_id: str, **kwargs):
             resource_update = any(field in kwargs for field in _JOB_RESOURCE_FIELDS)
             terminal_update = status_update in _TERMINAL_JOB_STATUSES
             existing_terminal = job.get("status") in _TERMINAL_JOB_STATUSES
+            terminal_transition = terminal_update and existing_status not in _TERMINAL_JOB_STATUSES
             # Persist terminal job states to SQLite; if a cancellation raced
             # ahead of the worker's sampler shutdown, persist the late peaks.
             if terminal_update or (existing_terminal and resource_update):
                 job_copy_to_persist = job.copy()
                 _job_processes.pop(job_id, None)
+                emit_terminal_webhook = terminal_transition
     if job_copy_to_persist is not None:
         _persist_job(job_copy_to_persist)
-        # Fire webhook event for terminal job states (best-effort).
+        # Fire webhook once, on the terminal transition (best-effort). Late
+        # sampler updates persist the final record but must not duplicate it.
         # Wrapped in try/except so a webhook failure never blocks job
         # finalisation. Dispatched asynchronously via _io_pool.
-        try:
-            _emit_job_webhook(job_copy_to_persist)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Webhook emit failed for job %s: %s",
-                           job_copy_to_persist.get("id"), exc)
+        if emit_terminal_webhook:
+            try:
+                _emit_job_webhook(job_copy_to_persist)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Webhook emit failed for job %s: %s",
+                               job_copy_to_persist.get("id"), exc)
 
 
 def _emit_job_webhook(job_dict):
@@ -583,6 +599,13 @@ def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
 
     if cancelled_job is not None:
         _persist_job(cancelled_job, sync=persist_sync)
+        # Cancellation happens outside _update_job so the terminal webhook
+        # must be emitted here. Late worker cleanup is intentionally silent.
+        try:
+            _emit_job_webhook(cancelled_job)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Webhook emit failed for cancelled job %s: %s",
+                           cancelled_job.get("id"), exc)
     return cancelled_job, "cancelled"
 
 
@@ -994,6 +1017,12 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     logger.exception("Job %s error in %s", job_id, job_type)
                     resource_update = _stop_resource_sampler(resource_sampler)
                     resource_sampler = None
+                    if _is_cancelled(job_id):
+                        # A user cancellation deliberately interrupts many
+                        # workers. Keep its terminal state and only merge the
+                        # sampler snapshot collected during shutdown.
+                        _update_job(job_id, **resource_update)
+                        return
                     update = {
                         "status": "error",
                         "error": str(e),

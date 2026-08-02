@@ -6,6 +6,19 @@ import sys
 import threading
 import time
 
+from flask import Blueprint
+
+
+def _isolate_job_store(monkeypatch, tmp_path):
+    import opencut.job_store as store
+
+    store.close_all_connections()
+    monkeypatch.setattr(store, "_DB_PATH", str(tmp_path / "jobs.db"))
+    store._INITIALIZED = False
+    store._INITIALIZED_PATH = None
+    store._LOCAL = type(store._LOCAL)()
+    store._ALL_CONNECTIONS = {}
+    return store
 
 def _wait_for_registered_process(job_id: str, *, timeout: float = 5.0):
     from opencut.jobs import _job_processes, job_lock
@@ -139,6 +152,86 @@ def test_cleanup_old_jobs_kills_process_for_timed_out_job(monkeypatch):
         assert persisted[0]["id"] == job_id
         assert persisted[0]["status"] == "error"
     finally:
+        with jobs_mod.job_lock:
+            jobs_mod._job_processes.pop(job_id, None)
+            jobs_mod.jobs.pop(job_id, None)
+
+
+def test_worker_exception_keeps_cancelled_state_and_emits_one_webhook(
+    app, monkeypatch, tmp_path
+):
+    """A cancellation-induced worker error cannot replace the terminal state."""
+    store = _isolate_job_store(monkeypatch, tmp_path)
+    import opencut.jobs as jobs_mod
+    from opencut.core import job_diagnostics as jd
+
+    original_persist = jobs_mod._persist_job
+
+    def sync_persist(job_dict, *, sync=False):
+        original_persist(job_dict, sync=True)
+
+    webhook_jobs = []
+    monkeypatch.setattr(jobs_mod, "_persist_job", sync_persist)
+    monkeypatch.setattr(
+        jobs_mod,
+        "_emit_job_webhook",
+        lambda job_dict: webhook_jobs.append(job_dict.copy()),
+    )
+
+    class FakeSampler:
+        def start(self):
+            return self
+
+        def stop(self):
+            return {"peak_rss_mb": 128}
+
+    monkeypatch.setattr(jd, "JobResourceSampler", FakeSampler)
+
+    entered = threading.Event()
+    release = threading.Event()
+    bp = Blueprint("f216_cancel_lifecycle", __name__)
+
+    @bp.route("/f216/cancel-lifecycle", methods=["POST"])
+    @jobs_mod.async_job("f216_cancel_lifecycle", filepath_required=False)
+    def cancel_lifecycle(job_id, filepath, data):
+        entered.set()
+        assert release.wait(5), "test worker was not released"
+        raise RuntimeError("worker failed after cancellation")
+
+    app.register_blueprint(bp)
+    job_id = ""
+    try:
+        client = app.test_client()
+        csrf = client.get("/health").get_json()["csrf_token"]
+        response = client.post(
+            "/f216/cancel-lifecycle",
+            json={},
+            headers={"X-OpenCut-Token": csrf},
+        )
+        assert response.status_code == 200, response.get_json()
+        job_id = response.get_json()["job_id"]
+        assert entered.wait(5), "worker did not start"
+
+        with jobs_mod.job_lock:
+            future = jobs_mod.jobs[job_id]["_future"]
+
+        cancelled_job, state = jobs_mod._cancel_job(job_id, persist_sync=True)
+        assert state == "cancelled"
+        assert cancelled_job is not None
+        assert cancelled_job["status"] == "cancelled"
+
+        release.set()
+        future.result(timeout=5)
+
+        live = jobs_mod._get_job_copy(job_id)
+        persisted = store.get_job(job_id)
+        for record in (live, persisted):
+            assert record["status"] == "cancelled"
+            assert record["exit_reason"] == "cancelled"
+            assert record["peak_rss_mb"] == 128
+        assert [job["status"] for job in webhook_jobs] == ["cancelled"]
+    finally:
+        release.set()
         with jobs_mod.job_lock:
             jobs_mod._job_processes.pop(job_id, None)
             jobs_mod.jobs.pop(job_id, None)
