@@ -376,7 +376,7 @@ def assemble_beat_synced(
         on_progress(5, "Preparing beat-synced assembly...")
 
     if output_path_str is None:
-        output_path_str = output_path(music_path, "beat_synced", ".mp4")
+        output_path_str = output_path(music_path, "beat_synced")
         # Ensure .mp4 extension
         if not output_path_str.endswith(".mp4"):
             output_path_str = os.path.splitext(output_path_str)[0] + ".mp4"

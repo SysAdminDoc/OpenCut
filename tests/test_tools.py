@@ -327,6 +327,28 @@ class TestBeatCuts(unittest.TestCase):
         for param in ("music_path", "cut_list", "output_path_str", "transition", "on_progress"):
             self.assertIn(param, sig.parameters)
 
+    @patch("opencut.core.beat_cuts.get_ffmpeg_path", return_value="ffmpeg.exe")
+    @patch("opencut.core.beat_cuts.write_concat_list")
+    @patch("opencut.core.beat_cuts.run_ffmpeg")
+    @patch("opencut.core.beat_cuts.get_video_info", return_value={"width": 1920, "height": 1080, "fps": 24})
+    def test_assemble_beat_synced_default_output_stays_with_music(
+        self, _mock_info, _mock_run, _mock_concat, _mock_ffmpeg
+    ):
+        """The implicit output should sit beside the music, not in a .mp4 folder."""
+        from opencut.core.beat_cuts import assemble_beat_synced
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            music_path = os.path.join(temp_dir, "song.mp3")
+            result = assemble_beat_synced(
+                music_path,
+                [{"clip_path": os.path.join(temp_dir, "clip.mp4"), "start": 0, "duration": 1}],
+            )
+
+            output_path = os.path.abspath(result["output_path"])
+            self.assertEqual(os.path.dirname(output_path), os.path.abspath(temp_dir))
+            self.assertEqual(os.path.basename(output_path), "song_beat_synced.mp4")
+            self.assertFalse(os.path.isdir(os.path.join(temp_dir, ".mp4")))
+
     @patch("subprocess.run")
     def test_get_audio_duration_invalid(self, mock_run):
         """_get_audio_duration should return 0 for failed ffprobe."""

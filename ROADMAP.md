@@ -75,15 +75,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P1 — 2026-08-02
 
-- [ ] P1 — Fix the `output_path()` misuse that breaks default beat-synced assembly
-  Category: correctness
-  Where: `opencut/core/beat_cuts.py:379`; helper signature `opencut/helpers.py:119-124` (`output_path(input_path, suffix, output_dir="")`).
-  Problem: The call is `output_path(music_path, "beat_synced", ".mp4")` — the third positional parameter is `output_dir`, not an extension. The literal `".mp4"` becomes the output **directory**, producing a CWD-relative path inside a hidden `.mp4/` folder. Nothing in `beat_cuts.py` creates that directory, so the final merge (`"-y", output_path_str`) fails with "No such file or directory" and `run_ffmpeg` raises. This is the default path: `POST /beat-cuts/assemble` (`opencut/routes/tools_routes.py:46-71`) explicitly allows `output_path` to be omitted and passes `None` through.
-  Evidence: `output_path('C:/media/song.mp3', 'beat_synced', '.mp4')` returns `'.mp4\\song_beat_synced.mp3'`. The next two lines ("Ensure .mp4 extension") rewrite the extension to `.mp4` but leave the bogus `.mp4\` directory, which masks the real mistake. Correct usage `output_path('C:/media/song.mp3','beat_synced')` returns `'C:/media\\song_beat_synced.mp3'`.
-  Fix: Call `output_path(music_path, "beat_synced")` and keep the existing extension fixup.
-  Acceptance: A test calls the assembly entry point with `output_path=None` and asserts the resulting path is inside the music file's own directory and that no directory named `.mp4` is created.
-  Confidence: Verified
-  Effort: S
 
 ### P2 — 2026-08-02
 

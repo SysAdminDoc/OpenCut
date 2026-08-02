@@ -41,6 +41,11 @@ record also lives in the git commit messages.
   the backend's canonical track shape. Header-only exports report that no
   clips were found instead of claiming a populated handoff document.
 
+### Fixed - Default beat-synced output path
+
+- Beat-synced assembly now places its implicit `.mp4` output beside the source
+  music file instead of treating the extension as a directory name.
+
 ### Added - Windows High Contrast (forced-colors) coverage
 
 - Both panels gained `@media (forced-colors: active)` rules. In that mode the
