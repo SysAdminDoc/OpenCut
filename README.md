@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1543-orange)
-![Tests](https://img.shields.io/badge/Tests-12300+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-12400+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -286,7 +286,7 @@ OpenCut v1.45.0 includes **1,543 shipped API routes** (implemented or dependency
 | Transcript Editor | Edit segments in-panel with undo/redo and search | Built-in |
 | YouTube Chapters | LLM-powered topic change detection for chapter timestamps | Ollama / OpenAI / Anthropic |
 | SRT to Native Captions | Import any SRT file as a native Premiere Pro caption track | ExtendScript |
-| Caption XML Interchange | EBU-TT, TTML, legacy IMSC1, and validated IMSC 1.3 with multilingual/RTL/vertical round trips | W3C TTML / IMSC |
+| Caption XML Interchange | EBU-TT, TTML, legacy IMSC1, and IMSC 1.3 with multilingual/RTL/vertical round trips, validated against the W3C reference implementation | W3C TTML / IMSC (`ttconv` + `imschrm`) |
 
 Caption XML profiles are explicit: `/delivery/caption/ttml` accepts `ttml`,
 legacy `imsc1` (the compatibility default), or `imsc1.3`; Subtitle Pro uses
@@ -294,6 +294,16 @@ legacy `imsc1` (the compatibility default), or `imsc1.3`; Subtitle Pro uses
 style/region references, unsafe XML, and unrepresentable text now fail with a
 migration error instead of writing a document that claims unsupported
 conformance.
+
+Standards labels are earned from independent validators, not self-assessed.
+`pip install "opencut[standards]"` adds `ttconv` (the W3C TTML reference
+implementation) and `imschrm` (the IMSC Hypothetical Render Model); the
+release gate runs OpenCut's own IMSC 1.3 output through both. IMF packages are
+checked with Netflix Photon's `IMPAnalyzer` when `OPENCUT_PHOTON_JAR` points
+at the jar and a JRE is on `PATH`, and loudness is checked against a signal
+whose BS.1770 value is derived from the standard's own K-weighting
+coefficients. When a validator is absent the report says `available: false`
+and `passed: null` — "not checked" never reads as "passed".
 
 Transcript caches, caption sidecars, interview state, and JSON exports retain
 the exact ASR engine, model revision, alignment backend, language decision, and
@@ -812,7 +822,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-12,300+ estimated tests across 309 root test files covering route smoke tests,
+12,400+ estimated tests across 310 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -879,7 +889,7 @@ extension/
     main.js          # UXP panel (~8,488 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (12,300+ estimated tests, 309 root test files)
+tests/               # pytest test suite (12,400+ estimated tests, 310 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

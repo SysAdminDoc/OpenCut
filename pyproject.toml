@@ -141,6 +141,13 @@ scene-ml = [
 reframe = [
     "mediapipe>=0.10,<1",
 ]
+standards = [
+    # Independent reference validators for standards-labelled output:
+    # ttconv is the W3C TTML reference implementation, imschrm runs the IMSC
+    # Hypothetical Render Model. Both are pure Python and MIT/BSD licensed.
+    "ttconv>=1.2,<2",
+    "imschrm>=1.1,<2",
+]
 mcp = [
     # OpenCut does not import this SDK — `opencut/mcp_server.py` speaks
     # JSON-RPC directly, so the FastMCP -> McpServer rewrite in 2.x cannot
