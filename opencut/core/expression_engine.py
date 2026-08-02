@@ -231,6 +231,34 @@ def _pulse(x: float, frequency: float = 1.0,
     return 1.0 if phase < duty_cycle else 0.0
 
 
+_MAX_POWER_BASE = 1_000_000
+_MAX_POWER_EXPONENT = 12
+
+
+def _bounded_power(base, exponent, modulus=None):
+    """Evaluate sandbox power calls without permitting unbounded work."""
+    for label, value in (("base", base), ("exponent", exponent)):
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            continue
+        elif isinstance(value, float):
+            if not math.isfinite(value):
+                raise ValueError(f"power {label} must be a finite number")
+        else:
+            raise ValueError(f"power {label} must be a finite number")
+
+    if abs(base) > _MAX_POWER_BASE:
+        raise ValueError("power base exceeds the safe magnitude limit")
+    if abs(exponent) > _MAX_POWER_EXPONENT:
+        raise ValueError(
+            f"power exponent exceeds the safe limit of {_MAX_POWER_EXPONENT}"
+        )
+    if modulus is not None:
+        return pow(base, exponent, modulus)
+    return pow(base, exponent)
+
+
 # ---------------------------------------------------------------------------
 # Sandbox Globals
 # ---------------------------------------------------------------------------
@@ -246,7 +274,7 @@ SANDBOX_FUNCTIONS = {
     "atan": math.atan,
     "atan2": math.atan2,
     "sqrt": math.sqrt,
-    "pow": pow,
+    "pow": _bounded_power,
     "abs": abs,
     "floor": math.floor,
     "ceil": math.ceil,
@@ -426,6 +454,36 @@ def _check_ast_safety(expr_str: str) -> Optional[str]:
             if node.func.id not in _ALLOWED_CALL_NAMES:
                 return f"Forbidden function call: {node.func.id}"
 
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+            exponent = _power_literal(node.right)
+            if exponent is None:
+                return "Forbidden power: exponent must be a finite numeric constant"
+            if abs(exponent) > _MAX_POWER_EXPONENT:
+                return (
+                    "Forbidden power: exponent exceeds the safe limit of "
+                    f"{_MAX_POWER_EXPONENT}"
+                )
+            base = _power_literal(node.left)
+            if base is not None and abs(base) > _MAX_POWER_BASE:
+                return "Forbidden power: base exceeds the safe magnitude limit"
+
+    return None
+
+
+def _power_literal(node):
+    """Return a finite numeric literal, including a unary sign, if present."""
+    if isinstance(node, ast.Constant):
+        value = node.value
+        if isinstance(value, bool) or isinstance(value, int):
+            return value
+        if isinstance(value, float) and math.isfinite(value):
+            return value
+        return None
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        value = _power_literal(node.operand)
+        if value is None:
+            return None
+        return value if isinstance(node.op, ast.UAdd) else -value
     return None
 
 
