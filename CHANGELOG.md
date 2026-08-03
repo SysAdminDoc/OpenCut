@@ -38,6 +38,12 @@ record also lives in the git commit messages.
   forced onto an alternate port leave the live server's running jobs and
   persistent queue untouched instead of creating duplicate recovery work.
 
+### Fixed - Timecode sync output placement
+
+- Default JSON and EDL timelines now sit beside the first source file with the
+  correct timeline extension instead of being written under a hidden,
+  extension-named directory.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and

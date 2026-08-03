@@ -511,7 +511,7 @@ def sync_by_timecode(
     # Generate timeline
     if output is None:
         ext = ".json" if timeline_format == "json" else ".edl"
-        output = _output_path(sources[0], "_tc_sync", ext)
+        output = os.path.splitext(_output_path(sources[0], "tc_sync"))[0] + ext
 
     timeline_result = generate_synced_timeline(
         source_infos, offsets, output,
