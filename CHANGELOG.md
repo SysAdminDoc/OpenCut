@@ -3,6 +3,15 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - Uninstall could delete a drive root or a media folder
+
+- The chosen install path is now normalized and vetted before it is stored: it
+  must be fully qualified, a bare drive root gets its own `OpenCut` folder,
+  Windows/system/profile directories are refused, and a directory that already
+  holds unrelated files asks for confirmation first.
+- The uninstaller re-checks the same rule before its recursive delete and
+  before `rmdir /s /q`, and refuses rather than deleting an unsafe root.
+
 ### Fixed - Install.ps1 terminated Premiere Pro
 
 - The port cleanup in `Install.ps1` took the last column of every `netstat`
