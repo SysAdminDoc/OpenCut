@@ -47,6 +47,28 @@ class TestUpdateCheck:
         assert "update_available" in data
         assert "release_url" in data
 
+    def test_update_check_failure_is_not_reported_as_latest(self, client, monkeypatch):
+        from opencut.routes import system_model_routes
+
+        monkeypatch.setattr(system_model_routes, "_update_cache", {"data": None, "ts": 0})
+        calls = 0
+
+        def fail_urlopen(*_args, **_kwargs):
+            nonlocal calls
+            calls += 1
+            raise OSError("network unavailable")
+
+        monkeypatch.setattr("urllib.request.urlopen", fail_urlopen)
+
+        first = client.get("/system/update-check").get_json()
+        second = client.get("/system/update-check").get_json()
+
+        assert first["latest_version"] is None
+        assert first["update_available"] is False
+        assert first["error"] == "offline"
+        assert second["latest_version"] is None
+        assert calls == 2
+
 
 # =====================================================================
 # /system/dependencies

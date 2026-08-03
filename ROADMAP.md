@@ -341,16 +341,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Report update-check failures honestly instead of claiming the current version is latest
-  Category: reliability
-  Where: `opencut/routes/system_model_routes.py:339-411` (`check_for_update`), cache at `:318-320`.
-  Problem: `result` is seeded with `latest_version = current`, and on any failure — offline, DNS, GitHub 5xx, rate limit — the `except` branch adds `error: "offline"` but leaves that seeded value in place and returns HTTP 200. So the endpoint asserts the latest release equals the installed version when it has no idea, and any client rendering "You're up to date (latest 1.46.0)" is stating something unverified. Worse, the failed result is then written into `_update_cache` with a full `_UPDATE_CACHE_TTL` of 3600 s, so one transient blip suppresses update checks for an hour with no retry. Both panels read only `update_available` (`extension/com.opencut.uxp/main.js:8302-8303`; `extension/com.opencut.panel/client/main.js:2471-2472`) and drop the error entirely, so the user is never told the check failed.
-  Evidence: Observed live against v1.46.0: `GET /system/update-check` returned `{"current_version":"1.46.0","error":"offline","latest_version":"1.46.0","update_available":false}` with HTTP 200.
-  Fix: On failure set `latest_version` to `null` (not `current`) and keep `update_available` false; cache failures for a much shorter TTL (or not at all) so a retry is possible; have both panels surface the error state with retry guidance rather than silently ignoring it. This refines — and should be implemented together with — the existing "Make update notices persistent and actionable" P2 item above, whose acceptance already calls for offline/error states retaining retry guidance.
-  Acceptance: With the network blocked, the endpoint returns `latest_version: null` and an error field, a subsequent call retries rather than serving an hour-old failure, and both panels show a "couldn't check for updates" state with a retry affordance.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Repair the four dead or mis-wired CEP controls
   Category: ux
   Where: (a) `extension/com.opencut.panel/client/main.js:16792` with markup at `client/index.html:3213-3220`; (b) `client/main.js:10192-10204` vs controls at `client/index.html:442,449`; (c) `client/main.js:17800-17822` (`tryDemo`) vs `:3101-3126` (`selectFile`); (d) `client/main.js:15272-15286` (`applyMulticamCuts`) vs `:15151-15156` (`applySequenceCuts`).
