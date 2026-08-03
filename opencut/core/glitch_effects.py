@@ -217,9 +217,6 @@ def _build_glitch_filter(
     effect: str, intensity: float, info: dict,
 ) -> tuple:
     """Return (vf_string, filter_complex_string). One will be empty."""
-    info.get("width", 1920)
-    info.get("height", 1080)
-
     if effect == "rgb_split":
         # rgbashift: shift R and B channels horizontally
         offset = max(2, int(intensity * 30))

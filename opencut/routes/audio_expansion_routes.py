@@ -200,7 +200,6 @@ def stem_remix(job_id, filepath, data):
     stem_paths = data.get("stem_paths", [])
     effects_config = data.get("effects_config", [])
     mix_config = data.get("mix_config", [])
-    data.get("output_dir", "")
     output = data.get("output_path", None)
     if output:
         output = validate_output_path(output)

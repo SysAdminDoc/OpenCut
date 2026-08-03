@@ -146,17 +146,6 @@ def convert_360_projection(
     in_proj = proj_map.get(src_proj, "e")
     out_proj = proj_map.get(projection, "c6x1")
 
-    info = get_video_info(video_path)
-    w = info.get("width", 3840)
-    info.get("height", 1920)
-
-    if projection == "cubemap":
-        w // 6
-    elif projection == "equirect":
-        w // 2
-    else:
-        pass
-
     v360_filter = f"v360={in_proj}:{out_proj}"
 
     run_ffmpeg([
@@ -562,7 +551,6 @@ def keyframed_reframe(
 
     info = get_video_info(video_path)
     duration = info.get("duration", 0.0)
-    info.get("fps", 30.0)
 
     if on_progress:
         on_progress(5, f"Reframing with {len(parsed_kfs)} keyframes...")

@@ -244,8 +244,6 @@ def export_comparison_video(
 
     info = get_video_info(original)
     w, h = info["width"], info["height"]
-    info.get("duration", 0)
-    info.get("fps", 30)
 
     if out_path is None:
         out_path = _output_path(original, f"comparison_{mode}")

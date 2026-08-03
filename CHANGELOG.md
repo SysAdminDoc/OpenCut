@@ -81,6 +81,12 @@ record also lives in the git commit messages.
   model, key, and URL values as structured 400 `INVALID_INPUT` responses
   without appending crash-log entries.
 
+### Fixed - Discarded-expression cleanup
+
+- The release lint gate now includes Ruff `B018`. Dead metadata probes and
+  dimension calculations were removed, B-roll filenames now contribute match
+  terms, and screen-recording classification now honors supported codecs.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and

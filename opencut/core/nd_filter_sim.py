@@ -58,7 +58,6 @@ def simulate_nd_filter(
 
     info = get_video_info(input_path)
     fps = info.get("fps", 30.0)
-    info.get("duration", 0)
 
     # Calculate blur strength from shutter angle
     # At 360 degrees, each frame exposes for the full frame interval

@@ -164,9 +164,10 @@ def _detect_content_type(
     Uses metadata, motion level, and stream properties to classify content.
     """
     # Check for screen recording indicators
+    screen_codec = ""
     for stream in probe_data.get("streams", []):
         if stream.get("codec_type") == "video":
-            stream.get("codec_name", "").lower()
+            screen_codec = str(stream.get("codec_name", "") or "").lower()
             break
 
     fmt = probe_data.get("format", {})
@@ -175,7 +176,9 @@ def _detect_content_type(
     # Screen recording: typically low motion, standard resolutions, certain codecs
     is_screen_res = (width in (1920, 2560, 3840, 1280) and
                      height in (1080, 1440, 2160, 720, 800, 900))
-    if motion_level < 0.3 and is_screen_res and fps <= 30:
+    screen_codecs = {"h264", "hevc", "vp8", "vp9", "av1"}
+    is_screen_codec = screen_codec in screen_codecs
+    if motion_level < 0.3 and is_screen_res and fps <= 30 and is_screen_codec:
         # Low motion at standard screen res likely screen recording
         return "screen_recording"
 

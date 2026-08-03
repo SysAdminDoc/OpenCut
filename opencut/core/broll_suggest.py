@@ -231,11 +231,13 @@ def _match_cue_to_footage(cue: BRollCue, footage_index: List[Dict],
         clip_keywords = set(k.lower() for k in clip.get("keywords", []))
         clip_tags = set(t.lower() for t in clip.get("tags", []))
         clip_desc = clip.get("description", "").lower()
-        clip.get("name", "").lower()
+        clip_name = str(clip.get("name", "") or "").lower()
 
         all_clip_terms = clip_keywords | clip_tags
         if clip_desc:
             all_clip_terms.update(re.findall(r"\b\w+\b", clip_desc))
+        if clip_name:
+            all_clip_terms.update(re.findall(r"\b\w+\b", clip_name.replace("_", " ")))
 
         # Score based on keyword overlap
         cue_keywords = set(k.lower() for k in cue.keywords)

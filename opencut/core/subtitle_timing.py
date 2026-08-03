@@ -171,7 +171,6 @@ def snap_subtitles_to_cuts(
             # Subtitle spans one or more cuts - split it
             segments = []
             current_start = sub.start
-            sub.text.split()
             total_chars = len(sub.text.replace("\n", " "))
 
             for cut in spanning_cuts:
