@@ -10,7 +10,14 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, get_video_info, output_path, run_ffmpeg, write_concat_list
+from opencut.helpers import (
+    FFmpegCmd,
+    escape_drawtext,
+    get_video_info,
+    output_path,
+    run_ffmpeg,
+    write_concat_list,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -573,11 +580,10 @@ def _generate_text_card(
     output_path_str: str, bg_color: str = "black",
 ):
     """Generate a video card with text using FFmpeg."""
-    # Escape text for FFmpeg drawtext
-    safe_text = text.replace("'", "\\'").replace(":", "\\:")
+    safe_text = escape_drawtext(text)
 
     vf = (
-        f"drawtext=text='{safe_text}':"
+        f"drawtext=expansion=none:text='{safe_text}':"
         f"fontsize=48:fontcolor=white:"
         f"x=(w-text_w)/2:y=(h-text_h)/2"
     )

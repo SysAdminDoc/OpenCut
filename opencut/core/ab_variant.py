@@ -14,7 +14,7 @@ import string
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -146,18 +146,13 @@ def _apply_hook_variant(
         "auto": "You need to see this.",
     }
     text = hook_labels.get(hook_type, "Watch this.")
-    escaped = (
-        text.replace("\\", "\\\\")
-        .replace("'", "\\'")
-        .replace(":", "\\:")
-        .replace("%", "%%")
-    )
+    escaped = escape_drawtext(text)
 
     font_size = max(24, min(56, int(w / 28)))
     y_pos = int(h * 0.45)
 
     drawtext = (
-        f"drawtext=text='{escaped}'"
+        f"drawtext=expansion=none:text='{escaped}'"
         f":fontsize={font_size}"
         f":fontcolor=#FFFFFF"
         f":shadowcolor=#000000:shadowx=3:shadowy=3"

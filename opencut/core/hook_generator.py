@@ -18,6 +18,7 @@ from dataclasses import asdict, dataclass
 from typing import Callable, List, Optional
 
 from opencut.helpers import (
+    escape_drawtext,
     get_ffmpeg_path,
     get_video_info,
     output_path,
@@ -413,18 +414,12 @@ def apply_hook(
         if on_progress:
             on_progress(30, "Rendering caption overlay hook...")
 
-        escaped_text = (
-            hook_result.hook_text
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
-            .replace(":", "\\:")
-            .replace("%", "%%")
-        )
+        escaped_text = escape_drawtext(hook_result.hook_text)
         y_pos = int(h * 0.45)
         font_size = max(24, min(60, int(w / 25)))
 
         drawtext = (
-            f"drawtext=text='{escaped_text}'"
+            f"drawtext=expansion=none:text='{escaped_text}'"
             f":fontsize={font_size}"
             f":fontcolor=#FFFFFF"
             f":shadowcolor=#000000"

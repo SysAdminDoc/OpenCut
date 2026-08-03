@@ -14,6 +14,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -173,9 +174,9 @@ def generate_safe_zone_overlay(
         # Position label text at center of zone
         text_x = zone.x + zone.w // 2
         text_y = zone.y + zone.h // 2
-        escaped_label = zone.label.replace("'", "\\'").replace(":", "\\:")
+        escaped_label = escape_drawtext(zone.label)
         filter_parts.append(
-            f"drawtext=text='{escaped_label}'"
+            f"drawtext=expansion=none:text='{escaped_label}'"
             f":x={text_x}-(text_w/2):y={text_y}-(text_h/2)"
             f":fontsize=20:fontcolor=white:borderw=2:bordercolor=black"
         )

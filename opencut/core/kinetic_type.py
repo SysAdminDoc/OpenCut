@@ -16,7 +16,7 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
-from opencut.helpers import FFmpegCmd, run_ffmpeg
+from opencut.helpers import FFmpegCmd, escape_drawtext, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -231,7 +231,7 @@ def _build_drawtext_expr(
 ) -> str:
     """Build FFmpeg drawtext filter with animation expressions."""
     preset = ANIMATION_PRESETS.get(preset_name, ANIMATION_PRESETS["fade_in"])
-    escaped = text.replace("'", "\\'").replace(":", "\\:")
+    escaped = escape_drawtext(text)
     # Base position: centered
     x_expr = "(w-text_w)/2"
     y_expr = "(h-text_h)/2"
@@ -246,7 +246,7 @@ def _build_drawtext_expr(
         # Typewriter: show N characters based on time
         # We'll use drawtext's text_shaping and clip the display
         return (
-            f"drawtext=text='{escaped}':fontfile='{font}':"
+            f"drawtext=expansion=none:text='{escaped}':fontfile='{font}':"
             f"fontsize={font_size}:fontcolor={color}:"
             f"x={x_expr}:y={y_expr}:"
             f"alpha='min(1,t/{max(0.1, duration*0.1)})':"
@@ -293,7 +293,7 @@ def _build_drawtext_expr(
         alpha_expr = f"min(1,t/{max(0.1, duration*0.3)})"
 
     return (
-        f"drawtext=text='{escaped}':fontsize={font_size}:"
+        f"drawtext=expansion=none:text='{escaped}':fontsize={font_size}:"
         f"fontcolor={color}:x={x_expr}:y={y_expr}:"
         f"alpha='{alpha_expr}'"
     )
@@ -462,9 +462,9 @@ def create_custom_animation(
     x_expr = f"{start_x}+({end_x}-{start_x})*{progress}-text_w/2"
     y_expr = f"{start_y}+({end_y}-{start_y})*{progress}-text_h/2"
 
-    escaped = text.replace("'", "\\'").replace(":", "\\:")
+    escaped = escape_drawtext(text)
     drawtext = (
-        f"drawtext=text='{escaped}':fontsize={font_size}:"
+        f"drawtext=expansion=none:text='{escaped}':fontsize={font_size}:"
         f"fontcolor={font_color}:x='{x_expr}':y='{y_expr}':"
         f"alpha='{alpha_expr}'"
     )

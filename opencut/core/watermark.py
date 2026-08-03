@@ -11,7 +11,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, output_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -146,11 +146,10 @@ def _apply_text_watermark(
     pos_expr = _POSITION_MAP.get(position, _POSITION_MAP["center"])
     alpha = f"{opacity:.2f}"
 
-    # Escape special chars for drawtext
-    escaped = text.replace("'", "\\'").replace(":", "\\:")
+    escaped = escape_drawtext(text)
 
     drawtext = (
-        f"drawtext=text='{escaped}'"
+        f"drawtext=expansion=none:text='{escaped}'"
         f":fontsize={font_size}"
         f":fontcolor=white@{alpha}"
         f":x={pos_expr.split(':')[0]}"

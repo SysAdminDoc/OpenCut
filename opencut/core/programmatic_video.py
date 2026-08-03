@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, run_ffmpeg
+from opencut.helpers import FFmpegCmd, escape_drawtext, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -90,12 +90,7 @@ def create_data_video(
         if not text:
             continue
 
-        # Escape for FFmpeg drawtext
-        safe = (text
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-                .replace(":", "\\:")
-                .replace("%", "%%"))
+        safe = escape_drawtext(text)
 
         x = tf.get("x", "(w-text_w)/2")
         y = tf.get("y", "(h-text_h)/2")
@@ -103,7 +98,7 @@ def create_data_video(
         fontcolor = tf.get("fontcolor", "white")
 
         drawtext_parts.append(
-            f"drawtext=text='{safe}':fontsize={fontsize}:"
+            f"drawtext=expansion=none:text='{safe}':fontsize={fontsize}:"
             f"fontcolor={fontcolor}:x={x}:y={y}"
         )
         fields_used.append(key)

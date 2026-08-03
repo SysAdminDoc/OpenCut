@@ -117,7 +117,7 @@ def _build_retro_filter(effect: str, intensity: float, w: int, h: int) -> str:
         )
         # VHS date stamp
         parts.append(
-            f"drawtext=text='REC  %{{pts\\:hms}}':fontsize={max(16, h // 30)}:"
+            f"drawtext=expansion=normal:text='REC  %{{pts\\:hms}}':fontsize={max(16, h // 30)}:"
             f"fontcolor=white@0.8:x=w-tw-20:y=h-th-20:font=monospace"
         )
         return ",".join(parts)

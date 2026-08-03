@@ -87,6 +87,13 @@ record also lives in the git commit messages.
   dimension calculations were removed, B-roll filenames now contribute match
   terms, and screen-recording classification now honors supported codecs.
 
+### Fixed - Literal drawtext escaping
+
+- Literal text overlays now use the shared FFmpeg escaper with
+  `expansion=none`, covering paths, colons, apostrophes, backslashes, and
+  percent-expression text across the core renderers. Intentional timecode and
+  counter expressions remain explicitly on normal expansion.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and

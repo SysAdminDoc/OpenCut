@@ -30,6 +30,7 @@ from opencut.helpers import (
     OPENCUT_DIR,
     FFmpegCmd,
     ensure_package,
+    escape_drawtext,
     run_ffmpeg,
 )
 
@@ -687,15 +688,14 @@ def _generate_placeholder(
     if on_progress:
         on_progress(50, "No generation model available. Creating placeholder...")
 
-    # Escape special characters for FFmpeg drawtext
-    safe_prompt = prompt.replace("'", "\\'").replace(":", "\\:")[:100]
-    safe_name = profile.name.replace("'", "\\'").replace(":", "\\:")[:30]
+    safe_prompt = escape_drawtext(prompt[:100])
+    safe_name = escape_drawtext(f"Character: {profile.name[:30]}")
 
     drawtext = (
-        f"drawtext=text='{safe_prompt}'"
+        f"drawtext=expansion=none:text='{safe_prompt}'"
         f":fontsize=28:fontcolor=white:x=(w-tw)/2:y=(h-th)/2"
         f":box=1:boxcolor=black@0.7:boxborderw=10,"
-        f"drawtext=text='Character\\: {safe_name}'"
+        f"drawtext=expansion=none:text='{safe_name}'"
         f":fontsize=20:fontcolor=gray:x=(w-tw)/2:y=(h+40)/2"
         f":box=1:boxcolor=black@0.5:boxborderw=5"
     )

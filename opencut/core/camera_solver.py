@@ -19,6 +19,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -688,14 +689,14 @@ def render_3d_overlay(
     first_frame = solve_result.frames[0] if solve_result.frames else None
     if first_frame and first_frame.frame_number in frame_overlays:
         for i, overlay in enumerate(frame_overlays[first_frame.frame_number]):
-            text = overlay["text"].replace("'", "\\'").replace(":", "\\:")
+            text = escape_drawtext(overlay["text"])
             x = int(overlay["x"])
             y = int(overlay["y"])
             fs = max(8, int(overlay["font_size"] * overlay["scale"]))
             color = overlay["color"]
             alpha = overlay["opacity"]
             drawtext_parts.append(
-                f"drawtext=text='{text}':x={x}:y={y}"
+                f"drawtext=expansion=none:text='{text}':x={x}:y={y}"
                 f":fontsize={fs}:fontcolor={color}:alpha={alpha}"
             )
 

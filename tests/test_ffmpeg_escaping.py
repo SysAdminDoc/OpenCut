@@ -61,17 +61,32 @@ CORE_CONCAT_MODULES = (
 
 DRAWTEXT_LITERAL_MODULES = (
     "audiogram",
+    "ab_variant",
+    "adr_cueing",
     "brand_kit",
+    "camera_solver",
     "callout_gen",
     "caption_styles",
+    "character_consistency",
     "click_overlay",
+    "data_animation",
+    "declarative_compose",
     "end_screen",
     "guest_compilation",
+    "hook_generator",
     "instant_replay",
+    "kinetic_type",
+    "multicam_grid",
     "news_ticker",
+    "programmatic_video",
     "quiz_overlay",
+    "safe_zones",
     "motion_graphics",
+    "template_assembly",
     "telemetry_overlay",
+    "thumbnail_ab",
+    "video_compare",
+    "watermark",
 )
 
 
@@ -233,5 +248,6 @@ class TestConcatList:
                 encoding="utf-8"
             )
             assert "escape_drawtext" in source, module_name
+            assert "drawtext=expansion=none:" in source, module_name
             assert '.replace("%", "%%")' not in source, module_name
             assert "drawtext=text='" not in source, module_name

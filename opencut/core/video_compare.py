@@ -15,6 +15,7 @@ from typing import Callable, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     run_ffmpeg,
 )
@@ -254,12 +255,8 @@ def export_comparison_video(
     # Label font size
     font_size = max(16, min(w, h) // 25)
 
-    # Escape labels for FFmpeg drawtext
-    def _esc(t):
-        return t.replace("'", "\\'").replace(":", "\\:")
-
-    label_orig_esc = _esc(label_original[:50])
-    label_proc_esc = _esc(label_processed[:50])
+    label_orig_esc = escape_drawtext(label_original[:50])
+    label_proc_esc = escape_drawtext(label_processed[:50])
 
     scale_b = (
         f"[1:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
@@ -273,10 +270,10 @@ def export_comparison_video(
             f"[0:v]scale={hw}:{h}[a];"
             f"[1:v]scale={hw}:{h}[b];"
             f"[a][b]hstack=inputs=2[stacked];"
-            f"[stacked]drawtext=text='{label_orig_esc}':"
+            f"[stacked]drawtext=expansion=none:text='{label_orig_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2,"
-            f"drawtext=text='{label_proc_esc}':"
+            f"drawtext=expansion=none:text='{label_proc_esc}':"
             f"fontsize={font_size}:fontcolor=white:x={hw + 10}:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2[outv]"
         )
@@ -291,10 +288,10 @@ def export_comparison_video(
             f"[base]drawbox=x=0:y=0:"
             f"w='(W/2)+(W/2)*sin(2*PI*t/{cycle:.2f})':"
             f"h=H:color=black@0:t=fill,"
-            f"drawtext=text='{label_orig_esc}':"
+            f"drawtext=expansion=none:text='{label_orig_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2,"
-            f"drawtext=text='{label_proc_esc}':"
+            f"drawtext=expansion=none:text='{label_proc_esc}':"
             f"fontsize={font_size}:fontcolor=white:x={w - font_size * 8}:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2[outv]"
         )
@@ -308,10 +305,10 @@ def export_comparison_video(
             f"[base]drawbox=x=0:y=0:w=W:"
             f"h='(H/2)+(H/2)*sin(2*PI*t/{cycle:.2f})':"
             f"color=black@0:t=fill,"
-            f"drawtext=text='{label_orig_esc}':"
+            f"drawtext=expansion=none:text='{label_orig_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2,"
-            f"drawtext=text='{label_proc_esc}':"
+            f"drawtext=expansion=none:text='{label_proc_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y={h - font_size - 10}:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2[outv]"
         )
@@ -321,11 +318,11 @@ def export_comparison_video(
         interval = max(0.5, alternating_interval)
         fc = (
             f"[0:v]scale={w}:{h},"
-            f"drawtext=text='{label_orig_esc}':"
+            f"drawtext=expansion=none:text='{label_orig_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2[a];"
             f"[1:v]scale={w}:{h},"
-            f"drawtext=text='{label_proc_esc}':"
+            f"drawtext=expansion=none:text='{label_proc_esc}':"
             f"fontsize={font_size}:fontcolor=white:x=10:y=10:"
             f"shadowcolor=black@0.7:shadowx=2:shadowy=2[b];"
             f"[a][b]xfade=transition=fade:duration=0.3:offset={interval}[outv]"

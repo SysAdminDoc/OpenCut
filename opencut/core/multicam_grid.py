@@ -13,6 +13,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_video_info,
     run_ffmpeg,
 )
@@ -153,14 +154,14 @@ def export_multicam_grid(
 
         # Add label text
         if label_names and i < len(label_names):
-            label_text = label_names[i].replace("'", "\\'").replace(":", "\\:")
+            label_text = escape_drawtext(label_names[i])
         else:
-            label_text = f"CAM {i + 1}"
+            label_text = escape_drawtext(f"CAM {i + 1}")
 
         labeled_label = f"[lbl{i}]"
         font_size = max(12, cell_w // 20)
         fc_parts.append(
-            f"{cell_label}drawtext=text='{label_text}':"
+            f"{cell_label}drawtext=expansion=none:text='{label_text}':"
             f"fontsize={font_size}:fontcolor=white:"
             f"x=5:y=5:shadowcolor=black@0.7:shadowx=1:shadowy=1"
             f"{labeled_label}"
@@ -172,7 +173,7 @@ def export_multicam_grid(
             tc_label = f"[tc{i}]"
             tc_size = max(10, cell_w // 25)
             fc_parts.append(
-                f"{cell_label}drawtext=text='%{{pts\\:hms}}':"
+                f"{cell_label}drawtext=expansion=normal:text='%{{pts\\:hms}}':"
                 f"fontsize={tc_size}:fontcolor=yellow:"
                 f"x={cell_w - tc_size * 6}:y={cell_h - tc_size - 5}:"
                 f"shadowcolor=black@0.7:shadowx=1:shadowy=1"
