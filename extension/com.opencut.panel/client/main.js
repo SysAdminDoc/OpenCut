@@ -3960,6 +3960,11 @@
         if (el.genAdrListBtn) el.genAdrListBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
         if (el.genMusicCueBtn) el.genMusicCueBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
         if (el.genAssetListBtn) el.genAssetListBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
+        var openDeliverablesFolderBtn = document.getElementById("openDeliverablesFolder");
+        if (openDeliverablesFolderBtn) {
+            openDeliverablesFolderBtn.disabled = !inPremiere;
+            openDeliverablesFolderBtn.classList.toggle("hidden", !inPremiere);
+        }
         if (el.getSeqMarkersBtn) el.getSeqMarkersBtn.disabled = !inPremiere;
         if (el.exportMarkedClipsBtn) el.exportMarkedClipsBtn.disabled = !connected || !inPremiere || !selectedPath || !hasSequenceMarkers;
         if (el.loadProjectItemsBtn) el.loadProjectItemsBtn.disabled = !inPremiere;
@@ -10333,10 +10338,9 @@
         if (el.silencePreviewBtn && el.silencePreviewPlayer) {
             el.silencePreviewBtn.addEventListener("click", function () {
                 if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
-                // Use the current threshold / min-silence params if exposed,
-                // otherwise default to the FFmpeg-friendly -30 dB / 400 ms.
-                var thr = el.silenceThreshold ? parseFloat(el.silenceThreshold.value) : -30;
-                var minDur = el.silenceMinDur ? parseFloat(el.silenceMinDur.value) : 0.4;
+                // Keep the preview aligned with the controls used by runSilence.
+                var thr = el.threshold ? parseFloat(el.threshold.value) : -30;
+                var minDur = el.minDuration ? parseFloat(el.minDuration.value) : 0.5;
                 renderAudioPreview({
                     filepath: selectedPath, start: 0, duration: 10,
                     filter: "silence",
@@ -15445,15 +15449,21 @@
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!multicamCutsData) { showAlert(t("timeline.no_multicam_cuts", "No multicam cuts available.")); return; }
         var payload = JSON.stringify(multicamCutsData);
-        cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
-            try {
-                var r = JSON.parse(result);
-                showToast(t("timeline.multicam_cuts_applied", "Multicam cuts applied: {count}")
-                    .replace("{count}", r.applied || 0), "success");
-            } catch (e) {
+        journalCheckpointedHostWrite({
+            action: "apply_multicam_cuts",
+            label: t("journal.apply_multicam_cuts_label", "Apply reviewed multicam cuts"),
+            clipPath: selectedPath,
+            preview: { clips: selectedName ? [selectedName] : [], settings: { cuts: multicamCutsData } }
+        }, function (cb) {
+            cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
+        }, function (r) {
+            if (!r || r.error) {
                 showAlert(t("timeline.action_failed", "Error: {error}")
-                    .replace("{error}", result || e.message));
+                    .replace("{error}", (r && r.error) || t("common.unknown", "Unknown")));
+                return;
             }
+            showToast(t("timeline.multicam_cuts_applied", "Multicam cuts applied: {count}")
+                .replace("{count}", r.applied || 0), "success");
         });
     }
 
@@ -16959,10 +16969,26 @@
         if (assetBtn) assetBtn.addEventListener("click", function() { genDeliverableDoc("asset-list"); });
         var openFolderBtn = document.getElementById("openDeliverablesFolder");
         if (openFolderBtn) openFolderBtn.addEventListener("click", function() {
-            var fp = document.getElementById("deliverablesFilePath");
-            if (fp && fp.textContent && inPremiere) {
-                cs.evalScript('openFolderInFinder("' + escPath(fp.textContent) + '")', function() {});
+            if (!inPremiere) {
+                showAlert(t("deliverables.premiere_required", "Premiere Pro connection required to open the output folder."));
+                return;
             }
+            var fp = document.getElementById("deliverablesFilePath");
+            if (!fp || !fp.textContent) {
+                showAlert(t("deliverables.open_folder_missing_path", "No generated deliverable path is available yet."));
+                return;
+            }
+            cs.evalScript('openFolderInFinder("' + escPath(fp.textContent) + '")', function(result) {
+                var parsed;
+                try { parsed = JSON.parse(result || "{}"); }
+                catch (e) { parsed = { error: result || e.message }; }
+                if (!parsed || parsed.error || parsed.success === false) {
+                    showAlert(t("deliverables.open_folder_failed", "Could not open the deliverables folder: {error}")
+                        .replace("{error}", (parsed && parsed.error) || t("common.unknown", "Unknown")));
+                    return;
+                }
+                showToast(t("deliverables.folder_opened", "Opened the deliverables folder"), "info");
+            });
         });
         updateDeliverablesSummary();
     }
@@ -17987,12 +18013,11 @@
                     }
                     // Fall through to the existing selection flow.
                     try {
-                        selectedPath = data.path;
+                        selectFile(data.path);
                         showToast(t("toast.demo_loaded", "Loaded demo footage — try any tab"), "success");
-                        // Poke any selection label the panel exposes.
-                        var label = document.getElementById("selectedClipLabel");
-                        if (label) label.textContent = data.path.split(/[\\/]/).pop();
-                    } catch (e) {}
+                    } catch (e) {
+                        showToast(t("toast.demo_fetch_failed", "Demo fetch failed"), "error");
+                    }
                 });
             }
 

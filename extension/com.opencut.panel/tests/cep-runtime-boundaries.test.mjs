@@ -314,6 +314,63 @@ describe("CEP update-check boundary", () => {
   });
 });
 
+describe("CEP shipped control wiring", () => {
+  function sourceBetween(source, startMarker, endMarker) {
+    const start = source.indexOf(startMarker);
+    const end = source.indexOf(endMarker, start + startMarker.length);
+    expect(start, startMarker).toBeGreaterThanOrEqual(0);
+    expect(end, endMarker).toBeGreaterThan(start);
+    return source.slice(start, end);
+  }
+
+  it("opens deliverable folders through a guarded host function and reports failures", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
+    const host = readFileSync(new URL("../host/index.jsx", import.meta.url), "utf8");
+    const source = sourceBetween(main, "function initDeliverablesFeatures()", "function initNlpFeatures()");
+
+    expect(index).toContain('id="openDeliverablesFolder"');
+    expect(source).toContain("openFolderInFinder");
+    expect(source).toContain("JSON.parse(result || \"{}\")");
+    expect(source).toContain("parsed.error || parsed.success === false");
+    expect(main).toContain('openDeliverablesFolderBtn.classList.toggle("hidden", !inPremiere)');
+    expect(host).toContain("function openFolderInFinder(path)");
+    expect(host).toContain("new File(String(path))");
+    expect(host).toContain("file.parent.execute()");
+    expect(host).toContain('JSON.stringify({ error: "No project open" })');
+  });
+
+  it("previews silence with the same controls used by the run payload", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const source = sourceBetween(main, "function initAudioPreviewButtons()", "function renderAudioPreview(");
+
+    expect(source).toContain("el.threshold.value");
+    expect(source).toContain("el.minDuration.value");
+    expect(source).not.toContain("el.silenceThreshold");
+    expect(source).not.toContain("el.silenceMinDur");
+  });
+
+  it("loads demo footage through the real selection lifecycle", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const source = sourceBetween(main, "function tryDemo()", "function gistPush()");
+
+    expect(source).toContain("selectFile(data.path)");
+    expect(source).not.toContain("selectedPath = data.path");
+    expect(source).not.toContain("selectedClipLabel");
+  });
+
+  it("journals multicam writes and treats host error payloads as failures", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const source = sourceBetween(main, "function applyMulticamCuts()", "function renderMulticamTrackMap()");
+
+    expect(source).toContain("journalCheckpointedHostWrite");
+    expect(source).toContain("ocApplySequenceCuts");
+    expect(source).toContain("if (!r || r.error)");
+    expect(source.indexOf("journalCheckpointedHostWrite")).toBeLessThan(source.indexOf("ocApplySequenceCuts"));
+    expect(source).toContain("timeline.action_failed");
+  });
+});
+
 describe("CEP source ownership", () => {
   it("persists recovery checkpoints before every journalled host mutation", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");

@@ -601,6 +601,34 @@ function getProjectFolder() {
 
 
 /**
+ * Open the folder containing a generated deliverable in the system browser.
+ * Returns JSON so the CEP panel can surface host and filesystem failures.
+ */
+function openFolderInFinder(path) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        if (!path) {
+            return JSON.stringify({ error: "No file path supplied" });
+        }
+        var file = new File(String(path));
+        if (!file.parent || !file.parent.exists) {
+            return JSON.stringify({ error: "Output folder does not exist" });
+        }
+        var opened = file.parent.execute();
+        if (!opened) {
+            return JSON.stringify({ error: "Could not open output folder" });
+        }
+        return JSON.stringify({ success: true, path: file.parent.fsName });
+    } catch (e) {
+        _ocLog("openFolderInFinder error: " + e.toString());
+        return JSON.stringify({ error: "Could not open output folder: " + e.toString() });
+    }
+}
+
+
+/**
  * Check if the current project has been saved (has a file path).
  * Returns JSON: {saved: true/false, path: "..."}
  */

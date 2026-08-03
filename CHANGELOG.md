@@ -19,6 +19,13 @@ record also lives in the git commit messages.
   notes, verified release-page actions, version-scoped dismissal, and retryable
   offline/error guidance without opening a browser automatically.
 
+### Fixed - CEP control wiring
+
+- Deliverable folders now open through a guarded ExtendScript host function
+  with visible errors, silence previews use the active threshold controls,
+  demo footage follows the normal selection lifecycle, and multicam writes
+  create recovery checkpoints and reject host error payloads.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and
