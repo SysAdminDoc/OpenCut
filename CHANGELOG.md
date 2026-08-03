@@ -45,6 +45,12 @@ record also lives in the git commit messages.
   dismissal updates, and workflow/preset/favorites route mutations so
   concurrent requests cannot overwrite each other's durable state.
 
+### Fixed - Queue and workflow terminal-state handling
+
+- Queue execution now waits through the configured job-stuck timeout before
+  starting the next entry, and interrupted jobs finish queue and workflow
+  polling immediately instead of being reported as timeouts.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

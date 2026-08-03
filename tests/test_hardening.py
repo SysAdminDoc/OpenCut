@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from unittest.mock import patch
 
@@ -171,6 +172,66 @@ def test_queue_multicam_cuts_completes_as_a_tracked_job(
         time.sleep(0.05)
     with jobs_routes.job_queue_lock:
         assert not any(entry["id"] == queue_id for entry in jobs_routes.job_queue)
+
+
+def test_queue_waits_past_30_minutes_before_starting_next_entry(monkeypatch):
+    import opencut.jobs as jobs
+    import opencut.routes.jobs_routes as jobs_routes
+
+    past_30_minutes = threading.Event()
+    release_job = threading.Event()
+    dispatches = []
+    clock = [0.0]
+
+    def fake_time():
+        return clock[0]
+
+    def fake_sleep(_seconds):
+        clock[0] = 1801.0
+        past_30_minutes.set()
+        assert release_job.wait(timeout=2), "queue worker did not release"
+
+    def fake_dispatch(entry, _app):
+        dispatches.append(entry["id"])
+        entry["status"] = "started"
+        entry["job_id"] = f"job-{entry['id']}"
+
+    def fake_get_job(job_id):
+        if job_id == "job-first" and not release_job.is_set():
+            return {"id": job_id, "status": "running"}
+        return {"id": job_id, "status": "complete"}
+
+    monkeypatch.setattr(jobs, "_JOB_STUCK_TIMEOUT", 7200)
+    monkeypatch.setattr(jobs_routes.time, "time", fake_time)
+    monkeypatch.setattr(jobs_routes.time, "sleep", fake_sleep)
+    monkeypatch.setattr(jobs_routes, "_dispatch_queue_entry", fake_dispatch)
+    monkeypatch.setattr(jobs_routes, "_get_job_copy", fake_get_job)
+    monkeypatch.setattr(jobs_routes, "_queue_persistence_enabled", False)
+
+    with jobs_routes.job_queue_lock:
+        jobs_routes.job_queue[:] = [
+            {"id": "first", "endpoint": "/silence", "payload": {}, "status": "queued"},
+            {"id": "second", "endpoint": "/silence", "payload": {}, "status": "queued"},
+        ]
+        jobs_routes._queue_state["running"] = False
+
+    jobs_routes._process_queue(object())
+    assert past_30_minutes.wait(timeout=2), "queue worker did not reach the long-running job"
+
+    with jobs_routes.job_queue_lock:
+        snapshot = [dict(entry) for entry in jobs_routes.job_queue]
+    assert dispatches == ["first"]
+    assert snapshot[0]["status"] == "started"
+    assert "QUEUE_JOB_TIMEOUT" not in snapshot[0]
+    assert snapshot[1]["status"] == "queued"
+
+    release_job.set()
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        if len(dispatches) == 2:
+            break
+        time.sleep(0.01)
+    assert dispatches == ["first", "second"]
 
 
 def test_cancel_route_persists_terminal_state(client, csrf_token):

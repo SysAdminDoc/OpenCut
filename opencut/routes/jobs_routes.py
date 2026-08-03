@@ -14,6 +14,7 @@ import uuid
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
+import opencut.jobs as jobs_module
 from opencut.jobs import (
     _cancel_job,
     _cancel_running_jobs,
@@ -1040,11 +1041,14 @@ def _process_queue(app=None):
                 job_id = entry.get("job_id")
                 entry_status = entry.get("status")
             if job_id:
-                deadline = time.time() + 1800
+                job_timeout = jobs_module._JOB_STUCK_TIMEOUT
+                deadline = time.time() + job_timeout
                 while time.time() < deadline:
                     # Call _get_job_copy outside job_queue_lock to avoid nested lock deadlock
                     safe = _get_job_copy(job_id)
-                    if safe and safe.get("status") in ("complete", "error", "cancelled"):
+                    if safe and safe.get("status") in (
+                        "complete", "error", "cancelled", "interrupted"
+                    ):
                         _update_queue_entry(entry, safe["status"])
                         break
                     time.sleep(1)
@@ -1053,9 +1057,9 @@ def _process_queue(app=None):
                         entry,
                         "error",
                         code="QUEUE_JOB_TIMEOUT",
-                        error="Queued job timed out after 30 minutes",
+                        error=f"Queued job timed out after {job_timeout} seconds",
                     )
-                    logger.warning("Queue job %s timed out after 30 minutes", job_id)
+                    logger.warning("Queue job %s timed out after %s seconds", job_id, job_timeout)
             elif entry_status not in ("started", "error"):
                 _update_queue_entry(
                     entry,

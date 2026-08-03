@@ -435,7 +435,7 @@ def _wait_for_job(app, job_id: str, csrf_token: str, step_num: int,
         status = job.get("status", "")
         if status == "complete":
             return job
-        if status in ("error", "cancelled"):
+        if status in ("error", "cancelled", "interrupted"):
             return job
 
         # Update progress within the step
