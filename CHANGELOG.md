@@ -57,6 +57,12 @@ record also lives in the git commit messages.
   thread, checkpoint their WAL files before closing, and report cleanup
   failures instead of silently hiding them.
 
+### Fixed - Versioned Whisper settings
+
+- The production Whisper-settings loader now runs the JSON migration framework,
+  translates legacy `device` values into `cpu_mode`, and persists a schema
+  marker without exposing migration metadata through the settings API.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

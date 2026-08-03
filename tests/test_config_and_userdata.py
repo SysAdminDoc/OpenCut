@@ -108,9 +108,9 @@ def test_user_writable_package_dir_is_not_sys_path_priority():
 
 
 def test_create_app_applies_custom_job_config():
+    import opencut.jobs as jobs_module
     from opencut.config import OpenCutConfig
     from opencut.server import create_app
-    import opencut.jobs as jobs_module
 
     original = (
         jobs_module.JOB_MAX_AGE,
@@ -150,6 +150,24 @@ def test_read_user_file_quarantines_corrupt_json(tmp_path):
     assert not corrupt_path.exists()
     quarantined = list(tmp_path.glob("favorites.json.corrupt-*"))
     assert len(quarantined) == 1
+
+
+def test_production_whisper_loader_migrates_legacy_device_setting(tmp_path, monkeypatch):
+    import opencut.user_data as user_data
+
+    path = tmp_path / "whisper_settings.json"
+    path.write_text(json.dumps({"model": "base", "device": "cpu"}), encoding="utf-8")
+    monkeypatch.setattr(user_data, "OPENCUT_DIR", str(tmp_path))
+
+    loaded = user_data.load_whisper_settings()
+
+    assert loaded["model"] == "base"
+    assert loaded["device"] == "cpu"
+    assert loaded["cpu_mode"] is True
+    assert "_schema_version" not in loaded
+    persisted = json.loads(path.read_text(encoding="utf-8"))
+    assert persisted["_schema_version"] == user_data.WHISPER_SETTINGS_SCHEMA_VERSION
+    assert persisted["cpu_mode"] is True
 
 
 def test_json_config_migration_rolls_back_all_steps_and_retries_idempotently(
@@ -452,8 +470,8 @@ def test_server_main_rejects_remote_bind_without_opt_in(monkeypatch, capsys):
 
 
 def test_create_app_fails_closed_when_remote_auth_gate_cannot_install(monkeypatch):
-    from opencut.config import OpenCutConfig
     import opencut.server as server
+    from opencut.config import OpenCutConfig
 
     def _boom(*args, **kwargs):
         raise RuntimeError("auth import failed")
@@ -483,6 +501,7 @@ def test_server_main_allows_remote_bind_with_explicit_opt_in(monkeypatch, capsys
 
 def test_server_alternate_port_does_not_recover_jobs_from_live_instance(monkeypatch):
     import atexit
+
     import opencut.job_store as job_store
     import opencut.routes.jobs_routes as jobs_routes
     import opencut.server as server
@@ -522,6 +541,7 @@ def test_server_alternate_port_does_not_recover_jobs_from_live_instance(monkeypa
 
 def test_server_recovers_jobs_after_claiming_requested_port(monkeypatch):
     import atexit
+
     import opencut.job_store as job_store
     import opencut.routes.jobs_routes as jobs_routes
     import opencut.server as server

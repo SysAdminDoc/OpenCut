@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Wire or remove the versioned-config migration framework
-  Category: maintainability
-  Where: `opencut/user_data.py:161-257` (`CONFIG_SCHEMAS`, `register_config_schema`, `read_user_file_versioned`, `_MIGRATION_BACKUP_SUFFIX`).
-  Problem: `CONFIG_SCHEMAS` has zero production registrations and `read_user_file_versioned` has zero production callers — the only caller is `tests/test_config_and_userdata.py:187-221`. All real reads go through plain `read_user_file`, so a schema migration registered tomorrow would never run in production while appearing to be supported. ~100 lines of framework verified only against itself.
-  Evidence: Repo-wide call-site search returns only the test module.
-  Fix: Either wire `read_user_file_versioned` into the `load_X()` wrappers (its evident purpose) or delete it with its tests. Given the repo already ships JSON schema migrations elsewhere, wiring is probably correct — but pick one.
-  Acceptance: Either a production `load_X()` path is covered by a migration test, or the framework and its tests are gone and the suite still passes.
-  Confidence: Verified
-  Effort: S (delete) / M (wire in)
-
 - [ ] P3 — Drop `noisereduce` from the declared dependencies
   Category: maintainability
   Where: `requirements.txt` (STANDARD section); `pyproject.toml` `standard` and `audio` extras; install hints at `opencut/core/dependency_support.py:83` and `opencut/routes/system_runtime_routes.py:371,397`.
