@@ -12,6 +12,7 @@ require that an *absent* validator reports "not checked" rather than "passed".
 """
 from __future__ import annotations
 
+import logging
 import unittest
 
 import pytest
@@ -75,6 +76,28 @@ class TestValidatorStatus(unittest.TestCase):
 # ---------------------------------------------------------------------------
 @imsc_required
 class TestImscConformance(unittest.TestCase):
+    def test_log_capture_ignores_unrelated_records_and_deduplicates(self):
+        from unittest import mock
+
+        import ttconv.imsc.reader as imsc_reader
+
+        original_to_model = imsc_reader.to_model
+
+        def noisy_to_model(tree):
+            logging.getLogger("opencut").error("unrelated validator failure")
+            ttconv_logger = logging.getLogger("ttconv")
+            ttconv_logger.warning("synthetic ttconv warning")
+            ttconv_logger.warning("synthetic ttconv warning")
+            return original_to_model(tree)
+
+        with mock.patch.object(imsc_reader, "to_model", side_effect=noisy_to_model):
+            report = sv.validate_imsc(_imsc(SIMPLE))
+
+        self.assertTrue(report.passed, report.errors)
+        self.assertNotIn("unrelated validator failure", report.errors)
+        self.assertNotIn("unrelated validator failure", report.warnings)
+        self.assertEqual(report.warnings.count("synthetic ttconv warning"), 1)
+
     def test_generated_imsc13_passes_the_reference_implementation(self):
         report = sv.validate_imsc(_imsc(SIMPLE), target="imsc1.3")
         self.assertTrue(report.available)

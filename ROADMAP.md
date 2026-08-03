@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Scope the IMSC validator's log capture to ttconv
-  Category: correctness
-  Where: `opencut/core/standards_validators.py:160-206` (`_CollectingHandler` attachment in `validate_imsc`).
-  Problem: The handler is added to both `logging.getLogger("ttconv")` and the root logger, but ttconv propagates to root by default — so every ttconv warning/error is captured twice and appears duplicated in `report.errors`/`report.warnings`. More seriously, any logger in the process that propagates to root (including `"opencut"`, which has handlers but default `propagate=True`, `opencut/server.py:79-84`) contributes records during the validation window, so an unrelated ERROR lands in `report.errors` and `report.passed = not report.errors` becomes a false failure. Currently only test and release-gate callers exercise it (mostly single-threaded), which is what keeps this at P3 — but it becomes a live flake the moment the validator is exposed as a route.
-  Evidence: Both `addHandler` calls are present at the cited lines with no filter on `record.name`.
-  Fix: Attach only to the `ttconv` logger, or keep the root attachment behind a filter on `record.name.startswith("ttconv")`, and de-duplicate findings before returning.
-  Acceptance: A test that logs an unrelated ERROR to the `opencut` logger during validation asserts `report.passed` is unaffected and no duplicate findings are recorded.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Return 400, not 500, for malformed sequence-index payloads
   Category: reliability
   Where: `opencut/core/sequence_index.py:513-514` (`filter_rows`) and `:143` (frame conversion); route handler `opencut/routes/sequence_index_routes.py:200`, row rebuild at `:47-49`.
