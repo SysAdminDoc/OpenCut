@@ -334,20 +334,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Repair the four dead or mis-wired CEP controls
-  Category: ux
-  Where: (a) `extension/com.opencut.panel/client/main.js:16792` with markup at `client/index.html:3213-3220`; (b) `client/main.js:10192-10204` vs controls at `client/index.html:442,449`; (c) `client/main.js:17800-17822` (`tryDemo`) vs `:3101-3126` (`selectFile`); (d) `client/main.js:15272-15286` (`applyMulticamCuts`) vs `:15151-15156` (`applySequenceCuts`).
-  Problem: Four shipped controls do nothing, or the wrong thing, with no feedback.
-  (a) Deliverables "Open Folder" calls `cs.evalScript('openFolderInFinder(...)')`, but no such ExtendScript function exists anywhere in the repo — the host defines 57 functions and this is not one. ExtendScript returns "EvalScript error." into a no-op callback, so the button is silently dead on a shipped result surface.
-  (b) Silence "Preview 10s" reads `el.silenceThreshold` / `el.silenceMinDur`, neither of which exists, so it always falls back to hardcoded `-30 dB / 0.4 s`. The real sliders are `#threshold` and `#minDuration` (the ones `runSilence` uses at `:4931-4932`), so even an untouched panel previews different parameters than it will run — while `index.html:492` promises "hear what gets cut with current threshold".
-  (c) `tryDemo` assigns `selectedPath` directly and writes to a `#selectedClipLabel` element that does not exist, instead of calling `selectFile()`. `body.has-clip` is never added, so the "select a clip" empty-state overlay stays up on every workspace panel while the toast says "Loaded demo footage — try any tab" — the first-run demo appears broken.
-  (d) `applyMulticamCuts` never checks `r.error`, so a host failure like `{"error":"No active sequence"}` parses fine and shows the **success** toast "Multicam cuts applied: 0". It is also the only sequence-mutating write that bypasses `journalCheckpointedHostWrite`, violating the panel's own stated invariant at `:2345-2347`, so a crash mid-apply leaves no recovery row.
-  Evidence: Repo-wide grep finds `openFolderInFinder` only at the call site; `el.silenceThreshold`/`el.silenceMinDur` and `#selectedClipLabel` resolve to nothing while `#threshold`, `#minDuration` exist in `index.html`; `applySequenceCuts` checks `r.error` and `applyMulticamCuts` does not.
-  Fix: (a) add `openFolderInFinder(path)` to `host/index.jsx` (the `new File(path).parent.execute()` pattern with project guards and a JSON error return), check the result, and hide the button outside Premiere; (b) read `el.threshold`/`el.minDuration`; (c) replace the body of `tryDemo`'s try-block with `selectFile(data.path)`; (d) route `applyMulticamCuts` through `journalCheckpointedHostWrite` and check `r.error` before the success toast.
-  Acceptance: Each control is covered by a test asserting it invokes the intended function with the current UI values and surfaces host errors as errors. Manually: loading demo footage clears the empty state on every tab.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P2 — Stop the Photon adapter failing clean IMF packages
   Category: correctness
   Where: `opencut/core/standards_validators.py:257-267` (`validate_imf_package` output scan).
