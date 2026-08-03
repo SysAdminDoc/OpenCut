@@ -424,13 +424,20 @@ def test_quality_receipt_identifies_the_vmaf_model(corpus):
 
 
 def test_identical_inputs_score_as_a_perfect_match(corpus):
-    from opencut.core.quality_metrics import check_vmaf_available, compare_videos
+    from opencut.core.quality_metrics import (
+        PSNR_LOSSLESS_CAP,
+        check_vmaf_available,
+        compare_videos,
+    )
 
     report = compare_videos(corpus["cfr_25"], corpus["cfr_25"])
     assert report.ssim == pytest.approx(1.0, abs=1e-6), report.notes
-    # A lossless comparison reports PSNR as infinity; it must not read as a
-    # parse failure.
-    assert report.psnr == float("inf"), report.notes
+    # A lossless comparison reports PSNR as infinity; the JSON-facing report
+    # uses a finite documented cap and records why it was applied.
+    assert report.psnr == PSNR_LOSSLESS_CAP, report.notes
+    payload = json.loads(json.dumps(dict(report), allow_nan=False))
+    assert payload["psnr"] == PSNR_LOSSLESS_CAP
+    assert any("lossless match capped" in note for note in report.notes)
     if check_vmaf_available():
         assert report.vmaf is not None and report.vmaf > 95.0, report.notes
 
