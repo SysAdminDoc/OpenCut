@@ -3930,6 +3930,36 @@
                     </div>
                 </section>
 
+                <section class="card update-notice-card" id="updateNoticeCard" data-state="checking" aria-labelledby="updateNoticeTitle">
+                    <div class="card-header">
+                        <div class="card-title" id="updateNoticeTitle" data-i18n="settings.update_title">Updates</div>
+                        <span class="settings-value settings-status-pill" id="updateStatusText" data-state="working" data-i18n="settings.update_checking">Checking…</span>
+                    </div>
+                    <p class="card-desc" id="updateSummary" role="status" aria-live="polite" data-i18n="settings.update_checking_summary">Checking GitHub for the latest OpenCut release.</p>
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="settings.update_current">Current</span>
+                        <span class="settings-value" id="updateCurrentVersion">1.46.0</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="settings.update_available_version">Available</span>
+                        <span class="settings-value" id="updateAvailableVersion">—</span>
+                    </div>
+                    <div class="update-release-details hidden" id="updateReleaseDetails">
+                        <div class="update-release-name" id="updateReleaseName"></div>
+                        <details class="update-notes" id="updateNotesDetails" hidden>
+                            <summary data-i18n="settings.update_release_notes">Release notes</summary>
+                            <div class="update-release-notes" id="updateReleaseNotes"></div>
+                        </details>
+                        <div class="btn-row gap-xs mt-xs">
+                            <button type="button" class="btn-outline btn-sm" id="updateOpenBtn" data-i18n="settings.update_view_release">View Release</button>
+                            <button type="button" class="btn-outline btn-sm" id="updateDismissBtn" data-i18n="settings.update_dismiss">Dismiss</button>
+                        </div>
+                    </div>
+                    <div class="btn-row gap-xs mt-xs">
+                        <button type="button" class="btn-outline btn-sm" id="updateRetryBtn" data-i18n="settings.update_check_again">Check Again</button>
+                    </div>
+                </section>
+
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">

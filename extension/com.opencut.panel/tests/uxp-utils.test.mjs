@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   escapeHtml,
   isVersionAtLeast,
+  normalizeReleaseUrl,
   safeDomIdSegment,
 } from "../../com.opencut.uxp/uxp-utils.js";
 
@@ -34,5 +35,21 @@ describe("UXP backend version comparison", () => {
     expect(isVersionAtLeast("1.41.9", "1.42.0")).toBe(false);
     expect(isVersionAtLeast("", "1.42.0")).toBe(false);
     expect(isVersionAtLeast("development", "1.42.0")).toBe(false);
+  });
+});
+
+describe("UXP release URL boundary", () => {
+  it("accepts only canonical HTTPS GitHub release pages", () => {
+    expect(normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.46.0"))
+      .toBe("https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.46.0");
+    expect(normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/releases/"))
+      .toBe("https://github.com/SysAdminDoc/OpenCut/releases");
+  });
+
+  it("rejects alternate hosts, redirects, and non-HTTPS schemes", () => {
+    expect(normalizeReleaseUrl("https://evil.example/releases/tag/v1.46.0")).toBeNull();
+    expect(normalizeReleaseUrl("https://github.com.evil/SysAdminDoc/OpenCut/releases")).toBeNull();
+    expect(normalizeReleaseUrl("http://github.com/SysAdminDoc/OpenCut/releases")).toBeNull();
+    expect(normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/issues/1")).toBeNull();
   });
 });

@@ -18667,6 +18667,43 @@ kbd {
     min-width: 0;
 }
 
+.update-notice-card[data-state="available"] {
+    border-color: color-mix(in srgb, var(--warning, #c8902f) 58%, var(--border));
+}
+
+.update-notice-card[data-state="error"] {
+    border-color: color-mix(in srgb, var(--error, #d46a6a) 58%, var(--border));
+}
+
+.update-release-details {
+    display: grid;
+    gap: var(--sp-sm);
+}
+
+.update-release-name {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.update-notes {
+    margin-top: var(--sp-xs);
+}
+
+.update-release-notes {
+    max-height: 220px;
+    margin-top: var(--sp-xs);
+    overflow: auto;
+    padding: var(--sp-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
 @media (max-width: 620px) {
     .job-queue-bar {
         align-items: flex-start;

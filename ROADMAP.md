@@ -286,13 +286,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A new user can connect, choose media, understand unavailable capabilities, and reach a first successful operation; settings round-trip with schema/version validation and redacted support export; malformed imports are non-destructive and actionable.
   Complexity: L
 
-- [ ] P2 — Make update notices persistent and actionable
-  Why: Both panels reduce update availability to a short-lived “visit GitHub” toast with no release notes, retry, or durable destination.
-  Evidence: `extension/com.opencut.uxp/main.js:8099-8110`; CEP update-check implementation; Descript changelog; Frame.io version-update UX.
-  Touches: CEP/UXP settings and status surfaces, update endpoint/client, locale strings, rendered tests.
-  Acceptance: Available updates persist in Settings/About with current/available versions, release notes and a validated browser action; dismissed state is version-scoped; offline/error states retain retry guidance; no update launches automatically.
-  Complexity: M
-
 - [ ] P2 — Split the remaining panel controller hotspots
   Why: CEP and UXP controllers still centralize lifecycle, bridge state, navigation, settings, and result rendering, and were among the highest-churn files in the last 200 commits.
   Evidence: `extension/com.opencut.panel/client/main.js` (~18,200 lines), `extension/com.opencut.uxp/main.js` (~8,700 lines), recent decomposition commits.

@@ -182,6 +182,25 @@ export function normalizeHttpsExternalUrl(value) {
   }
 }
 
+/** Return only a canonical HTTPS GitHub OpenCut release URL. */
+export function normalizeReleaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    const path = parsed.pathname.replace(/\/+$/, "");
+    if (
+      parsed.origin !== "https://github.com"
+      || (path !== "/SysAdminDoc/OpenCut/releases"
+        && !path.startsWith("/SysAdminDoc/OpenCut/releases/tag/"))
+    ) return null;
+    return `${parsed.origin}${path}`;
+  } catch (_) {
+    return null;
+  }
+}
+
 /** True when an error represents an abort/timeout. */
 export function isTimeoutError(err) {
   const message = String(err?.message || err || "");
