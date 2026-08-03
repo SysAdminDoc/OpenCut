@@ -334,16 +334,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Claim the port before marking previous jobs interrupted
-  Category: correctness
-  Where: `opencut/server.py:585-591` (`mark_interrupted()` / `cleanup_old_jobs()`) versus `:609-630` (port check, `_nuke_old_servers`, `_write_pid`).
-  Problem: `run_server` marks every `running` row in the shared `~/.opencut/jobs.db` as `interrupted` *before* checking the port and before the kill sequence. If the kill fails, the second instance deliberately falls back to `port+1..port+10`, so both instances run. Instance B has then marked instance A's actively-running jobs as `interrupted`, making them resume candidates via `/jobs/interrupted` and `/jobs/<id>/resume` — duplicate execution of work still running on A. B's `initialize_job_queue` also rewrites `job_queue.json`, marking A's `running`/`started` entries `SERVER_RESTARTED` while A's queue runner keeps mutating the same file (last-writer-wins).
-  Evidence: Statement order in `run_server`; the alternate-port fallback is an intentional, documented path, which is what makes the two-instance state reachable.
-  Fix: Move the `mark_interrupted()` / `cleanup_old_jobs()` block to after `_write_pid(effective_port)`, i.e. after this instance has won a port.
-  Acceptance: A test starting a second instance while the first holds the port asserts the first instance's `running` rows are untouched.
-  Confidence: Verified (code order)
-  Effort: S
-
 - [ ] P2 — Write the tc-sync timeline where the user can find it
   Category: correctness
   Where: `opencut/core/tc_sync.py:512-514`; helper signature `opencut/helpers.py:119-124`.
