@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Return 403, not 500, for non-ASCII auth tokens
-  Category: reliability
-  Where: `opencut/security.py:116` (`is_csrf_token_valid`); same pattern at `opencut/auth.py:395` (`is_token_valid`) and `opencut/core/review_links.py:760` (`get_review`).
-  Problem: WSGI decodes headers as latin-1, so `X-OpenCut-Token` can legitimately contain non-ASCII characters. `hmac.compare_digest` raises `TypeError: comparing strings with non-ASCII characters is not supported` for non-ASCII `str` operands, and the exception escapes the CSRF middleware. An unauthenticated caller converts a should-be-403 into a 500, and every 500 appends a full traceback to `~/.opencut/crash.log` (`opencut/server.py:456-468`) with no rotation — a trivial disk-fill and log-flood primitive. It also blinds the security audit trail: `record_csrf_rejection` is never reached, so these attempts never appear in `security_audit.jsonl`. The failure is state-dependent: with an empty token pool the comprehension is empty and returns `False`; once any token has been issued (i.e. after the panel calls `/health`) it raises.
-  Evidence: `POST /settings/llm` with header `X-OpenCut-Token: "\xff"` returned 500 `{"code":"INTERNAL_ERROR"}` with a traceback through `security.py:116`.
-  Fix: Reject candidates failing `str.isascii()` before comparing (or encode both sides to bytes with `surrogateescape`). Apply to all three sites.
-  Acceptance: A test posting a non-ASCII token gets 403, a `csrf_rejection` audit record is written, and `crash.log` is unchanged.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Coerce non-string JSON values before calling string methods
   Category: reliability
   Where: `opencut/routes/settings.py:761` (`data.get("api_key", "").startswith("***")`); `opencut/routes/system_model_routes.py:285-290` (`.strip()` on `provider`, `model`, `api_key`, `base_url`).

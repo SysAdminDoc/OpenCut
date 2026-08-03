@@ -387,10 +387,12 @@ def clear_token() -> bool:
 
 def is_token_valid(candidate: Optional[str]) -> bool:
     """Constant-time compare ``candidate`` against the persisted token."""
-    if not candidate:
+    if not isinstance(candidate, str) or not candidate or not candidate.isascii():
         return False
     persisted = current_token()
     if persisted is None:
+        return False
+    if not isinstance(persisted.token, str) or not persisted.token.isascii():
         return False
     return hmac.compare_digest(persisted.token, candidate)
 

@@ -72,6 +72,7 @@ def test_is_token_valid_uses_constant_time_compare(isolated_auth):
 
     assert isolated_auth.is_token_valid(token.token) is True
     assert isolated_auth.is_token_valid("wrong") is False
+    assert isolated_auth.is_token_valid("токен") is False
     assert isolated_auth.is_token_valid("") is False
     assert isolated_auth.is_token_valid(None) is False
 

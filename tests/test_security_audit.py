@@ -37,6 +37,31 @@ def test_csrf_rejection_writes_security_audit_without_token_value(client, tmp_pa
     assert "attacker-token" not in audit_path.read_text(encoding="utf-8")
 
 
+def test_non_ascii_csrf_token_is_403_and_does_not_write_crash_log(
+    client, tmp_path, monkeypatch
+):
+    audit_path = tmp_path / "security_audit.jsonl"
+    crash_path = tmp_path / "crash.log"
+    crash_path.write_text("existing crash entry\n", encoding="utf-8")
+    monkeypatch.setenv("OPENCUT_SECURITY_AUDIT_LOG", str(audit_path))
+    monkeypatch.setattr("opencut.server.LOG_DIR", str(tmp_path))
+
+    from opencut.security import get_csrf_token
+
+    get_csrf_token()
+    response = client.post(
+        "/info",
+        json={},
+        headers={"X-OpenCut-Token": "\xff"},
+    )
+
+    assert response.status_code == 403
+    entries = _read_entries(audit_path)
+    assert len(entries) == 1
+    assert entries[0]["event"] == "csrf_rejected"
+    assert crash_path.read_text(encoding="utf-8") == "existing crash entry\n"
+
+
 def test_path_traversal_rejection_writes_security_audit(tmp_path, monkeypatch):
     from opencut.security import validate_path
 
