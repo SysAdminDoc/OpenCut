@@ -33,6 +33,12 @@ record also lives in the git commit messages.
   recently finished long-running jobs for status polling and cleanup parity
   with the persistent job store.
 
+### Fixed - Port-holder safety
+
+- The netstat fallback now verifies that the listener is serving OpenCut before
+  attempting a force-kill; unrelated listeners are left untouched so startup
+  can select an alternate port.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

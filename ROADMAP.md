@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Verify the port holder is OpenCut before force-killing it
-  Category: reliability
-  Where: `opencut/pid.py:197-231,238-274` (`_kill_via_netstat`, strategy 3); `_is_opencut_on_port` is defined and re-exported at `opencut/server.py:537` but never called in the kill path.
-  Problem: Strategies 1 and 2 are correctly OpenCut-specific (its own endpoint, its own PID file). Strategy 3 runs `taskkill /F /T` against whatever PID is listening on the port — including an unrelated user application and its entire process tree. It fires exactly when the first two fail, which is precisely the case where the holder is *not* OpenCut. The aggressive startup behaviour appears intentional, but killing a foreign process tree is a real hazard on a workstation.
-  Evidence: Call-graph check — `_is_opencut_on_port` has no callers in the kill path.
-  Fix: Gate strategy 3 on `_is_opencut_on_port(host, port)`; if the holder is not OpenCut, skip straight to the alternate-port search that already exists.
-  Acceptance: A test with a non-OpenCut listener on the port asserts no kill is attempted and the server binds an alternate port.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Hold the per-file lock across read-modify-write sequences
   Category: correctness
   Where: `opencut/user_data.py:373-379` (`create_user_tombstone`), `:517-528` (`save_assistant_dismissed`), plus route-level load→mutate→save such as `opencut/routes/workflow.py:243-265`.
