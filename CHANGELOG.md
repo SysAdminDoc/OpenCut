@@ -75,6 +75,12 @@ record also lives in the git commit messages.
 - CSRF, remote-auth, and review-link token checks now reject non-ASCII input as
   an ordinary authentication failure, preserving 403 behavior and audit logging.
 
+### Fixed - LLM input type validation
+
+- LLM settings and connectivity-test routes now reject non-string provider,
+  model, key, and URL values as structured 400 `INVALID_INPUT` responses
+  without appending crash-log entries.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and

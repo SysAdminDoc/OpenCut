@@ -284,12 +284,27 @@ def llm_test():
     data = get_json_dict()
 
     _VALID_LLM_PROVIDERS = {"ollama", "openai", "anthropic", "gemini"}
-    provider = data.get("provider", "ollama").strip().lower()
+    string_fields = {
+        "provider": data.get("provider", "ollama"),
+        "model": data.get("model", ""),
+        "api_key": data.get("api_key", ""),
+        "base_url": data.get("base_url", ""),
+    }
+    for field, value in string_fields.items():
+        if value is not None and not isinstance(value, str):
+            return jsonify({
+                "success": False,
+                "code": "INVALID_INPUT",
+                "error": f"'{field}' must be a string",
+                "suggestion": "Send string values for provider, model, api_key, and base_url.",
+            }), 400
+
+    provider = str(string_fields["provider"] or "").strip().lower()
     if provider not in _VALID_LLM_PROVIDERS:
         return jsonify({"success": False, "error": f"Invalid provider: {provider}. Must be one of: {', '.join(sorted(_VALID_LLM_PROVIDERS))}"}), 400
-    model = data.get("model", "").strip()
-    api_key = data.get("api_key", "").strip()
-    base_url = data.get("base_url", "").strip()
+    model = str(string_fields["model"] or "").strip()
+    api_key = str(string_fields["api_key"] or "").strip()
+    base_url = str(string_fields["base_url"] or "").strip()
 
     try:
         from opencut.core.llm import LLMConfig, query_llm

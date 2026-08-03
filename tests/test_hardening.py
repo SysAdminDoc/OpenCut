@@ -243,6 +243,31 @@ def test_save_llm_settings_clamps_numeric_values(client, csrf_token):
     assert saved["temperature"] == 2.0
 
 
+def test_llm_string_fields_reject_non_strings_without_crash_log(
+    client, csrf_token, tmp_path, monkeypatch
+):
+    crash_log = tmp_path / "crash.log"
+    crash_log.write_text("existing crash entry\n", encoding="utf-8")
+    monkeypatch.setattr("opencut.server.LOG_DIR", str(tmp_path))
+
+    settings_response = client.post(
+        "/settings/llm",
+        json={"api_key": 123},
+        headers=csrf_headers(csrf_token),
+    )
+    llm_test_response = client.post(
+        "/llm/test",
+        json={"provider": 5},
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert settings_response.status_code == 400
+    assert settings_response.get_json()["code"] == "INVALID_INPUT"
+    assert llm_test_response.status_code == 400
+    assert llm_test_response.get_json()["code"] == "INVALID_INPUT"
+    assert crash_log.read_text(encoding="utf-8") == "existing crash entry\n"
+
+
 # ---------------------------------------------------------------------------
 # Audit pass 2 — regression tests
 # ---------------------------------------------------------------------------
