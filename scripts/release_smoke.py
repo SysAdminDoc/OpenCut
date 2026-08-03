@@ -516,6 +516,30 @@ def step_dependency_matrix(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_installed_versions(_args: argparse.Namespace) -> StepResult:
+    """The stack the suite just ran on must be the stack the project declares."""
+    start = time.time()
+    result = _run(
+        [sys.executable, "scripts/check_installed_versions.py", "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "installed-versions",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "installed distributions match the declared specifiers"
+            if status == "ok"
+            else "the tested stack violates the project's own constraints"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_roadmap_lint(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -1440,6 +1464,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("release-lock", step_release_lock, "Check exact pins and SHA-256 hashes for release inputs"),
     StepDefinition("ffmpeg-provenance", step_ffmpeg_provenance, "Verify bundled FFmpeg provenance and security floor"),
     StepDefinition("dependency-matrix", step_dependency_matrix, "Check optional dependency support contract"),
+    StepDefinition("installed-versions", step_installed_versions, "Check the tested stack matches the declared specifiers"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),

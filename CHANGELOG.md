@@ -3,6 +3,20 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Installed-versus-declared dependency gate
+
+- `scripts/check_installed_versions.py` compares every installed distribution
+  against the specifier OpenCut declares for it, across every extra. Nothing
+  previously compared the declared lanes to what was importable, so the suite
+  could report green on a stack that violated the project's own constraints.
+  It runs as a `release_smoke.py` step and is covered by
+  `tests/test_declared_floors.py`.
+- PySceneDetect is now on 0.7.x (a breaking release), and the adapter is
+  exercised against a generated clip through the 0.7 API. `cryptography` is
+  back at its declared 48.0.1 lock and `Pillow` meets its 12.3.0 security
+  floor. The stale `edge-tts`, `pytest-cov`, and `pre-commit` ceilings were
+  raised to admit the versions the suite actually runs on.
+
 ### Fixed - Generated feature readiness now proves implementation
 
 - 27 auto-generated feature records reported `available` with no
