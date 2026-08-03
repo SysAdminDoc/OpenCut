@@ -15,21 +15,13 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, missing_dependency, safe_error
 from opencut.jobs import _update_job, async_job
+from opencut.routes._common import _stub_503
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 wave_k_bp = Blueprint("wave_k", __name__)
 
 _BK_SETTINGS_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "brand_kit_settings.json")
-
-
-def _stub_503(name: str, hint: str = "") -> tuple:
-    return error_response(
-        "DEPENDENCY_NOT_INSTALLED",
-        f"{name} optional dependency is not installed.",
-        status=503,
-        suggestion=hint or "Check INSTALL_HINT in the module for install instructions.",
-    )
 
 
 def _stub_501(name: str) -> tuple:

@@ -15,10 +15,10 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
+from opencut.routes._common import _json_object_or_400
 from opencut.security import (
     build_destructive_plan,
     destructive_confirmation_required_response,
-    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -29,20 +29,6 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 workflow_dev_bp = Blueprint("workflow_dev", __name__)
-
-
-def _json_object_or_400():
-    try:
-        return get_json_dict(), None
-    except ValueError as exc:
-        return None, (
-            jsonify({
-                "error": str(exc),
-                "code": "INVALID_INPUT",
-                "suggestion": "Send a top-level JSON object in the request body.",
-            }),
-            400,
-        )
 
 
 def _clean_string(value, field_name, *, allow_empty=True, default=""):

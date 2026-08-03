@@ -51,6 +51,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
+from opencut.routes._common import _stub_503
 from opencut.security import (
     get_json_dict,
     require_csrf,
@@ -64,19 +65,6 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 wave_h_bp = Blueprint("wave_h", __name__)
-
-
-# ===========================================================================
-# Shared helpers
-# ===========================================================================
-
-def _stub_503(name: str, hint: str):
-    return error_response(
-        "MISSING_DEPENDENCY",
-        f"{name} backend is not installed on this server.",
-        status=503,
-        suggestion=hint,
-    )
 
 
 def _stub_501(name: str, hint: str = ""):
@@ -449,7 +437,12 @@ def route_onboarding_post():
 def route_flashvsr():
     from opencut.core import upscale_flashvsr
     if not upscale_flashvsr.check_flashvsr_available():
-        return _stub_503("FlashVSR", upscale_flashvsr.INSTALL_HINT)
+        return _stub_503(
+            "FlashVSR",
+            upscale_flashvsr.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="FlashVSR backend is not installed on this server.",
+        )
     return error_response(
         "NOT_IMPLEMENTED",
         "FlashVSR wiring is not implemented yet.",
@@ -472,7 +465,12 @@ def route_flashvsr_info():
 def route_rose():
     from opencut.core import inpaint_rose
     if not inpaint_rose.check_rose_available():
-        return _stub_503("ROSE inpainting", inpaint_rose.INSTALL_HINT)
+        return _stub_503(
+            "ROSE inpainting",
+            inpaint_rose.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="ROSE inpainting backend is not installed on this server.",
+        )
     return error_response(
         "NOT_IMPLEMENTED",
         "ROSE inpainting wiring ships in a future release.",
@@ -485,7 +483,12 @@ def route_rose():
 def route_sammie():
     from opencut.core import matte_sammie
     if not matte_sammie.check_sammie_available():
-        return _stub_503("Sammie-Roto-2", matte_sammie.INSTALL_HINT)
+        return _stub_503(
+            "Sammie-Roto-2",
+            matte_sammie.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="Sammie-Roto-2 backend is not installed on this server.",
+        )
     return error_response(
         "NOT_IMPLEMENTED",
         "Sammie-Roto-2 wiring ships in a future release.",
@@ -498,7 +501,12 @@ def route_sammie():
 def route_omnivoice():
     from opencut.core import tts_omnivoice
     if not tts_omnivoice.check_omnivoice_available():
-        return _stub_503("OmniVoice TTS", tts_omnivoice.INSTALL_HINT)
+        return _stub_503(
+            "OmniVoice TTS",
+            tts_omnivoice.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="OmniVoice TTS backend is not installed on this server.",
+        )
     return error_response(
         "NOT_IMPLEMENTED",
         "OmniVoice wiring ships in a future release.",
@@ -517,7 +525,12 @@ def route_omnivoice_models():
 def route_reezsynth():
     from opencut.core import style_reezsynth
     if not style_reezsynth.check_reezsynth_available():
-        return _stub_503("ReEzSynth", style_reezsynth.INSTALL_HINT)
+        return _stub_503(
+            "ReEzSynth",
+            style_reezsynth.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="ReEzSynth backend is not installed on this server.",
+        )
     return error_response(
         "NOT_IMPLEMENTED",
         "ReEzSynth wiring ships in a future release.",

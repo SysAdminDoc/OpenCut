@@ -14,10 +14,10 @@ import uuid
 from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
+from opencut.routes._common import _json_object_or_400
 from opencut.security import (
     build_destructive_plan,
     destructive_confirmation_required_response,
-    get_json_dict,
     is_path_within,
     require_csrf,
     safe_bool,
@@ -37,20 +37,6 @@ _CAPABILITY_LABELS = {
     "models.download": ("Model downloads", "sensitive"),
     "ui.panel": ("Panel UI", "ui"),
 }
-
-
-def _json_object_or_400():
-    try:
-        return get_json_dict(), None
-    except ValueError as e:
-        return None, (
-            jsonify({
-                "error": str(e),
-                "code": "INVALID_INPUT",
-                "suggestion": "Send a top-level JSON object in the request body.",
-            }),
-            400,
-        )
 
 
 def _valid_plugin_name(name: str) -> bool:
