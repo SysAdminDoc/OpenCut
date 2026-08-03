@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Return 400, not 500, for malformed sequence-index payloads
-  Category: reliability
-  Where: `opencut/core/sequence_index.py:513-514` (`filter_rows`) and `:143` (frame conversion); route handler `opencut/routes/sequence_index_routes.py:200`, row rebuild at `:47-49`.
-  Problem: Two crash shapes. (1) `filter_rows` calls `t.lower()` / `e.lower()` on `tags` and `effects` elements; `_dict_to_row` preserves non-string list elements, so a round-tripped row with `tags: [1]` plus a `query` raises `AttributeError`, which the route does not catch — a 500 where a 400 belongs. (2) Python's `json.loads` accepts `Infinity`, so an infinite `start`/`end`/`fps` reaches `int(round(seconds * fps))` and raises `OverflowError` → 500. (`NaN` yields a 400, but with the cryptic message "cannot convert float NaN to integer".)
-  Evidence: The `.lower()` calls are unguarded and `_dict_to_row` performs no element coercion; `_safe_float` does not reject non-finite values.
-  Fix: Coerce list elements to `str` in `_dict_to_row`/`build_index`, and make `_safe_float` reject non-finite values with a clear validation message.
-  Acceptance: Both payloads return 400 with an actionable message; a test covers `tags: [1]` with a query and `start: Infinity`.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Purge terminal jobs by completion time, not creation time
   Category: correctness
   Where: `opencut/jobs.py:664-667` (`_cleanup_old_jobs`); compare the correct SQLite TTL at `opencut/job_store.py:453-455`.

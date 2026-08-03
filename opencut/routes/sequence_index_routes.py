@@ -32,21 +32,21 @@ sequence_index_bp = Blueprint("sequence_index", __name__)
 
 def _dict_to_row(d: dict):
     """Rehydrate a row dict into an IndexRow for sort/filter."""
-    from opencut.core.sequence_index import IndexRow
+    from opencut.core.sequence_index import IndexRow, _coerce_string_list, _safe_float
     return IndexRow(
         track_type=str(d.get("track_type") or ""),
         track_index=int(d.get("track_index", 0) or 0),
         clip_index=int(d.get("clip_index", 0) or 0),
         name=str(d.get("name") or ""),
         path=str(d.get("path") or ""),
-        start_s=float(d.get("start_s", 0.0) or 0.0),
-        end_s=float(d.get("end_s", 0.0) or 0.0),
-        duration_s=float(d.get("duration_s", 0.0) or 0.0),
+        start_s=_safe_float(d.get("start_s", 0.0), 0.0),
+        end_s=_safe_float(d.get("end_s", 0.0), 0.0),
+        duration_s=_safe_float(d.get("duration_s", 0.0), 0.0),
         timecode_in=str(d.get("timecode_in") or ""),
         timecode_out=str(d.get("timecode_out") or ""),
-        effects=list(d.get("effects") or []),
+        effects=_coerce_string_list(d.get("effects"), "effects"),
         rating=int(d.get("rating", 0) or 0),
-        tags=list(d.get("tags") or []),
+        tags=_coerce_string_list(d.get("tags"), "tags"),
         transcript_excerpt=str(d.get("transcript_excerpt") or ""),
         locator_id=str(d.get("locator_id") or ""),
         host_locators=dict(d.get("host_locators") or {}),

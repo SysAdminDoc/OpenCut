@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
@@ -184,9 +185,21 @@ def _coerce_seq(payload: Any) -> dict:
 
 def _safe_float(v: Any, default: float) -> float:
     try:
-        return float(v)
+        result = float(v)
     except (TypeError, ValueError):
         return default
+    if not math.isfinite(result):
+        raise ValueError(f"numeric value must be finite, got {v!r}")
+    return result
+
+
+def _coerce_string_list(value: Any, field: str) -> List[str]:
+    """Normalize a JSON string-list field by coercing each item to text."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"'{field}' must be a list")
+    return [str(item) for item in value if item is not None]
 
 
 def _safe_int(v: Any, default: int) -> int:
@@ -419,9 +432,11 @@ def build_index(
                 timecode_out=_seconds_to_timecode(end, fps),
                 # Audio clips don't ship 'effects' in the JSX payload; the
                 # .get() below yields [] for them without a second branch.
-                effects=[str(x) for x in (clip.get("effects") or []) if x],
+                effects=_coerce_string_list(clip.get("effects"), "effects"),
                 rating=_safe_int(_metadata_value(ratings, locator_id, path, 0), 0),
-                tags=list(_metadata_value(tags, locator_id, path, []) or []),
+                tags=_coerce_string_list(
+                    _metadata_value(tags, locator_id, path, []), "tags",
+                ),
                 transcript_excerpt=_transcript_excerpt_for(
                     start, end, transcript_segments, excerpt_chars
                 ),
