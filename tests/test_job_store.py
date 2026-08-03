@@ -5,6 +5,7 @@ Tests for OpenCut Job Store (SQLite persistence).
 import json
 import os
 import sqlite3
+import threading
 import time
 from unittest.mock import patch
 
@@ -228,6 +229,32 @@ class TestJobStore:
 
         assert isolate_db.get_job("first") is not None
         assert isolate_db.get_job("second") is not None
+
+    def test_close_all_connections_checkpoints_worker_thread_wal(self, isolate_db):
+        errors = []
+
+        def save_from_worker():
+            try:
+                isolate_db.save_job({
+                    "id": "worker-job",
+                    "type": "test",
+                    "status": "complete",
+                    "created": time.time(),
+                })
+            except Exception as exc:  # pragma: no cover - assertion below reports it
+                errors.append(exc)
+
+        worker = threading.Thread(target=save_from_worker)
+        worker.start()
+        worker.join(timeout=5)
+        assert not worker.is_alive()
+        assert errors == []
+
+        wal_path = f"{isolate_db._DB_PATH}-wal"
+        assert os.path.isfile(wal_path)
+        isolate_db.close_all_connections()
+
+        assert not os.path.exists(wal_path) or os.path.getsize(wal_path) == 0
 
     def test_closed_thread_local_connection_reopens_cleanly(self, isolate_db):
         created = time.time()

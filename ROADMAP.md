@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Make the shutdown WAL checkpoint actually run
-  Category: reliability
-  Where: `opencut/job_store.py:159-182` (`close_all_connections`) and `:145-155`; same pattern in `opencut/journal.py:95-104,158-172`.
-  Problem: Connections are created with sqlite3's default `check_same_thread=True`. `close_all_connections()` runs at exit on the main thread and calls `execute("PRAGMA wal_checkpoint(TRUNCATE)")` plus `close()` on connections created by `_io_pool`/worker threads — both raise `ProgrammingError` ("SQLite objects created in a thread can only be used in that same thread") and both are swallowed. Since nearly all `save_job` writes happen on `_io_pool` threads, the documented "checkpoints WAL before closing to avoid orphaned -wal/-shm files" never happens for the connections that matter. The same swallow hides failed closes in the dead-thread pruning paths. Impact is limited (process exit releases the handles) but the hygiene the code claims is not occurring — another check that always appears to pass.
-  Evidence: Reproduced the `ProgrammingError` for a cross-thread `close()`/`PRAGMA` against these modules.
-  Fix: Open connections with `check_same_thread=False` (each is already thread-confined by design), or have each pool thread close its own connection via an executor-shutdown hook.
-  Acceptance: A test asserts that after `close_all_connections()` the `-wal` file is truncated and no exception was swallowed.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P3 — Wire or remove the versioned-config migration framework
   Category: maintainability
   Where: `opencut/user_data.py:161-257` (`CONFIG_SCHEMAS`, `register_config_schema`, `read_user_file_versioned`, `_MIGRATION_BACKUP_SUFFIX`).

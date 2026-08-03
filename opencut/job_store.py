@@ -117,8 +117,8 @@ def _get_conn() -> sqlite3.Connection:
                     _ALL_CONNECTIONS.pop(tid, None)
         try:
             conn.close()
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as exc:
+            logger.debug("Could not close stale job-store connection: %s", exc)
         _LOCAL.conn = None
         _LOCAL.conn_path = None
         conn = None
@@ -132,7 +132,7 @@ def _get_conn() -> sqlite3.Connection:
         conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
-        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        conn = sqlite3.connect(_DB_PATH, timeout=10, check_same_thread=False)
         try:
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
@@ -150,8 +150,8 @@ def _get_conn() -> sqlite3.Connection:
             for tid in dead_ids:
                 try:
                     _ALL_CONNECTIONS[tid].close()
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001 - cleanup is best effort
+                    logger.debug("Could not close dead job-store connection: %s", exc)
                 del _ALL_CONNECTIONS[tid]
     return conn
 
@@ -166,12 +166,12 @@ def close_all_connections():
         for conn in _ALL_CONNECTIONS.values():
             try:
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - shutdown is best effort
+                logger.warning("Could not checkpoint job-store WAL: %s", exc)
             try:
                 conn.close()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - shutdown is best effort
+                logger.warning("Could not close job-store connection: %s", exc)
         _ALL_CONNECTIONS.clear()
     try:
         if getattr(_LOCAL, "conn", None) is not None:
