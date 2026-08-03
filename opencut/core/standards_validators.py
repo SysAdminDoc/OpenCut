@@ -96,9 +96,11 @@ class _CollectingHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         message = record.getMessage()
         if record.levelno >= logging.ERROR:
-            self.errors.append(message)
+            if message not in self.errors:
+                self.errors.append(message)
         else:
-            self.warnings.append(message)
+            if message not in self.warnings:
+                self.warnings.append(message)
 
 
 # ---------------------------------------------------------------------------
@@ -164,9 +166,7 @@ def validate_imsc(source: str | bytes, *, target: str = "") -> ValidationReport:
 
     collector = _CollectingHandler()
     ttconv_logger = logging.getLogger("ttconv")
-    root_logger = logging.getLogger()
     ttconv_logger.addHandler(collector)
-    root_logger.addHandler(collector)
     try:
         try:
             tree = ET.ElementTree(ET.fromstring(payload))
@@ -202,12 +202,15 @@ def validate_imsc(source: str | bytes, *, target: str = "") -> ValidationReport:
             report.errors.append(f"HRM validation failed: {exc}")
     finally:
         ttconv_logger.removeHandler(collector)
-        root_logger.removeHandler(collector)
 
     # A reader diagnostic means an attribute was discarded — the document did
     # not round-trip, even though parsing "succeeded".
-    report.errors.extend(collector.errors)
-    report.warnings.extend(collector.warnings)
+    for message in collector.errors:
+        if message not in report.errors:
+            report.errors.append(message)
+    for message in collector.warnings:
+        if message not in report.warnings:
+            report.warnings.append(message)
     report.passed = not report.errors
     return report
 

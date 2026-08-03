@@ -15,6 +15,12 @@ record also lives in the git commit messages.
   apostrophe-safe quoting, and a timed-out metric no longer aborts the other
   measurements in the report.
 
+### Fixed - IMSC validator log capture
+
+- IMSC validation now collects only ttconv diagnostics, de-duplicates repeated
+  findings, and ignores unrelated records propagated by the application root
+  logger.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
