@@ -77,8 +77,22 @@ def ffmpeg_security_available() -> bool:
 
 
 def check_demucs_available():
-    """Check if demucs (audio separation) is installed."""
+    """Check if demucs (audio separation) is installed.
+
+    Demucs was archived upstream on 2024-04-24 and is kept only as a legacy
+    backend; ``check_audio_separator_available`` covers the maintained one.
+    """
     return _try_import("demucs") is not None
+
+
+def check_audio_separator_available():
+    """Check if python-audio-separator (maintained stem separation) is installed."""
+    return _try_import("audio_separator") is not None
+
+
+def check_stem_separation_available():
+    """True when any stem-separation backend is installed."""
+    return check_audio_separator_available() or check_demucs_available()
 
 
 def check_watermark_available():

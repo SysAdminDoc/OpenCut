@@ -365,7 +365,10 @@ def check_dependencies():
     # missing packages without leaving the UI.
     _DEP_INSTALL_HINTS = {
         "faster-whisper": 'pip install "opencut-ppro[captions]"',
-        "demucs": 'pip install "opencut-ppro[audio]"',
+        "audio-separator": 'pip install "opencut-ppro[audio]"',
+        # Demucs was archived upstream on 2024-04-24; the dashboard must not
+        # present it as the recommended path.
+        "demucs": 'pip install demucs  (legacy - archived upstream 2024-04-24)',
         "pedalboard": 'pip install "opencut-ppro[audio]"',
         "deepfilternet": 'pip install "opencut-ppro[audio]"',
         "librosa": 'pip install "opencut-ppro[audio]"',
@@ -390,6 +393,7 @@ def check_dependencies():
     checks = {
         "faster-whisper": "faster_whisper",
         "whisperx": "whisperx",
+        "audio-separator": "audio_separator",
         "demucs": "demucs",
         "pedalboard": "pedalboard",
         "deepfilternet": "df",

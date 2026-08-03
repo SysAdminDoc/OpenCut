@@ -90,6 +90,10 @@ captions = [
     "Pillow>=12.3.0,<13",
 ]
 audio = [
+    # python-audio-separator is the maintained separation backend and the
+    # route default. Demucs was archived upstream on 2024-04-24 and stays only
+    # so existing callers that name a Demucs-only model keep working.
+    "audio-separator>=0.44,<1",
     "demucs>=4.0,<5",
     "pedalboard>=0.9,<1",
     "librosa>=0.10,<1",
@@ -179,6 +183,7 @@ torch-stack = [
     # WhisperX 3.8.x is intentionally absent: it requires torchvision<0.24,
     # which cannot coexist with OpenCut's torchvision>=0.25/Torch>=2.10
     # security floor. Runtime readiness reports that conflict explicitly.
+    "audio-separator>=0.44,<1",
     "demucs>=4.0,<5",
     "realesrgan>=0.3,<1",
     "gfpgan>=1.3,<2",

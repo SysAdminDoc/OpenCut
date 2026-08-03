@@ -3,6 +3,18 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Changed - Stem separation defaults to a maintained backend
+
+- `python-audio-separator` (Mel-Band / BS-RoFormer, SCNet, MDX23C) is declared
+  in the `audio` and `torch-stack` extras and is the `/audio/separate` default.
+  It was already wired into the route but appeared in no extra, so its only
+  install guidance was a runtime error string.
+- Demucs was archived upstream on 2024-04-24. It remains available as a legacy
+  backend - a request naming a Demucs-only model still routes to it - but the
+  dependency dashboard, model cards, and panel now label it as legacy rather
+  than recommended, and the "not installed" message points at the maintained
+  backend.
+
 ### Added - Installed-versus-declared dependency gate
 
 - `scripts/check_installed_versions.py` compares every installed distribution
