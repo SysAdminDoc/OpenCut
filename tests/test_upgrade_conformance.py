@@ -239,6 +239,11 @@ def test_unversioned_settings_still_load(legacy_user_data):
     assert favorites == ["silence", "captions"]
     assert "Legacy podcast" in workflows
     assert whisper["model"] == "base"
+    assert whisper["cpu_mode"] is False
+    persisted_whisper = json.loads(
+        (legacy_user_data / "whisper_settings.json").read_text(encoding="utf-8")
+    )
+    assert persisted_whisper["_schema_version"] == user_data.WHISPER_SETTINGS_SCHEMA_VERSION
     assert loudness["target_lufs"] == -14.0
     # A key the legacy file omits must fall back to the current default
     # instead of coming back missing.

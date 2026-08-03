@@ -505,16 +505,33 @@ def save_workflows(workflows: list):
 
 # Whisper settings
 _WHISPER_DEFAULTS = {"cpu_mode": False, "model": "turbo"}
+WHISPER_SETTINGS_SCHEMA_VERSION = 1
+
+
+def _migrate_whisper_settings_v1(data: dict) -> dict:
+    """Translate the legacy device hint into the current CPU-mode flag."""
+    if "cpu_mode" not in data and "device" in data:
+        data["cpu_mode"] = str(data.get("device") or "").strip().lower() == "cpu"
+    return data
+
+
+register_config_schema(
+    "whisper_settings.json",
+    version=WHISPER_SETTINGS_SCHEMA_VERSION,
+    migrations={1: _migrate_whisper_settings_v1},
+)
 
 def load_whisper_settings() -> dict:
-    saved = read_user_file("whisper_settings.json", default={})
+    saved = read_user_file_versioned("whisper_settings.json", default=None)
     result = dict(_WHISPER_DEFAULTS)
     if isinstance(saved, dict):
-        result.update(saved)
+        result.update({key: value for key, value in saved.items() if key != "_schema_version"})
     return result
 
 def save_whisper_settings(settings: dict):
-    write_user_file("whisper_settings.json", settings)
+    payload = dict(settings)
+    payload["_schema_version"] = WHISPER_SETTINGS_SCHEMA_VERSION
+    write_user_file("whisper_settings.json", payload)
 
 
 # ---------------------------------------------------------------------------
