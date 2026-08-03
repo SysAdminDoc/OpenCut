@@ -28,7 +28,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path
+from opencut.helpers import escape_filter_path, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 
@@ -103,18 +103,6 @@ _SSIM_RE = re.compile(r"SSIM\s+.*?All:\s*([\d.]+|inf)", re.IGNORECASE)
 # A lossless match reports ``average:inf``; without the alternative the metric
 # looks like it failed exactly when it succeeded perfectly.
 _PSNR_RE = re.compile(r"PSNR\s+.*?average:\s*([\d.]+|inf)", re.IGNORECASE)
-
-
-def _escape_filter_path(path: str) -> str:
-    """Quote a filesystem path for use as an FFmpeg *filter option* value.
-
-    A bare Windows path breaks the filtergraph parser on the drive colon, and
-    escaping the colon alone is not enough — the value has to be single-quoted
-    *and* the colon escaped. Without both, ``libvmaf=log_path=C:/...`` fails
-    with "No option name near ..." and VMAF is unavailable on Windows.
-    """
-    forward = str(path).replace("\\", "/")
-    return "'" + forward.replace(":", "\\:") + "'"
 
 
 # Pinned so a receipt means the same thing across machines and FFmpeg builds.
@@ -256,12 +244,12 @@ def measure_vmaf(distorted: str, reference: str, timeout: int = 3600) -> Dict[st
     fd, json_path = tempfile.mkstemp(suffix=".json", prefix="opencut_vmaf_")
     os.close(fd)
     try:
-        log_path = _escape_filter_path(json_path)
+        log_path = escape_filter_path(json_path)
         model = "model=version\\=" + VMAF_MODEL
         fc = (
             "[0:v]scale=1920:1080:flags=bicubic,format=yuv420p[dist];"
             "[1:v]scale=1920:1080:flags=bicubic,format=yuv420p[ref];"
-            f"[dist][ref]libvmaf={model}:log_fmt=json:log_path={log_path}"
+            f"[dist][ref]libvmaf={model}:log_fmt=json:log_path='{log_path}'"
         )
         _run_ffmpeg_filter_complex(distorted, reference, fc, timeout=timeout)
 
@@ -376,7 +364,7 @@ def compare_videos(
                 else:
                     report.psnr = None
                     report.notes.append("psnr: non-finite result omitted")
-        except RuntimeError as exc:
+        except (RuntimeError, _sp.TimeoutExpired) as exc:
             report.notes.append(f"{name}: {exc}")
             logger.warning("Quality metric %s failed: %s", name, exc)
 
