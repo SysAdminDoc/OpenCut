@@ -333,17 +333,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-
-- [ ] P2 — Write the tc-sync timeline where the user can find it
-  Category: correctness
-  Where: `opencut/core/tc_sync.py:512-514`; helper signature `opencut/helpers.py:119-124`.
-  Problem: The same `output_path()` argument misuse as the beat-cuts item, but with a worse outcome because it succeeds silently. `_output_path(sources[0], "_tc_sync", ext)` passes the extension as `output_dir`, so the timeline is written to a CWD-relative hidden directory with the wrong extension. `generate_synced_timeline` does `os.makedirs` (`:352-354`), so the directory is created and the write succeeds — the user simply never finds the file, and it is named as if it were video. This is the default path for `POST /video/tc-sync` when `output_path` is omitted (`opencut/routes/music_safety_routes.py:114`).
-  Evidence: `output_path('C:/media/camA.mp4', '_tc_sync', '.json')` returns `'.json\\camA__tc_sync.mp4'` — hidden `.json/` directory relative to the server's CWD, doubled underscore, and a `.mp4` extension on JSON content.
-  Fix: Build the path as `os.path.splitext(_output_path(sources[0], "tc_sync"))[0] + ext`.
-  Acceptance: A test calls the entry point without `output_path` and asserts the result sits beside the first source file with the correct `.json`/`.edl` extension and a single underscore.
-  Confidence: Verified
-  Effort: S
-
 ### P3 — 2026-08-02
 
 - [ ] P3 — Delete the test that cannot fail

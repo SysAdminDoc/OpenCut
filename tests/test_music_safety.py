@@ -729,6 +729,41 @@ class TestTcSync(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             sync_by_timecode(["/nonexistent/a.mp4"])
 
+    def test_sync_default_output_path_uses_source_directory_and_format(self):
+        from opencut.core import tc_sync
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source_paths = [
+                os.path.join(tmpdir, "camA.mp4"),
+                os.path.join(tmpdir, "camB.mp4"),
+            ]
+            for source_path in source_paths:
+                with open(source_path, "wb") as source_file:
+                    source_file.write(b"source")
+
+            def fake_extract(filepath, fps=0.0):
+                return {
+                    "start_tc": "00:00:00:00",
+                    "end_tc": "00:00:01:00",
+                    "fps": 25.0,
+                    "start_frame": 0,
+                    "end_frame": 25,
+                    "duration": 1.0,
+                    "tc_source": "embedded",
+                }
+
+            with patch.object(tc_sync, "_extract_source_timecodes", side_effect=fake_extract):
+                for timeline_format, extension in (("json", ".json"), ("edl", ".edl")):
+                    result = tc_sync.sync_by_timecode(
+                        source_paths,
+                        timeline_format=timeline_format,
+                    )
+                    expected_path = os.path.join(tmpdir, f"camA_tc_sync{extension}")
+                    self.assertEqual(result["timeline_path"], expected_path)
+                    self.assertTrue(os.path.isfile(expected_path))
+                    self.assertEqual(os.path.dirname(result["timeline_path"]), tmpdir)
+                    self.assertEqual(os.path.basename(result["timeline_path"]), f"camA_tc_sync{extension}")
+
     def test_generate_json_timeline(self):
         from opencut.core.tc_sync import generate_synced_timeline
         sources = [
