@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using OpenCut.Installer.Services;
 
 namespace OpenCut.Installer.Pages;
 
@@ -226,29 +227,30 @@ public partial class OptionsPage : Page
             config.WhisperModel = GetSelectedWhisperModel();
         }
 
-        if (string.IsNullOrWhiteSpace(config.InstallPath))
+        // Normalise once, here. Everything downstream - including the
+        // recursive delete the uninstaller performs - trusts InstallPath.
+        var pathCheck = InstallPathValidator.Validate(config.InstallPath);
+        if (pathCheck.Verdict == InstallPathVerdict.Rejected)
         {
-            MessageBox.Show("Please select an install location.", "OpenCut Setup",
+            MessageBox.Show(pathCheck.Message, "OpenCut Setup",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        try
+        if (pathCheck.Verdict == InstallPathVerdict.NeedsConfirmation)
         {
-            var fullPath = Path.GetFullPath(config.InstallPath);
-            if (fullPath.Length > 200)
-            {
-                MessageBox.Show("Install path is too long (max 200 characters).", "OpenCut Setup",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            var answer = MessageBox.Show(pathCheck.Message, "OpenCut Setup",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
         }
-        catch (Exception)
+        else if (!string.IsNullOrEmpty(pathCheck.Message))
         {
-            MessageBox.Show("Install path contains invalid characters.", "OpenCut Setup",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            MessageBox.Show(pathCheck.Message, "OpenCut Setup",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        config.InstallPath = pathCheck.NormalizedPath;
+        PathBox.Text = pathCheck.NormalizedPath;
 
         try
         {

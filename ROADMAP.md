@@ -13,13 +13,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P0 — 2026-08-02 (research pass)
 
-- [ ] P0 — Normalise and guard the chosen install path before uninstall deletes it
-  Why: Uninstall runs `rmdir /s /q` on a raw, unvalidated user string, so choosing a drive root or an existing media folder in the browser destroys it.
-  Evidence: `installer/src/OpenCut.Installer/Pages/OptionsPage.xaml.cs:207` stores `PathBox.Text.Trim()`; the `Path.GetFullPath` result at `:238` is used only for a length check and discarded. `Services/UninstallEngine.cs:123-142` deletes recursively and `:175` runs `rmdir /s /q "{installDir}"`. No drive-root rejection, no non-empty-directory warning, no app-name append.
-  Touches: `Pages/OptionsPage.xaml.cs`, `Services/UninstallEngine.cs`, `Models/InstallConfig.cs`, installer tests.
-  Acceptance: Selecting a drive root or a non-empty directory is refused or warned before install; the stored path is always absolute; a test asserts uninstall refuses a path that is a drive root, a system directory, or the user profile.
-  Complexity: S
-
 - [ ] P0 — Make the test suite runnable from a fresh clone
   Why: Nine test modules read markdown that `.gitignore` excludes from the repo, so the advertised green baseline is reproducible only on the maintainer's machine and no contributor can verify a release.
   Evidence: `tests/test_uxp_migration_docs.py`, `test_uxp_macos_http.py`, `test_uxp_webview_scaffold.py`, `test_uxp_webview_permission_split.py`, `test_uxp_filesystem_permission.py`, `test_cep_uxp_parity_catalogue.py`, `test_windows_arm64_doc.py`, `test_roadmap_mirror.py` all `read_text()` untracked `docs/*.md`; `test_local_release_policy.py` reads the gitignored `CLAUDE.md`. `README.md:475` also points readers at the untracked `docs/UXP_MIGRATION.md`. `tests/test_fresh_clone_integrity.py:57` should catch this but its regex `\[[^\]]*\]\(([^)]+)\)` matches markdown links only, so backticked path references pass.

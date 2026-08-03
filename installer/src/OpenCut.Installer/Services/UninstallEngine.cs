@@ -115,7 +115,16 @@ public class UninstallEngine
         // Step 7: Delete install directory (skip uninstaller exe which is running)
         step = 7;
         Report(progress, step, totalSteps, "Removing files", "Deleting install directory...");
-        if (Directory.Exists(_config.InstallPath))
+        if (!InstallPathValidator.IsSafeToDelete(_config.InstallPath))
+        {
+            // A drive root, a Windows directory, or the user's profile: deleting
+            // it recursively would destroy unrelated data, so refuse instead.
+            Report(progress, step, totalSteps, "Removing files",
+                $"Refusing to delete '{_config.InstallPath}' - it is not a dedicated "
+                + "install folder. Remove it by hand if it really is OpenCut's.",
+                LogLevel.Warning);
+        }
+        else if (Directory.Exists(_config.InstallPath))
         {
             try
             {
@@ -171,8 +180,12 @@ public class UninstallEngine
 
             var installDir = _config.InstallPath;
 
-            // Use cmd.exe to wait, then delete the exe and parent directory
-            var cmd = $"/c timeout /t 3 /nobreak >nul & del /f /q \"{selfPath}\" & rmdir /s /q \"{installDir}\"";
+            // Use cmd.exe to wait, then delete the exe and parent directory.
+            // `rmdir /s /q` is unrecoverable, so it only runs for a path that
+            // passed the install-root guard; otherwise just drop the exe.
+            var cmd = InstallPathValidator.IsSafeToDelete(installDir)
+                ? $"/c timeout /t 3 /nobreak >nul & del /f /q \"{selfPath}\" & rmdir /s /q \"{installDir}\""
+                : $"/c timeout /t 3 /nobreak >nul & del /f /q \"{selfPath}\"";
 
             Process.Start(new ProcessStartInfo
             {
