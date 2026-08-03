@@ -714,6 +714,55 @@ class TestTcSync(unittest.TestCase):
         self.assertEqual(offsets["a.mp4"]["offset_frames"], 0)
         self.assertEqual(offsets["b.mp4"]["offset_frames"], 50)
 
+    def test_tc_conversion_uses_smpte_drop_frame_math(self):
+        from opencut.core.tc_sync import _frames_to_tc, _tc_to_frames
+
+        self.assertEqual(_tc_to_frames("01:00:00;02", 29.97), 107894)
+        self.assertEqual(_tc_to_frames("01:00:00:02", 29.97), 108002)
+        self.assertEqual(
+            _frames_to_tc(107894, 29.97, drop_frame=True),
+            "01:00:00;02",
+        )
+
+    def test_compute_offsets_drop_frame_sources_are_exact(self):
+        from opencut.core.tc_sync import compute_tc_offsets
+
+        sources = [
+            {"filepath": "cam-a.mp4", "start_tc": "00:00:00;00", "fps": 29.97},
+            {"filepath": "cam-b.mp4", "start_tc": "01:00:00;00", "fps": 29.97},
+        ]
+        offsets = compute_tc_offsets(sources)
+
+        self.assertEqual(offsets["cam-b.mp4"]["offset_frames"], 107892)
+        self.assertEqual(offsets["cam-b.mp4"]["offset_seconds"], 3600.0)
+
+    def test_compute_offsets_mixed_fps_uses_source_rates(self):
+        from opencut.core.tc_sync import compute_tc_offsets
+
+        sources = [
+            {"filepath": "cam-25.mp4", "start_frame": 100, "fps": 25.0},
+            {"filepath": "cam-50.mp4", "start_frame": 150, "fps": 50.0},
+        ]
+        offsets = compute_tc_offsets(sources)
+
+        self.assertEqual(offsets["cam-50.mp4"]["offset_seconds"], 0.0)
+        self.assertEqual(offsets["cam-25.mp4"]["offset_seconds"], 1.0)
+        self.assertEqual(offsets["cam-25.mp4"]["offset_frames"], 25)
+
+    def test_common_range_mixed_fps_uses_source_rates(self):
+        from opencut.core.tc_sync import find_common_timecode_range
+
+        result = find_common_timecode_range([
+            {"start_frame": 0, "end_frame": 250, "fps": 25.0},
+            {"start_frame": 250, "end_frame": 750, "fps": 50.0},
+        ])
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["start_frame"], 125)
+        self.assertEqual(result["end_frame"], 250)
+        self.assertEqual(result["duration_frames"], 125)
+        self.assertEqual(result["duration_seconds"], 5.0)
+
     def test_compute_offsets_empty(self):
         from opencut.core.tc_sync import compute_tc_offsets
         offsets = compute_tc_offsets([])

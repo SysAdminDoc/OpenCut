@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Use SMPTE drop-frame math in tc-sync
-  Category: correctness
-  Where: `opencut/core/tc_sync.py:57-69` (`_tc_to_frames`), `:251` (`compute_tc_offsets`), `:302` (`find_common_timecode_range`). Correct implementation already exists at `opencut/core/timecode_utils.py:260-286`.
-  Problem: `_tc_to_frames` strips the `;` drop-frame separator and computes `hh*fps_int*3600 + …`, which overcounts 29.97 DF timecode by 2 frames per non-tenth minute (e.g. `01:00:00;02` → 108,002 rather than the correct 107,894). Two cameras striped with DF timecode starting minutes apart get relative offsets wrong by roughly 2 frames per minute of timecode delta — defeating the module's stated frame-accurate purpose. Separately, `compute_tc_offsets` and `find_common_timecode_range` apply `sources[0]`'s fps to every source's frame counts, so mixed 25/50 fps sets produce wrong `offset_seconds`.
-  Evidence: The `;` separator is discarded before the arithmetic, and the arithmetic contains no drop-frame correction; `timecode_utils` has the correct algorithm and is not imported here.
-  Fix: Delegate to `timecode_utils.timecode_to_frames` (honouring `;`) and convert each source with its own fps before comparing.
-  Acceptance: A test with two 29.97 DF sources one hour apart asserts the computed offset is exact, and a mixed 25/50 fps pair asserts correct `offset_seconds`.
-  Confidence: Verified
-  Effort: M
-
 - [ ] P3 — Consolidate the duplicate filter-path escaper and catch metric timeouts
   Category: correctness
   Where: `opencut/core/quality_metrics.py:106-115` (`_escape_filter_path`) versus `opencut/helpers.py:443` (`escape_filter_path`); and `opencut/core/quality_metrics.py:343-364` (`compare_videos` per-metric loop).
