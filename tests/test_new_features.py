@@ -717,7 +717,20 @@ class TestPreviewFileServing(unittest.TestCase):
         """A media file outside tempdir + ~/.opencut must be denied even if
         the MIME guesser says audio/video/image.
         """
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        repo_root = os.path.realpath(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+        # The repo is only "outside" if the checkout itself is not under an
+        # approved root — a clone into the system temp directory is not.
+        for approved in (
+            os.path.realpath(tempfile.gettempdir()),
+            os.path.realpath(os.path.join(os.path.expanduser("~"), ".opencut")),
+        ):
+            if os.path.commonpath([repo_root, approved]) == approved:
+                self.skipTest(
+                    f"checkout lives under an approved root ({approved}); "
+                    "no directory inside the repo can test the denial path"
+                )
         with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
             media_path = os.path.join(tmpdir, "outside.wav")
             with open(media_path, "wb") as f:
