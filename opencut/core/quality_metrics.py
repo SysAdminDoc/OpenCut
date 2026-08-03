@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 import subprocess as _sp
@@ -33,6 +34,7 @@ logger = logging.getLogger("opencut")
 
 
 METRICS = ("vmaf", "ssim", "psnr")
+PSNR_LOSSLESS_CAP = 99.0
 
 
 @dataclass
@@ -222,7 +224,12 @@ def measure_ssim(distorted: str, reference: str, timeout: int = 3600) -> float:
 
 
 def measure_psnr(distorted: str, reference: str, timeout: int = 3600) -> float:
-    """Return the mean PSNR (dB) of ``distorted`` against ``reference``."""
+    """Return the mean PSNR (dB) of ``distorted`` against ``reference``.
+
+    FFmpeg reports a mathematically identical pair as positive infinity;
+    :func:`compare_videos` converts that transport value to the finite
+    ``PSNR_LOSSLESS_CAP`` before building a JSON-facing report.
+    """
     stderr = _run_ffmpeg_filter_complex(
         distorted, reference,
         _reference_scaled_graph(reference, "psnr"),
@@ -358,7 +365,17 @@ def compare_videos(
             elif name == "ssim":
                 report.ssim = round(measure_ssim(distorted, reference, timeout=timeout), 4)
             elif name == "psnr":
-                report.psnr = round(measure_psnr(distorted, reference, timeout=timeout), 3)
+                psnr = measure_psnr(distorted, reference, timeout=timeout)
+                if math.isinf(psnr) and psnr > 0:
+                    report.psnr = PSNR_LOSSLESS_CAP
+                    report.notes.append(
+                        f"psnr: lossless match capped at {PSNR_LOSSLESS_CAP:.1f} dB"
+                    )
+                elif math.isfinite(psnr):
+                    report.psnr = round(min(psnr, PSNR_LOSSLESS_CAP), 3)
+                else:
+                    report.psnr = None
+                    report.notes.append("psnr: non-finite result omitted")
         except RuntimeError as exc:
             report.notes.append(f"{name}: {exc}")
             logger.warning("Quality metric %s failed: %s", name, exc)

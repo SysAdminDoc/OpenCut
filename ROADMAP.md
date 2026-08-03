@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Keep `Infinity` out of job-result JSON
-  Category: correctness
-  Where: `opencut/core/quality_metrics.py:103,224-234,361`; consumed by `opencut/routes/wave_c_routes.py:113-119`.
-  Problem: Parsing `average:inf` for a lossless match (fixed earlier today) is correct, but `measure_psnr` then returns `float("inf")`, `round(inf, 3)` is still `inf`, and the value flows into the async-job result dict. Python's `json.dumps` and Flask's default provider serialise that as the bare token `Infinity`, which is not valid JSON — `JSON.parse` in both panels throws. Comparing a stream copy or lossless transcode against its source is a realistic workflow, so a perfect result is the one the client cannot read.
-  Evidence: The NaN self-equality filter already applied to VMAF at `:346-351` shows the intended pattern; PSNR has no equivalent.
-  Fix: Clamp to a documented sentinel — either a `99.0` dB cap or `null` plus a `notes` entry such as "identical content" — mirroring the VMAF handling.
-  Acceptance: A test compares a file with itself and asserts `json.dumps(report)` produces valid JSON that `json.loads` round-trips.
-  Confidence: Likely (serialisation path traced; panel parse failure not executed)
-  Effort: S
-
 - [ ] P3 — Return 403, not 500, for non-ASCII auth tokens
   Category: reliability
   Where: `opencut/security.py:116` (`is_csrf_token_valid`); same pattern at `opencut/auth.py:395` (`is_token_valid`) and `opencut/core/review_links.py:760` (`get_review`).

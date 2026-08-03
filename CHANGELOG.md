@@ -65,6 +65,11 @@ record also lives in the git commit messages.
 - CSV exports now prefix formula-like text cells with a single quote so names,
   paths, tags, and transcript excerpts remain inert when opened in a spreadsheet.
 
+### Fixed - Quality-report JSON safety
+
+- Lossless PSNR results now use a documented finite `99.0 dB` cap and retain a
+  note explaining the cap, so async quality reports never emit bare `Infinity`.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
