@@ -134,11 +134,11 @@ class TestBuildIndex(unittest.TestCase):
         result = build_index(
             SAMPLE_SEQ,
             ratings={"/media/take3.mp4": 5},
-            tags={"/media/take3.mp4": ["hero", "approved"]},
+            tags={"/media/take3.mp4": [1, "approved"]},
         )
         take3 = next(r for r in result.rows if r.name == "interview-take-3.mp4")
         self.assertEqual(take3.rating, 5)
-        self.assertEqual(take3.tags, ["hero", "approved"])
+        self.assertEqual(take3.tags, ["1", "approved"])
 
     def test_locator_keys_distinguish_reused_media_path(self):
         from opencut.core.sequence_index import build_index
@@ -449,6 +449,35 @@ class TestRoutes(unittest.TestCase):
         self.assertTrue(all(r["host_locators"]["track_type"] == "video" for r in body["rows"]))
         durations = [r["duration_s"] for r in body["rows"]]
         self.assertEqual(durations, sorted(durations, reverse=True))
+
+    def test_filter_coerces_non_string_tags_for_queries(self):
+        resp = self.client.post(
+            "/timeline/sequence-index/filter",
+            json={"rows": [{"name": "clip", "tags": [1], "effects": [2]}], "query": "1"},
+            headers={"X-OpenCut-Token": self.token},
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        body = json.loads(resp.data.decode("utf-8"))
+        self.assertEqual(body["rows"][0]["tags"], ["1"])
+        self.assertEqual(body["rows"][0]["effects"], ["2"])
+
+    def test_build_rejects_nonfinite_clip_start(self):
+        sequence = {
+            "name": "Invalid sequence",
+            "fps": 24.0,
+            "videoTracks": [{
+                "index": 0,
+                "clips": [{"name": "bad", "start": float("inf"), "end": 1.0}],
+            }],
+        }
+        resp = self.client.post(
+            "/timeline/sequence-index",
+            json={"sequence": sequence},
+            headers={"X-OpenCut-Token": self.token},
+        )
+        self.assertEqual(resp.status_code, 400, resp.data)
+        body = json.loads(resp.data.decode("utf-8"))
+        self.assertIn("finite", body["error"].lower())
 
     def test_filter_rejects_bad_sort_key(self):
         resp = self.client.post(

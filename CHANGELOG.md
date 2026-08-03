@@ -21,6 +21,12 @@ record also lives in the git commit messages.
   findings, and ignores unrelated records propagated by the application root
   logger.
 
+### Fixed - Sequence-index payload validation
+
+- Sequence-index rows now coerce metadata list items to strings, while
+  non-finite timeline numbers are rejected with a clear 400 response instead
+  of reaching frame conversion and producing a server error.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
