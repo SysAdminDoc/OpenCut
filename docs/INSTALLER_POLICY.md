@@ -174,5 +174,3 @@ schedule in §2.
 * `docs/MACOS_NOTARIZATION.md` — macOS counterpart (F202).
 * `docs/WINDOWS_ARM64_PACKAGING.md` — Windows-on-ARM64 build notes
   (F101).
-* `.ai/research/2026-05-17/INSTALLER_AUDIT.md` — Pass-2 audit that
-  surfaced F200.

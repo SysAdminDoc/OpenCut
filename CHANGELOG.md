@@ -3,6 +3,18 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - The test suite now runs from a fresh clone
+
+- Sixteen `docs/*.md` files, the UXP API notes, and a shipped built-in skill
+  were excluded by `.gitignore` while tests and package data read them, so the
+  advertised green baseline was reproducible only on the maintainer's machine.
+  They are tracked now, and `.gitignore` un-ignores documentation under
+  `docs/`, `extension/`, and `opencut/` by rule rather than by allowlist.
+- The fresh-clone check no longer looks at markdown links alone: it also scans
+  backticked and quoted path references in tracked docs, and every
+  `REPO_ROOT`-anchored path the test suite reads, failing when one exists
+  locally but is absent from a clone.
+
 ### Fixed - Uninstall could delete a drive root or a media folder
 
 - The chosen install path is now normalized and vetted before it is stored: it

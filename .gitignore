@@ -45,7 +45,10 @@ research.md
 content_calendar.csv
 content_calendar.ics
 
-# Markdown files local-only, except the project-facing docs below
+# Markdown files local-only, except the project-facing docs below.
+# Anything the test suite or the shipped package reads must be tracked, or
+# `pytest` on a fresh clone fails on missing files — hence the whole of
+# docs/, the extension notes, and package data under opencut/.
 *.md
 !README.md
 !CHANGELOG.md
@@ -54,15 +57,9 @@ content_calendar.ics
 !ROADMAP.md
 !RESEARCH*.md
 !SECURITY.md
-!docs/INSTALLER_POLICY.md
-!docs/LINUX_DISTRIBUTION.md
-!docs/MACOS_NOTARIZATION.md
-!docs/MCP_SERVER.md
-!docs/MODELS.md
-!docs/NODE_ADVISORIES.md
-!docs/PYTHON_ADVISORIES.md
-!docs/RELEASE_PROVENANCE.md
-!docs/WINDOWS_CODESIGNING.md
+!docs/*.md
+!extension/**/*.md
+!opencut/**/*.md
 
 # AI config
 CODEX_CHANGELOG.md

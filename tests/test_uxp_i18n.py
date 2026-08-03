@@ -268,7 +268,6 @@ def test_uxp_shell_i18n_attributes_are_present_and_covered():
         "uxp.video.clip_path",
         "uxp.video.color_grading_match",
         "uxp.video.reference_video_placeholder",
-        "uxp.video.aspect_shorts_tiktok",
         "uxp.video.generate_multicam_cuts",
         "uxp.video.number_of_speakers",
         "uxp.video.broll_description_placeholder",

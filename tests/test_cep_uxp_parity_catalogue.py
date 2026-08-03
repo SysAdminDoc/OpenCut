@@ -19,7 +19,6 @@ from opencut.tools import dump_cep_uxp_parity as tool
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HOST_JSX = REPO_ROOT / "extension" / "com.opencut.panel" / "host" / "index.jsx"
-MATRIX_DOC = REPO_ROOT / ".ai" / "research" / "2026-05-17" / "CEP_UXP_PARITY_MATRIX.md"
 UXP_DOC = REPO_ROOT / "docs" / "UXP_MIGRATION.md"
 MANIFEST = REPO_ROOT / "opencut" / "_generated" / "cep_uxp_parity.json"
 
@@ -67,14 +66,12 @@ def test_committed_manifest_matches_live_catalogue():
 
 
 def test_docs_reference_the_catalogued_cep_only_paths():
-    docs = [
-        MATRIX_DOC.read_text(encoding="utf-8"),
-        UXP_DOC.read_text(encoding="utf-8"),
-    ]
+    # Only tracked documentation counts: the parity matrix under `.ai/` is a
+    # local research artifact and is absent from a clone.
+    doc = UXP_DOC.read_text(encoding="utf-8")
     for function_name in cep_only_names():
-        for doc in docs:
-            assert function_name in doc
-    assert "No new user-facing feature should depend on QE reflection." in docs[1]
+        assert function_name in doc
+    assert "No new user-facing feature should depend on QE reflection." in doc
 
 
 def test_cli_check_passes_in_sync():
