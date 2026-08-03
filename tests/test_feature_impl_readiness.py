@@ -98,6 +98,73 @@ def test_generated_records_carry_implementation_identity():
     assert missing == [], f"generated records dropped their adapter identity: {missing}"
 
 
+def test_no_generated_record_is_available_without_a_resolvable_adapter():
+    """The blind spot itself is now a hard gate, not an observation.
+
+    27 records used to report ``available`` with an empty ``impl_module``,
+    which is exactly the shape that let three terminal-stub adapters advertise
+    as runnable. Derivation now reads what the probe imports, what the routes
+    it gates import, and finally a same-named module verified on disk.
+    """
+    from opencut.tools.dump_feature_readiness import (
+        build_manifest,
+        unproven_available_records,
+    )
+
+    assert unproven_available_records(build_manifest()) == []
+
+
+def test_committed_readiness_manifest_proves_every_available_record():
+    from opencut.tools.dump_feature_readiness import (
+        load_manifest,
+        unproven_available_records,
+    )
+
+    manifest = load_manifest()
+    assert manifest is not None
+    assert unproven_available_records(manifest) == []
+
+
+def test_unproven_gate_rejects_an_empty_and_a_dangling_adapter():
+    """Guard against a gate wired to always pass."""
+    from opencut.tools.dump_feature_readiness import unproven_available_records
+
+    offenders = unproven_available_records(
+        {
+            "records": [
+                {
+                    "feature_id": "auto.nothing",
+                    "check_name": "check_nothing_available",
+                    "state": registry.STATE_AVAILABLE,
+                    "impl_module": "",
+                },
+                {
+                    "feature_id": "auto.ghost",
+                    "check_name": "check_ghost_available",
+                    "state": registry.STATE_AVAILABLE,
+                    "impl_module": "module_that_does_not_exist",
+                },
+                {
+                    "feature_id": "auto.fine",
+                    "check_name": "check_fine_available",
+                    "state": registry.STATE_AVAILABLE,
+                    "impl_module": "auto_zoom",
+                },
+                {
+                    "feature_id": "auto.stub",
+                    "check_name": "check_stub_available",
+                    "state": registry.STATE_STUB,
+                    "impl_module": "",
+                },
+            ]
+        }
+    )
+
+    assert len(offenders) == 2
+    assert any("auto.nothing" in line for line in offenders)
+    assert any("auto.ghost" in line for line in offenders)
+
+
 def test_generated_stub_adapters_never_resolve_available():
     """The three live regressions, plus every other generated record."""
     offenders = []
