@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import ast
 from importlib import import_module
+from pathlib import Path
 
 import pytest
+
+ROUTES_ROOT = Path(__file__).resolve().parents[1] / "opencut" / "routes"
 
 
 FACADE_MODULES = {
@@ -57,3 +61,18 @@ def test_route_facade_exports_are_explicit_and_unique(facade_name, submodule_nam
             assert name not in exported_by, f"{name} is exported by both {exported_by[name]} and {submodule_name}"
             exported_by[name] = submodule_name
             assert getattr(facade, name) is getattr(submodule, name)
+
+
+def test_shared_route_helpers_have_single_definitions():
+    definitions = {"_json_object_or_400": [], "_stub_503": []}
+
+    for source_path in ROUTES_ROOT.glob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in definitions:
+                definitions[node.name].append(source_path.name)
+
+    assert definitions == {
+        "_json_object_or_400": ["_common.py"],
+        "_stub_503": ["_common.py"],
+    }

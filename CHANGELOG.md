@@ -79,6 +79,11 @@ record also lives in the git commit messages.
 - Workflow tests now verify that cancellation between steps preserves the
   completed step result and reports the correct partial `steps_completed` count.
 
+### Refactored - Shared route response helpers
+
+- Consolidated JSON-body validation and optional-backend 503 responses into a
+  single route helper module, preserving the Wave H dependency error contract.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

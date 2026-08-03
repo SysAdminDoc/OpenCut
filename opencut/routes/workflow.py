@@ -10,10 +10,10 @@ import time
 from flask import Blueprint, current_app, has_app_context, jsonify
 
 from opencut.jobs import _update_job, async_job
+from opencut.routes._common import _json_object_or_400
 from opencut.security import (
     build_destructive_plan,
     destructive_confirmation_required_response,
-    get_json_dict,
     require_csrf,
     safe_bool,
     verify_destructive_confirm_token,
@@ -30,20 +30,6 @@ from opencut.user_data import (
 logger = logging.getLogger("opencut")
 
 workflow_bp = Blueprint("workflow", __name__)
-
-
-def _json_object_or_400():
-    try:
-        return get_json_dict(), None
-    except ValueError as e:
-        return None, (
-            jsonify({
-                "error": str(e),
-                "code": "INVALID_INPUT",
-                "suggestion": "Send a top-level JSON object in the request body.",
-            }),
-            400,
-        )
 
 
 def _extract_workflow_steps(data):

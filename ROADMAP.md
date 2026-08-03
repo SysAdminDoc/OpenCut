@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Consolidate the duplicated route helpers
-  Category: maintainability
-  Where: `_json_object_or_400` defined five times — `opencut/routes/dev_scripting_routes.py:26`, `plugins.py:42`, `workflow.py:34`, `workflow_dev_routes.py:34`, `workflow_routes.py:20`; `_stub_503` defined three times — `wave_h_routes.py:73`, `wave_k_routes.py:26`, `wave_l_contract.py:10`.
-  Problem: Copies have already drifted: `wave_h_routes._stub_503` has no default for `hint` while the others do, so behaviour depends on which module a route happens to live in. The repo's own "consolidated helpers" convention (CLAUDE.md) exists for exactly this.
-  Evidence: Definition counts from a repo-wide search.
-  Fix: Move both into `opencut/helpers.py` or a new `opencut/routes/_common.py` and import them; reconcile the `hint` default deliberately.
-  Acceptance: Each helper is defined once; all callers import it; the suite passes.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Fix the UXP controls that silently do nothing
   Category: correctness
   Where: (a) `extension/com.opencut.uxp/main.js:4693,4701` (Auto Zoom aspect); (b) `:4589-4616` (Loudness Match); (c) `:6704-6708` (chat actions); (d) `:6386-6388` (OTIO export path fallback).
