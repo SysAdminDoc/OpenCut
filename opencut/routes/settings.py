@@ -816,9 +816,13 @@ def save_llm_settings_route():
     data, error = _require_json_object()
     if error:
         return error
+    raw_api_key = data.get("api_key", "")
+    if raw_api_key is not None and not isinstance(raw_api_key, str):
+        return _invalid_input_response("'api_key' must be a string")
     current = load_llm_settings()
     # Don't overwrite key if masked value sent back
-    if data.get("api_key", "").startswith("***"):
+    api_key = str(raw_api_key or "")
+    if api_key.startswith("***"):
         data["api_key"] = current.get("api_key", "")
     normalized = {k: v for k, v in data.items() if k in current}
     if "provider" in normalized:

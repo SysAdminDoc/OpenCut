@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Coerce non-string JSON values before calling string methods
-  Category: reliability
-  Where: `opencut/routes/settings.py:761` (`data.get("api_key", "").startswith("***")`); `opencut/routes/system_model_routes.py:285-290` (`.strip()` on `provider`, `model`, `api_key`, `base_url`).
-  Problem: `get_json_dict()` guarantees the body is a JSON object but says nothing about value types; these sites assume `str`. A non-string value yields a 500 `AttributeError` instead of a 400 `INVALID_INPUT`, plus a crash-log append per request (compounding the item above). The surrounding normalisation block at `settings.py:765-771` already uses `str(...)` coercion for exactly this reason — these two sites were missed.
-  Evidence: `POST /settings/llm {"api_key": 123}` → 500 `AttributeError: 'int' object has no attribute 'startswith'`; `POST /llm/test {"provider": 5}` → 500 `AttributeError: 'int' object has no attribute 'strip'`.
-  Fix: Coerce with `str(data.get(...) or "")` before string methods, matching the adjacent block.
-  Acceptance: Both requests return 400 with a structured `INVALID_INPUT` error and no crash-log entry.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Enable `B018` and triage the discarded expressions it finds
   Category: maintainability
   Where: Lint config in `pyproject.toml` (`ruff` `--select E,F,I` per `scripts/release_smoke.py`). Sites: `opencut/core/auto_dub_pipeline.py:577-578`, `noise_classify.py:243-244`, `broll_suggest.py:234`, `smart_defaults.py:169`, `subtitle_timing.py:174`, `clean_plate.py:159`, `glitch_effects.py:220-221`, `nd_filter_sim.py:61`, `plate_blur.py:112,297`, `power_windows.py:254-255`, `shot_classify.py:498`, `spatial_audio_vr.py:213-214`, `video_360.py:151,565`, `video_compare.py:247-248`, `routes/audio_expansion_routes.py:203`.
