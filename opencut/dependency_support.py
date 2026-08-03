@@ -80,7 +80,6 @@ DEPENDENCY_EXTRAS: Mapping[str, str] = {
     "demucs": "audio",
     "pedalboard": "audio",
     "deepfilternet": "audio",
-    "noisereduce": "audio",
     "librosa": "audio",
     "opencv": "video",
     "pillow": "video",

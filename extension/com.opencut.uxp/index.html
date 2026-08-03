@@ -475,8 +475,8 @@
             <div class="oc-field-row">
               <label class="oc-label" for="denoiseMethod" data-i18n="uxp.audio.method">Method</label>
               <!-- Backend /audio/denoise allowlist is afftdn|highpass|gate.
-                   Older options (noisereduce/rnnoise/spectral) were silently
-                   coerced to afftdn, so all three did identical work. -->
+                   Older options were silently coerced to afftdn, so they did
+                   identical work. -->
               <select class="oc-select" id="denoiseMethod">
                 <option value="afftdn" data-i18n="uxp.audio.denoise_afftdn">FFT denoise (recommended)</option>
                 <option value="highpass" data-i18n="uxp.audio.denoise_highpass">Highpass + lowpass band-limit</option>

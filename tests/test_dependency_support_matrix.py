@@ -30,6 +30,19 @@ def test_pyproject_and_runtime_publish_one_python_range():
     dependency_support.assert_extra_names(project["optional-dependencies"])
 
 
+def test_noisereduce_is_not_declared_or_advertised():
+    project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    optional_dependencies = project["optional-dependencies"]
+
+    assert all(
+        "noisereduce" not in requirement.lower()
+        for requirements in optional_dependencies.values()
+        for requirement in requirements
+    )
+    assert "noisereduce" not in dependency_support.DEPENDENCY_EXTRAS
+    assert dependency_support.dependency_support("noisereduce")["install_hint"] == ""
+
+
 def test_platform_specific_gpu_support_is_explicit():
     assert dependency_support.extra_support("ai-gpu", platform_name="win32")["supported"] is True
     assert dependency_support.extra_support("ai-gpu", platform_name="linux")["supported"] is True

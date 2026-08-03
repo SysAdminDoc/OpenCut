@@ -126,6 +126,13 @@ def test_uxp_i18n_loader_supports_dom_text_and_attributes():
     assert js.index("await loadLocale();") < js.index("bindEvents();")
 
 
+def test_uxp_denoise_fallback_uses_supported_ffmpeg_method():
+    js = _js()
+
+    assert '?.value ?? "afftdn"' in js
+    assert '?.value ?? "noisereduce"' not in js
+
+
 def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     english = _locale()
     spanish = _locale(UXP_ES_LOCALE)
