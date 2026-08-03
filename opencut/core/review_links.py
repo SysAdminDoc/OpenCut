@@ -757,7 +757,13 @@ def get_review(review_id: str, token: str, version_id: str = "") -> ReviewLink:
     if review_id not in reviews:
         raise KeyError(f"Review not found: {review_id}")
     record = reviews[review_id]
-    if not hmac.compare_digest(str(record["token"] or ""), str(token or "")):
+    expected_token = str(record["token"] or "")
+    supplied_token = str(token or "")
+    if (
+        not expected_token.isascii()
+        or not supplied_token.isascii()
+        or not hmac.compare_digest(expected_token, supplied_token)
+    ):
         raise PermissionError("Invalid review token")
     if record.get("expires_at") and time.time() > record["expires_at"]:
         raise PermissionError("Review link has expired")

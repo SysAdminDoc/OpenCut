@@ -64,6 +64,18 @@ def test_review_versions_keep_artifacts_and_feedback_immutable(tmp_path, monkeyp
     assert {comment["version_id"] for comment in exported["comments"]} == {"v1", "v2"}
 
 
+def test_review_rejects_non_ascii_token_without_compare_digest_error(tmp_path, monkeypatch):
+    from opencut.core.review_links import create_review_link, get_review
+
+    _use_review_store(tmp_path, monkeypatch)
+    video = tmp_path / "review.mp4"
+    video.write_bytes(b"review")
+    review = create_review_link(str(video), title="Token check")
+
+    with pytest.raises(PermissionError, match="Invalid review token"):
+        get_review(review.review_id, "токен")
+
+
 def test_legacy_migration_backup_and_rollback_are_lossless(tmp_path, monkeypatch):
     from opencut.core.review_links import _load_reviews, rollback_review_migration
 

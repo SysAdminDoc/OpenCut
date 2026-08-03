@@ -107,7 +107,7 @@ def get_csrf_token() -> str:
 
 def is_csrf_token_valid(header_token: str) -> bool:
     """Return True when *header_token* matches a non-expired CSRF token."""
-    if not header_token:
+    if not isinstance(header_token, str) or not header_token or not header_token.isascii():
         return False
     with _csrf_lock:
         _purge_expired_tokens()

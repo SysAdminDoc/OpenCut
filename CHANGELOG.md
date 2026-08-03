@@ -70,6 +70,11 @@ record also lives in the git commit messages.
 - Lossless PSNR results now use a documented finite `99.0 dB` cap and retain a
   note explaining the cap, so async quality reports never emit bare `Infinity`.
 
+### Fixed - Non-ASCII token rejection
+
+- CSRF, remote-auth, and review-link token checks now reject non-ASCII input as
+  an ordinary authentication failure, preserving 403 behavior and audit logging.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
