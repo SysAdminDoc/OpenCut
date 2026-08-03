@@ -39,6 +39,12 @@ record also lives in the git commit messages.
   attempting a force-kill; unrelated listeners are left untouched so startup
   can select an alternate port.
 
+### Fixed - User-data read-modify-write races
+
+- Per-file reentrant locks now cover tombstone pruning/restoration, assistant
+  dismissal updates, and workflow/preset/favorites route mutations so
+  concurrent requests cannot overwrite each other's durable state.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

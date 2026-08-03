@@ -41,6 +41,7 @@ from opencut.user_data import (
     save_presets,
     save_workflows,
     summarize_user_tombstone,
+    user_file_lock,
 )
 
 settings_bp = Blueprint("settings", __name__)
@@ -67,15 +68,17 @@ def _restore_tombstone(entry: dict) -> tuple[dict | None, str | None]:
     key = str(entry.get("key", "") or "default")
     value = entry.get("value")
     if kind == "preset":
-        presets = load_presets()
-        presets[key] = value
-        save_presets(presets)
+        with user_file_lock("user_presets.json"):
+            presets = load_presets()
+            presets[key] = value
+            save_presets(presets)
     elif kind == "workflow":
         if not isinstance(value, dict):
             return None, "Workflow tombstone payload is invalid"
-        workflows = [wf for wf in load_workflows() if wf.get("name") != key]
-        workflows.append(value)
-        save_workflows(workflows[:100])
+        with user_file_lock("workflows.json"):
+            workflows = [wf for wf in load_workflows() if wf.get("name") != key]
+            workflows.append(value)
+            save_workflows(workflows[:100])
     elif kind == "favorites":
         if not isinstance(value, list):
             return None, "Favorites tombstone payload is invalid"
@@ -182,11 +185,12 @@ def save_preset():
     settings = data.get("settings", {})
     if not isinstance(settings, dict):
         return jsonify({"error": "Settings must be an object"}), 400
-    presets = load_presets()
-    if name not in presets and len(presets) >= 500:
-        return jsonify({"error": "Too many presets (max 500)"}), 400
-    presets[name] = {"settings": settings, "saved": time.time()}
-    save_presets(presets)
+    with user_file_lock("user_presets.json"):
+        presets = load_presets()
+        if name not in presets and len(presets) >= 500:
+            return jsonify({"error": "Too many presets (max 500)"}), 400
+        presets[name] = {"settings": settings, "saved": time.time()}
+        save_presets(presets)
     return jsonify({"success": True, "name": name})
 
 
@@ -209,48 +213,49 @@ def delete_preset():
             "code": "INVALID_INPUT",
             "suggestion": "Pass the preset name to delete in the JSON body.",
         }), 400
-    presets = load_presets()
-    if name not in presets:
-        return jsonify({
-            "error": f"Preset '{name}' not found",
-            "code": "NOT_FOUND",
-            "suggestion": "Refresh the preset list — it may have been deleted by another client.",
-        }), 404
-    record = build_user_data_destructive_record(
-        "preset",
-        name,
-        presets[name],
-        source_file="user_presets.json",
-        route="/presets/delete",
-    )
-    plan = build_destructive_plan(
-        "user_data.preset.delete",
-        records=[record],
-        metadata={"route": "/presets/delete", "name": name, "tombstone": True},
-        reversible=True,
-    )
-    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
-    if dry_run:
-        return jsonify({
-            "success": True,
-            "dry_run": True,
-            "deleted": None,
-            "would_delete": name,
-            "destructive_plan": plan,
-            "confirm_token": plan["confirm_token"],
-        })
-    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
-        return jsonify(destructive_confirmation_required_response(plan)), 409
+    with user_file_lock("user_presets.json"):
+        presets = load_presets()
+        if name not in presets:
+            return jsonify({
+                "error": f"Preset '{name}' not found",
+                "code": "NOT_FOUND",
+                "suggestion": "Refresh the preset list — it may have been deleted by another client.",
+            }), 404
+        record = build_user_data_destructive_record(
+            "preset",
+            name,
+            presets[name],
+            source_file="user_presets.json",
+            route="/presets/delete",
+        )
+        plan = build_destructive_plan(
+            "user_data.preset.delete",
+            records=[record],
+            metadata={"route": "/presets/delete", "name": name, "tombstone": True},
+            reversible=True,
+        )
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "deleted": None,
+                "would_delete": name,
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
 
-    tombstone = create_user_tombstone(
-        "preset",
-        name,
-        presets[name],
-        source_file="user_presets.json",
-        metadata={"route": "/presets/delete"},
-    )
-    del presets[name]
-    save_presets(presets)
+        tombstone = create_user_tombstone(
+            "preset",
+            name,
+            presets[name],
+            source_file="user_presets.json",
+            metadata={"route": "/presets/delete"},
+        )
+        del presets[name]
+        save_presets(presets)
     return jsonify({
         "success": True,
         "deleted": name,
@@ -279,18 +284,19 @@ def save_favorites_route():
         return jsonify({"error": "favorites must be a list"}), 400
     if len(favorites) > 200:
         return jsonify({"error": "Too many favorites (max 200)"}), 400
-    current = load_favorites()
-    tombstone = None
-    if current != favorites:
-        tombstone = create_user_tombstone(
-            "favorites",
-            "default",
-            current,
-            source_file="favorites.json",
-            action="replace",
-            metadata={"route": "/favorites/save", "new_count": len(favorites)},
-        )
-    save_favorites(favorites)
+    with user_file_lock("favorites.json"):
+        current = load_favorites()
+        tombstone = None
+        if current != favorites:
+            tombstone = create_user_tombstone(
+                "favorites",
+                "default",
+                current,
+                source_file="favorites.json",
+                action="replace",
+                metadata={"route": "/favorites/save", "new_count": len(favorites)},
+            )
+        save_favorites(favorites)
     response = {"success": True}
     if tombstone:
         response["tombstone"] = summarize_user_tombstone(tombstone)
@@ -323,20 +329,21 @@ def save_workflow():
         return jsonify({"error": "Steps must be a non-empty list"}), 400
     if len(steps) > 50:
         return jsonify({"error": "Too many workflow steps (max 50)"}), 400
-    workflows = load_workflows()
-    # Update or add
-    found = False
-    for wf in workflows:
-        if wf.get("name") == name:
-            wf["steps"] = steps
-            wf["updated"] = time.time()
-            found = True
-            break
-    if not found:
-        if len(workflows) >= 100:
-            return jsonify({"error": "Too many workflows (max 100)"}), 400
-        workflows.append({"name": name, "steps": steps, "created": time.time()})
-    save_workflows(workflows)
+    with user_file_lock("workflows.json"):
+        workflows = load_workflows()
+        # Update or add
+        found = False
+        for wf in workflows:
+            if wf.get("name") == name:
+                wf["steps"] = steps
+                wf["updated"] = time.time()
+                found = True
+                break
+        if not found:
+            if len(workflows) >= 100:
+                return jsonify({"error": "Too many workflows (max 100)"}), 400
+            workflows.append({"name": name, "steps": steps, "created": time.time()})
+        save_workflows(workflows)
     return jsonify({"success": True})
 
 
@@ -359,49 +366,50 @@ def delete_workflow():
             "code": "INVALID_INPUT",
             "suggestion": "Pass the workflow name to delete in the JSON body.",
         }), 400
-    workflows = load_workflows()
-    remaining = [wf for wf in workflows if wf.get("name") != name]
-    if len(remaining) == len(workflows):
-        return jsonify({
-            "error": f"Workflow '{name}' not found",
-            "code": "NOT_FOUND",
-            "suggestion": "Refresh the workflow list — it may have been deleted by another client.",
-        }), 404
-    removed = next((wf for wf in workflows if wf.get("name") == name), None)
-    record = build_user_data_destructive_record(
-        "workflow",
-        name,
-        removed or {"name": name},
-        source_file="workflows.json",
-        route="/workflows/delete",
-    )
-    plan = build_destructive_plan(
-        "user_data.workflow.delete",
-        records=[record],
-        metadata={"route": "/workflows/delete", "name": name, "tombstone": True},
-        reversible=True,
-    )
-    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
-    if dry_run:
-        return jsonify({
-            "success": True,
-            "dry_run": True,
-            "deleted": None,
-            "would_delete": name,
-            "destructive_plan": plan,
-            "confirm_token": plan["confirm_token"],
-        })
-    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
-        return jsonify(destructive_confirmation_required_response(plan)), 409
+    with user_file_lock("workflows.json"):
+        workflows = load_workflows()
+        remaining = [wf for wf in workflows if wf.get("name") != name]
+        if len(remaining) == len(workflows):
+            return jsonify({
+                "error": f"Workflow '{name}' not found",
+                "code": "NOT_FOUND",
+                "suggestion": "Refresh the workflow list — it may have been deleted by another client.",
+            }), 404
+        removed = next((wf for wf in workflows if wf.get("name") == name), None)
+        record = build_user_data_destructive_record(
+            "workflow",
+            name,
+            removed or {"name": name},
+            source_file="workflows.json",
+            route="/workflows/delete",
+        )
+        plan = build_destructive_plan(
+            "user_data.workflow.delete",
+            records=[record],
+            metadata={"route": "/workflows/delete", "name": name, "tombstone": True},
+            reversible=True,
+        )
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "deleted": None,
+                "would_delete": name,
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
 
-    tombstone = create_user_tombstone(
-        "workflow",
-        name,
-        removed or {"name": name},
-        source_file="workflows.json",
-        metadata={"route": "/workflows/delete"},
-    )
-    save_workflows(remaining)
+        tombstone = create_user_tombstone(
+            "workflow",
+            name,
+            removed or {"name": name},
+            source_file="workflows.json",
+            metadata={"route": "/workflows/delete"},
+        )
+        save_workflows(remaining)
     return jsonify({
         "success": True,
         "deleted": name,

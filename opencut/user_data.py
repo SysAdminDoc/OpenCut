@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 
 from opencut.credential_store import (
     load_and_migrate_secrets,
@@ -75,6 +76,14 @@ def _get_lock(filepath: str) -> threading.RLock:
         if key not in _file_locks:
             _file_locks[key] = threading.RLock()
         return _file_locks[key]
+
+
+@contextmanager
+def user_file_lock(filename: str):
+    """Hold the per-file lock across a caller's read-modify-write sequence."""
+    filepath = _safe_user_filepath(filename)
+    with _get_lock(filepath):
+        yield
 
 
 def _quarantine_corrupt_file(filepath: str) -> None:
@@ -370,13 +379,14 @@ def create_user_tombstone(kind: str, key: str, value, *, source_file: str, actio
         "expires_at_iso": _utc_iso(expires_at),
         "restore_route": "/settings/tombstones/restore",
     }
-    entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
-    if not isinstance(entries, list):
-        entries = []
-    entries = _prune_user_tombstones(entries, now=now)
-    entries.append(entry)
-    entries = _prune_user_tombstones(entries, now=now)
-    write_user_file(USER_TOMBSTONES_FILE, entries)
+    with user_file_lock(USER_TOMBSTONES_FILE):
+        entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
+        if not isinstance(entries, list):
+            entries = []
+        entries = _prune_user_tombstones(entries, now=now)
+        entries.append(entry)
+        entries = _prune_user_tombstones(entries, now=now)
+        write_user_file(USER_TOMBSTONES_FILE, entries)
     return entry
 
 
@@ -408,12 +418,13 @@ def build_user_data_destructive_record(
 
 
 def list_user_tombstones(kind: str | None = None) -> list[dict]:
-    entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
-    if not isinstance(entries, list):
-        entries = []
-    pruned = _prune_user_tombstones(entries)
-    if len(pruned) != len(entries):
-        write_user_file(USER_TOMBSTONES_FILE, pruned)
+    with user_file_lock(USER_TOMBSTONES_FILE):
+        entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
+        if not isinstance(entries, list):
+            entries = []
+        pruned = _prune_user_tombstones(entries)
+        if len(pruned) != len(entries):
+            write_user_file(USER_TOMBSTONES_FILE, pruned)
     if kind:
         return [entry for entry in pruned if entry.get("kind") == kind]
     return pruned
@@ -427,17 +438,21 @@ def get_user_tombstone(tombstone_id: str) -> dict | None:
 
 
 def mark_user_tombstone_restored(tombstone_id: str) -> dict | None:
-    entries = list_user_tombstones()
-    now = time.time()
-    restored = None
-    for entry in entries:
-        if entry.get("id") == tombstone_id:
-            entry["restored_at"] = now
-            entry["restored_at_iso"] = _utc_iso(now)
-            restored = entry
-            break
-    if restored is not None:
-        write_user_file(USER_TOMBSTONES_FILE, entries)
+    with user_file_lock(USER_TOMBSTONES_FILE):
+        entries = read_user_file(USER_TOMBSTONES_FILE, default=[])
+        if not isinstance(entries, list):
+            entries = []
+        entries = _prune_user_tombstones(entries)
+        now = time.time()
+        restored = None
+        for entry in entries:
+            if entry.get("id") == tombstone_id:
+                entry["restored_at"] = now
+                entry["restored_at_iso"] = _utc_iso(now)
+                restored = entry
+                break
+        if restored is not None:
+            write_user_file(USER_TOMBSTONES_FILE, entries)
     return restored
 
 
@@ -515,17 +530,18 @@ def load_assistant_dismissed(sequence_key: str = "default") -> list:
 
 
 def save_assistant_dismissed(sequence_key: str, dismissed_ids: list) -> None:
-    all_data = read_user_file("assistant_dismissed.json", default={}) or {}
-    if not isinstance(all_data, dict):
-        all_data = {}
-    # Dedupe + cap so the file doesn't grow unbounded
-    cleaned: list = []
-    for i in (dismissed_ids or []):
-        s = str(i)
-        if s and s not in cleaned:
-            cleaned.append(s)
-    all_data[sequence_key or "default"] = cleaned[:200]
-    write_user_file("assistant_dismissed.json", all_data)
+    with user_file_lock("assistant_dismissed.json"):
+        all_data = read_user_file("assistant_dismissed.json", default={}) or {}
+        if not isinstance(all_data, dict):
+            all_data = {}
+        # Dedupe + cap so the file doesn't grow unbounded
+        cleaned: list = []
+        for i in (dismissed_ids or []):
+            s = str(i)
+            if s and s not in cleaned:
+                cleaned.append(s)
+        all_data[sequence_key or "default"] = cleaned[:200]
+        write_user_file("assistant_dismissed.json", all_data)
 
 
 # ---------------------------------------------------------------------------
