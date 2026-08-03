@@ -163,6 +163,44 @@ def test_settings_workflow_delete_requires_confirm_token(client, csrf_token, mon
     assert user_data.load_workflows() == []
 
 
+def test_concurrent_workflow_deletes_keep_both_tombstones(
+    app, csrf_token, monkeypatch, tmp_path
+):
+    from concurrent.futures import ThreadPoolExecutor
+
+    user_data = _isolate_user_data(monkeypatch, tmp_path)
+    user_data.save_workflows([
+        {"name": "Concurrent A", "steps": [{"endpoint": "/silence"}]},
+        {"name": "Concurrent B", "steps": [{"endpoint": "/captions"}]},
+    ])
+
+    tokens = {}
+    for name in ("Concurrent A", "Concurrent B"):
+        preview = app.test_client().post(
+            "/workflows/delete",
+            json={"name": name, "dry_run": True},
+            headers=_headers(csrf_token),
+        )
+        assert preview.status_code == 200, preview.data
+        tokens[name] = preview.get_json()["confirm_token"]
+
+    def delete_workflow(name: str):
+        with app.test_client() as thread_client:
+            return thread_client.post(
+                "/workflows/delete",
+                json={"name": name, "confirm_token": tokens[name]},
+                headers=_headers(csrf_token),
+            )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(delete_workflow, ("Concurrent A", "Concurrent B")))
+
+    assert [response.status_code for response in responses] == [200, 200]
+    assert user_data.load_workflows() == []
+    tombstones = user_data.list_user_tombstones(kind="workflow")
+    assert {entry["key"] for entry in tombstones} == {"Concurrent A", "Concurrent B"}
+
+
 def test_assistant_dismiss_clear_creates_restorable_tombstone(client, csrf_token, monkeypatch, tmp_path):
     user_data = _isolate_user_data(monkeypatch, tmp_path)
     user_data.save_assistant_dismissed("sequence-a", ["silence-dead-air", "generate-chapters"])

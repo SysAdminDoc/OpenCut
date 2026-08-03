@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Hold the per-file lock across read-modify-write sequences
-  Category: correctness
-  Where: `opencut/user_data.py:373-379` (`create_user_tombstone`), `:517-528` (`save_assistant_dismissed`), plus route-level load→mutate→save such as `opencut/routes/workflow.py:243-265`.
-  Problem: The per-file `RLock` makes each individual `read_user_file`/`write_user_file` atomic, but these helpers release it between the read and the write. Flask is threaded, so two concurrent requests interleave and one update is lost — e.g. two concurrent `/workflows/delete` calls each create a tombstone and one silently vanishes, breaking the reversibility guarantee that the destructive-confirmation flow advertises.
-  Evidence: Each helper calls the read wrapper and the write wrapper as separate lock acquisitions.
-  Fix: Expose a `with user_file_lock(filename):` context manager (the lock is already an `RLock`, so nesting is safe) and wrap the read-modify-write sequences.
-  Acceptance: A concurrency test issuing two simultaneous tombstone-creating deletes asserts both tombstones exist.
-  Confidence: Verified (code trace; requires concurrency to observe)
-  Effort: M
-
 - [ ] P3 — Let the queue runner wait as long as the job is allowed to run
   Category: correctness
   Where: `opencut/routes/jobs_routes.py:1043-1058` (the `_run` poll loop); related terminal-state check in `opencut/core/workflow.py` `_wait_for_job`.

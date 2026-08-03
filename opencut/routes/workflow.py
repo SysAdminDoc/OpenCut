@@ -24,6 +24,7 @@ from opencut.user_data import (
     load_workflows,
     save_workflows,
     summarize_user_tombstone,
+    user_file_lock,
 )
 
 logger = logging.getLogger("opencut")
@@ -240,29 +241,30 @@ def save_custom_workflow():
     if not valid:
         return jsonify({"error": error}), 400
 
-    workflows = load_workflows()
+    with user_file_lock("workflows.json"):
+        workflows = load_workflows()
 
-    # Update existing or append
-    found = False
-    for wf in workflows:
-        if wf.get("name") == name:
-            wf["steps"] = steps
-            wf["description"] = description
-            wf["updated"] = time.time()
-            found = True
-            break
+        # Update existing or append
+        found = False
+        for wf in workflows:
+            if wf.get("name") == name:
+                wf["steps"] = steps
+                wf["description"] = description
+                wf["updated"] = time.time()
+                found = True
+                break
 
-    if not found:
-        if len(workflows) >= 100:
-            return jsonify({"error": "Too many custom workflows (max 100)"}), 400
-        workflows.append({
-            "name": name,
-            "steps": steps,
-            "description": description,
-            "created": time.time(),
-        })
+        if not found:
+            if len(workflows) >= 100:
+                return jsonify({"error": "Too many custom workflows (max 100)"}), 400
+            workflows.append({
+                "name": name,
+                "steps": steps,
+                "description": description,
+                "created": time.time(),
+            })
 
-    save_workflows(workflows)
+        save_workflows(workflows)
     return jsonify({"success": True, "name": name})
 
 
@@ -294,48 +296,49 @@ def delete_custom_workflow():
     if name in builtin_names:
         return jsonify({"error": "Cannot delete a built-in workflow"}), 400
 
-    workflows = load_workflows()
-    original_len = len(workflows)
-    removed = next((wf for wf in workflows if wf.get("name") == name), None)
-    workflows = [wf for wf in workflows if wf.get("name") != name]
+    with user_file_lock("workflows.json"):
+        workflows = load_workflows()
+        original_len = len(workflows)
+        removed = next((wf for wf in workflows if wf.get("name") == name), None)
+        workflows = [wf for wf in workflows if wf.get("name") != name]
 
-    if len(workflows) == original_len:
-        return jsonify({"error": "Workflow not found"}), 404
+        if len(workflows) == original_len:
+            return jsonify({"error": "Workflow not found"}), 404
 
-    record = build_user_data_destructive_record(
-        "workflow",
-        name,
-        removed or {"name": name},
-        source_file="workflows.json",
-        route="/workflow/delete",
-    )
-    plan = build_destructive_plan(
-        "user_data.workflow.delete",
-        records=[record],
-        metadata={"route": "/workflow/delete", "name": name, "tombstone": True},
-        reversible=True,
-    )
-    dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
-    if dry_run:
-        return jsonify({
-            "success": True,
-            "dry_run": True,
-            "deleted": None,
-            "would_delete": name,
-            "destructive_plan": plan,
-            "confirm_token": plan["confirm_token"],
-        })
-    if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
-        return jsonify(destructive_confirmation_required_response(plan)), 409
+        record = build_user_data_destructive_record(
+            "workflow",
+            name,
+            removed or {"name": name},
+            source_file="workflows.json",
+            route="/workflow/delete",
+        )
+        plan = build_destructive_plan(
+            "user_data.workflow.delete",
+            records=[record],
+            metadata={"route": "/workflow/delete", "name": name, "tombstone": True},
+            reversible=True,
+        )
+        dry_run = safe_bool(data.get("dry_run", data.get("preview", False)), False)
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "deleted": None,
+                "would_delete": name,
+                "destructive_plan": plan,
+                "confirm_token": plan["confirm_token"],
+            })
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
 
-    tombstone = create_user_tombstone(
-        "workflow",
-        name,
-        removed or {"name": name},
-        source_file="workflows.json",
-        metadata={"route": "/workflow/delete"},
-    )
-    save_workflows(workflows)
+        tombstone = create_user_tombstone(
+            "workflow",
+            name,
+            removed or {"name": name},
+            source_file="workflows.json",
+            metadata={"route": "/workflow/delete"},
+        )
+        save_workflows(workflows)
     return jsonify({
         "success": True,
         "tombstone": summarize_user_tombstone(tombstone),
