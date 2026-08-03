@@ -3,6 +3,15 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - Install.ps1 terminated Premiere Pro
+
+- The port cleanup in `Install.ps1` took the last column of every `netstat`
+  row mentioning the backend port, which includes ESTABLISHED rows whose PID
+  belongs to the connected client - Premiere Pro, while the panel is open.
+  Re-running install or uninstall therefore killed Premiere and lost unsaved
+  project work. Port cleanup now selects listeners only, via
+  `Get-NetTCPConnection` with a column-wise `netstat` fallback.
+
 ### Fixed - WPF installer left modern Premiere without PlayerDebugMode
 
 - The WPF installer now enables PlayerDebugMode for CSXS 7-18 instead of 7-12,
