@@ -195,7 +195,14 @@ def _kill_via_pid(pid: int) -> bool:
 
 
 def _kill_via_netstat(host: str, port: int) -> bool:
-    """Strategy 3: Find PID holding the port via netstat and force-kill it."""
+    """Strategy 3: force-kill a verified OpenCut process holding the port."""
+    if not _is_opencut_on_port(host, port):
+        logger.warning(
+            "Refusing netstat kill for port %d: listener is not verified as OpenCut",
+            port,
+        )
+        return False
+
     killed_any = False
     try:
         if sys.platform == "win32":
