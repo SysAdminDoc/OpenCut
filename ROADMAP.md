@@ -334,16 +334,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Stop the Photon adapter failing clean IMF packages
-  Category: correctness
-  Where: `opencut/core/standards_validators.py:257-267` (`validate_imf_package` output scan).
-  Problem: The scan classifies any output line containing the substring `error` as an error: `if "error" in lowered or "fatal" in lowered: report.errors.append(stripped)`, then `report.passed = completed.returncode == 0 and not report.errors`. Netflix Photon's `IMPAnalyzer` prints a per-asset summary of the form `CPL_<uuid>.xml has no errors or warnings` for **clean** assets — which contains "errors", lands in `report.errors`, and flips `passed` to `False`. The validator therefore reports failure precisely when the package is clean. Any file path containing "error" trips it too.
-  Evidence: The substring test is unanchored, and the only Photon test coverage is the missing-jar case (`tests/test_standards_validators.py:176`), so the parsing branch is untested. Latent on this machine (no `OPENCUT_PHOTON_JAR` configured) but wired into the release gate at `scripts/release_smoke.py:1339`.
-  Fix: Anchor on Photon's actual severity tokens (lines beginning `ERROR`/`FATAL`, e.g. `^\s*(ERROR|FATAL)\b`) and explicitly exclude the "has no errors or warnings" summary line.
-  Acceptance: A test feeds recorded Photon output for a clean package and asserts `passed is True` with zero errors, and feeds output containing a real `ERROR` record and asserts `passed is False`.
-  Confidence: Verified (static; requires the Photon jar to execute end-to-end)
-  Effort: S
-
 - [ ] P2 — Claim the port before marking previous jobs interrupted
   Category: correctness
   Where: `opencut/server.py:585-591` (`mark_interrupted()` / `cleanup_old_jobs()`) versus `:609-630` (port check, `_nuke_old_servers`, `_write_pid`).
