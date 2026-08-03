@@ -341,16 +341,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 
-- [ ] P2 — Stop tests from writing into the developer's real `~/.opencut`
-  Category: testing
-  Where: `tests/test_coverage_expansion.py:1064-1097` (`TestAddToQueueClamping`) against `opencut/core/render_queue.py:22,96-97,148-150`; `tests/test_collab_review.py:88-93` (`_session`, used by ~30 tests) against `opencut/core/review_comments.py:30,127-135`; `tests/test_subtitle_pro.py` (`TestMultiLang*`) against `opencut/core/multilang_subtitle.py:28`.
-  Problem: These tests exercise real persistence helpers whose paths are module-level constants rooted at `~/.opencut`, and nothing redirects them. `add_to_queue()` appends and immediately `_save_queue()`s to `~/.opencut/render_queue.json`; the test's `finally` restores only the in-memory `_queue` and never re-saves, so the on-disk entry survives. Because `render_queue.py` runs `_load_queue()` at import, a real OpenCut session then loads the test entry — and would attempt to render `/test.mp4` if the queue were started. Review sessions use uuid-unique names specifically to avoid cross-test collisions, which means every full run deposits a fresh batch of orphan JSON files that nothing ever removes.
-  Evidence: On this machine, `~/.opencut/render_queue.json` contains **35** accumulated entries, all `{"input_path": "/test.mp4", "preset_name": "preset", "error": "Unknown preset: preset"}`, with `created_at` timestamps spanning multiple past runs. `~/.opencut/reviews/` holds **1344** orphan JSON files totalling ~909 KB. The autouse `clear_session_cache()` fixture (`test_collab_review.py:34-39`) clears memory only.
-  Fix: Monkeypatch `render_queue._QUEUE_PATH`, `review_comments._REVIEWS_DIR`, and `multilang_subtitle.SUBTITLE_DIR` to `tmp_path` (the file-level autouse pattern in `tests/test_user_data_tombstones.py` is the model). Then add a conftest-level guard that fails any test which creates or modifies a path under the real `~/.opencut`, so this class of leak cannot return.
-  Acceptance: The guard fixture fails on the current tests and passes after they are isolated; a full suite run leaves `~/.opencut/render_queue.json` and `~/.opencut/reviews/` byte-identical. Note for the implementer: the 35 queue entries and 1344 review files already on this machine are pre-existing residue and can be deleted once the leak is closed.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P2 — Report update-check failures honestly instead of claiming the current version is latest
   Category: reliability
   Where: `opencut/routes/system_model_routes.py:339-411` (`check_for_update`), cache at `:318-320`.

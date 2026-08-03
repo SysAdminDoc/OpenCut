@@ -2,11 +2,74 @@
 Shared pytest fixtures for OpenCut integration tests.
 """
 
+import builtins
+import io
 import logging
+import os
+import sys
+from pathlib import Path
 
 import pytest
 
 _fixture_log = logging.getLogger("opencut.tests.conftest")
+_REAL_USER_DATA_ROOT = os.path.normcase(
+    os.path.realpath(os.path.join(os.path.expanduser("~"), ".opencut"))
+)
+
+
+def _is_real_user_data_path(path) -> bool:
+    """Return whether *path* resolves inside the developer's real profile."""
+    if isinstance(path, int):
+        return False
+    try:
+        candidate = os.path.normcase(
+            os.path.realpath(os.path.expanduser(os.fsdecode(os.fspath(path))))
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    return candidate == _REAL_USER_DATA_ROOT or candidate.startswith(
+        _REAL_USER_DATA_ROOT + os.sep
+    )
+
+
+def _reject_real_user_data_write(path, operation: str) -> None:
+    if _is_real_user_data_path(path):
+        raise AssertionError(
+            f"test attempted to {operation} real OpenCut user data: {path!s}"
+        )
+
+
+def _replace_real_user_data_path(value, isolated_root):
+    """Map a loaded OpenCut path from the real profile into ``isolated_root``."""
+    if isinstance(value, Path):
+        candidate = os.path.normcase(os.path.realpath(os.fspath(value)))
+    elif isinstance(value, str):
+        candidate = os.path.normcase(os.path.realpath(value))
+    else:
+        return None
+    if not (
+        candidate == _REAL_USER_DATA_ROOT
+        or candidate.startswith(_REAL_USER_DATA_ROOT + os.sep)
+    ):
+        return None
+    relative = os.path.relpath(candidate, _REAL_USER_DATA_ROOT)
+    if relative == ".":
+        return Path(isolated_root) if isinstance(value, Path) else str(isolated_root)
+    replacement = Path(isolated_root) / relative
+    return replacement if isinstance(value, Path) else str(replacement)
+
+
+def _redirect_loaded_opencut_paths(monkeypatch, isolated_root) -> None:
+    """Redirect already-imported OpenCut path constants for this test."""
+    for module_name, module in list(sys.modules.items()):
+        if module is None or not (
+            module_name == "opencut" or module_name.startswith("opencut.")
+        ):
+            continue
+        for name, value in list(vars(module).items()):
+            replacement = _replace_real_user_data_path(value, isolated_root)
+            if replacement is not None:
+                monkeypatch.setattr(module, name, replacement)
 
 
 @pytest.fixture
@@ -60,6 +123,138 @@ def _isolate_os_credential_vault(monkeypatch):
     monkeypatch.setattr(credential_store, "_last_error", "")
     monkeypatch.delenv(credential_store.INSECURE_OPT_IN_ENV, raising=False)
     return backend
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _isolate_process_user_data_home(tmp_path_factory):
+    """Keep dynamically computed OpenCut paths inside one test-only home."""
+    isolated_home = str(tmp_path_factory.mktemp("opencut-home"))
+    patch = pytest.MonkeyPatch()
+    patch.setenv("HOME", isolated_home)
+    real_expanduser = os.path.expanduser
+
+    def isolated_expanduser(path):
+        if path == "~":
+            return isolated_home
+        if isinstance(path, str) and (path.startswith("~/") or path.startswith("~\\")):
+            return os.path.join(isolated_home, path[2:])
+        return real_expanduser(path)
+
+    patch.setattr(os.path, "expanduser", isolated_expanduser)
+    _redirect_loaded_opencut_paths(patch, Path(isolated_home) / ".opencut")
+    try:
+        yield
+    finally:
+        patch.undo()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_persistent_module_writers(
+    monkeypatch, tmp_path, _isolate_process_user_data_home
+):
+    """Redirect module-level persistence constants to a per-test directory."""
+    from opencut.core import multilang_subtitle, render_queue, review_comments
+
+    monkeypatch.setattr(
+        render_queue, "_QUEUE_PATH", str(tmp_path / "render_queue.json")
+    )
+    monkeypatch.setattr(render_queue, "_ensure_opencut_dir", lambda: None)
+    monkeypatch.setattr(review_comments, "_REVIEWS_DIR", str(tmp_path / "reviews"))
+    monkeypatch.setattr(
+        multilang_subtitle, "SUBTITLE_DIR", str(tmp_path / "subtitles")
+    )
+
+    with render_queue._queue_lock:
+        saved_queue = list(render_queue._queue)
+        render_queue._queue.clear()
+    try:
+        yield
+    finally:
+        with render_queue._queue_lock:
+            render_queue._queue.clear()
+            render_queue._queue.extend(saved_queue)
+
+
+@pytest.fixture(autouse=True)
+def _reject_real_user_data_writes(monkeypatch):
+    """Fail immediately if a test tries to mutate the real ``~/.opencut``."""
+    real_open = builtins.open
+    real_io_open = io.open
+    real_os_open = os.open
+
+    def guarded_open(file, mode="r", *args, **kwargs):
+        if isinstance(mode, str) and any(
+            flag in mode for flag in ("w", "a", "x", "+")
+        ):
+            _reject_real_user_data_write(file, f"open for {mode!r}")
+        return real_open(file, mode, *args, **kwargs)
+
+    def guarded_io_open(file, mode="r", *args, **kwargs):
+        if isinstance(mode, str) and any(
+            flag in mode for flag in ("w", "a", "x", "+")
+        ):
+            _reject_real_user_data_write(file, f"io.open for {mode!r}")
+        return real_io_open(file, mode, *args, **kwargs)
+
+    def guarded_os_open(path, flags, *args, **kwargs):
+        write_flags = (
+            os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
+        )
+        if flags & write_flags:
+            _reject_real_user_data_write(path, f"os.open with flags {flags}")
+        return real_os_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", guarded_open)
+    monkeypatch.setattr(io, "open", guarded_io_open)
+    monkeypatch.setattr(os, "open", guarded_os_open)
+
+    real_makedirs = os.makedirs
+
+    def guarded_makedirs(path, mode=0o777, exist_ok=False):
+        if _is_real_user_data_path(path) and not os.path.isdir(path):
+            _reject_real_user_data_write(path, "create a directory at")
+        return real_makedirs(path, mode=mode, exist_ok=exist_ok)
+
+    monkeypatch.setattr(os, "makedirs", guarded_makedirs)
+
+    real_mkdir = os.mkdir
+
+    def guarded_mkdir(path, mode=0o777, *, dir_fd=None):
+        if _is_real_user_data_path(path) and not os.path.isdir(path):
+            _reject_real_user_data_write(path, "create a directory at")
+        return real_mkdir(path, mode=mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "mkdir", guarded_mkdir)
+
+    for name in (
+        "replace",
+        "rename",
+        "renames",
+        "remove",
+        "unlink",
+        "rmdir",
+        "removedirs",
+        "truncate",
+        "utime",
+        "chmod",
+        "link",
+        "symlink",
+    ):
+        real_operation = getattr(os, name)
+
+        def guarded_operation(
+            *args, _name=name, _operation=real_operation, **kwargs
+        ):
+            path_args = (
+                args[:2]
+                if _name in {"replace", "rename", "renames", "link", "symlink"}
+                else args[:1]
+            )
+            for path in path_args:
+                _reject_real_user_data_write(path, f"os.{_name}")
+            return _operation(*args, **kwargs)
+
+        monkeypatch.setattr(os, name, guarded_operation)
 
 
 @pytest.fixture(autouse=True)
