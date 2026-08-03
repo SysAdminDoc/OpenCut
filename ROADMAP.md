@@ -43,13 +43,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A tag and an unsigned GitHub Release exist for the current version with the Windows installer, `release-composition.json`, artifact SBOM, third-party notices, and FFmpeg provenance attached; a release-gate check fails when `__version__` has no matching tag.
   Complexity: M
 
-- [ ] P1 — Make generated readiness prove implementation for every record
-  Why: 27 auto-generated feature records report `available` with no `impl_module`, which is exactly the blind spot that let three terminal-stub adapters advertise as available.
-  Evidence: `opencut/_generated/feature_readiness.json` — 27 of 72 records have `source: "generated"` and `impl_module: ""`, all in state `available`, including `audio.demucs`, `video.sam2`, `video.mediapipe`, `editing.auto-editor`, `auto.otio`. The three previously-caught adapters now carry a populated `impl_module`; nothing prevents the next one.
-  Touches: `opencut/tools/dump_feature_readiness.py`, `opencut/registry.py`, `tests/test_feature_impl_readiness.py`.
-  Acceptance: A record cannot be emitted in `available` without a resolvable `impl_module` that the stub scanner has inspected; the generator fails on the current tree and passes once all 27 are resolved or reclassified.
-  Complexity: M
-
 ### P2 — 2026-08-02 (research pass)
 
 - [ ] P2 — Triage the routes that no surface reaches

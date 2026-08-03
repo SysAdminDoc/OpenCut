@@ -45,6 +45,7 @@ from opencut.tools.dump_route_manifest import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROUTES_DIR = REPO_ROOT / "opencut" / "routes"
+CORE_DIR = REPO_ROOT / "opencut" / "core"
 CHECKS_PATH = REPO_ROOT / "opencut" / "checks.py"
 MANIFEST_PATH = GENERATED_FEATURE_READINESS_PATH
 MANIFEST_VERSION = 1
@@ -263,18 +264,79 @@ def _derive_feature_state(
 _IMPL_MODULES_BY_PROBE: Optional[Dict[str, List[str]]] = None
 
 
-def _build_impl_module_index() -> Dict[str, List[str]]:
-    """Map each ``checks.check_*`` probe to the adapter modules it imports.
+def _core_module_stems(node: ast.AST) -> List[str]:
+    """``opencut.core.<stem>`` modules imported anywhere under *node*."""
+    modules: List[str] = []
 
-    Generated records used to carry no implementation identity at all, which
-    made them structurally incapable of being graded as stubs: with no module
-    to scan, a terminal ``NotImplementedError`` adapter whose optional
-    dependency happened to be installed was advertised as available.
+    def _add(stem: str) -> None:
+        if stem and stem not in modules:
+            modules.append(stem)
 
-    The mapping is derived rather than hand-maintained because the naming is
-    not always mechanical — ``check_searaft`` lives in ``flow_searaft`` — so
-    guessing ``opencut.core.<probe stem>`` silently misses adapters.
+    for child in ast.walk(node):
+        if isinstance(child, ast.ImportFrom) and child.module:
+            # `from opencut.core import music_acestep` names the module itself.
+            if child.module == "opencut.core":
+                for alias in child.names:
+                    if alias.name != "*":
+                        _add(alias.name)
+                continue
+            names = [child.module]
+        elif isinstance(child, ast.Import):
+            names = [alias.name for alias in child.names]
+        else:
+            continue
+        for name in names:
+            if not name.startswith("opencut.core."):
+                continue
+            _add(name[len("opencut.core."):].split(".", 1)[0])
+    return modules
+
+
+def _module_level_core_bindings(tree: ast.Module) -> Dict[str, str]:
+    """Map names bound at module level to the ``opencut.core`` module behind them.
+
+    Route files commonly do ``from opencut.core import music_acestep`` (or
+    ``import opencut.core.x as y``) at the top and reference the module inside
+    the handler, so a function-body-only scan sees no adapter at all.
     """
+    bindings: Dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "opencut.core":
+                for alias in node.names:
+                    if alias.name != "*":
+                        bindings[alias.asname or alias.name] = alias.name
+            elif node.module.startswith("opencut.core."):
+                stem = node.module[len("opencut.core."):].split(".", 1)[0]
+                for alias in node.names:
+                    bindings[alias.asname or alias.name] = stem
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if not alias.name.startswith("opencut.core."):
+                    continue
+                stem = alias.name[len("opencut.core."):].split(".", 1)[0]
+                bindings[alias.asname or alias.name.split(".")[-1]] = stem
+    return bindings
+
+
+def _referenced_core_stems(
+    node: ast.AST,
+    bindings: Dict[str, str],
+) -> List[str]:
+    """Module-level ``opencut.core`` bindings this function actually uses."""
+    if not bindings:
+        return []
+    stems: List[str] = []
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name) and child.id in bindings:
+            stem = bindings[child.id]
+            if stem not in stems:
+                stems.append(stem)
+    return stems
+
+
+def _impl_modules_from_checks() -> Dict[str, List[str]]:
+    """Adapter modules each ``checks.check_*`` probe imports directly."""
     index: Dict[str, List[str]] = {}
     try:
         source = Path(inspect.getsourcefile(checks) or "").read_text(encoding="utf-8")
@@ -290,21 +352,91 @@ def _build_impl_module_index() -> Dict[str, List[str]]:
             continue
         if not node.name.startswith("check_"):
             continue
-        modules: List[str] = []
-        for child in ast.walk(node):
-            if isinstance(child, ast.ImportFrom) and child.module:
-                if child.module.startswith("opencut.core."):
-                    stem = child.module[len("opencut.core."):]
-                    if stem and stem not in modules:
-                        modules.append(stem)
-            elif isinstance(child, ast.Import):
-                for alias in child.names:
-                    if alias.name.startswith("opencut.core."):
-                        stem = alias.name[len("opencut.core."):]
-                        if stem and stem not in modules:
-                            modules.append(stem)
+        modules = _core_module_stems(node)
         if modules:
             index[node.name] = modules
+    return index
+
+
+def _impl_modules_from_routes(
+    routes_dir: Path = ROUTES_DIR,
+    aliases: Optional[Dict[str, str]] = None,
+) -> Dict[str, List[str]]:
+    """Adapter modules imported by the route functions each probe gates.
+
+    Most probes test a third-party binary or package directly
+    (``check_auto_editor_available`` calls ``shutil.which``), so scanning
+    ``opencut.checks`` alone finds no adapter for them. The implementation the
+    probe actually gates lives in the route handler, which imports
+    ``opencut.core.<adapter>`` before calling it — that is the module the stub
+    scanner needs to inspect.
+    """
+    aliases = aliases or _probe_aliases(_all_probe_names())
+    index: Dict[str, List[str]] = defaultdict(list)
+
+    for path in sorted(routes_dir.glob("*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            continue
+        blueprints = _blueprint_assignments(tree)
+        if not blueprints:
+            continue
+        bindings = _module_level_core_bindings(tree)
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not _route_endpoints(node, blueprints):
+                continue
+            probes = _called_probes(node, aliases)
+            if not probes:
+                continue
+            modules = _core_module_stems(node)
+            for stem in _referenced_core_stems(node, bindings):
+                if stem not in modules:
+                    modules.append(stem)
+            if not modules:
+                continue
+            for probe in probes:
+                for stem in modules:
+                    if stem not in index[probe]:
+                        index[probe].append(stem)
+    return dict(index)
+
+
+def _build_impl_module_index() -> Dict[str, List[str]]:
+    """Map each ``checks.check_*`` probe to the adapter modules behind it.
+
+    Generated records used to carry no implementation identity at all, which
+    made them structurally incapable of being graded as stubs: with no module
+    to scan, a terminal ``NotImplementedError`` adapter whose optional
+    dependency happened to be installed was advertised as available.
+
+    The mapping is derived rather than hand-maintained because the naming is
+    not always mechanical — ``check_searaft`` lives in ``flow_searaft`` — so
+    guessing ``opencut.core.<probe stem>`` silently misses adapters. Two
+    sources are merged: what the probe itself imports, and what the routes it
+    gates import.
+    """
+    index: Dict[str, List[str]] = {
+        probe: list(modules) for probe, modules in _impl_modules_from_checks().items()
+    }
+    for probe, modules in _impl_modules_from_routes().items():
+        merged = index.setdefault(probe, [])
+        for stem in modules:
+            if stem not in merged:
+                merged.append(stem)
+
+    # Last resort for probes whose only route is the dependency dashboard:
+    # a module named exactly after the probe. Verified against the filesystem,
+    # so it resolves a real adapter or contributes nothing.
+    for probe in _all_probe_names():
+        if index.get(probe):
+            continue
+        stem = _slug_probe(probe).replace("-", "_")
+        if (CORE_DIR / f"{stem}.py").is_file():
+            index[probe] = [stem]
+
     return index
 
 
@@ -371,6 +503,33 @@ def _record_for_probe(
         "requires_gpu": _requires_gpu(hardware),
         "minimum_vram_mb": _minimum_vram_mb(hardware),
     }
+
+
+def unproven_available_records(manifest: dict) -> List[str]:
+    """Records claiming ``available`` that name no adapter the stub scanner can read.
+
+    A record with an empty ``impl_module`` is structurally incapable of being
+    graded as a stub — that blind spot is what let three terminal-stub adapters
+    advertise as available. An adapter stem that does not resolve to a real
+    ``opencut/core/<stem>.py`` is the same blind spot with extra steps.
+    """
+    offenders: List[str] = []
+    for record in manifest.get("records", []):
+        if record.get("state") != STATE_AVAILABLE:
+            continue
+        stems = [s.strip() for s in str(record.get("impl_module") or "").split(",") if s.strip()]
+        if not stems:
+            offenders.append(
+                f"{record.get('feature_id')} ({record.get('check_name')}): no impl_module"
+            )
+            continue
+        missing = [stem for stem in stems if not (CORE_DIR / f"{stem}.py").is_file()]
+        if missing:
+            offenders.append(
+                f"{record.get('feature_id')} ({record.get('check_name')}): "
+                f"impl_module does not resolve: {', '.join(missing)}"
+            )
+    return offenders
 
 
 def build_manifest(route_manifest: Optional[dict] = None) -> dict:
@@ -454,6 +613,16 @@ def cli(argv: Optional[List[str]] = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     manifest = build_manifest()
+
+    unproven = unproven_available_records(manifest)
+    if unproven:
+        print("[feature-readiness] FAIL - available records with no proven implementation:")
+        for line in unproven[:25]:
+            print(f"  - {line}")
+        if len(unproven) > 25:
+            print(f"  - ... {len(unproven) - 25} more")
+        return 1
+
     if args.check:
         existing = load_manifest()
         if existing is None:

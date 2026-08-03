@@ -3,6 +3,17 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - Generated feature readiness now proves implementation
+
+- 27 auto-generated feature records reported `available` with no
+  `impl_module`, so the stub scanner had nothing to inspect - the exact blind
+  spot that once let terminal-stub adapters advertise as runnable. Adapter
+  identity is now derived from what the probe imports, what the routes it
+  gates import (including module-level bindings), and finally a same-named
+  `opencut/core` module verified on disk. All 72 records resolve.
+- The generator refuses to emit a manifest containing an `available` record
+  whose `impl_module` is empty or does not resolve to a real module.
+
 ### Fixed - Two CLI commands crashed on valid input
 
 - `opencut scene-detect` passed a `method=` keyword no backend accepts, so the
