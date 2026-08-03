@@ -15,7 +15,7 @@ import tempfile
 
 from flask import Blueprint, jsonify
 
-from opencut.checks import check_demucs_available
+from opencut.checks import check_audio_separator_available, check_demucs_available
 from opencut.core.workflow import workflow_step
 from opencut.errors import error_response, safe_error
 from opencut.helpers import (
@@ -450,12 +450,22 @@ def audio_separate(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)
-    backend = data.get("backend", "demucs")
-    if backend not in ("demucs", "audio-separator"):
-        backend = "demucs"
-    model = data.get("model", "htdemucs" if backend == "demucs" else "mel_band_roformer")
     allowed_demucs = {"htdemucs", "htdemucs_ft", "htdemucs_6s", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q"}
     allowed_separator = {"mel_band_roformer", "bs_roformer", "scnet", "mdx23c", "htdemucs"}
+
+    # Demucs was archived upstream on 2024-04-24; python-audio-separator is the
+    # maintained backend and is now the default. A caller that names a
+    # Demucs-only model still gets Demucs, so existing clients keep working
+    # without having to learn the `backend` parameter.
+    requested_model = str(data.get("model", "") or "").strip()
+    backend = data.get("backend")
+    if backend not in ("demucs", "audio-separator"):
+        if requested_model and requested_model in allowed_demucs - allowed_separator:
+            backend = "demucs"
+        else:
+            backend = "audio-separator"
+
+    model = requested_model or ("htdemucs" if backend == "demucs" else "mel_band_roformer")
     allowed_models = allowed_demucs if backend == "demucs" else allowed_separator
     if model not in allowed_models:
         raise ValueError(f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}")
@@ -468,7 +478,17 @@ def audio_separate(job_id, filepath, data):
     auto_import = safe_bool(data.get("auto_import", True), True)
 
     if backend == "demucs" and not check_demucs_available():
-        raise ValueError("Demucs not installed. Please install it first.")
+        raise ValueError(
+            "Demucs is not installed, and it was archived upstream on 2024-04-24. "
+            'Install the maintained backend instead: pip install -e ".[audio]" '
+            "(python-audio-separator), then omit `model` or pass one of "
+            f"{', '.join(sorted(allowed_separator))}."
+        )
+    if backend == "audio-separator" and not check_audio_separator_available():
+        raise ValueError(
+            'Stem separation backend not installed. Run: pip install -e ".[audio]" '
+            "(or pip install 'audio-separator[cpu]')."
+        )
 
     temp_audio = None
     try:

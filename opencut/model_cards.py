@@ -66,17 +66,33 @@ class ModelCard:
 CARDS: List[ModelCard] = [
     # ---- Audio --------------------------------------------------------
     ModelCard(
+        check_name="check_audio_separator_available",
+        feature_id="audio.audio-separator",
+        label="python-audio-separator (Mel-Band / BS-RoFormer, SCNet, MDX23C)",
+        category="audio",
+        license="MIT",
+        upstream="https://github.com/nomadkaraoke/python-audio-separator",
+        hardware="cpu/gpu",
+        install_hint='pip install -e ".[audio]"  # or: pip install "audio-separator[cpu]"',
+        privacy="local-only",
+        latency="RoFormer models are slower than Demucs; SCNet/MDX23C sit between",
+        quality_notes="Maintained backend and the route default; RoFormer leads current benches.",
+    ),
+    ModelCard(
         check_name="check_demucs_available",
         feature_id="audio.demucs",
-        label="Demucs (htdemucs / hdemucs)",
+        label="Demucs (htdemucs / hdemucs) - ARCHIVED UPSTREAM",
         category="audio",
         license="MIT",
         upstream="https://github.com/facebookresearch/demucs",
         hardware="cpu/gpu",
-        install_hint="pip install demucs",
+        install_hint="pip install demucs  # legacy: archived upstream 2024-04-24",
         privacy="local-only",
         latency="~0.3x realtime on CPU; near-real on RTX 3060",
-        quality_notes="Strong baseline; superseded by BS-RoFormer in newer benches.",
+        quality_notes=(
+            "Archived upstream on 2024-04-24. Kept as a legacy backend for callers "
+            "that name a Demucs-only model; new work should use python-audio-separator."
+        ),
     ),
     ModelCard(
         check_name="check_audiocraft_available",

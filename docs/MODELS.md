@@ -2,7 +2,7 @@
 
 Generated from `opencut/model_cards.py`. **Do not hand-edit** — regenerate with `python -m opencut.tools.dump_model_cards`.
 
-Total optional AI/model surfaces: **67**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
+Total optional AI/model surfaces: **68**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
 
 ## Audio
 
@@ -12,13 +12,14 @@ Total optional AI/model surfaces: **67**. Each row carries license, hardware, in
 | [AudioCraft / MusicGen](https://github.com/facebookresearch/audiocraft) | MIT | gpu (>= 8 GB VRAM) | local-only | `pip install "opencut[music]" (Python 3.11; Torch 2.1 stack)` |
 | [BeatNet beat/downbeat tracker](https://github.com/mjhydri/BeatNet) | MIT | cpu | local-only | `pip install BeatNet` |
 | [Chatterbox TTS (emotional voice clone)](https://github.com/resemble-ai/chatterbox) | MIT | gpu | local-only | `pip install chatterbox-tts` |
-| [Demucs (htdemucs / hdemucs)](https://github.com/facebookresearch/demucs) | MIT | cpu/gpu | local-only | `pip install demucs` |
+| [Demucs (htdemucs / hdemucs) - ARCHIVED UPSTREAM](https://github.com/facebookresearch/demucs) | MIT | cpu/gpu | local-only | `pip install demucs  # legacy: archived upstream 2024-04-24` |
 | [DiffRhythm (diffusion full-song generator)](https://github.com/ASLP-lab/DiffRhythm) | Apache-2.0 | gpu (>= 8 GB VRAM) | local-only | `git clone https://github.com/ASLP-lab/DiffRhythm && pip install -r DiffRhythm/requirements.txt` |
 | [Edge TTS (Microsoft cloud voices)](https://github.com/rany2/edge-tts) | MIT (client) | cpu | cloud — text is sent to Microsoft's Speech API | `pip install edge-tts` |
 | [ElevenLabs cloud TTS](https://github.com/elevenlabs/elevenlabs-python) | proprietary client SDK; cloud service | cpu (client) | cloud — text is sent to ElevenLabs | `pip install elevenlabs + ELEVENLABS_API_KEY` |
 | [F5-TTS (zero-shot voice clone)](https://github.com/SWivid/F5-TTS) | MIT | gpu (>= 6 GB VRAM) | local-only | `pip install f5-tts` |
 | [Kokoro TTS (82M, CPU-only)](https://github.com/hexgrad/kokoro) | Apache-2.0 | cpu | local-only | `pip install kokoro (needs espeak-ng for some languages)` |
 | [OmniVoice TTS](https://github.com/k2-fsa/OmniVoice) | Apache-2.0 | gpu | local-only | `pip install omnivoice` |
+| [python-audio-separator (Mel-Band / BS-RoFormer, SCNet, MDX23C)](https://github.com/nomadkaraoke/python-audio-separator) | MIT | cpu/gpu | local-only | `pip install -e ".[audio]"  # or: pip install "audio-separator[cpu]"` |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | MIT | gpu | local-only | `pip install "opencut[enhance]" (Python 3.11; Torch 2.1 stack)` |
 | [Silero VAD](https://github.com/snakers4/silero-vad) | MIT | cpu | local-only | `pip install silero-vad` |
 | [Spark-TTS (CPU-native zero-shot)](https://github.com/SparkAudio/Spark-TTS) | Apache-2.0 | cpu | local-only | `pip install sparktts` |
@@ -193,6 +194,7 @@ These `opencut.checks` functions do not gate a model/AI dependency and are delib
 - `check_shaka_available`
 - `check_social_post_available`
 - `check_srt_available`
+- `check_stem_separation_available`
 - `check_svtav1_psy_available`
 - `check_temp_cleanup_available`
 - `check_vmaf_available`

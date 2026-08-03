@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "generated_at": "2026-08-03T23:40:01Z",
+  "generated_at": "2026-08-03T23:56:48Z",
   "source": "opencut/_generated/route_manifest.json",
-  "total_records": 72,
-  "total_routes": 98,
+  "total_records": 73,
+  "total_routes": 99,
   "records": [
     {
       "feature_id": "auto.ab-av1",
@@ -78,6 +78,24 @@
       "source": "generated",
       "notes": "Auto-derived from route functions that call this check probe.",
       "hardware": "",
+      "requires_gpu": false,
+      "minimum_vram_mb": 0
+    },
+    {
+      "feature_id": "audio.audio-separator",
+      "label": "python-audio-separator (Mel-Band / BS-RoFormer, SCNet, MDX23C)",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install -e \".[audio]\"  # or: pip install \"audio-separator[cpu]\"",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/separate"
+      ],
+      "check_name": "check_audio_separator_available",
+      "impl_module": "workflow",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe.",
+      "hardware": "cpu/gpu",
       "requires_gpu": false,
       "minimum_vram_mb": 0
     },
@@ -245,10 +263,10 @@
     },
     {
       "feature_id": "audio.demucs",
-      "label": "Demucs (htdemucs / hdemucs)",
+      "label": "Demucs (htdemucs / hdemucs) - ARCHIVED UPSTREAM",
       "category": "audio",
       "state": "available",
-      "install_hint": "pip install demucs",
+      "install_hint": "pip install demucs  # legacy: archived upstream 2024-04-24",
       "docs": "docs/MODELS.md",
       "routes": [
         "/audio/separate"

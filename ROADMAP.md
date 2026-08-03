@@ -60,13 +60,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A cut list above a configurable threshold is written as a timeline interchange import instead of per-clip razors; a fixture with 1,000 cuts across 1V/2A round-trips with in/out points and all audio tracks intact; the toast reports cuts requested, not clip-removals.
   Complexity: L
 
-- [ ] P2 — Replace the archived Demucs pin and declare the separation backend that actually works
-  Why: The declared stem-separation dependency is archived upstream, and the maintained backend the code already supports cannot be installed from any extra.
-  Evidence: `facebookresearch/demucs` was archived 2024-04-24 and is pinned `demucs>=4.0,<5` in the `audio`, `torch-stack`, and `all` extras. `python-audio-separator` is wired at `opencut/routes/audio.py:498-503` and probed at `opencut/core/engine_registry.py:470`, but appears in no extra and in no `requirements*.txt`; the only install guidance is a runtime `RuntimeError` string.
-  Touches: `pyproject.toml` extras, `requirements.txt`, `opencut/core/dependency_support.py`, `opencut/checks.py`, `opencut/routes/system_runtime_routes.py` hint tables, `docs/MODELS.md`.
-  Acceptance: `pip install -e ".[audio]"` installs a maintained separation backend; the dependency dashboard names the archived status of Demucs and does not advertise it as the recommended path; the default backend is the maintained one.
-  Complexity: S
-
 - [ ] P2 — Retire the dead `auto-editor` pip pin
   Why: The pinned branch is nine months stale and upstream left PyPI, so every 2026 capability — partial-lossless GOP-copy rendering, linked dissolve transitions, Parakeet TDT word timestamps, MLT export — is unreachable.
   Evidence: `pyproject.toml` pins `auto-editor>=29.3,<30`; PyPI's last release is 29.3.1 (2025-11-04). Upstream was rewritten in Nim and now ships prebuilt native binaries. Positioning note for the docs: distributed builds now gate rendering above 3200×1800 and all professional-NLE export behind a licence key while the repository stays Unlicense.

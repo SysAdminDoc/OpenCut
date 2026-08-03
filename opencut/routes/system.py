@@ -280,8 +280,10 @@ def _build_capabilities():
     caps["crisper_whisper"] = check_crisper_whisper_available()
     caps["otio"] = check_otio_available()
 
-    # Check Demucs availability
-    caps["separation"] = check_demucs_available()
+    # Stem separation is available through either backend; the maintained one
+    # is python-audio-separator (Demucs was archived upstream 2024-04-24).
+    from opencut.checks import check_stem_separation_available
+    caps["separation"] = check_stem_separation_available()
 
     # Check watermark removal availability
     caps["watermark_removal"] = check_watermark_available()

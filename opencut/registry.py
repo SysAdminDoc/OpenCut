@@ -92,6 +92,9 @@ NON_AI_CHECKS: tuple = (
     "check_otio_diff_available",
     "check_pedalboard_available",
     "check_quality_metrics_available",
+    # An either/or roll-up over the two separation backends, each of which has
+    # its own card; it ships no model of its own.
+    "check_stem_separation_available",
     "check_rate_limit_categories_available",
     "check_request_correlation_available",
     "check_resolve_available",
@@ -225,8 +228,18 @@ def _check(name: str) -> Optional[Callable[[], bool]]:
 _FEATURES: List[FeatureRecord] = [
     # ---- Audio --------------------------------------------------------
     FeatureRecord(
+        feature_id="audio.audio-separator",
+        label="Stem separation (python-audio-separator)",
+        category="audio",
+        state=STATE_AVAILABLE,
+        install_hint='pip install -e ".[audio]"',
+        docs="docs/MODELS.md#stem-separation",
+        routes=["/audio/separate"],
+        probe=_check("check_audio_separator_available"),
+    ),
+    FeatureRecord(
         feature_id="audio.demucs",
-        label="Demucs stem separation",
+        label="Demucs stem separation (legacy - archived upstream 2024-04-24)",
         category="audio",
         state=STATE_AVAILABLE,
         install_hint="pip install demucs",

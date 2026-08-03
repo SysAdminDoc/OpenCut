@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "total": 67,
+  "total": 68,
   "cards": [
     {
       "check_name": "check_acestep_available",
@@ -14,6 +14,22 @@
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "3.5B model; ~1 min of music in seconds on an RTX 3090.",
+      "requires_checkpoint_env": null,
+      "advisory_notes": [],
+      "license_waiver": ""
+    },
+    {
+      "check_name": "check_audio_separator_available",
+      "feature_id": "audio.audio-separator",
+      "label": "python-audio-separator (Mel-Band / BS-RoFormer, SCNet, MDX23C)",
+      "category": "audio",
+      "license": "MIT",
+      "upstream": "https://github.com/nomadkaraoke/python-audio-separator",
+      "hardware": "cpu/gpu",
+      "install_hint": "pip install -e \".[audio]\"  # or: pip install \"audio-separator[cpu]\"",
+      "privacy": "local-only",
+      "latency": "RoFormer models are slower than Demucs; SCNet/MDX23C sit between",
+      "quality_notes": "Maintained backend and the route default; RoFormer leads current benches.",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
       "license_waiver": ""
@@ -215,15 +231,15 @@
     {
       "check_name": "check_demucs_available",
       "feature_id": "audio.demucs",
-      "label": "Demucs (htdemucs / hdemucs)",
+      "label": "Demucs (htdemucs / hdemucs) - ARCHIVED UPSTREAM",
       "category": "audio",
       "license": "MIT",
       "upstream": "https://github.com/facebookresearch/demucs",
       "hardware": "cpu/gpu",
-      "install_hint": "pip install demucs",
+      "install_hint": "pip install demucs  # legacy: archived upstream 2024-04-24",
       "privacy": "local-only",
       "latency": "~0.3x realtime on CPU; near-real on RTX 3060",
-      "quality_notes": "Strong baseline; superseded by BS-RoFormer in newer benches.",
+      "quality_notes": "Archived upstream on 2024-04-24. Kept as a legacy backend for callers that name a Demucs-only model; new work should use python-audio-separator.",
       "requires_checkpoint_env": null,
       "advisory_notes": [],
       "license_waiver": ""
@@ -1168,6 +1184,7 @@
     "check_shaka_available",
     "check_social_post_available",
     "check_srt_available",
+    "check_stem_separation_available",
     "check_svtav1_psy_available",
     "check_temp_cleanup_available",
     "check_vmaf_available",
