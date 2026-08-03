@@ -27,6 +27,12 @@ record also lives in the git commit messages.
   non-finite timeline numbers are rejected with a clear 400 response instead
   of reaching frame conversion and producing a server error.
 
+### Fixed - Terminal job retention
+
+- In-memory terminal jobs now age from their completion timestamp, preserving
+  recently finished long-running jobs for status polling and cleanup parity
+  with the persistent job store.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
