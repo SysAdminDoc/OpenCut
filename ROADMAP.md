@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Let the queue runner wait as long as the job is allowed to run
-  Category: correctness
-  Where: `opencut/routes/jobs_routes.py:1043-1058` (the `_run` poll loop); related terminal-state check in `opencut/core/workflow.py` `_wait_for_job`.
-  Problem: The runner polls a dispatched job for 1800 s then marks the entry `QUEUE_JOB_TIMEOUT`, but the job itself may run for 7200 s (`job_stuck_timeout`) and workflows wait 3600 s per step. The runner then starts the **next** entry while the "timed-out" job is still executing, so two heavy jobs run concurrently despite the queue's one-at-a-time design, and the user sees an error for a job that later completes successfully. Separately, `_wait_for_job` treats only `complete`/`error`/`cancelled` as terminal, so an `interrupted` sub-job spins the full timeout.
-  Evidence: The 1800 s constant is independent of, and shorter than, both `_JOB_STUCK_TIMEOUT` and the workflow step budget.
-  Fix: Poll until the job reaches a terminal state or `_JOB_STUCK_TIMEOUT` (which already guarantees termination) rather than an independent shorter deadline; add `interrupted` to the terminal set.
-  Acceptance: A test with a job running longer than 1800 s asserts the queue does not start the next entry and does not report a timeout error.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Make the shutdown WAL checkpoint actually run
   Category: reliability
   Where: `opencut/job_store.py:159-182` (`close_all_connections`) and `:145-155`; same pattern in `opencut/journal.py:95-104,158-172`.

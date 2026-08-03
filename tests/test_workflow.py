@@ -184,9 +184,10 @@ class TestWorkflowValidation:
     def test_parent_cancellation_cancels_active_step_and_stops_workflow(
         self, app, monkeypatch
     ):
+        from unittest.mock import Mock
+
         import opencut.core.workflow as workflow_core
         import opencut.jobs as jobs
-        from unittest.mock import Mock
 
         class _Response:
             status_code = 200
@@ -309,6 +310,29 @@ class TestWorkflowValidation:
                 {"message": "Workflow step timed out", "persist_sync": True},
             )
         ]
+
+    def test_wait_for_job_treats_interrupted_as_terminal(self, monkeypatch):
+        import opencut.core.workflow as workflow_core
+        import opencut.jobs as jobs
+
+        monkeypatch.setattr(
+            jobs,
+            "_get_job_copy",
+            lambda _job_id: {"id": "interrupted-step", "status": "interrupted"},
+        )
+
+        result = workflow_core._wait_for_job(
+            object(),
+            "interrupted-step",
+            "csrf-token",
+            1,
+            "Interrupted step",
+            None,
+            1,
+            timeout=3600,
+        )
+
+        assert result == {"id": "interrupted-step", "status": "interrupted"}
 
 
 # =====================================================================
