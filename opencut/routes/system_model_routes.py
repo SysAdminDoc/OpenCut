@@ -1,5 +1,7 @@
 """System model routes registered on the shared system blueprint."""
 
+from urllib.parse import urlsplit
+
 __all__ = [
     "install_demucs",
     "install_watermark",
@@ -318,6 +320,28 @@ def llm_test():
 _update_cache = {"data": None, "ts": 0}
 _update_cache_lock = threading.Lock()
 _UPDATE_CACHE_TTL = 3600  # 1 hour
+_UPDATE_RELEASE_NOTES_MAX_CHARS = 20_000
+_UPDATE_RELEASES_URL = "https://github.com/SysAdminDoc/OpenCut/releases"
+
+
+def _canonical_release_url(value: object) -> str:
+    """Accept only canonical HTTPS GitHub release links from the API payload."""
+    candidate = str(value or "").strip()
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return _UPDATE_RELEASES_URL
+    path = parsed.path.rstrip("/")
+    if (
+        parsed.scheme.lower() == "https"
+        and parsed.netloc.lower() == "github.com"
+        and (
+            path == "/SysAdminDoc/OpenCut/releases"
+            or path.startswith("/SysAdminDoc/OpenCut/releases/tag/")
+        )
+    ):
+        return candidate
+    return _UPDATE_RELEASES_URL
 
 
 @system_bp.route("/openapi.json", methods=["GET"])
@@ -352,7 +376,10 @@ def check_for_update():
         "current_version": current,
         "latest_version": None,
         "update_available": False,
-        "release_url": "https://github.com/SysAdminDoc/OpenCut/releases",
+        "release_url": _UPDATE_RELEASES_URL,
+        "release_name": None,
+        "release_notes": None,
+        "published_at": None,
     }
 
     try:
@@ -372,7 +399,16 @@ def check_for_update():
             raise ValueError("GitHub response did not include a release tag")
 
         result["latest_version"] = tag
-        result["release_url"] = html_url
+        result["release_url"] = _canonical_release_url(html_url)
+        result["release_name"] = str(data.get("name") or tag)
+        body = data.get("body")
+        result["release_notes"] = (
+            body[:_UPDATE_RELEASE_NOTES_MAX_CHARS]
+            if isinstance(body, str)
+            else ""
+        )
+        published_at = data.get("published_at")
+        result["published_at"] = str(published_at) if published_at else None
 
         def _parse_version(v: str) -> tuple:
             """Parse version like '1.16.0' or '1.16.0-rc1' into comparable tuple.

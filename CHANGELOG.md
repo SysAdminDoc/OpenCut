@@ -10,6 +10,8 @@ record also lives in the git commit messages.
 - Update checks now return an unknown latest version when GitHub is
   unavailable, avoid caching failed responses, and retry on the next request.
   CEP and UXP panels surface the failure and point to their Refresh controls.
+- Successful checks now include bounded release notes, release name, publish
+  time, and a canonical release URL for the Settings/About notice.
 
 ### Fixed - Test profile isolation
 
