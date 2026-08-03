@@ -60,7 +60,7 @@ public class RegistryManager
     public void SetPlayerDebugMode(IProgress<InstallProgress> progress, int step, int totalSteps)
     {
         Report(progress, step, totalSteps, "Setting PlayerDebugMode",
-            "Enabling unsigned CEP extensions for CSXS 7-12...");
+            $"Enabling unsigned CEP extensions for CSXS {AppConstants.CsxsVersionRange}...");
 
         foreach (var version in AppConstants.CsxsVersions)
         {
@@ -78,7 +78,7 @@ public class RegistryManager
         }
 
         Report(progress, step, totalSteps, "Setting PlayerDebugMode",
-            "PlayerDebugMode set for CSXS 7-12.", LogLevel.Success);
+            $"PlayerDebugMode set for CSXS {AppConstants.CsxsVersionRange}.", LogLevel.Success);
     }
 
     public void RemovePlayerDebugMode()

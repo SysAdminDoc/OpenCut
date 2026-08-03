@@ -34,8 +34,15 @@ public static class AppConstants
     public const string AppRegKey = @"Software\OpenCut";
     public const string EnvironmentRegKey = "Environment";
 
-    // CSXS versions for PlayerDebugMode
-    public static readonly int[] CsxsVersions = { 7, 8, 9, 10, 11, 12 };
+    // CSXS versions for PlayerDebugMode.
+    // Covers CSXS 7 (CC 2014) through 18 (Premiere 2025+). Stopping at 12 left
+    // every Premiere newer than CC 2022 without PlayerDebugMode, so the unsigned
+    // CEP panel never loaded. Must stay in lockstep with Install.ps1 and
+    // OpenCut.iss — tests/test_installer_csxs_lockstep.py enforces it.
+    public static readonly int[] CsxsVersions = { 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+
+    public static string CsxsVersionRange =>
+        $"{CsxsVersions[0]}-{CsxsVersions[^1]}";
 
     // Whisper model sizes for display
     public static readonly Dictionary<string, string> WhisperModels = new()

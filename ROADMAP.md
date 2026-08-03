@@ -13,13 +13,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P0 — 2026-08-02 (research pass)
 
-- [ ] P0 — Enable PlayerDebugMode for CSXS 13–18 in the WPF installer
-  Why: The README's recommended Windows install path cannot make the CEP panel load on any Premiere newer than CC 2022, and reports success anyway.
-  Evidence: `installer/src/OpenCut.Installer/Models/AppConstants.cs:38` sets `CsxsVersions = { 7,8,9,10,11,12 }`, consumed at `Services/RegistryManager.cs:65-81`; Premiere CC 2023+/2025 use CSXS 13–18. `Install.ps1:555-561` and `OpenCut.iss:105-116` already cover 7–18, and the PowerShell comment names this exact regression.
-  Touches: `installer/src/OpenCut.Installer/Models/AppConstants.cs`, `Services/RegistryManager.cs` (two log strings hardcode "7-12"), `installer/tests`.
-  Acceptance: A test asserts the installer's CSXS set equals the `Install.ps1`/`OpenCut.iss` set; a smoke run writes `PlayerDebugMode` under CSXS.13–18 and a drift test fails if the three lists diverge again.
-  Complexity: S
-
 - [ ] P0 — Stop the installer force-killing Premiere
   Why: Re-running install or uninstall while the panel is connected terminates Premiere and loses unsaved project work.
   Evidence: `Install.ps1:138-143` and `:217-229` take the last column of every `netstat -ano | Select-String ":5679 "` row; that matches `ESTABLISHED` rows whose PID is the *client* — i.e. Premiere. `installer/src/OpenCut.Installer/Services/ProcessKiller.cs:93` filters with `findstr LISTENING` and is correct.
@@ -334,16 +327,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 
 ### P3 — 2026-08-02
-
-- [ ] P3 — Fix the UXP controls that silently do nothing
-  Category: correctness
-  Where: (a) `extension/com.opencut.uxp/main.js:4693,4701` (Auto Zoom aspect); (b) `:4589-4616` (Loudness Match); (c) `:6704-6708` (chat actions); (d) `:6386-6388` (OTIO export path fallback).
-  Problem: Four controls mislead the user about what they do. (a) `zoomAspect` is read into `aspect` and never included in the request payload (`{ filepath, zoom_amount, easing }`), so the user's 9:16 / 1:1 choice has no effect on the output. (b) "Loudness Match" posts `{files: [clipPath, refPath], target_lufs: -14.0}`, so the backend batch-normalises *both* files to a fixed −14 LUFS: the reference's loudness is never measured and a pointless normalised copy of the reference is produced, while the UI ("Matching loudness to reference…", a required reference picker) promises reference-matching. (c) The chat flow toasts "Executing {count} action(s)…" but only counts `r.data.actions` — no dispatch follows. (d) `document.getElementById("clipPathCut")?.value?.trim() ?? document.getElementById("clipPathVideo")?.value?.trim()` uses `??`, but an empty Cut input yields `""`, which is not nullish, so the Video-tab fallback is dead code; meanwhile `updateTimelineReadiness` (`:2999-3001`) uses `||`, so the Export OTIO button *enables* when only `clipPathVideo` is set and then dead-ends on "Select a clip first."
-  Evidence: Each is a direct read of the cited lines; the payload objects visibly omit the read values.
-  Fix: (a) include `aspect` in the payload (and confirm the backend honours it, else remove the control); (b) either measure the reference first and use its LUFS as the target, or relabel to "Normalize to −14 LUFS" and drop the reference input; (c) wire the actions through the existing NLP apply path or change the copy to "N suggested action(s) — review in the result panel"; (d) change `??` to `||`.
-  Acceptance: Each control is covered by a test asserting the request payload or dispatched action reflects the UI state; the OTIO button and its handler agree on which inputs count.
-  Confidence: Verified
-  Effort: M
 
 - [ ] P3 — Order-guard the Sequence Index filter requests
   Category: correctness
