@@ -236,6 +236,7 @@ Documentation = "https://github.com/SysAdminDoc/OpenCut/wiki"
 include = ["opencut*"]
 
 [tool.pytest.ini_options]
+addopts = '-m "not integration and not slow"'
 markers = [
     "integration: requires real FFmpeg processing",
     "slow: tests that take >30 seconds",

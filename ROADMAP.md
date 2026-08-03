@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Deselect network/integration tests from the default run
-  Category: testing
-  Where: `tests/test_integration_whisper.py:16-20`; `[tool.pytest.ini_options]` in `pyproject.toml`.
-  Problem: The `integration` and `slow` markers are declared but there is no `addopts` filter, so a plain `pytest` downloads a Whisper model over the network and runs real FFmpeg renders. The docstring says "Run manually" but nothing enforces it, and the only guard is a `skipif` on FFmpeg availability.
-  Evidence: No `addopts` entry in the pytest config; the marker declarations exist without a default filter.
-  Fix: Set `addopts = -m "not integration and not slow"` and document opting in with `-m integration`.
-  Acceptance: A plain `pytest` run performs no network I/O; `pytest -m integration` still runs the suite.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Cover the workflow between-steps cancellation branch
   Category: testing
   Where: `opencut/core/workflow.py:218-227` (the `_is_cancelled(parent_job_id)` early exit).

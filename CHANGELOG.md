@@ -69,6 +69,11 @@ record also lives in the git commit messages.
   longer declare or advertise the unused `noisereduce` package; UXP denoise
   fallback now selects the supported FFmpeg `afftdn` method.
 
+### Changed - Safer default pytest selection
+
+- Default pytest runs now exclude `integration` and `slow` tests; pass
+  `-m integration` when explicitly opting into network/FFmpeg coverage.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

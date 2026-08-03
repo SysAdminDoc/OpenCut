@@ -756,8 +756,11 @@ py -3.12 scripts/bootstrap_check.py --metadata-only --dev
 py -3.12 -m venv --clear .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 
-# Run all tests
+# Run the default test suite (integration and slow tests are excluded)
 python -m pytest tests/ -q
+
+# Opt into network/FFmpeg integration tests explicitly
+python -m pytest tests/ -q -m integration
 
 # Run smoke tests only
 python -m pytest tests/test_route_smoke.py -q

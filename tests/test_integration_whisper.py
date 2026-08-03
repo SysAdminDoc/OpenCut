@@ -5,7 +5,7 @@ These tests are marked both ``integration`` and ``slow`` because they need
 a Whisper model to be downloaded on first run, which can take significant time.
 
 Run manually with:
-    python -m pytest tests/test_integration_whisper.py -v --tb=short
+    python -m pytest tests/test_integration_whisper.py -m integration -v --tb=short
 """
 
 import shutil
@@ -40,4 +40,4 @@ def test_audio(tmp_path):
 class TestWhisperTranscription:
     def test_transcribe_returns_segments(self, client, csrf_token, test_audio):
         """POST /captions/transcribe with real audio and tiny model."""
-        pytest.skip("Requires Whisper model download — run manually with: pytest -m slow")
+        pytest.skip("Requires Whisper model download — run manually with: pytest -m integration")
