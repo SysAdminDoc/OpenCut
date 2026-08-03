@@ -9,6 +9,10 @@ import { createI18nRuntime } from "../../com.opencut.uxp/uxp-i18n.js";
 import { createJobController } from "../../com.opencut.uxp/job-controller.js";
 import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
 import {
+  buildChatActionRequest,
+  buildLoudnessMatchPayload,
+} from "../../com.opencut.uxp/uxp-utils.js";
+import {
   applyPremiereTheme,
   createPremiereThemeSync,
   normalizePremiereTheme,
@@ -77,6 +81,50 @@ describe("UXP backend client", () => {
       status: 500,
       data: null,
     });
+  });
+});
+
+describe("UXP feature control contracts", () => {
+  it("builds allowlisted chat requests with the active clip", () => {
+    expect(buildChatActionRequest({
+      action: "/audio/normalize",
+      params: { preset: "youtube" },
+    }, "C:/clips/interview.mp4")).toEqual({
+      endpoint: "/audio/normalize",
+      payload: { preset: "youtube", filepath: "C:/clips/interview.mp4" },
+    });
+    expect(buildChatActionRequest({ action: "/settings/delete-all", params: {} }, "clip.mp4")).toBeNull();
+  });
+
+  it("normalizes only the input clip to the measured reference target", () => {
+    expect(buildLoudnessMatchPayload("C:/clips/input.wav", -18.25)).toEqual({
+      files: ["C:/clips/input.wav"],
+      target_lufs: -18.25,
+    });
+    expect(buildLoudnessMatchPayload("C:/clips/input.wav", "not-a-number")).toBeNull();
+  });
+
+  it("removes unsupported auto-zoom aspect state and keeps OTIO fallback aligned", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
+    expect(main).not.toContain('getElementById("zoomAspect")');
+    expect(index).not.toContain('id="zoomAspect"');
+
+    const otioStart = main.indexOf('document.getElementById("exportOtioBtn")?.addEventListener');
+    const otioSource = main.slice(otioStart, otioStart + 1800);
+    expect(otioSource).toContain('document.getElementById("clipPathCut")?.value?.trim()');
+    expect(otioSource).toContain('|| document.getElementById("clipPathVideo")?.value?.trim()');
+    expect(otioSource).not.toContain('?? document.getElementById("clipPathVideo")');
+  });
+
+  it("dispatches supported chat actions through the job controller", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    expect(main).toContain("void executeChatActions(actions, clipPath);");
+    const start = main.indexOf("async function executeChatActions");
+    const source = main.slice(start, start + 1800);
+    expect(source).toContain("JobPoller.start(");
+    expect(source).toContain("request.endpoint");
+    expect(source).toContain("request.payload");
   });
 });
 

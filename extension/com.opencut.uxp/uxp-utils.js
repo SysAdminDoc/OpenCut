@@ -16,6 +16,48 @@ export function safeDomIdSegment(value) {
     .replace(/^-+|-+$/g, "") || "item";
 }
 
+const CHAT_ACTION_ENDPOINTS = Object.freeze({
+  "/silence": "/silence",
+  "/fillers": "/fillers",
+  "/audio/denoise": "/audio/denoise",
+  "/audio/normalize": "/audio/normalize",
+  "/audio/separate": "/audio/separate",
+  "/audio/enhance": "/audio/enhance",
+  "/styled-captions": "/styled-captions",
+  "/captions": "/captions",
+  "/video/scenes": "/video/scenes",
+  "/video/fx/apply": "/video/fx/apply",
+  "/video/reframe": "/video/reframe",
+  "/video/speed/change": "/video/speed/change",
+  "/video/depth/bokeh": "/video/depth/bokeh",
+  "/export/preset": "/export/preset",
+});
+
+/** Build a validated chat action request without permitting arbitrary routes. */
+export function buildChatActionRequest(action, filepath = "") {
+  const rawRoute = typeof action?.action === "string" ? action.action.trim() : "";
+  const endpoint = CHAT_ACTION_ENDPOINTS[rawRoute];
+  if (!endpoint) return null;
+
+  const params = action?.params;
+  const payload = params && typeof params === "object" && !Array.isArray(params)
+    ? { ...params }
+    : {};
+  const currentFilepath = String(filepath || "").trim();
+  if (!String(payload.filepath || "").trim() && currentFilepath) {
+    payload.filepath = currentFilepath;
+  }
+  return { endpoint, payload };
+}
+
+/** Build the loudness-match request after measuring the reference clip. */
+export function buildLoudnessMatchPayload(inputPath, targetLufs) {
+  const filepath = String(inputPath || "").trim();
+  const target = Number(targetLufs);
+  if (!filepath || !Number.isFinite(target)) return null;
+  return { files: [filepath], target_lufs: target };
+}
+
 // ── Batch rename / smart bins pure logic ─────────────────────────────
 // Extracted from the timeline controller so it can be unit-tested without a
 // live Premiere/UXP host. The UI passes real project items in; these helpers
