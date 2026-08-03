@@ -4796,7 +4796,7 @@ async function runDenoise() {
   const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
   if (!clipPath) { showSelectClipWarning(); return; }
 
-  const method   = document.getElementById("denoiseMethod")?.value ?? "noisereduce";
+  const method   = document.getElementById("denoiseMethod")?.value ?? "afftdn";
   const strength = parseInt(document.getElementById("denoiseStrength")?.value ?? 75) / 100;
 
   UIController.setButtonLoading("runDenoiseBtn", true);

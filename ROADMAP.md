@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Drop `noisereduce` from the declared dependencies
-  Category: maintainability
-  Where: `requirements.txt` (STANDARD section); `pyproject.toml` `standard` and `audio` extras; install hints at `opencut/core/dependency_support.py:83` and `opencut/routes/system_runtime_routes.py:371,397`.
-  Problem: `noisereduce` is never imported anywhere in the repo — no static import, no `import_module`, no `reduce_noise` usage; it appears only in install-hint strings. Everyone installing `[standard]` or `[audio]` pulls the package plus its scipy chain for code that cannot use it. Other spot-checked dependencies (rich, waitress, psutil, keyring, python-json-logger, scenedetect) are all genuinely imported.
-  Evidence: Repo-wide import scan finds zero usages.
-  Fix: Remove it from the extras and `requirements.txt`, or keep it documented as plugin-only; update the two hint tables either way.
-  Acceptance: A fresh `pip install -e ".[audio]"` does not pull `noisereduce`, and the dependency-support table no longer advertises it as a supported backend.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Deselect network/integration tests from the default run
   Category: testing
   Where: `tests/test_integration_whisper.py:16-20`; `[tool.pytest.ini_options]` in `pyproject.toml`.

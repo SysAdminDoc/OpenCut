@@ -63,6 +63,12 @@ record also lives in the git commit messages.
   translates legacy `device` values into `cpu_mode`, and persists a schema
   marker without exposing migration metadata through the settings API.
 
+### Changed - Remove unused noisereduce dependency
+
+- The standard/audio/all dependency lanes and runtime install dashboard no
+  longer declare or advertise the unused `noisereduce` package; UXP denoise
+  fallback now selects the supported FFmpeg `afftdn` method.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

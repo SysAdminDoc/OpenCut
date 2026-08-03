@@ -28,7 +28,6 @@ numpy>=1.24
 librosa>=0.10,<1
 # pydub retired in F123; OpenCut does not import it and keeps an optional
 # audioop-lts compatibility shim for downstream plugins that install pydub.
-noisereduce>=3.0,<4
 scenedetect>=0.7.1,<1
 # RA-23 — requests/urllib3 enter via faster-whisper's huggingface-hub; floor
 # them (urllib3 CVE-2026-21441 fixed 2.6.3, requests CVE-2026-25645 fixed 2.33.0).

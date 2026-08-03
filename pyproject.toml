@@ -77,7 +77,6 @@ standard = [
     # complicates Python 3.13 because pydub still imports stdlib audioop).
     # See opencut.core.audioop_shim for the optional 3.13 bridge if a
     # downstream plugin needs pydub.
-    "noisereduce>=3.0,<4",
     "scenedetect>=0.7.1,<1",
     # RA-23 — requests/urllib3 enter transitively via faster-whisper's
     # huggingface-hub fetch path. Floor them to the lockfile security level so
@@ -95,7 +94,6 @@ audio = [
     "pedalboard>=0.9,<1",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (see [standard] extra for rationale).
-    "noisereduce>=3.0,<4",
     "edge-tts>=6.1,<7",
 ]
 video = [
@@ -200,7 +198,6 @@ all = [
     "numpy>=1.24",
     "librosa>=0.10,<1",
     # F123 — pydub dropped (see [standard] extra).
-    "noisereduce>=3.0,<4",
     "scenedetect>=0.7.1,<1",
     "pedalboard>=0.9,<1",
     "edge-tts>=6.1,<7",
