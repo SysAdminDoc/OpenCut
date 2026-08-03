@@ -99,8 +99,8 @@ def _prune_dead_connections() -> None:
         for tid in dead_ids:
             try:
                 _ALL_CONNECTIONS[tid].close()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - cleanup is best effort
+                logger.debug("Could not close dead journal connection: %s", exc)
             del _ALL_CONNECTIONS[tid]
 
 
@@ -123,8 +123,8 @@ def _discard_cached_conn(conn) -> None:
                 _ALL_CONNECTIONS.pop(tid, None)
     try:
         conn.close()
-    except sqlite3.Error:
-        pass
+    except sqlite3.Error as exc:
+        logger.debug("Could not close stale journal connection: %s", exc)
     _thread_local.conn = None
     _thread_local.conn_path = None
 
@@ -143,7 +143,7 @@ def _get_conn() -> sqlite3.Connection:
         conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
-        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        conn = sqlite3.connect(_DB_PATH, timeout=10, check_same_thread=False)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.row_factory = sqlite3.Row
@@ -156,13 +156,17 @@ def _get_conn() -> sqlite3.Connection:
 
 
 def close_all_connections() -> None:
-    """Close every tracked connection. Called on server shutdown."""
+    """Checkpoint WAL and close every tracked connection on shutdown."""
     with _CONN_LOCK:
         for conn in list(_ALL_CONNECTIONS.values()):
             try:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except Exception as exc:  # noqa: BLE001 - shutdown is best effort
+                logger.warning("Could not checkpoint journal WAL: %s", exc)
+            try:
                 conn.close()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - shutdown is best effort
+                logger.warning("Could not close journal connection: %s", exc)
         _ALL_CONNECTIONS.clear()
     try:
         if getattr(_thread_local, "conn", None) is not None:

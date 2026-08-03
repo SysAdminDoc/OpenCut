@@ -125,6 +125,31 @@ class TestJournalStore(unittest.TestCase):
         self.assertTrue(dummy.closed)
         self.assertNotIn(999999, jm._ALL_CONNECTIONS)
 
+    def test_close_all_connections_checkpoints_worker_thread_wal(self):
+        from opencut import journal as jm
+
+        errors = []
+
+        def record_from_worker():
+            try:
+                jm.record("add_markers", "worker entry", {})
+            except Exception as exc:  # pragma: no cover - assertion below reports it
+                errors.append(exc)
+
+        worker = threading.Thread(target=record_from_worker)
+        worker.start()
+        worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(errors, [])
+
+        wal_path = f"{jm._DB_PATH}-wal"
+        self.assertTrue(os.path.isfile(wal_path))
+        jm.close_all_connections()
+
+        self.assertTrue(
+            not os.path.exists(wal_path) or os.path.getsize(wal_path) == 0
+        )
+
     def test_large_payloads_spill_to_content_files(self):
         from opencut import journal as jm
 

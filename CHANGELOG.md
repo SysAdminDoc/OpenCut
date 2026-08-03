@@ -51,6 +51,12 @@ record also lives in the git commit messages.
   starting the next entry, and interrupted jobs finish queue and workflow
   polling immediately instead of being reported as timeouts.
 
+### Fixed - Shutdown WAL cleanup
+
+- Job-store and journal SQLite connections can be closed from the shutdown
+  thread, checkpoint their WAL files before closing, and report cleanup
+  failures instead of silently hiding them.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
