@@ -46,6 +46,24 @@
         return "";
     }
 
+    function normalizeReleaseUrl(value) {
+        var raw = value === undefined || value === null ? "" : String(value).trim();
+        if (!raw || /[\u0000-\u001F\u007F]/.test(raw) || typeof URL === "undefined") return "";
+        var parsed;
+        try {
+            parsed = new URL(raw);
+        } catch (error) {
+            return "";
+        }
+        var path = String(parsed.pathname || "").replace(/\/+$/, "");
+        if (
+            parsed.origin !== "https://github.com"
+            || (path !== "/SysAdminDoc/OpenCut/releases"
+                && path.indexOf("/SysAdminDoc/OpenCut/releases/tag/") !== 0)
+        ) return "";
+        return parsed.origin + path;
+    }
+
     function isVersionAtLeast(version, minimum) {
         function parse(value) {
             var match = String(value || "").trim().match(/^v?(\d+)\.(\d+)\.(\d+)/i);
@@ -358,6 +376,7 @@
         escapeHtml: escapeHtml,
         escapeJsxDoubleQuotedString: escapeJsxDoubleQuotedString,
         normalizeOAuthUrl: normalizeOAuthUrl,
+        normalizeReleaseUrl: normalizeReleaseUrl,
         isVersionAtLeast: isVersionAtLeast,
         createLazyDomProxy: createLazyDomProxy,
         normalizePaletteText: normalizePaletteText,

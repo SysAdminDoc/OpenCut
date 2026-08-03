@@ -299,12 +299,18 @@ describe("CEP update-check boundary", () => {
     const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
 
     expect(main).toContain("function checkForUpdateNotice(force)");
+    expect(main).toContain("function renderUpdateNotice(result, checking)");
+    expect(main).toContain("normalizeReleaseUrl");
+    expect(main).toContain("function dismissUpdateNotice()");
     expect(main).toContain("udata.error || !udata.latest_version");
     expect(main).toContain("toast.update_check_failed");
     const refreshStart = main.indexOf("function refreshAll()");
     expect(refreshStart).toBeGreaterThan(-1);
     expect(main.slice(refreshStart, refreshStart + 500)).toContain("checkForUpdateNotice(true)");
     expect(index).toContain('id="refreshAllBtn"');
+    for (const id of ["updateNoticeCard", "updateOpenBtn", "updateDismissBtn", "updateRetryBtn"]) {
+      expect(index).toContain(`id="${id}"`);
+    }
   });
 });
 

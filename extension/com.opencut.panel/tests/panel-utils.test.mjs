@@ -87,6 +87,22 @@ describe("CEP OAuth URL boundary", () => {
   });
 });
 
+describe("CEP release URL boundary", () => {
+  it("accepts only canonical HTTPS GitHub release pages", () => {
+    expect(utils.normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.46.0"))
+      .toBe("https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.46.0");
+    expect(utils.normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/releases/"))
+      .toBe("https://github.com/SysAdminDoc/OpenCut/releases");
+  });
+
+  it("rejects redirects, alternate hosts, and non-HTTPS schemes", () => {
+    expect(utils.normalizeReleaseUrl("https://evil.example/releases/tag/v1.46.0")).toBe("");
+    expect(utils.normalizeReleaseUrl("https://github.com.evil/SysAdminDoc/OpenCut/releases")).toBe("");
+    expect(utils.normalizeReleaseUrl("http://github.com/SysAdminDoc/OpenCut/releases")).toBe("");
+    expect(utils.normalizeReleaseUrl("https://github.com/SysAdminDoc/OpenCut/issues/1")).toBe("");
+  });
+});
+
 describe("CEP backend version comparison", () => {
   it("accepts checkpoint-capable releases and common version prefixes", () => {
     expect(utils.isVersionAtLeast("1.42.0", "1.42.0")).toBe(true);

@@ -1838,6 +1838,35 @@
 
         <section class="oc-settings-group" id="settingsPaneAbout" data-settings-pane="about" role="tabpanel" aria-labelledby="settingsNavAbout">
         <div class="oc-section-title" data-i18n="uxp.settings.about">About</div>
+        <div class="oc-card" id="uxpUpdateNoticeCard" data-state="checking" aria-labelledby="uxpUpdateNoticeTitle">
+          <div class="oc-card-header">
+            <span id="uxpUpdateNoticeTitle" data-i18n="uxp.settings.updates">Updates</span>
+            <span class="oc-inline-value" id="uxpUpdateStatusText" data-state="working" data-i18n="uxp.settings.update_checking">Checking…</span>
+          </div>
+          <div class="oc-field-row">
+            <span class="oc-label" data-i18n="uxp.settings.update_current">Current</span>
+            <strong class="oc-inline-value" id="uxpUpdateCurrentVersion">1.46.0</strong>
+          </div>
+          <div class="oc-field-row">
+            <span class="oc-label" data-i18n="uxp.settings.update_available_version">Available</span>
+            <strong class="oc-inline-value" id="uxpUpdateAvailableVersion">—</strong>
+          </div>
+          <div class="oc-status-line" id="uxpUpdateSummary" role="status" aria-live="polite" data-i18n="uxp.settings.update_checking_summary">Checking GitHub for the latest OpenCut release.</div>
+          <div class="oc-update-release-details" id="uxpUpdateReleaseDetails" hidden>
+            <strong class="oc-card-copy" id="uxpUpdateReleaseName"></strong>
+            <details class="oc-update-notes" id="uxpUpdateNotesDetails" hidden>
+              <summary data-i18n="uxp.settings.update_release_notes">Release notes</summary>
+              <div class="oc-update-release-notes" id="uxpUpdateReleaseNotes"></div>
+            </details>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-primary oc-btn-sm" id="uxpUpdateOpenBtn" data-i18n="uxp.settings.update_view_release">View Release</button>
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="uxpUpdateDismissBtn" data-i18n="uxp.settings.update_dismiss">Dismiss</button>
+            </div>
+          </div>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="uxpUpdateRetryBtn" data-i18n="uxp.settings.update_check_again">Check Again</button>
+          </div>
+        </div>
         <div class="oc-card">
           <div class="oc-field-row">
             <span class="oc-label" data-i18n="uxp.settings.version">Version</span>

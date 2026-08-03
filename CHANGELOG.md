@@ -13,6 +13,12 @@ record also lives in the git commit messages.
 - Successful checks now include bounded release notes, release name, publish
   time, and a canonical release URL for the Settings/About notice.
 
+### Added - Persistent update notices
+
+- CEP and UXP Settings/About surfaces now retain update availability, release
+  notes, verified release-page actions, version-scoped dismissal, and retryable
+  offline/error guidance without opening a browser automatically.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and

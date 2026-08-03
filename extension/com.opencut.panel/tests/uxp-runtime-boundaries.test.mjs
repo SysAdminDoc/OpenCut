@@ -358,11 +358,17 @@ describe("UXP update-check boundary", () => {
     const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
 
     expect(main).toContain("async function checkForUpdatesUxp");
+    expect(main).toContain("function renderUpdateNoticeUxp");
+    expect(main).toContain("normalizeReleaseUrl(uxpLatestUpdate?.release_url)");
+    expect(main).toContain("function dismissUpdateNoticeUxp()");
     expect(main).toContain("data.error || !data.latest_version");
     expect(main).toContain("uxp.status.update_check_failed");
     expect(main).toContain("await checkForUpdatesUxp({ force: true });");
     expect(index).toContain('id="refreshBtn"');
     expect(index).toContain('data-workspace-command="refresh-backend"');
+    for (const id of ["uxpUpdateNoticeCard", "uxpUpdateOpenBtn", "uxpUpdateDismissBtn", "uxpUpdateRetryBtn"]) {
+      expect(index).toContain(`id="${id}"`);
+    }
   });
 });
 

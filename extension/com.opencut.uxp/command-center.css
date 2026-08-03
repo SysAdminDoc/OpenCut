@@ -146,6 +146,37 @@
   border-color: rgba(99, 199, 165, 0.28);
 }
 
+#uxpUpdateNoticeCard[data-state="available"] {
+  border-top-color: var(--cc-warning);
+}
+
+#uxpUpdateNoticeCard[data-state="error"] {
+  border-top-color: var(--cc-danger);
+}
+
+.oc-update-release-details {
+  display: grid;
+  gap: 8px;
+}
+
+.oc-update-notes {
+  margin-top: 2px;
+}
+
+.oc-update-release-notes {
+  max-height: 220px;
+  margin-top: 5px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--cc-border);
+  border-radius: 6px;
+  background: var(--cc-surface-raised);
+  color: var(--cc-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .oc-settings-group {
   display: grid;
   min-width: 0;
