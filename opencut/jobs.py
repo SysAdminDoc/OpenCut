@@ -684,8 +684,13 @@ def _cleanup_old_jobs():
                 jobs_to_persist.append(j.copy())
                 if jid in _job_processes:
                     processes_to_kill.add(jid)
-            elif status in ("complete", "error", "cancelled") and age > JOB_MAX_AGE:
-                expired.append(jid)
+            elif status in ("complete", "error", "cancelled"):
+                completed_at = j.get("completed_at")
+                terminal_age = now - (
+                    completed_at if completed_at is not None else created
+                )
+                if terminal_age > JOB_MAX_AGE:
+                    expired.append(jid)
         for jid in expired:
             del jobs[jid]
             if jid in _job_processes:

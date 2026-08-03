@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Purge terminal jobs by completion time, not creation time
-  Category: correctness
-  Where: `opencut/jobs.py:664-667` (`_cleanup_old_jobs`); compare the correct SQLite TTL at `opencut/job_store.py:453-455`.
-  Problem: Terminal jobs are deleted from memory when `now - created > JOB_MAX_AGE` (1 h default), so a job that *ran* longer than an hour becomes eligible for purge on the first 5-minute tick after it completes. `/status/<job_id>` — the endpoint the CEP panel polls — then 404s ("Job not found") for a job that finished seconds ago. `/jobs/<job_id>` falls back to SQLite, but `/status` does not. The SQLite TTL already does this correctly with `COALESCE(completed_at, created_at)`.
-  Evidence: The in-memory branch keys on `created` only.
-  Fix: Use `now - (completed_at or created)` for the terminal-purge branch; leave stuck-job detection keyed on `created`.
-  Acceptance: A test with a terminal job created 90 minutes ago but completed 1 minute ago asserts it survives the purge and `/status` still returns it.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Verify the port holder is OpenCut before force-killing it
   Category: reliability
   Where: `opencut/pid.py:197-231,238-274` (`_kill_via_netstat`, strategy 3); `_is_opencut_on_port` is defined and re-exported at `opencut/server.py:537` but never called in the kill path.

@@ -157,6 +157,32 @@ def test_cleanup_old_jobs_kills_process_for_timed_out_job(monkeypatch):
             jobs_mod.jobs.pop(job_id, None)
 
 
+def test_cleanup_old_terminal_job_uses_completed_at_for_status_retention(app, monkeypatch):
+    import opencut.jobs as jobs_mod
+
+    job_id = "recently-finished-long-job"
+    now = time.time()
+    monkeypatch.setattr(jobs_mod, "JOB_MAX_AGE", 3600)
+    with jobs_mod.job_lock:
+        jobs_mod.jobs[job_id] = {
+            "id": job_id,
+            "type": "render",
+            "status": "complete",
+            "created": now - (90 * 60),
+            "completed_at": now - 60,
+        }
+
+    try:
+        jobs_mod._cleanup_old_jobs()
+
+        response = app.test_client().get(f"/status/{job_id}")
+        assert response.status_code == 200
+        assert response.get_json()["id"] == job_id
+    finally:
+        with jobs_mod.job_lock:
+            jobs_mod.jobs.pop(job_id, None)
+
+
 def test_worker_exception_keeps_cancelled_state_and_emits_one_webhook(
     app, monkeypatch, tmp_path
 ):
