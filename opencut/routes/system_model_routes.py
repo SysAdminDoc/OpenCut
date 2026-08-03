@@ -350,7 +350,7 @@ def check_for_update():
     current = __version__
     result = {
         "current_version": current,
-        "latest_version": current,
+        "latest_version": None,
         "update_available": False,
         "release_url": "https://github.com/SysAdminDoc/OpenCut/releases",
     }
@@ -368,44 +368,52 @@ def check_for_update():
         tag = data.get("tag_name", "").lstrip("vV")
         html_url = data.get("html_url", result["release_url"])
 
-        if tag:
-            result["latest_version"] = tag
-            result["release_url"] = html_url
+        if not tag:
+            raise ValueError("GitHub response did not include a release tag")
 
-            def _parse_version(v: str) -> tuple:
-                """Parse version like '1.16.0' or '1.16.0-rc1' into comparable tuple.
+        result["latest_version"] = tag
+        result["release_url"] = html_url
 
-                Keeps only leading integer components, ignoring any -rc/.dev/+build
-                suffix. Falls back to (0,) if no digits are present so comparison
-                never raises on unexpected inputs.
-                """
-                parts = []
-                for seg in str(v).split("."):
-                    # Strip any trailing non-digit suffix (e.g. "0-rc1" -> "0")
-                    digits = ""
-                    for ch in seg:
-                        if ch.isdigit():
-                            digits += ch
-                        else:
-                            break
-                    if digits:
-                        parts.append(int(digits))
+        def _parse_version(v: str) -> tuple:
+            """Parse version like '1.16.0' or '1.16.0-rc1' into comparable tuple.
+
+            Keeps only leading integer components, ignoring any -rc/.dev/+build
+            suffix. Falls back to (0,) if no digits are present so comparison
+            never raises on unexpected inputs.
+            """
+            parts = []
+            for seg in str(v).split("."):
+                # Strip any trailing non-digit suffix (e.g. "0-rc1" -> "0")
+                digits = ""
+                for ch in seg:
+                    if ch.isdigit():
+                        digits += ch
                     else:
                         break
-                return tuple(parts) if parts else (0,)
+                if digits:
+                    parts.append(int(digits))
+                else:
+                    break
+            return tuple(parts) if parts else (0,)
 
-            try:
-                current_parts = _parse_version(current)
-                latest_parts = _parse_version(tag)
-                result["update_available"] = latest_parts > current_parts
-            except Exception as ve:
-                logger.debug("Version compare failed (%s vs %s): %s", current, tag, ve)
+        try:
+            current_parts = _parse_version(current)
+            latest_parts = _parse_version(tag)
+            result["update_available"] = latest_parts > current_parts
+        except Exception as ve:
+            logger.debug("Version compare failed (%s vs %s): %s", current, tag, ve)
     except Exception as exc:
         logger.debug("Update check failed: %s", exc)
         result["error"] = "offline"
 
     with _update_cache_lock:
-        _update_cache["data"] = result
-        _update_cache["ts"] = now
+        if "error" in result:
+            # An unavailable release endpoint must not turn into a stale
+            # "current is latest" answer for the full success-cache TTL.
+            _update_cache["data"] = None
+            _update_cache["ts"] = 0
+        else:
+            _update_cache["data"] = result
+            _update_cache["ts"] = now
 
     return jsonify(result)

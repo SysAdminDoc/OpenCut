@@ -5,6 +5,11 @@ record also lives in the git commit messages.
 
 ## 1.46.0 - Earned claims
 
+### Fixed - Honest update-check failures
+
+- Update checks now return an unknown latest version when GitHub is
+  unavailable, avoid caching failed responses, and retry on the next request.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and
