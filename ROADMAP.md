@@ -11,6 +11,266 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ## Research-Driven Additions
 
+### P0 — 2026-08-02 (research pass)
+
+- [ ] P0 — Enable PlayerDebugMode for CSXS 13–18 in the WPF installer
+  Why: The README's recommended Windows install path cannot make the CEP panel load on any Premiere newer than CC 2022, and reports success anyway.
+  Evidence: `installer/src/OpenCut.Installer/Models/AppConstants.cs:38` sets `CsxsVersions = { 7,8,9,10,11,12 }`, consumed at `Services/RegistryManager.cs:65-81`; Premiere CC 2023+/2025 use CSXS 13–18. `Install.ps1:555-561` and `OpenCut.iss:105-116` already cover 7–18, and the PowerShell comment names this exact regression.
+  Touches: `installer/src/OpenCut.Installer/Models/AppConstants.cs`, `Services/RegistryManager.cs` (two log strings hardcode "7-12"), `installer/tests`.
+  Acceptance: A test asserts the installer's CSXS set equals the `Install.ps1`/`OpenCut.iss` set; a smoke run writes `PlayerDebugMode` under CSXS.13–18 and a drift test fails if the three lists diverge again.
+  Complexity: S
+
+- [ ] P0 — Stop the installer force-killing Premiere
+  Why: Re-running install or uninstall while the panel is connected terminates Premiere and loses unsaved project work.
+  Evidence: `Install.ps1:138-143` and `:217-229` take the last column of every `netstat -ano | Select-String ":5679 "` row; that matches `ESTABLISHED` rows whose PID is the *client* — i.e. Premiere. `installer/src/OpenCut.Installer/Services/ProcessKiller.cs:93` filters with `findstr LISTENING` and is correct.
+  Touches: `Install.ps1` (both port-kill loops), `Uninstall.bat` path, installer smoke scripts.
+  Acceptance: A test feeds recorded `netstat -ano` output containing an ESTABLISHED row for the port and asserts only the LISTENING PID is selected.
+  Complexity: S
+
+- [ ] P0 — Normalise and guard the chosen install path before uninstall deletes it
+  Why: Uninstall runs `rmdir /s /q` on a raw, unvalidated user string, so choosing a drive root or an existing media folder in the browser destroys it.
+  Evidence: `installer/src/OpenCut.Installer/Pages/OptionsPage.xaml.cs:207` stores `PathBox.Text.Trim()`; the `Path.GetFullPath` result at `:238` is used only for a length check and discarded. `Services/UninstallEngine.cs:123-142` deletes recursively and `:175` runs `rmdir /s /q "{installDir}"`. No drive-root rejection, no non-empty-directory warning, no app-name append.
+  Touches: `Pages/OptionsPage.xaml.cs`, `Services/UninstallEngine.cs`, `Models/InstallConfig.cs`, installer tests.
+  Acceptance: Selecting a drive root or a non-empty directory is refused or warned before install; the stored path is always absolute; a test asserts uninstall refuses a path that is a drive root, a system directory, or the user profile.
+  Complexity: S
+
+- [ ] P0 — Make the test suite runnable from a fresh clone
+  Why: Nine test modules read markdown that `.gitignore` excludes from the repo, so the advertised green baseline is reproducible only on the maintainer's machine and no contributor can verify a release.
+  Evidence: `tests/test_uxp_migration_docs.py`, `test_uxp_macos_http.py`, `test_uxp_webview_scaffold.py`, `test_uxp_webview_permission_split.py`, `test_uxp_filesystem_permission.py`, `test_cep_uxp_parity_catalogue.py`, `test_windows_arm64_doc.py`, `test_roadmap_mirror.py` all `read_text()` untracked `docs/*.md`; `test_local_release_policy.py` reads the gitignored `CLAUDE.md`. `README.md:475` also points readers at the untracked `docs/UXP_MIGRATION.md`. `tests/test_fresh_clone_integrity.py:57` should catch this but its regex `\[[^\]]*\]\(([^)]+)\)` matches markdown links only, so backticked path references pass.
+  Touches: `.gitignore` allowlist, `docs/` (track the 16 untracked files or relocate the fixtures), `tests/test_fresh_clone_integrity.py`, `tests/test_local_release_policy.py`, `README.md:475`.
+  Acceptance: `git clone` + `pip install -e ".[dev]"` + `pytest` passes with no missing-file errors; the fresh-clone check also scans backticked and quoted path references, in tracked docs *and* in `tests/`, and fails on the current tree before the fix.
+  Complexity: M
+
+### P1 — 2026-08-02 (research pass)
+
+- [ ] P1 — Advance the FFmpeg snapshot floor past the July 2026 fixes and ship the `full` build
+  Why: The accepted release lane and the current snapshot floor both predate four HIGH-severity crafted-media fixes, and the bundled variant lacks every FFmpeg 8.x capability the project could expose.
+  Evidence: CVE-2026-64832/64833/64835/66041 list 8.1.2 as affected; fix commits `4c6217477f`, `6f80e27654`, `1836ef9684`, `4da9812e25` landed on master 2026-07-02…07-05 and are not on `release/8.1` (Debian tracker marks all four unfixed; ffmpeg.org/security.html omits them). `opencut/core/ffmpeg_provenance.py:47,53,72` still sets `RELEASE_FLOOR=(8,1,2)`, `SNAPSHOT_FLOOR_DATE="2026-06-10"`, and pins `8.1.2-essentials_build-www.gyan.dev`. The bundled `ffmpeg/ffmpeg.exe` reports `8.1.2-essentials` with `--enable-nvdec --enable-cuvid` and without `libsvtav1`/`libdav1d`/`whisper`/`libplacebo`/`vulkan`/`libjxl`/`libvvenc`. Cross-reference: `Roadmap_Blocked.md` P0 "Replace the FFmpeg 8.1.2 security floor" is blocked on the *release* lane only — the snapshot lane already exists in code and makes this actionable now.
+  Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, installer FFmpeg constants (`AppConstants.cs`, `OpenCut.iss`, `Install.ps1`), `Dockerfile` pinned source + SHA-256, `release_licenses/` source archive, `README.md` install instructions.
+  Acceptance: The release lane is refused with a named-CVE message until `n8.1.3` exists; the snapshot floor is `>= 2026-07-06` and records the four CVEs plus their fix commits; the bundled and documented build is a `git-full` snapshot pinned by exact commit hash with its source archived beside it; a probe flips the release lane back on when a fixed tag appears.
+  Complexity: M
+
+- [ ] P1 — Test against the dependency versions the project declares
+  Why: The 10,726-pass baseline runs on a stack that violates four of OpenCut's own constraints, two at major-version boundaries, so users installing per `pyproject.toml` execute code paths the suite has never run.
+  Evidence: In the environment that produced the recorded baseline: `opencv-python` 4.11.0.86 vs declared `>=5,<6`; `edge-tts` 7.2.7 vs `<7`; `cryptography` 49.0.0 vs `<49`; `scenedetect` 0.6.7.1 vs `>=0.7.1`. PySceneDetect 0.7 is a documented breaking release (VFR handling, seconds-vs-frames option semantics, `save-fcp`). `scripts/check_dependency_matrix.py` resolves declared lanes but never compares them to what is installed.
+  Touches: `scripts/check_dependency_matrix.py`, `scripts/release_smoke.py`, `tests/conftest.py` or a new `tests/test_declared_floors.py`, `opencut/core/scene_detect.py` (0.7 API), `pyproject.toml`/`requirements.txt` if a constraint is wrong rather than the environment.
+  Acceptance: A gate compares every installed distribution against the declared specifier for the active extras and fails on mismatch; it fails on the current environment and passes after either the environment or the constraint is corrected; the PySceneDetect path is exercised on 0.7.x.
+  Complexity: M
+
+- [ ] P1 — Close the UXP capability gap before ExtendScript support ends
+  Why: Adobe states verbatim that ExtendScript is supported "through September 2026" and CEP 12 is the last CEP release, yet 133 user-facing capabilities exist only in the CEP panel — a UXP-only user cannot even install Whisper.
+  Evidence: Literal route references resolve to 189 non-stub routes in `extension/com.opencut.panel/client/main.js` and 77 across `extension/com.opencut.uxp/*.js`; the CEP-only set includes `/audio/separate`, `/captions/translate`, `/audio/enhance`, `/captions/animated/render`, `/export/preset`, `/full`, `/install-whisper`. `opencut/_generated/uxp_migration_dashboard.json` measures the 18 ExtendScript host functions (nearly all `direct_uxp`) and therefore reports migration as near-complete; `extension/PANEL_PARITY.json` already records `"$adobe_cep_eol": "approximately 2026-09"`. Host-write itself is sound — `main.js:812-833` feature-detects `project.lockedAccess()` for 26.3. Cross-references the existing P2 "Complete UXP first-run and settings portability", which covers onboarding/settings but not feature reach.
+  Touches: `extension/com.opencut.uxp/*`, `opencut/tools/dump_uxp_migration_dashboard.py` (or equivalent generator), `extension/PANEL_PARITY.json`, `tests/test_panel_tab_parity.py`, `tests/test_cep_uxp_parity_catalogue.py`, locale files.
+  Acceptance: The migration dashboard reports **route coverage**, not host-function coverage, and a gate fails when a CEP-reachable route has no UXP path or a recorded, justified exclusion; the CEP-only set is driven to zero for capabilities the product claims, starting with dependency installation, stem separation, translation, enhancement, and export presets.
+  Complexity: XL
+
+- [ ] P1 — Publish a downloadable release for the current source tree
+  Why: The newest artifact anyone can install is 21 versions old, so no user has any fix shipped since 2026-04-20 — including the security work this roadmap tracks.
+  Evidence: `gh release list` shows v1.25.1 (2026-04-20) as the latest; `pyproject.toml:13` is 1.46.0; `git rev-parse refs/tags/v1.34.0` … `v1.46.0` all fail — thirteen shipped versions carry no tag.
+  Touches: `scripts/release_smoke.py`, `scripts/release_gate.py`, `scripts/release_composition.py`, `installer/InstallerBuilder.ps1`, `scripts/build_linux_packages.sh`, `CHANGELOG.md`, git tags.
+  Acceptance: A tag and an unsigned GitHub Release exist for the current version with the Windows installer, `release-composition.json`, artifact SBOM, third-party notices, and FFmpeg provenance attached; a release-gate check fails when `__version__` has no matching tag.
+  Complexity: M
+
+- [ ] P1 — Fix the two CLI commands that crash on valid input
+  Why: `opencut scene-detect` raises `TypeError` on its default invocation and `opencut podcast` throws away an expensive diarization pass at the last step.
+  Evidence: `opencut/cli.py:1425` calls `detect_scenes(input_file, threshold=..., method=method)` but `opencut/core/scene_detect.py:54-59` accepts no `method` kwarg, so both `--method ffmpeg` (default) and `--method pyscenedetect` fail; `cli.py:1430` then normalises a `SceneInfo` dataclass as list-or-dict, so `--method ml` always reports "Scenes found: 0" and writes `[]`. `cli.py:540-545` passes a `List[TimeSegment]` into `generate_multicam_xml(cuts=...)`, which immediately calls `c.get("end", 0)` at `opencut/core/multicam_xml.py:73` — `TimeSegment` has no `.get`.
+  Touches: `opencut/cli.py`, `opencut/core/scene_detect.py` dispatch, `opencut/core/multicam_xml.py` input contract, `tests/` CLI coverage.
+  Acceptance: A test invokes every CLI subcommand with its documented default arguments against a generated fixture and asserts exit 0 and non-empty structured output; `scene-detect --method ml` reports the real boundary count.
+  Complexity: S
+
+- [ ] P1 — Make generated readiness prove implementation for every record
+  Why: 27 auto-generated feature records report `available` with no `impl_module`, which is exactly the blind spot that let three terminal-stub adapters advertise as available.
+  Evidence: `opencut/_generated/feature_readiness.json` — 27 of 72 records have `source: "generated"` and `impl_module: ""`, all in state `available`, including `audio.demucs`, `video.sam2`, `video.mediapipe`, `editing.auto-editor`, `auto.otio`. The three previously-caught adapters now carry a populated `impl_module`; nothing prevents the next one.
+  Touches: `opencut/tools/dump_feature_readiness.py`, `opencut/registry.py`, `tests/test_feature_impl_readiness.py`.
+  Acceptance: A record cannot be emitted in `available` without a resolvable `impl_module` that the stub scanner has inspected; the generator fails on the current tree and passes once all 27 are resolved or reclassified.
+  Complexity: M
+
+### P2 — 2026-08-02 (research pass)
+
+- [ ] P2 — Triage the routes that no surface reaches
+  Why: 1,253 of 1,518 non-stub routes are referenced by no panel, no command palette entry, no CLI command, and no MCP tool — the product's breadth is unreachable by its own users.
+  Evidence: Literal-path matching against `opencut/_generated/route_manifest.json` gives 211 routes referenced across all panel JS, 38 in `opencut/core/command_palette.py`, 93 in `opencut/mcp_server.py`, 5 in `opencut/cli.py`. Margin is small: `client/main.js` builds zero route paths by template literal and the UXP panel builds eight. Cross-reference: the existing P3 "Reconcile the queue allowlist with the documented invariant" is the same judgement at one-tenth the scale and should be decided together.
+  Touches: `opencut/_generated/route_manifest.json` generator, `opencut/registry.py`, `opencut/core/command_palette.py`, `docs/` API documentation, `scripts/release_smoke.py`.
+  Acceptance: Every shipped route carries a declared surface class (panel / palette / CLI / MCP / integration-only) in the generated manifest; a gate fails on an unclassified route; the README's route claim is restated in terms of what a user can reach.
+  Complexity: L
+
+- [ ] P2 — Apply timeline cuts as interchange, not per-clip razor operations
+  Why: Razoring clip-by-clip through the host is the mechanism that makes a silence pass leave Premiere unusable, and the panel's own success toast miscounts the result.
+  Evidence: `ocApplySequenceCuts` in `extension/com.opencut.panel/host/index.jsx` increments per clip removed per track, so `client/main.js:15157` reports "Applied 9 cuts" for a 3-cut apply on a 1V/2A sequence; an Adobe forum report has a comparable tool's >1000-cut pass leaving Premiere "unusably laggy" on a 4090/i9-14900K/64 GB machine. Round-trip risks to cover: OTIO #569 (FCP XML losing trim points on Premiere import) and auto-editor #70 (only the first audio track survives).
+  Touches: `extension/com.opencut.panel/host/index.jsx`, `extension/com.opencut.uxp/main.js`, `opencut/export/otio_export.py`, `opencut/core/multicam_xml.py`, panel result rendering and locale strings.
+  Acceptance: A cut list above a configurable threshold is written as a timeline interchange import instead of per-clip razors; a fixture with 1,000 cuts across 1V/2A round-trips with in/out points and all audio tracks intact; the toast reports cuts requested, not clip-removals.
+  Complexity: L
+
+- [ ] P2 — Replace the archived Demucs pin and declare the separation backend that actually works
+  Why: The declared stem-separation dependency is archived upstream, and the maintained backend the code already supports cannot be installed from any extra.
+  Evidence: `facebookresearch/demucs` was archived 2024-04-24 and is pinned `demucs>=4.0,<5` in the `audio`, `torch-stack`, and `all` extras. `python-audio-separator` is wired at `opencut/routes/audio.py:498-503` and probed at `opencut/core/engine_registry.py:470`, but appears in no extra and in no `requirements*.txt`; the only install guidance is a runtime `RuntimeError` string.
+  Touches: `pyproject.toml` extras, `requirements.txt`, `opencut/core/dependency_support.py`, `opencut/checks.py`, `opencut/routes/system_runtime_routes.py` hint tables, `docs/MODELS.md`.
+  Acceptance: `pip install -e ".[audio]"` installs a maintained separation backend; the dependency dashboard names the archived status of Demucs and does not advertise it as the recommended path; the default backend is the maintained one.
+  Complexity: S
+
+- [ ] P2 — Retire the dead `auto-editor` pip pin
+  Why: The pinned branch is nine months stale and upstream left PyPI, so every 2026 capability — partial-lossless GOP-copy rendering, linked dissolve transitions, Parakeet TDT word timestamps, MLT export — is unreachable.
+  Evidence: `pyproject.toml` pins `auto-editor>=29.3,<30`; PyPI's last release is 29.3.1 (2025-11-04). Upstream was rewritten in Nim and now ships prebuilt native binaries. Positioning note for the docs: distributed builds now gate rendering above 3200×1800 and all professional-NLE export behind a licence key while the repository stays Unlicense.
+  Touches: `pyproject.toml`, `requirements.txt`, `opencut/core/auto_edit.py` (binary resolution, same pattern as `get_ffmpeg_path()`), `opencut/checks.py`, `docs/MODELS.md`, installer optional-tools step.
+  Acceptance: The integration resolves a bundled or system `auto-editor` binary with a version probe and a clear message when absent; the pip pin is removed or documented as legacy-only; a test asserts the resolver prefers the native binary.
+  Complexity: M
+
+- [ ] P2 — Make the CEP panel build a real bundle
+  Why: The shipped artifact is a byte-identical copy of the 18,360-line source, so a Chromium-99 runtime parses unbundled, unminified source on every panel open.
+  Evidence: `extension/com.opencut.panel/client/dist/main.js` and `client/main.js` have identical MD5 (`5282cc69…`) and identical line counts, despite `vite.config.mjs` and a `build` script in `extension/com.opencut.panel/package.json`.
+  Touches: `extension/com.opencut.panel/vite.config.js`, `package.json` build scripts, `scripts/verify-build.mjs`, `CSXS/manifest.xml` `MainPath`, packaging steps.
+  Acceptance: `npm run build` produces a bundled, minified `dist/` that differs from source and passes `build:verify`; the installer ships `dist/`; a test fails if the built artifact is byte-identical to a source file.
+  Complexity: M
+
+- [ ] P2 — Restate the product claims Premiere 26.2/26.3 made first-party
+  Why: Several headline features now ship in the host, so the README and panel copy advertise parity work instead of the differentiated capability.
+  Evidence: Premiere 26.2 shipped the Sequence Index panel (search, sort, column chooser, filter funnel, jump, CSV export); 26.3 shipped Single-Word Captions; 25.2 shipped Media Intelligence search; 25.6 added bulk bleep/mute; Auto-Match Loudness and Text-Based-Editing Delete Pauses / Delete Filler Words predate both; Adobe's on-device Speechmatics STT (April 2026) claims 12–16% better accuracy than Whisper-powered creative tools. See RESEARCH.md "Rejected Ideas" for the per-feature verdicts.
+  Touches: `README.md` feature overview and comparison sections, `extension/*/locales/en.json` descriptions, `docs/` positioning, `opencut/core/command_palette.py` ordering.
+  Acceptance: Every claim that overlaps a native 26.x feature is restated as the differentiated part (cross-project scope, exportable artifacts, unlimited/uncapped, headless/REST access, template breadth) or removed; a doc test asserts no claim states the host cannot do something it now does.
+  Complexity: S
+
+- [ ] P2 — Ship diarization-driven cutting on pyannote's exclusive-speaker output
+  Why: Cutting at speaker changes is the single most-requested Premiere automation with no free implementation, and pyannote 4.x added an output built specifically to reconcile diarization against imprecise ASR timestamps that OpenCut does not use.
+  Evidence: Adobe feature request 1555738 asks for speaker-change cuts "similar to Scene Edit Detection" plus auto track placement and speaker colour-coding; multicam-by-speaker is paywalled by AutoPod ($29/mo), FireCut Pro, and AutoCut. pyannote-audio 4.0 adds `exclusive_speaker_diarization` alongside regular diarization and VBx clustering in `speaker-diarization-community-1`; repo-wide search for `exclusive_speaker` returns zero hits while `opencut/core/diarize.py` already references `community-1`.
+  Touches: `opencut/core/diarize.py`, `opencut/core/multicam.py`, `opencut/routes/video_core.py` (`/video/multicam-cuts`), panel multicam surfaces, `docs/MODELS.md`.
+  Acceptance: Multicam cut generation consumes the exclusive-speaker output when available, cuts land on speaker boundaries rather than ASR segment boundaries, and a fixture with two overlapping speakers produces cuts within one frame of the diarization boundary.
+  Complexity: M
+
+- [ ] P2 — Give the cleanup chain one reversible verb
+  Why: OpenCut has every component of the standard cleanup pass and no single entry point, while every competitor ships one button for it.
+  Evidence: Podcastle "Magic Dust", FireCut "Magic Cut" (2026-07-22), Descript Underlord all collapse silence trim → denoise → loudness → captions into one action. OpenCut exposes them as separate operations plus workflow presets in `opencut/data/workflow_presets.json` that require the user to know which preset to choose.
+  Touches: `opencut/core/workflow.py`, `opencut/data/workflow_presets.json`, CEP/UXP quick actions, locale strings, cut review panel.
+  Acceptance: One control runs the chain, shows a single preview of every proposed change before anything is written, and is reversible from the journal as one unit; it degrades honestly when an optional dependency in the chain is missing. Depends on the existing P2 "Compile workflows into preflighted resumable plans".
+  Complexity: M
+
+- [ ] P2 — Make the highlight score explainable and re-weightable
+  Why: The category's incumbent locks an opaque 0–99 score behind its paid tier and users treat it as triage, not verdict — an inspectable score is the differentiator a local tool can own.
+  Evidence: Opus Clip's Virality Score is free-tier-locked and blends hook strength, topic-transition density, speaker engagement, and category history; `opencut/core/virality_score.py` already computes a weighted blend of audio energy, transcript hook, and visual salience, and its own documentation warns the absolute numbers are not comparable across video types.
+  Touches: `opencut/core/virality_score.py`, `opencut/core/highlights.py`, `opencut/routes/wave_h_routes.py`, panel result rendering, `docs/`.
+  Acceptance: The response returns each named component signal with its weight and contribution; the panel renders the breakdown and lets the user re-weight and re-rank without re-analysing; the docs state the score is ordinal within one video, not absolute.
+  Complexity: M
+
+### P3 — 2026-08-02 (research pass)
+
+- [ ] P3 — Export MLT projects for Kdenlive and Shotcut
+  Why: The two most actively developed open-source NLEs cannot receive an OpenCut edit natively, and neither can produce one — Shotcut's own roadmap lists OTIO import/export and Kdenlive XML export as not done.
+  Evidence: Repo-wide search for `mlt`, `kdenlive`, and `shotcut` returns zero hits in `opencut/`; auto-editor 31.1.2–31.3.0 exports MLT with volume/blur ramps as keyframe animations and timewarp producers; OTIO does not cover MLT.
+  Touches: new `opencut/export/mlt_export.py`, `opencut/routes/timeline.py`, `opencut/cli.py`, `tests/`.
+  Acceptance: A cut list with keyframed volume and a speed change round-trips into Kdenlive and Shotcut with correct in/out points and timing, verified against a checked-in reference `.mlt`.
+  Complexity: L
+
+- [ ] P3 — Emit OTIO transitions and bound the caption round-trip claim
+  Why: The OTIO export writes clips and markers but no `Transition` items, and OTIO has no caption schema at all — so the interchange claim is broader than the format can carry.
+  Evidence: Search for `schema.Transition` in `opencut/` returns zero hits; OpenTimelineIO issue #62 confirms there is no subtitle/caption schema; issues #442/#445/#446 record that the AAF writer supports only cross-dissolves, no markers, no essence import.
+  Touches: `opencut/export/otio_export.py`, `opencut/export/otio_diff.py`, `README.md` interchange claims, `docs/DELIVERY_STANDARDS.md`.
+  Acceptance: Transitions survive OTIO export and re-import; the documented interchange matrix states per-format exactly what is and is not carried, and a test fails if a claim exceeds what the writer emits.
+  Complexity: M
+
+- [ ] P3 — Resync an existing subtitle file to its video
+  Why: Editors with subtitle libraries ask for in-NLE resync repeatedly and no free tool wires it into Premiere; OpenCut already has the ASR and alignment pieces.
+  Evidence: Adobe feature request 1326702 quantifies the manual cost at 10–15 minutes per episode against a 1,000+ episode library; `ffsubsync` exists as a standalone CLI. Repo-wide search for `subsync` returns zero hits.
+  Touches: new `opencut/core/subtitle_resync.py`, `opencut/routes/subtitle_routes.py`, CEP/UXP captions tab, `opencut/cli.py`.
+  Acceptance: An SRT offset by a known constant and an SRT with a known drift both realign to within one frame against a fixture, and the result is previewable before it overwrites anything.
+  Complexity: M
+
+- [ ] P3 — Add bulk transcript correction
+  Why: Per-word click-in correction is the loudest transcript complaint and OpenCut's transcript surfaces have no find/replace or glossary.
+  Evidence: Adobe feature request 1329035 — "correcting the transcript by having to click into the text window is cumbersome when there's lots of correcting to be done"; repo-wide search for `find_replace` and `glossary` returns zero hits.
+  Touches: `opencut/routes/transcript_edit_routes.py`, new core module, CEP/UXP transcript editor, `opencut/user_data.py` for the persisted glossary.
+  Acceptance: Find/replace across a whole transcript with preview and undo, plus a persisted per-project term glossary applied on transcription; corrections survive re-transcription of unchanged regions.
+  Complexity: M
+
+- [ ] P3 — Let the user choose the GPU
+  Why: Multi-GPU workstations get whatever device the runtime picks first, and there is no way to steer or exclude one.
+  Evidence: Repo-wide search for `cuda_device`, `device_index`, `gpu_index`, `CUDA_VISIBLE`, and `multi_gpu` returns zero hits. Shotcut 26.8.1 shipped a Graphics Adapter setting for exactly this; the same request is open on StoryToolkitAI (#124), ClearerVoice (#62), and python-audio-separator (#180).
+  Touches: `opencut/config.py`, `opencut/core/gpu_semaphore.py`, `opencut/core/resource_monitor.py`, ML core modules, settings UI, `/system/gpu`.
+  Acceptance: A configured device index is honoured by every GPU-backed operation and reported in `/system/status`; an invalid index fails with a structured error listing the available devices.
+  Complexity: M
+
+- [ ] P3 — Run a WCAG rule engine against the rendered panel
+  Why: Accessibility coverage is a hand-rolled contrast ratio plus ad-hoc role assertions, so whole rule classes — landmarks, focus order, name-from-content, duplicate ids — are unchecked.
+  Evidence: `extension/com.opencut.panel/tests/rendered/panel-regression.spec.mjs:887-947` computes relative luminance and asserts ≥ 4.5:1 in both themes; 34 aria/role assertions exist across the file; `package.json` has no accessibility rule engine in `devDependencies`.
+  Touches: `extension/com.opencut.panel/package.json`, `tests/rendered/panel-regression.spec.mjs`, panel markup fixes the scan surfaces.
+  Acceptance: An automated WCAG 2.2 AA rule scan runs over each production panel state in both themes with an explicit, reviewed suppression list, and fails on a new violation. Complements the existing P2 "Test production UI states at real breakpoint boundaries".
+  Complexity: M
+
+- [ ] P3 — Finish MCP conformance for the transport OpenCut actually serves
+  Why: The server advertises the `2026-07-28` revision but the HTTP transport omits headers the revision requires and one error code was not renumbered.
+  Evidence: `opencut/mcp_server.py:1657` sets `LATEST_PROTOCOL_VERSION = "2026-07-28"` and the server exposes `--http` on 5681; searches for `Mcp-Method` and `Mcp-Name` return zero hits, and `-32021` (`MissingRequiredClientCapability`) is absent while `-32020`/`-32022` are present. `server/discover`, `resultType`, `ttlMs`, and `cacheScope` are implemented; `subscriptions/listen` is legitimately absent because the server declares `subscribe: false` and `listChanged: false`.
+  Touches: `opencut/mcp_server.py` HTTP request/response path, `tests/test_mcp_*`, `docs/MCP_SERVER.md`, `pyproject.toml` (`mcp>=1.26` spans the 1.x→2.x protocol break unbounded; bound it).
+  Acceptance: A conformance test drives both protocol eras over the HTTP transport and asserts required headers and error codes; the `mcp` extra is bounded to one major line.
+  Complexity: M
+
+- [ ] P3 — Make the Docker `gpu` and `mcp` profiles work as documented
+  Why: Both profiles fail out of the box for anyone following the README.
+  Evidence: `docker-compose.yml:36-64` reserves an NVIDIA device but the image is `python:3.12-slim-bookworm` with no CUDA runtime, the bundled FFmpeg is configured without NVENC/CUDA (`Dockerfile:53-72`), and the locked set has CPU-only `onnxruntime` and no torch; both services also publish `5679:5679`, so `docker compose --profile gpu up` fails on port allocation. `docker-compose.yml:96-97` points the MCP sidecar at `http://opencut-server:5679` while `OPENCUT_TRUSTED_HOSTS` defaults empty, so `opencut/server.py:738-748` returns 400 `UNTRUSTED_HOST` on every call.
+  Touches: `docker-compose.yml`, `Dockerfile` (a real CUDA target or removal of the profile), `README.md` Docker section.
+  Acceptance: `docker compose --profile mcp up` completes an MCP→backend round trip with no manual environment editing; the GPU profile either provides working acceleration on a distinct port or is removed.
+  Complexity: M
+
+- [ ] P3 — Fix the example plugins so they load
+  Why: Two of the three shipped examples are rejected by OpenCut's own plugin validator, so copying the documented reference produces a plugin that never loads.
+  Evidence: `opencut/data/example_plugins/clip-notes/plugin.json` and `.../timecode-watermark/plugin.json` declare no `api_version`; `_declared_api_range` returns `None` (`opencut/core/plugin_manifest.py:117-119`) and `check_api_compatibility` then reports `compatible=False` (`:169-183`). Separately `timecode-watermark/routes.py:77` hardcodes `rate=25` for `drawtext=timecode=` and `:34` rejects any frame component above 24, so 29.97/30 fps footage drifts ~20% and a valid `00:00:00:29` start timecode is refused.
+  Touches: both `plugin.json` manifests, `opencut/data/example_plugins/timecode-watermark/routes.py`, `docs/PLUGIN_AUTHORING.md`, plugin tests.
+  Acceptance: A test installs each shipped example into a temp plugin dir and asserts it loads and `opencut plugins doctor` exits 0; the timecode plugin probes source fps.
+  Complexity: S
+
+- [ ] P3 — Make `auto-zoom --apply` use the tracking it computed
+  Why: The CLI runs face detection and then renders a static top-left crop, usually cropping out the face it found.
+  Evidence: `opencut/cli.py:1170-1179` uses only `keyframes[0]["zoom"]` (commented "simplified: use first keyframe zoom for now") and builds `zoompan=z={zoom_val}:d=1:s={w}x{h}:fps={fps}` with no `x`/`y` expressions, so `zoompan` defaults to `x=0:y=0`.
+  Touches: `opencut/cli.py`, `opencut/core/auto_zoom.py` filter construction (share it with `/video/auto-zoom`), tests.
+  Acceptance: A fixture with a face in the lower-right renders a zoom centred on the face; the CLI and the route build the filter through the same helper.
+  Complexity: S
+
+- [ ] P3 — Complete the `Install.ps1` uninstall path and stop using a bare `pip`
+  Why: Uninstall leaves working launchers pointing at a removed package, and the "old package removed" step silently no-ops on multi-Python machines.
+  Evidence: `Install.ps1:124-183` removes the CEP extension, pip package, and model caches but leaves `Start-OpenCut.bat` and `Start-OpenCut-Hidden.vbs` (created at `:597-623`), the desktop shortcut (`:626-638`), and every `PlayerDebugMode` key (`:559-583`). `:253-255` and `:161` call bare `pip` before `$pythonCmd` is resolved at `:370-389`, while installs use `& $pythonCmd -m pip` at `:412-439`. `:536` and `:546` call `Remove-Item -Recurse -Force` under `$ErrorActionPreference = "Stop"`, so a Premiere-held handle aborts mid-install with a raw exception.
+  Touches: `Install.ps1` uninstall branch, interpreter resolution order, CEP folder removal.
+  Acceptance: Uninstall removes every artifact install created and reports what it could not remove; all pip calls go through the resolved interpreter; a locked CEP folder yields a "close Premiere and retry" message rather than a stack trace.
+  Complexity: S
+
+- [ ] P3 — Give the WPF installer rollback and upgrade detection
+  Why: A failure mid-install leaves PATH mutated and files half-copied with no uninstaller registered, and reinstalling to a new directory orphans the previous copy.
+  Evidence: `installer/src/OpenCut.Installer/Services/InstallEngine.cs:198-205` catches every failure, deletes only the temp dir, and rethrows — PATH was already mutated at `:120` and steps 13–14 (uninstaller registration) never run. Nothing reads the existing `HKCU\Software\OpenCut\InstallPath` before overwriting it (`RegistryManager.cs:95`) or the single-GUID HKLM uninstall key (`AppConstants.cs:33`); `FileInstaller.cs:33` is copy-with-overwrite, so stale files from the previous version are never pruned.
+  Touches: `Services/InstallEngine.cs`, `Services/UninstallEngine.cs`, `Services/RegistryManager.cs`, `Services/FileInstaller.cs`, installer tests.
+  Acceptance: A simulated failure at each step leaves the machine in its pre-install state; installing over an existing install detects the prior path, runs its uninstaller first, and prunes files the new version no longer ships.
+  Complexity: M
+
+- [ ] P3 — Launch installer helpers by absolute path and stop expanding the user's PATH
+  Why: An elevated installer resolving `python`/`cmd.exe`/`powershell.exe` by bare name searches its own directory first, and the PATH writer bakes environment-variable expansions into the user's PATH.
+  Evidence: `Services/DependencyInstaller.cs:11,59` (`"python"`/`"python3"`/`"py"`), `Services/ProcessKiller.cs:92,131`, and `Services/UninstallEngine.cs:179` all use bare filenames with `UseShellExecute=false`, so `CreateProcess` searches the application directory — normally Downloads — before `PATH`. `Services/RegistryManager.cs:17` reads `Path` without `RegistryValueOptions.DoNotExpandEnvironmentNames` and writes it back as `ExpandString` at `:30`, permanently rewriting entries like `%USERPROFILE%\bin` to a literal expansion computed from the elevated account.
+  Touches: `Services/DependencyInstaller.cs`, `Services/ProcessKiller.cs`, `Services/UninstallEngine.cs`, `Services/RegistryManager.cs`.
+  Acceptance: All helper launches use fully-qualified `%SystemRoot%\System32` paths and a validated absolute Python path; a test asserts a PATH containing `%USERPROFILE%\bin` round-trips unexpanded.
+  Complexity: S
+
+- [ ] P3 — Make `install.py` fail when verification fails
+  Why: A missing Flask — the one dependency the script treats as critical — is reported as a successful install to the user and to any calling script.
+  Evidence: `install.py:262` calls `verify()` and discards the return value; `:264-273` print the success banner unconditionally and `main()` exits 0. `install.py:246-248` shows `verify()` already classifies Flask as critical.
+  Touches: `install.py`.
+  Acceptance: A run with a missing critical dependency prints the failure and exits non-zero; a test asserts the exit code.
+  Complexity: S
+
+- [ ] P3 — Make the Linux bundles resolvable and honest about their data dir
+  Why: The Flatpak and AppImage launchers export a variable the application ignores, and neither bundle provides an FFmpeg for the sandbox to find.
+  Evidence: `packaging/linux/appimage/AppRun:8` and `packaging/linux/flatpak/opencut-server:7` set and `mkdir -p` `OPENCUT_HOME=~/.local/share/opencut`, but `OPENCUT_HOME` appears nowhere in the Python tree and the data dir is `~/.opencut` (`opencut/helpers.py:108`). Neither `io.github.sysadmindoc.opencut.yml` nor the AppDir staging in `scripts/build_linux_packages.sh:54-71` provides `ffmpeg`/`ffprobe` or the `org.freedesktop.Platform.ffmpeg-full` extension, so `get_ffmpeg_path()` (`helpers.py:64-76`) has nothing to resolve. Needs live validation for the exact Flatpak runtime contents.
+  Touches: `opencut/helpers.py` (honour `OPENCUT_HOME` or drop it), `packaging/linux/*`, `io.github.sysadmindoc.opencut.yml`, `scripts/build_linux_packages.sh`.
+  Acceptance: A built AppImage and Flatpak each resolve FFmpeg and write user data to the documented location; a test asserts the launcher's declared data dir matches what the application uses.
+  Complexity: M
+
+- [ ] P3 — Warn about the RTX 50-series faster-whisper failure before the job runs
+  Why: The default transcription backend fails on current-generation NVIDIA hardware unless compute type is forced, and the user sees a raw cuBLAS error.
+  Evidence: Subtitle Edit issue #10180 documents faster-whisper crashing with `cuBLAS_STATUS_NOT_SUPPORTED` on RTX 50-series unless `float16` is used; OpenCut ships faster-whisper as the default engine, and upstream has had no release since 2025-10-31.
+  Touches: `opencut/core/captions.py` compute-type selection, `opencut/routes/system.py` GPU detection, dependency dashboard, `docs/MODELS.md`.
+  Acceptance: The GPU probe detects the affected architecture and selects a working compute type automatically, reporting the substitution; a forced-failure path returns a structured error naming the fix rather than the raw CUDA message.
+  Complexity: S
+
+- [ ] P3 — Get OpenCut into the lists its competitors are already on
+  Why: Discovery is a distribution channel the project is absent from while every named competitor is listed.
+  Evidence: OpenCut appears in none of `krzemienski/awesome-video` (1.9k★), `sindresorhus/awesome-whisper` (2.4k★), `ebu/awesome-broadcasting`, `transitive-bullshit/awesome-ffmpeg`, `wentianli/awesome-video-editing`, or `ScreenKite/awesome-ai-video-editing`; the first two list auto-editor, LosslessCut, and WhisperX.
+  Touches: outbound pull requests only; `README.md` description line used as the submission text.
+  Acceptance: A submission exists for each list whose scope OpenCut fits, with the one-line description matching the README. Depends on the P1 release item — submit only once a current artifact is downloadable.
+  Complexity: S
+
 ### P0 — 2026-07-29
 
 ### P1 — 2026-07-25
@@ -453,6 +713,7 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
   Problem: This audit did not cover, and no finding above should be read as clearing: the installer (`installer/`, `OpenCut.iss`, `Install.ps1`) and its .NET build; Docker and the Linux packaging lane (`Dockerfile`, `packaging/linux/`, `io.github.sysadmindoc.opencut.yml`); the CLI surface (`opencut/cli.py`, ~1,781 lines) beyond the two commands touched incidentally; the ~130 core modules not sampled (the media pass prioritised FFmpeg-command builders, parsers, and timecode math); the plugin examples under `opencut/data/example_plugins/`; localisation completeness for `es.json` (only key *presence* is machine-checked, not translation quality); and any behaviour requiring a live Adobe Premiere host — every panel finding here was verified by code trace plus the headless rendered suite, never against Premiere itself.
   Evidence: Scope of this pass, recorded honestly.
   Fix: Schedule a pass per area, starting with the installer and Docker lanes since they gate distribution.
+  Update (2026-08-02, research pass): the installer, Docker, CLI, Linux packaging, and example-plugin lanes have now had that pass — findings are the P0/P1/P3 items under "Research-Driven Additions" dated 2026-08-02. Remaining unaudited: the ~130 unsampled core modules, `es.json` translation quality, and anything requiring a live Premiere host.
   Acceptance: Each listed area has had a recorded audit pass.
   Confidence: Verified
   Effort: L
