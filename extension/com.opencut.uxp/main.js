@@ -13,6 +13,8 @@ import {
   normalizeCaptionStyleCatalog,
   migrationStateClass,
   pluginTrustStateClass,
+  buildChatActionRequest,
+  buildLoudnessMatchPayload,
 } from "./uxp-utils.js";
 import { createUxpState } from "./uxp-state.js";
 import { createBackendClient } from "./backend-client.js";
@@ -4861,17 +4863,49 @@ async function runLoudnessMatch() {
   }
 
   UIController.setButtonLoading("runLoudnessBtn", true);
-  UIController.showProcessing(t("uxp.audio.runtime.matching_loudness_reference", "Matching loudness to reference..."));
+  UIController.showProcessing(t("uxp.audio.runtime.measuring_loudness_reference", "Measuring reference loudness..."));
+
+  const measurement = await BackendClient.post("/audio/measure", { filepath: refPath });
+  const targetLufs = Number(measurement.data?.integrated_lufs);
+  const payload = measurement.ok ? buildLoudnessMatchPayload(clipPath, targetLufs) : null;
+  if (!measurement.ok || !payload) {
+    UIController.hideProcessing();
+    UIController.setButtonLoading("runLoudnessBtn", false);
+    UIController.showToast(
+      formatI18n(
+        "uxp.audio.runtime.reference_loudness_error",
+        "Could not measure the reference loudness: {error}",
+        { error: measurement.error || t("common.unknown", "unknown") },
+      ),
+      "error",
+    );
+    return;
+  }
+
+  UIController.showProcessing(
+    formatI18n("uxp.audio.runtime.matching_loudness_reference", "Matching loudness to reference ({target} LUFS)...", {
+      target: targetLufs.toFixed(1),
+    }),
+  );
 
   await JobPoller.start(
     "/audio/loudness-match",
-    { files: [clipPath, refPath], target_lufs: -14.0 },
+    payload,
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.audio.runtime.matching", "Matching...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
-      UIController.showToast(t("uxp.audio.runtime.loudness_match_complete", "Loudness match complete."), "success");
-      UIController.setStatus(t("uxp.audio.runtime.loudness_match_done", "Loudness match done."));
+      UIController.showToast(
+        formatI18n("uxp.audio.runtime.loudness_match_complete", "Loudness match complete at {target} LUFS.", {
+          target: targetLufs.toFixed(1),
+        }),
+        "success",
+      );
+      UIController.setStatus(
+        formatI18n("uxp.audio.runtime.loudness_match_done", "Loudness match done at {target} LUFS.", {
+          target: targetLufs.toFixed(1),
+        }),
+      );
     },
     (err) => {
       UIController.hideProcessing();
@@ -4956,7 +4990,6 @@ async function runAutoZoom() {
   const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
   if (!clipPath) { showSelectClipWarning(); return; }
 
-  const aspect    = document.getElementById("zoomAspect")?.value ?? "9:16";
   const maxZoom   = parseFloat(document.getElementById("zoomFactor")?.value ?? 1.4);
 
   UIController.setButtonLoading("runAutoZoomBtn", true);
@@ -6715,7 +6748,7 @@ function bindEvents() {
 
   document.getElementById("exportOtioBtn")?.addEventListener("click", async () => {
     const clipPath = document.getElementById("clipPathCut")?.value?.trim()
-                  ?? document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+                  || document.getElementById("clipPathVideo")?.value?.trim() || "";
     if (!clipPath) { showSelectClipWarning(); return; }
     const mode = document.getElementById("otioExportMode")?.value ?? "cuts";
     const payload = {
@@ -7032,10 +7065,10 @@ async function sendChatMessage() {
       history.appendChild(replyDiv);
       history.scrollTop = history.scrollHeight;
     }
-    // Auto-execute actions if present
+    // Execute only the route actions advertised by the chat contract.
     const actions = r.data.actions || [];
     if (actions.length > 0) {
-      UIController.showToast(formatI18n("uxp.runtime.executing_actions", "Executing {count} action(s)...", { count: actions.length }), "info");
+      void executeChatActions(actions, clipPath);
     }
   } else {
     if (history) {
@@ -7044,6 +7077,52 @@ async function sendChatMessage() {
       errDiv.textContent = formatI18n("uxp.runtime.error_prefix", "Error: {error}", { error: r.error || t("uxp.runtime.failed", "Failed") });
       history.appendChild(errDiv);
     }
+  }
+}
+
+async function executeChatActions(actions, filepath) {
+  const requests = (Array.isArray(actions) ? actions : [])
+    .map((action) => buildChatActionRequest(action, filepath))
+    .filter(Boolean);
+  if (!requests.length) {
+    UIController.showToast(
+      t("uxp.runtime.no_supported_chat_actions", "The assistant returned no supported actions to run."),
+      "warning",
+    );
+    return;
+  }
+
+  UIController.showToast(
+    formatI18n("uxp.runtime.executing_actions", "Executing {count} action(s)...", { count: requests.length }),
+    "info",
+  );
+  UIController.showProcessing(t("uxp.runtime.executing_chat_action", "Executing assistant action..."));
+
+  try {
+    for (const request of requests) {
+      await new Promise((resolve, reject) => {
+        JobPoller.start(
+          request.endpoint,
+          request.payload,
+          (pct, msg) => {
+            UIController.setProgress(pct);
+            UIController.setProcessingMsg(msg || t("uxp.runtime.executing_chat_action", "Executing assistant action..."));
+          },
+          resolve,
+          reject,
+        );
+      });
+    }
+    UIController.hideProcessing();
+    UIController.setStatus(
+      formatI18n("uxp.runtime.chat_actions_complete", "Completed {count} assistant action(s).", { count: requests.length }),
+    );
+  } catch (err) {
+    UIController.hideProcessing();
+    UIController.showToast(
+      formatI18n("uxp.runtime.chat_actions_failed", "Assistant action failed: {error}", { error: err }),
+      "error",
+    );
   }
 }
 

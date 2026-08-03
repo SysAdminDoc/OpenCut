@@ -3,6 +3,19 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - UXP controls that silently did nothing
+
+- Loudness Match now measures the reference clip first and normalizes only the
+  input to that measured LUFS value, instead of batch-normalizing both files to
+  a fixed -14 LUFS.
+- Chat actions returned by the assistant are dispatched through the job
+  controller against an allowlist of routes, rather than only being counted in
+  a toast.
+- The unused Auto Zoom target-aspect control was removed; it was read but never
+  sent to the backend.
+- The OTIO export clip fallback uses `||` so an empty Cut-tab path falls through
+  to the Video-tab path, matching the button's own enable condition.
+
 ### Fixed - SMPTE timecode sync
 
 - tc-sync now honors SMPTE drop-frame separators and normalizes source frame
