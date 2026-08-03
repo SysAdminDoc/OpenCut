@@ -548,12 +548,20 @@ CSV_COLUMNS = (
 HIDEABLE_COLUMNS = frozenset(CSV_COLUMNS) - {"name", "timecode_in", "locator_id"}
 
 _LIST_COLUMNS = ("effects", "tags")
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _neutralize_csv_formula(value: str) -> str:
+    """Keep spreadsheet consumers from evaluating attacker-controlled text."""
+    if value and value[0] in _CSV_FORMULA_PREFIXES:
+        return "'" + value
+    return value
 
 
 def _csv_cell(row: IndexRow, column: str) -> str:
     value = getattr(row, column)
     if column in _LIST_COLUMNS:
-        return "; ".join(str(v) for v in (value or []))
+        return _neutralize_csv_formula("; ".join(str(v) for v in (value or [])))
     if isinstance(value, bool):
         # Spreadsheets read "true"/"false" as booleans; "True" stays text.
         return "true" if value else "false"
@@ -561,7 +569,11 @@ def _csv_cell(row: IndexRow, column: str) -> str:
         # Timeline seconds are millisecond-meaningful at most; keep the sheet
         # readable instead of emitting float noise like 12.300000000000001.
         return f"{value:.3f}"
-    return "" if value is None else str(value)
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return _neutralize_csv_formula(value)
+    return str(value)
 
 
 def rows_to_csv(rows: List[IndexRow], columns: Optional[List[str]] = None) -> str:

@@ -60,6 +60,11 @@ record also lives in the git commit messages.
 - README route claims now compare against the manifest's shipped-route count,
   with exact-match enforcement and regression coverage for one-route drift.
 
+### Fixed - Sequence-index CSV safety
+
+- CSV exports now prefix formula-like text cells with a single quote so names,
+  paths, tags, and transcript excerpts remain inert when opened in a spreadsheet.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
