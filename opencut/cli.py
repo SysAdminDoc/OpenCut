@@ -787,6 +787,54 @@ def local_db_diagnostics(json_output):
     console.print(table)
 
 
+def _scene_boundaries_to_rows(scenes):
+    """Turn a ``SceneInfo`` into ``[{start, end, score, frame}]`` rows.
+
+    Every backend returns a ``SceneInfo`` whose ``boundaries`` are *cut
+    points* (a single ``time``), not ranges. Treating that dataclass as a
+    list-or-dict reported "Scenes found: 0" and wrote `[]` for every run.
+    """
+    boundaries = getattr(scenes, "boundaries", None)
+    if boundaries is None:
+        if isinstance(scenes, dict):
+            boundaries = scenes.get("boundaries", scenes.get("scenes", []))
+        elif isinstance(scenes, list):
+            boundaries = scenes
+        else:
+            boundaries = []
+
+    duration = float(getattr(scenes, "duration", 0.0) or 0.0)
+
+    points = []
+    for boundary in boundaries:
+        if isinstance(boundary, dict):
+            value = boundary.get("time", boundary.get("start"))
+            label = boundary.get("label", "")
+        else:
+            value = getattr(boundary, "time", getattr(boundary, "start", None))
+            label = getattr(boundary, "label", "")
+        if value is None:
+            continue
+        try:
+            points.append((float(value), str(label or "")))
+        except (TypeError, ValueError):
+            continue
+
+    rows = []
+    for index, (start, label) in enumerate(points):
+        # A boundary marks where a scene begins; the last one runs to the end.
+        end = points[index + 1][0] if index + 1 < len(points) else duration
+        if end < start:
+            end = start
+        rows.append({
+            "index": index + 1,
+            "start": start,
+            "end": end,
+            "label": label or f"Scene {index + 1}",
+        })
+    return rows
+
+
 def _resolve_output_dir(input_file, output_dir):
     """Resolve output directory, creating it if needed. Returns base path."""
     base = os.path.splitext(input_file)[0]
@@ -1396,20 +1444,43 @@ def denoise(input_file, output, method, strength):
 @cli.command("scene-detect")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(["ffmpeg", "ml", "pyscenedetect"]), default="ffmpeg", help="Detection method")
-@click.option("--threshold", type=float, default=0.3, help="Detection sensitivity 0-1")
+@click.option(
+    "--threshold",
+    type=float,
+    default=None,
+    help="Detection sensitivity. Scale differs per method (ffmpeg/ml: 0-1, "
+         "pyscenedetect: ~15-50); omit to use the method's own default.",
+)
 @click.option("--output", "-o", type=click.Path(), default=None, help="Output JSON file")
 def scene_detect(input_file, method, threshold, output):
     """Detect scene boundaries/cuts in a video."""
     print_banner()
 
     try:
-        from .core.scene_detect import detect_scenes, detect_scenes_ml
+        from .core.scene_detect import (
+            detect_scenes,
+            detect_scenes_ml,
+            detect_scenes_pyscenedetect,
+        )
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         sys.exit(1)
 
+    # Each backend is its own entry point with its own threshold scale; there
+    # is no `method` keyword on any of them.
+    detectors = {
+        "ffmpeg": detect_scenes,
+        "ml": detect_scenes_ml,
+        "pyscenedetect": detect_scenes_pyscenedetect,
+    }
+    detector = detectors[method]
+    kwargs = {} if threshold is None else {"threshold": threshold}
+
     console.print(f"\n[bold]Scene detection:[/bold] {input_file}")
-    console.print(f"[dim]Method: {method} | Threshold: {threshold}[/dim]\n")
+    console.print(
+        f"[dim]Method: {method} | Threshold: "
+        f"{'method default' if threshold is None else threshold}[/dim]\n"
+    )
 
     with Progress(
         SpinnerColumn(),
@@ -1419,15 +1490,12 @@ def scene_detect(input_file, method, threshold, output):
     ) as progress:
         task = progress.add_task("Detecting scenes...", total=None)
         start_time = time.time()
-        if method == "ml":
-            scenes = detect_scenes_ml(input_file, threshold=threshold)
-        else:
-            scenes = detect_scenes(input_file, threshold=threshold, method=method)
+        scenes = detector(input_file, **kwargs)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Detection complete ({elapsed:.1f}s)")
         progress.stop()
 
-    scene_list = scenes if isinstance(scenes, list) else scenes.get("scenes", []) if isinstance(scenes, dict) else []
+    scene_list = _scene_boundaries_to_rows(scenes)
     console.print(f"\n[bold]Scenes found:[/bold] {len(scene_list)}")
 
     if scene_list:
@@ -1437,12 +1505,10 @@ def scene_detect(input_file, method, threshold, output):
         table.add_column("End", justify="right")
         table.add_column("Duration", justify="right")
 
-        for i, s in enumerate(scene_list[:30], 1):
-            data = s if isinstance(s, dict) else {"start": s}
-            start = data.get("start", 0)
-            end = data.get("end", start)
-            dur = end - start
-            table.add_row(str(i), f"{start:.2f}s", f"{end:.2f}s", f"{dur:.2f}s")
+        for i, data in enumerate(scene_list[:30], 1):
+            start = data["start"]
+            end = data["end"]
+            table.add_row(str(i), f"{start:.2f}s", f"{end:.2f}s", f"{end - start:.2f}s")
 
         if len(scene_list) > 30:
             console.print(f"[dim](showing first 30 of {len(scene_list)})[/dim]")

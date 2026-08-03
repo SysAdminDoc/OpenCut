@@ -43,13 +43,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A tag and an unsigned GitHub Release exist for the current version with the Windows installer, `release-composition.json`, artifact SBOM, third-party notices, and FFmpeg provenance attached; a release-gate check fails when `__version__` has no matching tag.
   Complexity: M
 
-- [ ] P1 — Fix the two CLI commands that crash on valid input
-  Why: `opencut scene-detect` raises `TypeError` on its default invocation and `opencut podcast` throws away an expensive diarization pass at the last step.
-  Evidence: `opencut/cli.py:1425` calls `detect_scenes(input_file, threshold=..., method=method)` but `opencut/core/scene_detect.py:54-59` accepts no `method` kwarg, so both `--method ffmpeg` (default) and `--method pyscenedetect` fail; `cli.py:1430` then normalises a `SceneInfo` dataclass as list-or-dict, so `--method ml` always reports "Scenes found: 0" and writes `[]`. `cli.py:540-545` passes a `List[TimeSegment]` into `generate_multicam_xml(cuts=...)`, which immediately calls `c.get("end", 0)` at `opencut/core/multicam_xml.py:73` — `TimeSegment` has no `.get`.
-  Touches: `opencut/cli.py`, `opencut/core/scene_detect.py` dispatch, `opencut/core/multicam_xml.py` input contract, `tests/` CLI coverage.
-  Acceptance: A test invokes every CLI subcommand with its documented default arguments against a generated fixture and asserts exit 0 and non-empty structured output; `scene-detect --method ml` reports the real boundary count.
-  Complexity: S
-
 - [ ] P1 — Make generated readiness prove implementation for every record
   Why: 27 auto-generated feature records report `available` with no `impl_module`, which is exactly the blind spot that let three terminal-stub adapters advertise as available.
   Evidence: `opencut/_generated/feature_readiness.json` — 27 of 72 records have `source: "generated"` and `impl_module: ""`, all in state `available`, including `audio.demucs`, `video.sam2`, `video.mediapipe`, `editing.auto-editor`, `auto.otio`. The three previously-caught adapters now carry a populated `impl_module`; nothing prevents the next one.
