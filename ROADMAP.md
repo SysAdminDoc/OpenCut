@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Neutralise spreadsheet formulas in exported CSV cells
-  Category: security
-  Where: `opencut/core/sequence_index.py:553-564` (`_csv_cell` / `rows_to_csv`), BOM written at `:600`.
-  Problem: `rows_to_csv` writes `name`, `path`, `tags`, and the ASR-derived `transcript_excerpt` verbatim. A clip named `=HYPERLINK(...)` — or transcript text beginning `=`, `+`, `-`, or `@` — becomes a live formula when the export is opened. The file is written with a `utf-8-sig` BOM specifically so Excel opens it cleanly, so Excel is the intended consumer. Transcript content is attacker-influenceable (it is whatever the video says), which is what lifts this above a pure theoretical.
-  Evidence: `_csv_cell` applies type formatting (bools, floats, list joins) but no formula-injection guard; the export route is `POST /timeline/sequence-index/export-csv`.
-  Fix: Prefix a single quote on any cell whose first character is `=`, `+`, `-`, `@`, tab, or CR, following the OWASP CSV-injection guidance.
-  Acceptance: A test exports a row whose clip name is `=cmd|'/c calc'!A1` and asserts the emitted cell is prefixed and inert.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Keep `Infinity` out of job-result JSON
   Category: correctness
   Where: `opencut/core/quality_metrics.py:103,224-234,361`; consumed by `opencut/routes/wave_c_routes.py:113-119`.

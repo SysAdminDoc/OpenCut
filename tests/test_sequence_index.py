@@ -283,9 +283,10 @@ class TestCsvExport(unittest.TestCase):
         self.assertEqual(header.split(","), list(CSV_COLUMNS))
 
     def test_one_line_per_row(self):
-        from opencut.core.sequence_index import rows_to_csv
         import csv
         import io
+
+        from opencut.core.sequence_index import rows_to_csv
         parsed = list(csv.reader(io.StringIO(rows_to_csv(self.rows))))
         self.assertEqual(len(parsed), len(self.rows) + 1)
 
@@ -305,25 +306,61 @@ class TestCsvExport(unittest.TestCase):
             rows_to_csv(self.rows, [])
 
     def test_list_columns_are_joined_not_repr(self):
-        from opencut.core.sequence_index import rows_to_csv
         import csv
         import io
+
+        from opencut.core.sequence_index import rows_to_csv
         rows = list(csv.DictReader(io.StringIO(rows_to_csv(self.rows))))
         blur = [r for r in rows if r["name"] == "B-roll-intro.mp4"][0]
         self.assertEqual(blur["effects"], "Gaussian Blur")
 
     def test_commas_in_text_are_quoted_not_split(self):
-        from opencut.core.sequence_index import rows_to_csv
         import csv
         import io
+
+        from opencut.core.sequence_index import rows_to_csv
         rows = list(csv.DictReader(io.StringIO(rows_to_csv(self.rows))))
         intro = [r for r in rows if r["name"] == "B-roll-intro.mp4"][0]
         # The overlapping transcript segment contains a comma-free sentence,
         # but the field must still survive the round trip verbatim.
         self.assertIn("Welcome back", intro["transcript_excerpt"])
 
+    def test_formula_like_text_is_prefixed_for_spreadsheets(self):
+        import csv
+        import io
+
+        from opencut.core.sequence_index import IndexRow, rows_to_csv
+
+        row = IndexRow(
+            track_type="video",
+            track_index=0,
+            clip_index=0,
+            name="=cmd|'/c calc'!A1",
+            path="+external-link",
+            start_s=-1.25,
+            end_s=2.0,
+            duration_s=3.25,
+            timecode_in="00:00:00:00",
+            timecode_out="00:00:03:06",
+            effects=["-effect"],
+            tags=["@tag"],
+            transcript_excerpt="\ttranscript",
+            locator_id="\rlocator",
+        )
+        columns = ["name", "path", "effects", "tags", "transcript_excerpt", "locator_id", "start_s"]
+        parsed = next(csv.DictReader(io.StringIO(rows_to_csv([row], columns))))
+
+        self.assertEqual(parsed["name"], "'=cmd|'/c calc'!A1")
+        self.assertEqual(parsed["path"], "'+external-link")
+        self.assertEqual(parsed["effects"], "'-effect")
+        self.assertEqual(parsed["tags"], "'@tag")
+        self.assertEqual(parsed["transcript_excerpt"], "'\ttranscript")
+        self.assertEqual(parsed["locator_id"], "'\rlocator")
+        self.assertEqual(parsed["start_s"], "-1.250")
+
     def test_export_csv_writes_file(self):
         import tempfile
+
         from opencut.core.sequence_index import export_csv
         with tempfile.TemporaryDirectory() as tmp:
             out = os.path.join(tmp, "index.csv")
