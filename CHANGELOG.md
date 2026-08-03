@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - WPF installer left modern Premiere without PlayerDebugMode
+
+- The WPF installer now enables PlayerDebugMode for CSXS 7-18 instead of 7-12,
+  so the CEP panel loads on Premiere CC 2023 and newer. `Install.ps1`,
+  `OpenCut.iss`, and `install.py` already covered the full range; a lockstep
+  test now fails if any of the four install paths drifts.
+
 ### Fixed - UXP controls that silently did nothing
 
 - Loudness Match now measures the reference clip first and normalizes only the
