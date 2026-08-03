@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, output_path, run_ffmpeg
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -244,18 +244,17 @@ def generate_adr_guide(
     end = cue.end_time + postroll
     duration = end - start
 
-    # Escape text for FFmpeg drawtext
-    safe_char = cue.character.replace("'", "\\'").replace(":", "\\:")
-    safe_line = cue.line_text.replace("'", "\\'").replace(":", "\\:")
-    if len(safe_line) > 60:
-        safe_line = safe_line[:57] + "..."
+    line_text = cue.line_text
+    if len(line_text) > 60:
+        line_text = line_text[:57] + "..."
 
     # Build drawtext overlay
-    cue_text = f"{cue.cue_id} - {safe_char}"
+    cue_text = escape_drawtext(f"{cue.cue_id} - {cue.character}")
+    safe_line = escape_drawtext(line_text)
     vf_parts = [
-        f"drawtext=text='{cue_text}':fontsize=24:fontcolor=white"
+        f"drawtext=expansion=none:text='{cue_text}':fontsize=24:fontcolor=white"
         f":x=20:y=20:box=1:boxcolor=black@0.7:boxborderw=8",
-        f"drawtext=text='{safe_line}':fontsize=18:fontcolor=yellow"
+        f"drawtext=expansion=none:text='{safe_line}':fontsize=18:fontcolor=yellow"
         f":x=20:y=60:box=1:boxcolor=black@0.5:boxborderw=6",
     ]
 

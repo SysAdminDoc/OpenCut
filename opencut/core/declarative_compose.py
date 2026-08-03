@@ -65,7 +65,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import FFmpegCmd, run_ffmpeg
+from opencut.helpers import FFmpegCmd, escape_drawtext, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -140,16 +140,10 @@ def _validate_color(value: str, default: str = DEFAULT_BG_COLOR) -> str:
     return default
 
 
-def _escape_text(text: str) -> str:
-    """Escape user text for FFmpeg drawtext filter (single-quoted values)."""
-    # drawtext text value is single-quoted; backslash, single quote, and
-    # colon/semicolon need escaping. Strip control characters.
-    safe = text.replace("\\", "\\\\")
-    safe = safe.replace("'", r"\'")
-    safe = safe.replace(":", r"\:")
-    safe = safe.replace(";", r"\;")
+def _sanitize_text(text: str) -> str:
+    """Strip control characters before shared FFmpeg drawtext escaping."""
     # Strip ASCII control characters (except tab / newline which we also drop)
-    safe = re.sub(r"[\x00-\x1f\x7f]", " ", safe)
+    safe = re.sub(r"[\x00-\x1f\x7f]", " ", text)
     # Keep only first 500 chars — drawtext doesn't paginate
     return safe[:500]
 
@@ -214,7 +208,7 @@ def validate_spec(spec: Dict) -> Dict:
 
         text = clip.get("text")
         if text:
-            entry["text"] = _escape_text(str(text))
+            entry["text"] = _sanitize_text(str(text))
             pos = str(clip.get("text_position") or "bottom").lower()
             entry["text_position"] = pos if pos in TEXT_POSITIONS else "bottom"
 
@@ -319,7 +313,8 @@ def _render_clip_to_normalized(
             y = "(h-text_h-h*0.08)"
         font_size = max(24, min(96, int(height * 0.055)))
         drawtext = (
-            f"drawtext=text='{text}':fontcolor=white:fontsize={font_size}:"
+            f"drawtext=expansion=none:text='{escape_drawtext(text)}':"
+            f"fontcolor=white:fontsize={font_size}:"
             f"x=(w-text_w)/2:y={y}:"
             "box=1:boxcolor=black@0.45:boxborderw=16:line_spacing=4"
         )

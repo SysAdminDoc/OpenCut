@@ -26,7 +26,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 # Module-level import so tests/callers can patch
 # ``opencut.core.data_animation.run_ffmpeg`` directly. The full implementation
 # below uses this binding for any FFmpeg shell-out paths.
-from opencut.helpers import get_ffmpeg_path, run_ffmpeg  # noqa: E402,F401
+from opencut.helpers import escape_drawtext, get_ffmpeg_path, run_ffmpeg  # noqa: E402,F401
 
 logger = logging.getLogger("opencut")
 
@@ -974,13 +974,13 @@ def render_counter(
     counter_text = f"{prefix}%{{eif\\:{expr}\\:d}}{suffix}"
 
     drawtext = (
-        f"drawtext=text='{counter_text}':fontsize={font_size}:"
+        f"drawtext=expansion=normal:text='{counter_text}':fontsize={font_size}:"
         f"fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2"
     )
     if title:
-        title_safe = title.replace("'", "\\'").replace(":", "\\:")
+        title_safe = escape_drawtext(title)
         drawtext += (
-            f",drawtext=text='{title_safe}':fontsize={max(24, font_size // 2)}:"
+            f",drawtext=expansion=none:text='{title_safe}':fontsize={max(24, font_size // 2)}:"
             f"fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2-{font_size}"
         )
 

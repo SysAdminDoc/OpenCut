@@ -17,6 +17,7 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
+    escape_drawtext,
     get_ffmpeg_path,
     get_video_info,
     run_ffmpeg,
@@ -353,14 +354,13 @@ def generate_variants(
     # 3. Text overlay (if text provided)
     if text:
         text_out = os.path.join(output_dir, f"{base}_text_overlay.jpg")
-        # Escape special characters for FFmpeg drawtext
-        safe_text = text.replace("'", "\\'").replace(":", "\\:")
+        safe_text = escape_drawtext(text)
         cmd = (FFmpegCmd()
                .input(frame_path)
                .video_filter(
                    f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
                    f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
-                   f"drawtext=text='{safe_text}'"
+                   f"drawtext=expansion=none:text='{safe_text}'"
                    f":fontsize={height // 10}"
                    f":fontcolor=white:borderw=3:bordercolor=black"
                    f":x=(w-text_w)/2:y=h-th-{height // 10}")

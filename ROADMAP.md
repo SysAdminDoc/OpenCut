@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Route the remaining drawtext call sites through the shared escaper
-  Category: correctness
-  Where: `opencut/core/watermark.py:150`, `kinetic_type.py:234,465`, `template_assembly.py:577`, `thumbnail_ab.py:357`, `adr_cueing.py:249-254`, `multicam_grid.py:156`, `camera_solver.py:698`, `character_consistency.py:691`, `data_animation.py:981`. Related `%`-escaping: `hook_generator.py:416-421`, `ab_variant.py:149-154`, `programmatic_video.py:94-97`. Helper: `opencut/helpers.py:447` (`escape_drawtext`).
-  Problem: Each module carries its own partial escaper handling only `'` and sometimes `:`, never `\`, and none sets `expansion=none`. A Windows path or a backslash in user text breaks the filtergraph, and literal `%{...}` in user text is evaluated as a drawtext expression rather than printed. `adr_cueing.py` additionally embeds an unescaped `cue.cue_id`. The `%`→`%%` escaping in the last three modules is likely wrong under `expansion=normal` and would render a literal double `%%`.
-  Evidence: Probed the bundled FFmpeg: `drawtext=text='C:\media'` fails with `Invalid argument`, and `%{eif:...}` is evaluated (exit 0) rather than printed. Reachable via user text on the owning routes (e.g. `/video/watermark`, kinetic-type routes at `opencut/routes/color_mam_routes.py:804-880`).
-  Fix: Replace every local escaper with `helpers.escape_drawtext` paired with `expansion=none`, as that helper's docstring mandates. Then add a guard test that fails if any `drawtext=` construction in `opencut/core/` does not go through the helper.
-  Acceptance: A parametrised test renders `C:\media\clip`, `Title: Part 2`, and `100%{x}` through each affected entry point, asserting exit 0 and literal output. The guard test fails if a new local escaper is introduced.
-  Confidence: Verified (the breaking inputs are confirmed against the bundled binary; per-site reachability varies)
-  Effort: M
-
 - [ ] P3 — Use SMPTE drop-frame math in tc-sync
   Category: correctness
   Where: `opencut/core/tc_sync.py:57-69` (`_tc_to_frames`), `:251` (`compute_tc_offsets`), `:302` (`find_common_timecode_range`). Correct implementation already exists at `opencut/core/timecode_utils.py:260-286`.
