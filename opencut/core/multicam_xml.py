@@ -25,6 +25,79 @@ def _indent_xml(elem):
     return parsed.toprettyxml(indent="  ", encoding=None)
 
 
+def _coerce_float(value, default=0.0):
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return default
+    return default if result != result else result  # reject NaN
+
+
+def _normalize_cut(cut):
+    """Accept every cut shape OpenCut produces and return the canonical dict.
+
+    Three producers feed this module and none of them agreed:
+
+    * routes and the documented API pass ``{start, end, speaker, track}``;
+    * ``multicam.generate_multicam_cuts`` emits ``{time, duration, speaker,
+      track}`` — read as ``{start, end}`` every clip landed at 0-0;
+    * ``DiarizationResult.to_camera_switches`` returns ``TimeSegment``
+      dataclasses, which have no ``.get`` at all and raised ``AttributeError``.
+
+    Rather than making callers translate, normalise here.
+    """
+    if isinstance(cut, dict):
+        data = dict(cut)
+    else:
+        data = {
+            key: getattr(cut, key)
+            for key in ("start", "end", "time", "duration", "speaker", "track", "label")
+            if hasattr(cut, key)
+        }
+
+    start = _coerce_float(data.get("start", data.get("time", 0.0)))
+    if "end" in data:
+        end = _coerce_float(data.get("end"), start)
+    else:
+        end = start + _coerce_float(data.get("duration"), 0.0)
+    if end < start:
+        start, end = end, start
+
+    label = str(data.get("label", "") or "")
+    speaker = data.get("speaker")
+    track = data.get("track")
+
+    # `to_camera_switches` encodes the camera index in the label as
+    # "camera_<n>"; tracks are 1-based in FCP XML.
+    if (speaker is None or track is None) and label.startswith("camera_"):
+        suffix = label.split("_", 1)[1]
+        if suffix.isdigit():
+            index = int(suffix)
+            if track is None:
+                track = index + 1
+            if speaker is None:
+                speaker = f"SPEAKER_{index:02d}"
+
+    if speaker is None:
+        speaker = label or "SPEAKER_00"
+    try:
+        track = int(track) if track is not None else 1
+    except (TypeError, ValueError):
+        track = 1
+
+    return {
+        "start": start,
+        "end": end,
+        "speaker": str(speaker),
+        "track": max(1, track),
+    }
+
+
+def normalize_cuts(cuts):
+    """Public helper: canonicalise a cut list from any supported producer."""
+    return [_normalize_cut(cut) for cut in (cuts or [])]
+
+
 def generate_multicam_xml(
     cuts,
     source_files,
@@ -38,11 +111,12 @@ def generate_multicam_xml(
     """Generate Premiere-compatible FCP XML from multicam cut data.
 
     Args:
-        cuts: list of dicts with keys:
-            - start (float): start time in seconds
-            - end (float): end time in seconds
-            - speaker (str): speaker identifier
-            - track (int): target video track (1-based)
+        cuts: list of cuts in any shape OpenCut produces - dicts with
+            ``{start, end, speaker, track}`` (canonical), dicts with
+            ``{time, duration, ...}`` as emitted by
+            ``multicam.generate_multicam_cuts``, or ``TimeSegment`` objects as
+            returned by ``DiarizationResult.to_camera_switches``. See
+            :func:`normalize_cuts`.
         source_files: dict mapping speaker/track to file path, e.g.
             {"SPEAKER_00": "/path/to/cam1.mp4", "SPEAKER_01": "/path/to/cam2.mp4"}
             OR list of file paths (indexed by track number - 1)
@@ -60,6 +134,8 @@ def generate_multicam_xml(
             - cuts_count (int): number of cuts in the sequence
             - duration (float): total duration in seconds
     """
+    cuts = normalize_cuts(cuts)
+
     # Normalize source_files to a speaker->path mapping
     if isinstance(source_files, list):
         file_map = {}

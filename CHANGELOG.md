@@ -3,6 +3,21 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - Two CLI commands crashed on valid input
+
+- `opencut scene-detect` passed a `method=` keyword no backend accepts, so the
+  default `ffmpeg` run and `--method pyscenedetect` both raised `TypeError`.
+  Each method now dispatches to its own entry point, and `--threshold` defaults
+  to the backend's own value because the scales differ (0-1 vs ~15-50).
+- `opencut scene-detect --method ml` reported "Scenes found: 0" for every video
+  because it normalized a `SceneInfo` dataclass as list-or-dict. Boundaries are
+  now expanded into contiguous scene ranges.
+- `generate_multicam_xml` accepts every cut shape OpenCut produces:
+  `{start, end}` dicts, the `{time, duration}` dicts that
+  `generate_multicam_cuts` emits, and the `TimeSegment` objects that
+  `opencut podcast` passes - which previously raised `AttributeError` and
+  discarded the whole diarization pass.
+
 ### Fixed - The test suite now runs from a fresh clone
 
 - Sixteen `docs/*.md` files, the UXP API notes, and a shipped built-in skill
