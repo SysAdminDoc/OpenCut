@@ -11,6 +11,7 @@ The script enforces that project documentation size/count claims stay within
 from __future__ import annotations
 
 import importlib.util
+import json
 import shutil
 import subprocess
 import sys
@@ -149,6 +150,34 @@ class TestDocSizeCLI(unittest.TestCase):
                 result.returncode, 1,
                 f"--check should fail on mutated doc. stdout: {result.stdout}\nstderr: {result.stderr}",
             )
+
+    def test_shipped_route_claim_fails_on_one_manifest_route_drift(self):
+        """The three shipped-route claims require an exact manifest match."""
+        mod = _load_module()
+        route_labels = {
+            "README routes badge",
+            "README feature overview API routes",
+            "README architecture API routes",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "route_manifest.json"
+            manifest = json.loads(mod.ROUTE_MANIFEST.read_text(encoding="utf-8"))
+            expected_count = manifest["shipped_route_count"] - 1
+            manifest["shipped_route_count"] -= 1
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            original_manifest = mod.ROUTE_MANIFEST
+            mod.ROUTE_MANIFEST = manifest_path
+            try:
+                entries = mod._evaluate(mod.DEFAULT_TOLERANCE_PCT)
+            finally:
+                mod.ROUTE_MANIFEST = original_manifest
+
+        route_entries = [entry for entry in entries if entry.label in route_labels]
+        self.assertEqual({entry.actual for entry in route_entries}, {expected_count})
+        self.assertEqual({entry.tolerance_pct for entry in route_entries}, {0.0})
+        self.assertTrue(all(entry.over_tolerance for entry in route_entries))
 
 
 if __name__ == "__main__":

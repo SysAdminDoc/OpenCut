@@ -77,8 +77,8 @@ def _route_manifest_value(key: str) -> int:
     return int(payload.get(key) or 0)
 
 
-def _route_count() -> int:
-    return _route_manifest_value("total_routes")
+def _shipped_route_count() -> int:
+    return _route_manifest_value("shipped_route_count")
 
 
 def _blueprint_count() -> int:
@@ -95,6 +95,7 @@ class DocClaim:
     live: Callable[[], int]
     docs: tuple[Path, ...]
     unit: str = ""  # "lines", "files", "modules", etc.
+    tolerance_pct: float | None = None  # Override the default for exact claims.
 
 
 # Each regex must capture the documented number as group 1 (or named "n").
@@ -102,9 +103,10 @@ TARGETS: list[DocClaim] = [
     DocClaim(
         label="README routes badge",
         regex=re.compile(r"API%20Routes-([\d,]+)-"),
-        live=_route_count,
+        live=_shipped_route_count,
         docs=(README,),
         unit="routes",
+        tolerance_pct=0.0,
     ),
     # Route-count prose tolerates an optional qualifier word (e.g. "shipped")
     # between the number and "routes" so copy rewording doesn't silently
@@ -112,16 +114,18 @@ TARGETS: list[DocClaim] = [
     DocClaim(
         label="README feature overview API routes",
         regex=re.compile(r"OpenCut\s+v[\d.]+\s+includes\s+\*\*([\d,]+)\s+(?:\w+\s+)?API routes\*\*", re.IGNORECASE),
-        live=_route_count,
+        live=_shipped_route_count,
         docs=(README,),
         unit="routes",
+        tolerance_pct=0.0,
     ),
     DocClaim(
         label="README architecture API routes",
         regex=re.compile(r"\|\s*([\d,]+)\s+(?:\w+\s+)?(?:API\s+)?routes\s*\|", re.IGNORECASE),
-        live=_route_count,
+        live=_shipped_route_count,
         docs=(README,),
         unit="routes",
+        tolerance_pct=0.0,
     ),
     DocClaim(
         label="README architecture core modules",
@@ -206,6 +210,7 @@ class DriftEntry:
     claimed: int | None
     actual: int
     drift_pct: float | None
+    tolerance_pct: float
     over_tolerance: bool
 
     def to_dict(self) -> dict:
@@ -215,6 +220,7 @@ class DriftEntry:
             "claimed": self.claimed,
             "actual": self.actual,
             "drift_pct": self.drift_pct,
+            "tolerance_pct": self.tolerance_pct,
             "over_tolerance": self.over_tolerance,
         }
 
@@ -227,6 +233,9 @@ def _evaluate(tolerance_pct: float) -> list[DriftEntry]:
     out: list[DriftEntry] = []
     for claim in TARGETS:
         actual = claim.live()
+        claim_tolerance = (
+            tolerance_pct if claim.tolerance_pct is None else claim.tolerance_pct
+        )
         for doc in claim.docs:
             if not doc.exists():
                 continue
@@ -239,12 +248,12 @@ def _evaluate(tolerance_pct: float) -> list[DriftEntry]:
             if actual == 0:
                 # Live value unavailable; surface but never flag drift.
                 out.append(DriftEntry(claim.label, str(doc.relative_to(ROOT)),
-                                       claimed, actual, None, False))
+                                       claimed, actual, None, claim_tolerance, False))
                 continue
             drift = (claimed - actual) / actual * 100.0
-            over = abs(drift) > tolerance_pct
+            over = abs(drift) > claim_tolerance
             out.append(DriftEntry(claim.label, str(doc.relative_to(ROOT)),
-                                   claimed, actual, drift, over))
+                                   claimed, actual, drift, claim_tolerance, over))
     return out
 
 
@@ -254,7 +263,7 @@ def cmd_report(tolerance: float) -> int:
         print("No documented claims matched any target. Nothing to check.")
         return 0
     width = max(len(e.label) for e in entries) + 2
-    print(f"{'Claim'.ljust(width)} {'Doc':<24} {'Claimed':>10} {'Actual':>10} {'Drift':>10}")
+    print(f"{'Claim'.ljust(width)} {'Doc':<24} {'Claimed':>10} {'Actual':>10} {'Drift':>10} {'Tolerance':>10}")
     print("-" * (width + 60))
     any_over = False
     for e in entries:
@@ -262,12 +271,12 @@ def cmd_report(tolerance: float) -> int:
         flag = " !!" if e.over_tolerance else ""
         print(
             f"{e.label.ljust(width)} {e.doc:<24} "
-            f"{e.claimed if e.claimed is not None else '-':>10} "
-            f"{e.actual:>10} {drift_str:>10}{flag}"
+            f"{e.claimed if e.claimed is not None else '-':>10} {e.actual:>10} "
+            f"{drift_str:>10} {e.tolerance_pct:>9.0f}%{flag}"
         )
         if e.over_tolerance:
             any_over = True
-    print(f"\nTolerance: ±{tolerance:.0f}%.")
+    print(f"\nDefault tolerance: +/-{tolerance:.0f}%; target-specific overrides are shown above.")
     if any_over:
         print("DRIFT DETECTED — update the documented size/count claims.")
     else:

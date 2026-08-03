@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Compare the README route claim against the number it actually claims
-  Category: testing
-  Where: `scripts/check_doc_sizes.py:80-81` (`_route_count` → `_route_manifest_value("total_routes")`) used by the "README routes badge", "README feature overview API routes", and "README architecture API routes" targets at `:103-122`; data in `opencut/_generated/route_manifest.json`.
-  Problem: The README states **1,544 shipped API routes** and explicitly defines that as excluding 25 strategic 501 stubs (`README.md:257`), but the checker compares that claim against `total_routes` (1569), a different quantity. The manifest already publishes the right field — `shipped_route_count: 1544` — and it is not used. The check reports −1.6% drift and passes only because it is inside the ±15% tolerance, so it neither validates the claim nor would catch real drift in the shipped count until it exceeded ~230 routes. This is a check wired to the wrong data source: it looks like it ran, and authorises anything.
-  Evidence: `python scripts/check_doc_sizes.py` prints `README feature overview API routes  README.md  1544  1569  -1.6%` and concludes "All documented sizes within tolerance". `route_manifest.json` contains `{"total_routes": 1569, "shipped_route_count": 1544, "blueprint_count": 107}`.
-  Fix: Point the three shipped-route targets at `shipped_route_count`, and tighten their tolerance to 0 (an exact-match claim deserves an exact check). Decide separately whether the badge, which reads only "API Routes", should show the total or be relabelled "Shipped Routes".
-  Acceptance: Changing `shipped_route_count` in the manifest by one fails the check; the current tree passes with an exact match.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Neutralise spreadsheet formulas in exported CSV cells
   Category: security
   Where: `opencut/core/sequence_index.py:553-564` (`_csv_cell` / `rows_to_csv`), BOM written at `:600`.

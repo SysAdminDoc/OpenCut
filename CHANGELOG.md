@@ -55,6 +55,11 @@ record also lives in the git commit messages.
 - The audio-feature extraction test now fails on extraction errors or missing
   result fields instead of swallowing every exception and assertion failure.
 
+### Fixed - Route-count documentation checks
+
+- README route claims now compare against the manifest's shipped-route count,
+  with exact-match enforcement and regression coverage for one-route drift.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
