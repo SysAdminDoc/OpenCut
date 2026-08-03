@@ -352,6 +352,20 @@ describe("UXP journal restore contract", () => {
   });
 });
 
+describe("UXP update-check boundary", () => {
+  it("surfaces failed checks and retries from the visible refresh controls", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
+
+    expect(main).toContain("async function checkForUpdatesUxp");
+    expect(main).toContain("data.error || !data.latest_version");
+    expect(main).toContain("uxp.status.update_check_failed");
+    expect(main).toContain("await checkForUpdatesUxp({ force: true });");
+    expect(index).toContain('id="refreshBtn"');
+    expect(index).toContain('data-workspace-command="refresh-backend"');
+  });
+});
+
 describe("UXP source ownership", () => {
   it("checkpoints direct UXP host writes and exposes restart recovery", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");

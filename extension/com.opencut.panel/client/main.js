@@ -82,6 +82,9 @@
     var healthTimer = null;
     var csrfToken = "";
     var _updateCheckDone = false;
+    var _updateCheckFailed = false;
+    var _updateCheckInFlight = false;
+    var _sessionContextShown = false;
     var projectMedia = [];
     var projectFolder = "";
     // Raw project folder detected by JSX (app.project.path → parent dir,
@@ -2430,6 +2433,28 @@
         } catch (e) {}
     }
 
+    function checkForUpdateNotice(force) {
+        force = !!force;
+        if (_updateCheckInFlight || _updateCheckDone || (_updateCheckFailed && !force)) return;
+        _updateCheckInFlight = true;
+        api("GET", "/system/update-check", null, function (uerr, udata) {
+            _updateCheckInFlight = false;
+            if (uerr || !udata || udata.error || !udata.latest_version) {
+                _updateCheckDone = false;
+                _updateCheckFailed = true;
+                showToast(t("toast.update_check_failed", "Couldn't check for updates. Click Refresh to try again."), "warning");
+                return;
+            }
+            _updateCheckDone = true;
+            _updateCheckFailed = false;
+            if (udata.update_available) {
+                var _template = t("toast.update_available", "OpenCut v{version} available — visit GitHub to update");
+                var _msg = _template.replace("{version}", udata.latest_version || "");
+                showToast(_msg, "info");
+            }
+        });
+    }
+
     function checkHealth() {
         api("GET", "/health", null, function (err, data) {
             var ok = !err && data && data.status === "ok";
@@ -2466,16 +2491,13 @@
                 if (!_wsConnected && capabilities.websocket !== false) {
                     wsConnect();
                 }
-                // One-time checks after server connects
-                if (!_updateCheckDone) {
-                    _updateCheckDone = true;
-                    api("GET", "/system/update-check", null, function (uerr, udata) {
-                        if (!uerr && udata && udata.update_available) {
-                            var _template = t("toast.update_available", "OpenCut v{version} available — visit GitHub to update");
-                            var _msg = _template.replace("{version}", udata.latest_version || "");
-                            showToast(_msg, "info");
-                        }
-                    });
+                // One-time checks after server connects. A failed check stays
+                // retryable from the visible Refresh control.
+                if (!_updateCheckDone && !_updateCheckFailed) {
+                    checkForUpdateNotice(false);
+                }
+                if (!_sessionContextShown) {
+                    _sessionContextShown = true;
                     // Surface last-session history + interrupted jobs in a
                     // dedicated "Welcome back" card (replaces the older alert).
                     showSessionContext();
@@ -9034,6 +9056,7 @@
         settingsLoaded = false;
         capabilitiesLoaded = false;
         checkHealth();
+        checkForUpdateNotice(true);
         scanProjectMedia();
         loadStylePreview();
         setTimeout(function () {

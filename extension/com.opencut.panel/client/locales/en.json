@@ -2075,6 +2075,7 @@
   "toast.translating_captions_step": "Step 2/2: Translating captions…",
   "toast.unknown_error": "Unknown error",
   "toast.update_available": "OpenCut v{version} available — visit GitHub to update",
+  "toast.update_check_failed": "Couldn't check for updates. Click Refresh to try again.",
   "toast.used_cached_transcript": "Used cached transcript (saved ~2 min).",
   "toast.watermark_region_autofilled": "Watermark detected — region auto-filled",
   "toast.watermark_remover_installed": "Watermark remover installed successfully!",

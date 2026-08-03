@@ -418,6 +418,9 @@ const runtimeState = createUxpState({
   healthBackoffMs: HEALTH_CHECK_MS,
 });
 let BACKEND = runtimeState.backendUrl;
+let uxpUpdateCheckDone = false;
+let uxpUpdateCheckFailed = false;
+let uxpUpdateCheckInFlight = null;
 
 async function refreshBackendBaseUrl() {
   const detected = await detectBackend();
@@ -427,6 +430,61 @@ async function refreshBackendBaseUrl() {
   BACKEND = detected;
   runtimeState.backendUrl = detected;
   return BACKEND;
+}
+
+async function checkForUpdatesUxp({ force = false } = {}) {
+  if (!force && (uxpUpdateCheckDone || uxpUpdateCheckFailed)) {
+    return uxpUpdateCheckDone;
+  }
+  if (uxpUpdateCheckInFlight) return uxpUpdateCheckInFlight;
+
+  uxpUpdateCheckInFlight = (async () => {
+    UIController.setStatus(t("uxp.status.update_checking", "Checking for updates..."), "working");
+    let result;
+    try {
+      result = await BackendClient.get("/system/update-check");
+    } catch (error) {
+      result = { ok: false, error: error?.message || "offline", data: null };
+    }
+
+    const data = result?.data;
+    if (!result?.ok || !data || data.error || !data.latest_version) {
+      uxpUpdateCheckDone = false;
+      uxpUpdateCheckFailed = true;
+      const message = t(
+        "uxp.status.update_check_failed",
+        "Couldn't check for updates. Use Refresh to try again."
+      );
+      UIController.setStatus(message, "error");
+      UIController.showToast({
+        title: t("uxp.status.update_check_failed_title", "Couldn't check for updates"),
+        message,
+        type: "error",
+        duration: 0,
+      });
+      return false;
+    }
+
+    uxpUpdateCheckDone = true;
+    uxpUpdateCheckFailed = false;
+    UIController.setStatus(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
+    if (data.update_available) {
+      UIController.showToast(
+        formatI18n(
+          "uxp.status.update_available",
+          "OpenCut v{version} available - visit GitHub to update",
+          { version: data.latest_version }
+        ),
+        "info",
+        6000
+      );
+    }
+    return true;
+  })().finally(() => {
+    uxpUpdateCheckInFlight = null;
+  });
+
+  return uxpUpdateCheckInFlight;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -6294,7 +6352,10 @@ function bindEvents() {
   });
 
   // ── Refresh button ──
-  document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection({ rescan: true }));
+  document.getElementById("refreshBtn")?.addEventListener("click", async () => {
+    const alive = await checkConnection({ rescan: true });
+    if (alive) await checkForUpdatesUxp({ force: true });
+  });
   document.querySelectorAll("[data-quick-action]").forEach((btn) => {
     btn.addEventListener("click", (event) => {
       runSettingsQuickAction(event.currentTarget?.dataset?.quickAction || "");
@@ -8497,19 +8558,9 @@ async function initApp() {
     // Start periodic backend media scan
     startMediaScanInterval();
 
-    // One-time update check
-    const ur = await BackendClient.get("/system/update-check");
-    if (ur.ok && ur.data && ur.data.update_available) {
-      UIController.showToast(
-        formatI18n(
-          "uxp.status.update_available",
-          "OpenCut v{version} available - visit GitHub to update",
-          { version: ur.data.latest_version }
-        ),
-        "info",
-        6000
-      );
-    }
+    // One-time update check. A failed check stays retryable from either
+    // visible Refresh control instead of being silently treated as current.
+    await checkForUpdatesUxp();
   } else {
     await refreshFootageIndexStats({ silent: true });
   }
