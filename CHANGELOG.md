@@ -3,6 +3,12 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - SMPTE timecode sync
+
+- tc-sync now honors SMPTE drop-frame separators and normalizes source frame
+  counts using each camera's frame rate before computing offsets and common
+  ranges.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures

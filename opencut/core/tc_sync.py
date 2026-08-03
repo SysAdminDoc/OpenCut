@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.timecode_utils import frames_to_timecode, timecode_to_frames
 from opencut.helpers import (
     get_video_info,
 )
@@ -58,27 +59,42 @@ def _tc_to_frames(tc: str, fps: float) -> int:
     """Convert SMPTE timecode string to frame number."""
     if not tc:
         return 0
-    parts = tc.replace(";", ":").split(":")
-    if len(parts) != 4:
-        return 0
     try:
-        hh, mm, ss, ff = int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3])
-    except ValueError:
+        return timecode_to_frames(tc, fps)
+    except (TypeError, ValueError):
         return 0
-    fps_int = round(fps)
-    return hh * fps_int * 3600 + mm * fps_int * 60 + ss * fps_int + ff
 
 
-def _frames_to_tc(frame_num: int, fps: float) -> str:
+def _frames_to_tc(frame_num: int, fps: float, drop_frame: bool = False) -> str:
     """Convert frame number to SMPTE timecode string."""
     if fps <= 0:
         return "00:00:00:00"
-    fps_int = round(fps)
-    ff = frame_num % fps_int
-    ss = (frame_num // fps_int) % 60
-    mm = (frame_num // (fps_int * 60)) % 60
-    hh = frame_num // (fps_int * 3600)
-    return f"{hh:02d}:{mm:02d}:{ss:02d}:{ff:02d}"
+    return frames_to_timecode(frame_num, fps, drop_frame=drop_frame)
+
+
+def _coerce_fps(value: object, fallback: float = 25.0) -> float:
+    """Return a positive numeric frame rate, falling back when invalid."""
+    try:
+        fps = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return fps if fps > 0 else fallback
+
+
+def _source_frame(source: dict, frame_key: str, tc_key: str, fps: float) -> int:
+    """Read a source frame field, deriving it from its timecode when absent."""
+    value = source.get(frame_key)
+    if value is not None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            pass
+    return _tc_to_frames(source.get(tc_key, ""), fps)
+
+
+def _is_drop_frame_timecode(*timecodes: object) -> bool:
+    """Return whether any supplied timecode uses the SMPTE DF separator."""
+    return any(";" in str(timecode or "") for timecode in timecodes)
 
 
 def _frames_to_seconds(frames: int, fps: float) -> float:
@@ -118,8 +134,7 @@ def _extract_source_timecodes(
         raise FileNotFoundError(f"Source file not found: {filepath}")
 
     info = get_video_info(filepath)
-    if fps <= 0:
-        fps = info.get("fps", 25.0) or 25.0
+    fps = _coerce_fps(fps, _coerce_fps(info.get("fps", 25.0)))
     duration = info.get("duration", 0.0) or 0.0
 
     # Try embedded timecode from ffprobe metadata
@@ -164,7 +179,9 @@ def _extract_source_timecodes(
                 end_frame = start_frame + total_frames
                 return {
                     "start_tc": tc,
-                    "end_tc": _frames_to_tc(end_frame, fps),
+                    "end_tc": _frames_to_tc(
+                        end_frame, fps, drop_frame=_is_drop_frame_timecode(tc),
+                    ),
                     "fps": fps,
                     "start_frame": start_frame,
                     "end_frame": end_frame,
@@ -248,31 +265,49 @@ def find_common_timecode_range(
             "valid": False,
         }
 
-    fps = timecodes[0].get("fps", 25.0)
+    fps = _coerce_fps(timecodes[0].get("fps"), 25.0)
+    drop_frame = _is_drop_frame_timecode(
+        timecodes[0].get("start_tc"), timecodes[0].get("end_tc"),
+    )
 
-    # Find the latest start and earliest end
-    max_start = max(tc.get("start_frame", 0) for tc in timecodes)
-    min_end = min(tc.get("end_frame", 0) for tc in timecodes)
+    # Compare source frame counts in seconds so mixed frame rates share a
+    # common clock. Returned frame fields use the first source's timeline fps.
+    intervals = []
+    for timecode in timecodes:
+        source_fps = _coerce_fps(timecode.get("fps"), fps)
+        start_frame = _source_frame(timecode, "start_frame", "start_tc", source_fps)
+        end_frame = _source_frame(timecode, "end_frame", "end_tc", source_fps)
+        intervals.append(
+            (
+                _frames_to_seconds(start_frame, source_fps),
+                _frames_to_seconds(end_frame, source_fps),
+            )
+        )
 
-    if min_end <= max_start:
+    max_start_seconds = max(start for start, _ in intervals)
+    min_end_seconds = min(end for _, end in intervals)
+    max_start = round(max_start_seconds * fps)
+    min_end = round(min_end_seconds * fps)
+
+    if min_end_seconds <= max_start_seconds:
         return {
             "start_frame": max_start,
             "end_frame": max_start,
-            "start_tc": _frames_to_tc(max_start, fps),
-            "end_tc": _frames_to_tc(max_start, fps),
+            "start_tc": _frames_to_tc(max_start, fps, drop_frame=drop_frame),
+            "end_tc": _frames_to_tc(max_start, fps, drop_frame=drop_frame),
             "duration_frames": 0,
             "duration_seconds": 0.0,
             "valid": False,
         }
 
     duration_frames = min_end - max_start
-    duration_seconds = _frames_to_seconds(duration_frames, fps)
+    duration_seconds = min_end_seconds - max_start_seconds
 
     return {
         "start_frame": max_start,
         "end_frame": min_end,
-        "start_tc": _frames_to_tc(max_start, fps),
-        "end_tc": _frames_to_tc(min_end, fps),
+        "start_tc": _frames_to_tc(max_start, fps, drop_frame=drop_frame),
+        "end_tc": _frames_to_tc(min_end, fps, drop_frame=drop_frame),
         "duration_frames": duration_frames,
         "duration_seconds": round(duration_seconds, 3),
         "valid": True,
@@ -297,16 +332,22 @@ def compute_tc_offsets(
     if not sources:
         return {}
 
-    # Reference point: earliest start timecode
-    min_start = min(s.get("start_frame", 0) for s in sources)
-    fps = sources[0].get("fps", 25.0)
+    # Normalize each source to seconds, then express offsets in the first
+    # source's timeline frames. A source's frame count is not comparable to
+    # another source's count when their frame rates differ.
+    fps = _coerce_fps(sources[0].get("fps"), 25.0)
+    starts = []
+    for src in sources:
+        source_fps = _coerce_fps(src.get("fps"), fps)
+        start_frame = _source_frame(src, "start_frame", "start_tc", source_fps)
+        starts.append((src, _frames_to_seconds(start_frame, source_fps)))
+    min_start_seconds = min(start_seconds for _, start_seconds in starts)
 
     offsets = {}
-    for src in sources:
+    for src, start_seconds in starts:
         fp = src.get("filepath", src.get("label", ""))
-        start_frame = src.get("start_frame", 0)
-        offset_frames = start_frame - min_start
-        offset_seconds = _frames_to_seconds(offset_frames, fps)
+        offset_seconds = start_seconds - min_start_seconds
+        offset_frames = round(offset_seconds * fps)
 
         offsets[fp] = {
             "offset_frames": offset_frames,
