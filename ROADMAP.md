@@ -13,13 +13,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P0 — 2026-08-02 (research pass)
 
-- [ ] P0 — Stop the installer force-killing Premiere
-  Why: Re-running install or uninstall while the panel is connected terminates Premiere and loses unsaved project work.
-  Evidence: `Install.ps1:138-143` and `:217-229` take the last column of every `netstat -ano | Select-String ":5679 "` row; that matches `ESTABLISHED` rows whose PID is the *client* — i.e. Premiere. `installer/src/OpenCut.Installer/Services/ProcessKiller.cs:93` filters with `findstr LISTENING` and is correct.
-  Touches: `Install.ps1` (both port-kill loops), `Uninstall.bat` path, installer smoke scripts.
-  Acceptance: A test feeds recorded `netstat -ano` output containing an ESTABLISHED row for the port and asserts only the LISTENING PID is selected.
-  Complexity: S
-
 - [ ] P0 — Normalise and guard the chosen install path before uninstall deletes it
   Why: Uninstall runs `rmdir /s /q` on a raw, unvalidated user string, so choosing a drive root or an existing media folder in the browser destroys it.
   Evidence: `installer/src/OpenCut.Installer/Pages/OptionsPage.xaml.cs:207` stores `PathBox.Text.Trim()`; the `Path.GetFullPath` result at `:238` is used only for a length check and discarded. `Services/UninstallEngine.cs:123-142` deletes recursively and `:175` runs `rmdir /s /q "{installDir}"`. No drive-root rejection, no non-empty-directory warning, no app-name append.

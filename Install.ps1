@@ -118,6 +118,60 @@ function Get-FFmpegSecurityStatus {
     return [pscustomobject]@{ Safe = $false; Version = $token; Reason = "Unrecognized FFmpeg build token" }
 }
 
+function Get-OpenCutListenerPids {
+    <#
+    .SYNOPSIS
+        PIDs of the processes LISTENING on a TCP port - never the clients.
+
+    .DESCRIPTION
+        `netstat -ano | Select-String ":5679 "` also matches ESTABLISHED rows,
+        and the last column of an ESTABLISHED row is the PID of whichever end
+        of the connection the row describes. When the CEP panel is connected,
+        one of those rows belongs to Premiere Pro - so the old parse killed
+        Premiere and lost the user's unsaved project.
+
+        Prefer `Get-NetTCPConnection`, which reports state as a typed value and
+        does not depend on the console locale. Fall back to parsing `netstat`
+        column-wise: a killable row is TCP, in state LISTENING, and its *local*
+        address (field 2, not the foreign address) ends with the port.
+
+    .PARAMETER NetstatOutput
+        Recorded `netstat -ano` lines. For tests; production callers omit it.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][int]$Port,
+        [string[]]$NetstatOutput
+    )
+
+    if (-not $NetstatOutput) {
+        try {
+            $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop
+            return @($listeners |
+                ForEach-Object { [string]$_.OwningProcess } |
+                Where-Object { $_ -match '^\d+$' -and $_ -ne '0' } |
+                Sort-Object -Unique)
+        } catch {
+            # Get-NetTCPConnection is unavailable or returned nothing usable;
+            # fall through to the netstat parse below.
+        }
+        $NetstatOutput = @(netstat -ano 2>$null)
+    }
+
+    $found = @()
+    foreach ($line in $NetstatOutput) {
+        if (-not $line) { continue }
+        $fields = ([string]$line).Trim() -split '\s+'
+        # TCP  <local address>  <foreign address>  LISTENING  <pid>
+        if ($fields.Count -lt 5) { continue }
+        if ($fields[0] -ne 'TCP') { continue }
+        if ($fields[3] -ne 'LISTENING') { continue }
+        if ($fields[1] -notmatch ":$Port$") { continue }
+        $procId = $fields[4]
+        if ($procId -match '^\d+$' -and $procId -ne '0') { $found += $procId }
+    }
+    return @($found | Sort-Object -Unique)
+}
+
 # ---------------------------------------------------------------------------
 # Uninstall
 # ---------------------------------------------------------------------------
@@ -130,14 +184,13 @@ if ($Uninstall) {
         try { $_.CommandLine -like "*opencut*" } catch { $false }
     } | Stop-Process -Force -ErrorAction SilentlyContinue
     
-    # Kill by port. NB: ``$pid`` is a read-only automatic PowerShell
-    # variable (the current process PID). Assigning to it in ``foreach``
-    # raises a ``Cannot overwrite variable PID`` runtime error and, with
-    # ``$ErrorActionPreference = "Stop"`` set above, halts the entire
-    # uninstall. Use ``$procId`` instead.
-    $portPids = netstat -ano 2>$null | Select-String ":5679 " | ForEach-Object {
-        ($_ -split '\s+')[-1]
-    } | Where-Object { $_ -match '^\d+$' } | Sort-Object -Unique
+    # Kill by port - listeners only, never connected clients (Premiere holds
+    # the client end of :5679 while the panel is open). NB: ``$pid`` is a
+    # read-only automatic PowerShell variable (the current process PID).
+    # Assigning to it in ``foreach`` raises a ``Cannot overwrite variable PID``
+    # runtime error and, with ``$ErrorActionPreference = "Stop"`` set above,
+    # halts the entire uninstall. Use ``$procId`` instead.
+    $portPids = Get-OpenCutListenerPids -Port 5679
     foreach ($procId in $portPids) {
         Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
@@ -212,13 +265,12 @@ if (-not $SkipCleanup) {
     # Kill any running OpenCut server processes
     Write-Step "Stopping any running OpenCut processes..."
     
-    # Method 1: Kill python processes on port 5679-5689
+    # Method 1: Kill whatever is LISTENING on ports 5679-5689. Connected
+    # clients (Premiere, a browser tab) must be left alone.
     $killed = 0
     for ($port = 5679; $port -le 5689; $port++) {
-        $portPids = netstat -ano 2>$null | Select-String ":$port " | ForEach-Object {
-            ($_ -split '\s+')[-1]
-        } | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' } | Sort-Object -Unique
-        
+        $portPids = Get-OpenCutListenerPids -Port $port
+
         # ``$pid`` is reserved (current process PID, read-only); use ``$procId``.
         foreach ($procId in $portPids) {
             try {
