@@ -69,6 +69,30 @@ class TestUpdateCheck:
         assert second["latest_version"] is None
         assert calls == 2
 
+    def test_update_check_returns_bounded_release_metadata(self, client, monkeypatch):
+        from opencut.routes import system_model_routes
+
+        monkeypatch.setattr(system_model_routes, "_update_cache", {"data": None, "ts": 0})
+        response = MagicMock()
+        response.read.return_value = json.dumps({
+            "tag_name": "v9.8.7",
+            "name": "OpenCut 9.8.7",
+            "body": "Release notes",
+            "published_at": "2026-08-02T12:00:00Z",
+            "html_url": "https://github.com/SysAdminDoc/OpenCut/releases/tag/v9.8.7",
+        }).encode("utf-8")
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+        monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: response)
+
+        data = client.get("/system/update-check").get_json()
+
+        assert data["latest_version"] == "9.8.7"
+        assert data["release_name"] == "OpenCut 9.8.7"
+        assert data["release_notes"] == "Release notes"
+        assert data["published_at"] == "2026-08-02T12:00:00Z"
+        assert data["release_url"].endswith("/releases/tag/v9.8.7")
+
 
 # =====================================================================
 # /system/dependencies
