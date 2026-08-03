@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Consolidate the duplicate filter-path escaper and catch metric timeouts
-  Category: correctness
-  Where: `opencut/core/quality_metrics.py:106-115` (`_escape_filter_path`) versus `opencut/helpers.py:443` (`escape_filter_path`); and `opencut/core/quality_metrics.py:343-364` (`compare_videos` per-metric loop).
-  Problem: Two defects in one module. (1) The local escaper handles `\`→`/` and `:` but not apostrophes, while the shared helper handles `'` with the close/reopen idiom — so VMAF breaks for any user whose profile path contains an apostrophe (the log path comes from `tempfile.mkstemp`, e.g. `C:\Users\O'Brien\AppData\Local\Temp\...`). It also duplicates a consolidated helper, against the repo's own convention. (2) The per-metric loop catches only `RuntimeError`, but `_run_ffmpeg_filter_complex` calls `_sp.run(..., timeout=timeout)`, which raises `subprocess.TimeoutExpired` — so one hung metric (VMAF on long media being the obvious case) aborts the entire report including metrics already measured, instead of degrading into `notes` like every other failure. The docstring promises per-metric isolation.
-  Evidence: Both are direct reads of the cited lines; the helper's apostrophe handling is present and the local copy's is absent.
-  Fix: Use `helpers.escape_filter_path` and delete the local copy; add `_sp.TimeoutExpired` to the per-metric `except` clause.
-  Acceptance: A test with an apostrophe in the temp path measures VMAF successfully; a test where one metric times out still returns the other metrics with a note.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Scope the IMSC validator's log capture to ttconv
   Category: correctness
   Where: `opencut/core/standards_validators.py:160-206` (`_CollectingHandler` attachment in `validate_imsc`).

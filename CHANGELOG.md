@@ -9,6 +9,12 @@ record also lives in the git commit messages.
   counts using each camera's frame rate before computing offsets and common
   ranges.
 
+### Fixed - Quality metric isolation
+
+- VMAF log paths now use the shared FFmpeg filter-path escaper, including
+  apostrophe-safe quoting, and a timed-out metric no longer aborts the other
+  measurements in the report.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
