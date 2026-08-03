@@ -311,6 +311,78 @@ class TestWorkflowValidation:
             )
         ]
 
+    def test_parent_cancellation_between_steps_returns_partial_results(self, monkeypatch):
+        import opencut.core.workflow as workflow_core
+        import opencut.jobs as jobs
+
+        class _Response:
+            status_code = 200
+
+            @staticmethod
+            def get_json():
+                return {"job_id": "workflow-step-1"}
+
+        class _Client:
+            def __init__(self):
+                self.posts = []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def post(self, endpoint, **_kwargs):
+                self.posts.append(endpoint)
+                return _Response()
+
+        class _App:
+            def __init__(self):
+                self.client = _Client()
+
+            def test_client(self):
+                return self.client
+
+        app = _App()
+        cancel_checks = []
+        monkeypatch.setattr(
+            jobs,
+            "_is_cancelled",
+            lambda job_id: cancel_checks.append(job_id) or len(cancel_checks) >= 2,
+        )
+        monkeypatch.setattr(
+            workflow_core,
+            "_wait_for_job",
+            lambda *_args, **_kwargs: {"status": "complete", "result": {}},
+        )
+
+        result = workflow_core.run_workflow(
+            app,
+            __file__,
+            [
+                {"endpoint": "/silence", "params": {}},
+                {"endpoint": "/audio/normalize", "params": {}},
+            ],
+            "csrf-token",
+            parent_job_id="parent-job",
+        )
+
+        assert result == {
+            "success": False,
+            "steps_completed": 1,
+            "output": __file__,
+            "step_results": [{
+                "step": 1,
+                "endpoint": "/silence",
+                "success": True,
+                "output": __file__,
+                "job_id": "workflow-step-1",
+            }],
+            "error": "Workflow cancelled by user",
+        }
+        assert cancel_checks == ["parent-job", "parent-job"]
+        assert app.client.posts == ["/silence"]
+
     def test_wait_for_job_treats_interrupted_as_terminal(self, monkeypatch):
         import opencut.core.workflow as workflow_core
         import opencut.jobs as jobs

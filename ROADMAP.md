@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Cover the workflow between-steps cancellation branch
-  Category: testing
-  Where: `opencut/core/workflow.py:218-227` (the `_is_cancelled(parent_job_id)` early exit).
-  Problem: The branch that returns "Workflow cancelled by user" with partial `step_results` is exercised by no test — the only `parent_job_id` reference in the test suite is against a mocked `run_workflow` (`tests/test_workflow.py:146`), and the repo-root `.coverage` shows these lines unexecuted. Job-level cancellation is well covered (`tests/test_job_cancellation_race.py` is solid), but the workflow-chain contract — partial results and the `steps_completed` count — is unverified. This matters more once the propagation fix above lands.
-  Evidence: Coverage data plus the absence of a non-mocked caller.
-  Fix: Add a test that flips `_is_cancelled` after the first step and asserts the partial-result shape and `steps_completed`.
-  Acceptance: The new test fails if the early-exit branch is removed.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Consolidate the duplicated route helpers
   Category: maintainability
   Where: `_json_object_or_400` defined five times — `opencut/routes/dev_scripting_routes.py:26`, `plugins.py:42`, `workflow.py:34`, `workflow_dev_routes.py:34`, `workflow_routes.py:20`; `_stub_503` defined three times — `wave_h_routes.py:73`, `wave_k_routes.py:26`, `wave_l_contract.py:10`.

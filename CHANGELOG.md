@@ -74,6 +74,11 @@ record also lives in the git commit messages.
 - Default pytest runs now exclude `integration` and `slow` tests; pass
   `-m integration` when explicitly opting into network/FFmpeg coverage.
 
+### Added - Workflow cancellation coverage
+
+- Workflow tests now verify that cancellation between steps preserves the
+  completed step result and reports the correct partial `steps_completed` count.
+
 ## 1.46.0 - Earned claims
 
 ### Fixed - Honest update-check failures
