@@ -26,6 +26,12 @@ record also lives in the git commit messages.
   demo footage follows the normal selection lifecycle, and multicam writes
   create recovery checkpoints and reject host error payloads.
 
+### Fixed - Photon IMF clean-package parsing
+
+- IMF validation now ignores Photon's clean “has no errors or warnings”
+  summaries and records only line-leading `ERROR`/`FATAL` severity records as
+  failures, while preserving explicit warnings.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and

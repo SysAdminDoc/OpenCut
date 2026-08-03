@@ -188,6 +188,41 @@ class TestImfValidatorAdapter(unittest.TestCase):
         self.assertIn("Photon", sv.INSTALL_HINT_IMF)
         self.assertIn(sv.PHOTON_JAR_ENV, sv.INSTALL_HINT_IMF)
 
+    def test_clean_photon_summary_is_not_classified_as_an_error(self):
+        from unittest import mock
+
+        completed = mock.Mock(returncode=0, stdout=(
+            "INFO IMPAnalyzer completed\n"
+            "CPL_123.xml has no errors or warnings\n"
+            "INFO reports/error-path.txt inspected\n"
+        ), stderr="")
+        with mock.patch.object(sv, "check_imf_validator_available", return_value=True), \
+                mock.patch.object(sv, "photon_jar_path", return_value="photon-test.jar"), \
+                mock.patch.object(sv.subprocess, "run", return_value=completed):
+            report = sv.validate_imf_package(".")
+
+        self.assertTrue(report.passed, report.errors)
+        self.assertEqual(report.errors, [])
+        self.assertEqual(report.warnings, [])
+
+    def test_photon_severity_lines_are_reported(self):
+        from unittest import mock
+
+        completed = mock.Mock(returncode=1, stdout=(
+            "ERROR Failed to read CPL\n"
+            "FATAL IMPAnalyzer aborted\n"
+            "WARNING Optional sidecar missing\n"
+            "INFO error text in a diagnostic path\n"
+        ), stderr="")
+        with mock.patch.object(sv, "check_imf_validator_available", return_value=True), \
+                mock.patch.object(sv, "photon_jar_path", return_value="photon-test.jar"), \
+                mock.patch.object(sv.subprocess, "run", return_value=completed):
+            report = sv.validate_imf_package(".")
+
+        self.assertFalse(report.passed)
+        self.assertEqual(report.errors, ["ERROR Failed to read CPL", "FATAL IMPAnalyzer aborted"])
+        self.assertEqual(report.warnings, ["WARNING Optional sidecar missing"])
+
 
 # ---------------------------------------------------------------------------
 # Capability wording

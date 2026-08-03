@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -41,6 +42,10 @@ INSTALL_HINT_IMF = (
     "Install a JRE and set OPENCUT_PHOTON_JAR to the Netflix Photon "
     "all-in-one jar (photon-<version>-all.jar)."
 )
+
+_PHOTON_ERROR_LINE_RE = re.compile(r"^\s*(?:ERROR|FATAL)\b", re.IGNORECASE)
+_PHOTON_WARNING_LINE_RE = re.compile(r"^\s*WARNING\b", re.IGNORECASE)
+_PHOTON_CLEAN_SUMMARY_RE = re.compile(r"\bhas no errors or warnings\b", re.IGNORECASE)
 
 #: EBU R 128 / ITU-R BS.1770 tolerance for a programme-loudness measurement.
 LOUDNESS_TOLERANCE_LU = 0.5
@@ -258,10 +263,11 @@ def validate_imf_package(package_dir: str, *, timeout: int = 900) -> ValidationR
         stripped = line.strip()
         if not stripped:
             continue
-        lowered = stripped.lower()
-        if "error" in lowered or "fatal" in lowered:
+        if _PHOTON_CLEAN_SUMMARY_RE.search(stripped):
+            continue
+        if _PHOTON_ERROR_LINE_RE.match(stripped):
             report.errors.append(stripped)
-        elif "warning" in lowered:
+        elif _PHOTON_WARNING_LINE_RE.match(stripped):
             report.warnings.append(stripped)
     report.measurements["exit_code"] = completed.returncode
     report.passed = completed.returncode == 0 and not report.errors
