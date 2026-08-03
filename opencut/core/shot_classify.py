@@ -495,7 +495,6 @@ def classify_shots(
 
     info = get_video_info(input_path)
     duration = info.get("duration", 0)
-    info.get("fps", 30.0)
 
     if on_progress:
         on_progress(10, "Detecting scene boundaries...")

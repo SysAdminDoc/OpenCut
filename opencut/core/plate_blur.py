@@ -109,7 +109,6 @@ def _detect_plates_yolo(frames_dir: str, info: dict, sample_fps: float) -> Optio
 
     detections: List[PlateDetection] = []
     frame_files = sorted(f for f in os.listdir(frames_dir) if f.endswith(".png"))
-    info.get("fps", 25.0)
 
     for idx, fname in enumerate(frame_files):
         fpath = os.path.join(frames_dir, fname)
@@ -294,7 +293,6 @@ def blur_plates(
     info = get_video_info(input_path)
     duration = info["duration"]
     width, height = info["width"], info["height"]
-    info.get("fps", 25.0)
 
     if detections is None:
         if on_progress:

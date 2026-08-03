@@ -906,7 +906,7 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
             duration_ms=int((time.time() - start) * 1000),
         )
     result = _run(
-        ["ruff", "check", "opencut/", "--select", "E,F,I", "--ignore", "E501,E402"],
+        ["ruff", "check", "opencut/", "--select", "E,F,I,B018", "--ignore", "E501,E402"],
         cwd=REPO_ROOT,
     )
     duration = int((time.time() - start) * 1000)

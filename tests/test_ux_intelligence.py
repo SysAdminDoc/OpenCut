@@ -978,6 +978,15 @@ class TestContentTypeDetection:
         )
         assert result == "screen_recording"
 
+    def test_non_screen_codec_does_not_trigger_screen_recording(self):
+        from opencut.core.smart_defaults import _detect_content_type
+        result = _detect_content_type(
+            {"format": {}, "streams": [{"codec_type": "video", "codec_name": "mpeg4"}]},
+            motion_level=0.1, has_audio=False, duration_s=300,
+            width=1920, height=1080, fps=30,
+        )
+        assert result == "unknown"
+
     def test_detect_drone_metadata(self):
         from opencut.core.smart_defaults import _detect_content_type
         result = _detect_content_type(

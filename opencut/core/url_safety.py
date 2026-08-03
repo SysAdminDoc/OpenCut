@@ -101,7 +101,7 @@ def validate_public_http_url(url: str, *, label: str = "URL", resolve: bool = Fa
     if parsed.username is not None or parsed.password is not None:
         raise ValueError(f"{label} must not include embedded credentials")
     try:
-        parsed.port
+        _ = parsed.port
     except ValueError as exc:
         raise ValueError(f"{label} is not a valid URL") from exc
 

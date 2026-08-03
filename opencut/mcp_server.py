@@ -205,7 +205,7 @@ def _mcp_http_origin_is_allowed(
         if parsed.path not in ("", "/") or parsed.query or parsed.fragment:
             return False
         # Accessing .port validates malformed/non-numeric ports.
-        parsed.port
+        _ = parsed.port
     except ValueError:
         return False
     return _trusted_hosts.is_trusted_host(

@@ -486,6 +486,22 @@ class TestSuggestBroll:
         assert len(result.matches) >= 1
         assert result.coverage_ratio > 0
 
+    def test_filename_terms_match_without_metadata(self):
+        from opencut.core.broll_suggest import suggest_broll
+        transcript = [
+            {"start": 0, "end": 5, "text": "Take a look at the ocean waves"},
+        ]
+        footage = [
+            {"name": "ocean_clip.mp4", "path": "/clips/ocean.mp4",
+             "keywords": [], "tags": [], "duration": 10.0,
+             "category": "", "description": ""},
+        ]
+
+        result = suggest_broll(transcript, footage_index=footage)
+
+        assert result.matches
+        assert "ocean" in result.matches[0].match_keywords
+
     def test_cutlist_generation(self):
         from opencut.core.broll_suggest import BRollCue, BRollMatch, generate_broll_cutlist
         cues = [BRollCue(start=0, end=5, cue_type="keyword", keywords=["test"])]

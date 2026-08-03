@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Enable `B018` and triage the discarded expressions it finds
-  Category: maintainability
-  Where: Lint config in `pyproject.toml` (`ruff` `--select E,F,I` per `scripts/release_smoke.py`). Sites: `opencut/core/auto_dub_pipeline.py:577-578`, `noise_classify.py:243-244`, `broll_suggest.py:234`, `smart_defaults.py:169`, `subtitle_timing.py:174`, `clean_plate.py:159`, `glitch_effects.py:220-221`, `nd_filter_sim.py:61`, `plate_blur.py:112,297`, `power_windows.py:254-255`, `shot_classify.py:498`, `spatial_audio_vr.py:213-214`, `video_360.py:151,565`, `video_compare.py:247-248`, `routes/audio_expansion_routes.py:203`.
-  Problem: ~21 statements compute a value and discard it. Three tiers: (1) a wasted `ffprobe` subprocess per request in `auto_dub_pipeline._composite_dubbed_audio:577` and `noise_classify._remove_noise_ffmpeg:243`, where the `get_video_info(...)` result is entirely unused (these are the only 2 truly dead call sites out of 215); (2) two probable dropped assignments — `broll_suggest.py:234` discards `clip.get("name","").lower()`, so clip filenames never enter `all_clip_terms` and B-roll cues cannot match on filename; `smart_defaults.py:169` computes the screen-recording codec check and throws it away, so the classifier silently uses only resolution and motion; (3) plain dead lines. The release lint gate selects only `E,F,I`, so `B018` (flake8-bugbear useless-expression) never runs and this whole class is invisible.
-  Evidence: AST scan across `opencut/` for expression statements whose value is unused.
-  Fix: Add `B018` to the ruff selection, then triage each hit individually — delete the dead ones, and decide whether `broll_suggest` and `smart_defaults` need the assignment restored (these two change behaviour, so they need a test either way).
-  Acceptance: `ruff check opencut/ --select E,F,I,B018` is clean; B-roll matching on clip filename is covered by a test if that assignment is restored.
-  Confidence: Verified (deadness); the two behaviour gaps are Likely-unintended and need a judgement call
-  Effort: M
-
 - [ ] P3 — Route the remaining drawtext call sites through the shared escaper
   Category: correctness
   Where: `opencut/core/watermark.py:150`, `kinetic_type.py:234,465`, `template_assembly.py:577`, `thumbnail_ab.py:357`, `adr_cueing.py:249-254`, `multicam_grid.py:156`, `camera_solver.py:698`, `character_consistency.py:691`, `data_animation.py:981`. Related `%`-escaping: `hook_generator.py:416-421`, `ab_variant.py:149-154`, `programmatic_video.py:94-97`. Helper: `opencut/helpers.py:447` (`escape_drawtext`).

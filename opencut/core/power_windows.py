@@ -251,8 +251,6 @@ def track_window(
     info = get_video_info(video_path)
     fps = info.get("fps", 30.0)
     duration = info.get("duration", 0.0)
-    info.get("width", 1920)
-    info.get("height", 1080)
     total_frames = int(fps * duration) if duration > 0 else 0
 
     # Use FFmpeg mestimate to get motion vectors

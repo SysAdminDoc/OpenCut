@@ -574,9 +574,6 @@ def _composite_dubbed_audio(
     _stage_progress(on_progress, STAGE_COMPOSITE, 0, "Compositing final output...")
 
     # Create a full-length dubbed audio track by mixing TTS segments
-    info = get_video_info(video_path)
-    info.get("duration", 60.0)
-
     # Generate the mixed audio
     tts_segments_with_audio = [s for s in segments if s.tts_audio_path and os.path.isfile(s.tts_audio_path)]
 

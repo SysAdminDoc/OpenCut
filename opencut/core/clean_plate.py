@@ -156,7 +156,6 @@ def generate_clean_plate(
 
     info = get_video_info(video_path)
     fps = info.get("fps", 30.0)
-    info.get("duration", 0.0)
     w = info.get("width", 0)
     h = info.get("height", 0)
 

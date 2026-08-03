@@ -210,8 +210,6 @@ def detect_speaker_positions(
         raise FileNotFoundError(f"Video not found: {video_path}")
 
     info = get_video_info(video_path)
-    info.get("width", 3840)
-    info.get("height", 1920)
     duration = info.get("duration", 0.0)
 
     if duration <= 0:

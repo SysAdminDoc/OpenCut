@@ -240,8 +240,6 @@ def _remove_noise_ffmpeg(
 ) -> str:
     """Remove classified noise segments using FFmpeg filters."""
     ffmpeg = get_ffmpeg_path()
-    info = get_video_info(input_path)
-    info.get("duration", 0)
 
     filters = []
     for seg in segments:
