@@ -882,8 +882,6 @@ class TestLipSync(unittest.TestCase):
             self.assertIn("amplitudes", features)
             self.assertIn("duration", features)
             self.assertIn("frame_count", features)
-        except Exception:
-            pass  # FFmpeg mock may not capture all paths
         finally:
             os.unlink(audio_path)
 

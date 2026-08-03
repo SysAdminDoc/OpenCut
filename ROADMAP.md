@@ -335,16 +335,6 @@ suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
 
 ### P3 — 2026-08-02
 
-- [ ] P3 — Delete the test that cannot fail
-  Category: testing
-  Where: `tests/test_voice_speech.py:859-888` (`TestLipSync.test_extract_audio_features`).
-  Problem: The call and all three `assertIn`s are wrapped in `try: ... except Exception: pass  # FFmpeg mock may not capture all paths`. `AssertionError` is an `Exception`, so the test passes regardless of what `_extract_audio_features` returns — including if it raises or returns garbage. It inflates the green count while verifying nothing.
-  Evidence: Read at the cited lines; the `except Exception: pass` encloses every assertion.
-  Fix: Remove the try/except and let the deterministic mock (which already writes fake PCM) drive real assertions; if a specific environment-dependent exception is genuinely expected, `pytest.skip` on that exact type only.
-  Acceptance: Mutating `_extract_audio_features` to return `{}` makes the test fail.
-  Confidence: Verified
-  Effort: S
-
 - [ ] P3 — Compare the README route claim against the number it actually claims
   Category: testing
   Where: `scripts/check_doc_sizes.py:80-81` (`_route_count` → `_route_manifest_value("total_routes")`) used by the "README routes badge", "README feature overview API routes", and "README architecture API routes" targets at `:103-122`; data in `opencut/_generated/route_manifest.json`.

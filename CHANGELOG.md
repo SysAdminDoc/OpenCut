@@ -50,6 +50,11 @@ record also lives in the git commit messages.
   subtitle stores. A fail-closed filesystem guard rejects any attempted write
   to the developer's real `~/.opencut` profile.
 
+### Fixed - Lip-sync test coverage
+
+- The audio-feature extraction test now fails on extraction errors or missing
+  result fields instead of swallowing every exception and assertion failure.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
