@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## 1.46.0 - Earned claims
 
+### Fixed - Test profile isolation
+
+- Test persistence now uses an isolated home and per-test queue, review, and
+  subtitle stores. A fail-closed filesystem guard rejects any attempted write
+  to the developer's real `~/.opencut` profile.
+
 ### Fixed - Scripting-console reflection escape
 
 - The scripting console now refuses reflection modules (`operator` and
