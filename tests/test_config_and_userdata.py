@@ -481,6 +481,72 @@ def test_server_main_allows_remote_bind_with_explicit_opt_in(monkeypatch, capsys
     assert "WARNING: Binding OpenCut to non-loopback host 0.0.0.0" in out
 
 
+def test_server_alternate_port_does_not_recover_jobs_from_live_instance(monkeypatch):
+    import atexit
+    import opencut.job_store as job_store
+    import opencut.routes.jobs_routes as jobs_routes
+    import opencut.server as server
+
+    requested_port = 5679
+    alternate_port = requested_port + 1
+    running_rows = {"job-from-live-server": "running"}
+    check_calls = []
+
+    def _check_port(_host, candidate):
+        check_calls.append(candidate)
+        return candidate == alternate_port
+
+    def _stop_server(*_args, **_kwargs):
+        raise RuntimeError("stop startup before serving")
+
+    monkeypatch.setattr(server, "_check_port", _check_port)
+    monkeypatch.setattr(server, "_nuke_old_servers", lambda *_args: False)
+    monkeypatch.setattr(server, "_write_pid", lambda port: check_calls.append(("pid", port)))
+    monkeypatch.setattr(server, "_show_startup_notification", lambda _port: None)
+    monkeypatch.setattr(server, "_get_app", lambda: object())
+    monkeypatch.setattr(server, "_serve_wsgi_app", _stop_server)
+    monkeypatch.setattr(atexit, "register", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(job_store, "mark_interrupted", lambda: running_rows.update({"job-from-live-server": "interrupted"}))
+    monkeypatch.setattr(job_store, "cleanup_old_jobs", lambda: None)
+    monkeypatch.setattr(jobs_routes, "initialize_job_queue", lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("live server queue must not be rewritten")
+    ))
+
+    with pytest.raises(RuntimeError, match="stop startup"):
+        server.run_server(port=requested_port)
+
+    assert ("pid", alternate_port) in check_calls
+    assert running_rows == {"job-from-live-server": "running"}
+    assert check_calls[:2] == [requested_port, alternate_port]
+
+
+def test_server_recovers_jobs_after_claiming_requested_port(monkeypatch):
+    import atexit
+    import opencut.job_store as job_store
+    import opencut.routes.jobs_routes as jobs_routes
+    import opencut.server as server
+
+    events = []
+
+    def _stop_server(*_args, **_kwargs):
+        raise RuntimeError("stop startup before serving")
+
+    monkeypatch.setattr(server, "_check_port", lambda *_args: True)
+    monkeypatch.setattr(server, "_write_pid", lambda _port: events.append("pid"))
+    monkeypatch.setattr(server, "_show_startup_notification", lambda _port: None)
+    monkeypatch.setattr(server, "_get_app", lambda: object())
+    monkeypatch.setattr(server, "_serve_wsgi_app", _stop_server)
+    monkeypatch.setattr(atexit, "register", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(job_store, "mark_interrupted", lambda: events.append("mark"))
+    monkeypatch.setattr(job_store, "cleanup_old_jobs", lambda: events.append("cleanup"))
+    monkeypatch.setattr(jobs_routes, "initialize_job_queue", lambda *_args, **_kwargs: events.append("queue") or {})
+
+    with pytest.raises(RuntimeError, match="stop startup"):
+        server.run_server(port=5679)
+
+    assert events[:4] == ["pid", "mark", "cleanup", "queue"]
+
+
 def test_server_loopback_host_detection_accepts_only_local_addresses():
     import opencut.server as server
 

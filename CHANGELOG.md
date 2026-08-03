@@ -32,6 +32,12 @@ record also lives in the git commit messages.
   summaries and records only line-leading `ERROR`/`FATAL` severity records as
   failures, while preserving explicit warnings.
 
+### Fixed - Server startup ownership
+
+- A server now claims its PID/port before recovering durable jobs. Instances
+  forced onto an alternate port leave the live server's running jobs and
+  persistent queue untouched instead of creating duplicate recovery work.
+
 ### Fixed - Test profile isolation
 
 - Test persistence now uses an isolated home and per-test queue, review, and

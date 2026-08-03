@@ -582,14 +582,6 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     """Start the OpenCut backend server."""
     import tempfile
 
-    # Mark any jobs that were running when the server last died as interrupted
-    try:
-        from opencut.job_store import cleanup_old_jobs, mark_interrupted
-        mark_interrupted()
-        cleanup_old_jobs()
-    except Exception as e:
-        logger.warning("Job store startup failed: %s", e)
-
     # Clean up stale preview temp files from previous runs
     try:
         import glob as _glob
@@ -605,6 +597,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
         pass
 
     effective_port = port
+    recover_durable_work = True
 
     if not _check_port(host, port):
         # Port is busy - run the kill sequence
@@ -612,6 +605,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
             effective_port = port
         else:
             # Kill sequence failed - find an alternate port
+            recover_durable_work = False
             print("  Searching for an open port...")
             for offset in range(1, 11):
                 candidate = port + offset
@@ -628,6 +622,18 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
 
     # Write PID file so future instances can kill us
     _write_pid(effective_port)
+
+    # Only the process that owns the requested port may recover shared durable
+    # work. An alternate-port instance can coexist with the original server,
+    # so marking its running jobs interrupted or rewriting its queue would
+    # create duplicate recovery candidates.
+    if recover_durable_work:
+        try:
+            from opencut.job_store import cleanup_old_jobs, mark_interrupted
+            mark_interrupted()
+            cleanup_old_jobs()
+        except Exception as e:
+            logger.warning("Job store startup failed: %s", e)
 
     # Register cleanup on normal exit
     import atexit
@@ -669,7 +675,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     server_app = _get_app()
     # The Werkzeug debug reloader starts a parent process before the serving
     # child. Only the serving process may claim and resume durable queue work.
-    if not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    if recover_durable_work and (not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true"):
         try:
             from opencut.routes.jobs_routes import initialize_job_queue
 
