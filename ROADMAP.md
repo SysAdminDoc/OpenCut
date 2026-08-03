@@ -13,13 +13,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P0 — 2026-08-02 (research pass)
 
-- [ ] P0 — Make the test suite runnable from a fresh clone
-  Why: Nine test modules read markdown that `.gitignore` excludes from the repo, so the advertised green baseline is reproducible only on the maintainer's machine and no contributor can verify a release.
-  Evidence: `tests/test_uxp_migration_docs.py`, `test_uxp_macos_http.py`, `test_uxp_webview_scaffold.py`, `test_uxp_webview_permission_split.py`, `test_uxp_filesystem_permission.py`, `test_cep_uxp_parity_catalogue.py`, `test_windows_arm64_doc.py`, `test_roadmap_mirror.py` all `read_text()` untracked `docs/*.md`; `test_local_release_policy.py` reads the gitignored `CLAUDE.md`. `README.md:475` also points readers at the untracked `docs/UXP_MIGRATION.md`. `tests/test_fresh_clone_integrity.py:57` should catch this but its regex `\[[^\]]*\]\(([^)]+)\)` matches markdown links only, so backticked path references pass.
-  Touches: `.gitignore` allowlist, `docs/` (track the 16 untracked files or relocate the fixtures), `tests/test_fresh_clone_integrity.py`, `tests/test_local_release_policy.py`, `README.md:475`.
-  Acceptance: `git clone` + `pip install -e ".[dev]"` + `pytest` passes with no missing-file errors; the fresh-clone check also scans backticked and quoted path references, in tracked docs *and* in `tests/`, and fails on the current tree before the fix.
-  Complexity: M
-
 ### P1 — 2026-08-02 (research pass)
 
 - [ ] P1 — Advance the FFmpeg snapshot floor past the July 2026 fixes and ship the `full` build

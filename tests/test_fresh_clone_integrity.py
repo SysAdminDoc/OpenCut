@@ -81,6 +81,128 @@ def test_tracked_docs_do_not_link_to_untracked_files():
     assert offenders == [], f"tracked docs link to files absent from a clone: {offenders}"
 
 
+# A markdown link is not the only way to point a reader at a file: the docs
+# refer to paths in backticks and in quotes far more often than in links, and
+# the original check matched only `[text](target)`.
+_PATH_REF_RE = re.compile(
+    r"[`\"']([A-Za-z0-9_.][A-Za-z0-9_./\\-]*\.[A-Za-z0-9]{1,6})[`\"']"
+)
+
+# Build outputs the docs legitimately name as *products* of a documented
+# command. They are absent from a clone by design, not by oversight.
+_GENERATED_PREFIXES = (
+    "ffmpeg/",
+    "dist/",
+    "build/",
+    "node_modules/",
+    "installer/publish/",
+    "installer/dist/",
+)
+
+
+def _is_generated(target: str) -> bool:
+    return target.startswith(_GENERATED_PREFIXES) or "/client/dist/" in target
+
+
+def test_tracked_docs_do_not_name_untracked_repo_files():
+    """Backticked and quoted path references must survive a clone too."""
+    tracked = _tracked_files()
+    offenders: list[str] = []
+
+    for rel in sorted(f for f in tracked if f.endswith(".md")):
+        source = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+        for match in _PATH_REF_RE.finditer(source):
+            target = match.group(1).replace("\\", "/").removeprefix("./")
+            if "/" not in target or _is_generated(target):
+                # A bare filename is usually prose ("edit config.json"), not a
+                # repository path; only rooted references are checkable.
+                continue
+            candidate = REPO_ROOT / target
+            # Only an existing-but-untracked file is a clone hazard. A path that
+            # does not exist at all is either prose or a separate bug class.
+            if candidate.is_file() and target not in tracked:
+                offenders.append(f"{rel} -> {target}")
+
+    assert offenders == [], (
+        "tracked docs name files that exist locally but are absent from a clone: "
+        f"{sorted(set(offenders))}"
+    )
+
+
+_ASSIGNMENT_RE = re.compile(
+    r"^([A-Z][A-Z0-9_]*)\s*=\s*((?:REPO_ROOT|[A-Z][A-Z0-9_]*)(?:\s*/\s*\"[^\"]+\")+)\s*$",
+    re.MULTILINE,
+)
+_CHAIN_RE = re.compile(r"(REPO_ROOT|[A-Z][A-Z0-9_]*)((?:\s*/\s*\"[^\"]+\")+)")
+_SEGMENT_RE = re.compile(r"\"([^\"]+)\"")
+
+
+def _repo_paths_referenced_by(source: str) -> set[Path]:
+    """Resolve ``REPO_ROOT / "a" / "b"`` chains, including via named constants."""
+    names: dict[str, Path] = {"REPO_ROOT": REPO_ROOT}
+    # Constants may be defined in terms of earlier constants; a few passes
+    # settle the chain without needing a real interpreter.
+    for _ in range(4):
+        for name, expr in _ASSIGNMENT_RE.findall(source):
+            head = _CHAIN_RE.match(expr)
+            if head is None:
+                continue
+            base = names.get(head.group(1))
+            if base is None:
+                continue
+            names[name] = base.joinpath(*_SEGMENT_RE.findall(head.group(2)))
+
+    referenced = {path for name, path in names.items() if name != "REPO_ROOT"}
+    for head, tail in _CHAIN_RE.findall(source):
+        base = names.get(head)
+        if base is not None:
+            referenced.add(base.joinpath(*_SEGMENT_RE.findall(tail)))
+    return referenced
+
+
+def test_the_test_suite_only_reads_files_a_clone_actually_has():
+    """`pytest` on a fresh clone must not fail on maintainer-only files.
+
+    Nine modules used to read `docs/*.md` files that `.gitignore` excluded, so
+    the advertised green baseline was reproducible only on the maintainer's
+    machine. A path that exists here but is untracked is exactly that bug; a
+    path that exists nowhere is an "assert this stays deleted" reference and is
+    left alone.
+    """
+    tracked = _tracked_files()
+    offenders: list[str] = []
+
+    for path in sorted((REPO_ROOT / "tests").rglob("*.py")):
+        source = path.read_text(encoding="utf-8", errors="replace")
+        for target in sorted(_repo_paths_referenced_by(source)):
+            try:
+                rel_target = target.resolve().relative_to(REPO_ROOT).as_posix()
+            except ValueError:
+                continue
+            if target.is_dir():
+                continue
+            if not target.exists():
+                continue
+            if rel_target in tracked:
+                continue
+            offenders.append(f"{path.name} -> {rel_target}")
+
+    assert offenders == [], (
+        "tests read files that exist locally but are absent from a clone: "
+        f"{sorted(set(offenders))}"
+    )
+
+
+def test_clone_hazard_scanner_still_resolves_real_paths():
+    """Guard against a regex that silently matches nothing."""
+    resolved = _repo_paths_referenced_by(
+        (REPO_ROOT / "tests" / "test_installer_policy.py").read_text(
+            encoding="utf-8", errors="replace"
+        )
+    )
+    assert any(p.name == "OpenCut.iss" for p in resolved), resolved
+
+
 def test_pyinstaller_hidden_imports_are_source_derived():
     spec = _read("opencut_server.spec")
     # Derived from the _try_import call sites rather than hand-maintained, so

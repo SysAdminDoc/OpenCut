@@ -241,5 +241,3 @@ tracked as the only remaining external action for F147.
 - `tests/test_mcp_registry_manifest.py` — committed-vs-live guard.
 - `tests/test_mcp_extended_tools.py` — generated extended-catalogue
   guard and opt-in dispatch coverage.
-- `.ai/research/2026-05-17/FEATURE_BACKLOG.md` — F147 entry (C.
-  Agentic / chat / MCP).

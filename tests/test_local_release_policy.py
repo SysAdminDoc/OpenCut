@@ -24,7 +24,8 @@ ACTIVE_DOCS = (
 )
 
 OPTIONAL_ACTIVE_LOCAL_BUILD_SURFACES = (
-    REPO_ROOT / "CLAUDE.md",
+    # Only tracked surfaces: a clone has no maintainer-local AI working notes,
+    # so linting them here would assert something no contributor can reproduce.
     REPO_ROOT / "docs" / "UXP_MIGRATION.md",
 )
 
