@@ -365,10 +365,8 @@ def check_dependencies():
     # missing packages without leaving the UI.
     _DEP_INSTALL_HINTS = {
         "faster-whisper": 'pip install "opencut-ppro[captions]"',
-        "audio-separator": 'pip install "opencut-ppro[audio]"',
-        # Demucs was archived upstream on 2024-04-24; the dashboard must not
-        # present it as the recommended path.
-        "demucs": 'pip install demucs  (legacy - archived upstream 2024-04-24)',
+        "audio-separator": 'python -m pip install -e ".[audio]"',
+        "demucs": "pip install demucs",
         "pedalboard": 'pip install "opencut-ppro[audio]"',
         "deepfilternet": 'pip install "opencut-ppro[audio]"',
         "librosa": 'pip install "opencut-ppro[audio]"',
@@ -387,6 +385,15 @@ def check_dependencies():
         "mediapipe": 'pip install "opencut-ppro[reframe]"',
         "torch": 'pip install "opencut-ppro[torch-stack]"',
         "onnxruntime": 'pip install "opencut-ppro[ai]"',
+    }
+
+    # Backends kept only for compatibility. The dashboard states why rather
+    # than presenting them as a recommended install path.
+    _DEP_LEGACY_NOTES = {
+        "demucs": (
+            "Archived upstream on 2024-04-24. Legacy backend; new work should "
+            "use audio-separator, which is the /audio/separate default."
+        ),
     }
 
     deps = {}
@@ -428,6 +435,8 @@ def check_dependencies():
                 "supported": support["supported"],
                 "support_reason": support["reason"],
             }
+            if name in _DEP_LEGACY_NOTES:
+                deps[name]["legacy_note"] = _DEP_LEGACY_NOTES[name]
         except ImportError:
             deps[name] = {
                 "installed": False,
@@ -440,6 +449,8 @@ def check_dependencies():
                     else ""
                 ),
             }
+            if name in _DEP_LEGACY_NOTES:
+                deps[name]["legacy_note"] = _DEP_LEGACY_NOTES[name]
 
     # Check FFmpeg
     try:
