@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from ..utils.config import DiarizeConfig
 from .audio import extract_audio_wav
@@ -36,6 +36,10 @@ class DiarizationResult:
     segments: List[SpeakerSegment]
     num_speakers: int = 0
     speakers: List[str] = field(default_factory=list)
+    # pyannote 4's exclusive output reconciles overlapping speaker turns with
+    # transcript-friendly boundaries. Older pipelines only expose the regular
+    # annotation, so retain the source for downstream cut provenance.
+    boundary_source: str = "speaker_diarization"
 
     @property
     def total_duration(self) -> float:
@@ -124,6 +128,52 @@ class DiarizationResult:
 # community model cannot be loaded (e.g. terms not yet accepted on HF).
 DEFAULT_DIARIZATION_MODEL = "pyannote/speaker-diarization-community-1"
 LEGACY_DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
+
+
+def select_diarization_annotation(output: Any) -> Tuple[Any, str]:
+    """Select the most precise speaker-boundary annotation from pyannote.
+
+    pyannote.audio 4 returns an object containing both regular and exclusive
+    speaker diarization for ``speaker-diarization-community-1``. Legacy
+    pipelines return the annotation directly. Keeping this adapter tolerant
+    lets callers use the exclusive path when present without breaking cached
+    or older model outputs.
+    """
+    if isinstance(output, Mapping):
+        exclusive = output.get("exclusive_speaker_diarization")
+        if exclusive is not None:
+            return exclusive, "exclusive_speaker_diarization"
+        regular = output.get("speaker_diarization")
+        if regular is not None:
+            return regular, "speaker_diarization"
+    else:
+        exclusive = getattr(output, "exclusive_speaker_diarization", None)
+        if exclusive is not None:
+            return exclusive, "exclusive_speaker_diarization"
+        regular = getattr(output, "speaker_diarization", None)
+        if regular is not None:
+            return regular, "speaker_diarization"
+
+    return output, "speaker_diarization"
+
+
+def annotation_to_segments(annotation: Any) -> List[SpeakerSegment]:
+    """Convert a pyannote annotation into OpenCut speaker segments."""
+    if not hasattr(annotation, "itertracks"):
+        raise TypeError("Diarization output does not expose itertracks()")
+
+    segments: List[SpeakerSegment] = []
+    for turn, _, speaker in annotation.itertracks(yield_label=True):
+        start = float(turn.start)
+        end = float(turn.end)
+        if end <= start:
+            continue
+        segments.append(SpeakerSegment(
+            speaker=str(speaker),
+            start=start,
+            end=end,
+        ))
+    return segments
 
 
 def check_pyannote_available() -> bool:
@@ -217,19 +267,14 @@ def diarize(
             if config.max_speakers < 10:
                 kwargs["max_speakers"] = config.max_speakers
 
-        diarization = pipeline(wav_path, **kwargs)
+        pipeline_output = pipeline(wav_path, **kwargs)
+        diarization, boundary_source = select_diarization_annotation(pipeline_output)
 
-        # Parse results
-        segments = []
-        speakers_set = set()
-
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            segments.append(SpeakerSegment(
-                speaker=speaker,
-                start=turn.start,
-                end=turn.end,
-            ))
-            speakers_set.add(speaker)
+        # Parse the selected annotation. Exclusive output is intentionally
+        # selected before this conversion so multicam boundaries do not inherit
+        # overlap/rounding from ASR-aligned regular turns.
+        segments = annotation_to_segments(diarization)
+        speakers_set = {segment.speaker for segment in segments}
 
         speakers = sorted(speakers_set)
 
@@ -237,6 +282,7 @@ def diarize(
             segments=segments,
             num_speakers=len(speakers),
             speakers=speakers,
+            boundary_source=boundary_source,
         )
 
     finally:

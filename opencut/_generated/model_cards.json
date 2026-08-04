@@ -274,7 +274,7 @@
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "The community-1 pipeline is the default; legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms."
+        "The community-1 pipeline is the default; pyannote 4 exclusive_speaker_diarization output is used for multicam boundaries when available and the boundary source is reported. Legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms."
       ],
       "license_waiver": ""
     },

@@ -5323,7 +5323,7 @@ async function runMulticamCuts() {
     return;
   }
 
-  const strategy = document.getElementById("multicamStrategy")?.value ?? "activity";
+  const strategy = document.getElementById("multicamStrategy")?.value ?? "speaker";
 
   UIController.setButtonLoading("runMulticamBtn", true);
   UIController.showProcessing(t("uxp.video.runtime.generating_multicam_cuts", "Generating multicam cuts..."));
@@ -5333,12 +5333,13 @@ async function runMulticamCuts() {
   // ``filepath`` it can transcribe to derive speakers from. Sending the
   // second camera path as ``diarization_file`` always 400s with
   // "Could not read diarization_file" because it's a video, not JSON.
-  // The right flow: transcribe cam1 to derive speaker turns, then map
-  // speaker → camera afterwards. cam2 is needed only for the eventual
-  // timeline-side multicam application, not for the cut generation pass.
+  // The right flow: ask the backend for pyannote's exclusive speaker turns
+  // first, then let it fall back to ASR segments when the optional diarization
+  // model or its Hugging Face token is unavailable. cam2 is needed only for
+  // the eventual timeline-side multicam application, not this cut pass.
   await JobPoller.start(
     "/video/multicam-cuts",
-    { filepath: cam1Path, min_cut_duration: 1.0 },
+    { filepath: cam1Path, strategy, min_cut_duration: 1.0 },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.video.runtime.analyzing_cameras", "Analyzing cameras...")); },
     async (result) => {
       UIController.hideProcessing();
@@ -5351,10 +5352,16 @@ async function runMulticamCuts() {
         }),
         "success"
       );
+      const boundarySource = result.boundary_source;
+      const boundaryLabel = boundarySource === "exclusive_speaker_diarization"
+        ? t("uxp.video.runtime.multicam_boundary_exclusive", "Exclusive speaker boundaries")
+        : boundarySource === "asr_segments"
+          ? t("uxp.video.runtime.multicam_boundary_fallback", "ASR fallback boundaries")
+          : t("uxp.video.runtime.multicam_boundary_other", "Provided speaker boundaries");
       UIController.setStatus(
-        formatI18n("uxp.video.runtime.multicam_cuts_ready_status", "Multicam cuts ready - {count} cuts.", {
+        `${formatI18n("uxp.video.runtime.multicam_cuts_ready_status", "Multicam cuts ready - {count} cuts.", {
           count: cuts.length,
-        })
+        })} ${boundaryLabel}`
       );
       // Attempt to apply directly to timeline
       await applyTimelineCuts(cuts);

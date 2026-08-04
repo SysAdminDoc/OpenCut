@@ -559,6 +559,63 @@ def _validate_multicam_cuts_request(data):
     return None
 
 
+def _diarization_result_to_multicam_segments(result):
+    """Convert a diarization result into the route's cut-segment shape."""
+    raw_segments = getattr(result, "segments", None) or []
+    segments = []
+    for segment in raw_segments:
+        if isinstance(segment, dict):
+            start = segment.get("start", 0.0)
+            end = segment.get("end", 0.0)
+            speaker = segment.get("speaker", "SPEAKER_00")
+            text = segment.get("text", "")
+        else:
+            start = getattr(segment, "start", 0.0)
+            end = getattr(segment, "end", 0.0)
+            speaker = getattr(segment, "speaker", "SPEAKER_00")
+            text = getattr(segment, "text", "")
+        try:
+            start_value = float(start)
+            end_value = float(end)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if end_value <= start_value:
+            continue
+        segments.append({
+            "start": start_value,
+            "end": end_value,
+            "text": str(text or ""),
+            "speaker": str(speaker or "SPEAKER_00"),
+        })
+    return segments, str(
+        getattr(result, "boundary_source", "speaker_diarization")
+        or "speaker_diarization"
+    )
+
+
+def _pyannote_segments_for_multicam(filepath, data):
+    """Run optional pyannote diarization and return route-ready segments."""
+    from opencut.core.diarize import check_pyannote_available, diarize
+
+    if not check_pyannote_available():
+        logger.info("pyannote.audio unavailable; falling back to ASR segments")
+        return None, None
+
+    from opencut.utils.config import DiarizeConfig
+
+    raw_num_speakers = data.get("num_speakers")
+    num_speakers = None
+    if raw_num_speakers not in (None, ""):
+        parsed_num_speakers = safe_int(raw_num_speakers, 0, min_val=1, max_val=10)
+        if parsed_num_speakers > 0:
+            num_speakers = parsed_num_speakers
+    diarization_result = diarize(
+        filepath,
+        config=DiarizeConfig(num_speakers=num_speakers),
+    )
+    return _diarization_result_to_multicam_segments(diarization_result)
+
+
 @video_editing_bp.route("/video/multicam-cuts", methods=["POST"])
 @require_csrf
 @async_job(
@@ -572,8 +629,11 @@ def video_multicam_cuts(job_id, filepath, data):
     diarization_file = str(data.get("diarization_file", "") or "").strip()
     segments = data.get("segments", None)
     speaker_map = data.get("speaker_map", None)
+    track_map = data.get("track_map", None)
     min_cut_duration = safe_float(data.get("min_cut_duration", 1.0), 1.0, min_val=0.1, max_val=60.0)
     mode = str(data.get("mode") or "audio").strip().lower()
+    strategy = str(data.get("strategy") or "speaker").strip().lower()
+    boundary_source = "provided_segments" if segments is not None else "unknown"
 
     if filepath and not diarization_file and not segments:
         try:
@@ -596,11 +656,35 @@ def video_multicam_cuts(job_id, filepath, data):
                 raise ValueError("Diarization file too large (max 50 MB)")
             import json as _json
             with open(diarization_file, encoding="utf-8") as _f:
-                effective_segments = _json.load(_f)
+                loaded = _json.load(_f)
+            if isinstance(loaded, dict) and isinstance(loaded.get("segments"), list):
+                effective_segments = loaded["segments"]
+                boundary_source = str(loaded.get("boundary_source") or "diarization_file")
+            else:
+                effective_segments = loaded
+                boundary_source = "diarization_file"
         except Exception as exc:
             raise ValueError(f"Could not read diarization_file: {exc}") from exc
 
-    # If filepath given but no segments, attempt transcription with speaker diarization
+    # Prefer pyannote 4's exclusive speaker annotation when the caller asks for
+    # speaker boundaries (the default). It reconciles overlapping diarization
+    # turns before cuts are generated. If the optional model or its token is
+    # unavailable, retain the existing ASR-based path as an explicit fallback.
+    if effective_segments is None and not diarization_file and filepath and strategy in {
+        "auto", "diarization", "exclusive", "speaker"
+    }:
+        try:
+            effective_segments, boundary_source = _pyannote_segments_for_multicam(
+                filepath, data
+            )
+            if not effective_segments:
+                effective_segments = None
+                logger.info("Pyannote returned no speaker turns; falling back to ASR segments")
+        except Exception as exc:
+            logger.info("Speaker diarization unavailable; falling back to ASR segments: %s", exc)
+
+    # If filepath given but no segments, attempt transcription as a deterministic
+    # fallback for installations without pyannote or an accepted HF model.
     if effective_segments is None and not diarization_file and filepath:
         try:
             from opencut.core.captions import check_whisper_available, transcribe
@@ -622,6 +706,7 @@ def video_multicam_cuts(job_id, filepath, data):
                         "text": getattr(seg, "text", ""),
                         "speaker": getattr(seg, "speaker", "SPEAKER_00"),
                     })
+            boundary_source = "asr_segments"
         except ImportError:
             raise RuntimeError(
                 "Transcription modules not available. Provide segments directly."
@@ -635,10 +720,21 @@ def video_multicam_cuts(job_id, filepath, data):
     try:
         from opencut.core import multicam
 
-        # Auto-assign speakers if no map provided
-        effective_speaker_map = speaker_map
+        # Auto-assign speakers if no map provided. The CEP panel sends its
+        # ordered track choices as a list, so translate that order into the
+        # speaker labels discovered by the diarization pass.
+        effective_speaker_map = speaker_map if isinstance(speaker_map, dict) else None
         if not effective_speaker_map:
             effective_speaker_map = multicam.auto_assign_speakers(effective_segments)
+            if isinstance(track_map, list):
+                for speaker, appearance_index in list(effective_speaker_map.items()):
+                    if appearance_index < len(track_map):
+                        effective_speaker_map[speaker] = safe_int(
+                            track_map[appearance_index],
+                            appearance_index,
+                            min_val=0,
+                            max_val=100,
+                        )
 
         result = multicam.generate_multicam_cuts(
             effective_segments,
@@ -675,6 +771,8 @@ def video_multicam_cuts(job_id, filepath, data):
             "total_cuts": total_cuts,
             "speakers": speakers,
             "speaker_map": effective_speaker_map,
+            "boundary_source": boundary_source,
+            "uses_exclusive_speaker_diarization": boundary_source == "exclusive_speaker_diarization",
         }
         if mode == "audio+visual":
             resp["mode"] = "audio+visual" if visual_applied else "audio_fallback"

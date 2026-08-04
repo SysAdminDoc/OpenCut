@@ -191,7 +191,7 @@ CARDS: List[ModelCard] = [
         privacy="local-only (HF token used for gated weight download only)",
         latency="~1x realtime depending on device",
         advisory_notes=[
-            "The community-1 pipeline is the default; legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms.",
+            "The community-1 pipeline is the default; pyannote 4 exclusive_speaker_diarization output is used for multicam boundaries when available and the boundary source is reported. Legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms.",
         ],
     ),
     ModelCard(
