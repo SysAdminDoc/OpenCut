@@ -1,9 +1,12 @@
 """Timecode Watermark Plugin — burns timecode overlay onto videos."""
 
 import logging
+import math
 import re
 
 from flask import Blueprint, jsonify, request
+
+from opencut.helpers import get_video_info
 
 logger = logging.getLogger("opencut")
 
@@ -26,12 +29,31 @@ def _get_json_object():
     return data if isinstance(data, dict) else {}
 
 
-def _validate_timecode(value):
+def _source_fps(filepath):
+    """Return a safe source rate for FFmpeg's timecode filter."""
+    try:
+        fps = float(get_video_info(filepath).get("fps", 30.0))
+    except (AttributeError, TypeError, ValueError):
+        fps = 30.0
+    if not math.isfinite(fps) or fps <= 0:
+        return 30.0
+    return min(fps, 120.0)
+
+
+def _format_fps(fps):
+    """Format a probed rate without turning common fractional rates into noise."""
+    if math.isclose(fps, round(fps), rel_tol=0.0, abs_tol=1e-6):
+        return str(int(round(fps)))
+    return f"{fps:.3f}".rstrip("0").rstrip(".")
+
+
+def _validate_timecode(value, fps=30.0):
     value = str(value or "00:00:00:00").strip()
     if not _TIMECODE_RE.match(value):
         raise ValueError("start_timecode must use HH:MM:SS:FF")
     _hours, minutes, seconds, frames = (int(part) for part in value.split(":"))
-    if minutes > 59 or seconds > 59 or frames > 24:
+    frame_count = max(1, math.ceil(float(fps)))
+    if minutes > 59 or seconds > 59 or frames >= frame_count:
         raise ValueError("start_timecode contains an out-of-range component")
     return value
 
@@ -65,7 +87,10 @@ def apply_timecode():
     try:
         font_size = safe_int(data.get("font_size", 24), default=24, min_val=8, max_val=200)
         color = _validate_color(data.get("color", "white"))
-        start_tc = _validate_timecode(data.get("start_timecode", "00:00:00:00"))
+        source_fps = _source_fps(filepath)
+        start_tc = _validate_timecode(
+            data.get("start_timecode", "00:00:00:00"), source_fps
+        )
         output = validate_output_path(output_path(filepath, "tc"))
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -74,7 +99,7 @@ def apply_timecode():
         from opencut.helpers import run_ffmpeg
 
         drawtext = (
-            f"drawtext=timecode='{start_tc}':rate=25:fontsize={font_size}"
+            f"drawtext=timecode='{start_tc}':rate={_format_fps(source_fps)}:fontsize={font_size}"
             f":fontcolor={color}:{_POSITIONS[position]}"
         )
 

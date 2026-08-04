@@ -2,6 +2,7 @@
     "name": "timecode-watermark",
     "version": "1.0.0",
     "description": "Burns a timecode overlay onto exported videos",
+    "api_version": 1,
     "author": "OpenCut",
     "enabled": true,
     "routes": [

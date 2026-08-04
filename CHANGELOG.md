@@ -25,6 +25,12 @@ record also lives in the git commit messages.
   CPU-only and has no CUDA/NVENC runtime; NVIDIA acceleration remains in the
   native `ai-gpu` installation lane.
 
+### Fixed - Example plugin compatibility
+
+- The shipped Clip Notes and Timecode Watermark manifests now declare the
+  plugin API they support, and the timecode filter probes the source frame
+  rate instead of assuming 25 fps.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter

@@ -2,6 +2,7 @@
     "name": "clip-notes",
     "version": "1.0.0",
     "description": "Save timestamped notes for clips and export as plain text or CSV",
+    "api_version": 1,
     "author": "OpenCut",
     "enabled": true,
     "routes": [
