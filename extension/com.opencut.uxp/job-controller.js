@@ -83,6 +83,22 @@ export function createJobController({
     else pollJob(jobId, onProgress, onComplete, onError);
   }
 
+  async function runExclusive(task, onBusy = () => {}) {
+    if (!state.markJobStarting()) {
+      onBusy(translate("uxp.runtime.job_already_running", "Another OpenCut job is already running."));
+      return false;
+    }
+    setLocked(true);
+    notifyState();
+    try {
+      await task();
+      return true;
+    } finally {
+      clear();
+      fireCompletionHooks();
+    }
+  }
+
   function closeSse() {
     const stream = state.replaceSse(null);
     if (stream) stream.close();
@@ -194,6 +210,7 @@ export function createJobController({
 
   return {
     start,
+    runExclusive,
     poll,
     cancel,
     resume: (jobId, onProgress, onComplete, onError) => (
