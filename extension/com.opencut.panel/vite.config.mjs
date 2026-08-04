@@ -49,6 +49,8 @@ const classicScriptFiles = [
   "onboarding-state.js",
   "update-controller.js",
   "results-controller.js",
+  "settings-diagnostics-controller.js",
+  "navigation-controller.js",
   "bootstrap.js",
   "main.js",
 ];

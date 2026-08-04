@@ -17,6 +17,8 @@ export default [
       "client/bootstrap.js",
       "client/update-controller.js",
       "client/results-controller.js",
+      "client/settings-diagnostics-controller.js",
+      "client/navigation-controller.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -27,6 +29,8 @@ export default [
         CSEvent: "readonly",
         OpenCutUpdateController: "readonly",
         OpenCutResultsController: "readonly",
+        OpenCutSettingsDiagnosticsController: "readonly",
+        OpenCutNavigationController: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },

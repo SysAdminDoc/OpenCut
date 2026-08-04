@@ -2416,6 +2416,64 @@
         onBoundaryReview: renderFillerBoundaryReview,
         onAnnounce: announceJobResult
     });
+    var SettingsDiagnosticsController = OpenCutSettingsDiagnosticsController.createSettingsDiagnosticsController({
+        request: function (method, path, body, callback) {
+            api(method, path, body, callback);
+        },
+        isConnected: function () { return connected; },
+        renderOverview: renderSettingsStudioOverview,
+        syncBackendSummary: syncSettingsBackendSummary,
+        updateWhisperState: updateWhisperSettingsState,
+        renderGpuState: function (data) {
+            if (data) {
+                el.gpuName.textContent = data.available ? data.name : t("settings.system_gpu_none_detected", "None detected");
+                el.gpuVram.textContent = data.available
+                    ? t("settings.system_gpu_gb", "{gb} GB").replace("{gb}", safeFixed(data.vram_mb / 1024, 1))
+                    : "--";
+            }
+            updateSystemSettingsState(data);
+        },
+        onHealthUnavailable: function () {
+            setStatusLine(
+                "systemStatusLine",
+                t("settings.system_reconnect_details", "Reconnect the backend to review GPU acceleration, logs, and local service details."),
+                "warning"
+            );
+        },
+        setCpuMode: function (cpuMode) {
+            if (el.whisperCpuMode) el.whisperCpuMode.checked = !!cpuMode;
+        },
+        onFirstLoad: _updateWsStatus,
+        loadLlmSettings: loadLLMSettings,
+        updateBridgeStatus: _updateWsStatus,
+        refreshDependencies: refreshDeps,
+        refreshModels: refreshModelList,
+        loadEngineRegistry: loadEngineRegistry,
+        loadPluginTrust: loadPluginTrustDashboard
+    });
+    var NavigationController = OpenCutNavigationController.createNavigationController({
+        documentRef: document,
+        windowRef: window,
+        getElement: $,
+        getVisibleTabButtons: getVisibleTabButtons,
+        moveFocusAndActivate: moveFocusAndActivate,
+        getPanelTabName: getPanelTabName,
+        ensureSubTabShell: ensureSubTabShell,
+        updateSubTabOverflowState: updateSubTabOverflowState,
+        activateNavTab: activateNavTab,
+        activateSubTab: activateSubTab,
+        getInitialNav: function () {
+            var initiallyActiveNav = document.querySelector(".nav-tab.active");
+            return _workspaceState.activeNav
+                || (initiallyActiveNav ? initiallyActiveNav.getAttribute("data-nav") : "")
+                || "cut";
+        },
+        getInitialSub: function (tabName) {
+            return (_workspaceState.activeSubs || {})[tabName];
+        },
+        updateWorkspaceClipStatus: updateWorkspaceClipStatus,
+        onResize: checkSubTabOverflow
+    });
     var rememberButtonText = OpenCutComponents.rememberButtonText;
     var setButtonText = OpenCutComponents.setButtonText;
 
@@ -3496,7 +3554,7 @@
         _pproCache.bins = null;
         _pproCache.binsTs = 0;
         checkSubTabOverflow();
-        if (activeTabName === "settings") loadSettingsInfo();
+        if (activeTabName === "settings") SettingsDiagnosticsController.load();
         initTabOnFirstVisit(activeTabName);
         activateSubTab(activeTabName, (options && options.sub) || (_workspaceState.activeSubs || {})[activeTabName], {
             remember: remember,
@@ -3604,120 +3662,6 @@
         shell.appendChild(container);
         shell.appendChild(createSubTabScrollButton(container, 1));
         return shell;
-    }
-
-    function setupNavTabs() {
-        var navContainer = $("navTabs");
-        if (navContainer) navContainer.setAttribute("aria-orientation", "vertical");
-
-        var navBtns = document.querySelectorAll(".nav-tab");
-        for (var i = 0; i < navBtns.length; i++) {
-            var navName = navBtns[i].getAttribute("data-nav") || ("tab-" + i);
-            navBtns[i].id = navBtns[i].id || ("nav-tab-" + navName);
-            navBtns[i].setAttribute("aria-controls", "panel-" + navName);
-            navBtns[i].tabIndex = navBtns[i].classList.contains("active") ? 0 : -1;
-            var controlledPanel = $("panel-" + navName);
-            if (controlledPanel) {
-                controlledPanel.setAttribute("aria-labelledby", navBtns[i].id);
-                controlledPanel.setAttribute("aria-hidden", controlledPanel.classList.contains("active") ? "false" : "true");
-                controlledPanel.hidden = !controlledPanel.classList.contains("active");
-            }
-
-            navBtns[i].addEventListener("click", function () {
-                activateNavTab(this.getAttribute("data-nav"));
-            });
-            navBtns[i].addEventListener("keydown", function (e) {
-                var buttons = getVisibleTabButtons(this.parentElement, ".nav-tab");
-                if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-                    e.preventDefault();
-                    moveFocusAndActivate(buttons, this, 1);
-                } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-                    e.preventDefault();
-                    moveFocusAndActivate(buttons, this, -1);
-                } else if (e.key === "Home" && buttons.length) {
-                    e.preventDefault();
-                    buttons[0].focus();
-                    buttons[0].click();
-                } else if (e.key === "End" && buttons.length) {
-                    e.preventDefault();
-                    buttons[buttons.length - 1].focus();
-                    buttons[buttons.length - 1].click();
-                }
-            });
-        }
-
-        var subTabContainers = document.querySelectorAll(".sub-tabs");
-        for (var i = 0; i < subTabContainers.length; i++) {
-            (function (container) {
-                var btns = container.querySelectorAll(".sub-tab");
-                var parentPanel = container.closest(".nav-panel");
-                var parentTabName = getPanelTabName(parentPanel);
-                ensureSubTabShell(container);
-                container.setAttribute("aria-orientation", "horizontal");
-                if (!container._overflowTrackingBound) {
-                    container._overflowTrackingBound = true;
-                    container.addEventListener("scroll", function () {
-                        updateSubTabOverflowState(container);
-                    }, { passive: true });
-                    container.addEventListener("wheel", function (e) {
-                        var hasOverflow = container.scrollWidth > container.clientWidth + 1;
-                        if (!hasOverflow || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-                        container.scrollLeft += e.deltaY;
-                        e.preventDefault();
-                    }, { passive: false });
-                }
-                for (var j = 0; j < btns.length; j++) {
-                    var subName = btns[j].getAttribute("data-sub") || (parentTabName + "-sub-" + j);
-                    btns[j].id = btns[j].id || ("sub-tab-" + subName);
-                    btns[j].setAttribute("role", "tab");
-                    btns[j].setAttribute("aria-controls", "sub-" + subName);
-                    btns[j].setAttribute("aria-selected", btns[j].classList.contains("active") ? "true" : "false");
-                    btns[j].tabIndex = btns[j].classList.contains("active") ? 0 : -1;
-                    var subPanel = $("sub-" + subName);
-                    if (subPanel) {
-                        subPanel.setAttribute("role", "tabpanel");
-                        subPanel.setAttribute("aria-labelledby", btns[j].id);
-                        subPanel.setAttribute("aria-hidden", subPanel.classList.contains("active") ? "false" : "true");
-                        subPanel.hidden = !subPanel.classList.contains("active");
-                    }
-
-                    btns[j].addEventListener("click", function () {
-                        activateSubTab(parentTabName, this.getAttribute("data-sub"));
-                    });
-                    btns[j].addEventListener("keydown", function (e) {
-                        var buttons = getVisibleTabButtons(container, ".sub-tab");
-                        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-                            e.preventDefault();
-                            moveFocusAndActivate(buttons, this, 1);
-                        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                            e.preventDefault();
-                            moveFocusAndActivate(buttons, this, -1);
-                        } else if (e.key === "Home" && buttons.length) {
-                            e.preventDefault();
-                            buttons[0].focus();
-                            buttons[0].click();
-                        } else if (e.key === "End" && buttons.length) {
-                            e.preventDefault();
-                            buttons[buttons.length - 1].focus();
-                            buttons[buttons.length - 1].click();
-                        }
-                    });
-                }
-
-                activateSubTab(parentTabName, (_workspaceState.activeSubs || {})[parentTabName], {
-                    remember: false,
-                    scroll: false
-                });
-                updateSubTabOverflowState(container);
-            })(subTabContainers[i]);
-        }
-
-        var initiallyActiveNav = document.querySelector(".nav-tab.active");
-        activateNavTab(_workspaceState.activeNav || (initiallyActiveNav ? initiallyActiveNav.getAttribute("data-nav") : "") || "cut", {
-            remember: false,
-            scroll: false
-        });
-        updateWorkspaceClipStatus();
     }
 
     // ================================================================
@@ -8468,7 +8412,6 @@
     // ================================================================
     // Settings Info
     // ================================================================
-    var settingsLoaded = false;
     var _settingsStudioState = {
         backend: {
             label: t("settings.studio_backend_checking", "Checking..."),
@@ -8710,55 +8653,6 @@
         message = t("settings.system_gpu_loading", "{port} is active. GPU details are still loading.")
             .replace("{port}", portLabel);
         setStatusLine("systemStatusLine", message, "working", message);
-    }
-
-    function loadSettingsInfo() {
-        var firstLoad = !settingsLoaded;
-        settingsLoaded = true;
-
-        renderSettingsStudioOverview();
-        if (!connected) syncSettingsBackendSummary(false);
-
-        // Whisper status from health check
-        api("GET", "/health", null, function (err, data) {
-            if (err || !data || data.status !== "ok") {
-                syncSettingsBackendSummary(false);
-                updateWhisperSettingsState(null);
-                setStatusLine(
-                    "systemStatusLine",
-                    t("settings.system_reconnect_details", "Reconnect the backend to review GPU acceleration, logs, and local service details."),
-                    "warning"
-                );
-                return;
-            }
-            syncSettingsBackendSummary(true);
-            if (el.whisperCpuMode) el.whisperCpuMode.checked = !!(data.capabilities && data.capabilities.whisper_cpu_mode);
-            updateWhisperSettingsState(data);
-            if (firstLoad) {
-                _updateWsStatus();
-            }
-        });
-
-        // GPU info
-        api("GET", "/system/gpu", null, function (err, data) {
-            if (!err && data) {
-                el.gpuName.textContent = data.available ? data.name : t("settings.system_gpu_none_detected", "None detected");
-                el.gpuVram.textContent = data.available
-                    ? t("settings.system_gpu_gb", "{gb} GB").replace("{gb}", safeFixed(data.vram_mb / 1024, 1))
-                    : "--";
-                updateSystemSettingsState(data);
-                return;
-            }
-            updateSystemSettingsState(null);
-        });
-
-        loadLLMSettings();
-        _updateWsStatus();
-
-        refreshDeps();
-        refreshModelList();
-        loadEngineRegistry();
-        loadPluginTrustDashboard();
     }
 
     function installWhisper() {
@@ -9081,7 +8975,7 @@
     // ================================================================
     function refreshAll() {
         el.refreshAllBtn.classList.add("spinning");
-        settingsLoaded = false;
+        SettingsDiagnosticsController.reset();
         capabilitiesLoaded = false;
         checkHealth();
         UpdateController.check(true);
@@ -17278,9 +17172,7 @@
         initSkipLinkFocus();
         initOverlayFocusManagement();
         initMainScrollTracking();
-        setupNavTabs();
-        checkSubTabOverflow();
-        window.addEventListener("resize", checkSubTabOverflow);
+        NavigationController.bind();
         setupSliders();
         initFormControlSemantics();
         initNumericInputValidation();
@@ -17856,6 +17748,8 @@
             stopHostThemeSync();
             UpdateController.dispose();
             ResultsController.dispose();
+            SettingsDiagnosticsController.dispose();
+            NavigationController.dispose();
             wsDisconnect();
             if (activeStream) {
                 activeStream.close();

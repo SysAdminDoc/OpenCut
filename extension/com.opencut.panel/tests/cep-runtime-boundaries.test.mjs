@@ -14,6 +14,8 @@ const onboarding = require("../client/onboarding-state.js");
 const bootstrap = require("../client/bootstrap.js");
 const { createUpdateController } = require("../client/update-controller.js");
 const { createResultsController } = require("../client/results-controller.js");
+const { createSettingsDiagnosticsController } = require("../client/settings-diagnostics-controller.js");
+const { createNavigationController } = require("../client/navigation-controller.js");
 
 function requestHarness() {
   const requests = [];
@@ -570,6 +572,124 @@ describe("CEP source ownership", () => {
     expect(results).toContain("function showSuccess(job, sourcePayload)");
     expect(results).toContain("function showFailure(job, message, canRetry)");
     expect(results).toContain("function dispose()");
+  });
+
+  it("keeps settings diagnostics requests behind a disposable controller", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const diagnostics = readFileSync(new URL("../client/settings-diagnostics-controller.js", import.meta.url), "utf8");
+
+    expect(main).toContain("OpenCutSettingsDiagnosticsController.createSettingsDiagnosticsController");
+    expect(main).toContain("SettingsDiagnosticsController.load()");
+    expect(main).toContain("SettingsDiagnosticsController.dispose()");
+    expect(main).not.toContain("function loadSettingsInfo()");
+    expect(diagnostics).toContain('"/system/gpu"');
+    expect(diagnostics).toContain('"/health"');
+    expect(diagnostics).toContain("function dispose()");
+  });
+
+  it("keeps CEP navigation listener ownership behind a teardown boundary", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const navigation = readFileSync(new URL("../client/navigation-controller.js", import.meta.url), "utf8");
+
+    expect(main).toContain("OpenCutNavigationController.createNavigationController");
+    expect(main).toContain("NavigationController.bind()");
+    expect(main).toContain("NavigationController.dispose()");
+    expect(main).not.toContain("function setupNavTabs()");
+    expect(navigation).toContain("function bind()");
+    expect(navigation).toContain("function dispose()");
+  });
+
+  it("removes CEP navigation listeners on panel teardown", () => {
+    function button(name, active) {
+      const listeners = new Map();
+      const attributes = { "data-nav": name };
+      return {
+        id: "",
+        tabIndex: 0,
+        parentElement: null,
+        classList: {
+          contains: (value) => value === "active" && active,
+          toggle: vi.fn(),
+        },
+        getAttribute: (key) => attributes[key] || null,
+        setAttribute: (key, value) => { attributes[key] = value; },
+        removeAttribute: (key) => { delete attributes[key]; },
+        addEventListener: (type, listener) => listeners.set(type, listener),
+        removeEventListener: (type, listener) => {
+          if (listeners.get(type) === listener) listeners.delete(type);
+        },
+        focus: vi.fn(),
+        click: vi.fn(),
+        dispatch: (type, event = {}) => listeners.get(type)?.({ target: this, ...event }),
+        listenerCount: () => listeners.size,
+      };
+    }
+    const first = button("cut", true);
+    const second = button("settings", false);
+    first.parentElement = { querySelectorAll: () => [first, second] };
+    second.parentElement = first.parentElement;
+    const windowListeners = new Map();
+    const windowRef = {
+      addEventListener: (type, listener) => windowListeners.set(type, listener),
+      removeEventListener: (type, listener) => {
+        if (windowListeners.get(type) === listener) windowListeners.delete(type);
+      },
+    };
+    const documentRef = {
+      querySelectorAll: (selector) => selector === ".nav-tab" ? [first, second] : [],
+      querySelector: () => first,
+    };
+    const activateNavTab = vi.fn();
+    const updateWorkspaceClipStatus = vi.fn();
+    const controller = createNavigationController({
+      documentRef,
+      windowRef,
+      getElement: () => null,
+      getVisibleTabButtons: (container) => container.querySelectorAll(".nav-tab"),
+      moveFocusAndActivate: vi.fn(),
+      activateNavTab,
+      activateSubTab: vi.fn(),
+      updateWorkspaceClipStatus,
+      onResize: vi.fn(),
+    });
+
+    expect(controller.bind()).toBe(true);
+    expect(activateNavTab).toHaveBeenCalledWith("cut", { remember: false, scroll: false });
+    expect(updateWorkspaceClipStatus).toHaveBeenCalledOnce();
+    expect(windowListeners.has("resize")).toBe(true);
+    const clicksBeforeDispose = first.listenerCount();
+    controller.dispose();
+    expect(first.listenerCount()).toBe(clicksBeforeDispose - 2);
+    expect(windowListeners.has("resize")).toBe(false);
+    expect(controller.bind()).toBe(false);
+  });
+
+  it("prevents late health and GPU callbacks after settings teardown", () => {
+    const requests = [];
+    const health = vi.fn();
+    const gpu = vi.fn();
+    const controller = createSettingsDiagnosticsController({
+      request: (method, path, body, callback) => requests.push({ path, callback }),
+      renderOverview: vi.fn(),
+      syncBackendSummary: vi.fn(),
+      updateWhisperState: health,
+      renderGpuState: gpu,
+      loadLlmSettings: vi.fn(),
+      updateBridgeStatus: vi.fn(),
+      refreshDependencies: vi.fn(),
+      refreshModels: vi.fn(),
+      loadEngineRegistry: vi.fn(),
+      loadPluginTrust: vi.fn(),
+    });
+
+    expect(controller.load()).toBe(true);
+    expect(requests.map((request) => request.path)).toEqual(["/health", "/system/gpu"]);
+    controller.dispose();
+    requests[0].callback(null, { status: "ok", capabilities: {} });
+    requests[1].callback(null, { available: true, name: "GPU" });
+    expect(health).not.toHaveBeenCalled();
+    expect(gpu).not.toHaveBeenCalled();
+    expect(controller.load()).toBe(false);
   });
 
   it("renders success and failure states without owning the job lifecycle", () => {
