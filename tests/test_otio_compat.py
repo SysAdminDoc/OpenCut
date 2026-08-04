@@ -11,12 +11,15 @@ from click.testing import CliRunner
 
 otio = pytest.importorskip("opentimelineio")
 
+from opencut.core.silence import TimeSegment  # noqa: E402
 from opencut.export.otio_compat import (  # noqa: E402
     OTIOPreflightError,
     get_otio_capabilities,
     preflight_otio_timeline,
     write_otio_timeline,
 )
+from opencut.export.otio_diff import diff_timelines  # noqa: E402
+from opencut.export.otio_export import export_otio  # noqa: E402
 
 
 def _fixture_timeline():
@@ -102,6 +105,58 @@ def test_current_and_legacy_fixtures_roundtrip_without_loss(tmp_path, schema_tar
     assert report["lossy"] is False
     assert report["written"] is True
     _assert_fixture_roundtrip(output, schema_target)
+
+
+@pytest.mark.parametrize("schema_target", ["current", "OTIO_CORE:0.14.0"])
+def test_export_otio_emits_transitions_that_roundtrip(tmp_path, schema_target):
+    output = tmp_path / f"transition-{schema_target.replace(':', '-')}.otio"
+    report = export_otio(
+        "C:/media/source.mp4",
+        [
+            TimeSegment(0.0, 2.0, "speech"),
+            TimeSegment(2.0, 4.0, "speech"),
+        ],
+        str(output),
+        schema_target=schema_target,
+        return_report=True,
+        transitions=[
+            {
+                "after": 0,
+                "name": "Soft dissolve",
+                "type": "dissolve",
+                "in_offset": 0.5,
+                "out_offset": 0.5,
+                "metadata": {"owner": "editor"},
+            },
+        ],
+    )
+
+    assert report["written"] is True
+    recovered = otio.adapters.read_from_file(str(output))
+    track = list(recovered.tracks[0])
+    assert [type(item) for item in track] == [otio.schema.Clip, otio.schema.Transition, otio.schema.Clip]
+    transition = track[1]
+    assert transition.name == "Soft dissolve"
+    assert transition.in_offset.value == pytest.approx(12)
+    assert transition.out_offset.value == pytest.approx(12)
+    assert transition.metadata["owner"] == "editor"
+    assert transition.metadata["opencut"]["transition_type"] == "dissolve"
+
+
+def test_otio_diff_reports_transition_changes(tmp_path):
+    left_timeline = _fixture_timeline()
+    del left_timeline.tracks[0][1]
+    left = tmp_path / "left.otio"
+    right = tmp_path / "right.otio"
+    write_otio_timeline(left_timeline, str(left))
+    write_otio_timeline(_fixture_timeline(), str(right))
+
+    result = diff_timelines(str(left), str(right))
+
+    assert result.summary["transitions_added"] == 1
+    assert result.summary["transitions_removed"] == 0
+    assert result.transition_diffs[0].kind == "added"
+    assert result.to_dict()["transition_diffs"][0]["right"]["name"] == "Dissolve"
 
 
 def test_preflight_reports_multireference_loss_before_write(tmp_path):
@@ -195,6 +250,38 @@ def _route_client():
     client = app.test_client()
     token = client.get("/health").get_json()["csrf_token"]
     return client, {"X-OpenCut-Token": token, "Content-Type": "application/json"}
+
+
+def test_export_route_passes_transition_specs_to_writer(tmp_path):
+    client, headers = _route_client()
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"fixture")
+    transition = {
+        "after": 0,
+        "name": "Dissolve",
+        "type": "SMPTE_Dissolve",
+        "in_offset": 0.25,
+        "out_offset": 0.25,
+    }
+    result = {"output_path": str(tmp_path / "source_opencut.otio"), "written": True}
+    with (
+        patch("opencut.utils.media.probe", return_value=SimpleNamespace(fps=24.0, duration=4.0)),
+        patch("opencut.export.otio_export.export_otio", return_value=result) as exporter,
+    ):
+        response = client.post(
+            "/timeline/export-otio",
+            headers=headers,
+            json={
+                "filepath": str(source),
+                "output_dir": str(tmp_path),
+                "mode": "segments",
+                "segments": [{"start": 0, "end": 2}, {"start": 2, "end": 4}],
+                "transitions": [transition],
+            },
+        )
+
+    assert response.status_code == 200
+    assert exporter.call_args.kwargs["transitions"] == [transition]
 
 
 def test_capabilities_route_and_legacy_preflight_do_not_write(tmp_path):

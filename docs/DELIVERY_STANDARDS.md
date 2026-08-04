@@ -66,3 +66,15 @@ curl "http://127.0.0.1:5679/delivery/mastering-plan?preset=dolby_vision_profile_
 
 The response contains `runs_external_tools=false`, command `argv` arrays, source
 links, validation notes, and the commercial boundary for the selected preset.
+
+## Interchange matrix
+
+This is the behavior of the artifacts OpenCut currently writes; a destination
+adapter may still apply its own downgrade rules.
+
+| Artifact | Source clips and ranges | Transitions | Markers | Captions |
+|---|---|---|---|---|
+| Native OTIO (`otio_json`) | Yes | Yes, when supplied and preserved by the selected OTIO schema target | Yes | No caption schema; export SRT/VTT/ASS separately |
+| Premiere FCP 7 XML | Yes | Not emitted by the current exporter | Not emitted by the current exporter | Not emitted; use the caption exporters |
+| MLT (`.mlt`) | Yes, including speed and volume automation | Not emitted by the current exporter | Not emitted by the current exporter | Not emitted; use the caption exporters |
+| SRT/VTT/ASS | No timeline media or transitions | No | No | Yes, as timed text |

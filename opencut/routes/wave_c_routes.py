@@ -49,8 +49,8 @@ def route_timeline_diff(job_id, filepath, data):
 
     Reads both sides via OpenTimelineIO adapters (.otio, .otioz, FCP XML,
     EDL, AAF when the optional adapter is installed) and emits a
-    structured diff of tracks, clips (retimed/moved/added/removed), and
-    markers (shifted/added/removed).
+    structured diff of tracks, clips (retimed/moved/added/removed), markers
+    (shifted/added/removed), and transitions (changed/added/removed).
     """
     from opencut.export import otio_diff
 
