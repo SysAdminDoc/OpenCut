@@ -21,8 +21,10 @@ The server speaks the stateless 2026-07-28 revision — ``server/discover``
 advertises supported versions, capabilities, and identity, every modern result
 carries ``resultType`` plus ``_meta`` server identity, and list results carry
 ``ttlMs``/``cacheScope`` cache hints. Clients state their protocol version
-per request in ``_meta``; the legacy ``initialize``/``notifications/initialized``
-handshake is still accepted so pre-2026 clients keep working unchanged.
+per request in ``_meta``. HTTP clients additionally mirror the version and
+operation in the required MCP headers; the legacy
+``initialize``/``notifications/initialized`` handshake is still accepted so
+pre-2026 clients keep working unchanged.
 
 Methods: server/discover, initialize (legacy), tools/list, tools/call,
 resources/list, resources/templates/list, prompts/list.
@@ -1683,8 +1685,21 @@ META_LOG_LEVEL = "io.modelcontextprotocol/logLevel"
 _TRACE_META_KEYS = ("traceparent", "tracestate", "baggage")
 
 # The 2026-07-28 error-code allocation policy reserves -32020..-32099 for the
-# specification; -32022 is UnsupportedProtocolVersion.
+# specification. Keep these wire values together: the draft renumbered them
+# from the earlier release candidate allocation.
+ERROR_HEADER_MISMATCH = -32020
+ERROR_MISSING_REQUIRED_CLIENT_CAPABILITY = -32021
 ERROR_UNSUPPORTED_PROTOCOL_VERSION = -32022
+
+MCP_PROTOCOL_VERSION_HEADER = "MCP-Protocol-Version"
+MCP_METHOD_HEADER = "Mcp-Method"
+MCP_NAME_HEADER = "Mcp-Name"
+
+_MCP_HTTP_NAME_SOURCES = {
+    "tools/call": "name",
+    "resources/read": "uri",
+    "prompts/get": "name",
+}
 
 #: `CacheableResult` hints. The tool catalogue is generated from a static
 #: registry, so it is safe for shared intermediaries to cache briefly.
@@ -1781,7 +1796,10 @@ def _unsupported_version_error(msg_id, requested: str) -> dict:
         "error": {
             "code": ERROR_UNSUPPORTED_PROTOCOL_VERSION,
             "message": f"Unsupported protocol version: {requested}",
-            "data": {"supported": list(SUPPORTED_PROTOCOL_VERSIONS)},
+            "data": {
+                "requested": requested,
+                "supported": list(SUPPORTED_PROTOCOL_VERSIONS),
+            },
         },
     }
 
@@ -1928,6 +1946,152 @@ def run_mcp_stdio():
 # ---------------------------------------------------------------------------
 # HTTP transport (JSON-RPC 2.0 over HTTP on port 5681)
 # ---------------------------------------------------------------------------
+def _mcp_http_header_value(headers, name: str):
+    """Return a trimmed HTTP header value, preserving an absent header."""
+    value = headers.get(name)
+    if value is None:
+        return None
+    return value.strip()
+
+
+def _mcp_http_header_value_is_valid(value) -> bool:
+    """Check the visible-ASCII value envelope required by HTTP headers."""
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and all(char == "\t" or " " <= char <= "~" for char in value)
+    )
+
+
+def _mcp_http_header_mismatch_error(msg_id, message: str) -> dict:
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "error": {
+            "code": ERROR_HEADER_MISMATCH,
+            "message": message,
+        },
+    }
+
+
+def _mcp_http_validate_request_headers(body: dict, headers):
+    """Validate modern MCP HTTP headers against the JSON-RPC body.
+
+    Header validation is scoped to the 2026-07-28 revision. Headerless
+    requests remain valid for the legacy initialize-era transport so existing
+    clients do not need a flag day migration.
+    """
+    if not isinstance(body, dict):
+        return None
+
+    msg_id = body.get("id")
+    params = body.get("params")
+    if params is None:
+        params = {}
+    elif not isinstance(params, dict):
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            "MCP params must be an object when standard headers are used",
+        )
+
+    request_meta = _request_meta(params)
+    body_version = request_meta.get(META_PROTOCOL_VERSION)
+    if body_version is not None and (
+        not isinstance(body_version, str) or not body_version
+    ):
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"Invalid {META_PROTOCOL_VERSION} request metadata",
+        )
+    if body_version and body_version not in SUPPORTED_PROTOCOL_VERSIONS:
+        return _unsupported_version_error(msg_id, body_version)
+
+    raw_version = headers.get(MCP_PROTOCOL_VERSION_HEADER)
+    header_version = _mcp_http_header_value(headers, MCP_PROTOCOL_VERSION_HEADER)
+    if raw_version is not None and not _mcp_http_header_value_is_valid(header_version):
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"Invalid {MCP_PROTOCOL_VERSION_HEADER} header",
+        )
+    if header_version and header_version not in SUPPORTED_PROTOCOL_VERSIONS:
+        return _unsupported_version_error(msg_id, header_version)
+    if body_version and header_version and body_version != header_version:
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"{MCP_PROTOCOL_VERSION_HEADER} header does not match request metadata",
+        )
+
+    modern = header_version == LATEST_PROTOCOL_VERSION or body_version == LATEST_PROTOCOL_VERSION
+    if not modern:
+        return None
+
+    if header_version is None:
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"Missing required {MCP_PROTOCOL_VERSION_HEADER} header",
+        )
+
+    method = body.get("method")
+    header_method = _mcp_http_header_value(headers, MCP_METHOD_HEADER)
+    if not _mcp_http_header_value_is_valid(header_method):
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"Missing or malformed {MCP_METHOD_HEADER} header",
+        )
+    if not isinstance(method, str) or method != header_method:
+        return _mcp_http_header_mismatch_error(
+            msg_id,
+            f"{MCP_METHOD_HEADER} header does not match request method",
+        )
+
+    name_source = _MCP_HTTP_NAME_SOURCES.get(method)
+    if name_source:
+        expected_name = params.get(name_source)
+        header_name = _mcp_http_header_value(headers, MCP_NAME_HEADER)
+        if not _mcp_http_header_value_is_valid(header_name):
+            return _mcp_http_header_mismatch_error(
+                msg_id,
+                f"Missing or malformed {MCP_NAME_HEADER} header for {method}",
+            )
+        if not isinstance(expected_name, str) or header_name != expected_name:
+            return _mcp_http_header_mismatch_error(
+                msg_id,
+                f"{MCP_NAME_HEADER} header does not match {name_source}",
+            )
+
+    return None
+
+
+def _mcp_http_apply_protocol_version(body: dict, headers) -> dict:
+    """Make an HTTP version header available to the shared dispatcher.
+
+    The modern HTTP binding mirrors the version in the envelope. Accepting a
+    header-only version here keeps the transport interoperable with clients
+    that rely on the binding header while all later header/body mismatches are
+    rejected before dispatch.
+    """
+    header_version = _mcp_http_header_value(headers, MCP_PROTOCOL_VERSION_HEADER)
+    if not header_version or not isinstance(body, dict):
+        return body
+    params = body.get("params")
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        return body
+    meta = params.get("_meta")
+    if not isinstance(meta, dict):
+        meta = {}
+    if META_PROTOCOL_VERSION in meta:
+        return body
+    updated_meta = dict(meta)
+    updated_meta[META_PROTOCOL_VERSION] = header_version
+    updated_params = dict(params)
+    updated_params["_meta"] = updated_meta
+    updated_body = dict(body)
+    updated_body["params"] = updated_params
+    return updated_body
+
+
 class _McpHttpPayloadTooLarge(ValueError):
     """Raised before reading a request body that exceeds the transport cap."""
 
@@ -2035,6 +2199,11 @@ class _McpHttpHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Invalid JSON"}, status=400)
             return
 
+        header_error = _mcp_http_validate_request_headers(body, self.headers)
+        if header_error is not None:
+            self._send_json(header_error, status=400)
+            return
+        body = _mcp_http_apply_protocol_version(body, self.headers)
         response = dispatch_jsonrpc(body)
         if response is None:
             # A notification carries no reply; 202 says "accepted".
@@ -2043,7 +2212,15 @@ class _McpHttpHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        status = 404 if response.get("error", {}).get("code") == -32601 else 200
+        error_code = response.get("error", {}).get("code")
+        if error_code in {
+            ERROR_HEADER_MISMATCH,
+            ERROR_MISSING_REQUIRED_CLIENT_CAPABILITY,
+            ERROR_UNSUPPORTED_PROTOCOL_VERSION,
+        }:
+            status = 400
+        else:
+            status = 404 if error_code == -32601 else 200
         self._send_json(response, status=status)
 
 

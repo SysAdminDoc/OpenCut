@@ -158,13 +158,11 @@ standards = [
     "imschrm>=1.1,<2",
 ]
 mcp = [
-    # OpenCut does not import this SDK — `opencut/mcp_server.py` speaks
-    # JSON-RPC directly, so the FastMCP -> McpServer rewrite in 2.x cannot
-    # break it. The extra exists so `pip install opencut[mcp]` pulls the
-    # reference client tooling; both SDK lines are usable, and
-    # tests/test_mcp_sdk_pin.py enforces the no-import invariant that makes
-    # the unbounded range safe.
-    "mcp>=1.26",
+    # OpenCut speaks JSON-RPC directly, but this extra is also used as
+    # reference client tooling. Keep installs on the tested 1.x API line
+    # until the 1.x -> 2.x protocol/client break has its own compatibility
+    # pass.
+    "mcp>=1.26,<2",
 ]
 otio = [
     "opentimelineio>=0.17,<1",

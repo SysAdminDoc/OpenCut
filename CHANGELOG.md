@@ -9,6 +9,14 @@ record also lives in the git commit messages.
   across tabs, themes, and breakpoint boundaries; the scan has no suppressions
   and the covered light-theme contrast/focus issues are fixed.
 
+### Fixed - MCP HTTP conformance
+
+- Modern HTTP requests now validate `MCP-Protocol-Version`, `Mcp-Method`, and
+  operation-specific `Mcp-Name` headers against the JSON-RPC body, with the
+  standardized `-32020`/`-32021`/`-32022` error assignments and HTTP 400
+  responses for protocol validation failures. Legacy HTTP remains compatible,
+  and the optional MCP SDK extra is bounded to the tested 1.x line.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
