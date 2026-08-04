@@ -49,13 +49,13 @@ def _resolve_ffmpeg() -> str:
     env_path = os.environ.get("OPENCUT_FFMPEG") or os.environ.get("FFMPEG_BINARY")
     if env_path and Path(env_path).is_file():
         return env_path
-    on_path = shutil.which("ffmpeg")
-    if on_path:
-        return on_path
     bundled_name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
     bundled = REPO_ROOT / "ffmpeg" / bundled_name
     if bundled.is_file():
         return str(bundled)
+    on_path = shutil.which("ffmpeg")
+    if on_path:
+        return on_path
     return ""
 
 
