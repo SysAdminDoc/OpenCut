@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mlt LC_NUMERIC="C" version="7.22.0" title="Reference Edit" producer="tractor0">
+  <profile description="OpenCut" width="1920" height="1080" progressive="1" sample_aspect_num="1" sample_aspect_den="1" display_aspect_num="1920" display_aspect_den="1080" frame_rate_num="25" frame_rate_den="1" colorspace="709" />
+  <chain id="opencut_clip_0" in="00:00:00.000" out="00:00:01.960">
+    <property name="length">00:00:02.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">file:///C:/media/source.mp4</property>
+    <property name="mlt_service">avformat</property>
+    <property name="shotcut:caption">source.mp4</property>
+    <property name="opencut:source_in">0</property>
+    <property name="opencut:source_out">49</property>
+    <property name="opencut:output_frames">50</property>
+    <property name="opencut:speed">1</property>
+  </chain>
+  <producer id="opencut_clip_1" in="00:00:00.000" out="00:00:03.480">
+    <property name="length">00:00:03.520</property>
+    <property name="eof">pause</property>
+    <property name="resource">2:file:///C:/media/source.mp4</property>
+    <property name="warp_speed">2</property>
+    <property name="warp_resource">file:///C:/media/source.mp4</property>
+    <property name="warp_pitch">1</property>
+    <property name="mlt_service">timewarp</property>
+    <property name="shotcut:producer">avformat</property>
+    <property name="opencut:source_in">100</property>
+    <property name="opencut:source_out">174</property>
+    <property name="opencut:output_frames">38</property>
+    <property name="opencut:speed">2</property>
+  </producer>
+  <playlist id="playlist0">
+    <property name="shotcut:video">1</property>
+    <property name="shotcut:name">V1</property>
+    <entry producer="opencut_clip_0" in="00:00:00.000" out="00:00:01.960">
+      <property name="opencut:source_in">0</property>
+      <property name="opencut:source_out">49</property>
+      <property name="opencut:speed">1</property>
+      <filter in="00:00:00.000" out="00:00:01.960">
+        <property name="mlt_service">volume</property>
+        <property name="level">0=0;25=-6.0206</property>
+        <property name="shotcut:filter">audioGain</property>
+        <property name="kdenlive_id">volume</property>
+      </filter>
+    </entry>
+    <entry producer="opencut_clip_1" in="00:00:02.000" out="00:00:03.480">
+      <property name="opencut:source_in">100</property>
+      <property name="opencut:source_out">174</property>
+      <property name="opencut:speed">2</property>
+    </entry>
+  </playlist>
+  <tractor id="tractor0" in="00:00:00.000" out="00:00:03.480">
+    <property name="shotcut">1</property>
+    <property name="shotcut:projectAudioChannels">2</property>
+    <property name="kdenlive:clipname">Reference Edit</property>
+    <track producer="playlist0" />
+  </tractor>
+  <playlist id="main_bin">
+    <property name="xml_retain">1</property>
+    <entry producer="tractor0" in="00:00:00.000" out="00:00:03.480" />
+  </playlist>
+</mlt>

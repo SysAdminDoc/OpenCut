@@ -112,6 +112,86 @@ def timeline_export_premiere_interchange():
 
 
 # ---------------------------------------------------------------------------
+# Timeline: MLT Export (Kdenlive / Shotcut)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/export-mlt", methods=["POST"])
+@require_csrf
+def timeline_export_mlt():
+    """Write a cut list or kept-segment list as an MLT project.
+
+    MLT is the native project interchange format shared by Kdenlive and
+    Shotcut.  The exporter keeps source ranges, speed, and volume keyframes
+    explicit so both editors can reconstruct the edit without host calls.
+    """
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+
+    filepath = str(data.get("filepath", "")).strip()
+    mode = str(data.get("mode", "cuts")).strip().lower()
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    if mode not in {"cuts", "segments"}:
+        return jsonify({"error": "mode must be cuts or segments"}), 400
+
+    items = data.get(mode, [])
+    if not isinstance(items, list) or not items:
+        return jsonify({"error": f"No {mode} provided (must be a non-empty list)"}), 400
+    if len(items) > 10000:
+        return jsonify({"error": f"Too many {mode} (max 10000)"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+        output_dir = str(data.get("output_dir", "")).strip()
+        output_dir = validate_path(output_dir) if output_dir else os.path.dirname(filepath)
+        sequence_name = str(data.get("sequence_name", "OpenCut Edit"))[:200]
+        output_path = validate_output_path(
+            os.path.join(
+                output_dir,
+                f"{os.path.splitext(os.path.basename(filepath))[0]}_opencut.mlt",
+            )
+        )
+
+        from opencut.export.mlt_export import export_mlt, export_mlt_from_cuts
+
+        export_kwargs = {}
+        if "framerate" in data:
+            export_kwargs["framerate"] = safe_float(data.get("framerate"), 0.0, min_val=0.001)
+        for key in ("width", "height", "audio_channels"):
+            if key in data:
+                export_kwargs[key] = safe_int(data.get(key), 0, min_val=0)
+
+        if mode == "cuts":
+            result = export_mlt_from_cuts(
+                filepath,
+                items,
+                output_path,
+                sequence_name=sequence_name,
+                total_duration=safe_float(data.get("total_duration"), 0.0, min_val=0.0),
+                **export_kwargs,
+            )
+        else:
+            result = export_mlt(
+                filepath,
+                items,
+                output_path,
+                sequence_name=sequence_name,
+                **export_kwargs,
+            )
+        return jsonify({
+            **result,
+            "format": "mlt",
+            "mode": mode,
+            "message": f"Exported MLT timeline: {os.path.basename(output_path)}",
+        })
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "timeline_export_mlt")
+
+
+# ---------------------------------------------------------------------------
 # Timeline: Export Clips from Markers
 # ---------------------------------------------------------------------------
 def _validate_timeline_export(data):

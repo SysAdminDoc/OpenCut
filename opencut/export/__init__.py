@@ -1,1 +1,1 @@
-"""Export modules for Premiere Pro XML, DaVinci Resolve, SRT/VTT captions."""
+"""Export modules for Premiere/Resolve XML, MLT, and subtitle artifacts."""
