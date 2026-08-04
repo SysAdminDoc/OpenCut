@@ -34,8 +34,8 @@ INDEX_HTML = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.h
 
 WORKSPACE_METADATA_CALLS = (
     # Twenty-ninth batch (workspace header/stage metadata).
-    ("tabs.cut_desc", re.compile(r'cut:\s*"Remove dead space')),
-    ("tabs.captions_desc", re.compile(r'captions:\s*"Transcribe, edit')),
+    ("tabs.cut_desc", re.compile(r'cut:\s*"Reviewable cuts')),
+    ("tabs.captions_desc", re.compile(r'captions:\s*"Editable, exportable')),
     ("tabs.audio_desc", re.compile(r'audio:\s*"Repair dialogue')),
     ("tabs.video_desc", re.compile(r'video:\s*"Analyze, repair')),
     ("tabs.export_desc", re.compile(r'export:\s*"Package deliverables')),
@@ -5118,7 +5118,7 @@ EXPECTED_CALLS = (
     (
         "onboarding.caption_body",
         re.compile(r't\(\s*"onboarding\.caption_body"'),
-        re.compile(r'body:\s*"Captions and stems both run locally'),
+        re.compile(r'body:\s*"OpenCut keeps captions and stems local by default'),
     ),
     (
         "onboarding.export_title",

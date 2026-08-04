@@ -19,7 +19,7 @@
 > while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
-> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
+> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
 
 ---
 
@@ -242,20 +242,22 @@ OpenCut requires Python 3.11-3.14. Run `python --version` to check. On Windows, 
 
 ## What OpenCut adds beyond Premiere 26
 
-Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligence, and 90+ Film Impact transitions natively. OpenCut complements those with capabilities Adobe does not bundle:
+Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence search, Sequence Index, Single-Word Captions, pause/filler deletion, loudness matching, bulk bleep/mute, and 90+ Film Impact transitions natively. OpenCut complements those host workflows with broader scope, reviewable proposals, exportable artifacts, and headless access:
 
 | Capability | OpenCut | Premiere 26.x Native |
 |-----------|---------|---------------------|
-| Silence-cut to timeline | Full ripple-delete with cut review panel | Pause-mute only (no ripple delete) |
-| Stem separation | Demucs / BS-RoFormer / MDX-Net (unlimited) | Not available |
-| Voice cloning | Chatterbox TTS (15-sec training, local) | Not available |
-| Filler word detection | CrisperWhisper verbatim markers + custom words | Not available |
-| Animated captions | 55 styles, word-by-word pop/fade/bounce/glow | Basic captions, cloud translation |
-| LLM highlights | Ollama (local, no API key), engagement scoring | Not available |
-| Social export | Direct YouTube/TikTok/Instagram OAuth upload | Not available |
-| Cross-NLE export | OTIO to Resolve, FCP, Avid | Not available |
-| Repeated take detection | Jaccard-overlap transcript similarity | Not available |
-| Cut review panel | Human-in-loop approve/reject before applying | Not available |
+| Silence-cut to timeline | Reviewable ripple-delete ranges, batch/headless routes, and FCP/OTIO export | Text-Based Editing Delete Pauses; OpenCut adds review and interchange scope |
+| Stem separation | Demucs / BS-RoFormer / MDX-Net (unlimited) | No bundled stem separator; OpenCut adds unlimited local models |
+| Voice cloning | Chatterbox TTS (15-sec training, local) | No bundled local clone; OpenCut adds local training and exportable narration |
+| Filler word cleanup | CrisperWhisper verbatim markers, custom words, reviewable ranges, and REST/CLI access | Text-Based Editing Delete Filler Words; OpenCut adds provenance and batch scope |
+| Animated captions | 55 styles, word-level animation, native/burn-in/interchange outputs | Captions + Single-Word Captions; OpenCut adds template breadth and export choices |
+| LLM highlights | Ollama (local, no API key), engagement scoring, and exportable highlight artifacts | Media Intelligence search; OpenCut adds local ranking and deliverables |
+| Cross-project footage search | Whole-library FTS5 search through REST/MCP/CLI | Media Intelligence search in the open project; OpenCut adds cross-project/headless scope |
+| Social export | Direct YouTube/TikTok/Instagram OAuth upload | No direct social handoff; OpenCut adds explicit upload workflows |
+| Cross-NLE export | OTIO to Resolve, FCP, Avid | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
+| Repeated take detection | Jaccard-overlap transcript similarity with reviewable proposals | OpenCut adds a dedicated repeated-take pass |
+| Cut review panel | Human-in-loop approve/reject before applying or exporting ranges | Native editing controls; OpenCut adds a dedicated proposal/review pass |
+| Loudness and profanity reports | Explicit LUFS targets, batch measurement, and auditable bleep/mute ranges | Auto-Match Loudness and bulk bleep/mute; OpenCut adds reports and headless access |
 
 **No usage caps.** Unlike CapCut Pro ($240/yr, metered), Descript ($288-600/yr, credit burn), and Submagic ($468/yr, 40 videos/mo), OpenCut processes unlimited content for $0.
 
@@ -269,13 +271,13 @@ OpenCut v1.46.0 includes **1,545 shipped API routes** (implemented or dependency
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
-| Silence Removal | Detect and remove silent segments with adjustable threshold or AI neural detection | FFmpeg / Silero VAD |
+| Silence Removal | Detect and stage silent segments with adjustable threshold or AI neural detection; review ranges before timeline write-back | FFmpeg / Silero VAD |
 | Silero VAD Mode | ML-based voice activity detection -- 87% TPR vs 50% for energy thresholds. Auto-fallback if PyTorch unavailable | Silero VAD (ONNX) |
-| Filler Word Detection | Detect and cut "um", "uh", "like", "you know" + custom words. Two backends: standard Whisper or CrisperWhisper (verbatim mode) | faster-whisper / CrisperWhisper |
+| Filler Word Detection | Detect and stage "um", "uh", "like", "you know" + custom words for reviewable cuts. Two backends: standard Whisper or CrisperWhisper (verbatim mode) | faster-whisper / CrisperWhisper |
 | CrisperWhisper Mode | Modified Whisper that transcribes verbatim with `[UH]`/`[UM]` markers -- #1 on OpenASR Leaderboard for filler detection | HuggingFace transformers |
 | Waveform Preview | Visual waveform with draggable threshold line synced to slider | FFmpeg PCM + Canvas |
 | Trim Tool | Set in/out points to extract a clip portion (stream copy or re-encode) | FFmpeg |
-| Full Pipeline | Combined silence + filler removal + captions + zoom in one pass | Multi-stage |
+| Full Pipeline | One reviewable local pass for silence/filler ranges, captions, and zoom | Multi-stage |
 | Repeated Take Detection | Detect when speakers restart a sentence using transcript similarity (Jaccard overlap) | WhisperX |
 | Auto-Edit | Motion-based and audio-based automated rough cuts | auto-editor |
 | Cut Review Panel | Review and approve/reject individual cuts before applying to timeline | Built-in |
@@ -284,9 +286,9 @@ OpenCut v1.46.0 includes **1,545 shipped API routes** (implemented or dependency
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
-| Transcription | Speech-to-text with word-level timestamps, immutable engine/model provenance, separate text/boundary confidence, and explicit language/engine overrides | faster-whisper / WhisperX |
-| 55 Caption Styles | YouTube Bold, Neon Pop, Cinematic, Netflix, Sports, and more | Pillow renderer |
-| Animated Captions | CapCut-style word-by-word pop, fade, bounce, glow, highlight (7 presets) | Pillow + OpenCV |
+| Transcription | Speech-to-text with word-level timestamps, immutable engine/model provenance, exportable sidecars, separate text/boundary confidence, and explicit language/engine overrides | faster-whisper / WhisperX |
+| 55 Caption Styles | YouTube Bold, Neon Pop, Cinematic, Netflix, Sports, and more, with native-track and burn-in delivery paths | Pillow renderer |
+| Animated Captions | 55-style word-by-word pop, fade, bounce, glow, and highlight templates with exportable artifacts | Pillow + OpenCV |
 | Caption Burn-in | Hard-burn styled captions directly into video | FFmpeg drawtext / ASS |
 | Speaker Diarization | Identify who's speaking for podcasts/interviews | pyannote.audio |
 | Multimodal Diarization | Audio + face cross-modal speaker mapping for multi-camera setups | InsightFace / facenet + pyannote |
@@ -405,7 +407,7 @@ without returning transcript text.
 
 | Feature | Description |
 |---------|-------------|
-| Footage Search | Index your entire media library by spoken content, search across all clips by keyword |
+| Footage Search | Index your entire media library across projects by spoken content, then query it through the panel, REST, MCP, or CLI |
 | FTS5 Database Search | SQLite full-text search index with auto-indexing and cleanup |
 | Natural Language Commands | Type in English -- OpenCut maps commands to API routes via keyword matching or LLM |
 | Chat Editor | Multi-turn LLM-powered editing assistant with session memory and action parsing |
@@ -835,7 +837,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-12,800+ estimated tests across 321 root test files covering route smoke tests,
+12,800+ estimated tests across 322 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -902,7 +904,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (12,800+ estimated tests, 321 root test files)
+tests/               # pytest test suite (12,800+ estimated tests, 322 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

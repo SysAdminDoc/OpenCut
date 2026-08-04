@@ -3309,8 +3309,8 @@
     // Tab Navigation
     // ================================================================
     var TAB_DESCRIPTIONS = {
-        cut: function () { return t("tabs.cut_desc", "Silence, fillers, and pacing."); },
-        captions: function () { return t("tabs.captions_desc", "Transcribe, style, and deliver."); },
+        cut: function () { return t("tabs.cut_desc", "Reviewable cuts and pacing."); },
+        captions: function () { return t("tabs.captions_desc", "Editable, exportable caption deliverables."); },
         audio: function () { return t("tabs.audio_desc", "Repair, mix, and master."); },
         video: function () { return t("tabs.video_desc", "Color, reframe, and finish."); },
         export: function () { return t("tabs.export_desc", "Presets, outputs, and delivery."); },
@@ -3325,7 +3325,7 @@
             return {
                 kicker: t("workspace.cut_kicker", "Cut Pass"),
                 idleTitle: t("workspace.cut_idle_title", "Select media to start the cut pass."),
-                idleCopy: t("workspace.cut_idle_copy", "Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace."),
+                idleCopy: t("workspace.cut_idle_copy", "Choose a source, then stage reviewable dead-air and filler cuts while keeping pacing decisions in one workspace."),
                 readyTitle: t("workspace.cut_ready_title", "Cut tools are ready for the active source."),
                 readyCopy: t("workspace.cut_ready_copy", "Run cleanup, review proposed edits, and send approved changes back to Premiere.")
             };
@@ -3336,7 +3336,7 @@
                 idleTitle: t("workspace.captions_idle_title", "Select media to build transcript assets."),
                 idleCopy: t("workspace.captions_idle_copy", "Create captions, subtitles, transcript cleanup, chapters, and translations from one source."),
                 readyTitle: t("workspace.captions_ready_title", "Caption tools are ready for the active source."),
-                readyCopy: t("workspace.captions_ready_copy", "Transcribe once, keep the text editable, then style, review, and export.")
+                readyCopy: t("workspace.captions_ready_copy", "Transcribe once, keep the text editable, then style across 55 templates, review, and export.")
             };
         },
         audio: function () {
@@ -14148,9 +14148,9 @@
         case "cut":
             return t("palette.description_cut", "Tighten pacing, trims, and spoken edits from one focused cut workflow.");
         case "captions":
-            return t("palette.description_captions", "Transcribe, translate, and shape subtitle deliverables without leaving the panel.");
+            return t("palette.description_captions", "Transcribe once, then shape editable, exportable subtitle deliverables without leaving the panel.");
         case "audio":
-            return t("palette.description_audio", "Polish dialogue, stems, loudness, and generated sound from one audio surface.");
+            return t("palette.description_audio", "Measure dialogue, split stems, match explicit loudness targets, and generate sound from one audio surface.");
         case "video":
             return t("palette.description_video", "Repair, reframe, and finish image work with cleaner visual controls.");
         case "export":
@@ -18219,7 +18219,7 @@
                 {
                     title: function () { return t("onboarding.caption_title", "Caption + enhance"); },
                     body: function () {
-                        return t("onboarding.caption_body", "Captions and stems both run locally via faster-whisper and Demucs.");
+                        return t("onboarding.caption_body", "OpenCut keeps captions and stems local by default via faster-whisper and Demucs.");
                     }
                 },
                 {

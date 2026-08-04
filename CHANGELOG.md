@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Changed - Restate native Premiere overlap
+
+- README, MCP positioning, and CEP/UXP copy now name Premiere's native
+  Sequence Index, Single-Word Captions, pause/filler deletion, Media
+  Intelligence search, loudness matching, and bulk bleep/mute instead of
+  presenting those workflows as missing from the host.
+- The command palette keeps those operations available while ranking the
+  differentiated scope, review, artifact, and headless-access paths first.
+
 ### Added - Bundled CEP production artifact
 
 - The CEP panel now compiles its ordered classic runtime into a minified

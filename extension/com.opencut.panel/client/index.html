@@ -363,7 +363,7 @@
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="card-title" id="interviewPolishTitle" data-i18n="interview.title">Interview Polish</div>
-                            <div class="card-subtitle" data-i18n="interview.subtitle">One click: silence trim → repeated-take detection → filler cut → captions → chapters → Premiere XML</div>
+                            <div class="card-subtitle" data-i18n="interview.subtitle">One click: reviewable silence trim → repeated-take detection → filler cut → captions → chapters → Premiere XML</div>
                         </div>
                     </div>
                     <div class="interview-polish-options">
@@ -423,7 +423,7 @@
 
                 <div class="sub-panel active" id="sub-silence">
                     <section class="card">
-                        <p class="card-desc" data-i18n="cut.silence_desc">Detect and remove silent pauses from your clip. Choose a preset or fine-tune the detection.</p>
+                        <p class="card-desc" data-i18n="cut.silence_desc">Build a reviewable, timeline-ready cut pass from silent pauses. Adjust detection, inspect the ranges, then apply or export them.</p>
                         <div class="form-group">
                             <label for="silencePreset" data-i18n="forms.preset">Preset</label>
                             <select id="silencePreset">
@@ -500,7 +500,7 @@
 
                 <div class="sub-panel" id="sub-fillers">
                     <section class="card">
-                        <p class="card-desc" data-i18n="cut.filler_desc">Find and remove filler words like "um", "uh", "like", and "you know" using AI speech recognition.</p>
+                        <p class="card-desc" data-i18n="cut.filler_desc">Find filler words with AI speech recognition, keep verbatim markers and custom words, and review the proposed ranges before applying them.</p>
                         <div class="form-group">
                             <label for="fillerBackend" data-i18n="cut.filler_backend">Detection Backend</label>
                             <select id="fillerBackend" aria-label="Filler detection backend" data-i18n-aria-label="cut.filler_backend_aria">
@@ -556,7 +556,7 @@
 
                 <div class="sub-panel" id="sub-full">
                     <section class="card">
-                        <p class="card-desc" data-i18n="cut.full_desc">One-click cleanup: remove silences, strip fillers, add captions, and auto-zoom — all at once.</p>
+                        <p class="card-desc" data-i18n="cut.full_desc">One-click local cleanup: stage silence and filler ranges, add captions, and auto-zoom in one reviewable pass.</p>
                         <div class="form-group">
                             <label for="fullPreset" data-i18n="forms.preset">Preset</label>
                             <select id="fullPreset">
@@ -1465,7 +1465,7 @@
 
                 <div class="sub-panel" id="sub-aud-normalize">
                     <section class="card">
-                        <p class="card-desc" data-i18n="audio.normalize_desc">Match your audio loudness to platform standards so your content sounds consistent everywhere.</p>
+                        <p class="card-desc" data-i18n="audio.normalize_desc">Match audio to an explicit platform or broadcast target and keep the measurement visible in the result.</p>
                         <div class="form-group">
                             <label for="normalizePreset" data-i18n="audio.normalize_platform_preset">Platform Preset</label>
                             <select id="normalizePreset">

@@ -252,7 +252,7 @@ const WORKSPACE_GUIDES = {
     titleKey: "uxp.guide.agent_title",
     title: "Plan and run assisted edit workflows.",
     textKey: "uxp.guide.agent_text",
-    text: "Use the conductor, one-click enhance, variants, sequence index, and MCP bridge from one tab.",
+    text: "Use the conductor, one-click enhance, variants, sequence reports, and MCP bridge from one tab.",
     action: "focus-agentChatIntent",
     actionLabelKey: "uxp.guide.describe_intent",
     actionLabel: "Describe Intent",
@@ -10005,7 +10005,7 @@ function initAgentTab() {
       }
       sequenceIndexRenderColumnToggles();
       setStatus("sequenceIndexStatus",
-        formatI18n("uxp.agent.runtime.sequence_index_built", "Index built: {rows} rows across {width}x{height} sequence.", {
+        formatI18n("uxp.agent.runtime.sequence_index_built", "Report built: {rows} rows across {width}x{height} sequence.", {
           rows: data.total_rows ?? 0,
           width: data.width ?? 0,
           height: data.height ?? 0,
@@ -10071,8 +10071,8 @@ function initAgentTab() {
       const data = responseData(info);
       setStatus("sequenceIndexStatus",
         data?.available
-          ? formatI18n("uxp.agent.runtime.sequence_index_capability_ok", "Capability OK - sort keys: {keys}", { keys: (data.sort_keys || []).join(", ") })
-          : t("uxp.agent.runtime.sequence_index_unavailable", "Sequence Index unavailable"));
+          ? formatI18n("uxp.agent.runtime.sequence_index_capability_ok", "Report capability OK - sort keys: {keys}", { keys: (data.sort_keys || []).join(", ") })
+          : t("uxp.agent.runtime.sequence_index_unavailable", "Sequence report unavailable"));
     } catch (err) {
       setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.capability_check_failed", "Capability check failed: {error}", { error: err?.message || err }));
     }
