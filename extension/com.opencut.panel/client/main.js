@@ -102,6 +102,7 @@
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
     var _pendingCleanupPlan = null;
+    var _pendingSrtResync = null;
     var jobLifecycleHandlers = OpenCutJobLifecycle.createJobLifecycleRegistry();
     var _utilityJobSeq = 0;
     var _waveformRequestSeq = 0;
@@ -3795,6 +3796,15 @@
         if (el.renameAllBtn) el.renameAllBtn.disabled = !connected || !hasRenameItems;
         if (el.createSmartBinsBtn) el.createSmartBinsBtn.disabled = !connected || !hasSmartBinRules;
         if (el.runSrtImportBtn) el.runSrtImportBtn.disabled = !connected || !inPremiere;
+        var srtResyncPath = (document.getElementById("srtImportPath") || {}).value || "";
+        var srtResyncPreviewBtn = document.getElementById("runSrtResyncPreviewBtn");
+        var srtResyncApplyBtn = document.getElementById("runSrtResyncApplyBtn");
+        if (srtResyncPreviewBtn) {
+            srtResyncPreviewBtn.disabled = !connected || !selectedPath || !srtResyncPath;
+        }
+        if (srtResyncApplyBtn) {
+            srtResyncApplyBtn.disabled = !connected || !_pendingSrtResync;
+        }
         if (el.indexAllClipsBtn) el.indexAllClipsBtn.disabled = !connected || !hasProjectMedia;
         if (el.clearSearchIndexBtn) el.clearSearchIndexBtn.disabled = !connected || !Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
 
@@ -15840,6 +15850,77 @@
         });
     }
 
+    function runSrtResyncPreview() {
+        var path = (document.getElementById("srtImportPath") || {}).value || "";
+        if (!path) { showAlert(t("captions.select_srt_file_first", "Select an SRT file first.")); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
+        var previewBtn = document.getElementById("runSrtResyncPreviewBtn");
+        var applyBtn = document.getElementById("runSrtResyncApplyBtn");
+        var statusEl = document.getElementById("srtResyncStatus");
+        if (previewBtn) previewBtn.disabled = true;
+        if (applyBtn) applyBtn.disabled = true;
+        setHintState(statusEl, t("captions.srt_resync_working", "Matching subtitle cues to the source clip…"), "info");
+        var payload = {
+            srt_path: path,
+            video_path: selectedPath,
+            model: (el.subModel && el.subModel.value) || "base",
+            overwrite: !!((document.getElementById("srtResyncOverwrite") || {}).checked)
+        };
+        api("POST", "/subtitle/resync", payload, function (err, data) {
+            if (err || (data && data.error)) {
+                _pendingSrtResync = null;
+                setHintState(statusEl, replaceTemplateValue(
+                    t("captions.srt_resync_failed", "Resync failed: {error}"),
+                    "{error}", data ? data.error : t("timeline.network_error", "Network error")
+                ), "error");
+                updateButtons();
+                return;
+            }
+            var result = data && data.result ? data.result : {};
+            _pendingSrtResync = {
+                payload: payload,
+                confirmToken: data && data.plan ? data.plan.confirm_token : ""
+            };
+            setHintState(statusEl, replaceTemplateValue(
+                t("captions.srt_resync_ready", "Preview ready: {matched} cue(s), offset {offset}s, rate {rate}. Review before applying."),
+                "{matched}", String(result.matched_count || 0)
+            ).replace("{offset}", safeFixed(result.offset_seconds || 0, 3))
+                .replace("{rate}", safeFixed(result.rate || 1, 6)), "success");
+            updateButtons();
+        });
+    }
+
+    function runSrtResyncApply() {
+        if (!_pendingSrtResync) {
+            showAlert(t("captions.srt_resync_preview_first", "Preview the resync before applying it."));
+            return;
+        }
+        var statusEl = document.getElementById("srtResyncStatus");
+        var payload = Object.assign({}, _pendingSrtResync.payload, {
+            apply: true,
+            confirm_token: _pendingSrtResync.confirmToken
+        });
+        var applyBtn = document.getElementById("runSrtResyncApplyBtn");
+        if (applyBtn) applyBtn.disabled = true;
+        setHintState(statusEl, t("captions.srt_resync_applying", "Writing the reviewed subtitle timing…"), "info");
+        api("POST", "/subtitle/resync", payload, function (err, data) {
+            if (err || (data && data.error)) {
+                setHintState(statusEl, replaceTemplateValue(
+                    t("captions.srt_resync_failed", "Resync failed: {error}"),
+                    "{error}", data ? data.error : t("timeline.network_error", "Network error")
+                ), "error");
+                updateButtons();
+                return;
+            }
+            _pendingSrtResync = null;
+            setHintState(statusEl, replaceTemplateValue(
+                t("captions.srt_resync_applied", "Resync saved to {path}."),
+                "{path}", data && data.output_path ? data.output_path : "the output file"
+            ), "success");
+            updateButtons();
+        });
+    }
+
     // ================================================================
     // v1.5.0 — Audio Tab: Loudness Match
     // ================================================================
@@ -16827,6 +16908,26 @@
         // SRT import
         var srtBtn = document.getElementById("runSrtImportBtn");
         if (srtBtn) srtBtn.addEventListener("click", runSrtImport);
+        var srtResyncPreviewBtn = document.getElementById("runSrtResyncPreviewBtn");
+        if (srtResyncPreviewBtn) srtResyncPreviewBtn.addEventListener("click", runSrtResyncPreview);
+        var srtResyncApplyBtn = document.getElementById("runSrtResyncApplyBtn");
+        if (srtResyncApplyBtn) srtResyncApplyBtn.addEventListener("click", runSrtResyncApply);
+        var srtResyncOverwrite = document.getElementById("srtResyncOverwrite");
+        if (srtResyncOverwrite) srtResyncOverwrite.addEventListener("change", function () {
+            _pendingSrtResync = null;
+            updateButtons();
+        });
+        var srtResyncPathInput = document.getElementById("srtImportPath");
+        if (srtResyncPathInput) {
+            srtResyncPathInput.addEventListener("change", function () {
+                _pendingSrtResync = null;
+                updateButtons();
+            });
+            srtResyncPathInput.addEventListener("input", function () {
+                _pendingSrtResync = null;
+                updateButtons();
+            });
+        }
     }
 
     function initAudioNewFeatures() {

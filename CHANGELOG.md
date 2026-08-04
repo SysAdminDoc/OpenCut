@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Subtitle resynchronisation
+
+- Existing SRT files can now be matched to a video transcript to correct a
+  constant offset or clock drift. The REST route, CLI, and CEP/UXP captions
+  surfaces show a no-write preview first and require explicit apply approval
+  before writing a sidecar result.
+
 ### Added - OTIO transitions and interchange boundaries
 
 - OTIO export now emits and round-trips explicit transitions, and timeline

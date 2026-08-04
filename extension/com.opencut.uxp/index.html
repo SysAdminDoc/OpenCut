@@ -1326,6 +1326,19 @@
               </div>
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn" data-i18n="uxp.timeline.validate_srt_file">Validate SRT File</button>
+            <div class="oc-divider"></div>
+            <div class="oc-section-title" data-i18n="uxp.timeline.srt_resync_title">Resync Existing SRT</div>
+            <p class="oc-hint" data-i18n="uxp.timeline.srt_resync_hint">Uses the selected video or captions source, previews the timing transform, and writes a sidecar only after Apply.</p>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="srtResyncOverwrite"> <span data-i18n="uxp.timeline.srt_resync_overwrite">Replace an existing output file</span>
+              </label>
+            </div>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-secondary" id="runSrtResyncPreviewBtn" data-i18n="uxp.timeline.srt_resync_preview">Preview Resync</button>
+              <button type="button" class="oc-btn oc-btn-primary" id="runSrtResyncApplyBtn" disabled data-i18n="uxp.timeline.srt_resync_apply">Apply Resync</button>
+            </div>
+            <div class="oc-status-line" id="srtResyncStatus" role="status" aria-live="polite" data-i18n="uxp.timeline.srt_resync_idle">Choose an SRT and source clip to preview timing.</div>
           </div>
         </div>
       </div>

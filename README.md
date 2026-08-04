@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1551-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1552-orange)
 ![Tests](https://img.shields.io/badge/Tests-13000+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -15,7 +15,7 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
-> surface map: **267 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> surface map: **268 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
 > while **1,284 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
@@ -265,7 +265,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,551 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **267** have literal first-party panel, palette, CLI, and curated MCP references; **1,284 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.46.0 includes **1,552 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **268** have literal first-party panel, palette, CLI, and curated MCP references; **1,284 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -297,6 +297,7 @@ OpenCut v1.46.0 includes **1,551 shipped API routes** (implemented or dependency
 | Transcript Editor | Edit segments in-panel with undo/redo and search | Built-in |
 | YouTube Chapters | LLM-powered topic change detection for chapter timestamps | Ollama / OpenAI / Anthropic |
 | SRT to Native Captions | Import any SRT file as a native Premiere Pro caption track | ExtendScript |
+| Subtitle Resync | Preview text-matched constant-offset and clock-drift correction before writing a sidecar SRT | Whisper / local alignment |
 | Caption XML Interchange | EBU-TT, TTML, legacy IMSC1, and IMSC 1.3 with multilingual/RTL/vertical round trips, validated against the W3C reference implementation | W3C TTML / IMSC (`ttconv` + `imschrm`) |
 
 Caption XML profiles are explicit: `/delivery/caption/ttml` accepts `ttml`,
@@ -401,6 +402,7 @@ without returning transcript text.
 | Smart Bins | Auto-sort project items into bins by rule (name, type, duration) |
 | Export from Markers | Batch-export clip ranges defined by sequence markers |
 | SRT to Native Captions | Import SRT as a native Premiere Pro caption track |
+| Subtitle Resync | Preview and apply text-matched SRT offset/drift correction without overwriting the source by default |
 | OTIO Export | Export timeline clips, markers, and supported transitions as OpenTimelineIO; captions remain SRT/VTT/ASS sidecars |
 | MLT Export | Export cut lists, speed changes, and keyframed volume to Kdenlive and Shotcut |
 
@@ -496,7 +498,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,551 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,552 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -658,6 +660,10 @@ opencut chapters interview.mp4 --provider ollama --model llama3
 
 # Detect repeated takes
 opencut repeat-detect recording.mp4 --threshold 0.6
+
+# Preview subtitle offset/drift correction; add --apply after review to write a sidecar
+opencut subtitle-resync captions.srt --video interview.mp4
+opencut subtitle-resync captions.srt --video interview.mp4 --apply
 
 # Search footage library
 opencut search index *.mp4

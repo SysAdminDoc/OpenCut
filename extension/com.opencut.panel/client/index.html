@@ -1267,6 +1267,16 @@
                         </div>
                         <button type="button" class="btn-primary" id="runSrtImportBtn" data-i18n="captions.srt_import_run">Import Captions</button>
                         <div class="hint hidden" id="srtImportStatus"></div>
+                        <div class="form-group mt-sm">
+                            <div class="card-title" data-i18n="captions.srt_resync_title">Resync Existing SRT</div>
+                            <p class="card-desc" data-i18n="captions.srt_resync_desc">Match this subtitle file to the selected clip, review the timing preview, then write a sidecar result.</p>
+                            <label class="checkbox-row"><input type="checkbox" id="srtResyncOverwrite"> <span data-i18n="captions.srt_resync_overwrite">Replace an existing output file</span></label>
+                            <div class="btn-row">
+                                <button type="button" class="btn-secondary" id="runSrtResyncPreviewBtn" disabled data-i18n="captions.srt_resync_preview">Preview Resync</button>
+                                <button type="button" class="btn-primary" id="runSrtResyncApplyBtn" disabled data-i18n="captions.srt_resync_apply">Apply Resync</button>
+                            </div>
+                            <div class="hint" id="srtResyncStatus" role="status" aria-live="polite" data-i18n="captions.srt_resync_idle">Choose an SRT and source clip to preview timing.</div>
+                        </div>
                     </section>
                 </div>
             </div>

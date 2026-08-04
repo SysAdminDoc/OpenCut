@@ -56,9 +56,9 @@
   ],
   "coverage": {
     "component_schemas": 51,
-    "csrf_documented_operations": 1178,
-    "error_typed_operations": 1579,
-    "operations": 1579,
+    "csrf_documented_operations": 1179,
+    "error_typed_operations": 1580,
+    "operations": 1580,
     "typed_requests": 77,
     "typed_responses": 138
   },
