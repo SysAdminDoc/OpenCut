@@ -16,15 +16,17 @@
 #              are separate opt-in processes, not default container ports.
 # ============================================================
 
-# Stage 0: build the exact CVE-floor release from upstream source. Debian's
-# distro package can lag the patched point release, so it is never accepted as
-# the container's media runtime.
-ARG FFMPEG_VERSION=8.1.2
-ARG FFMPEG_SHA256=464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+# Stage 0: build the exact post-fix master snapshot from upstream source.
+# Debian's distro package can lag the patched commits, so it is never accepted
+# as the container's media runtime.
+ARG FFMPEG_VERSION=2026-08-03-git-01a25f74cc
+ARG FFMPEG_SOURCE_COMMIT=01a25f74cc446a683318bab13dfd98a467082ef7
+ARG FFMPEG_SOURCE_SHA256=02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf
 FROM python:3.12-slim-bookworm AS ffmpeg-build
 
 ARG FFMPEG_VERSION
-ARG FFMPEG_SHA256
+ARG FFMPEG_SOURCE_COMMIT
+ARG FFMPEG_SOURCE_SHA256
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -45,12 +47,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     xz-utils \
     yasm \
-    && curl -fsSLo /tmp/ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
-    && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum --check --strict \
+    && curl -fsSLo /tmp/ffmpeg.tar.gz "https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_SOURCE_COMMIT}.tar.gz" \
+    && echo "${FFMPEG_SOURCE_SHA256}  /tmp/ffmpeg.tar.gz" | sha256sum --check --strict \
     && mkdir /tmp/ffmpeg-src \
-    && tar --extract --xz --file /tmp/ffmpeg.tar.xz --directory /tmp/ffmpeg-src --strip-components=1 \
+    && tar --extract --gzip --file /tmp/ffmpeg.tar.gz --directory /tmp/ffmpeg-src --strip-components=1 \
     && cd /tmp/ffmpeg-src \
     && ./configure \
+        --extra-version="-2026-08-03-git-01a25f74cc" \
         --prefix=/opt/ffmpeg \
         --disable-debug \
         --disable-doc \
@@ -99,8 +102,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ffmpeg-build /opt/ffmpeg /opt/ffmpeg
 ENV PATH="/opt/ffmpeg/bin:${PATH}"
-RUN ffmpeg -version | grep -F "ffmpeg version 8.1.2" \
-    && ffprobe -version | grep -F "ffprobe version 8.1.2"
+RUN ffmpeg -version | grep -F "2026-08-03-git-01a25f74cc" \
+    && ffprobe -version | grep -F "2026-08-03-git-01a25f74cc"
 
 WORKDIR /app
 
@@ -118,7 +121,8 @@ RUN python -m pip install --no-cache-dir --require-hashes --requirement requirem
 FROM base AS final
 
 ARG FFMPEG_VERSION
-ARG FFMPEG_SHA256
+ARG FFMPEG_SOURCE_COMMIT
+ARG FFMPEG_SOURCE_SHA256
 
 # Copy installed packages from deps stage
 COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
@@ -127,15 +131,15 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Copy application code
 COPY . /app
 
-# Project-owned provenance gate records CVE-2026-8461 and both upstream fix
+# Project-owned provenance gate records the July-2026 CVEs and all upstream fix
 # commits and fails the image build if the resolved binary is ever downgraded.
 RUN python scripts/verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg \
     --ffprobe /opt/ffmpeg/bin/ffprobe \
     --release \
-    --source-url "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
-    --source-sha256 "${FFMPEG_SHA256}" \
-    --build-origin "OpenCut Dockerfile upstream source build for FFmpeg ${FFMPEG_VERSION}" \
-    --corresponding-source "Download the archive at source.url, verify source.sha256, then run the recorded configuration with the Debian Bookworm development libraries listed in Dockerfile." \
+    --source-url "https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_SOURCE_COMMIT}.tar.gz" \
+    --source-sha256 "${FFMPEG_SOURCE_SHA256}" \
+    --build-origin "OpenCut Dockerfile upstream source build for FFmpeg ${FFMPEG_VERSION}, commit ${FFMPEG_SOURCE_COMMIT}" \
+    --corresponding-source "Download the exact archive at source.url, verify source.sha256, then run the recorded configuration with the Debian Bookworm development libraries listed in Dockerfile." \
     --manifest /tmp/ffmpeg-provenance.json \
     && python scripts/release_composition.py \
         --lane linux \

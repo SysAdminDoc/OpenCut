@@ -14,7 +14,12 @@ from typing import Any
 
 from opencut import __version__
 from opencut.core.ffmpeg_provenance import (
+    PINNED_INSTALLER_ARCHIVE_SHA256,
+    PINNED_INSTALLER_ARCHIVE_URL,
+    PINNED_INSTALLER_COMMIT,
     PINNED_INSTALLER_VERSION,
+    PINNED_INSTALLER_SOURCE_SHA256,
+    PINNED_INSTALLER_SOURCE_URL,
     RELEASE_FLOOR,
     SNAPSHOT_FLOOR_DATE,
 )
@@ -113,6 +118,11 @@ def build_project_facts(repo_root: Path | None = None) -> dict[str, Any]:
             "release_floor": release_floor,
             "snapshot_floor_date": SNAPSHOT_FLOOR_DATE,
             "pinned_installer_build": PINNED_INSTALLER_VERSION,
+            "pinned_installer_commit": PINNED_INSTALLER_COMMIT,
+            "pinned_installer_archive_url": PINNED_INSTALLER_ARCHIVE_URL,
+            "pinned_installer_archive_sha256": PINNED_INSTALLER_ARCHIVE_SHA256,
+            "pinned_source_url": PINNED_INSTALLER_SOURCE_URL,
+            "pinned_source_sha256": PINNED_INSTALLER_SOURCE_SHA256,
         },
         "distribution": {
             "verified_on": PUBLICATION_VERIFIED_ON,

@@ -4,24 +4,24 @@ The roadmap carries two related FFmpeg items:
 
 * bump the bundled binary from 8.0.x to 8.1.x (for the D3D12VA/Vulkan encoder
   routes that the rest of the codebase already detects), and
-* assert a *security patch level*, not just a version string — the June-2026
-  automated FFmpeg audit disclosed ~21 zero-days (CVE-2026-6385 confirmed,
-  CVE-2026-39210..39218 reserved), several heap/stack overflows reachable via
-  crafted media (the first untrusted-input path a media tool hits). Those fixes
-  landed as post-release master commits, so an ``8.1.x`` *release tag* can
-  predate them.
+* assert a *security patch level*, not just a version string — the June/July
+  2026 automated FFmpeg audit disclosed several heap/stack overflows reachable
+  via crafted media (the first untrusted-input path a media tool hits). The
+  four July advisories landed as post-release master commits, so an ``8.1.x``
+  *release tag* can predate them.
 
 This module is the single source of truth for "which bundled FFmpeg build is
 acceptable". It parses the human-readable ``ffmpeg -version`` banner into a
 structured provenance record and grades it against two acceptance lanes:
 
-* **release lane** — a tagged release ``>= 8.1.2``. This is the first 8.1
-  release containing the MagicYUV fixes for CVE-2026-8461.
+* **release lane** — a tagged release ``>= 8.1.3``. The 8.1.2 release is
+  rejected until upstream publishes a point release containing the four July
+  2026 crafted-media fixes.
 * **snapshot lane** — a gyan.dev / BtbN git-master snapshot dated on/after
   :data:`SNAPSHOT_FLOOR_DATE`, the guaranteed-clean lane that demonstrably
-  carries the June-2026 commits. The reference snapshot
-  (:data:`REFERENCE_GIT_COMMIT`) is recorded so a release that later proves to
-  predate a specific fix has a concrete fallback.
+  carries the July-2026 commits. The exact bundled snapshot
+  (:data:`REFERENCE_GIT_COMMIT`) is recorded so the Windows release can be
+  reproduced from a named source archive.
 
 The module is deliberately stdlib-only so it works inside a fresh
 ``pip install -e .`` and inside the ``scripts/verify_ffmpeg_provenance.py``
@@ -42,36 +42,64 @@ logger = logging.getLogger("opencut")
 # Provenance floor — the bundled binary must clear ONE of these lanes.
 # ---------------------------------------------------------------------------
 
-# Minimum acceptable *release* version. CVE-2026-8461 affects releases before
-# 8.1.2, so 8.1.1 must never be used to process untrusted media.
-RELEASE_FLOOR: tuple[int, int, int] = (8, 1, 2)
+# Minimum acceptable *release* version. The four July-2026 advisories affect
+# 8.1.2, so the release lane remains closed until upstream publishes 8.1.3.
+RELEASE_FLOOR: tuple[int, int, int] = (8, 1, 3)
 
-# Minimum acceptable *git-master snapshot* date. The June-2026 fixes landed as
-# post-release master commits; gyan.dev's git-full snapshot from this date is
-# the first build that demonstrably carries them. ISO ``YYYY-MM-DD``.
-SNAPSHOT_FLOOR_DATE = "2026-06-10"
+# Minimum acceptable *git-master snapshot* date. The four July-2026 fixes
+# landed on master by 2026-06-29; the first dated Gyan full build after the
+# fixes is 2026-07-06. ISO ``YYYY-MM-DD``.
+SNAPSHOT_FLOOR_DATE = "2026-07-06"
 
-# The reference post-fix master snapshot (gyan.dev ``git-full`` build) recorded
-# so the provenance pins a concrete commit hash, not merely a version string —
-# this is what makes the security claim auditable. If a tagged release is ever
-# found to predate a specific June-2026 fix, the build falls back to a snapshot
-# at or after this commit.
-REFERENCE_GIT_COMMIT = "b29bdd3715"
-REFERENCE_GIT_DATE = "2026-06-10"
+# The exact post-fix master snapshot used by the bundled Windows payload. Keep
+# the full source SHA here even though Gyan's banner exposes a ten-character
+# abbreviated commit.
+REFERENCE_GIT_COMMIT = "01a25f74cc446a683318bab13dfd98a467082ef7"
+REFERENCE_GIT_DATE = "2026-08-03"
 
-# Upstream MagicYUV fixes for CVE-2026-8461. The snapshot lane predates the
-# 8.1.2 tag but postdates both commits; recording them makes that assertion
-# auditable in capability and release provenance output.
+# Upstream MagicYUV fix commits for CVE-2026-8461. They remain part of the
+# complete provenance record even though the current snapshot is newer.
 MAGICYUV_FIX_COMMITS: tuple[str, ...] = (
     "374b726ffa878ee1cadb987bd1e1e20cc7ed8845",
     "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1",
 )
 
-# The human-readable version string the installers pin (see AppConstants.cs /
-# OpenCut.iss). Kept here so the Python side and the C#/Inno side agree.
-PINNED_INSTALLER_VERSION = "8.1.2-essentials_build-www.gyan.dev"
+# The four July-2026 crafted-media fixes that are not present in the 8.1.2
+# release branch. These are intentionally named in every failed-release
+# message and every generated provenance record.
+JULY_2026_CVES: tuple[str, ...] = (
+    "CVE-2026-64832",  # NVDEC double-free
+    "CVE-2026-64833",  # S/PDIF DTS out-of-bounds read
+    "CVE-2026-64835",  # ADX out-of-bounds access
+    "CVE-2026-66041",  # vf_quirc heap out-of-bounds write
+)
+JULY_2026_FIX_COMMITS: tuple[str, ...] = (
+    "4c6217477fc64305055b37d9d1d0d76d30e37f97",
+    "6f80e2765492700622596af720534cef33dd31b4",
+    "1836ef96846937a6cc2443698a693104f5c0b21e",
+    "4da9812e25894fb51d62a8875cfa8eb39b5e20f5",
+)
 
-# The June-2026 FFmpeg advisories this floor exists to clear.
+# The human-readable version string and exact redistribution inputs the
+# installers pin. Kept here so Python, C#, Inno, Docker, and release metadata
+# all agree on one full snapshot.
+PINNED_INSTALLER_VERSION = "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
+PINNED_INSTALLER_COMMIT = REFERENCE_GIT_COMMIT
+PINNED_INSTALLER_ARCHIVE_URL = (
+    "https://www.gyan.dev/ffmpeg/builds/packages/"
+    "ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z"
+)
+PINNED_INSTALLER_ARCHIVE_SHA256 = (
+    "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc"
+)
+PINNED_INSTALLER_SOURCE_URL = (
+    "https://github.com/FFmpeg/FFmpeg/archive/01a25f74cc446a683318bab13dfd98a467082ef7.tar.gz"
+)
+PINNED_INSTALLER_SOURCE_SHA256 = (
+    "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf"
+)
+
+# The June-2026 FFmpeg advisories this floor also carries forward.
 JUNE_2026_CVES: tuple[str, ...] = (
     "CVE-2026-8461",  # MagicYUV OOB write; releases before 8.1.2
     "CVE-2026-6385",  # GHSA-q22x-99q7-fr6w, CVSS 6.5 (confirmed)
@@ -86,10 +114,15 @@ JUNE_2026_CVES: tuple[str, ...] = (
     "CVE-2026-39218",
 )
 
+# Keep the old name as a compatibility surface for callers that only need the
+# original June advisory set. New records use the complete combined tuples.
+SECURITY_CVES: tuple[str, ...] = JUNE_2026_CVES + JULY_2026_CVES
+SECURITY_FIX_COMMITS: tuple[str, ...] = MAGICYUV_FIX_COMMITS + JULY_2026_FIX_COMMITS
+
 # ``ffmpeg version <token> ...`` — capture the build token (release or git).
 _VERSION_RE = re.compile(r"version\s+([^\s]+)")
 # gyan.dev git snapshots embed an ISO date and the ``git-<hash>`` commit:
-#   2026-06-10-git-b29bdd3715-full_build-www.gyan.dev
+#   2026-08-03-git-01a25f74cc-full_build-www.gyan.dev
 # BtbN / native ``git describe`` snapshots use ``N-<rev>-g<hash>`` (no date):
 #   N-118000-gabcdef1234
 _SNAPSHOT_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
@@ -139,7 +172,9 @@ def parse_version_banner(banner: str) -> dict:
             record["git_commit"] = btbn_m.group(1).lower()
             record["is_git_snapshot"] = True
 
-    date_m = _SNAPSHOT_DATE_RE.match(token)
+    # Source builds may add the provenance token after an ``N-<rev>``
+    # fallback version, so search rather than requiring the date at position 0.
+    date_m = _SNAPSHOT_DATE_RE.search(token)
     if date_m:
         record["snapshot_date"] = f"{date_m.group(1)}-{date_m.group(2)}-{date_m.group(3)}"
         record["is_git_snapshot"] = True
@@ -170,7 +205,7 @@ def check_security_floor(banner: str) -> dict:
     """Grade an ``ffmpeg -version`` banner against the security floor.
 
     Returns ``{ok, lane, version, snapshot_date, git_commit, reason, cves}``.
-    ``ok`` is ``True`` only when the build clears the release lane (``>= 8.1.2``)
+    ``ok`` is ``True`` only when the build clears the release lane (``>= 8.1.3``)
     or the snapshot lane (git-master dated ``>= SNAPSHOT_FLOOR_DATE``). The
     grading never raises.
     """
@@ -181,9 +216,11 @@ def check_security_floor(banner: str) -> dict:
         "version": rec["raw"],
         "snapshot_date": rec["snapshot_date"],
         "git_commit": rec["git_commit"],
+        "flavor": rec["flavor"],
+        "builder": rec["builder"],
         "reason": "",
-        "cves": list(JUNE_2026_CVES),
-        "fix_commits": list(MAGICYUV_FIX_COMMITS),
+        "cves": list(SECURITY_CVES),
+        "fix_commits": list(SECURITY_FIX_COMMITS),
     }
 
     if not rec["raw"]:
@@ -197,17 +234,20 @@ def check_security_floor(banner: str) -> dict:
                 result["ok"] = True
                 result["reason"] = (
                     f"git-master snapshot {rec['snapshot_date']} is at/after the "
-                    f"post-fix floor {SNAPSHOT_FLOOR_DATE}"
+                    f"post-fix floor {SNAPSHOT_FLOOR_DATE} for "
+                    f"{', '.join(JULY_2026_CVES)}"
                 )
             else:
                 result["reason"] = (
                     f"git-master snapshot {rec['snapshot_date']} predates the "
-                    f"post-fix floor {SNAPSHOT_FLOOR_DATE}"
+                    f"post-fix floor {SNAPSHOT_FLOOR_DATE} for "
+                    f"{', '.join(JULY_2026_CVES)}"
                 )
         else:
             result["reason"] = (
                 "git snapshot has no embedded date; cannot confirm it carries "
-                f"the June-2026 fixes — rebuild from a snapshot >= {SNAPSHOT_FLOOR_DATE}"
+                f"the July-2026 fixes ({', '.join(JULY_2026_CVES)}) — rebuild from "
+                f"a snapshot >= {SNAPSHOT_FLOOR_DATE}"
             )
         return result
 
@@ -217,14 +257,15 @@ def check_security_floor(banner: str) -> dict:
             result["ok"] = True
             result["reason"] = (
                 f"release {'.'.join(map(str, rec['release']))} is at/after the "
-                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for CVE-2026-8461; "
-                f"the post-fix snapshot fallback is {REFERENCE_GIT_COMMIT} dated "
+                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor; the post-fix "
+                f"snapshot fallback is {REFERENCE_GIT_COMMIT[:10]} dated "
                 f"{REFERENCE_GIT_DATE}"
             )
         else:
             result["reason"] = (
                 f"release {'.'.join(map(str, rec['release']))} predates the "
-                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor"
+                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for "
+                f"{', '.join(JULY_2026_CVES)}"
             )
         return result
 
@@ -245,9 +286,18 @@ def provenance_record(banner: Optional[str] = None) -> dict:
         "required_snapshot_floor_date": SNAPSHOT_FLOOR_DATE,
         "reference_git_commit": REFERENCE_GIT_COMMIT,
         "reference_git_date": REFERENCE_GIT_DATE,
-        "required_fix_commits": list(MAGICYUV_FIX_COMMITS),
+        "required_fix_commits": list(SECURITY_FIX_COMMITS),
         "pinned_installer_version": PINNED_INSTALLER_VERSION,
-        "cves_addressed": list(JUNE_2026_CVES),
+        "pinned_installer_commit": PINNED_INSTALLER_COMMIT,
+        "pinned_installer_archive": {
+            "url": PINNED_INSTALLER_ARCHIVE_URL,
+            "sha256": PINNED_INSTALLER_ARCHIVE_SHA256,
+        },
+        "pinned_source": {
+            "url": PINNED_INSTALLER_SOURCE_URL,
+            "sha256": PINNED_INSTALLER_SOURCE_SHA256,
+        },
+        "cves_addressed": list(SECURITY_CVES),
         "bundled": None,
     }
     if banner is None:
@@ -273,10 +323,24 @@ class FfmpegSecurityError(RuntimeError):
         self.grade = grade
         super().__init__(
             f"FFmpeg is unavailable because {binary!r} does not clear the "
-            f"{'.'.join(map(str, RELEASE_FLOOR))} security floor: "
+            f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for "
+            f"{', '.join(JULY_2026_CVES)}: "
             f"{grade.get('reason') or 'version could not be verified'}. "
-            "Install FFmpeg 8.1.2+ or a dated post-fix snapshot before processing media."
+            f"Install FFmpeg {'.'.join(map(str, RELEASE_FLOOR))}+ or a dated "
+            f"post-fix snapshot >= {SNAPSHOT_FLOOR_DATE} before processing media."
         )
+
+
+def is_pinned_snapshot(grade: dict) -> bool:
+    """Return whether a passing snapshot matches the bundled source commit."""
+    actual = str(grade.get("git_commit") or "").lower()
+    expected = PINNED_INSTALLER_COMMIT.lower()
+    return bool(
+        grade.get("ok")
+        and grade.get("lane") == "snapshot"
+        and actual
+        and (expected.startswith(actual) or actual.startswith(expected))
+    )
 
 
 def probe_binary_security(ffmpeg_bin: str, timeout: float = 8.0) -> dict:

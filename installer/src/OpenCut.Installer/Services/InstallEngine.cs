@@ -239,6 +239,10 @@ public class InstallEngine
             ["bundled_ffmpeg_security_floor"] = AppConstants.BundledFfmpegSecurityFloor,
             ["bundled_ffmpeg_security_cve"] = AppConstants.BundledFfmpegSecurityCve,
             ["bundled_ffmpeg_security_fix_commits"] = AppConstants.BundledFfmpegSecurityFixCommits,
+            ["bundled_ffmpeg_source_commit"] = AppConstants.BundledFfmpegSourceCommit,
+            ["bundled_ffmpeg_source_sha256"] = AppConstants.BundledFfmpegSourceSha256,
+            ["bundled_ffmpeg_package_url"] = AppConstants.BundledFfmpegPackageUrl,
+            ["bundled_ffmpeg_package_sha256"] = AppConstants.BundledFfmpegPackageSha256,
             ["installed_at_utc"] = DateTime.UtcNow.ToString("O"),
         };
 

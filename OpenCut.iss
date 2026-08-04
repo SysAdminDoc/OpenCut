@@ -5,12 +5,20 @@
 #define MyAppVersion "1.46.0"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
-#define BundledFfmpegVersion "8.1.2-essentials_build-www.gyan.dev"
-#define BundledFfprobeVersion "8.1.2-essentials_build-www.gyan.dev"
-#define BundledFfmpegSecurityFloor "release>=8.1.2 OR git-master>=2026-06-10 (commit b29bdd3715)"
-#define BundledFfmpegSecurityCve "CVE-2026-8461"
+#define BundledFfmpegVersion "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
+#define BundledFfprobeVersion "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev"
+#define BundledFfmpegSecurityFloor "release>=8.1.3 OR git-master>=2026-07-06 (commit 01a25f74cc446a683318bab13dfd98a467082ef7)"
+#define BundledFfmpegSecurityCve "CVE-2026-8461, CVE-2026-64832, CVE-2026-64833, CVE-2026-64835, CVE-2026-66041"
 #define BundledFfmpegFixCommit1 "374b726ffa878ee1cadb987bd1e1e20cc7ed8845"
 #define BundledFfmpegFixCommit2 "5806e8b9f34f1b0663b3017ef9dd1aa5d08116d1"
+#define BundledFfmpegFixCommit3 "4c6217477fc64305055b37d9d1d0d76d30e37f97"
+#define BundledFfmpegFixCommit4 "6f80e2765492700622596af720534cef33dd31b4"
+#define BundledFfmpegFixCommit5 "1836ef96846937a6cc2443698a693104f5c0b21e"
+#define BundledFfmpegFixCommit6 "4da9812e25894fb51d62a8875cfa8eb39b5e20f5"
+#define BundledFfmpegSourceCommit "01a25f74cc446a683318bab13dfd98a467082ef7"
+#define BundledFfmpegSourceSha256 "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf"
+#define BundledFfmpegPackageUrl "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z"
+#define BundledFfmpegPackageSha256 "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc"
 #ifndef InstallerPrivilegesRequired
 #define InstallerPrivilegesRequired "admin"
 #endif
@@ -261,9 +269,77 @@ begin
     '  "bundled_ffmpeg_security_cve": "' + JsonEscape('{#BundledFfmpegSecurityCve}') + '",' + #13#10 +
     '  "bundled_ffmpeg_security_fix_commits": ["' +
       JsonEscape('{#BundledFfmpegFixCommit1}') + '", "' +
-      JsonEscape('{#BundledFfmpegFixCommit2}') + '"]' + #13#10 +
+      JsonEscape('{#BundledFfmpegFixCommit2}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit3}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit4}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit5}') + '", "' +
+      JsonEscape('{#BundledFfmpegFixCommit6}') + '"],' + #13#10 +
+    '  "bundled_ffmpeg_source_commit": "' + JsonEscape('{#BundledFfmpegSourceCommit}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_source_sha256": "' + JsonEscape('{#BundledFfmpegSourceSha256}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_package_url": "' + JsonEscape('{#BundledFfmpegPackageUrl}') + '",' + #13#10 +
+    '  "bundled_ffmpeg_package_sha256": "' + JsonEscape('{#BundledFfmpegPackageSha256}') + '"' + #13#10 +
     '}' + #13#10;
   SaveStringToFile(ManifestPath, Json, False);
+end;
+
+function IsPostFixSnapshotDate(DateText: string): Boolean;
+var
+  YearValue, MonthValue, DayValue: Integer;
+begin
+  Result := False;
+  if Length(DateText) <> 10 then
+    Exit;
+  if (Copy(DateText, 5, 1) <> '-') or (Copy(DateText, 8, 1) <> '-') then
+    Exit;
+  YearValue := StrToIntDef(Copy(DateText, 1, 4), 0);
+  MonthValue := StrToIntDef(Copy(DateText, 6, 2), 0);
+  DayValue := StrToIntDef(Copy(DateText, 9, 2), 0);
+  Result := (YearValue > 2026) or
+    ((YearValue = 2026) and (MonthValue > 7)) or
+    ((YearValue = 2026) and (MonthValue = 7) and (DayValue >= 6));
+end;
+
+function FfmpegBannerClearsFloor(Banner: string): Boolean;
+var
+  LowerBanner, Token, DateText: string;
+  VersionPos, SeparatorPos, MajorValue, MinorValue, PatchValue: Integer;
+begin
+  Result := False;
+  LowerBanner := Lowercase(Banner);
+  VersionPos := Pos('version ', LowerBanner);
+  if VersionPos = 0 then
+    Exit;
+  Token := Trim(Copy(Banner, VersionPos + Length('version '), Length(Banner)));
+  SeparatorPos := Pos(' ', Token);
+  if SeparatorPos > 0 then
+    Token := Copy(Token, 1, SeparatorPos - 1);
+
+  if Pos('-git-', Lowercase(Token)) > 0 then
+  begin
+    DateText := Copy(Token, 1, 10);
+    Result := IsPostFixSnapshotDate(DateText);
+    Exit;
+  end;
+
+  if (Length(Token) > 0) and (Lowercase(Copy(Token, 1, 1)) = 'n') then
+    Delete(Token, 1, 1);
+  SeparatorPos := Pos('-', Token);
+  if SeparatorPos > 0 then
+    Token := Copy(Token, 1, SeparatorPos - 1);
+  SeparatorPos := Pos('.', Token);
+  if SeparatorPos = 0 then
+    Exit;
+  MajorValue := StrToIntDef(Copy(Token, 1, SeparatorPos - 1), 0);
+  Delete(Token, 1, SeparatorPos);
+  SeparatorPos := Pos('.', Token);
+  if SeparatorPos = 0 then
+    Exit;
+  MinorValue := StrToIntDef(Copy(Token, 1, SeparatorPos - 1), 0);
+  Delete(Token, 1, SeparatorPos);
+  PatchValue := StrToIntDef(Token, 0);
+  Result := (MajorValue > 8) or
+    ((MajorValue = 8) and (MinorValue > 1)) or
+    ((MajorValue = 8) and (MinorValue = 1) and (PatchValue >= 3));
 end;
 
 procedure VerifyInstalledMediaBinary(BinaryPath, DisplayName: string);
@@ -282,7 +358,7 @@ begin
     RaiseException(DisplayName + ' version verification failed.');
 
   Banner := Output.StdOut[0];
-  if Pos('version 8.1.2', Lowercase(Banner)) = 0 then
+  if not FfmpegBannerClearsFloor(Banner) then
     RaiseException(
       DisplayName + ' is below the {#BundledFfmpegSecurityFloor} floor for ' +
       '{#BundledFfmpegSecurityCve}: ' + Banner);
