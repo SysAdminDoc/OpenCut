@@ -12,6 +12,13 @@ record also lives in the git commit messages.
   surfaces show a no-write preview first and require explicit apply approval
   before writing a sidecar result.
 
+### Added - Bulk transcript correction
+
+- CEP and UXP transcript editors can now preview and apply literal find/replace
+  corrections across a transcript, undo the last applied pass, and persist
+  repeated terms in an opaque per-project glossary that is reapplied after
+  future transcription without modifying the raw ASR cache.
+
 ### Added - OTIO transitions and interchange boundaries
 
 - OTIO export now emits and round-trips explicit transitions, and timeline

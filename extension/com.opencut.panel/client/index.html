@@ -964,6 +964,27 @@
                                 <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous" aria-label="Previous transcript search result" data-i18n-title="common.previous" data-i18n-aria-label="transcript.search_previous_aria">&uarr;</button>
                                 <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next" aria-label="Next transcript search result" data-i18n-title="common.next" data-i18n-aria-label="transcript.search_next_aria">&darr;</button>
                             </div>
+                            <div class="transcript-bulk-tools" id="transcriptBulkTools">
+                                <div class="card-header compact-card-header">
+                                    <div class="card-title" data-i18n="transcript.bulk_title">Bulk correction</div>
+                                    <span class="hint-inline" data-i18n="transcript.bulk_hint">Preview wording changes across the whole transcript.</span>
+                                </div>
+                                <div class="input-row transcript-bulk-inputs">
+                                    <input type="text" id="transcriptFindInput" class="text-input" placeholder="Find…" aria-label="Find transcript text" data-i18n-placeholder="transcript.bulk_find_placeholder" data-i18n-aria-label="transcript.bulk_find_aria" autocomplete="off" spellcheck="false">
+                                    <input type="text" id="transcriptReplaceInput" class="text-input" placeholder="Replace with…" aria-label="Replacement transcript text" data-i18n-placeholder="transcript.bulk_replace_placeholder" data-i18n-aria-label="transcript.bulk_replace_aria" autocomplete="off" spellcheck="false">
+                                </div>
+                                <div class="checkbox-row transcript-bulk-options">
+                                    <label class="checkbox-label"><input type="checkbox" id="transcriptCaseSensitive"> <span data-i18n="transcript.bulk_case_sensitive">Match case</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" id="transcriptWholeWord" checked> <span data-i18n="transcript.bulk_whole_word">Whole word</span></label>
+                                    <label class="checkbox-label"><input type="checkbox" id="transcriptSaveGlossary"> <span data-i18n="transcript.bulk_save_glossary">Save to project glossary</span></label>
+                                </div>
+                                <div class="btn-row transcript-bulk-actions">
+                                    <button type="button" class="btn-sm btn-secondary" id="transcriptPreviewReplaceBtn" disabled data-i18n="transcript.bulk_preview">Preview replacement</button>
+                                    <button type="button" class="btn-sm btn-primary" id="transcriptApplyReplaceBtn" disabled data-i18n="transcript.bulk_apply">Apply replacement</button>
+                                </div>
+                                <div class="hint hidden" id="transcriptCorrectionPreview" role="status" aria-live="polite"></div>
+                                <div class="hint" id="transcriptCorrectionStatus" role="status" aria-live="polite" data-i18n="transcript.bulk_idle">Preview a correction to review its affected segments.</div>
+                            </div>
                             <div class="transcript-workspace">
                                 <section class="transcript-timeline-panel" aria-labelledby="transcriptTimelineHeading">
                                     <div class="transcript-timeline-header">
@@ -4253,6 +4274,7 @@
     <script src="settings-diagnostics-controller.js"></script>
     <script src="navigation-controller.js"></script>
     <script src="bootstrap.js"></script>
+    <script src="transcript-correction-controller.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

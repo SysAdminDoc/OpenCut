@@ -628,6 +628,7 @@ def transcribe(
     timeout: Optional[float] = None,
     *,
     use_cache: bool = True,
+    project_path: Optional[str] = None,
 ) -> TranscriptionResult:
     """
     Transcribe audio/video to text with timestamps.
@@ -639,6 +640,7 @@ def transcribe(
         config: Caption configuration. Uses defaults if None.
         timeout: Maximum time in seconds for transcription. None = no timeout.
         use_cache: Use the persistent content-addressed transcript cache.
+        project_path: Optional project identity used for the persisted glossary.
 
     Returns:
         TranscriptionResult with segments and word-level timestamps.
@@ -666,6 +668,18 @@ def transcribe(
         max_speakers=config.max_speakers,
         fallback_reason=fallback_reason,
     )
+
+    def _apply_project_glossary(transcription: TranscriptionResult) -> TranscriptionResult:
+        # Keep raw ASR cache entries untouched. Applying the glossary on every
+        # return path makes corrections survive both fresh transcription and
+        # cache hits without invalidating the expensive ASR cache.
+        try:
+            from .transcript_corrections import apply_glossary_to_result
+
+            return apply_glossary_to_result(transcription, project_path or filepath)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Transcript glossary application failed for %s: %s", filepath, exc)
+            return transcription
 
     cache_key: Optional[str] = None
     cache_metadata: Optional[Dict[str, Any]] = None
@@ -706,14 +720,16 @@ def transcribe(
                         cache_metadata,
                         transcription_result_to_dict(migrated),
                     )
-                    return migrated
+                    return _apply_project_glossary(migrated)
             if cached:
                 logger.info("Transcript cache hit for %s", filepath)
-                return transcription_result_from_dict(
-                    cached["result"],
-                    cache_hit=True,
-                    cache_key=cache_key,
-                    cache_path=transcript_cache.cache_entry_path(cache_key),
+                return _apply_project_glossary(
+                    transcription_result_from_dict(
+                        cached["result"],
+                        cache_hit=True,
+                        cache_key=cache_key,
+                        cache_path=transcript_cache.cache_entry_path(cache_key),
+                    )
                 )
             logger.debug("Transcript cache miss for %s", filepath)
         except OSError as exc:
@@ -777,7 +793,7 @@ def transcribe(
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Transcript cache write failed for %s: %s", filepath, exc)
-        return result
+        return _apply_project_glossary(result)
     finally:
         if os.path.exists(wav_path) and wav_path.startswith(tempfile.gettempdir()):
             try:

@@ -367,6 +367,36 @@
           </div>
         </div>
 
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="transcriptCorrectionBody">
+            <span data-i18n="uxp.captions.bulk_correction">Bulk transcript correction</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="transcriptCorrectionBody">
+            <p class="oc-caption-intro" data-i18n="uxp.captions.bulk_correction_intro">Preview a literal find/replace across the active transcript, then apply it or save the term to this project glossary.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="uxpTranscriptFindInput" data-i18n="uxp.captions.bulk_find">Find</label>
+              <input type="text" class="oc-input" id="uxpTranscriptFindInput" placeholder="Find…" data-i18n-placeholder="uxp.captions.bulk_find_placeholder" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="uxpTranscriptReplaceInput" data-i18n="uxp.captions.bulk_replace">Replace</label>
+              <input type="text" class="oc-input" id="uxpTranscriptReplaceInput" placeholder="Replace with…" data-i18n-placeholder="uxp.captions.bulk_replace_placeholder" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label"><input type="checkbox" id="uxpTranscriptCaseSensitive"> <span data-i18n="uxp.captions.bulk_case_sensitive">Match case</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="uxpTranscriptWholeWord" checked> <span data-i18n="uxp.captions.bulk_whole_word">Whole word</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="uxpTranscriptSaveGlossary"> <span data-i18n="uxp.captions.bulk_save_glossary">Save to project glossary</span></label>
+            </div>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="uxpTranscriptPreviewBtn" data-i18n="uxp.captions.bulk_preview">Preview replacement</button>
+              <button type="button" class="oc-btn oc-btn-primary oc-btn-sm" id="uxpTranscriptApplyBtn" data-i18n="uxp.captions.bulk_apply">Apply replacement</button>
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="uxpTranscriptUndoBtn" disabled data-i18n="uxp.captions.bulk_undo">Undo last correction</button>
+            </div>
+            <div class="oc-status-line" id="uxpTranscriptCorrectionPreview" role="status" aria-live="polite"></div>
+            <div class="oc-status-line" id="uxpTranscriptCorrectionStatus" role="status" aria-live="polite" data-i18n="uxp.captions.bulk_idle">Run transcription before previewing a correction.</div>
+          </div>
+        </div>
+
         <div class="oc-section-title" data-i18n="uxp.captions.translation">Translation</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="translationBody">

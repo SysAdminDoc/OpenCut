@@ -74,7 +74,11 @@ def get_transcript(job_id, filepath, data):
         language=language,
         word_timestamps=True,
     )
-    result = transcribe(filepath, config=config)
+    transcribe_kwargs = {"config": config}
+    project_path = str(data.get("project_path") or "").strip()
+    if project_path:
+        transcribe_kwargs["project_path"] = project_path
+    result = transcribe(filepath, **transcribe_kwargs)
 
     if _is_cancelled(job_id):
         return {"cancelled": True}

@@ -5,6 +5,7 @@ Thread-safe JSON file access for user settings files:
 favorites, workflows, presets, whisper settings, job times.
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -26,6 +27,10 @@ OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 USER_TOMBSTONES_FILE = "user_tombstones.json"
 USER_TOMBSTONE_MAX_COUNT = 100
 USER_TOMBSTONE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+TRANSCRIPT_GLOSSARY_FILE = "transcript_glossaries.json"
+TRANSCRIPT_CORRECTION_HISTORY_FILE = "transcript_correction_history.json"
+TRANSCRIPT_GLOSSARY_MAX_RULES = 500
+TRANSCRIPT_CORRECTION_HISTORY_MAX = 25
 
 # Per-file locks to prevent concurrent read-modify-write corruption.
 # Bounded: only OpenCut user-data files should be locked (< 20 files).
@@ -165,6 +170,129 @@ def write_user_file(filename: str, data):
         except Exception as e:
             logger.warning("Could not write %s: %s", filename, e)
             raise
+
+
+def _transcript_project_key(project_path: str | None) -> str:
+    """Return the same opaque project key used by transcript correction APIs."""
+    value = str(project_path or "").strip().replace("\\", "/").casefold()
+    if not value:
+        value = "default"
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _transcript_project_store(filename: str, default: dict) -> dict:
+    payload = read_user_file(filename, default=default)
+    if not isinstance(payload, dict):
+        return dict(default)
+    projects = payload.get("projects")
+    if not isinstance(projects, dict):
+        payload["projects"] = {}
+    return payload
+
+
+def load_transcript_glossary(project_path: str | None = None) -> list[dict]:
+    """Load literal correction terms for one project/source identity."""
+    with user_file_lock(TRANSCRIPT_GLOSSARY_FILE):
+        payload = _transcript_project_store(
+            TRANSCRIPT_GLOSSARY_FILE,
+            {"_schema_version": 1, "projects": {}},
+        )
+        record = payload.get("projects", {}).get(_transcript_project_key(project_path), {})
+        rules = record.get("rules", []) if isinstance(record, dict) else []
+        if not isinstance(rules, list):
+            return []
+        return [rule for rule in rules[:TRANSCRIPT_GLOSSARY_MAX_RULES] if isinstance(rule, dict)]
+
+
+def save_transcript_glossary(
+    project_path: str | None,
+    rules: list[dict],
+) -> list[dict]:
+    """Persist a bounded per-project transcript glossary atomically."""
+    if not isinstance(rules, list):
+        raise ValueError("transcript glossary must be a list")
+    cleaned = [dict(rule) for rule in rules[:TRANSCRIPT_GLOSSARY_MAX_RULES] if isinstance(rule, dict)]
+    with user_file_lock(TRANSCRIPT_GLOSSARY_FILE):
+        payload = _transcript_project_store(
+            TRANSCRIPT_GLOSSARY_FILE,
+            {"_schema_version": 1, "projects": {}},
+        )
+        projects = payload.setdefault("projects", {})
+        projects[_transcript_project_key(project_path)] = {
+            "rules": cleaned,
+            "updated_at": time.time(),
+        }
+        payload["_schema_version"] = 1
+        write_user_file(TRANSCRIPT_GLOSSARY_FILE, payload)
+    return cleaned
+
+
+def save_transcript_correction_revision(
+    project_path: str | None,
+    revision: dict,
+) -> dict:
+    """Store a bounded undo record for a bulk transcript correction."""
+    if not isinstance(revision, dict) or not revision.get("id"):
+        raise ValueError("correction revision must include an id")
+    with user_file_lock(TRANSCRIPT_CORRECTION_HISTORY_FILE):
+        payload = _transcript_project_store(
+            TRANSCRIPT_CORRECTION_HISTORY_FILE,
+            {"_schema_version": 1, "projects": {}},
+        )
+        projects = payload.setdefault("projects", {})
+        key = _transcript_project_key(project_path)
+        record = projects.setdefault(key, {"revisions": []})
+        revisions = record.setdefault("revisions", [])
+        revisions.append(json.loads(json.dumps(revision, ensure_ascii=False)))
+        record["revisions"] = revisions[-TRANSCRIPT_CORRECTION_HISTORY_MAX:]
+        payload["_schema_version"] = 1
+        write_user_file(TRANSCRIPT_CORRECTION_HISTORY_FILE, payload)
+    return dict(revision)
+
+
+def get_transcript_correction_revision(
+    project_path: str | None,
+    revision_id: str,
+) -> dict | None:
+    """Return an undo record for a project without exposing other projects."""
+    if not revision_id:
+        return None
+    with user_file_lock(TRANSCRIPT_CORRECTION_HISTORY_FILE):
+        payload = _transcript_project_store(
+            TRANSCRIPT_CORRECTION_HISTORY_FILE,
+            {"_schema_version": 1, "projects": {}},
+        )
+        record = payload.get("projects", {}).get(_transcript_project_key(project_path), {})
+        revisions = record.get("revisions", []) if isinstance(record, dict) else []
+        for revision in reversed(revisions if isinstance(revisions, list) else []):
+            if isinstance(revision, dict) and revision.get("id") == revision_id:
+                return json.loads(json.dumps(revision, ensure_ascii=False))
+    return None
+
+
+def mark_transcript_correction_undone(
+    project_path: str | None,
+    revision_id: str,
+) -> dict | None:
+    """Mark an undo record restored and return the updated record."""
+    if not revision_id:
+        return None
+    with user_file_lock(TRANSCRIPT_CORRECTION_HISTORY_FILE):
+        payload = _transcript_project_store(
+            TRANSCRIPT_CORRECTION_HISTORY_FILE,
+            {"_schema_version": 1, "projects": {}},
+        )
+        record = payload.get("projects", {}).get(_transcript_project_key(project_path), {})
+        revisions = record.get("revisions", []) if isinstance(record, dict) else []
+        found = None
+        for revision in reversed(revisions if isinstance(revisions, list) else []):
+            if isinstance(revision, dict) and revision.get("id") == revision_id:
+                revision["undone_at"] = time.time()
+                found = json.loads(json.dumps(revision, ensure_ascii=False))
+                break
+        if found is not None:
+            write_user_file(TRANSCRIPT_CORRECTION_HISTORY_FILE, payload)
+        return found
 
 
 CONFIG_SCHEMAS: dict = {}

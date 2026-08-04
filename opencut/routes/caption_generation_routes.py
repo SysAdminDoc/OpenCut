@@ -21,6 +21,7 @@ from .captions import (
     _legacy_srt_bom_requested,
     _resolve_output_dir,
     _safe_probe,
+    _segment_payloads,
     _update_job,
     _write_caption_roundtrip_sidecar,
     async_job,
@@ -87,7 +88,14 @@ def generate_captions(job_id, filepath, data):
 
     force_retranscribe = safe_bool(data.get("force_retranscribe", False), False)
     _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
-    result = transcribe(filepath, config=config, use_cache=not force_retranscribe)
+    transcribe_kwargs = {
+        "config": config,
+        "use_cache": not force_retranscribe,
+    }
+    project_path = str(data.get("project_path") or "").strip()
+    if project_path:
+        transcribe_kwargs["project_path"] = project_path
+    result = transcribe(filepath, **transcribe_kwargs)
     if getattr(result, "cache_hit", False):
         _update_job(job_id, progress=25, message="Using cached transcript...")
 
@@ -122,12 +130,13 @@ def generate_captions(job_id, filepath, data):
         "sidecar_path": sidecar_path,
         "metadata_preserved": bool(sidecar_path),
         "language": getattr(result, "language", language or "en"),
-        "segments": len(result.segments),
+        "segment_count": len(result.segments),
         "caption_segments": len(result.segments),
         "words": getattr(result, "word_count", 0),
         "transcript_cache_hit": bool(getattr(result, "cache_hit", False)),
         "transcript_cache_key": getattr(result, "cache_key", None),
         "asr_provenance": _asr_provenance_payload(result),
+        "segments": _segment_payloads(result.segments, include_words=True, precision=3),
     }
     if sidecar_warnings:
         response["warnings"] = sidecar_warnings

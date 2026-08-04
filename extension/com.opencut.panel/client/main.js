@@ -68,6 +68,7 @@
     var OpenCutComponents = (typeof window !== "undefined" && window.OpenCutComponents) ? window.OpenCutComponents : {};
     var OpenCutTimeline = (typeof window !== "undefined" && window.OpenCutTimeline) ? window.OpenCutTimeline : {};
     var OpenCutBootstrap = (typeof window !== "undefined" && window.OpenCutBootstrap) ? window.OpenCutBootstrap : {};
+    var OpenCutTranscriptCorrection = (typeof window !== "undefined" && window.OpenCutTranscriptCorrectionController) ? window.OpenCutTranscriptCorrectionController : {};
 
     // ---- Core State ----
     var panelState = OpenCutPanelState.createPanelState({ backendUrl: BACKEND });
@@ -103,6 +104,7 @@
     var lastJobPayload = null; // for retry
     var _pendingCleanupPlan = null;
     var _pendingSrtResync = null;
+    var _transcriptCorrectionController = null;
     var jobLifecycleHandlers = OpenCutJobLifecycle.createJobLifecycleRegistry();
     var _utilityJobSeq = 0;
     var _waveformRequestSeq = 0;
@@ -1653,6 +1655,15 @@
         el.exportTranscriptBtn = $("exportTranscriptBtn");
         el.transcriptUndoBtn = $("transcriptUndoBtn");
         el.transcriptRedoBtn = $("transcriptRedoBtn");
+        el.transcriptFindInput = $("transcriptFindInput");
+        el.transcriptReplaceInput = $("transcriptReplaceInput");
+        el.transcriptCaseSensitive = $("transcriptCaseSensitive");
+        el.transcriptWholeWord = $("transcriptWholeWord");
+        el.transcriptSaveGlossary = $("transcriptSaveGlossary");
+        el.transcriptPreviewReplaceBtn = $("transcriptPreviewReplaceBtn");
+        el.transcriptApplyReplaceBtn = $("transcriptApplyReplaceBtn");
+        el.transcriptCorrectionPreview = $("transcriptCorrectionPreview");
+        el.transcriptCorrectionStatus = $("transcriptCorrectionStatus");
         el.summarizeTranscriptBtn = $("summarizeTranscriptBtn");
         el.summaryResult = $("summaryResult");
         el.summaryContent = $("summaryContent");
@@ -5059,6 +5070,7 @@
         startJob("/captions", {
             filepath: selectedPath,
             output_dir: projectFolder,
+            project_path: projectFolder || selectedPath,
             model: el.subModel.value,
             language: el.subLang.value || null,
             format: el.subFormat.value,
@@ -5070,6 +5082,7 @@
         startJob("/transcript", {
             filepath: selectedPath,
             output_dir: projectFolder,
+            project_path: projectFolder || selectedPath,
             model: el.transcriptModel.value,
         });
     }
@@ -8011,11 +8024,26 @@
         doTranscriptSearch((el.transcriptSearchInput.value || "").trim());
     }
 
+    function updateTranscriptCorrectionControls() {
+        if (_transcriptCorrectionController) _transcriptCorrectionController.update();
+    }
+
+    function runTranscriptCorrectionPreview() {
+        if (_transcriptCorrectionController) _transcriptCorrectionController.preview();
+    }
+
+    function runTranscriptCorrectionApply() {
+        if (_transcriptCorrectionController) _transcriptCorrectionController.apply();
+    }
+
     function snapshotTranscript() {
         if (!transcriptData || !transcriptData.segments) return;
         var snap = [];
         for (var i = 0; i < transcriptData.segments.length; i++) {
             snap.push(transcriptData.segments[i].text);
+        }
+        if (transcriptHistory.length && JSON.stringify(transcriptHistory[transcriptHistory.length - 1]) === JSON.stringify(snap)) {
+            return;
         }
         // Trim redo stack
         if (transcriptHistoryIdx < transcriptHistory.length - 1) {
@@ -8072,6 +8100,7 @@
 
     function renderTranscriptEditor(data) {
         ensureTranscriptDelegation();
+        if (_transcriptCorrectionController) _transcriptCorrectionController.reset();
         // Clear any pending debounce from previous render
         if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
 
@@ -8093,6 +8122,7 @@
             updateUndoRedoButtons();
             focusTranscriptSegment(-1, { scroll: false, scrollTimeline: false, instant: true });
             refreshTranscriptSearch();
+            updateTranscriptCorrectionControls();
             return;
         }
 
@@ -8129,6 +8159,7 @@
         snapshotTranscript();
         focusTranscriptSegment(Math.min(Math.max(_activeTranscriptSegmentIdx, 0), segCount - 1), { scroll: false, scrollTimeline: false, instant: true });
         refreshTranscriptSearch();
+        updateTranscriptCorrectionControls();
     }
 
     function autoResize(textarea) {
@@ -17296,6 +17327,22 @@
     OpenCutBootstrap.onReady(document, function () {
         initCSInterface();
         initDOM();
+        if (OpenCutTranscriptCorrection.create) {
+            _transcriptCorrectionController = OpenCutTranscriptCorrection.create({
+                elements: function () { return el; },
+                isConnected: function () { return connected; },
+                projectPath: function () { return projectFolder || selectedPath || "default"; },
+                getSegments: getTranscriptSegments,
+                getTranscriptData: function () { return transcriptData; },
+                setLastSegments: function (segments) { lastTranscriptSegments = segments; },
+                cache: function (segments) { if (selectedPath) cacheTranscriptSegments(selectedPath, segments); },
+                snapshot: snapshotTranscript,
+                autoResize: autoResize,
+                refreshSearch: refreshTranscriptSearch,
+                api: api,
+                t: t
+            });
+        }
         initSkipLinkFocus();
         initOverlayFocusManagement();
         initMainScrollTracking();
@@ -17349,6 +17396,18 @@
         _on("exportTranscriptBtn", "click", exportEditedTranscript);
         _on("transcriptUndoBtn", "click", undoTranscript);
         _on("transcriptRedoBtn", "click", redoTranscript);
+        _on("transcriptPreviewReplaceBtn", "click", runTranscriptCorrectionPreview);
+        _on("transcriptApplyReplaceBtn", "click", runTranscriptCorrectionApply);
+        ["transcriptFindInput", "transcriptReplaceInput", "transcriptCaseSensitive", "transcriptWholeWord", "transcriptSaveGlossary"].forEach(function (id) {
+            _on(id, "input", function () {
+                if (_transcriptCorrectionController) _transcriptCorrectionController.reset();
+                updateTranscriptCorrectionControls();
+            });
+            _on(id, "change", function () {
+                if (_transcriptCorrectionController) _transcriptCorrectionController.reset();
+                updateTranscriptCorrectionControls();
+            });
+        });
         _on("installWhisperBtn", "click", installWhisper);
         _on("captionStyle", "change", updateStylePreview);
         initCaptionDisplaySettingsCard();
