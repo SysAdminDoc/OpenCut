@@ -2849,6 +2849,41 @@ input[type="checkbox"]:disabled {
     overflow-wrap: anywhere;
 }
 
+.cleanup-chain-review {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
+    border-radius: 8px;
+    background: var(--surface-raised, rgba(255, 255, 255, 0.04));
+}
+
+.cleanup-chain-steps {
+    display: grid;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.cleanup-chain-step {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.cleanup-chain-step.is-skipped {
+    color: var(--text-muted, #9aa3ad);
+}
+
+.cleanup-chain-step-status {
+    flex: 0 0 auto;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 /* ============================================================
    PRESET SAVE/LOAD
    ============================================================ */

@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T06:06:57Z",
-  "total_routes": 1570,
-  "shipped_route_count": 1545,
+  "generated_at": "2026-08-04T09:24:01Z",
+  "total_routes": 1572,
+  "shipped_route_count": 1547,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 402,
     "PATCH": 1,
-    "POST": 1152,
+    "POST": 1154,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1517,
+    "implemented": 1519,
     "stub": 25
   },
   "blueprints": {
@@ -178,11 +178,11 @@
       ]
     },
     "captions": {
-      "route_count": 33,
+      "route_count": 35,
       "method_counts": {
         "DELETE": 2,
         "GET": 9,
-        "POST": 22
+        "POST": 24
       },
       "sample_rules": [
         "/captions/chapters",
@@ -10453,6 +10453,40 @@
       ]
     },
     {
+      "rule": "/cleanup/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.cleanup_apply",
+      "blueprint": "captions",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
+      ]
+    },
+    {
+      "rule": "/cleanup/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.cleanup_preview",
+      "blueprint": "captions",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
+      ]
+    },
+    {
       "rule": "/clips/get",
       "methods": [
         "GET"
@@ -12533,7 +12567,8 @@
       ],
       "surface_evidence": [
         "extension/com.opencut.panel/client/main.js",
-        "extension/com.opencut.uxp/main.js"
+        "extension/com.opencut.uxp/main.js",
+        "extension/com.opencut.uxp/uxp-utils.js"
       ]
     },
     {
@@ -26825,20 +26860,20 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1545,
-      "direct_surface_routes": 262,
+      "shipped_routes": 1547,
+      "direct_surface_routes": 264,
       "integration_only_routes": 1283,
-      "coverage_percent": 17.0,
+      "coverage_percent": 17.1,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 207,
+        "panel": 209,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
         "integration-only": 1308
       },
       "assigned_counts": {
-        "panel": 207,
+        "panel": 209,
         "palette": 33,
         "cli": 1,
         "mcp": 92,

@@ -7,6 +7,7 @@ first failure.
 """
 
 import copy
+import hashlib
 import json
 import logging
 import os
@@ -16,6 +17,13 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 logger = logging.getLogger("opencut")
 ROUTE_MANIFEST_PATH = Path(__file__).resolve().parents[1] / "_generated" / "route_manifest.json"
+
+# The cleanup verb is intentionally a plan contract rather than another
+# opaque workflow preset.  The preview is serialized into the client and the
+# apply request must present the same plan id before any artifact is written.
+CLEANUP_PLAN_SCHEMA_VERSION = 1
+CLEANUP_CHAIN_ID = "standard-cleanup"
+CLEANUP_STEP_IDS = ("silence_trim", "denoise", "loudness", "captions")
 
 # ---------------------------------------------------------------------------
 # Workflowable route markers.
@@ -158,6 +166,316 @@ def load_workflow_endpoints(path: Path = ROUTE_MANIFEST_PATH) -> Dict[str, str]:
 
 # Public compatibility name used by tests and workflow execution.
 KNOWN_ENDPOINTS: Dict[str, str] = load_workflow_endpoints()
+
+
+# ---------------------------------------------------------------------------
+# Reviewable cleanup-chain plans.
+# ---------------------------------------------------------------------------
+def _cleanup_bool(value: Any, default: bool) -> bool:
+    """Coerce the small set of boolean values accepted by the plan API."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value == value:
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off", "", "none", "null"}:
+            return False
+    return default
+
+
+def _cleanup_float(value: Any, default: Optional[float] = None) -> Optional[float]:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number != number or number in (float("inf"), float("-inf")):
+        return default
+    return number
+
+
+def _cleanup_segments(raw_segments: Any, duration: float) -> List[Dict[str, Any]]:
+    """Normalize speech segments for a deterministic, JSON-safe plan."""
+    if not isinstance(raw_segments, list):
+        return []
+    normalized: List[Dict[str, Any]] = []
+    for item in raw_segments:
+        if isinstance(item, Mapping):
+            raw_start = item.get("start", 0.0)
+            raw_end = item.get("end", 0.0)
+            label = str(item.get("label") or "speech")
+        else:
+            raw_start = getattr(item, "start", 0.0)
+            raw_end = getattr(item, "end", 0.0)
+            label = str(getattr(item, "label", "speech") or "speech")
+        start = _cleanup_float(raw_start)
+        end = _cleanup_float(raw_end)
+        if start is None or end is None or end <= start:
+            continue
+        start = max(0.0, min(float(duration), start))
+        end = max(0.0, min(float(duration), end))
+        if end - start <= 1e-6:
+            continue
+        normalized.append({
+            "start": round(start, 4),
+            "end": round(end, 4),
+            "label": label,
+        })
+
+    normalized.sort(key=lambda segment: (segment["start"], segment["end"]))
+    merged: List[Dict[str, Any]] = []
+    for segment in normalized:
+        if merged and segment["start"] <= merged[-1]["end"] + 1e-6:
+            merged[-1]["end"] = round(max(merged[-1]["end"], segment["end"]), 4)
+        else:
+            merged.append(segment)
+    return merged
+
+
+def _cleanup_removed_ranges(
+    kept_segments: List[Dict[str, Any]], duration: float
+) -> List[Dict[str, float]]:
+    """Return the source ranges that the silence step proposes removing."""
+    removed: List[Dict[str, float]] = []
+    cursor = 0.0
+    for segment in kept_segments:
+        start = float(segment["start"])
+        end = float(segment["end"])
+        if start > cursor + 1e-6:
+            removed.append({"start": round(cursor, 4), "end": round(start, 4)})
+        cursor = max(cursor, end)
+    if cursor < duration - 1e-6:
+        removed.append({"start": round(cursor, 4), "end": round(duration, 4)})
+    return removed
+
+
+def cleanup_plan_id(plan: Mapping[str, Any]) -> str:
+    """Return the content hash used to bind an apply request to its preview."""
+    canonical = copy.deepcopy(dict(plan))
+    canonical.pop("plan_id", None)
+    encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def build_cleanup_plan(
+    *,
+    filepath: str,
+    duration: float,
+    speech_segments: Any,
+    options: Optional[Mapping[str, Any]] = None,
+    capabilities: Optional[Mapping[str, Any]] = None,
+    output_dir: str = "",
+    source_loudness: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build a reviewable silence → denoise → loudness → captions plan.
+
+    This function is deliberately side-effect free.  It only normalizes
+    analysis data and declares the artifacts that the apply job may write.
+    Keeping it in the workflow core gives CEP, UXP, and future resumable
+    workflows one stable plan shape to render and validate.
+    """
+    duration_value = _cleanup_float(duration, 0.0) or 0.0
+    if duration_value <= 0:
+        raise ValueError("Cleanup plans require a positive source duration")
+    raw_source_path = str(filepath or "").strip()
+    if not raw_source_path:
+        raise ValueError("Cleanup plans require a source filepath")
+    source_path = os.path.abspath(raw_source_path)
+
+    raw_options = dict(options or {})
+    preset = str(raw_options.get("preset") or "podcast").strip().lower() or "podcast"
+    denoise_method = str(raw_options.get("denoise_method") or "afftdn").strip().lower()
+    if denoise_method not in {"afftdn", "highpass", "gate"}:
+        denoise_method = "afftdn"
+    denoise_strength = _cleanup_float(raw_options.get("denoise_strength"), 0.7)
+    denoise_strength = max(0.0, min(1.0, denoise_strength if denoise_strength is not None else 0.7))
+    requested_target = _cleanup_float(raw_options.get("target_lufs"))
+    if requested_target is None:
+        from opencut.core.loudness_standards import get_loudness_preset
+
+        requested_target = _cleanup_float(
+            get_loudness_preset(preset).get("i"),
+            -16.0,
+        )
+    requested_target = max(-70.0, min(0.0, requested_target or -16.0))
+    captions_requested = _cleanup_bool(raw_options.get("captions", True), True)
+    denoise_requested = _cleanup_bool(raw_options.get("denoise", True), True)
+    loudness_requested = _cleanup_bool(raw_options.get("loudness", True), True)
+
+    kept_segments = _cleanup_segments(speech_segments, duration_value)
+    if not kept_segments:
+        raise ValueError("Cleanup analysis did not produce any keepable speech segments")
+    removed_ranges = _cleanup_removed_ranges(kept_segments, duration_value)
+    removed_seconds = sum(item["end"] - item["start"] for item in removed_ranges)
+
+    caps = dict(capabilities or {})
+    ffmpeg_available = _cleanup_bool(caps.get("ffmpeg", True), True)
+    captions_available = _cleanup_bool(caps.get("captions_available", False), False)
+    captions_backend = str(caps.get("captions_backend") or "none")
+    captions_reason = str(caps.get("captions_reason") or "")
+    if not captions_reason and not captions_available:
+        captions_reason = "No caption backend is installed"
+
+    artifact_dir = os.path.abspath(str(output_dir or os.path.dirname(source_path)))
+    base_name, extension = os.path.splitext(os.path.basename(source_path))
+    artifacts = {
+        "output_dir": artifact_dir,
+        "denoised_path": os.path.join(artifact_dir, f"{base_name}_cleanup_denoised{extension}"),
+        "normalized_path": os.path.join(artifact_dir, f"{base_name}_cleanup{extension}"),
+        "xml_path": os.path.join(artifact_dir, f"{base_name}_cleanup.xml"),
+        "srt_path": os.path.join(artifact_dir, f"{base_name}_cleanup.srt"),
+    }
+
+    def _step(step_id: str, label: str, state: str, **details: Any) -> Dict[str, Any]:
+        return {
+            "id": step_id,
+            "label": label,
+            "state": state,
+            "status": state,
+            **details,
+        }
+
+    denoise_details: Dict[str, Any] = {
+        "requested": denoise_requested,
+        "method": denoise_method,
+        "strength": round(denoise_strength, 4),
+        "output_path": artifacts["denoised_path"],
+    }
+    if denoise_requested and ffmpeg_available:
+        denoise_details["capability"] = "ffmpeg"
+    else:
+        denoise_details["reason"] = (
+            "Disabled by user" if not denoise_requested else "FFmpeg is unavailable"
+        )
+
+    loudness_details: Dict[str, Any] = {
+        "requested": loudness_requested,
+        "preset": preset,
+        "target_lufs": requested_target,
+        "output_path": artifacts["normalized_path"],
+    }
+    if loudness_requested and ffmpeg_available:
+        loudness_details["capability"] = "ffmpeg"
+    else:
+        loudness_details["reason"] = (
+            "Disabled by user" if not loudness_requested else "FFmpeg is unavailable"
+        )
+
+    captions_details: Dict[str, Any] = {
+        "requested": captions_requested,
+        "backend": captions_backend,
+        "output_path": artifacts["srt_path"],
+    }
+    if captions_requested and captions_available:
+        captions_details["capability"] = captions_backend
+    else:
+        captions_details["reason"] = (
+            "Disabled by user" if not captions_requested else captions_reason
+        )
+
+    steps = [
+        _step(
+            "silence_trim",
+            "Trim silence",
+            "ready",
+            proposed_changes=removed_ranges,
+            kept_segments=len(kept_segments),
+            removed_seconds=round(removed_seconds, 4),
+        ),
+        _step(
+            "denoise",
+            "Remove background noise",
+            "ready" if denoise_requested and ffmpeg_available else "skipped",
+            **denoise_details,
+        ),
+        _step(
+            "loudness",
+            "Normalize loudness",
+            "ready" if loudness_requested and ffmpeg_available else "skipped",
+            **loudness_details,
+        ),
+        _step(
+            "captions",
+            "Generate captions",
+            "ready" if captions_requested and captions_available else "skipped",
+            **captions_details,
+        ),
+    ]
+
+    normalized_options = {
+        "preset": preset,
+        "denoise": denoise_requested,
+        "denoise_method": denoise_method,
+        "denoise_strength": round(denoise_strength, 4),
+        "loudness": loudness_requested,
+        "target_lufs": requested_target,
+        "captions": captions_requested,
+    }
+    plan: Dict[str, Any] = {
+        "schema_version": CLEANUP_PLAN_SCHEMA_VERSION,
+        "chain": CLEANUP_CHAIN_ID,
+        "verb": "cleanup",
+        "preview_only": True,
+        "requires_confirmation": True,
+        "reversible": True,
+        "source": {
+            "filepath": source_path,
+            "duration": round(duration_value, 4),
+        },
+        "options": normalized_options,
+        "steps": steps,
+        "segments_data": kept_segments,
+        "removed_ranges": removed_ranges,
+        "artifacts": artifacts,
+        "summary": {
+            "removed_seconds": round(removed_seconds, 4),
+            "kept_segments": len(kept_segments),
+            "removed_ranges": len(removed_ranges),
+            "ready_steps": sum(step["state"] == "ready" for step in steps),
+            "skipped_steps": sum(step["state"] == "skipped" for step in steps),
+        },
+    }
+    if source_loudness:
+        plan["source_loudness"] = dict(source_loudness)
+    plan["plan_id"] = cleanup_plan_id(plan)
+    return plan
+
+
+def validate_cleanup_plan(
+    plan: Any,
+    *,
+    filepath: str = "",
+) -> Tuple[bool, str]:
+    """Validate a client-returned cleanup plan before the apply job writes."""
+    if not isinstance(plan, Mapping):
+        return False, "Cleanup plan must be an object"
+    if plan.get("schema_version") != CLEANUP_PLAN_SCHEMA_VERSION:
+        return False, "Unsupported cleanup plan schema version"
+    if plan.get("chain") != CLEANUP_CHAIN_ID or plan.get("verb") != "cleanup":
+        return False, "Invalid cleanup plan chain"
+    if not plan.get("preview_only"):
+        return False, "Cleanup apply requires a preview plan"
+    if not isinstance(plan.get("steps"), list) or len(plan["steps"]) != len(CLEANUP_STEP_IDS):
+        return False, "Cleanup plan has an invalid step list"
+    step_ids = [step.get("id") for step in plan["steps"] if isinstance(step, Mapping)]
+    if step_ids != list(CLEANUP_STEP_IDS):
+        return False, "Cleanup plan steps are out of order"
+    source = plan.get("source")
+    if not isinstance(source, Mapping) or not str(source.get("filepath") or "").strip():
+        return False, "Cleanup plan is missing its source filepath"
+    if filepath:
+        expected = os.path.normcase(os.path.abspath(str(filepath)))
+        actual = os.path.normcase(os.path.abspath(str(source.get("filepath"))))
+        if expected != actual:
+            return False, "Cleanup plan source does not match the requested file"
+    if not isinstance(plan.get("segments_data"), list) or not plan["segments_data"]:
+        return False, "Cleanup plan has no keepable speech segments"
+    supplied_id = str(plan.get("plan_id") or "")
+    if not supplied_id or supplied_id != cleanup_plan_id(plan):
+        return False, "Cleanup plan id does not match its contents"
+    return True, ""
 
 
 def validate_workflow_steps(steps: List[Dict[str, Any]]) -> Tuple[bool, str]:

@@ -105,6 +105,7 @@
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
+    var _pendingCleanupPlan = null;
     var jobLifecycleHandlers = OpenCutJobLifecycle.createJobLifecycleRegistry();
     var _utilityJobSeq = 0;
     var _waveformRequestSeq = 0;
@@ -1587,6 +1588,11 @@
         el.fullCaptions = $("fullCaptions");
         el.fullFillers = $("fullFillers");
         el.runFullBtn = $("runFullBtn");
+        el.runCleanupChainBtn = $("runCleanupChainBtn");
+        el.cleanupChainReview = $("cleanupChainReview");
+        el.cleanupChainReviewSummary = $("cleanupChainReviewSummary");
+        el.cleanupChainSteps = $("cleanupChainSteps");
+        el.applyCleanupChainBtn = $("applyCleanupChainBtn");
         el.autoEditMethod = $("autoEditMethod");
         el.autoEditThreshold = $("autoEditThreshold");
         el.autoEditMargin = $("autoEditMargin");
@@ -3881,7 +3887,7 @@
     // ================================================================
     // All buttons that require a clip to be selected
     var _clipButtons = [
-        "runSilenceBtn", "runFillersBtn", "runFullBtn",
+        "runSilenceBtn", "runFillersBtn", "runFullBtn", "runCleanupChainBtn",
         "runStyledCaptionsBtn", "runSubtitleBtn", "runTranscriptBtn",
         "runSeparateBtn", "runDenoiseBtn", "measureLoudnessBtn",
         "runNormalizeBtn", "runBeatsBtn", "runEffectBtn",
@@ -4739,7 +4745,7 @@
 
         // Auto-import into Premiere (respect global setting)
         var autoImportEnabled = el.settingsAutoImport ? el.settingsAutoImport.checked : true;
-        if (job.result && inPremiere && autoImportEnabled) {
+        if (job.result && inPremiere && autoImportEnabled && !job.result.requires_host_review) {
             // XML edit list (silence removal, filler removal, etc.)
             var xmlPath = job.result.xml_path;
             if (xmlPath) {
@@ -5180,6 +5186,166 @@
             custom_words: custom,
             remove_silence: el.fillerSilence.checked,
             filler_backend: fillerBackend,
+        });
+    }
+
+    function _cleanupHostJson(raw) {
+        if (raw && typeof raw === "object") return raw;
+        try { return JSON.parse(raw || "{}"); }
+        catch (e) { return { error: raw || e.message }; }
+    }
+
+    function renderCleanupChainPreview(plan) {
+        if (!plan || !el.cleanupChainReview || !el.cleanupChainSteps) return;
+        _pendingCleanupPlan = plan;
+        el.cleanupChainReview.classList.remove("hidden");
+        var summary = plan.summary || {};
+        if (el.cleanupChainReviewSummary) {
+            el.cleanupChainReviewSummary.textContent = t(
+                "cleanup_chain.review_summary",
+                "{ranges} silence range{plural} proposed ({seconds}s removed). Review the full chain before applying it."
+            ).replace("{ranges}", Number(summary.removed_ranges || 0))
+                .replace("{plural}", Number(summary.removed_ranges || 0) === 1 ? "" : "s")
+                .replace("{seconds}", Number(summary.removed_seconds || 0).toFixed(1));
+        }
+        el.cleanupChainSteps.innerHTML = "";
+        var steps = Array.isArray(plan.steps) ? plan.steps : [];
+        for (var i = 0; i < steps.length; i++) {
+            var step = steps[i] || {};
+            var row = document.createElement("div");
+            row.className = "cleanup-chain-step" + (step.state === "skipped" ? " is-skipped" : "");
+            var label = document.createElement("strong");
+            label.textContent = step.label || step.id || t("cleanup_chain.step", "Cleanup step");
+            var status = document.createElement("span");
+            status.className = "cleanup-chain-step-status";
+            status.textContent = step.state === "skipped"
+                ? t("cleanup_chain.skipped", "Skipped")
+                : t("cleanup_chain.ready", "Ready");
+            row.appendChild(label);
+            row.appendChild(status);
+            var reason = step.reason || "";
+            if (reason) row.title = reason;
+            el.cleanupChainSteps.appendChild(row);
+        }
+        if (el.applyCleanupChainBtn) {
+            el.applyCleanupChainBtn.classList.remove("hidden");
+            el.applyCleanupChainBtn.disabled = false;
+        }
+        if (typeof el.cleanupChainReview.focus === "function") el.cleanupChainReview.focus();
+    }
+
+    function _cleanupChainPayload(plan) {
+        var preset = el.fullPreset ? el.fullPreset.value : "podcast";
+        return {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            cleanup_preset: preset || "podcast",
+            denoise: true,
+            loudness: true,
+            captions: el.fullCaptions ? el.fullCaptions.checked : true,
+            plan: plan || undefined,
+        };
+    }
+
+    function importCleanupChainResult(result, sourcePath) {
+        if (!result || !result.xml_path) return;
+        if (!inPremiere) {
+            showToast(t("cleanup_chain.artifacts_ready", "Cleanup artifacts are ready: {path}")
+                .replace("{path}", result.xml_path), "success");
+            return;
+        }
+        var forwardPayload = {
+            filepath: sourcePath,
+            output_dir: result.output_dir || projectFolder,
+            cleanup_plan: _pendingCleanupPlan || null,
+        };
+        journalCheckpointedHostWrite({
+            action: "import_sequence",
+            label: t("cleanup_chain.journal_label", "Import Magic Cleanup sequence"),
+            clipPath: sourcePath,
+            forward: { endpoint: "/cleanup/apply", payload: forwardPayload },
+            preview: {
+                clips: selectedName ? [selectedName] : [],
+                settings: {
+                    artifact: result.xml_path,
+                    captions_artifact: result.srt_path || "",
+                    chain: result.chain || "standard-cleanup",
+                    plan_id: result.plan_id || "",
+                },
+            },
+            inverseFromResult: function (r) { return r.sequence_name ? { name: r.sequence_name } : {}; }
+        }, function (cb) {
+            PremiereBridge.importXML(result.xml_path, function (rawXml) {
+                var imported = _cleanupHostJson(rawXml);
+                if (imported.error || !result.srt_path || !PremiereBridge.importCaptions) {
+                    cb(JSON.stringify(imported));
+                    return;
+                }
+                PremiereBridge.importCaptions(result.srt_path, function (rawCaptions) {
+                    var captions = _cleanupHostJson(rawCaptions);
+                    if (captions.error) {
+                        cb(JSON.stringify({
+                            error: t("cleanup_chain.caption_import_failed", "Sequence imported, but captions could not be added: {error}")
+                                .replace("{error}", captions.error),
+                            sequence_name: imported.sequence_name || "",
+                        }));
+                        return;
+                    }
+                    imported.captions = captions;
+                    cb(JSON.stringify(imported));
+                });
+            });
+        }, function (r) {
+            if (r.error) {
+                showAlert(t("cleanup_chain.import_failed", "Cleanup import failed: {error}").replace("{error}", r.error));
+            } else {
+                showToast(t("cleanup_chain.imported", "Magic Cleanup imported as one reversible Premiere sequence."), "success");
+            }
+        });
+    }
+
+    function runCleanupChainPreview() {
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
+        _pendingCleanupPlan = null;
+        if (el.applyCleanupChainBtn) el.applyCleanupChainBtn.classList.add("hidden");
+        startJob("/cleanup/preview", _cleanupChainPayload(), {
+            onComplete: function (result) {
+                if (result && result.cleanup_plan) {
+                    renderCleanupChainPreview(result.cleanup_plan);
+                    showToast(t("cleanup_chain.preview_ready", "Magic Cleanup preview ready for review."), "success");
+                }
+            }
+        });
+    }
+
+    function applyCleanupChain() {
+        var plan = _pendingCleanupPlan;
+        if (!plan || !plan.source || !plan.source.filepath) {
+            showAlert(t("cleanup_chain.preview_required", "Preview the cleanup chain before applying it."));
+            return;
+        }
+        var sourcePath = plan.source.filepath;
+        if (el.applyCleanupChainBtn) el.applyCleanupChainBtn.disabled = true;
+        startJob("/cleanup/apply", {
+            filepath: sourcePath,
+            output_dir: plan.artifacts && plan.artifacts.output_dir ? plan.artifacts.output_dir : projectFolder,
+            cleanup_plan: plan,
+        }, {
+            onComplete: function (result) {
+                if (result && result.cleanup_chain) {
+                    if (el.applyCleanupChainBtn) el.applyCleanupChainBtn.classList.add("hidden");
+                    if (el.cleanupChainReviewSummary) {
+                        el.cleanupChainReviewSummary.textContent = t(
+                            "cleanup_chain.applied_summary",
+                            "Cleanup artifacts prepared. Premiere will receive the reviewed pass as one journaled write."
+                        );
+                    }
+                    importCleanupChainResult(result, sourcePath);
+                }
+            },
+            onStartError: function () {
+                if (el.applyCleanupChainBtn) el.applyCleanupChainBtn.disabled = false;
+            }
         });
     }
 
@@ -17432,6 +17598,8 @@
         _on("runSilenceBtn", "click", runSilence);
         _on("runFillersBtn", "click", runFillers);
         _on("applyFillerBoundariesBtn", "click", applyReviewedFillerBoundaries);
+        _on("runCleanupChainBtn", "click", runCleanupChainPreview);
+        _on("applyCleanupChainBtn", "click", applyCleanupChain);
         _on("runFullBtn", "click", runFull);
         _on("fillerBackend", "change", updateButtons);
 
@@ -17907,7 +18075,7 @@
         var qClean = document.getElementById("quickCleanInterview");
         var qYT = document.getElementById("quickYouTube");
         var qPod = document.getElementById("quickPodcast");
-        if (qClean) qClean.addEventListener("click", function () { _quickWorkflow("Clean Interview"); });
+        if (qClean) qClean.addEventListener("click", runCleanupChainPreview);
         if (qYT) qYT.addEventListener("click", function () { _quickWorkflow("YouTube Upload"); });
         if (qPod) qPod.addEventListener("click", function () { _quickWorkflow("Podcast Polish"); });
 

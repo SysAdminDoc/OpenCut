@@ -320,14 +320,14 @@
             <!-- ======== TAB: CUT ======== -->
             <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean" data-i18n-aria-label="headers.cut">
                 <div class="quick-actions" id="quickActionsCut">
-                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up" data-i18n-title="quick_actions.clean_up_title">
+                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Preview silence trim, denoise, loudness, and captions as one reversible pass" data-i18n="cut.clean_up" data-i18n-title="quick_actions.clean_up_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.25h3l1.7-4.25 2.1 8.5 1.45-4.25h2.75"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label" data-i18n="cut.clean_up">Clean Up</span>
-                                <span class="quick-action-meta" data-i18n="quick_actions.clean_up_meta">Silence trim plus balanced loudness</span>
+                                <span class="btn-label" data-i18n="cut.clean_up">Magic Cleanup</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.clean_up_meta">Reviewable cleanup pass</span>
                             </span>
                         </span>
                         <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
@@ -570,7 +570,14 @@
                         <label class="checkbox-row"><input type="checkbox" id="fullZoom" checked> <span data-i18n="cut.auto_zoom">Auto Zoom</span></label>
                         <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> <span data-i18n="cut.captions_srt">Captions (SRT)</span></label>
                         <label class="checkbox-row"><input type="checkbox" id="fullFillers"> <span data-i18n="cut.remove_fillers">Remove Filler Words</span></label>
+                        <button type="button" class="btn-primary" id="runCleanupChainBtn" disabled data-i18n="cleanup_chain.preview">Preview Magic Cleanup</button>
                         <button type="button" class="btn-primary" id="runFullBtn" disabled data-i18n="cut.full_run">Run Full Pipeline</button>
+                        <div class="cleanup-chain-review hidden" id="cleanupChainReview" role="region" aria-live="polite" aria-labelledby="cleanupChainReviewTitle">
+                            <div class="card-title" id="cleanupChainReviewTitle" data-i18n="cleanup_chain.review_title">Magic Cleanup Review</div>
+                            <p class="card-desc" id="cleanupChainReviewSummary" data-i18n="cleanup_chain.review_hint">Review every proposed cleanup step before OpenCut writes an artifact or changes Premiere.</p>
+                            <div class="cleanup-chain-steps" id="cleanupChainSteps"></div>
+                            <button type="button" class="btn-primary hidden" id="applyCleanupChainBtn" data-i18n="cleanup_chain.apply">Apply Reviewed Cleanup</button>
+                        </div>
                     </section>
                 </div>
 
