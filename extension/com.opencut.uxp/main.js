@@ -33,6 +33,7 @@ import { createUxpUiController } from "./uxp-ui-controller.js";
 import { createUxpUpdateController } from "./uxp-update-controller.js";
 import { createUxpSettingsController } from "./uxp-settings-controller.js";
 import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
+import { createTranscriptCorrectionController } from "./uxp-transcript-correction-controller.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -1986,14 +1987,31 @@ function updateCapabilityHints(capabilities) {
     if (element) element.classList.toggle("oc-hidden", available);
   }
 }
-
 const BackendClient = createBackendClient({
   state: runtimeState,
   fetchWithTimeout,
   isTimeoutError,
   onCapabilities: updateCapabilityHints,
 });
-
+const transcriptCorrectionController = createTranscriptCorrectionController({
+  isConnected: isBackendConnected,
+  getSegments: () => _lastTranscriptSegments,
+  projectPath: () => document.getElementById("clipPathCaptions")?.value?.trim() || "default",
+  post: (...args) => BackendClient.post(...args),
+  t,
+  formatI18n,
+  updateResult: (segments) => {
+    _lastTranscriptSegments = Array.isArray(segments) ? segments : [];
+    const text = _lastTranscriptSegments.map((segment) => segment.text || "").join(" ");
+    if (_lastCaptionsResult) {
+      _lastCaptionsResult.content = text;
+      _lastCaptionsResult.contentTitle = text;
+    }
+    const body = document.getElementById("captionsResultBody");
+    if (body) body.value = text;
+    updateCaptionsWorkspaceSummary();
+  },
+});
 async function runCheckpointedUxpHostWrite(spec, writeHost) {
   if (runtimeState.backendVersion &&
       !isVersionAtLeast(runtimeState.backendVersion, CHECKPOINT_MIN_BACKEND_VERSION)) {
@@ -2405,6 +2423,7 @@ function syncCaptionsActionButtons() {
           "SRT Prep becomes available after a transcript pass produces subtitle output."
         );
   }
+  syncTranscriptCorrectionControlsUxp();
 }
 
 function updateCaptionsPlanSummary() {
@@ -4172,6 +4191,7 @@ async function runTranscribe() {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
       if (Array.isArray(result?.segments)) _lastTranscriptSegments = result.segments;
+      transcriptCorrectionController.reset();
       showCaptionsResult(result);
       UIController.showToast(t("uxp.captions.runtime.transcription_complete", "Transcription complete."), "success");
       UIController.setStatus(t("uxp.captions.runtime.transcription_done_status", "Transcription done."));
@@ -4198,6 +4218,10 @@ async function runTranscribe() {
     }
   );
 }
+function syncTranscriptCorrectionControlsUxp() { transcriptCorrectionController.sync(); }
+function runTranscriptCorrectionPreviewUxp() { return transcriptCorrectionController.preview(); }
+function runTranscriptCorrectionApplyUxp() { return transcriptCorrectionController.apply(); }
+function undoTranscriptCorrectionUxp() { return transcriptCorrectionController.undo(); }
 
 function showCaptionsResult(result) {
   if (Array.isArray(result?.segments)) _lastTranscriptSegments = result.segments;
@@ -6770,6 +6794,18 @@ function bindEvents() {
   // ── Captions ──
   document.getElementById("browseClipCaptions")?.addEventListener("click", () => browseFile("clipPathCaptions"));
   document.getElementById("runTranscribeBtn")?.addEventListener("click", runTranscribe);
+  document.getElementById("uxpTranscriptPreviewBtn")?.addEventListener("click", runTranscriptCorrectionPreviewUxp);
+  document.getElementById("uxpTranscriptApplyBtn")?.addEventListener("click", runTranscriptCorrectionApplyUxp);
+  document.getElementById("uxpTranscriptUndoBtn")?.addEventListener("click", undoTranscriptCorrectionUxp);
+  ["uxpTranscriptFindInput", "uxpTranscriptReplaceInput", "uxpTranscriptCaseSensitive", "uxpTranscriptWholeWord", "uxpTranscriptSaveGlossary"].forEach((id) => {
+    const control = document.getElementById(id);
+    if (!control) return;
+    const reset = () => {
+      transcriptCorrectionController.clearPending();
+    };
+    control.addEventListener("input", reset);
+    control.addEventListener("change", reset);
+  });
   document.getElementById("installWhisperBtn")?.addEventListener("click", installWhisperUxp);
   document.getElementById("runTranslateBtn")?.addEventListener("click", runCaptionTranslation);
   document.getElementById("installTranslationBtn")?.addEventListener("click", installTranslationBackendUxp);

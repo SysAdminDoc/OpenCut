@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 16,
-    "GET": 381,
+    "GET": 382,
     "PATCH": 1,
-    "POST": 1062,
+    "POST": 1066,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1462,
+  "tool_count": 1467,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -10301,6 +10301,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_timeline_sequence_index_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /transcript-edit/glossary"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /transcript-edit/glossary.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "transcript_edit",
+        "endpoint": "transcript_edit.get_transcript_glossary_route",
+        "generated": true,
+        "method": "GET",
+        "path": "/transcript-edit/glossary",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_transcript_edit_glossary"
     },
     {
       "annotations": {
@@ -36944,6 +36974,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /transcript-edit/corrections/apply"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /transcript-edit/corrections/apply.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "transcript_edit",
+        "endpoint": "transcript_edit.apply_transcript_corrections_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/transcript-edit/corrections/apply",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_transcript_edit_corrections_apply"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /transcript-edit/corrections/preview"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /transcript-edit/corrections/preview.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "transcript_edit",
+        "endpoint": "transcript_edit.preview_transcript_corrections_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/transcript-edit/corrections/preview",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_transcript_edit_corrections_preview"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /transcript-edit/corrections/undo"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /transcript-edit/corrections/undo.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "transcript_edit",
+        "endpoint": "transcript_edit.undo_transcript_corrections_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/transcript-edit/corrections/undo",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_transcript_edit_corrections_undo"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /transcript-edit/delete-words"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /transcript-edit/delete-words.",
@@ -36999,6 +37119,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_transcript_edit_export"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /transcript-edit/glossary"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /transcript-edit/glossary.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "transcript_edit",
+        "endpoint": "transcript_edit.save_transcript_glossary_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/transcript-edit/glossary",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_transcript_edit_glossary"
     },
     {
       "annotations": {

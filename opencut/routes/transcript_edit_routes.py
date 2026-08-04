@@ -5,16 +5,20 @@ Transcript-based editing (1.1) and AI rough cut assembly (21.3).
 """
 
 import logging
+import uuid
 
-from flask import Blueprint
+from flask import Blueprint, jsonify, request
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    build_destructive_plan,
+    destructive_confirmation_required_response,
     require_csrf,
     safe_bool,
     validate_filepath,
     validate_path,
+    verify_destructive_confirm_token,
 )
 
 logger = logging.getLogger("opencut")
@@ -25,6 +29,232 @@ transcript_edit_bp = Blueprint("transcript_edit", __name__)
 # ---------------------------------------------------------------------------
 # Transcript-Based Editing Routes
 # ---------------------------------------------------------------------------
+
+
+def _correction_request_data() -> dict:
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValueError("JSON body must be an object")
+    return payload
+
+
+def _correction_segments(data: dict) -> list:
+    source = data.get("segments")
+    if source is None:
+        source = data.get("transcript", data.get("transcript_json"))
+    if isinstance(source, dict):
+        source = source.get("segments")
+    if not isinstance(source, list):
+        raise ValueError("segments or transcript.segments is required")
+    return source
+
+
+def _correction_project_path(data: dict) -> str:
+    project_path = data.get("project_path") or data.get("filepath") or "default"
+    if not isinstance(project_path, str) or len(project_path) > 2_000:
+        raise ValueError("project_path must be a string")
+    return project_path.strip() or "default"
+
+
+def _correction_preview(data: dict) -> tuple[dict, str, dict]:
+    from opencut.core.transcript_corrections import (
+        normalize_correction_rules,
+        preview_transcript_corrections,
+        project_identity,
+    )
+
+    project_path = _correction_project_path(data)
+    rules = normalize_correction_rules(
+        data.get("rules"),
+        find=data.get("find"),
+        replace=data.get("replace"),
+        case_sensitive=safe_bool(data.get("case_sensitive", False), False),
+        whole_word=safe_bool(data.get("whole_word", False), False),
+    )
+    if not rules:
+        raise ValueError("At least one correction rule is required")
+    preview = preview_transcript_corrections(_correction_segments(data), rules)
+    save_to_glossary = safe_bool(data.get("save_to_glossary", False), False)
+    plan = build_destructive_plan(
+        "transcript_bulk_correction",
+        targets=[project_identity(project_path)],
+        records=[preview["summary"]],
+        metadata={
+            "project_id": project_identity(project_path),
+            "source_hash": preview["summary"]["source_hash"],
+            "rules": preview["rules"],
+            "save_to_glossary": save_to_glossary,
+        },
+        reversible=True,
+    )
+    return preview, project_path, plan
+
+
+def _correction_preview_response(preview: dict, plan: dict) -> dict:
+    return {
+        "dry_run": True,
+        "preview": True,
+        "segments": preview["segments"],
+        "corrected_segments": preview["segments"],
+        "changes": preview["changes"],
+        "summary": preview["summary"],
+        "rules": preview["rules"],
+        "plan": plan,
+        "confirm_token": plan["confirm_token"],
+    }
+
+
+@transcript_edit_bp.route("/transcript-edit/corrections/preview", methods=["POST"])
+@require_csrf
+def preview_transcript_corrections_route():
+    """Preview literal bulk transcript corrections without mutating state."""
+    try:
+        preview, _project_path, plan = _correction_preview(_correction_request_data())
+        return jsonify(_correction_preview_response(preview, plan))
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Transcript correction preview failed")
+        return jsonify({"error": str(exc), "code": "CORRECTION_PREVIEW_FAILED"}), 500
+
+
+@transcript_edit_bp.route("/transcript-edit/corrections/apply", methods=["POST"])
+@require_csrf
+def apply_transcript_corrections_route():
+    """Apply a reviewed transcript correction and persist an undo record."""
+    try:
+        data = _correction_request_data()
+        preview, project_path, plan = _correction_preview(data)
+        if safe_bool(data.get("dry_run", data.get("preview", False)), False):
+            return jsonify(_correction_preview_response(preview, plan))
+        if not verify_destructive_confirm_token(plan, data.get("confirm_token")):
+            return jsonify(destructive_confirmation_required_response(plan)), 409
+
+        from opencut.user_data import (
+            load_transcript_glossary,
+            save_transcript_correction_revision,
+            save_transcript_glossary,
+        )
+
+        revision = {
+            "id": uuid.uuid4().hex,
+            "before_segments": preview["original_segments"],
+            "after_segments": preview["segments"],
+            "changes": preview["changes"],
+            "summary": preview["summary"],
+            "rules": preview["rules"],
+        }
+        save_transcript_correction_revision(project_path, revision)
+
+        glossary = load_transcript_glossary(project_path)
+        if safe_bool(data.get("save_to_glossary", False), False):
+            from opencut.core.transcript_corrections import merge_glossary_rules
+
+            glossary = save_transcript_glossary(
+                project_path,
+                merge_glossary_rules(glossary, preview["rules"]),
+            )
+        return jsonify(
+            {
+                "applied": True,
+                "segments": preview["segments"],
+                "corrected_segments": preview["segments"],
+                "changes": preview["changes"],
+                "summary": preview["summary"],
+                "rules": preview["rules"],
+                "undo_token": revision["id"],
+                "glossary": glossary,
+                "plan": plan,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Transcript correction apply failed")
+        return jsonify({"error": str(exc), "code": "CORRECTION_APPLY_FAILED"}), 500
+
+
+@transcript_edit_bp.route("/transcript-edit/corrections/undo", methods=["POST"])
+@require_csrf
+def undo_transcript_corrections_route():
+    """Return the prior transcript snapshot for a previously applied correction."""
+    try:
+        data = _correction_request_data()
+        project_path = _correction_project_path(data)
+        undo_token = data.get("undo_token")
+        if not isinstance(undo_token, str) or not undo_token:
+            raise ValueError("undo_token is required")
+        from opencut.user_data import (
+            get_transcript_correction_revision,
+            mark_transcript_correction_undone,
+        )
+
+        revision = get_transcript_correction_revision(project_path, undo_token)
+        if revision is None:
+            return jsonify({"error": "Correction undo record not found", "code": "UNDO_NOT_FOUND"}), 404
+        restored = mark_transcript_correction_undone(project_path, undo_token) or revision
+        return jsonify(
+            {
+                "undone": True,
+                "segments": restored.get("before_segments", []),
+                "summary": restored.get("summary", {}),
+                "undo_token": undo_token,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Transcript correction undo failed")
+        return jsonify({"error": str(exc), "code": "CORRECTION_UNDO_FAILED"}), 500
+
+
+@transcript_edit_bp.route("/transcript-edit/glossary", methods=["GET"])
+def get_transcript_glossary_route():
+    """Return the persisted correction glossary for one project."""
+    try:
+        project_path = _correction_project_path(request.args.to_dict())
+        from opencut.user_data import load_transcript_glossary
+
+        return jsonify({"project_id": project_path, "rules": load_transcript_glossary(project_path)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+
+
+@transcript_edit_bp.route("/transcript-edit/glossary", methods=["POST"])
+@require_csrf
+def save_transcript_glossary_route():
+    """Add or replace persisted correction terms for one project."""
+    try:
+        data = _correction_request_data()
+        project_path = _correction_project_path(data)
+        from opencut.core.transcript_corrections import (
+            merge_glossary_rules,
+            normalize_correction_rules,
+        )
+        from opencut.user_data import load_transcript_glossary, save_transcript_glossary
+
+        rules = normalize_correction_rules(
+            data.get("rules"),
+            find=data.get("find"),
+            replace=data.get("replace"),
+            case_sensitive=safe_bool(data.get("case_sensitive", False), False),
+            whole_word=safe_bool(data.get("whole_word", False), False),
+        )
+        if not rules:
+            raise ValueError("At least one glossary rule is required")
+        if safe_bool(data.get("replace_all", False), False):
+            glossary = save_transcript_glossary(project_path, rules)
+        else:
+            glossary = save_transcript_glossary(
+                project_path,
+                merge_glossary_rules(load_transcript_glossary(project_path), rules),
+            )
+        return jsonify({"saved": True, "rules": glossary})
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Transcript glossary save failed")
+        return jsonify({"error": str(exc), "code": "GLOSSARY_SAVE_FAILED"}), 500
 
 @transcript_edit_bp.route("/transcript-edit/build-map", methods=["POST"])
 @require_csrf

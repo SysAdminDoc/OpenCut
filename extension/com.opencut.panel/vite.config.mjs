@@ -52,6 +52,7 @@ const classicScriptFiles = [
   "settings-diagnostics-controller.js",
   "navigation-controller.js",
   "bootstrap.js",
+  "transcript-correction-controller.js",
   "main.js",
 ];
 const classicScriptTag = /<script\s+src="([^"]+\.js)"\s*><\/script>/g;

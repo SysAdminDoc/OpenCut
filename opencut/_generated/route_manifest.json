@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T15:00:30Z",
-  "total_routes": 1577,
-  "shipped_route_count": 1552,
+  "generated_at": "2026-08-04T15:42:11Z",
+  "total_routes": 1582,
+  "shipped_route_count": 1557,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
-    "GET": 402,
+    "GET": 403,
     "PATCH": 1,
-    "POST": 1159,
+    "POST": 1163,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1524,
+    "implemented": 1529,
     "stub": 25
   },
   "blueprints": {
@@ -949,14 +949,15 @@
       ]
     },
     "transcript_edit": {
-      "route_count": 9,
+      "route_count": 14,
       "method_counts": {
-        "POST": 9
+        "GET": 1,
+        "POST": 13
       },
       "sample_rules": [
-        "/transcript-edit/apply-edits",
-        "/transcript-edit/build-map",
-        "/transcript-edit/delete-words"
+        "/transcript-edit/corrections/apply",
+        "/transcript-edit/corrections/preview",
+        "/transcript-edit/corrections/undo"
       ]
     },
     "utility": {
@@ -21241,6 +21242,54 @@
       ]
     },
     {
+      "rule": "/transcript-edit/corrections/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "transcript_edit.apply_transcript_corrections_route",
+      "blueprint": "transcript_edit",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.uxp/uxp-transcript-correction-controller.js"
+      ]
+    },
+    {
+      "rule": "/transcript-edit/corrections/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "transcript_edit.preview_transcript_corrections_route",
+      "blueprint": "transcript_edit",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.uxp/uxp-transcript-correction-controller.js"
+      ]
+    },
+    {
+      "rule": "/transcript-edit/corrections/undo",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "transcript_edit.undo_transcript_corrections_route",
+      "blueprint": "transcript_edit",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.uxp/uxp-transcript-correction-controller.js"
+      ]
+    },
+    {
       "rule": "/transcript-edit/delete-words",
       "methods": [
         "POST"
@@ -21262,6 +21311,38 @@
         "POST"
       ],
       "endpoint": "transcript_edit.export_route",
+      "blueprint": "transcript_edit",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
+      "rule": "/transcript-edit/glossary",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "transcript_edit.get_transcript_glossary_route",
+      "blueprint": "transcript_edit",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
+      "rule": "/transcript-edit/glossary",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "transcript_edit.save_transcript_glossary_route",
       "blueprint": "transcript_edit",
       "readiness": "implemented",
       "surface_class": "integration-only",
@@ -26926,6 +27007,7 @@
         "extension/com.opencut.uxp/uxp-state.js",
         "extension/com.opencut.uxp/uxp-theme.js",
         "extension/com.opencut.uxp/uxp-timeline.js",
+        "extension/com.opencut.uxp/uxp-transcript-correction-controller.js",
         "extension/com.opencut.uxp/uxp-ui-controller.js",
         "extension/com.opencut.uxp/uxp-update-controller.js",
         "extension/com.opencut.uxp/uxp-utils.js"
@@ -26948,24 +27030,24 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1552,
-      "direct_surface_routes": 268,
-      "integration_only_routes": 1284,
-      "coverage_percent": 17.3,
+      "shipped_routes": 1557,
+      "direct_surface_routes": 271,
+      "integration_only_routes": 1286,
+      "coverage_percent": 17.4,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 213,
+        "panel": 216,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
-        "integration-only": 1309
+        "integration-only": 1311
       },
       "assigned_counts": {
-        "panel": 213,
+        "panel": 216,
         "palette": 33,
         "cli": 1,
         "mcp": 92,
-        "integration-only": 1309
+        "integration-only": 1311
       }
     },
     "gate": {

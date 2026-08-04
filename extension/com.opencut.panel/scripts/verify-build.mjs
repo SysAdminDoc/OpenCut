@@ -37,6 +37,7 @@ const CLASSIC_SCRIPT_FILES = [
   "cep-theme.js",
   "timeline-utils.js",
   "onboarding-state.js",
+  "transcript-correction-controller.js",
   "bootstrap.js",
   "main.js",
 ];
