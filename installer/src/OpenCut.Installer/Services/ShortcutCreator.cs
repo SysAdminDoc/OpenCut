@@ -5,6 +5,23 @@ namespace OpenCut.Installer.Services;
 
 public class ShortcutCreator
 {
+    public static IReadOnlyList<string> GetShortcutPaths()
+    {
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        var programs = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+        var startup = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+        var startMenu = Path.Combine(programs, "OpenCut");
+
+        return
+        [
+            Path.Combine(desktop, "OpenCut.lnk"),
+            Path.Combine(startMenu, "OpenCut Server.lnk"),
+            Path.Combine(startMenu, "OpenCut Server (Console).lnk"),
+            Path.Combine(startMenu, "Uninstall OpenCut.lnk"),
+            Path.Combine(startup, "OpenCut.lnk"),
+        ];
+    }
+
     public void CreateShortcuts(InstallConfig config, IProgress<InstallProgress> progress, int step, int totalSteps)
     {
         var stepName = "Creating shortcuts";
@@ -60,24 +77,16 @@ public class ShortcutCreator
 
     public void RemoveShortcuts()
     {
-        // Desktop
-        var desktop = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "OpenCut.lnk");
-        TryDelete(desktop);
+        foreach (var shortcutPath in GetShortcutPaths())
+            TryDelete(shortcutPath);
 
-        // Start Menu folder
         var startMenu = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Programs), "OpenCut");
-        if (Directory.Exists(startMenu))
+        if (Directory.Exists(startMenu) && !Directory.EnumerateFileSystemEntries(startMenu).Any())
         {
-            try { Directory.Delete(startMenu, recursive: true); }
+            try { Directory.Delete(startMenu); }
             catch { /* Best effort */ }
         }
-
-        // Startup
-        var startup = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Startup), "OpenCut.lnk");
-        TryDelete(startup);
     }
 
     private static void CreateShortcut(string linkPath, string targetPath, string arguments,

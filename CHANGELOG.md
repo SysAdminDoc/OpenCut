@@ -42,6 +42,12 @@ record also lives in the git commit messages.
   removes its generated launchers, shortcut, and CEP debug values, and reports
   locked artifacts with a close-and-retry message instead of a raw exception.
 
+### Fixed - WPF installer upgrade recovery
+
+- WPF installs now snapshot the existing install and integration state, run a
+  detected prior uninstaller during upgrades, replace the install root cleanly
+  to prune stale files, and restore the snapshot if a later step fails.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
