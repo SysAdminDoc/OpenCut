@@ -794,6 +794,7 @@ npm test
 npm run test:rendered  # headless CEP/UXP viewport, state, a11y, and screenshot gate
 npm run audit:check:win -- --json
 npm run audit:esbuild:win -- --json
+npm run build
 npm run build:verify:win
 
 # Pre-commit hooks (auto-runs ruff lint/format on commit, pytest smoke on push)

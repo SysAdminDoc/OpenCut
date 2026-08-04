@@ -74,6 +74,7 @@ Write-Ok "Installer project found"
 $distServer = Join-Path $RepoRoot "dist\OpenCut-Server"
 $ffmpegDir = Join-Path $RepoRoot "ffmpeg"
 $extensionDir = Join-Path $RepoRoot "extension\com.opencut.panel"
+$cepBundle = Join-Path $extensionDir "client\dist\opencut-panel.js"
 $launcherVbs = Join-Path $RepoRoot "OpenCut-Launcher.vbs"
 $logoIco = Join-Path $RepoRoot "img\logo.ico"
 
@@ -81,6 +82,8 @@ $payloadReady = $true
 if (-not (Test-Path $distServer)) { Write-Warn "dist/OpenCut-Server/ not found (run PyInstaller first)"; $payloadReady = $false }
 if (-not (Test-Path $ffmpegDir)) { Write-Warn "ffmpeg/ not found"; $payloadReady = $false }
 if (-not (Test-Path $extensionDir)) { Write-Warn "extension/com.opencut.panel/ not found"; $payloadReady = $false }
+if (-not (Test-Path $cepBundle -PathType Leaf)) { Write-Warn "CEP production bundle not found (run npm run build in extension/com.opencut.panel)"; $payloadReady = $false }
+elseif ((Get-Item $cepBundle).Length -eq 0) { Write-Warn "CEP production bundle is empty"; $payloadReady = $false }
 if (-not (Test-Path $launcherVbs)) { Write-Warn "OpenCut-Launcher.vbs not found"; $payloadReady = $false }
 if (-not (Test-Path $logoIco)) { Write-Warn "img/logo.ico not found"; $payloadReady = $false }
 

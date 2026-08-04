@@ -25,5 +25,9 @@ if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
 }
 
 $node = Get-Command node -ErrorAction Stop
-& $node.Source $scriptPath @ForwardArgs
+$scriptArgs = @($ForwardArgs)
+if ($Gate -eq "build:verify" -and $scriptArgs -notcontains "--require-build") {
+    $scriptArgs += "--require-build"
+}
+& $node.Source $scriptPath @scriptArgs
 exit $LASTEXITCODE
