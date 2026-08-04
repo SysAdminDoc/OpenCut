@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.config import CaptionConfig
+from ..errors import OpenCutError
 from . import transcript_cache
 from .asr_provenance import (
     ASRProvenance,
@@ -27,6 +28,73 @@ from .asr_provenance import (
 from .audio import extract_audio_wav
 
 logger = logging.getLogger(__name__)
+
+
+class TranscriptionBackendError(OpenCutError):
+    """Actionable failure from the faster-whisper runtime."""
+
+    def __init__(
+        self,
+        *,
+        architecture: str = "unknown",
+        device: str = "cuda",
+        compute_type: str = "auto",
+        stage: str = "inference",
+    ):
+        affected_gpu = architecture == "blackwell"
+        gpu_label = (
+            "the detected RTX 50-series/Blackwell GPU"
+            if affected_gpu
+            else "the selected CUDA GPU"
+        )
+        super().__init__(
+            code="FASTER_WHISPER_CUDA_UNSUPPORTED",
+            message=(
+                f"faster-whisper could not complete {stage} on {gpu_label} "
+                f"after OpenCut selected compute_type={compute_type}."
+            ),
+            status=503,
+            suggestion=(
+                "Update faster-whisper and CTranslate2 to a build with "
+                "Blackwell support, or enable CPU mode in Whisper settings and retry."
+            ),
+            details={
+                "backend": "faster-whisper",
+                "architecture": architecture,
+                "device": device,
+                "compute_type": compute_type,
+                "stage": stage,
+                "recommended_action": (
+                    "update_faster_whisper_or_ctranslate2_or_enable_cpu_mode"
+                ),
+            },
+        )
+
+
+def _is_cuda_backend_error(exc: BaseException) -> bool:
+    """Return whether an exception indicates a CUDA/CTranslate2 failure."""
+    message = str(exc).lower()
+    return any(marker in message for marker in ("cuda", "cublas", "cudnn"))
+
+
+def faster_whisper_runtime_plan(
+    *,
+    device: str,
+    selected_device: dict | None = None,
+) -> dict:
+    """Return the compute type and warning selected for faster-whisper."""
+    from opencut.gpu import faster_whisper_compute_recommendation
+
+    recommendation = faster_whisper_compute_recommendation(selected_device)
+    if device != "cuda":
+        recommendation = dict(recommendation)
+        recommendation["compute_type"] = "int8"
+        recommendation["changed"] = False
+    return {
+        "device": device,
+        "compute_type": recommendation["compute_type"],
+        "recommendation": recommendation,
+    }
 
 
 REVIEW_ASR_CONFIDENCE_THRESHOLD = 0.70
@@ -996,6 +1064,8 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
     # Determine device and compute type
     device_index = None
+    selected_gpu = None
+    selected_architecture = "unknown"
     if force_cpu:
         logger.debug("CPU mode enabled via settings - skipping GPU")
         device = "cpu"
@@ -1021,8 +1091,69 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
             # No torch, let faster-whisper decide but be ready to fall back
             pass
 
+    if device == "cuda":
+        try:
+            from opencut.gpu import gpu_selection_status
+
+            selection = gpu_selection_status()
+            selected_index = (
+                device_index
+                if device_index is not None
+                else selection.get("selected_index")
+            )
+            selected_gpu = next(
+                (
+                    item
+                    for item in selection.get("devices", [])
+                    if item.get("index") == selected_index
+                ),
+                None,
+            )
+            runtime_plan = faster_whisper_runtime_plan(
+                device=device,
+                selected_device=selected_gpu,
+            )
+            compute_type = runtime_plan["compute_type"]
+            recommendation = runtime_plan["recommendation"]
+            selected_architecture = recommendation.get("architecture", "unknown")
+            if recommendation.get("changed"):
+                runtime_fallback_reason = recommendation["reason"]
+                logger.warning(recommendation["warning"])
+        except (TypeError, ValueError, RuntimeError, OSError) as exc:
+            logger.debug("Could not inspect GPU architecture for faster-whisper: %s", exc)
+
     # Try to load model with auto-repair on corrupt cache
     model = None
+
+    def _retry_with_cpu(error: BaseException, stage: str):
+        """Retry a CUDA failure on CPU or raise an actionable typed error."""
+        nonlocal device, compute_type, device_index, runtime_fallback_reason
+        failed_compute_type = compute_type
+        logger.warning("CUDA error during faster-whisper %s, retrying with CPU: %s", stage, error)
+        fallback_reason = f"CUDA {stage} failed; retried on CPU"
+        runtime_fallback_reason = (
+            f"{runtime_fallback_reason}; {fallback_reason}"
+            if runtime_fallback_reason
+            else fallback_reason
+        )
+        device = "cpu"
+        compute_type = "int8"
+        device_index = None
+        try:
+            return WhisperModel(
+                config.model,
+                device=device,
+                compute_type=compute_type,
+                revision=model_revision,
+            )
+        except Exception as fallback_error:  # noqa: BLE001 - convert to typed backend failure
+            raise TranscriptionBackendError(
+                architecture=selected_architecture,
+                device="cuda",
+                compute_type=failed_compute_type,
+                stage=f"{stage} and CPU fallback",
+            ) from fallback_error
+
     max_attempts = 3
     for attempt in range(max_attempts):
         try:
@@ -1042,18 +1173,8 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         except RuntimeError as e:
             err_str = str(e).lower()
             # CUDA library errors - fall back to CPU
-            if "cuda" in err_str or "cublas" in err_str or "cudnn" in err_str:
-                logger.warning(f"CUDA error, falling back to CPU: {e}")
-                runtime_fallback_reason = "CUDA model load failed; retried on CPU"
-                device = "cpu"
-                compute_type = "int8"
-                device_index = None
-                model = WhisperModel(
-                    config.model,
-                    device=device,
-                    compute_type=compute_type,
-                    revision=model_revision,
-                )
+            if _is_cuda_backend_error(e):
+                model = _retry_with_cpu(e, "model load")
                 break
             # Corrupt model cache - clear, re-download, and retry
             elif ("unable to open file" in err_str or "model.bin" in err_str
@@ -1076,6 +1197,9 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 raise
         except Exception as e:
             err_str = str(e).lower()
+            if _is_cuda_backend_error(e):
+                model = _retry_with_cpu(e, "model load")
+                break
             if ("unable to open file" in err_str or "model.bin" in err_str
                 or "corrupt" in err_str or "no such file" in err_str
                 or "not found" in err_str):
@@ -1109,26 +1233,25 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
             # Consume the generator to catch any CUDA errors during processing
             result_segments = list(result_segments)
         except RuntimeError as e:
-            if "cuda" in str(e).lower() or "cublas" in str(e).lower() or "cudnn" in str(e).lower():
-                logger.warning(f"CUDA error during transcription, retrying with CPU: {e}")
-                runtime_fallback_reason = "CUDA inference failed; retried on CPU"
-                device = "cpu"
-                compute_type = "int8"
-                device_index = None
-                model = WhisperModel(
-                    config.model,
-                    device=device,
-                    compute_type=compute_type,
-                    revision=model_revision,
-                )
-                result_segments, info = model.transcribe(
-                    wav_path,
-                    language=config.language,
-                    task=task,
-                    word_timestamps=config.word_timestamps,
-                    vad_filter=True,
-                )
-                result_segments = list(result_segments)
+            if _is_cuda_backend_error(e):
+                failed_compute_type = compute_type
+                model = _retry_with_cpu(e, "inference")
+                try:
+                    result_segments, info = model.transcribe(
+                        wav_path,
+                        language=config.language,
+                        task=task,
+                        word_timestamps=config.word_timestamps,
+                        vad_filter=True,
+                    )
+                    result_segments = list(result_segments)
+                except Exception as fallback_error:  # noqa: BLE001 - convert to typed backend failure
+                    raise TranscriptionBackendError(
+                        architecture=selected_architecture,
+                        device="cuda",
+                        compute_type=failed_compute_type,
+                        stage="inference and CPU fallback",
+                    ) from fallback_error
             else:
                 raise
 

@@ -1045,6 +1045,9 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         update["retry_after"] = getattr(e, "retry_after")
                     if getattr(e, "queue_depth", None) is not None:
                         update["queue_depth"] = getattr(e, "queue_depth")
+                    details = getattr(e, "details", None)
+                    if isinstance(details, dict) and details:
+                        update["error_details"] = dict(details)
                     update["exit_reason"] = _classify_exit_reason(
                         "error",
                         error=str(e),
@@ -1053,9 +1056,11 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     )
                     update.update(resource_update)
                     try:
-                        from opencut.core.install_hints import suggestion_for_exception
+                        suggestion = str(getattr(e, "suggestion", "") or "")
+                        if not suggestion:
+                            from opencut.core.install_hints import suggestion_for_exception
 
-                        suggestion = suggestion_for_exception(e, context=job_type)
+                            suggestion = suggestion_for_exception(e, context=job_type)
                         if suggestion:
                             update["suggestion"] = suggestion
                     except Exception:  # noqa: BLE001 - job finalisation must not fail

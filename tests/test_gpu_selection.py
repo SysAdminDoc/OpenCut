@@ -27,6 +27,36 @@ def test_gpu_selection_status_marks_manual_adapter(monkeypatch):
     assert status["selection_error"] is None
 
 
+def test_blackwell_gpu_gets_safe_faster_whisper_compute_type():
+    import opencut.gpu as gpu
+
+    recommendation = gpu.faster_whisper_compute_recommendation({
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 5090",
+    })
+
+    assert recommendation["architecture"] == "blackwell"
+    assert recommendation["affected"] is True
+    assert recommendation["compute_type"] == "float16"
+    assert recommendation["changed"] is True
+    assert "cuBLAS" in recommendation["warning"]
+
+
+def test_gpu_selection_status_reports_faster_whisper_substitution(monkeypatch):
+    import opencut.gpu as gpu
+
+    monkeypatch.setattr(gpu, "_configured_gpu_index", lambda: 0)
+    status = gpu.gpu_selection_status([{
+        "index": 0,
+        "name": "NVIDIA RTX 5090 Laptop GPU",
+        "memory_total_mb": 16384.0,
+    }])
+
+    assert status["faster_whisper"]["architecture"] == "blackwell"
+    assert status["faster_whisper"]["compute_type"] == "float16"
+    assert status["devices"][0]["faster_whisper"]["changed"] is True
+
+
 def test_invalid_gpu_index_lists_available_adapters(monkeypatch):
     import opencut.gpu as gpu
 

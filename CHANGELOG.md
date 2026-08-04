@@ -66,6 +66,13 @@ record also lives in the git commit messages.
   user-data directory and bundled FFmpeg directory; the package build stages
   and verifies both `ffmpeg` and `ffprobe` before creating artifacts.
 
+### Fixed - RTX 50-series faster-whisper startup
+
+- Blackwell/RTX 50-series adapters now force faster-whisper to `float16` when
+  automatic compute-type selection is unsafe, report that substitution through
+  GPU status and ASR provenance, and return an actionable typed error if both
+  CUDA and CPU recovery fail.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter

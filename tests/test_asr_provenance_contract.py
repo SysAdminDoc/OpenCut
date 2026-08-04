@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 
 def _result(*, boundary_confidence=0.9):
@@ -97,6 +100,127 @@ def test_engine_override_is_strict_and_normalizes_aliases(monkeypatch):
         assert "not installed" in str(exc)
     else:
         raise AssertionError("unavailable explicit engine must not silently fall back")
+
+
+def test_faster_whisper_runtime_plan_applies_blackwell_override():
+    from opencut.core.captions import faster_whisper_runtime_plan
+
+    plan = faster_whisper_runtime_plan(
+        device="cuda",
+        selected_device={"name": "NVIDIA RTX 5080", "index": 0},
+    )
+
+    assert plan["compute_type"] == "float16"
+    assert plan["recommendation"]["changed"] is True
+
+
+def test_faster_whisper_failure_exposes_actionable_structured_error():
+    from opencut.core.captions import TranscriptionBackendError
+
+    payload = TranscriptionBackendError(
+        architecture="blackwell",
+        device="cuda",
+        compute_type="float16",
+        stage="inference and CPU fallback",
+    ).to_dict()
+
+    assert payload["code"] == "FASTER_WHISPER_CUDA_UNSUPPORTED"
+    assert "RTX 50-series/Blackwell" in payload["error"]
+    assert "Update faster-whisper" in payload["suggestion"]
+    assert payload["details"]["recommended_action"].startswith("update_")
+
+
+def test_faster_whisper_backend_uses_blackwell_override(monkeypatch):
+    import opencut.core.captions as captions
+    import opencut.gpu as gpu
+    from opencut.utils.config import CaptionConfig
+
+    calls = []
+
+    class FakeWhisperModel:
+        def __init__(self, model_name, **kwargs):
+            calls.append((model_name, kwargs))
+
+        def transcribe(self, *_args, **_kwargs):
+            segment = SimpleNamespace(
+                text="hello",
+                start=0.0,
+                end=1.0,
+                words=[],
+                avg_logprob=0.0,
+                no_speech_prob=0.0,
+            )
+            return [segment], SimpleNamespace(language="en", language_probability=1.0)
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: True, empty_cache=lambda: None)
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(
+        sys.modules,
+        "faster_whisper",
+        SimpleNamespace(WhisperModel=FakeWhisperModel),
+    )
+    monkeypatch.setattr(gpu, "activate_selected_gpu", lambda **_kwargs: 0)
+    monkeypatch.setattr(gpu, "get_device_index", lambda: 0)
+    monkeypatch.setattr(
+        gpu,
+        "gpu_selection_status",
+        lambda: {
+            "selected_index": 0,
+            "devices": [{"index": 0, "name": "NVIDIA RTX 5090"}],
+        },
+    )
+
+    result = captions._transcribe_faster_whisper(
+        "audio.wav",
+        CaptionConfig(model="base", word_timestamps=False),
+    )
+
+    assert calls[0][1]["device"] == "cuda"
+    assert calls[0][1]["compute_type"] == "float16"
+    assert "compute_type from auto to float16" in result.provenance.fallback_reason
+
+
+def test_faster_whisper_gpu_and_cpu_failure_is_typed(monkeypatch):
+    import opencut.core.captions as captions
+    import opencut.gpu as gpu
+    from opencut.utils.config import CaptionConfig
+
+    class FailingWhisperModel:
+        def __init__(self, _model_name, **_kwargs):
+            raise RuntimeError("CUBLAS_STATUS_NOT_SUPPORTED")
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: True, empty_cache=lambda: None)
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(
+        sys.modules,
+        "faster_whisper",
+        SimpleNamespace(WhisperModel=FailingWhisperModel),
+    )
+    monkeypatch.setattr(gpu, "activate_selected_gpu", lambda **_kwargs: 0)
+    monkeypatch.setattr(gpu, "get_device_index", lambda: 0)
+    monkeypatch.setattr(
+        gpu,
+        "gpu_selection_status",
+        lambda: {
+            "selected_index": 0,
+            "devices": [{"index": 0, "name": "NVIDIA RTX 5090"}],
+        },
+    )
+
+    with pytest.raises(captions.TranscriptionBackendError) as exc_info:
+        captions._transcribe_faster_whisper(
+            "audio.wav",
+            CaptionConfig(model="base", word_timestamps=False),
+        )
+
+    error = exc_info.value
+    assert error.code == "FASTER_WHISPER_CUDA_UNSUPPORTED"
+    assert "enable CPU mode" in error.suggestion
+    assert "CUBLAS_STATUS_NOT_SUPPORTED" not in error.message
 
 
 def test_text_and_boundary_confidence_are_independent():
