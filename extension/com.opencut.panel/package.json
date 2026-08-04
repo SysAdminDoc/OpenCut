@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint client/main.js client/panel-state.js client/backend-client.js client/job-runtime.js client/job-lifecycle.js client/component-utils.js client/announce-utils.js client/cep-theme.js client/timeline-utils.js client/onboarding-state.js client/bootstrap.js && npm run lint:premiere",
     "lint:premiere": "cd ../com.opencut.uxp && eslint \"*.js\"",
+    "pretest": "npm run build && npm run build:verify",
     "test": "vitest run --config vitest.config.mjs",
     "test:rendered": "playwright test --config playwright.config.mjs",
     "test:rendered:update": "playwright test --config playwright.config.mjs --update-snapshots",
@@ -16,7 +17,7 @@
     "audit:check:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:check",
     "audit:esbuild": "node scripts/check-esbuild-pin.mjs",
     "audit:esbuild:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" audit:esbuild",
-    "build:verify": "node scripts/verify-build.mjs",
+    "build:verify": "node scripts/verify-build.mjs --require-build",
     "build:verify:win": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%INIT_CWD%\\scripts\\panel-node-gate.ps1\" build:verify"
   },
   "devDependencies": {

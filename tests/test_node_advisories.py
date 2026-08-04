@@ -57,7 +57,8 @@ def test_package_json_advertises_audit_and_verify_scripts():
     assert "audit:check" in scripts, "missing audit:check script entry"
     assert "build:verify" in scripts, "missing build:verify script entry"
     assert scripts["audit:check"].endswith("check-advisories.mjs")
-    assert scripts["build:verify"].endswith("verify-build.mjs")
+    assert "scripts/verify-build.mjs" in scripts["build:verify"]
+    assert "--require-build" in scripts["build:verify"]
 
 
 def test_check_advisories_script_present_and_executable_text():

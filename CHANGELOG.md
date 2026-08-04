@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Bundled CEP production artifact
+
+- The CEP panel now compiles its ordered classic runtime into a minified
+  `client/dist/opencut-panel.js` bundle, carries locale assets into `dist/`,
+  and launches Premiere from the generated index.
+- Build verification rejects copied source artifacts and installer staging
+  refuses to package the extension without the production bundle.
+
 ### Added - Timeline interchange for large cut passes
 
 - Cut lists above the configurable panel threshold now become one linked FCP

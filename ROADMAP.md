@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Make the CEP panel build a real bundle
-  Why: The shipped artifact is a byte-identical copy of the 18,360-line source, so a Chromium-99 runtime parses unbundled, unminified source on every panel open.
-  Evidence: `extension/com.opencut.panel/client/dist/main.js` and `client/main.js` have identical MD5 (`5282cc69…`) and identical line counts, despite `vite.config.mjs` and a `build` script in `extension/com.opencut.panel/package.json`.
-  Touches: `extension/com.opencut.panel/vite.config.js`, `package.json` build scripts, `scripts/verify-build.mjs`, `CSXS/manifest.xml` `MainPath`, packaging steps.
-  Acceptance: `npm run build` produces a bundled, minified `dist/` that differs from source and passes `build:verify`; the installer ships `dist/`; a test fails if the built artifact is byte-identical to a source file.
-  Complexity: M
-
 - [ ] P2 — Restate the product claims Premiere 26.2/26.3 made first-party
   Why: Several headline features now ship in the host, so the README and panel copy advertise parity work instead of the differentiated capability.
   Evidence: Premiere 26.2 shipped the Sequence Index panel (search, sort, column chooser, filter funnel, jump, CSV export); 26.3 shipped Single-Word Captions; 25.2 shipped Media Intelligence search; 25.6 added bulk bleep/mute; Auto-Match Loudness and Text-Based-Editing Delete Pauses / Delete Filler Words predate both; Adobe's on-device Speechmatics STT (April 2026) claims 12–16% better accuracy than Whisper-powered creative tools. See RESEARCH.md "Rejected Ideas" for the per-feature verdicts.
