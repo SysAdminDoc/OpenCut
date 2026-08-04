@@ -3,6 +3,8 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased - Reachable installs and a stack you can trust
+
 ### Changed - auto-editor resolves the native binary
 
 - Upstream rewrote auto-editor in Nim and stopped publishing to PyPI at 29.3.1
