@@ -36,6 +36,12 @@ record also lives in the git commit messages.
 - CLI and REST auto-zoom application now share a keyframed FFmpeg filter that
   interpolates tracked zoom anchors and keeps the detected subject in frame.
 
+### Fixed - Source installer uninstall cleanup
+
+- `Install.ps1 -Uninstall` now uses the resolved supported Python interpreter,
+  removes its generated launchers, shortcut, and CEP debug values, and reports
+  locked artifacts with a close-and-retry message instead of a raw exception.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
