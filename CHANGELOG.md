@@ -28,6 +28,12 @@ record also lives in the git commit messages.
 - UXP unload now closes the live WebSocket and clears its reconnect timer
   alongside the existing SSE, theme, settings, and media-scan cleanup.
 
+### Fixed - UXP full-report job ownership
+
+- Full report generation now uses the shared single-job controller, keeping
+  sequence preflight and every selected deliverable inside one lock so a
+  second action cannot overlap the package run.
+
 ### Fixed - Ordered UXP Sequence Index filters
 
 - Sequence Index search, facet, and sort responses now use a monotonic request

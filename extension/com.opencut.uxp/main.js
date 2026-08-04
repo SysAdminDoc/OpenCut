@@ -5998,6 +5998,16 @@ async function runDeliverables(type) {
 
 /** ── FULL PROJECT REPORT (generates all 4 deliverables) ── */
 async function runFullReport() {
+  await JobPoller.runExclusive(
+    () => runFullReportUnlocked(),
+    (message) => {
+      UIController.showToast(message, "warning");
+      UIController.setStatus(message, "warning");
+    },
+  );
+}
+
+async function runFullReportUnlocked() {
   const backendOnline = isBackendConnected();
   if (!backendOnline) {
     setDeliverablesStatus(t("uxp.deliverables.runtime.reconnect_before_report_package", "Reconnect the backend before generating the report package."), "error");

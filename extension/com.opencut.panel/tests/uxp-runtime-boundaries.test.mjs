@@ -363,6 +363,29 @@ describe("UXP job controller", () => {
     expect(error).toHaveBeenCalledWith("Another OpenCut job is already running.");
   });
 
+  it("serializes non-job work through the same lock", async () => {
+    const state = createUxpState();
+    const locked = [];
+    const busy = vi.fn();
+    let release;
+    const controller = createJobController({
+      state,
+      client: {},
+      setLocked: (value) => locked.push(value),
+    });
+    const first = controller.runExclusive(() => new Promise((resolve) => { release = resolve; }));
+
+    expect(state.hasActiveJob()).toBe(true);
+    expect(await controller.runExclusive(vi.fn(), busy)).toBe(false);
+    expect(busy).toHaveBeenCalledWith("Another OpenCut job is already running.");
+    expect(state.hasActiveJob()).toBe(true);
+
+    release();
+    expect(await first).toBe(true);
+    expect(state.hasActiveJob()).toBe(false);
+    expect(locked).toEqual([true, false]);
+  });
+
   it("ignores a status response that resolves after cancellation", async () => {
     const state = createUxpState();
     let resolveStatus;
@@ -766,6 +789,16 @@ describe("UXP source ownership", () => {
     expect(source).toContain("requested_cuts");
     expect(source).toContain("cutsToApply.length");
     expect(source).toContain("interchange_imported");
+  });
+
+  it("runs the full report inside the shared single-job lock", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const start = main.indexOf("async function runFullReport()");
+    const end = main.indexOf("async function runFullReportUnlocked()");
+    const wrapper = main.slice(start, end);
+
+    expect(wrapper).toContain("JobPoller.runExclusive(");
+    expect(wrapper).toContain("runFullReportUnlocked()");
   });
 
   it("keeps extracted runtime implementations out of main.js", () => {
