@@ -251,7 +251,7 @@ def verify():
     return True
 
 
-def main():
+def main() -> int:
     banner()
     check_python()
     check_ffmpeg()
@@ -259,7 +259,10 @@ def main():
     install_cep_extension()
     create_launcher()
     check_gpu()
-    verify()
+    if not verify():
+        print()
+        print("  Installation stopped because critical verification checks failed.")
+        return 1
 
     print()
     print("  ============================================")
@@ -271,7 +274,8 @@ def main():
     print("  2. Open Premiere Pro > Window > Extensions > OpenCut")
     print("  3. Select a clip and start editing!")
     print()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

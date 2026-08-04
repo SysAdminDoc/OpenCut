@@ -55,6 +55,11 @@ record also lives in the git commit messages.
 - User PATH edits preserve expandable variables such as `%USERPROFILE%` and
   retain the original string/expand-string registry kind.
 
+### Fixed - Source installer verification status
+
+- `install.py` now stops after a failed critical verification and exits with a
+  non-zero status instead of printing a successful installation banner.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter

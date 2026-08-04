@@ -1,3 +1,4 @@
+import importlib.util
 import re
 import tomllib
 from pathlib import Path
@@ -344,3 +345,22 @@ def test_requirements_txt_matches_core_and_standard_pyproject_deps():
     expected.update(project["optional-dependencies"]["standard"])
 
     assert expected <= _active_requirements_txt()
+
+
+def test_install_script_returns_nonzero_when_critical_verification_fails(monkeypatch):
+    install_path = REPO_ROOT / "install.py"
+    spec = importlib.util.spec_from_file_location("opencut_install_under_test", install_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    monkeypatch.setattr(module, "banner", lambda: None)
+    monkeypatch.setattr(module, "check_python", lambda: None)
+    monkeypatch.setattr(module, "check_ffmpeg", lambda: None)
+    monkeypatch.setattr(module, "install_deps", lambda: None)
+    monkeypatch.setattr(module, "install_cep_extension", lambda: None)
+    monkeypatch.setattr(module, "create_launcher", lambda: None)
+    monkeypatch.setattr(module, "check_gpu", lambda: None)
+    monkeypatch.setattr(module, "verify", lambda: False)
+
+    assert module.main() == 1
