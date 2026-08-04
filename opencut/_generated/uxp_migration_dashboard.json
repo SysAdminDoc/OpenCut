@@ -43,8 +43,7 @@
     },
     "gate": {
       "errors": [
-        "CEP routes without a UXP path or justified exclusion: /analyze/virality, /assistant/dismiss, /assistant/suggest, /audio/beats, /audio/duck-video, /audio/effects/apply, /audio/gen/sfx, /audio/gen/tone, /audio/music-ai/generate, /audio/pro/apply, /audio/pro/deepfilter, /audio/pro/effects, /audio/pro/install, /audio/tts/generate, /audio/tts/install, /batch, /batch/create, /cancel, /caption-styles, /captions/animated/render, /captions/burnin/segments, /captions/enhanced/capabilities, /captions/enhanced/install, /captions/translate, /captions/whisperx, /context/analyze, /deliverables, /export/presets, /export/thumbnails, /favorites, /favorites/save, /full, /info, /install-whisper, /interview-polish, /interview-polish/state, /jobs/history, /journal/clear, /journal/list, /llm/test, /models/list, /outputs/recent, /preflight, /presets, /presets/save, /queue/list, /queue/replay, /settings/auto-zoom, /settings/gist/pull, /settings/gist/push, /settings/loudness-target, /settings/onboarding, /shutdown, /silence/speed-up, /social/platforms, /status, /system/changelog/mark-seen, /system/demo/sample, /system/dependencies, /system/estimate-time, /system/gpu, /system/gpu-recommend, /system/issue-report/bundle, /system/open-path, /system/qe-reflect, /system/status, /templates/apply, /templates/list, /templates/save, /timeline/batch-rename, /timeline/beat-cut, /timeline/smart-bins, /transcript, /transcript/export, /transcript/summarize, /video/ai/capabilities, /video/ai/denoise, /video/ai/install, /video/ai/interpolate, /video/ai/rembg, /video/auto-detect-watermark, /video/auto-edit, /video/blend, /video/chromakey, /video/color/correct, /video/cursor-zoom/resolve, /video/face/blur, /video/face/enhance, /video/face/install, /video/face/swap, /video/highlights, /video/lut/apply, /video/lut/generate-from-ref, /video/merge, /video/particles/apply, /video/pip, /video/reframe/face, /video/remove/watermark, /video/speed/ramp, /video/speed/reverse, /video/title/overlay, /video/title/render, /video/transitions/apply, /video/trim, /video/upscale/run, /video/watermark, /whisper/clear-cache, /whisper/reinstall, /whisper/settings, /workflow/presets, /workflow/run, /workflow/save, /workflows, /workflows/list",
-        "priority routes without a UXP path: /captions/animated/render, /captions/translate, /full, /install-whisper"
+        "CEP routes without a UXP path or justified exclusion: /analyze/virality, /assistant/dismiss, /assistant/suggest, /audio/beats, /audio/duck-video, /audio/effects/apply, /audio/gen/sfx, /audio/gen/tone, /audio/music-ai/generate, /audio/pro/apply, /audio/pro/deepfilter, /audio/pro/effects, /audio/pro/install, /audio/tts/generate, /audio/tts/install, /batch, /batch/create, /cancel, /caption-styles, /captions/burnin/segments, /captions/enhanced/capabilities, /captions/whisperx, /context/analyze, /deliverables, /export/presets, /export/thumbnails, /favorites, /favorites/save, /info, /interview-polish, /interview-polish/state, /jobs/history, /journal/clear, /journal/list, /llm/test, /models/list, /outputs/recent, /preflight, /presets, /presets/save, /queue/list, /queue/replay, /settings/auto-zoom, /settings/gist/pull, /settings/gist/push, /settings/loudness-target, /settings/onboarding, /shutdown, /silence/speed-up, /social/platforms, /status, /system/changelog/mark-seen, /system/demo/sample, /system/dependencies, /system/estimate-time, /system/gpu, /system/gpu-recommend, /system/issue-report/bundle, /system/open-path, /system/qe-reflect, /system/status, /templates/apply, /templates/list, /templates/save, /timeline/batch-rename, /timeline/beat-cut, /timeline/smart-bins, /transcript, /transcript/export, /transcript/summarize, /video/ai/capabilities, /video/ai/denoise, /video/ai/install, /video/ai/interpolate, /video/ai/rembg, /video/auto-detect-watermark, /video/auto-edit, /video/blend, /video/chromakey, /video/color/correct, /video/cursor-zoom/resolve, /video/face/blur, /video/face/enhance, /video/face/install, /video/face/swap, /video/highlights, /video/lut/apply, /video/lut/generate-from-ref, /video/merge, /video/particles/apply, /video/pip, /video/reframe/face, /video/remove/watermark, /video/speed/ramp, /video/speed/reverse, /video/title/overlay, /video/title/render, /video/transitions/apply, /video/trim, /video/upscale/run, /video/watermark, /whisper/clear-cache, /whisper/reinstall, /whisper/settings, /workflow/presets, /workflow/run, /workflow/save, /workflows, /workflows/list"
       ],
       "missing_routes": [
         "/analyze/virality",
@@ -66,11 +65,8 @@
         "/batch/create",
         "/cancel",
         "/caption-styles",
-        "/captions/animated/render",
         "/captions/burnin/segments",
         "/captions/enhanced/capabilities",
-        "/captions/enhanced/install",
-        "/captions/translate",
         "/captions/whisperx",
         "/context/analyze",
         "/deliverables",
@@ -78,9 +74,7 @@
         "/export/thumbnails",
         "/favorites",
         "/favorites/save",
-        "/full",
         "/info",
-        "/install-whisper",
         "/interview-polish",
         "/interview-polish/state",
         "/jobs/history",
@@ -163,12 +157,7 @@
         "/workflows/list"
       ],
       "passes": false,
-      "priority_missing": [
-        "/install-whisper",
-        "/captions/translate",
-        "/captions/animated/render",
-        "/full"
-      ]
+      "priority_missing": []
     },
     "priority_routes": [
       "/install-whisper",
@@ -274,6 +263,7 @@
         "route": "/audio/enhance",
         "status": "covered",
         "uxp_sources": [
+          "extension/com.opencut.uxp/main.js",
           "extension/com.opencut.uxp/uxp-utils.js"
         ]
       },
@@ -381,6 +371,7 @@
         "route": "/audio/separate",
         "status": "covered",
         "uxp_sources": [
+          "extension/com.opencut.uxp/main.js",
           "extension/com.opencut.uxp/uxp-utils.js"
         ]
       },
@@ -464,8 +455,10 @@
         "justification": "",
         "priority": true,
         "route": "/captions/animated/render",
-        "status": "missing",
-        "uxp_sources": []
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
       },
       {
         "cep_sources": [
@@ -530,8 +523,10 @@
         "justification": "",
         "priority": false,
         "route": "/captions/enhanced/install",
-        "status": "missing",
-        "uxp_sources": []
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
       },
       {
         "cep_sources": [
@@ -552,8 +547,10 @@
         "justification": "",
         "priority": true,
         "route": "/captions/translate",
-        "status": "missing",
-        "uxp_sources": []
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
       },
       {
         "cep_sources": [
@@ -618,6 +615,7 @@
         "route": "/export/preset",
         "status": "covered",
         "uxp_sources": [
+          "extension/com.opencut.uxp/main.js",
           "extension/com.opencut.uxp/uxp-utils.js"
         ]
       },
@@ -681,8 +679,10 @@
         "justification": "",
         "priority": true,
         "route": "/full",
-        "status": "missing",
-        "uxp_sources": []
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
       },
       {
         "cep_sources": [
@@ -713,8 +713,10 @@
         "justification": "",
         "priority": true,
         "route": "/install-whisper",
-        "status": "missing",
-        "uxp_sources": []
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
       },
       {
         "cep_sources": [
@@ -1975,14 +1977,14 @@
     ],
     "summary": {
       "cep_route_count": 168,
-      "coverage_percent": 32.1,
-      "covered": 53,
+      "coverage_percent": 35.1,
+      "covered": 58,
       "excluded": 1,
-      "missing": 114,
+      "missing": 109,
       "priority_count": 7,
-      "priority_covered": 3,
-      "priority_missing": 4,
-      "uxp_route_count": 68
+      "priority_covered": 7,
+      "priority_missing": 0,
+      "uxp_route_count": 73
     },
     "uxp_sources": [
       "extension/com.opencut.uxp/main.js",

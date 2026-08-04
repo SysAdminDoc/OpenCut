@@ -51,7 +51,8 @@ def test_f260_dashboard_manifest_derives_from_f198_catalogue():
         "/full",
     ]
     assert route_coverage["gate"]["passes"] is False
-    assert "/install-whisper" in route_coverage["gate"]["priority_missing"]
+    assert route_coverage["summary"]["priority_covered"] == len(route_coverage["priority_routes"])
+    assert route_coverage["summary"]["priority_missing"] == 0
 
 
 def test_f260_route_gate_rejects_uncovered_routes_and_accepts_justified_exclusions():
@@ -147,6 +148,30 @@ def test_f260_panel_loads_dashboard_json_and_renders_rows():
     assert "settingsMigrationRouteValue" in source
     assert "uxpLoadMigrationRisk();" in source
     assert 'document.getElementById("uxpRefreshMigrationRiskBtn")?.addEventListener("click", uxpLoadMigrationRisk)' in source
+
+
+def test_f260_priority_routes_have_direct_uxp_actions():
+    source = _read(UXP_MAIN)
+    html = _read(UXP_HTML)
+
+    expected_routes = {
+        "/install-whisper": "installWhisperBtn",
+        "/audio/separate": "runStemSeparationBtn",
+        "/captions/translate": "runTranslateBtn",
+        "/audio/enhance": "runAudioEnhanceBtn",
+        "/captions/animated/render": "runAnimatedCaptionsBtn",
+        "/export/preset": "runExportPresetBtn",
+        "/full": "runFullPipelineBtn",
+    }
+    for route, button_id in expected_routes.items():
+        assert route in source
+        assert button_id in html
+        assert f'getElementById("{button_id}")?.addEventListener' in source
+
+    assert 'backend: "nllb"' in source
+    assert 'accept_restricted_license: true' in source
+    assert 'word_segments: wordSegments' in source
+    assert 'youtube: "youtube_1080p"' in source
 
 
 def test_f260_release_smoke_runs_dashboard_guardrail():

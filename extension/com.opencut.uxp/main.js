@@ -672,6 +672,7 @@ let _lastIndexStats = { total_files: 0, total_segments: 0, index_size_bytes: 0 }
 let _clearIndexConfirmUntil = 0;
 let _clearIndexConfirmTimer = null;
 let _lastCaptionsResult = null;
+let _lastTranscriptSegments = [];
 let _lastCutsInfo = null;
 let _lastMarkersInfo = null;
 let _lastTimelineAction = null;
@@ -2868,7 +2869,7 @@ function syncCaptionsActionButtons() {
   const sourcePath = document.getElementById("clipPathCaptions")?.value?.trim() || getWorkspaceSource("captions");
   const hasSource = !!sourcePath;
 
-  ["runTranscribeBtn", "runChaptersBtn", "runRepeatBtn"].forEach((id) => {
+  ["runTranscribeBtn", "runChaptersBtn", "runRepeatBtn", "runTranslateBtn", "runAnimatedCaptionsBtn"].forEach((id) => {
     const btn = document.getElementById(id);
     if (!btn || btn.classList.contains("loading")) return;
     btn.disabled = !backendOnline || !hasSource;
@@ -4445,6 +4446,35 @@ async function runFillerDetection() {
   );
 }
 
+/** ── FULL CLEANUP PIPELINE ── */
+async function runFullPipelineUxp() {
+  const clipPath = document.getElementById("clipPathCut")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  const preset = document.getElementById("fullPresetUxp")?.value || "youtube";
+  const skipZoom = !(document.getElementById("fullZoomUxp")?.checked ?? true);
+  const skipCaptions = !(document.getElementById("fullCaptionsUxp")?.checked ?? true);
+  const removeFillers = document.getElementById("fullFillersUxp")?.checked ?? false;
+  UIController.setButtonLoading("runFullPipelineBtn", true);
+  UIController.showProcessing(t("uxp.cut.runtime.running_full_pipeline", "Running the full cleanup pipeline..."));
+  await JobPoller.start(
+    "/full",
+    { filepath: clipPath, preset, skip_zoom: skipZoom, skip_captions: skipCaptions, remove_fillers: removeFillers },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runFullPipelineBtn", false);
+      const output = result?.xml_path || result?.output_path || t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.cut.runtime.full_pipeline_complete", "Full cleanup complete: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.cut.runtime.full_pipeline_complete_status", "Full cleanup pipeline complete."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runFullPipelineBtn", false);
+      UIController.showToast(formatI18n("uxp.cut.runtime.full_pipeline_error", "Full cleanup failed: {error}", { error: err }), "error");
+    }
+  );
+}
+
 /** ── TRANSCRIBE ── */
 async function runTranscribe() {
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
@@ -4485,6 +4515,7 @@ async function runTranscribe() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
+      if (Array.isArray(result?.segments)) _lastTranscriptSegments = result.segments;
       showCaptionsResult(result);
       UIController.showToast(t("uxp.captions.runtime.transcription_complete", "Transcription complete."), "success");
       UIController.setStatus(t("uxp.captions.runtime.transcription_done_status", "Transcription done."));
@@ -4513,6 +4544,7 @@ async function runTranscribe() {
 }
 
 function showCaptionsResult(result) {
+  if (Array.isArray(result?.segments)) _lastTranscriptSegments = result.segments;
   const content = result.srt ?? result.text ?? JSON.stringify(result, null, 2);
   const nonEmptyLines = content.split(/\r?\n/).filter(Boolean).length;
   const clipPath = document.getElementById("clipPathCaptions")?.value?.trim() || "";
@@ -4589,6 +4621,182 @@ function showCaptionsResult(result) {
       ? t("uxp.captions.runtime.next_copy_srt", "Copy SRT or open SRT Prep")
       : t("uxp.captions.runtime.next_copy_transcript", "Copy transcript or draft chapters"),
   });
+}
+
+function captionWordSegments(segments) {
+  const words = [];
+  (Array.isArray(segments) ? segments : []).forEach((segment) => {
+    (Array.isArray(segment?.words) ? segment.words : []).forEach((word) => {
+      const text = String(word?.word ?? word?.text ?? "").trim();
+      const start = Number(word?.start);
+      const end = Number(word?.end);
+      if (text && Number.isFinite(start) && Number.isFinite(end) && end > start) {
+        words.push({ word: text, start, end });
+      }
+    });
+  });
+  return words;
+}
+
+function captionSegmentsReviewText(segments) {
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment) => String(segment?.text ?? "").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** ── WHISPER INSTALL ── */
+async function installWhisperUxp() {
+  UIController.setButtonLoading("installWhisperBtn", true);
+  UIController.showProcessing(t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."));
+  setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."), t("uxp.captions.runtime.installing_whisper", "Installing faster-whisper..."));
+  await JobPoller.start(
+    "/install-whisper",
+    { backend: "faster-whisper", no_input: true },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    () => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("installWhisperBtn", false);
+      setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.whisper_ready", "faster-whisper is ready."), t("uxp.captions.runtime.whisper_ready", "faster-whisper is ready."));
+      UIController.showToast(t("uxp.captions.runtime.whisper_install_complete", "faster-whisper installation complete."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("installWhisperBtn", false);
+      setTextAndTitle("whisperInstallStatus", t("uxp.captions.runtime.whisper_install_failed", "Whisper installation failed."), String(err));
+      UIController.showToast(formatI18n("uxp.captions.runtime.whisper_install_error", "Whisper installation failed: {error}", { error: err }), "error");
+    }
+  );
+}
+
+/** ── CAPTION TRANSLATION ── */
+async function runCaptionTranslation() {
+  const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  if (!_lastTranscriptSegments.length) {
+    UIController.showToast(t("uxp.captions.runtime.translate_needs_transcript", "Transcribe the clip first, then translate its caption segments."), "warning");
+    return;
+  }
+  const restrictedOptIn = document.getElementById("translateRestrictedOptIn")?.checked ?? false;
+  if (!restrictedOptIn) {
+    UIController.showToast(t("uxp.captions.runtime.translate_license_required", "Confirm the non-commercial translation model license before translating."), "warning");
+    return;
+  }
+  const sourceLang = document.getElementById("translateSourceLang")?.value || "en";
+  const targetLang = document.getElementById("translateTargetLang")?.value || "es";
+  const outputSrt = document.getElementById("translateOutputSrt")?.checked ?? true;
+  const payload = {
+    filepath: clipPath,
+    segments: _lastTranscriptSegments,
+    source_lang: sourceLang,
+    target_lang: targetLang,
+    backend: "nllb",
+    output_srt: outputSrt,
+    accept_restricted_license: true,
+  };
+  UIController.setButtonLoading("runTranslateBtn", true);
+  UIController.showProcessing(t("uxp.captions.runtime.translating", "Translating captions..."));
+  await JobPoller.start(
+    "/captions/translate",
+    payload,
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runTranslateBtn", false);
+      if (Array.isArray(result?.segments)) _lastTranscriptSegments = result.segments;
+      const translated = Array.isArray(result?.segments) ? result.segments : [];
+      const content = result?.srt || captionSegmentsReviewText(translated);
+      renderCaptionsResultView({
+        kind: "translation",
+        header: t("uxp.captions.runtime.translation_output", "Translated Caption Output"),
+        summary: formatI18n("uxp.captions.runtime.translation_complete_summary", "{count} translated caption lines ready", { count: translated.length }),
+        content,
+        resultPillText: t("uxp.captions.runtime.translation_ready", "Translation ready"),
+        resultPillState: "success",
+        resultMeta: formatI18n("uxp.captions.runtime.translation_result_meta", "{source} to {target} via {backend}", { source: sourceLang, target: targetLang, backend: result?.backend_label || "NLLB" }),
+        resultMetaTitle: clipPath,
+        copyLabel: result?.srt ? t("uxp.captions.runtime.copy_translated_srt", "Copy translated SRT") : t("uxp.captions.runtime.copy_translation", "Copy translation"),
+        copySuccessLabel: t("uxp.captions.runtime.translated_captions", "translated captions"),
+        hasSrt: !!result?.srt,
+        sessionLabel: t("uxp.captions.runtime.translation_ready", "Translation ready"),
+        sessionState: "success",
+        statusMessage: t("uxp.captions.runtime.translation_done_status", "Translation is ready for review."),
+        statusState: "success",
+        statusTitle: clipPath,
+        outputLabel: formatI18n("uxp.captions.runtime.translation_count", "{count} translated lines", { count: translated.length }),
+        outputTitle: clipPath,
+        insightType: t("uxp.captions.runtime.translation", "Translation"),
+        insightLength: formatI18n("uxp.captions.runtime.translation_count", "{count} translated lines", { count: translated.length }),
+        insightNext: result?.srt ? t("uxp.captions.runtime.next_copy_translated_srt", "Copy translated SRT") : t("uxp.captions.runtime.next_copy_translation", "Review the translated text"),
+      });
+      UIController.showToast(t("uxp.captions.runtime.translation_complete", "Caption translation complete."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runTranslateBtn", false);
+      UIController.showToast(formatI18n("uxp.captions.runtime.translation_error", "Caption translation failed: {error}", { error: err }), "error");
+    }
+  );
+}
+
+async function installTranslationBackendUxp() {
+  const restrictedOptIn = document.getElementById("translateRestrictedOptIn")?.checked ?? false;
+  if (!restrictedOptIn) {
+    UIController.showToast(t("uxp.captions.runtime.translate_license_required", "Confirm the non-commercial translation model license before installing."), "warning");
+    return;
+  }
+  UIController.setButtonLoading("installTranslationBtn", true);
+  UIController.showProcessing(t("uxp.captions.runtime.installing_translation", "Installing translation dependencies..."));
+  await JobPoller.start(
+    "/captions/enhanced/install",
+    { component: "nllb", no_input: true, accept_restricted_license: true },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    () => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("installTranslationBtn", false);
+      setTextAndTitle("translationInstallStatus", t("uxp.captions.runtime.translation_dependencies_ready", "Translation dependencies are ready."), t("uxp.captions.runtime.translation_dependencies_ready", "Translation dependencies are ready."));
+      UIController.showToast(t("uxp.captions.runtime.translation_install_complete", "Translation dependencies installed."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("installTranslationBtn", false);
+      setTextAndTitle("translationInstallStatus", t("uxp.captions.runtime.translation_install_failed", "Translation install failed."), String(err));
+      UIController.showToast(formatI18n("uxp.captions.runtime.translation_install_error", "Translation install failed: {error}", { error: err }), "error");
+    }
+  );
+}
+
+/** ── ANIMATED CAPTIONS ── */
+async function runAnimatedCaptions() {
+  const clipPath = document.getElementById("clipPathCaptions")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  const wordSegments = captionWordSegments(_lastTranscriptSegments);
+  if (!wordSegments.length) {
+    UIController.showToast(t("uxp.captions.runtime.animated_needs_words", "Run transcription with Word-Level Timestamps before rendering animated captions."), "warning");
+    return;
+  }
+  const animation = document.getElementById("animCapPreset")?.value || "pop";
+  const fontSize = parseInt(document.getElementById("animCapFontSize")?.value || "56", 10);
+  const maxWords = parseInt(document.getElementById("animCapWpl")?.value || "6", 10);
+  UIController.setButtonLoading("runAnimatedCaptionsBtn", true);
+  UIController.showProcessing(t("uxp.captions.runtime.rendering_animated", "Rendering animated captions..."));
+  await JobPoller.start(
+    "/captions/animated/render",
+    { filepath: clipPath, word_segments: wordSegments, animation, font_size: fontSize, max_words: maxWords },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runAnimatedCaptionsBtn", false);
+      const output = result?.output_path || t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.captions.runtime.animated_complete", "Animated captions rendered: {output}", { output }), "success");
+      UIController.setStatus(formatI18n("uxp.captions.runtime.animated_complete_status", "Animated captions are ready: {output}", { output }), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runAnimatedCaptionsBtn", false);
+      UIController.showToast(formatI18n("uxp.captions.runtime.animated_error", "Animated caption render failed: {error}", { error: err }), "error");
+    }
+  );
 }
 
 /** ── CHAPTER GENERATION ── */
@@ -4819,6 +5027,72 @@ async function runDenoise() {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
       UIController.showToast(formatI18n("uxp.audio.runtime.denoise_error", "Denoise error: {error}", { error: err }), "error");
+    }
+  );
+}
+
+/** ── STEM SEPARATION ── */
+async function runStemSeparation() {
+  const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  const stems = ["vocals", "drums", "bass", "other"].filter((stem) => document.getElementById(`stem${stem[0].toUpperCase()}${stem.slice(1)}`)?.checked);
+  if (!stems.length) {
+    UIController.showToast(t("uxp.audio.runtime.choose_stem_types", "Choose at least one stem type."), "warning");
+    return;
+  }
+  const model = document.getElementById("stemModel")?.value || "mel_band_roformer";
+  const format = document.getElementById("stemFormat")?.value || "wav";
+  const autoImport = document.getElementById("stemAutoImport")?.checked ?? true;
+  UIController.setButtonLoading("runStemSeparationBtn", true);
+  UIController.showProcessing(t("uxp.audio.runtime.separating_stems", "Separating audio stems..."));
+  await JobPoller.start(
+    "/audio/separate",
+    { filepath: clipPath, model, stems, format, auto_import: autoImport },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runStemSeparationBtn", false);
+      const stemCount = (Array.isArray(result?.output_paths) ? result.output_paths.length : (result?.output_path ? 1 : 0)) || stems.length;
+      UIController.showToast(formatI18n("uxp.audio.runtime.stems_complete", "Stem separation complete: {count} file(s).", { count: stemCount }), "success");
+      UIController.setStatus(formatI18n("uxp.audio.runtime.stems_complete_status", "Stem separation complete: {count} stem(s).", { count: stemCount }), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runStemSeparationBtn", false);
+      UIController.showToast(formatI18n("uxp.audio.runtime.stems_error", "Stem separation failed: {error}", { error: err }), "error");
+    }
+  );
+}
+
+/** ── SPEECH ENHANCEMENT ── */
+async function runAudioEnhance() {
+  const clipPath = document.getElementById("clipPathAudio")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  const denoise = document.getElementById("enhanceDenoiseUxp")?.checked ?? true;
+  const enhance = document.getElementById("enhanceUpscaleUxp")?.checked ?? true;
+  if (!denoise && !enhance) {
+    UIController.showToast(t("uxp.audio.runtime.choose_enhance_step", "Choose denoise or speech enhancement."), "warning");
+    return;
+  }
+  const backend = document.getElementById("enhanceBackendUxp")?.value || "clearvoice";
+  const model = document.getElementById("enhanceModelUxp")?.value || "MossFormer2_SE_48K";
+  UIController.setButtonLoading("runAudioEnhanceBtn", true);
+  UIController.showProcessing(t("uxp.audio.runtime.enhancing_speech", "Enhancing speech audio..."));
+  await JobPoller.start(
+    "/audio/enhance",
+    { filepath: clipPath, backend, model, denoise, enhance },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runAudioEnhanceBtn", false);
+      const output = result?.output_path || t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.audio.runtime.enhance_complete", "Speech enhancement complete: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.audio.runtime.enhance_complete_status", "Enhanced speech audio is ready."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runAudioEnhanceBtn", false);
+      UIController.showToast(formatI18n("uxp.audio.runtime.enhance_error", "Speech enhancement failed: {error}", { error: err }), "error");
     }
   );
 }
@@ -5270,6 +5544,44 @@ async function runBatchExport() {
         formatI18n("uxp.timeline.runtime.marker_export_failed_detail", "Marker-based export failed. {error}", { error: err }),
         err
       );
+    }
+  );
+}
+
+/** ── SINGLE-CLIP EXPORT PRESET ── */
+async function runExportPreset() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
+  const outputDir = document.getElementById("exportDir")?.value?.trim();
+  if (!clipPath) { showSelectClipWarning(); return; }
+  if (!outputDir) {
+    UIController.showToast(t("uxp.timeline.runtime.select_output_folder", "Please select an output folder."), "warning");
+    return;
+  }
+  const selectedPreset = document.getElementById("exportPreset")?.value || "youtube";
+  const preset = {
+    youtube: "youtube_1080p",
+    tiktok: "tiktok",
+    instagram: "instagram_reels",
+    prores: "prores_422",
+    h265: "hevc_1080p",
+  }[selectedPreset] || selectedPreset;
+  UIController.setButtonLoading("runExportPresetBtn", true);
+  UIController.showProcessing(t("uxp.timeline.runtime.starting_preset_export", "Starting preset export..."));
+  await JobPoller.start(
+    "/export/preset",
+    { filepath: clipPath, output_dir: outputDir, preset },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("uxp.timeline.runtime.exporting", "Exporting...")); },
+    (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runExportPresetBtn", false);
+      const output = result?.output_path || t("uxp.runtime.saved", "saved");
+      UIController.showToast(formatI18n("uxp.timeline.runtime.preset_export_complete", "Preset export complete: {output}", { output }), "success");
+      UIController.setStatus(t("uxp.timeline.runtime.preset_export_done_status", "Preset export complete."), "success");
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runExportPresetBtn", false);
+      UIController.showToast(formatI18n("uxp.timeline.runtime.preset_export_error", "Preset export failed: {error}", { error: err }), "error");
     }
   );
 }
@@ -6631,11 +6943,16 @@ function bindEvents() {
   document.getElementById("browseClipCut")?.addEventListener("click", () => browseFile("clipPathCut"));
   document.getElementById("runSilenceBtn")?.addEventListener("click", runSilenceRemoval);
   document.getElementById("runFillerBtn")?.addEventListener("click", runFillerDetection);
+  document.getElementById("runFullPipelineBtn")?.addEventListener("click", runFullPipelineUxp);
   document.getElementById("applyCutResultBtn")?.addEventListener("click", () => applyTimelineCuts(lastCuts));
 
   // ── Captions ──
   document.getElementById("browseClipCaptions")?.addEventListener("click", () => browseFile("clipPathCaptions"));
   document.getElementById("runTranscribeBtn")?.addEventListener("click", runTranscribe);
+  document.getElementById("installWhisperBtn")?.addEventListener("click", installWhisperUxp);
+  document.getElementById("runTranslateBtn")?.addEventListener("click", runCaptionTranslation);
+  document.getElementById("installTranslationBtn")?.addEventListener("click", installTranslationBackendUxp);
+  document.getElementById("runAnimatedCaptionsBtn")?.addEventListener("click", runAnimatedCaptions);
   document.getElementById("runChaptersBtn")?.addEventListener("click", runChapterGeneration);
   document.getElementById("runRepeatBtn")?.addEventListener("click", runRepeatDetection);
   document.getElementById("copySrtBtn")?.addEventListener("click", async () => {
@@ -6670,6 +6987,8 @@ function bindEvents() {
   document.getElementById("browseRefLoudness")?.addEventListener("click", () => browseFile("refClipLoudness"));
   document.getElementById("browseBeatTrack")?.addEventListener("click",   () => browseFile("beatTrackPath"));
   document.getElementById("runDenoiseBtn")?.addEventListener("click",     runDenoise);
+  document.getElementById("runStemSeparationBtn")?.addEventListener("click", runStemSeparation);
+  document.getElementById("runAudioEnhanceBtn")?.addEventListener("click", runAudioEnhance);
   document.getElementById("runNormalizeBtn")?.addEventListener("click",   runNormalize);
   document.getElementById("runLoudnessBtn")?.addEventListener("click",    runLoudnessMatch);
   document.getElementById("runBeatMarkersBtn")?.addEventListener("click", runBeatMarkers);
@@ -6688,6 +7007,7 @@ function bindEvents() {
   document.getElementById("applyTimelineCutsBtn")?.addEventListener("click", () => applyTimelineCuts(lastCuts));
   document.getElementById("addBeatMarkersBtn")?.addEventListener("click", () => addSequenceMarkers(lastMarkers, null));
   document.getElementById("runBatchExportBtn")?.addEventListener("click", runBatchExport);
+  document.getElementById("runExportPresetBtn")?.addEventListener("click", runExportPreset);
   document.getElementById("runBatchRenameBtn")?.addEventListener("click", runBatchRename);
   document.getElementById("runSmartBinsBtn")?.addEventListener("click",   runSmartBins);
   document.getElementById("runSrtImportBtn")?.addEventListener("click",   runSrtImport);
@@ -6923,6 +7243,8 @@ function bindSliders() {
   UIController.bindSlider("zoomFactor",        "zoomFactorVal",       v => `${v.toFixed(2)}x`);
   UIController.bindSlider("sceneThresholdUxp", "sceneThresholdValUxp", v => v.toFixed(2));
   UIController.bindSlider("styleIntensityUxp", "styleIntensityValUxp", v => `${v}%`);
+  UIController.bindSlider("animCapFontSize", "animCapFontSizeVal", v => `${v}px`);
+  UIController.bindSlider("animCapWpl", "animCapWplVal", v => `${v}`);
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -246,6 +246,33 @@
           <div class="oc-result-body" id="cutResultBody"></div>
           <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn" data-i18n="uxp.cut.apply_cuts_to_timeline">Apply Cuts to Timeline</button>
         </div>
+
+        <div class="oc-section-title" data-i18n="uxp.cut.full_pipeline">Full Cleanup Pipeline</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="fullPipelineBody">
+            <span data-i18n="uxp.cut.full_pipeline_title">One-click cleanup</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="fullPipelineBody">
+            <p class="oc-caption-intro" data-i18n="uxp.cut.full_pipeline_hint">Run silence cleanup, optional zoom, captions, and filler removal as one backend job.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="fullPresetUxp" data-i18n="uxp.cut.full_preset">Preset</label>
+              <select class="oc-select" id="fullPresetUxp">
+                <option value="youtube" selected data-i18n="uxp.cut.full_preset_youtube">YouTube</option>
+                <option value="default" data-i18n="uxp.cut.full_preset_default">Default</option>
+                <option value="aggressive" data-i18n="uxp.cut.full_preset_aggressive">Aggressive</option>
+                <option value="conservative" data-i18n="uxp.cut.full_preset_conservative">Conservative</option>
+                <option value="podcast" data-i18n="uxp.cut.full_preset_podcast">Podcast</option>
+              </select>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label"><input type="checkbox" id="fullZoomUxp" checked> <span data-i18n="uxp.cut.auto_zoom">Auto Zoom</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="fullCaptionsUxp" checked> <span data-i18n="uxp.cut.captions_srt">Captions (SRT)</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="fullFillersUxp"> <span data-i18n="uxp.cut.remove_fillers">Remove Filler Words</span></label>
+            </div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFullPipelineBtn" data-i18n="uxp.cut.full_run">Run Full Pipeline</button>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== CAPTIONS TAB ==================== -->
@@ -325,6 +352,78 @@
             </div>
             <p class="oc-hint oc-caption-plan-note" id="captionsPlanNote" data-i18n="uxp.captions.plan_note_default">Word timing is on. Speaker splits are off.</p>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runTranscribeBtn" data-i18n="uxp.captions.transcribe">Transcribe</button>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="installWhisperBtn" data-i18n="uxp.captions.install_whisper">Install faster-whisper</button>
+              <span class="oc-status-line" id="whisperInstallStatus" role="status" data-i18n="uxp.captions.whisper_install_ready">Whisper install is available when the backend needs it.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="oc-section-title" data-i18n="uxp.captions.translation">Translation</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="translationBody">
+            <span data-i18n="uxp.captions.translate_captions">Translate Captions</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 5l6 6 6-6"/></svg>
+          </div>
+          <div class="oc-card-body" id="translationBody">
+            <p class="oc-caption-intro" data-i18n="uxp.captions.translation_intro">Translate the latest transcript locally with the explicit non-commercial model opt-in.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="translateSourceLang" data-i18n="uxp.captions.source_language">Source language</label>
+              <select class="oc-select" id="translateSourceLang">
+                <option value="en" selected data-i18n="uxp.captions.language_en">English</option>
+                <option value="es" data-i18n="uxp.captions.language_es">Spanish</option>
+                <option value="fr" data-i18n="uxp.captions.language_fr">French</option>
+                <option value="de" data-i18n="uxp.captions.language_de">German</option>
+                <option value="ja" data-i18n="uxp.captions.language_ja">Japanese</option>
+                <option value="zh" data-i18n="uxp.captions.language_zh">Chinese</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="translateTargetLang" data-i18n="uxp.captions.target_language">Target language</label>
+              <select class="oc-select" id="translateTargetLang">
+                <option value="es" selected data-i18n="uxp.captions.language_es">Spanish</option>
+                <option value="en" data-i18n="uxp.captions.language_en">English</option>
+                <option value="fr" data-i18n="uxp.captions.language_fr">French</option>
+                <option value="de" data-i18n="uxp.captions.language_de">German</option>
+                <option value="ja" data-i18n="uxp.captions.language_ja">Japanese</option>
+                <option value="zh" data-i18n="uxp.captions.language_zh">Chinese</option>
+              </select>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label"><input type="checkbox" id="translateOutputSrt" checked> <span data-i18n="uxp.captions.output_srt">Return translated SRT</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="translateRestrictedOptIn"> <span data-i18n="uxp.captions.accept_restricted_license">I accept the non-commercial model terms</span></label>
+            </div>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-primary oc-btn-sm" id="runTranslateBtn" data-i18n="uxp.captions.translate">Translate</button>
+              <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="installTranslationBtn" data-i18n="uxp.captions.install_translation">Install NLLB</button>
+            </div>
+            <div class="oc-status-line" id="translationInstallStatus" role="status" data-i18n="uxp.captions.translation_install_ready">Translation dependencies are not installed until requested.</div>
+          </div>
+        </div>
+
+        <div class="oc-section-title" data-i18n="uxp.captions.animated_captions">Animated Captions</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="animatedCaptionsBody">
+            <span data-i18n="uxp.captions.render_animated">Render Animated Captions</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 5l6 6 6-6"/></svg>
+          </div>
+          <div class="oc-card-body" id="animatedCaptionsBody">
+            <p class="oc-caption-intro" data-i18n="uxp.captions.animated_intro">Use word-level transcript timing to render an animated caption video.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="animCapPreset" data-i18n="uxp.captions.animation">Animation</label>
+              <select class="oc-select" id="animCapPreset">
+                <option value="pop" selected data-i18n="uxp.captions.animation_pop">Pop</option>
+                <option value="fade" data-i18n="uxp.captions.animation_fade">Fade</option>
+                <option value="slide_up" data-i18n="uxp.captions.animation_slide_up">Slide Up</option>
+                <option value="typewriter" data-i18n="uxp.captions.animation_typewriter">Typewriter</option>
+                <option value="bounce" data-i18n="uxp.captions.animation_bounce">Bounce</option>
+                <option value="glow" data-i18n="uxp.captions.animation_glow">Glow</option>
+                <option value="highlight_box" data-i18n="uxp.captions.animation_highlight_box">Highlight Box</option>
+              </select>
+            </div>
+            <div class="oc-slider-row"><label class="oc-label" for="animCapFontSize" data-i18n="uxp.captions.font_size">Font Size</label><input type="range" class="oc-slider" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="oc-slider-val" id="animCapFontSizeVal">56</span></div>
+            <div class="oc-slider-row"><label class="oc-label" for="animCapWpl" data-i18n="uxp.captions.words_per_line">Words Per Line</label><input type="range" class="oc-slider" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="oc-slider-val" id="animCapWplVal">6</span></div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runAnimatedCaptionsBtn" data-i18n="uxp.captions.render_animated">Render Animated Captions</button>
           </div>
         </div>
 
@@ -489,6 +588,53 @@
               <span class="oc-slider-val" id="denoiseStrengthVal">75%</span>
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runDenoiseBtn" data-i18n="uxp.audio.apply_denoise">Apply Denoise</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title" data-i18n="uxp.audio.stem_separation">Stem Separation</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="stemSeparationBody">
+            <span data-i18n="uxp.audio.ai_stem_separation">AI Stem Separation</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708 0l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="stemSeparationBody">
+            <p class="oc-caption-intro" data-i18n="uxp.audio.stem_separation_hint">Split the selected clip into vocals, drums, bass, and other stems with the maintained audio-separator backend.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="stemModel" data-i18n="uxp.audio.model">Model</label>
+              <select class="oc-select" id="stemModel">
+                <option value="mel_band_roformer" selected data-i18n="uxp.audio.model_mel_band_roformer">Mel-Band RoFormer</option>
+                <option value="bs_roformer" data-i18n="uxp.audio.model_bs_roformer">BS RoFormer</option>
+                <option value="mdx23c" data-i18n="uxp.audio.model_mdx23c">MDX23C</option>
+                <option value="htdemucs" data-i18n="uxp.audio.model_htdemucs">HTDemucs (legacy)</option>
+              </select>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label"><input type="checkbox" id="stemVocals" checked> <span data-i18n="uxp.audio.vocals">Vocals</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="stemDrums" checked> <span data-i18n="uxp.audio.drums">Drums</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="stemBass"> <span data-i18n="uxp.audio.bass">Bass</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="stemOther"> <span data-i18n="uxp.audio.other">Other</span></label>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="stemFormat" data-i18n="uxp.audio.format">Format</label>
+              <select class="oc-select" id="stemFormat"><option value="wav" selected>WAV</option><option value="flac">FLAC</option><option value="mp3">MP3</option></select>
+            </div>
+            <label class="oc-checkbox-row"><input type="checkbox" id="stemAutoImport" checked> <span data-i18n="uxp.audio.auto_import_stems">Auto-import generated stems</span></label>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runStemSeparationBtn" data-i18n="uxp.audio.separate_stems">Separate Stems</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title" data-i18n="uxp.audio.speech_enhancement">Speech Enhancement</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="audioEnhanceBody">
+            <span data-i18n="uxp.audio.enhance_speech">Enhance Speech</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708 0l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="audioEnhanceBody">
+            <p class="oc-caption-intro" data-i18n="uxp.audio.speech_enhancement_hint">Clean and restore spoken audio with ClearerVoice, or use Resemble when it is installed.</p>
+            <div class="oc-field-row"><label class="oc-label" for="enhanceBackendUxp" data-i18n="uxp.audio.backend">Backend</label><select class="oc-select" id="enhanceBackendUxp"><option value="clearvoice" selected data-i18n="uxp.audio.backend_clearvoice">ClearerVoice</option><option value="resemble" data-i18n="uxp.audio.backend_resemble">Resemble Enhance</option></select></div>
+            <div class="oc-field-row"><label class="oc-label" for="enhanceModelUxp" data-i18n="uxp.audio.model">Model</label><select class="oc-select" id="enhanceModelUxp"><option value="MossFormer2_SE_48K" selected>MossFormer2 SE 48K</option><option value="FRCRN_SE_16K">FRCRN SE 16K</option><option value="MossFormerGAN_SE_16K">MossFormerGAN SE 16K</option></select></div>
+            <div class="oc-checkbox-row"><label class="oc-checkbox-label"><input type="checkbox" id="enhanceDenoiseUxp" checked> <span data-i18n="uxp.audio.denoise">Denoise</span></label><label class="oc-checkbox-label"><input type="checkbox" id="enhanceUpscaleUxp" checked> <span data-i18n="uxp.audio.enhance">Enhance speech</span></label></div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runAudioEnhanceBtn" data-i18n="uxp.audio.run_enhancement">Enhance Audio</button>
           </div>
         </div>
 
@@ -1066,6 +1212,7 @@
               </div>
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBatchExportBtn" data-i18n="uxp.timeline.batch_export">Batch Export</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runExportPresetBtn" data-i18n="uxp.timeline.export_single_preset">Export Current Clip with Preset</button>
           </div>
         </div>
 
