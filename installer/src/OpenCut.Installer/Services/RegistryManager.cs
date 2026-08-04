@@ -14,8 +14,8 @@ public class RegistryManager
             using var envKey = Registry.CurrentUser.OpenSubKey(AppConstants.EnvironmentRegKey, writable: true);
             if (envKey == null) return;
 
-            var currentPath = envKey.GetValue(
-                "Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
+            var pathValue = ReadPathValue(envKey);
+            var currentPath = pathValue.Value;
 
             var pathSegments = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries);
             if (pathSegments.Any(p => p.Equals(directory, StringComparison.OrdinalIgnoreCase)))
@@ -28,7 +28,7 @@ public class RegistryManager
                 ? directory
                 : $"{currentPath};{directory}";
 
-            envKey.SetValue("Path", newPath, RegistryValueKind.ExpandString);
+            WritePathValue(envKey, newPath, pathValue.Kind);
 
             NativeMethods.BroadcastEnvironmentChange();
 
@@ -47,13 +47,13 @@ public class RegistryManager
             using var envKey = Registry.CurrentUser.OpenSubKey(AppConstants.EnvironmentRegKey, writable: true);
             if (envKey == null) return;
 
-            var currentPath = envKey.GetValue(
-                "Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
+            var pathValue = ReadPathValue(envKey);
+            var currentPath = pathValue.Value;
             var parts = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => !p.Equals(directory, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
-            envKey.SetValue("Path", string.Join(';', parts), RegistryValueKind.ExpandString);
+            WritePathValue(envKey, string.Join(';', parts), pathValue.Kind);
             NativeMethods.BroadcastEnvironmentChange();
         }
         catch { /* Best effort */ }
@@ -86,6 +86,36 @@ public class RegistryManager
     public void RemovePlayerDebugMode()
     {
         // We don't remove PlayerDebugMode on uninstall since other extensions may need it
+    }
+
+    public static (string Value, RegistryValueKind Kind) ReadPathValue(RegistryKey key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        var value = key.GetValue(
+            "Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
+        var kind = RegistryValueKind.ExpandString;
+        try
+        {
+            kind = key.GetValueKind("Path");
+        }
+        catch
+        {
+            // A missing Path defaults to an expandable value when first written.
+        }
+
+        if (kind is not RegistryValueKind.String and not RegistryValueKind.ExpandString)
+            kind = RegistryValueKind.ExpandString;
+        return (value, kind);
+    }
+
+    public static void WritePathValue(RegistryKey key, string value, RegistryValueKind kind)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        var safeKind = kind is RegistryValueKind.String or RegistryValueKind.ExpandString
+            ? kind
+            : RegistryValueKind.ExpandString;
+        key.SetValue("Path", value, safeKind);
     }
 
     public RegistryInstallState CaptureInstallState()

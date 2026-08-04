@@ -8,7 +8,6 @@ namespace OpenCut.Installer.Services;
 /// </summary>
 public class DependencyInstaller
 {
-    private static readonly string[] PythonCandidates = ["python", "python3", "py"];
     private static readonly IReadOnlyDictionary<string, string> SupportedRequirements =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -31,7 +30,7 @@ public class DependencyInstaller
         }
 
         // Find system Python
-        var python = FindPython();
+        var python = PythonResolver.FindSupportedPath();
         if (python == null)
         {
             Report(progress, step, totalSteps, stepName,
@@ -57,12 +56,16 @@ public class DependencyInstaller
                 var psi = new ProcessStartInfo
                 {
                     FileName = python,
-                    Arguments = $"-m pip install \"{requirement}\" -q",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
+                psi.ArgumentList.Add("-m");
+                psi.ArgumentList.Add("pip");
+                psi.ArgumentList.Add("install");
+                psi.ArgumentList.Add(requirement);
+                psi.ArgumentList.Add("-q");
 
                 using var process = Process.Start(psi);
                 if (process == null)
@@ -104,38 +107,6 @@ public class DependencyInstaller
                     $"Error installing {package}: {ex.Message}", LogLevel.Warning);
             }
         }
-    }
-
-    private static string? FindPython()
-    {
-        foreach (var name in PythonCandidates)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = name,
-                    Arguments = "-c \"import sys; raise SystemExit(0 if (3, 11) <= sys.version_info[:2] <= (3, 14) else 1)\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(psi);
-                if (process == null) continue;
-                process.WaitForExit(10000);
-
-                if (process.ExitCode == 0)
-                    return name;
-            }
-            catch
-            {
-                // Not found, try next
-            }
-        }
-
-        return null;
     }
 
     private static void Report(IProgress<InstallProgress> progress, int step, int total,
