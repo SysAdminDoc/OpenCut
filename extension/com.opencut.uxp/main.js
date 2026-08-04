@@ -32,6 +32,7 @@ import { createPremiereThemeSync } from "./uxp-theme.js";
 import { createUxpUiController } from "./uxp-ui-controller.js";
 import { createUxpUpdateController } from "./uxp-update-controller.js";
 import { createUxpSettingsController } from "./uxp-settings-controller.js";
+import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -9371,28 +9372,33 @@ function initAgentTab() {
     }
   }
 
-  async function sequenceIndexApplyFilter() {
-    if (!sequenceIndexState.built) return;
-    sequenceIndexSetBusy(true);
-    try {
-      const resp = await BackendClient.post("/timeline/sequence-index/filter", sequenceIndexFilterPayload());
-      if (!resp || resp.error || resp.ok === false) {
-        setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.failed", "Failed: {error}", { error: responseError(resp) }));
-        return;
-      }
-      const data = responseData(resp);
-      sequenceIndexState.visibleRows = Array.isArray(data.rows) ? data.rows : [];
+  const sequenceIndexFilterController = createSequenceIndexFilterController({
+    request: (payload) => BackendClient.post("/timeline/sequence-index/filter", payload),
+    getData: responseData,
+    onRows: (rows) => {
+      sequenceIndexState.visibleRows = rows;
       sequenceIndexRenderHead();
       sequenceIndexRenderRows();
       sequenceIndexRenderCount(sequenceIndexState.visibleRows.length > SEQUENCE_INDEX_PAGE_SIZE);
-    } catch (err) {
-      setStatus("sequenceIndexStatus", formatI18n("uxp.agent.runtime.error", "Error: {error}", { error: err?.message || err }));
-    } finally {
-      sequenceIndexSetBusy(false);
-    }
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : responseError(error);
+      setStatus("sequenceIndexStatus", formatI18n(
+        error instanceof Error ? "uxp.agent.runtime.error" : "uxp.agent.runtime.failed",
+        error instanceof Error ? "Error: {error}" : "Failed: {error}",
+        { error: message },
+      ));
+    },
+    setBusy: sequenceIndexSetBusy,
+  });
+
+  async function sequenceIndexApplyFilter() {
+    if (!sequenceIndexState.built) return;
+    await sequenceIndexFilterController.apply(sequenceIndexFilterPayload());
   }
 
   function sequenceIndexScheduleFilter() {
+    sequenceIndexFilterController.invalidate();
     if (sequenceIndexState.searchTimer) clearTimeout(sequenceIndexState.searchTimer);
     sequenceIndexState.searchTimer = setTimeout(() => {
       sequenceIndexState.searchTimer = null;
@@ -9403,6 +9409,7 @@ function initAgentTab() {
   $("sequenceIndexBuildBtn")?.addEventListener("click", async () => {
     const btn = $("sequenceIndexBuildBtn");
     if (btn) btn.disabled = true;
+    sequenceIndexFilterController.invalidate();
     sequenceIndexSetBusy(true);
     setStatus("sequenceIndexStatus", t("uxp.agent.runtime.reading_active_sequence", "Reading active sequence..."));
     try {

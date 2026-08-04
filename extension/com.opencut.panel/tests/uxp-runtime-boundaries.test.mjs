@@ -11,6 +11,7 @@ import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
 import { createUxpUiController } from "../../com.opencut.uxp/uxp-ui-controller.js";
 import { createUxpUpdateController } from "../../com.opencut.uxp/uxp-update-controller.js";
 import { createUxpSettingsController } from "../../com.opencut.uxp/uxp-settings-controller.js";
+import { createSequenceIndexFilterController } from "../../com.opencut.uxp/uxp-sequence-index-controller.js";
 import {
   buildChatActionRequest,
   buildLoudnessMatchPayload,
@@ -182,6 +183,27 @@ describe("UXP backend client", () => {
 });
 
 describe("UXP feature control contracts", () => {
+  it("keeps only the latest Sequence Index filter response", async () => {
+    const pending = [];
+    const rows = [];
+    const busy = [];
+    const controller = createSequenceIndexFilterController({
+      request: vi.fn(() => new Promise((resolve) => pending.push(resolve))),
+      onRows: (value) => rows.push(value),
+      setBusy: (value) => busy.push(value),
+    });
+
+    const first = controller.apply({ query: "old" });
+    const second = controller.apply({ query: "new" });
+    pending[1]({ ok: true, data: { rows: ["new-result"] } });
+    await second;
+    pending[0]({ ok: true, data: { rows: ["old-result"] } });
+    await first;
+
+    expect(rows).toEqual([["new-result"]]);
+    expect(busy).toEqual([true, true, false]);
+  });
+
   it("builds allowlisted chat requests with the active clip", () => {
     expect(buildChatActionRequest({
       action: "/audio/normalize",
