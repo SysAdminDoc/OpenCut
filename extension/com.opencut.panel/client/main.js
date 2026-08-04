@@ -2407,6 +2407,15 @@
             return false;
         }
     });
+    var ResultsController = OpenCutResultsController.createResultsController({
+        documentRef: document,
+        elements: el,
+        translate: t,
+        escapeHtml: esc,
+        safeFixed: safeFixed,
+        onBoundaryReview: renderFillerBoundaryReview,
+        onAnnounce: announceJobResult
+    });
     var rememberButtonText = OpenCutComponents.rememberButtonText;
     var setButtonText = OpenCutComponents.setButtonText;
 
@@ -4563,21 +4572,10 @@
 
         if (job.status === "error") {
             hideProgress();
-            // Show error in results card for better visibility
-            el.resultsSection.classList.remove("hidden");
-            el.resultsTitle.textContent = t("progress.run_failed", "Run failed");
-            el.resultsTitle.removeAttribute("style");
-            el.resultsTitle.setAttribute("data-state", "error");
-            el.resultsStats.textContent = enhanceError(
+            ResultsController.showFailure(job, enhanceError(
                 job.error || job.message || t("progress.unknown_error", "Unknown error"),
                 job
-            );
-            el.resultsPath.textContent = "";
-            el.resultsPath.title = "";
-            // Show retry button if we have a last job to retry
-            if (lastJobEndpoint) {
-                el.retryJobBtn.classList.remove("hidden");
-            }
+            ), !!lastJobEndpoint);
             // Also show alert banner with action link for code-aware errors
             if (job.code) {
                 showErrorWithAction(job);
@@ -4603,7 +4601,7 @@
         // Success
         hideProgress();
         el.retryJobBtn.classList.add("hidden");
-        showResults(job);
+        ResultsController.showSuccess(job, lastJobPayload);
         settleJobLifecycle(job);
 
         // Auto-import into Premiere (respect global setting)
@@ -4756,147 +4754,6 @@
         var mc = document.getElementById("mainContent");
         if (mc) mc.inert = false;
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
-    }
-
-    function showResults(job) {
-        el.resultsSection.classList.remove("hidden");
-        el.resultsTitle.textContent = t("progress.finished", "Finished");
-        el.resultsTitle.removeAttribute("style");
-        el.resultsTitle.setAttribute("data-state", "success");
-
-        var stats = "";
-        var r = job.result || {};
-
-        if (r.boundary_review && r.boundary_review.required) {
-            renderFillerBoundaryReview(r.boundary_review, lastJobPayload);
-        }
-
-        if (r.summary) {
-            stats += esc(r.summary) + "<br>";
-        }
-        if (r.segments !== undefined) {
-            var segmentCount = Number(r.segments);
-            stats += t("progress.result_segments", "{count} segment{plural}")
-                .replace("{count}", segmentCount)
-                .replace("{plural}", segmentCount === 1 ? "" : "s");
-        }
-        if (r.filler_stats) {
-            var fillerCount = Number(r.filler_stats.removed_fillers);
-            stats += " | " + t("progress.result_fillers_removed", "{count} filler{plural} removed ({seconds}s)")
-                .replace("{count}", fillerCount)
-                .replace("{plural}", fillerCount === 1 ? "" : "s")
-                .replace("{seconds}", safeFixed(r.filler_stats.total_filler_time, 1));
-        }
-        if (r.boundary_review && r.boundary_review.required) {
-            stats += (stats ? "<br>" : "") + t(
-                "cut.boundary_review_summary",
-                "{count} boundary or alignment result needs review before OpenCut changes the timeline."
-            ).replace("{count}", Number(r.boundary_review.review_hits || 0));
-        }
-        if (r.asr_provenance) {
-            var provenance = r.asr_provenance;
-            var revision = String(provenance.model_revision || "unknown");
-            if (revision.length > 12) revision = revision.slice(0, 12);
-            stats += (stats ? "<br>" : "") + t("progress.result_asr_provenance", "ASR: {engine} · {model} @ {revision} · {alignment} · {language}")
-                .replace("{engine}", esc(provenance.engine || "unknown"))
-                .replace("{model}", esc(provenance.model_id || "unknown"))
-                .replace("{revision}", esc(revision))
-                .replace("{alignment}", esc(provenance.alignment_mode || "none"))
-                .replace("{language}", esc(provenance.language_decision || "unknown"));
-        }
-        if (r.caption_segments !== undefined) {
-            var captionCount = Number(r.caption_segments);
-            var wordCount = Number(r.words || 0);
-            stats += (stats ? " | " : "") + t("progress.result_captions_words", "{captions} caption{caption_plural}, {words} word{word_plural}")
-                .replace("{captions}", captionCount)
-                .replace("{caption_plural}", captionCount === 1 ? "" : "s")
-                .replace("{words}", wordCount)
-                .replace("{word_plural}", wordCount === 1 ? "" : "s");
-        }
-        if (r.style) {
-            stats += " | " + t("progress.result_style", "Style: {style}")
-                .replace("{style}", esc(r.style));
-        }
-        // Audio results
-        if (r.effect && !r.method) {
-            stats += (stats ? "<br>" : "") + t("progress.result_effect_applied", "Effect applied: {effect}")
-                .replace("{effect}", esc(r.effect));
-        }
-        if (r.method && r.strength !== undefined) {
-            stats += (stats ? "<br>" : "") + t("progress.result_denoise", "Denoise: {method} ({strength}% strength)")
-                .replace("{method}", esc(r.method))
-                .replace("{strength}", safeFixed(r.strength * 100, 0));
-        }
-        if (r.preset && r.target_loudness !== undefined) {
-            stats += (stats ? "<br>" : "") + t("progress.result_normalized_to", "Normalized to {target} LUFS ({preset})")
-                .replace("{target}", safeFixed(r.target_loudness, 1))
-                .replace("{preset}", esc(r.preset));
-            if (r.input_loudness !== undefined) {
-                stats += " | " + t("progress.result_loudness_was", "Was: {lufs} LUFS")
-                    .replace("{lufs}", safeFixed(r.input_loudness, 1));
-            }
-        }
-        if (r.bpm) {
-            var beatCount = r.total_beats != null ? Number(r.total_beats) : 0;
-            stats += (stats ? "<br>" : "") + t("progress.result_bpm_beats", "BPM: {bpm} | {beats} beat{plural}")
-                .replace("{bpm}", safeFixed(r.bpm, 0))
-                .replace("{beats}", beatCount)
-                .replace("{plural}", beatCount === 1 ? "" : "s");
-            if (r.confidence !== undefined) {
-                stats += " | " + t("progress.result_confidence", "Confidence: {percent}%")
-                    .replace("{percent}", safeFixed(r.confidence * 100, 0));
-            }
-        }
-        // Stem separation
-        if (r.output_paths && r.output_paths.length > 0) {
-            var stemNames = [];
-            for (var i = 0; i < r.output_paths.length; i++) {
-                var fname = r.output_paths[i].split(/[/\\]/).pop();
-                stemNames.push(esc(fname));
-            }
-            stats += (stats ? "<br>" : "") + t("progress.result_stems", "{count} stem{plural}: {names}")
-                .replace("{count}", r.output_paths.length)
-                .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
-                .replace("{names}", stemNames.join(", "));
-        }
-        if (r.magic_clips_bundle) {
-            var bundleOutputs = Number(r.magic_clips_bundle.output_count || 0);
-            var bundleCandidates = Number(r.magic_clips_bundle.candidate_count || 0);
-            stats += (stats ? "<br>" : "") + "Magic Clips bundle: " +
-                bundleOutputs + " output" + (bundleOutputs === 1 ? "" : "s") +
-                " across " + bundleCandidates + " candidate" + (bundleCandidates === 1 ? "" : "s");
-        }
-        // Scene detection
-        if (r.total_scenes) {
-            stats += (stats ? "<br>" : "") + t("progress.result_scenes", "Scenes: {count} | Avg: {seconds}s")
-                .replace("{count}", Number(r.total_scenes))
-                .replace("{seconds}", safeFixed(r.avg_scene_length, 1));
-        }
-        if (r.indexed !== undefined && r.total !== undefined) {
-            stats += (stats ? "<br>" : "") + t("progress.result_files_indexed", "{indexed} of {total} files indexed")
-                .replace("{indexed}", Number(r.indexed))
-                .replace("{total}", Number(r.total));
-            if (r.errors && r.errors.length) {
-                stats += " | " + t("progress.result_errors", "{count} error{plural}")
-                    .replace("{count}", Number(r.errors.length))
-                    .replace("{plural}", r.errors.length === 1 ? "" : "s");
-            }
-        }
-
-        var resultPath = r.magic_clips_bundle_manifest || r.xml_path || r.output_path || r.overlay_path || (r.output_paths
-            ? t("progress.result_files_exported", "{count} file{plural} exported")
-                .replace("{count}", r.output_paths.length)
-                .replace("{plural}", r.output_paths.length === 1 ? "" : "s")
-            : "");
-        el.resultsStats.innerHTML = stats || t("progress.success_summary", "The run finished successfully.");
-        el.resultsPath.textContent = resultPath;
-        el.resultsPath.title = resultPath || "";
-
-        // Polite: success must not interrupt whatever the user is reading.
-        // Read the rendered summary back so the announcement carries the same
-        // detail the sighted user sees, not a generic "done".
-        announceJobResult("polite", t("progress.announce_finished", "Run finished. {summary}")
-            .replace("{summary}", el.resultsStats.textContent || ""));
     }
 
     function cancelJob() {
@@ -11020,7 +10877,7 @@
         });
         if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.pop();
         renderJobHistory();
-        // Note: toast is intentionally NOT shown here — onJobDone/showResults
+        // Note: toast is intentionally NOT shown here — onJobDone/ResultsController
         // already displays results and showAlert. Adding a toast here would
         // duplicate notifications on every job completion.
     }
@@ -17998,6 +17855,7 @@
         window.addEventListener("beforeunload", function () {
             stopHostThemeSync();
             UpdateController.dispose();
+            ResultsController.dispose();
             wsDisconnect();
             if (activeStream) {
                 activeStream.close();
