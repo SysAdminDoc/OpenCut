@@ -23,6 +23,7 @@
   "devDependencies": {
     "@adobe/eslint-plugin-premierepro": "26.3.0",
     "@adobe/premierepro": "26.3.0",
+    "@axe-core/playwright": "4.12.1",
     "@playwright/test": "1.61.1",
     "eslint": "^9.39.5",
     "globals": "^17.7.0",

@@ -3,6 +3,12 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Rendered WCAG scans
+
+- CEP and UXP rendered regression states now run an axe WCAG 2.2 AA scan
+  across tabs, themes, and breakpoint boundaries; the scan has no suppressions
+  and the covered light-theme contrast/focus issues are fixed.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
