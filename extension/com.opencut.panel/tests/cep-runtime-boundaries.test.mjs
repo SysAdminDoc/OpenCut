@@ -566,7 +566,8 @@ describe("CEP source ownership", () => {
     expect(main).toContain("ResultsController.showSuccess(job, lastJobPayload)");
     expect(results).toContain('onAnnounce("polite", t("progress.announce_finished"');
     expect(main).toContain("ResultsController.showFailure(job, enhanceError(");
-    expect(main).toContain('announceJobResult("error", failureTemplate.replace("{reason}", failureReason));');
+    expect(main).toContain('announceJobResult("error", replaceTemplateValue(failureTemplate, "{reason}", failureReason));');
+    expect(main).not.toMatch(/\.replace\("\{(?:error|reason)\}"/);
     expect(main).toContain('t("progress.announce_failed_retry"');
     expect(main).toContain('announceJobResult("polite", t("progress.announce_cancelled"');
 

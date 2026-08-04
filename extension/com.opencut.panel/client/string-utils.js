@@ -89,6 +89,10 @@
             .replace("{plural}", count === 1 ? "" : "s");
     }
 
+    function replaceTemplateValue(template, token, value) {
+        return String(template).replace(String(token), function () { return String(value); });
+    }
+
     return {
         humanizeControlId: humanizeControlId,
         journalClipName: journalClipName,
@@ -97,6 +101,7 @@
         captionDisplayOptionLabel: captionDisplayOptionLabel,
         inferNotificationTone: inferNotificationTone,
         getNotificationIconSvg: getNotificationIconSvg,
-        wsFormatListenerCount: wsFormatListenerCount
+        wsFormatListenerCount: wsFormatListenerCount,
+        replaceTemplateValue: replaceTemplateValue
     };
 });

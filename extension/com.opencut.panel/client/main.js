@@ -47,7 +47,8 @@
         captionDisplayOptionLabel = OpenCutStringUtils.captionDisplayOptionLabel,
         inferNotificationTone = OpenCutStringUtils.inferNotificationTone,
         getNotificationIconSvg = OpenCutStringUtils.getNotificationIconSvg,
-        wsFormatListenerCount = OpenCutStringUtils.wsFormatListenerCount;
+        wsFormatListenerCount = OpenCutStringUtils.wsFormatListenerCount,
+        replaceTemplateValue = OpenCutStringUtils.replaceTemplateValue;
     var OpenCutLookup = (typeof window !== "undefined" && window.OpenCutLookup) ? window.OpenCutLookup : {};
     var getTranscriptCacheKey = OpenCutLookup.getTranscriptCacheKey,
         parseToUnixSeconds = OpenCutLookup.parseToUnixSeconds,
@@ -1162,7 +1163,7 @@
             ? data.error
             : (err && err.message ? err.message : String(err || t("toast.unknown_error", "Unknown error")));
         if (data && data.suggestion) message += " " + data.suggestion;
-        return fallback.replace("{error}", message);
+        return replaceTemplateValue(fallback, "{error}", message);
     }
 
     function runDestructiveAction(options) {
@@ -4178,7 +4179,7 @@
                 if (hintEl) {
                     setHintState(
                         hintEl,
-                        t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                        replaceTemplateValue(t("install.failed", "Installation failed: {error}"), "{error}", errMsg),
                         "error",
                         actionBtn
                     );
@@ -4287,8 +4288,7 @@
         } catch (e) {
             jobRuntime.failStart();
             hideProgress();
-            showAlert(t("progress.start_failed_prefix", "Failed to start job: {error}")
-                .replace("{error}", e.message));
+            showAlert(replaceTemplateValue(t("progress.start_failed_prefix", "Failed to start job: {error}"), "{error}", e.message));
             runStartJobErrorHook(opts, { reason: "exception", error: e });
             return false;
         }
@@ -4530,7 +4530,7 @@
             var failureTemplate = lastJobEndpoint
                 ? t("progress.announce_failed_retry", "Run failed: {reason} Use the Retry button in the results card to run it again.")
                 : t("progress.announce_failed", "Run failed: {reason}");
-            announceJobResult("error", failureTemplate.replace("{reason}", failureReason));
+            announceJobResult("error", replaceTemplateValue(failureTemplate, "{reason}", failureReason));
             settleJobLifecycle(job);
             return;
         }
@@ -4570,7 +4570,7 @@
                     PremiereBridge.importXML(xmlPath, cb);
                 }, function (r) {
                     if (r.error) {
-                        showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
+                        showAlert(replaceTemplateValue(t("toast.import_error", "Import error: {error}"), "{error}", r.error));
                     } else if (r.sequence_name) {
                         showAlert(t("toast.opened_sequence", "Opened: {name}").replace("{name}", r.sequence_name));
                     }
@@ -4590,7 +4590,7 @@
                     PremiereBridge.importOverlay(overlayPath, cb);
                 }, function (r) {
                     if (r.error) {
-                        showAlert(t("toast.overlay_import_error", "Overlay import error: {error}").replace("{error}", r.error));
+                        showAlert(replaceTemplateValue(t("toast.overlay_import_error", "Overlay import error: {error}"), "{error}", r.error));
                     } else if (r.message) {
                         showAlert(r.message);
                     }
@@ -4609,7 +4609,7 @@
                     PremiereBridge.importFiles(outputPaths, t("premiere.bin_stems", "OpenCut Stems"), cb);
                 }, function (r) {
                     if (r.error) {
-                        showAlert(t("toast.stem_import_error", "Stem import error: {error}").replace("{error}", r.error));
+                        showAlert(replaceTemplateValue(t("toast.stem_import_error", "Stem import error: {error}"), "{error}", r.error));
                     } else if (r.message) {
                         showAlert(r.message);
                     }
@@ -4636,7 +4636,7 @@
                         PremiereBridge.importCaptions(outputPath, cb);
                     }, function (r) {
                         if (r.error) {
-                            showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
+                            showAlert(replaceTemplateValue(t("toast.caption_import_error", "Caption import error: {error}"), "{error}", r.error));
                         } else if (r.message) {
                             showAlert(r.message);
                         }
@@ -4654,7 +4654,7 @@
                         PremiereBridge.importFile(outputPath, t("premiere.bin_output", "OpenCut Output"), cb);
                     }, function (r) {
                         if (r.error) {
-                            showAlert(t("toast.import_error", "Import error: {error}").replace("{error}", r.error));
+                            showAlert(replaceTemplateValue(t("toast.import_error", "Import error: {error}"), "{error}", r.error));
                         } else if (r.message) {
                             showAlert(r.message);
                         }
@@ -4674,7 +4674,7 @@
                     PremiereBridge.importCaptions(srtPath, cb);
                 }, function (r) {
                     if (r.error) {
-                        showAlert(t("toast.caption_import_error", "Caption import error: {error}").replace("{error}", r.error));
+                        showAlert(replaceTemplateValue(t("toast.caption_import_error", "Caption import error: {error}"), "{error}", r.error));
                     } else if (r.message) {
                         showAlert(r.message);
                     }
@@ -4949,8 +4949,7 @@
                     var captions = _cleanupHostJson(rawCaptions);
                     if (captions.error) {
                         cb(JSON.stringify({
-                            error: t("cleanup_chain.caption_import_failed", "Sequence imported, but captions could not be added: {error}")
-                                .replace("{error}", captions.error),
+                            error: replaceTemplateValue(t("cleanup_chain.caption_import_failed", "Sequence imported, but captions could not be added: {error}"), "{error}", captions.error),
                             sequence_name: imported.sequence_name || "",
                         }));
                         return;
@@ -4961,7 +4960,7 @@
             });
         }, function (r) {
             if (r.error) {
-                showAlert(t("cleanup_chain.import_failed", "Cleanup import failed: {error}").replace("{error}", r.error));
+                showAlert(replaceTemplateValue(t("cleanup_chain.import_failed", "Cleanup import failed: {error}"), "{error}", r.error));
             } else {
                 showToast(t("cleanup_chain.imported", "Magic Cleanup imported as one reversible Premiere sequence."), "success");
             }
@@ -5078,8 +5077,7 @@
             if (!err && data && data.output_path) {
                 showAlert(t("toast.exported_to", "Exported to: {filename}").replace("{filename}", String(data.output_path).split(/[/\\]/).pop()));
             } else {
-                showAlert(t("toast.export_failed", "Export failed: {error}")
-                    .replace("{error}", data ? data.error : t("toast.unknown_error", "Unknown error")));
+                showAlert(replaceTemplateValue(t("toast.export_failed", "Export failed: {error}"), "{error}", data ? data.error : t("toast.unknown_error", "Unknown error")));
             }
         });
     }
@@ -5132,7 +5130,7 @@
                     : t("progress.unknown_error", "Unknown error");
                 setHintState(
                     el.separateHint,
-                    t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                    replaceTemplateValue(t("install.failed", "Installation failed: {error}"), "{error}", errMsg),
                     "error",
                     el.installDemucsBtn
                 );
@@ -5294,7 +5292,7 @@
                     : t("progress.unknown_error", "Unknown error");
                 setHintState(
                     el.watermarkHint,
-                    t("install.failed", "Installation failed: {error}").replace("{error}", errMsg),
+                    replaceTemplateValue(t("install.failed", "Installation failed: {error}"), "{error}", errMsg),
                     "error",
                     el.installWatermarkBtn
                 );
@@ -5318,8 +5316,7 @@
             if (err || !data) {
                 setHintState(
                     resEl,
-                    t("video.watermark_detection_failed", "Detection failed: {error}")
-                        .replace("{error}", (err && err.message) || t("progress.unknown_error", "Unknown error")),
+                    replaceTemplateValue(t("video.watermark_detection_failed", "Detection failed: {error}"), "{error}", (err && err.message) || t("progress.unknown_error", "Unknown error")),
                     "error"
                 );
                 return;
@@ -5423,7 +5420,7 @@
     function socialConnect() {
         var platform = (document.getElementById("socialPlatform") || {}).value || "youtube";
         api("POST", "/social/auth-url", { platform: platform }, function(err, r) {
-            if (err) { showAlert(t("toast.oauth_error", "OAuth error: {error}").replace("{error}", err.message)); return; }
+            if (err) { showAlert(replaceTemplateValue(t("toast.oauth_error", "OAuth error: {error}"), "{error}", err.message)); return; }
             if (r && r.auth_url) {
                 var authUrl = normalizeOAuthUrl(r.auth_url);
                 if (!authUrl) {
@@ -5723,7 +5720,7 @@
 
     function wsStartBridge() {
         api("POST", "/ws/start", {}, function (err, r) {
-            if (err) { showAlert(t("toast.ws_start_error", "WS start error: {error}").replace("{error}", err.message)); return; }
+            if (err) { showAlert(replaceTemplateValue(t("toast.ws_start_error", "WS start error: {error}"), "{error}", err.message)); return; }
             if (r && r.success) {
                 showToast(t("toast.live_updates_bridge_started", "Live-updates bridge started"), "success");
                 setTimeout(function () { wsConnect(); }, 500);
@@ -5749,10 +5746,10 @@
                 var reason = r && r.error
                     ? r.error
                     : (err && err.message ? err.message : t("toast.unknown_error", "Unknown error"));
-                var failure = t(
+                var failure = replaceTemplateValue(t(
                     "ws.hint_stop_failed",
                     "Couldn't stop the live-updates bridge. The panel is still connected; check the backend and try again. {reason}"
-                ).replace("{reason}", reason);
+                ), "{reason}", reason);
                 setStatusLine("wsHint", failure, "error", failure);
                 setSettingsStudioState(
                     "bridge",
@@ -5961,7 +5958,7 @@
                     var domainLabel = humanizeEngineDomain(dom);
                     var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : t("engines.state_auto", "Auto");
                     api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
-                        if (perr) { showAlert(t("toast.engine_preference_error", "Error: {error}").replace("{error}", perr.message)); loadEngineRegistry(); return; }
+                        if (perr) { showAlert(replaceTemplateValue(t("toast.engine_preference_error", "Error: {error}"), "{error}", perr.message)); loadEngineRegistry(); return; }
                         if (r && r.success) {
                             showToast(
                                 eng
@@ -6033,13 +6030,12 @@
         var worker = plugin && plugin.worker;
         var workerDetails = worker
             ? '<div class="plugin-action-contract">' + esc(
-                t(
+                replaceTemplateValue(t(
                     "settings.plugin_worker_isolation",
                     "Worker: {state}; {crashes} crashes; last error: {error}. Supervised-process availability isolation, not an OS security sandbox."
                 )
                     .replace("{state}", worker.state || "unknown")
-                    .replace("{crashes}", Number(worker.crash_count || 0))
-                    .replace("{error}", worker.last_error || t("settings.plugin_worker_no_error", "none"))
+                    .replace("{crashes}", Number(worker.crash_count || 0)), "{error}", worker.last_error || t("settings.plugin_worker_no_error", "none"))
             ) + '</div>' +
             '<button type="button" class="btn-outline btn-sm plugin-worker-restart" data-plugin-name="' + esc(plugin.name || "") + '">' +
             esc(t("settings.plugin_worker_restart", "Restart worker")) + '</button>'
@@ -6789,11 +6785,9 @@
                 var batchStatusError = (data && data.error) || t("batch.unknown", "Unknown");
                 var batchSummaryError = (data && data.error) || (err && err.message) ||
                     t("batch.unknown_error", "Unknown error");
-                el.batchStatusText.textContent = t("batch.error_status", "Batch error: {error}")
-                    .replace("{error}", batchStatusError);
+                el.batchStatusText.textContent = replaceTemplateValue(t("batch.error_status", "Batch error: {error}"), "{error}", batchStatusError);
                 updateBatchSummary(
-                    t("batch.start_failed_summary", "Batch couldn't start: {error}.")
-                        .replace("{error}", batchSummaryError),
+                    replaceTemplateValue(t("batch.start_failed_summary", "Batch couldn't start: {error}."), "{error}", batchSummaryError),
                     "error"
                 );
                 return;
@@ -7825,8 +7819,7 @@
                     var r = JSON.parse(result);
                     if (r && r.error) {
                         _playheadSyncWarned = true;
-                        showToast(t("toast.playhead_sync_unavailable", "Playhead sync unavailable: {error}")
-                            .replace("{error}", r.error), "warn");
+                        showToast(replaceTemplateValue(t("toast.playhead_sync_unavailable", "Playhead sync unavailable: {error}"), "{error}", r.error), "warn");
                     }
                 } catch (e) {}
             }
@@ -8420,8 +8413,7 @@
             if (el.capDispPreviewBtn) el.capDispPreviewBtn.disabled = false;
             if (err || !data || data.error) {
                 var previewError = (data && data.error) || (err && err.message) || t("toast.unknown_error", "Unknown error");
-                setCaptionDisplayStatus(t("captions.display_preview_failed", "Preview failed: {error}")
-                    .replace("{error}", previewError), "error");
+                setCaptionDisplayStatus(replaceTemplateValue(t("captions.display_preview_failed", "Preview failed: {error}"), "{error}", previewError), "error");
                 return;
             }
             applyCaptionDisplayPreview(data);
@@ -8828,8 +8820,7 @@
                 }
                 var reason = (r && r.error) || (err && err.message) || "";
                 showAlert(
-                    t("toast.log_open_failed", "Couldn't open the log file. {reason}")
-                        .replace("{reason}", reason)
+                    replaceTemplateValue(t("toast.log_open_failed", "Couldn't open the log file. {reason}"), "{reason}", reason)
                 );
             });
         });
@@ -9349,9 +9340,8 @@
     function _sessionCtxOpenPath(path, mode) {
         api("POST", "/system/open-path", { path: path, mode: mode }, function (err, data) {
             if (err) {
-                showToast(t("toast.path_action_failed", "Couldn't {mode}: {error}")
-                    .replace("{mode}", mode)
-                    .replace("{error}", err.error || err.message || err), "error");
+                showToast(replaceTemplateValue(t("toast.path_action_failed", "Couldn't {mode}: {error}")
+                    .replace("{mode}", mode), "{error}", err.error || err.message || err), "error");
             } else if (data && data.ok) {
                 showToast(mode === "reveal"
                     ? t("toast.path_revealed", "Revealed in file manager")
@@ -9369,7 +9359,7 @@
         showToast(t("toast.job_rerunning", "Re-running {name}…").replace("{name}", _sessionCtxOpText(job)), "info");
         api("POST", job.endpoint, job.payload, function (err, data) {
             if (err) {
-                showAlert(t("toast.job_rerun_failed", "Re-run failed: {error}").replace("{error}", err.error || err.message || err));
+                showAlert(replaceTemplateValue(t("toast.job_rerun_failed", "Re-run failed: {error}"), "{error}", err.error || err.message || err));
                 return;
             }
             if (data && data.job_id) {
@@ -9520,8 +9510,7 @@
                 );
                 updateJournalSummary(
                     [],
-                    t("journal.unavailable_status", "Couldn't load timeline history: {error}.")
-                        .replace("{error}", err.error || err.message || t("toast.unknown_error", "Unknown error")),
+                    replaceTemplateValue(t("journal.unavailable_status", "Couldn't load timeline history: {error}."), "{error}", err.error || err.message || t("toast.unknown_error", "Unknown error")),
                     "error"
                 );
                 return;
@@ -9681,8 +9670,7 @@
         if (!entry || !entry.transaction_id) return;
         api("GET", "/journal/checkpoints/" + encodeURIComponent(entry.transaction_id) + "/diagnostics", null, function (err, data) {
             if (err || !data) {
-                showAlert(t("journal.diagnostics_failed", "Could not export recovery diagnostics: {error}")
-                    .replace("{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                showAlert(replaceTemplateValue(t("journal.diagnostics_failed", "Could not export recovery diagnostics: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
                 return;
             }
             var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -9721,7 +9709,7 @@
             }, function (cb) {
                 cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
-                if (r.error) { showAlert(t("toast.apply_failed", "Apply failed: {error}").replace("{error}", r.error)); return; }
+                if (r.error) { showAlert(replaceTemplateValue(t("toast.apply_failed", "Apply failed: {error}"), "{error}", r.error)); return; }
                 showToast(t("toast.markers_readded", "Re-added {count} markers on '{target}'")
                     .replace("{count}", markers.length)
                     .replace("{target}", selectedName || t("toast.selection_target", "selection")), "success");
@@ -9751,8 +9739,7 @@
                 if (err || !resolved) {
                     btn.disabled = false;
                     btn.textContent = t("journal.restore", "Restore");
-                    showAlert(t("journal.recovery_payload_failed", "Could not verify the saved recovery payload: {error}")
-                        .replace("{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
+                    showAlert(replaceTemplateValue(t("journal.recovery_payload_failed", "Could not verify the saved recovery payload: {error}"), "{error}", (err && (err.error || err.message)) || t("toast.unknown_error", "Unknown error")));
                     return;
                 }
                 _journalDispatchRevert(resolved, btn);
@@ -9790,7 +9777,7 @@
                         diagnostics: { host_result: r }
                     }, function () { renderJournalList(); });
                 }
-                showAlert(t("toast.revert_failed", "Revert failed: {error}").replace("{error}", r.error));
+                showAlert(replaceTemplateValue(t("toast.revert_failed", "Revert failed: {error}"), "{error}", r.error));
                 return;
             }
             // Mark server-side so the UI reflects the new state.
@@ -9944,7 +9931,7 @@
                 }, function (cb) {
                     PremiereBridge.importXML(r.xml_path, cb);
                 }, function (jr) {
-                    if (jr.error) { showAlert(t("toast.import_failed", "Import failed: {error}").replace("{error}", jr.error)); return; }
+                    if (jr.error) { showAlert(replaceTemplateValue(t("toast.import_failed", "Import failed: {error}"), "{error}", jr.error)); return; }
                     showToast(t("toast.imported_sequence", "Imported '{name}'").replace("{name}", jr.sequence_name || r.sequence_name), "success");
                 });
             });
@@ -10223,8 +10210,7 @@
                 reader.onload = function () {
                     try {
                         var err = JSON.parse(reader.result);
-                        showAlert(t("toast.preview_failed", "Preview failed: {error}")
-                            .replace("{error}", err.error || t("toast.unknown_error", "Unknown error")));
+                        showAlert(replaceTemplateValue(t("toast.preview_failed", "Preview failed: {error}"), "{error}", err.error || t("toast.unknown_error", "Unknown error")));
                     } catch (e) {
                         showAlert(t("toast.preview_failed_http", "Preview failed (HTTP {status})").replace("{status}", xhr.status));
                     }
@@ -10415,8 +10401,7 @@
             }, function (err, data) {
                 _assistantLoading = false;
                 if (err) {
-                    _assistantRender(null, t("assistant.analyze_failed", "Couldn't analyze: {error}")
-                        .replace("{error}", err.error || err.message || t("common.unknown", "Unknown")));
+                    _assistantRender(null, replaceTemplateValue(t("assistant.analyze_failed", "Couldn't analyze: {error}"), "{error}", err.error || err.message || t("common.unknown", "Unknown")));
                     return;
                 }
                 _assistantRender(data.suggestions || []);
@@ -10450,8 +10435,7 @@
                 api("DELETE", "/interview-polish/state",
                     { filepath: selectedPath }, function (err, data) {
                         if (err) {
-                            showAlert(t("toast.polish_cache_clear_failed", "Couldn't clear cache: {error}")
-                                .replace("{error}", err.error || err.message || err));
+                            showAlert(replaceTemplateValue(t("toast.polish_cache_clear_failed", "Couldn't clear cache: {error}"), "{error}", err.error || err.message || err));
                             return;
                         }
                         if (data && data.removed) {
@@ -10579,7 +10563,7 @@
                     if (!confirmed) return;
                     updateJournalSummary([], t("journal.clearing_status", "Clearing the journal history. This does not undo anything in Premiere."), "working");
                     api("POST", "/journal/clear", {}, function (err) {
-                        if (err) { showAlert(t("toast.journal_clear_failed", "Could not clear: {error}").replace("{error}", err.error || err)); return; }
+                        if (err) { showAlert(replaceTemplateValue(t("toast.journal_clear_failed", "Could not clear: {error}"), "{error}", err.error || err)); return; }
                         showToast(t("toast.journal_cleared", "Journal cleared"), "success");
                         renderJournalList();
                     });
@@ -11823,8 +11807,7 @@
                 !PanelUtils.isVersionAtLeast(backendVersion, CHECKPOINT_MIN_BACKEND_VERSION)) {
             var versionError = "backend v" + backendVersion + " is too old; OpenCut v" +
                 CHECKPOINT_MIN_BACKEND_VERSION + " or newer is required for recovery checkpoints";
-            showAlert(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.")
-                .replace("{error}", versionError));
+            showAlert(replaceTemplateValue(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made."), "{error}", versionError));
             if (done) done({ error: versionError }, "", null);
             return;
         }
@@ -11840,8 +11823,7 @@
             if (checkpointErr || !checkpoint || !checkpoint.transaction_id) {
                 var checkpointMessage = (checkpointErr && (checkpointErr.error || checkpointErr.message)) ||
                     t("journal.checkpoint_unknown_error", "unknown checkpoint error");
-                showAlert(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made.")
-                    .replace("{error}", checkpointMessage));
+                showAlert(replaceTemplateValue(t("journal.checkpoint_failed", "Could not create a recovery checkpoint: {error}. No Premiere changes were made."), "{error}", checkpointMessage));
                 if (done) done({ error: checkpointMessage }, "", null);
                 return;
             }
@@ -12129,8 +12111,7 @@
                     if (requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath) return;
                     showToast(
                         (job && (job.error || job.message))
-                            ? t("audio.waveform_load_failed_detail", "Failed to load waveform: {error}")
-                                .replace("{error}", job.error || job.message)
+                            ? replaceTemplateValue(t("audio.waveform_load_failed_detail", "Failed to load waveform: {error}"), "{error}", job.error || job.message)
                             : t("audio.waveform_load_failed", "Failed to load waveform"),
                         "error"
                     );
@@ -12478,7 +12459,7 @@
                 if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
                 showToast(
                     (job && (job.error || job.message))
-                        ? t("toast.preview_failed", "Preview failed: {error}").replace("{error}", job.error || job.message)
+                        ? replaceTemplateValue(t("toast.preview_failed", "Preview failed: {error}"), "{error}", job.error || job.message)
                         : t("preview.failed", "Preview failed"),
                     "error"
                 );
@@ -14813,8 +14794,7 @@
                         ? err.message
                         : t("llm.provider_unreachable", "Couldn't reach the LLM provider");
                 refreshLlmStatusLine(
-                    t("llm.connection_failed_status", "Connection failed: {error}")
-                        .replace("{error}", msg),
+                    replaceTemplateValue(t("llm.connection_failed_status", "Connection failed: {error}"), "{error}", msg),
                     "error"
                 );
                 return;
@@ -15193,8 +15173,7 @@
                 var exportMessage = (exportData && exportData.error) ||
                     (exportErr && (exportErr.message || exportErr.error)) ||
                     t("common.unknown", "Unknown");
-                showAlert(t("timeline.interchange_export_failed", "Could not prepare the timeline interchange: {error}")
-                    .replace("{error}", exportMessage));
+                showAlert(replaceTemplateValue(t("timeline.interchange_export_failed", "Could not prepare the timeline interchange: {error}"), "{error}", exportMessage));
                 return;
             }
 
@@ -15218,8 +15197,7 @@
                 PremiereBridge.importXML(xmlPath, cb);
             }, function (result) {
                 if (result.error) {
-                    showAlert(t("timeline.interchange_import_failed", "Could not import the timeline interchange: {error}")
-                        .replace("{error}", result.error));
+                    showAlert(replaceTemplateValue(t("timeline.interchange_import_failed", "Could not import the timeline interchange: {error}"), "{error}", result.error));
                     return;
                 }
                 showToast(t("timeline.interchange_imported", "Imported {count} requested cuts as one linked timeline.")
@@ -15247,8 +15225,7 @@
             cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (r.error) {
-                showAlert(t("timeline.apply_cuts_failed", "Error applying cuts: {error}")
-                    .replace("{error}", r.error));
+                showAlert(replaceTemplateValue(t("timeline.apply_cuts_failed", "Error applying cuts: {error}"), "{error}", r.error));
                 return;
             }
             showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
@@ -15330,8 +15307,7 @@
             cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (r.error) {
-                showAlert(t("timeline.add_markers_failed", "Error adding markers: {error}")
-                    .replace("{error}", r.error));
+                showAlert(replaceTemplateValue(t("timeline.add_markers_failed", "Error adding markers: {error}"), "{error}", r.error));
                 return;
             }
             showToast(t("timeline.markers_added", "Added {count} markers")
@@ -15386,8 +15362,7 @@
             cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (!r || r.error) {
-                showAlert(t("timeline.action_failed", "Error: {error}")
-                    .replace("{error}", (r && r.error) || t("common.unknown", "Unknown")));
+                showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", (r && r.error) || t("common.unknown", "Unknown")));
                 return;
             }
             showToast(t("timeline.multicam_cuts_applied", "Multicam cuts applied: {count}")
@@ -15452,8 +15427,7 @@
                     listEl.innerHTML = '<div class="hint">' + esc(t("timeline.markers_read_failed", "Could not read sequence markers.")) + '</div>';
                 }
                 updateButtons();
-                showAlert(t("timeline.read_markers_failed", "Error reading markers: {error}")
-                    .replace("{error}", result || e.message));
+                showAlert(replaceTemplateValue(t("timeline.read_markers_failed", "Error reading markers: {error}"), "{error}", result || e.message));
             }
         });
     }
@@ -15491,8 +15465,7 @@
             try {
                 var items = JSON.parse(result);
                 if (!Array.isArray(items)) {
-                    showAlert(t("timeline.items_load_failed", "Error loading items: {error}")
-                        .replace("{error}", (items && items.error) || t("timeline.unexpected_response", "Unexpected Premiere response")));
+                    showAlert(replaceTemplateValue(t("timeline.items_load_failed", "Error loading items: {error}"), "{error}", (items && items.error) || t("timeline.unexpected_response", "Unexpected Premiere response")));
                     return;
                 }
                 renameItemsData = items;
@@ -15503,8 +15476,7 @@
             } catch (e) {
                 renameItemsData = [];
                 updateButtons();
-                showAlert(t("timeline.items_load_failed", "Error loading items: {error}")
-                    .replace("{error}", result || e.message));
+                showAlert(replaceTemplateValue(t("timeline.items_load_failed", "Error loading items: {error}"), "{error}", result || e.message));
             }
         });
     }
@@ -15547,8 +15519,7 @@
         if (!renames.length) { showAlert(t("timeline.no_changes_to_apply", "No changes to apply.")); return; }
         api("POST", "/timeline/batch-rename", { renames: renames }, function (err, data) {
             if (err || (data && data.error)) {
-                showAlert(t("timeline.validation_failed", "Validation failed: {error}")
-                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                showAlert(replaceTemplateValue(t("timeline.validation_failed", "Validation failed: {error}"), "{error}", data ? data.error : t("timeline.network_error", "Network error")));
                 return;
             }
             if (!inPremiere) { showToast(t("timeline.rename_validated_no_premiere", "Rename validated (no Premiere connection)"), "info"); return; }
@@ -15581,7 +15552,7 @@
                 cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(t("timeline.action_failed", "Error: {error}").replace("{error}", r.error));
+                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", r.error));
                     return;
                 }
                 showToast(t("timeline.renamed_items", "Renamed {count} items")
@@ -15674,8 +15645,7 @@
         if (!smartBinRules.length) { showAlert(t("timeline.add_rule_first", "Add at least one rule.")); return; }
         api("POST", "/timeline/smart-bins", { rules: smartBinRules }, function (err, data) {
             if (err || (data && data.error)) {
-                showAlert(t("timeline.validation_failed", "Validation failed: {error}")
-                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                showAlert(replaceTemplateValue(t("timeline.validation_failed", "Validation failed: {error}"), "{error}", data ? data.error : t("timeline.network_error", "Network error")));
                 return;
             }
             if (!inPremiere) { showToast(t("timeline.rules_validated_no_premiere", "Rules validated (no Premiere connection)"), "info"); return; }
@@ -15689,7 +15659,7 @@
                 cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(t("timeline.action_failed", "Error: {error}").replace("{error}", r.error));
+                    showAlert(replaceTemplateValue(t("timeline.action_failed", "Error: {error}"), "{error}", r.error));
                     return;
                 }
                 showToast(t("timeline.bins_created", "Created {count} bins")
@@ -15824,7 +15794,7 @@
             cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", cb);
         }, function (r) {
             if (r.error) {
-                showAlert(t("captions.action_failed", "Error: {error}").replace("{error}", r.error));
+                showAlert(replaceTemplateValue(t("captions.action_failed", "Error: {error}"), "{error}", r.error));
                 return;
             }
             showToast(t("captions.chapter_markers_added", "Added {count} chapter markers")
@@ -15837,8 +15807,7 @@
         if (!path) { showAlert(t("captions.select_srt_file_first", "Select an SRT file first.")); return; }
         api("POST", "/timeline/srt-to-captions", { srt_path: path }, function (err, data) {
             if (err || (data && data.error)) {
-                showAlert(t("captions.import_failed", "Failed: {error}")
-                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                showAlert(replaceTemplateValue(t("captions.import_failed", "Failed: {error}"), "{error}", data ? data.error : t("timeline.network_error", "Network error")));
                 return;
             }
             var segments = data.segments || [];
@@ -15857,8 +15826,7 @@
                 cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", cb);
             }, function (r) {
                 if (r.error) {
-                    showAlert(t("captions.action_failed", "Error: {error}")
-                        .replace("{error}", r.error));
+                    showAlert(replaceTemplateValue(t("captions.action_failed", "Error: {error}"), "{error}", r.error));
                     return;
                 }
                 var importedCount = r.captions_added || segments.length;
@@ -16134,8 +16102,7 @@
                     ),
                     "error"
                 );
-                showAlert(t("deliverables.sequence_load_error_alert", "Error loading sequence info: {error}")
-                    .replace("{error}", result || e.message));
+                showAlert(replaceTemplateValue(t("deliverables.sequence_load_error_alert", "Error loading sequence info: {error}"), "{error}", result || e.message));
             }
         });
     }
@@ -16181,8 +16148,7 @@
                         .replace("{label}", label),
                     "error"
                 );
-                showAlert(t("deliverables.generation_failed_alert", "Generation failed: {error}")
-                    .replace("{error}", data ? data.error : t("deliverables.network_error", "Network error")));
+                showAlert(replaceTemplateValue(t("deliverables.generation_failed_alert", "Generation failed: {error}"), "{error}", data ? data.error : t("deliverables.network_error", "Network error")));
                 return;
             }
             var res = document.getElementById("deliverablesResult");
@@ -16354,8 +16320,7 @@
                     if (statsEl) setHintState(statsEl, t("search.clear_failed_hint", "Couldn't clear the footage library just now."), "error");
                     setStatusLine("searchStatus", t("search.clear_failed_status", "Couldn't clear the footage library just now. Try again in a moment."), "error");
                     showAlert(
-                        t("search.clear_failed_alert", "Failed to clear footage index: {error}")
-                            .replace("{error}", data ? data.error : t("search.network_error", "Network error"))
+                        replaceTemplateValue(t("search.clear_failed_alert", "Failed to clear footage index: {error}"), "{error}", data ? data.error : t("search.network_error", "Network error"))
                     );
                     return;
                 }
@@ -16604,8 +16569,7 @@
             var outEl = document.getElementById("nlpCommandOutput");
             if (res) res.classList.remove("hidden");
             if (err || !data) {
-                if (routeEl) routeEl.textContent = t("nlp.route_error", "Error: {error}")
-                    .replace("{error}", err ? err.message : t("common.unknown", "Unknown"));
+                if (routeEl) routeEl.textContent = replaceTemplateValue(t("nlp.route_error", "Error: {error}"), "{error}", err ? err.message : t("common.unknown", "Unknown"));
                 return;
             }
             if (routeEl) routeEl.textContent = t("nlp.route_label", "Route: {route}")
@@ -16655,7 +16619,7 @@
                 var message = (data && data.error) || (err && err.message) || t("common.unknown", "Unknown");
                 setHintState(
                     document.getElementById("otioResult"),
-                    t("timeline.otio_capabilities_failed", "Could not discover OTIO adapters: {error}").replace("{error}", message),
+                    replaceTemplateValue(t("timeline.otio_capabilities_failed", "Could not discover OTIO adapters: {error}"), "{error}", message),
                     "error"
                 );
                 return;
@@ -16743,18 +16707,15 @@
                     var lossDetail = preflight && preflight.lossy_fields && preflight.lossy_fields.length
                         ? " " + preflight.lossy_fields.join(", ")
                         : "";
-                    var otioError = t("timeline.otio_error", "Error: {error}")
-                        .replace("{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
+                    var otioError = replaceTemplateValue(t("timeline.otio_error", "Error: {error}"), "{error}", (data && data.error) || (err && err.message) || t("common.unknown", "Unknown"));
                     // Only genuine preflight blocks (the backend tags them
                     // with code OTIO_PREFLIGHT_FAILED plus a preflight
                     // report) get the preflight wording; every other failure
                     // (validation, adapter, IO) shows the generic message.
                     var otioBlocked = !!(data && data.code === "OTIO_PREFLIGHT_FAILED");
                     var otioMessage = otioBlocked
-                        ? t("timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}")
-                            .replace("{error}", otioError)
-                        : t("timeline.otio_export_failed", "OTIO export failed: {error}")
-                            .replace("{error}", otioError);
+                        ? replaceTemplateValue(t("timeline.otio_preflight_failed", "Compatibility preflight blocked the export: {error}"), "{error}", otioError)
+                        : replaceTemplateValue(t("timeline.otio_export_failed", "OTIO export failed: {error}"), "{error}", otioError);
                     setHintState(otioRes, otioMessage + lossDetail, "error");
                     return;
                 }
@@ -16911,8 +16872,7 @@
                 try { parsed = JSON.parse(result || "{}"); }
                 catch (e) { parsed = { error: result || e.message }; }
                 if (!parsed || parsed.error || parsed.success === false) {
-                    showAlert(t("deliverables.open_folder_failed", "Could not open the deliverables folder: {error}")
-                        .replace("{error}", (parsed && parsed.error) || t("common.unknown", "Unknown")));
+                    showAlert(replaceTemplateValue(t("deliverables.open_folder_failed", "Could not open the deliverables folder: {error}"), "{error}", (parsed && parsed.error) || t("common.unknown", "Unknown")));
                     return;
                 }
                 showToast(t("deliverables.folder_opened", "Opened the deliverables folder"), "info");
@@ -17020,8 +16980,7 @@
             }
             _lastWorkflowRunContext = null;
         } else if (job.status === "error") {
-            var errorMsg = t("workflow.failed", "Workflow failed: {error}.")
-                .replace("{error}", job.error || job.message || t("workflow.unknown_error", "Unknown error"));
+            var errorMsg = replaceTemplateValue(t("workflow.failed", "Workflow failed: {error}."), "{error}", job.error || job.message || t("workflow.unknown_error", "Unknown error"));
             if (ctx && ctx.kind === "preset") {
                 updateWorkflowPresetSummary(errorMsg, "error");
             } else if (ctx && ctx.kind === "custom") {
@@ -17987,8 +17946,7 @@
                                 }, function (err, data) {
                                     if (err || !data || !data.html_url) {
                                         showAlert(
-                                            t("gist.push_failed", "Gist push failed: {error}")
-                                                .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                                            replaceTemplateValue(t("gist.push_failed", "Gist push failed: {error}"), "{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
                                         );
                                         return;
                                     }
@@ -18022,8 +17980,7 @@
                     api("POST", "/settings/gist/pull", { gist: url }, function (err, data) {
                         if (err || !data || !data.files) {
                             showAlert(
-                                t("gist.pull_failed", "Gist pull failed: {error}")
-                                    .replace("{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
+                                replaceTemplateValue(t("gist.pull_failed", "Gist pull failed: {error}"), "{error}", err && err.message ? err.message : t("gist.unknown_error", "unknown"))
                             );
                             return;
                         }
