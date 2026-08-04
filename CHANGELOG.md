@@ -23,6 +23,11 @@ record also lives in the git commit messages.
 - The panel lint command now permits the recorded 23-warning baseline but
   fails when the warning count grows beyond 24.
 
+### Fixed - UXP WebSocket teardown
+
+- UXP unload now closes the live WebSocket and clears its reconnect timer
+  alongside the existing SSE, theme, settings, and media-scan cleanup.
+
 ### Fixed - Ordered UXP Sequence Index filters
 
 - Sequence Index search, facet, and sort responses now use a monotonic request

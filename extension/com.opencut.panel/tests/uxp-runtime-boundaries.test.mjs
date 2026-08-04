@@ -317,6 +317,22 @@ describe("UXP UI controller", () => {
     expect(ui).toContain("export function createUxpUiController");
     expect(ui).toContain("function dispose()");
   });
+
+  it("closes the UXP WebSocket and reconnect timer during unload", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const unloadStart = main.indexOf('window.addEventListener("beforeunload"');
+    const unloadEnd = main.indexOf("}, { once: true });", unloadStart);
+    const unload = main.slice(unloadStart, unloadEnd);
+    const disconnectStart = main.indexOf("function uxpWsDisconnect()");
+    const disconnectEnd = main.indexOf("async function uxpUpdateWsStatus", disconnectStart);
+    const disconnect = main.slice(disconnectStart, disconnectEnd);
+
+    expect(unload).toContain("JobPoller.closeSse();");
+    expect(unload).toContain("uxpWsDisconnect();");
+    expect(disconnect).toContain("uxpWsClearReconnectTimer();");
+    expect(disconnect).toContain("_uxpWs = null;");
+    expect(disconnect).toContain("socket.close();");
+  });
 });
 
 describe("UXP job controller", () => {
