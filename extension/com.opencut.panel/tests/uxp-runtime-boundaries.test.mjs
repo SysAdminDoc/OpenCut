@@ -126,6 +126,19 @@ describe("UXP feature control contracts", () => {
     expect(source).toContain("request.endpoint");
     expect(source).toContain("request.payload");
   });
+
+  it("keeps first-run, support export, and portability seams wired", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
+    expect(main).toContain('BackendClient.post("/system/support-bundle"');
+    expect(main).toContain('BackendClient.post("/settings/onboarding"');
+    expect(main).toContain('BackendClient.get("/settings/onboarding")');
+    expect(main).toContain("opencut.support_bundle.v1");
+    expect(main).toContain("getUxpLocalFileSystem");
+    expect(index).toContain('id="uxpExportSupportBundleBtn"');
+    expect(index).toContain('id="uxpOnboardingOverlay"');
+    expect(index).toContain('id="uxpRestartOnboardingBtn"');
+  });
 });
 
 describe("UXP job controller", () => {

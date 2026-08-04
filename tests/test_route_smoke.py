@@ -1229,6 +1229,7 @@ class TestSettingsRoutes:
     def test_settings_export(self, client):
         resp = client.get("/settings/export")
         assert resp.status_code == 200
+        assert resp.get_json()["schema_version"] == 1
 
     def test_settings_import_empty(self, client, csrf_token):
         resp = client.post("/settings/import",
@@ -1236,6 +1237,15 @@ class TestSettingsRoutes:
                            headers=csrf_headers(csrf_token))
         # Should handle gracefully -- either 200 (no-op) or 400, never 500
         assert resp.status_code in (200, 400)
+
+    def test_settings_import_rejects_future_schema_without_mutating(self, client, csrf_token):
+        resp = client.post(
+            "/settings/import",
+            json={"schema_version": 99, "presets": {"should-not-write": {}}},
+            headers=csrf_headers(csrf_token),
+        )
+        assert resp.status_code == 400
+        assert resp.get_json()["code"] == "UNSUPPORTED_SETTINGS_SCHEMA"
 
     def test_settings_export_import_round_trip_preserves_user_data(
         self, client, csrf_token, monkeypatch, tmp_path

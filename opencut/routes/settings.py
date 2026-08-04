@@ -46,6 +46,7 @@ from opencut.user_data import (
 
 settings_bp = Blueprint("settings", __name__)
 logger = logging.getLogger("opencut")
+SETTINGS_SCHEMA_VERSION = 1
 
 
 def _invalid_input_response(message: str):
@@ -464,7 +465,11 @@ def restore_tombstone_route():
 @settings_bp.route("/settings/export", methods=["GET"])
 def export_settings():
     """Export all OpenCut settings (presets, favorites, workflows) as a single JSON bundle."""
-    bundle = {"version": __version__, "exported": time.time()}
+    bundle = {
+        "schema_version": SETTINGS_SCHEMA_VERSION,
+        "version": __version__,
+        "exported": time.time(),
+    }
     try:
         bundle["presets"] = load_presets()
     except Exception:
@@ -487,6 +492,30 @@ def import_settings():
     data, error = _require_json_object()
     if error:
         return error
+
+    # Bundles created before schema versioning remain importable as version 1,
+    # while future bundles fail before any section is written.  This keeps a
+    # malformed or newer file non-destructive and gives the panel an actionable
+    # response instead of silently dropping fields.
+    raw_schema_version = data.get("schema_version", SETTINGS_SCHEMA_VERSION)
+    if isinstance(raw_schema_version, bool) or not isinstance(raw_schema_version, int):
+        return jsonify({
+            "error": "Settings bundle schema_version must be an integer",
+            "code": "INVALID_SETTINGS_SCHEMA",
+            "suggestion": "Export a fresh OpenCut settings bundle and import that file.",
+        }), 400
+    if raw_schema_version < 1:
+        return jsonify({
+            "error": f"Settings bundle schema version {raw_schema_version} is invalid",
+            "code": "INVALID_SETTINGS_SCHEMA",
+            "suggestion": "Export a fresh OpenCut settings bundle and import that file.",
+        }), 400
+    if raw_schema_version > SETTINGS_SCHEMA_VERSION:
+        return jsonify({
+            "error": f"Settings bundle schema version {raw_schema_version} is newer than supported version {SETTINGS_SCHEMA_VERSION}",
+            "code": "UNSUPPORTED_SETTINGS_SCHEMA",
+            "suggestion": "Use the same or a newer OpenCut build to import this settings file.",
+        }), 400
     imported = []
     sections = {}
 

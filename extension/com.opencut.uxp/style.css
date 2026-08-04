@@ -5150,3 +5150,104 @@ textarea:focus-visible,
     animation-duration: 0.001s !important;
   }
 }
+
+/* ===========================================================================
+   UXP first-run guide
+   ========================================================================== */
+.oc-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 8, 14, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.oc-onboarding-overlay[hidden] {
+  display: none;
+}
+
+.oc-onboarding-card {
+  width: min(100%, 430px);
+  padding: 22px;
+  border: 1px solid rgba(143, 184, 255, 0.3);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(18, 30, 44, 0.98), rgba(10, 18, 28, 0.98)),
+    var(--bg-card);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.oc-onboarding-kicker {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.oc-onboarding-step {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.oc-onboarding-card h2 {
+  margin: 12px 0 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.oc-onboarding-card p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.oc-onboarding-action-row {
+  margin-top: 18px;
+}
+
+.oc-onboarding-footer {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.oc-onboarding-footer .oc-btn:first-child {
+  margin-right: auto;
+}
+
+.oc-onboarding-card .oc-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .oc-onboarding-overlay {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .oc-onboarding-card {
+    padding: 18px;
+  }
+}
+
+@media (forced-colors: active) {
+  .oc-onboarding-overlay {
+    background: Canvas;
+  }
+
+  .oc-onboarding-card {
+    border: 2px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

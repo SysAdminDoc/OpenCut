@@ -1780,6 +1780,15 @@
           </div>
           <div class="oc-status-line" id="uxpSettingsIOStatus" role="status" aria-live="polite" data-i18n="uxp.settings.settings_io_ready">Settings backup is ready.</div>
         </div>
+        <div class="oc-card" id="uxpSupportCard">
+          <p class="oc-hint" data-i18n="uxp.settings.support_io_hint">Create a local redacted support file or open a reviewed issue report when network access is available.</p>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary" id="uxpExportSupportBundleBtn" data-i18n="uxp.settings.export_support_bundle">Export Support Bundle</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="uxpOpenIssueReportBtn" data-i18n="uxp.settings.open_issue_report">Open Issue Report</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="uxpRestartOnboardingBtn" data-i18n="uxp.settings.restart_onboarding">Show Getting Started</button>
+          </div>
+          <div class="oc-status-line" id="uxpSupportStatus" role="status" aria-live="polite" data-i18n="uxp.settings.support_io_ready">Support tools are ready.</div>
+        </div>
         </section>
 
         <section class="oc-settings-group oc-settings-group--recovery" id="settingsPaneRecovery" data-settings-pane="recovery" role="tabpanel" aria-labelledby="settingsNavRecovery">
@@ -2037,6 +2046,23 @@
       </div>
 
     </main>
+
+    <div id="uxpOnboardingOverlay" class="oc-onboarding-overlay" hidden aria-hidden="true">
+      <div class="oc-onboarding-card" role="dialog" aria-modal="true" aria-labelledby="uxpOnboardingTitle" aria-describedby="uxpOnboardingBody">
+        <div class="oc-onboarding-kicker" data-i18n="uxp.onboarding.kicker">Getting started</div>
+        <div class="oc-onboarding-step" id="uxpOnboardingStep" aria-live="polite"></div>
+        <h2 id="uxpOnboardingTitle"></h2>
+        <p id="uxpOnboardingBody"></p>
+        <div class="oc-btn-row oc-onboarding-action-row">
+          <button type="button" class="oc-btn oc-btn-primary" id="uxpOnboardingActionBtn"></button>
+        </div>
+        <div class="oc-btn-row oc-onboarding-footer">
+          <button type="button" class="oc-btn oc-btn-ghost" id="uxpOnboardingBackBtn" data-i18n="uxp.onboarding.back">Back</button>
+          <button type="button" class="oc-btn oc-btn-ghost" id="uxpOnboardingSkipBtn" data-i18n="uxp.onboarding.skip">Skip</button>
+          <button type="button" class="oc-btn oc-btn-secondary" id="uxpOnboardingNextBtn" data-i18n="uxp.onboarding.next">Next</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== TOAST AREA ===== -->
     <div id="toastArea" class="oc-toast-area" aria-live="polite" aria-atomic="false"></div>

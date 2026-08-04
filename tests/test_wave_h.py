@@ -520,6 +520,23 @@ class TestWaveHRoutes(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("url", r.get_json())
 
+    def test_support_bundle_is_local_and_redacted(self):
+        r = self.client.post(
+            "/system/support-bundle",
+            json={
+                "title": "Support C:\\Users\\private\\clip",
+                "description": "Authorization: Bearer secret-value",
+            },
+            headers=self._h(),
+        )
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertEqual(body["kind"], "support_bundle")
+        self.assertTrue(body["redacted"])
+        self.assertNotIn("url", body)
+        self.assertNotIn("secret-value", body["body"])
+        self.assertNotIn("C:\\Users\\private", body["body"])
+
     def test_demo_list(self):
         r = self.client.get("/system/demo/list")
         self.assertEqual(r.status_code, 200)

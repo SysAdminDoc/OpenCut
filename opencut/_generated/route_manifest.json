@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T10:00:07Z",
-  "total_routes": 1572,
-  "shipped_route_count": 1547,
+  "generated_at": "2026-08-04T10:31:59Z",
+  "total_routes": 1573,
+  "shipped_route_count": 1548,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 402,
     "PATCH": 1,
-    "POST": 1154,
+    "POST": 1155,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1519,
+    "implemented": 1520,
     "stub": 25
   },
   "blueprints": {
@@ -1197,10 +1197,10 @@
       ]
     },
     "wave_h": {
-      "route_count": 35,
+      "route_count": 36,
       "method_counts": {
         "GET": 14,
-        "POST": 21
+        "POST": 22
       },
       "sample_rules": [
         "/analyze/virality",
@@ -18710,7 +18710,8 @@
         "panel"
       ],
       "surface_evidence": [
-        "extension/com.opencut.panel/client/main.js"
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -18726,7 +18727,8 @@
         "panel"
       ],
       "surface_evidence": [
-        "extension/com.opencut.panel/client/main.js"
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -20172,7 +20174,8 @@
         "panel"
       ],
       "surface_evidence": [
-        "extension/com.opencut.panel/client/main.js"
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -20188,7 +20191,8 @@
         "panel"
       ],
       "surface_evidence": [
-        "extension/com.opencut.panel/client/main.js"
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -20351,6 +20355,22 @@
       "surface_evidence": [
         "extension/com.opencut.panel/client/main.js",
         "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/system/support-bundle",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_h.route_support_bundle",
+      "blueprint": "wave_h",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.uxp/main.js"
       ]
     },
     {
@@ -26860,20 +26880,20 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1547,
-      "direct_surface_routes": 265,
+      "shipped_routes": 1548,
+      "direct_surface_routes": 266,
       "integration_only_routes": 1282,
-      "coverage_percent": 17.1,
+      "coverage_percent": 17.2,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 210,
+        "panel": 211,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
         "integration-only": 1307
       },
       "assigned_counts": {
-        "panel": 210,
+        "panel": 211,
         "palette": 33,
         "cli": 1,
         "mcp": 92,
