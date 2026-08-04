@@ -3523,6 +3523,33 @@
                         <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHSendLog" data-i18n="wave_h.send_log">Send log — open issue report</button>
                     </div>
                     <p class="oc-wave-h-note" data-i18n="wave_h.note">Gist export requires GITHUB_TOKEN. Issue reports scrub HOME paths.</p>
+                    <div class="oc-wave-h-virality-controls">
+                        <label class="oc-wave-h-label" for="ocWaveHViralityCandidatePaths" data-i18n="wave_h.virality_candidates_label">Additional clips to rank (optional)</label>
+                        <textarea id="ocWaveHViralityCandidatePaths" class="oc-wave-h-paths" rows="2" placeholder="One local media path per line" data-i18n-placeholder="wave_h.virality_candidates_placeholder"></textarea>
+                        <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHViralityRank" data-i18n="wave_h.virality_rank">Analyze and rank clips</button>
+                    </div>
+                    <div class="oc-wave-h-virality-result hidden" id="ocWaveHViralityResult" role="region" aria-live="polite" aria-labelledby="ocWaveHViralityResultTitle">
+                        <div class="oc-wave-h-virality-header">
+                            <div>
+                                <div class="oc-wave-h-virality-kicker" id="ocWaveHViralityResultTitle" data-i18n="wave_h.virality_result_title">Explainable highlight score</div>
+                                <div class="oc-wave-h-virality-scope" id="ocWaveHViralityScope" data-i18n="wave_h.virality_scope">Ordinal within this video</div>
+                            </div>
+                            <strong class="oc-wave-h-virality-score" id="ocWaveHViralityScore">—</strong>
+                        </div>
+                        <p class="oc-wave-h-virality-note" id="ocWaveHViralityNote" data-i18n="wave_h.virality_result_note">Use this score to triage moments in the same video, not to predict absolute performance across videos.</p>
+                        <div class="oc-wave-h-virality-breakdown" id="ocWaveHViralityBreakdown"></div>
+                        <div class="oc-wave-h-virality-reweight">
+                            <div class="oc-wave-h-virality-kicker" data-i18n="wave_h.virality_weights_title">Re-weight cached candidates</div>
+                            <p class="oc-wave-h-virality-note" data-i18n="wave_h.virality_weights_hint">Adjust the rubric, then re-rank without running another media analysis.</p>
+                            <div class="oc-wave-h-weight-grid">
+                                <label class="oc-wave-h-weight-row"><span data-i18n="wave_h.virality_audio_label">Audio energy</span><input type="range" id="ocWaveHViralityAudioWeight" min="0" max="100" step="1" value="30"><output id="ocWaveHViralityAudioWeightValue">30%</output></label>
+                                <label class="oc-wave-h-weight-row"><span data-i18n="wave_h.virality_hook_label">Transcript hook</span><input type="range" id="ocWaveHViralityHookWeight" min="0" max="100" step="1" value="45"><output id="ocWaveHViralityHookWeightValue">45%</output></label>
+                                <label class="oc-wave-h-weight-row"><span data-i18n="wave_h.virality_visual_label">Visual salience</span><input type="range" id="ocWaveHViralityVisualWeight" min="0" max="100" step="1" value="25"><output id="ocWaveHViralityVisualWeightValue">25%</output></label>
+                            </div>
+                            <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHViralityRerank" disabled data-i18n="wave_h.virality_rerank">Re-rank cached candidates</button>
+                        </div>
+                        <div class="oc-wave-h-virality-ranked" id="ocWaveHViralityRanked" aria-live="polite"></div>
+                    </div>
                 </section>
 
                 <!-- Operation Journal (v1.9.28) -->

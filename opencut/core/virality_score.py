@@ -24,7 +24,9 @@ match Wave A–G:
 - ``rank(candidates, ...)`` returns a sorted list of dicts, stable on
   ties, deterministic across runs for the same input.
 - Heuristic by design — the absolute number is **not** comparable
-  across video types. Use for relative ranking only.
+  across video types. Use for relative ranking only. Every response includes
+  the signal, normalized weight, and score contribution so the result can be
+  inspected and re-ranked without probing the media again.
 
 No new required pip deps.
 """
@@ -41,6 +43,23 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger("opencut")
+
+SCORE_SCOPE = "ordinal_within_video"
+
+SIGNAL_DEFINITIONS: Dict[str, Dict[str, str]] = {
+    "audio_energy": {
+        "label": "Audio energy",
+        "description": "Dynamic range and loud moments from the audio track.",
+    },
+    "transcript_hook": {
+        "label": "Transcript hook",
+        "description": "Curiosity, emphasis, questions, imperatives, and numeric cues.",
+    },
+    "visual_salience": {
+        "label": "Visual salience",
+        "description": "Motion activity estimated from sampled frame differences.",
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +103,9 @@ class ViralitySignals:
     def __contains__(self, key: str) -> bool:
         return key in self.keys()
 
+    def as_dict(self) -> Dict[str, float]:
+        return {key: float(getattr(self, key, 0.0)) for key in self.keys()}
+
 
 @dataclass
 class ViralityResult:
@@ -93,13 +115,15 @@ class ViralityResult:
     notes: List[str] = field(default_factory=list)
     duration: float = 0.0
     hook_phrase: str = ""            # best detected hook line, if any
+    breakdown: List[Dict[str, Any]] = field(default_factory=list)
+    score_scope: str = SCORE_SCOPE
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
 
     def keys(self):
         return ("score", "signals", "weights", "notes",
-                "duration", "hook_phrase")
+                "duration", "hook_phrase", "breakdown", "score_scope")
 
     def __contains__(self, key: str) -> bool:
         return key in self.keys()
@@ -125,6 +149,18 @@ _DEFAULT_WEIGHTS: Dict[str, float] = {
 }
 
 
+def _safe_signal_value(value: Any) -> float:
+    """Return a finite 0-100 signal value for breakdown calculations."""
+
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return max(0.0, min(100.0, value))
+
+
 def _normalise_weights(w: Optional[Dict[str, float]]) -> Dict[str, float]:
     """Normalise user-supplied weights to sum to 1.0, falling back to defaults."""
     if not w:
@@ -140,6 +176,63 @@ def _normalise_weights(w: Optional[Dict[str, float]]) -> Dict[str, float]:
         cleaned[key] = v
     total = sum(cleaned.values()) or 1.0
     return {k: v / total for k, v in cleaned.items()}
+
+
+def build_breakdown(
+    signals: ViralitySignals | Dict[str, Any],
+    weights: Optional[Dict[str, float]] = None,
+) -> Tuple[List[Dict[str, Any]], float, Dict[str, float]]:
+    """Build explainable component rows and the resulting composite score.
+
+    The function is deliberately pure. It accepts the cached signal values
+    from a prior analysis, so callers can change weights and recompute the
+    score without touching FFmpeg, ASR, or the source media.
+    """
+
+    normalized = _normalise_weights(weights)
+    rows: List[Dict[str, Any]] = []
+    composite = 0.0
+    for signal_id, definition in SIGNAL_DEFINITIONS.items():
+        if isinstance(signals, dict):
+            raw_value = signals.get(signal_id, 0.0)
+        else:
+            raw_value = getattr(signals, signal_id, 0.0)
+        signal_value = _safe_signal_value(raw_value)
+        weight = max(0.0, min(1.0, float(normalized.get(signal_id, 0.0))))
+        contribution = signal_value * weight
+        composite += contribution
+        rows.append({
+            "id": signal_id,
+            "label": definition["label"],
+            "description": definition["description"],
+            "signal": round(signal_value, 2),
+            "weight": round(weight, 4),
+            "contribution": round(contribution, 2),
+        })
+    return rows, round(max(0.0, min(100.0, composite)), 2), normalized
+
+
+def reweight(
+    signals: ViralitySignals | Dict[str, Any],
+    weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, Any]:
+    """Recompute a cached score from signals without re-analysing media."""
+
+    breakdown, composite, normalized = build_breakdown(signals, weights)
+    if isinstance(signals, dict):
+        signal_payload = {
+            key: round(_safe_signal_value(signals.get(key, 0.0)), 2)
+            for key in SIGNAL_DEFINITIONS
+        }
+    else:
+        signal_payload = signals.as_dict()
+    return {
+        "score": composite,
+        "signals": signal_payload,
+        "weights": normalized,
+        "breakdown": breakdown,
+        "score_scope": SCORE_SCOPE,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +489,7 @@ def score(
         dropped = w.pop("visual_salience", 0.0)
         total = sum(w.values()) or 1.0
         w = {k: v / total for k, v in w.items()}
+        w["visual_salience"] = 0.0
         if dropped:
             notes.append(f"weights renormalised (dropped visual: {dropped:.2f})")
     else:
@@ -408,12 +502,7 @@ def score(
         transcript_hook=hook_score,
         visual_salience=visual_score,
     )
-    composite = (
-        signals.audio_energy * w.get("audio_energy", 0.0)
-        + signals.transcript_hook * w.get("transcript_hook", 0.0)
-        + signals.visual_salience * w.get("visual_salience", 0.0)
-    )
-    composite = max(0.0, min(100.0, composite))
+    breakdown, composite, w = build_breakdown(signals, w)
 
     # Probe duration for the record.
     duration = 0.0
@@ -432,6 +521,8 @@ def score(
         notes=notes,
         duration=duration,
         hook_phrase=best_phrase,
+        breakdown=breakdown,
+        score_scope=SCORE_SCOPE,
     )
 
 
@@ -489,6 +580,8 @@ def rank(
                     visual_salience=r.signals.visual_salience,
                 ),
                 "weights": dict(r.weights),
+                "breakdown": list(r.breakdown),
+                "score_scope": r.score_scope,
                 "duration": r.duration,
                 "hook_phrase": r.hook_phrase,
                 "notes": list(r.notes),
@@ -508,10 +601,43 @@ def rank(
     return results
 
 
+def rerank(
+    candidates: Sequence[Dict[str, Any]],
+    weights: Optional[Dict[str, float]] = None,
+) -> List[Dict[str, Any]]:
+    """Re-rank previously scored candidates without reading their files.
+
+    Candidates are the dictionaries returned by :func:`rank` (or an
+    equivalent payload containing ``signals``). Errors and malformed entries
+    remain in their stable input order with a zero score.
+    """
+
+    normalized = _normalise_weights(weights)
+    reranked: List[Dict[str, Any]] = []
+    for index, candidate in enumerate(candidates or []):
+        item = dict(candidate) if isinstance(candidate, dict) else {}
+        item.setdefault("input_index", index)
+        signals = item.get("signals")
+        if not isinstance(signals, dict):
+            item.setdefault("score", 0.0)
+            reranked.append(item)
+            continue
+        recalculated = reweight(signals, normalized)
+        item.update(recalculated)
+        reranked.append(item)
+    reranked.sort(key=lambda item: -float(item.get("score") or 0.0))
+    return reranked
+
+
 __all__ = [
     "ViralitySignals",
     "ViralityResult",
+    "SCORE_SCOPE",
+    "SIGNAL_DEFINITIONS",
+    "build_breakdown",
     "check_virality_score_available",
+    "reweight",
+    "rerank",
     "score",
     "rank",
 ]

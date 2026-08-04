@@ -18670,6 +18670,164 @@
             // --------------------------------------------------------------
             // H1.1 — Virality score quick action
             // --------------------------------------------------------------
+            var viralityCachedCandidates = [];
+            var viralityActiveWeights = {
+                audio_energy: 0.30,
+                transcript_hook: 0.45,
+                visual_salience: 0.25
+            };
+            var VIRALITY_SIGNAL_LABELS = {
+                audio_energy: function () { return t("wave_h.virality_audio_label", "Audio energy"); },
+                transcript_hook: function () { return t("wave_h.virality_hook_label", "Transcript hook"); },
+                visual_salience: function () { return t("wave_h.virality_visual_label", "Visual salience"); }
+            };
+
+            function normalizeViralityWeights(weights) {
+                var defaults = { audio_energy: 0.30, transcript_hook: 0.45, visual_salience: 0.25 };
+                var cleaned = {};
+                var total = 0;
+                Object.keys(defaults).forEach(function (key) {
+                    var value = Number(weights && weights[key]);
+                    if (!isFinite(value) || value < 0) value = defaults[key];
+                    cleaned[key] = value;
+                    total += value;
+                });
+                if (!total) return defaults;
+                Object.keys(cleaned).forEach(function (key) { cleaned[key] /= total; });
+                return cleaned;
+            }
+
+            function buildViralityBreakdown(signals, weights) {
+                var normalized = normalizeViralityWeights(weights);
+                var rows = [];
+                var score = 0;
+                Object.keys(VIRALITY_SIGNAL_LABELS).forEach(function (key) {
+                    var signal = Number(signals && signals[key]);
+                    if (!isFinite(signal)) signal = 0;
+                    signal = Math.max(0, Math.min(100, signal));
+                    var contribution = signal * normalized[key];
+                    score += contribution;
+                    rows.push({
+                        id: key,
+                        label: VIRALITY_SIGNAL_LABELS[key](),
+                        signal: signal,
+                        weight: normalized[key],
+                        contribution: contribution
+                    });
+                });
+                return { score: Math.max(0, Math.min(100, score)), weights: normalized, breakdown: rows };
+            }
+
+            function rerankViralityCandidates(candidates, weights) {
+                var normalized = normalizeViralityWeights(weights);
+                return (candidates || []).map(function (candidate, index) {
+                    candidate = candidate || {};
+                    var result = buildViralityBreakdown(candidate.signals || {}, normalized);
+                    return Object.assign({}, candidate, {
+                        score: Number(result.score.toFixed(2)),
+                        weights: result.weights,
+                        breakdown: result.breakdown,
+                        input_index: candidate.input_index == null ? index : candidate.input_index
+                    });
+                }).sort(function (a, b) {
+                    var scoreDelta = Number(b.score || 0) - Number(a.score || 0);
+                    return scoreDelta || Number(a.input_index || 0) - Number(b.input_index || 0);
+                });
+            }
+
+            function renderViralityPanel(candidates, weights) {
+                var resultArea = document.getElementById("ocWaveHViralityResult");
+                var breakdownEl = document.getElementById("ocWaveHViralityBreakdown");
+                var rankedEl = document.getElementById("ocWaveHViralityRanked");
+                if (!resultArea || !breakdownEl || !rankedEl) return;
+                viralityActiveWeights = normalizeViralityWeights(weights || viralityActiveWeights);
+                viralityCachedCandidates = rerankViralityCandidates(candidates, viralityActiveWeights);
+                var first = viralityCachedCandidates[0];
+                if (!first) return;
+
+                resultArea.classList.remove("hidden");
+                var scoreEl = document.getElementById("ocWaveHViralityScore");
+                var scopeEl = document.getElementById("ocWaveHViralityScope");
+                var noteEl = document.getElementById("ocWaveHViralityNote");
+                if (scoreEl) scoreEl.textContent = Number(first.score || 0).toFixed(1);
+                if (scopeEl) scopeEl.textContent = t("wave_h.virality_scope", "Ordinal within this video");
+                if (noteEl) noteEl.textContent = t("wave_h.virality_result_note", "Use this score to triage moments in the same video, not to predict absolute performance across videos.");
+
+                breakdownEl.innerHTML = "";
+                first.breakdown.forEach(function (component) {
+                    var row = document.createElement("div");
+                    row.className = "oc-wave-h-virality-row";
+                    var copy = document.createElement("div");
+                    copy.className = "oc-wave-h-virality-row-copy";
+                    var label = document.createElement("span");
+                    label.className = "oc-wave-h-virality-row-label";
+                    label.textContent = component.label;
+                    var detail = document.createElement("span");
+                    detail.className = "oc-wave-h-virality-row-detail";
+                    detail.textContent = Number(component.signal).toFixed(1) + " × " + Math.round(component.weight * 100) + "%";
+                    copy.appendChild(label);
+                    copy.appendChild(detail);
+                    var contribution = document.createElement("strong");
+                    contribution.className = "oc-wave-h-virality-contribution";
+                    contribution.textContent = "+" + Number(component.contribution).toFixed(2);
+                    row.appendChild(copy);
+                    row.appendChild(contribution);
+                    breakdownEl.appendChild(row);
+                });
+
+                rankedEl.innerHTML = "";
+                viralityCachedCandidates.forEach(function (candidate, index) {
+                    var row = document.createElement("div");
+                    row.className = "oc-wave-h-virality-candidate";
+                    var rank = document.createElement("span");
+                    rank.className = "oc-wave-h-virality-rank";
+                    rank.textContent = "#" + (index + 1);
+                    var name = document.createElement("span");
+                    name.className = "oc-wave-h-virality-candidate-name";
+                    name.textContent = candidate.label || String(candidate.filepath || "Candidate").split(/[/\\]/).pop();
+                    name.title = candidate.filepath || name.textContent;
+                    var candidateScore = document.createElement("strong");
+                    candidateScore.className = "oc-wave-h-virality-candidate-score";
+                    candidateScore.textContent = Number(candidate.score || 0).toFixed(1);
+                    row.appendChild(rank);
+                    row.appendChild(name);
+                    row.appendChild(candidateScore);
+                    rankedEl.appendChild(row);
+                });
+
+                [
+                    ["ocWaveHViralityAudioWeight", "ocWaveHViralityAudioWeightValue", "audio_energy"],
+                    ["ocWaveHViralityHookWeight", "ocWaveHViralityHookWeightValue", "transcript_hook"],
+                    ["ocWaveHViralityVisualWeight", "ocWaveHViralityVisualWeightValue", "visual_salience"]
+                ].forEach(function (entry) {
+                    var input = document.getElementById(entry[0]);
+                    var output = document.getElementById(entry[1]);
+                    if (input) input.value = String(Math.round(viralityActiveWeights[entry[2]] * 100));
+                    if (output) output.textContent = Math.round(viralityActiveWeights[entry[2]] * 100) + "%";
+                });
+                var rerankButton = document.getElementById("ocWaveHViralityRerank");
+                if (rerankButton) rerankButton.disabled = false;
+            }
+
+            function readViralityWeights() {
+                return {
+                    audio_energy: Number((document.getElementById("ocWaveHViralityAudioWeight") || {}).value || 30) / 100,
+                    transcript_hook: Number((document.getElementById("ocWaveHViralityHookWeight") || {}).value || 45) / 100,
+                    visual_salience: Number((document.getElementById("ocWaveHViralityVisualWeight") || {}).value || 25) / 100
+                };
+            }
+
+            function updateViralityWeightLabel(inputId, outputId) {
+                var input = document.getElementById(inputId);
+                var output = document.getElementById(outputId);
+                if (input && output) output.textContent = String(Number(input.value || 0)) + "%";
+            }
+
+            function rerankViralityFromControls() {
+                if (!viralityCachedCandidates.length) return;
+                renderViralityPanel(viralityCachedCandidates, readViralityWeights());
+            }
+
             function runViralityScore() {
                 if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 startJob("/analyze/virality", {
@@ -18677,6 +18835,40 @@
                     skip_visual: false
                 });
             }
+
+            function runViralityRank() {
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
+                var extraPaths = ((document.getElementById("ocWaveHViralityCandidatePaths") || {}).value || "")
+                    .split(/\r?\n/)
+                    .map(function (path) { return path.trim(); })
+                    .filter(Boolean);
+                var paths = [selectedPath].concat(extraPaths);
+                var seen = {};
+                var candidates = [];
+                paths.forEach(function (path, index) {
+                    var key = path.toLowerCase();
+                    if (seen[key]) return;
+                    seen[key] = true;
+                    candidates.push({ filepath: path, label: index === 0 ? selectedName : "" });
+                });
+                startJob("/analyze/virality/rank", { candidates: candidates, skip_visual: false });
+            }
+
+            addJobDoneListener(function (job) {
+                if (job.status !== "complete" || !job.result) return;
+                if (job.type === "virality_score" && job.result.signals) {
+                    renderViralityPanel([{
+                        filepath: selectedPath,
+                        label: selectedName,
+                        signals: job.result.signals,
+                        notes: job.result.notes || [],
+                        hook_phrase: job.result.hook_phrase || "",
+                        input_index: 0
+                    }], job.result.weights);
+                } else if (job.type === "virality_rank" && Array.isArray(job.result.ranked)) {
+                    renderViralityPanel(job.result.ranked, job.result.ranked[0] && job.result.ranked[0].weights);
+                }
+            });
 
             // --------------------------------------------------------------
             // H1.2 — Cursor-zoom resolve (screen-recording auto-zoom)
@@ -18752,6 +18944,20 @@
                 });
                 b = document.getElementById("ocWaveHVirality");
                 if (b) b.addEventListener("click", runViralityScore);
+                b = document.getElementById("ocWaveHViralityRank");
+                if (b) b.addEventListener("click", runViralityRank);
+                b = document.getElementById("ocWaveHViralityRerank");
+                if (b) b.addEventListener("click", rerankViralityFromControls);
+                [
+                    ["ocWaveHViralityAudioWeight", "ocWaveHViralityAudioWeightValue"],
+                    ["ocWaveHViralityHookWeight", "ocWaveHViralityHookWeightValue"],
+                    ["ocWaveHViralityVisualWeight", "ocWaveHViralityVisualWeightValue"]
+                ].forEach(function (entry) {
+                    var input = document.getElementById(entry[0]);
+                    if (input) input.addEventListener("input", function () {
+                        updateViralityWeightLabel(entry[0], entry[1]);
+                    });
+                });
                 b = document.getElementById("ocWaveHCursorZoom");
                 if (b) b.addEventListener("click", function () { runCursorZoomResolve(""); });
             }

@@ -16494,6 +16494,162 @@ input[type="range"]::-webkit-slider-thumb:hover {
     border-radius: 0 4px 4px 0;
 }
 
+.oc-wave-h-virality-controls,
+.oc-wave-h-virality-result {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: var(--r-sm, 4px);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.oc-wave-h-label,
+.oc-wave-h-virality-kicker {
+    display: block;
+    color: var(--text-secondary, #b5bdcc);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.oc-wave-h-paths {
+    width: 100%;
+    min-height: 42px;
+    margin: 6px 0 8px;
+    resize: vertical;
+    background: var(--bg-input, #151a22);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: var(--r-xs, 3px);
+    color: var(--text-primary, #eef2f8);
+    font: 11px/1.4 var(--font-mono, monospace);
+    padding: 7px 8px;
+    box-sizing: border-box;
+}
+
+.oc-wave-h-virality-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.oc-wave-h-virality-scope,
+.oc-wave-h-virality-note {
+    color: var(--text-muted, #8891a2);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.oc-wave-h-virality-scope {
+    margin-top: 3px;
+}
+
+.oc-wave-h-virality-score {
+    color: var(--neon-cyan, #4d7fff);
+    font: 700 24px/1 var(--font-mono, monospace);
+}
+
+.oc-wave-h-virality-breakdown {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.oc-wave-h-virality-row,
+.oc-wave-h-weight-row {
+    display: grid;
+    align-items: center;
+    gap: 8px;
+}
+
+.oc-wave-h-virality-row {
+    grid-template-columns: minmax(90px, 1fr) auto;
+    padding: 7px 8px;
+    border-left: 2px solid var(--border-light, rgba(255, 255, 255, 0.12));
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.oc-wave-h-virality-row-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.oc-wave-h-virality-row-label,
+.oc-wave-h-virality-row-detail {
+    color: var(--text-primary, #eef2f8);
+    font-size: 11px;
+}
+
+.oc-wave-h-virality-row-detail {
+    color: var(--text-muted, #8891a2);
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+}
+
+.oc-wave-h-virality-contribution {
+    color: var(--text-primary, #eef2f8);
+    font: 600 11px var(--font-mono, monospace);
+}
+
+.oc-wave-h-virality-reweight {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.oc-wave-h-weight-grid {
+    display: grid;
+    gap: 7px;
+    margin: 8px 0;
+}
+
+.oc-wave-h-weight-row {
+    grid-template-columns: minmax(90px, 1fr) minmax(90px, 1.4fr) 42px;
+    color: var(--text-secondary, #b5bdcc);
+    font-size: 10px;
+}
+
+.oc-wave-h-weight-row output {
+    color: var(--text-primary, #eef2f8);
+    font: 600 10px var(--font-mono, monospace);
+    text-align: right;
+}
+
+.oc-wave-h-virality-ranked {
+    display: grid;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.oc-wave-h-virality-candidate {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: var(--r-xs, 3px);
+}
+
+.oc-wave-h-virality-rank {
+    color: var(--text-muted, #8891a2);
+    font: 600 10px var(--font-mono, monospace);
+}
+
+.oc-wave-h-virality-candidate-name {
+    overflow: hidden;
+    color: var(--text-secondary, #b5bdcc);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.oc-wave-h-virality-candidate-score {
+    color: var(--neon-cyan, #4d7fff);
+    font: 600 11px var(--font-mono, monospace);
+}
+
 /* Onboarding overlay (H1.8) */
 .oc-onboarding-overlay {
     position: fixed;
@@ -17290,6 +17446,19 @@ html.theme-light .oc-wave-h-note {
     background: rgba(17, 24, 39, 0.03);
     border-left-color: rgba(17, 24, 39, 0.15);
     color: var(--text-muted);
+}
+
+html.theme-light .oc-wave-h-virality-controls,
+html.theme-light .oc-wave-h-virality-result,
+html.theme-light .oc-wave-h-virality-row {
+    background: rgba(17, 24, 39, 0.025);
+    border-color: rgba(17, 24, 39, 0.10);
+}
+
+html.theme-light .oc-wave-h-paths {
+    background: var(--bg-input);
+    border-color: rgba(17, 24, 39, 0.16);
+    color: var(--text-primary);
 }
 
 /* ── Onboarding overlay ────────────────────────────── */

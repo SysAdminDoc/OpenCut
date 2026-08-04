@@ -52,6 +52,40 @@ class TestViralityScore(unittest.TestCase):
         # Bad values fall back to defaults; total re-normalised.
         self.assertAlmostEqual(sum(w.values()), 1.0, places=6)
 
+    def test_breakdown_exposes_signal_weight_and_contribution(self):
+        from opencut.core.virality_score import (
+            ViralitySignals,
+            build_breakdown,
+        )
+
+        rows, score, weights = build_breakdown(
+            ViralitySignals(audio_energy=80, transcript_hook=40, visual_salience=20),
+            {"audio_energy": 2, "transcript_hook": 1, "visual_salience": 1},
+        )
+        self.assertAlmostEqual(sum(weights.values()), 1.0, places=6)
+        self.assertAlmostEqual(score, 55.0, places=2)
+        audio = next(row for row in rows if row["id"] == "audio_energy")
+        self.assertEqual(audio["signal"], 80.0)
+        self.assertEqual(audio["weight"], 0.5)
+        self.assertEqual(audio["contribution"], 40.0)
+        self.assertTrue(audio["description"])
+
+    def test_rerank_uses_cached_signals_without_media_access(self):
+        from opencut.core.virality_score import rerank
+
+        cached = [
+            {"filepath": "audio-first.mp4", "signals": {
+                "audio_energy": 90, "transcript_hook": 10, "visual_salience": 0,
+            }},
+            {"filepath": "hook-first.mp4", "signals": {
+                "audio_energy": 20, "transcript_hook": 80, "visual_salience": 0,
+            }},
+        ]
+        ranked = rerank(cached, {"audio_energy": 1, "transcript_hook": 0, "visual_salience": 0})
+        self.assertEqual([item["filepath"] for item in ranked], ["audio-first.mp4", "hook-first.mp4"])
+        self.assertEqual(ranked[0]["score"], 90.0)
+        self.assertEqual(len(ranked[0]["breakdown"]), 3)
+
     def test_result_is_subscriptable(self):
         from opencut.core.virality_score import ViralityResult, ViralitySignals
         r = ViralityResult(
@@ -61,6 +95,42 @@ class TestViralityScore(unittest.TestCase):
         # Subscript + keys() so Flask jsonify works.
         self.assertEqual(r["score"], 42.0)
         self.assertIn("hook_phrase", r.keys())
+
+    def test_route_payload_preserves_explainable_score_contract(self):
+        from opencut.core.virality_score import ViralityResult, ViralitySignals
+        from opencut.routes.wave_h_routes import _virality_result_payload
+
+        result = ViralityResult(
+            score=42.0,
+            signals=ViralitySignals(audio_energy=10, transcript_hook=20, visual_salience=30),
+            breakdown=[{
+                "id": "audio_energy",
+                "label": "Audio energy",
+                "signal": 10.0,
+                "weight": 0.3,
+                "contribution": 3.0,
+            }],
+        )
+        payload = _virality_result_payload(result)
+        self.assertEqual(payload["score_scope"], "ordinal_within_video")
+        self.assertEqual(payload["breakdown"][0]["contribution"], 3.0)
+        self.assertIn("absolute", payload["score_note"])
+
+    def test_engagement_virality_breakdown_is_reweightable(self):
+        from opencut.core.highlights import EngagementScore
+
+        engagement = EngagementScore(hook_strength=1.0, emotional_peak=0.5)
+        self.assertEqual(engagement.compute_virality({
+            "hook_strength": 1,
+            "emotional_peak": 0,
+            "quotability": 0,
+            "pacing": 0,
+        }), 100)
+        rows = engagement.virality_breakdown()
+        hook = next(row for row in rows if row["id"] == "hook_strength")
+        self.assertEqual(hook["signal"], 100.0)
+        self.assertEqual(hook["weight"], 1.0)
+        self.assertEqual(hook["contribution"], 100.0)
 
     def test_check_available_requires_ffmpeg(self):
         from opencut.core.virality_score import check_virality_score_available

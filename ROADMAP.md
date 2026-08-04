@@ -32,15 +32,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A tag and an unsigned GitHub Release exist for the current version with the Windows installer, `release-composition.json`, artifact SBOM, third-party notices, and FFmpeg provenance attached; a release-gate check fails when `__version__` has no matching tag.
   Complexity: M
 
-### P2 — 2026-08-02 (research pass)
-
-- [ ] P2 — Make the highlight score explainable and re-weightable
-  Why: The category's incumbent locks an opaque 0–99 score behind its paid tier and users treat it as triage, not verdict — an inspectable score is the differentiator a local tool can own.
-  Evidence: Opus Clip's Virality Score is free-tier-locked and blends hook strength, topic-transition density, speaker engagement, and category history; `opencut/core/virality_score.py` already computes a weighted blend of audio energy, transcript hook, and visual salience, and its own documentation warns the absolute numbers are not comparable across video types.
-  Touches: `opencut/core/virality_score.py`, `opencut/core/highlights.py`, `opencut/routes/wave_h_routes.py`, panel result rendering, `docs/`.
-  Acceptance: The response returns each named component signal with its weight and contribution; the panel renders the breakdown and lets the user re-weight and re-rank without re-analysing; the docs state the score is ordinal within one video, not absolute.
-  Complexity: M
-
 ### P3 — 2026-08-02 (research pass)
 
 - [ ] P3 — Export MLT projects for Kdenlive and Shotcut

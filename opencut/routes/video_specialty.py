@@ -386,7 +386,11 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "quotability": getattr(c.engagement, "quotability", 0),
                     "overall": getattr(c.engagement, "overall", 0),
                     "virality": getattr(c.engagement, "virality", 0),
+                    "virality_weights": dict(getattr(c.engagement, "virality_weights", {})),
+                    "virality_contributions": dict(getattr(c.engagement, "virality_contributions", {})),
+                    "virality_breakdown": c.engagement.virality_breakdown(),
                 } if getattr(c, "engagement", None) else None,
+                "virality_breakdown": c.engagement.virality_breakdown() if getattr(c, "engagement", None) else [],
                 "virality": getattr(c.engagement, "virality", 0) if getattr(c, "engagement", None) else 0,
             }
             for c in clips
