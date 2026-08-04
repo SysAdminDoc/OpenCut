@@ -80,6 +80,21 @@ def _stub_501(name: str, hint: str = ""):
 # Tier 1.1 — Virality scoring
 # ===========================================================================
 
+def _virality_result_payload(result):
+    """Serialize a score with enough raw material for local re-ranking."""
+
+    return {
+        "score": result.score,
+        "signals": result.signals.as_dict(),
+        "weights": dict(result.weights),
+        "breakdown": list(result.breakdown),
+        "score_scope": result.score_scope,
+        "score_note": "Ordinal within this video; use component contributions for triage, not an absolute performance forecast.",
+        "hook_phrase": result.hook_phrase,
+        "duration": result.duration,
+        "notes": list(result.notes),
+    }
+
 @wave_h_bp.route("/analyze/virality", methods=["POST"])
 @require_csrf
 @async_job("virality_score")
@@ -117,14 +132,7 @@ def route_virality_score(job_id, filepath, data):
         skip_visual=skip_visual,
         on_progress=_on_progress,
     )
-    return {
-        "score": result.score,
-        "signals": dict(result.signals.__dict__),
-        "weights": dict(result.weights),
-        "hook_phrase": result.hook_phrase,
-        "duration": result.duration,
-        "notes": list(result.notes),
-    }
+    return _virality_result_payload(result)
 
 
 @wave_h_bp.route("/analyze/virality/rank", methods=["POST"])
@@ -158,7 +166,12 @@ def route_virality_rank(job_id, filepath, data):
         skip_visual=skip_visual,
         on_progress=_on_progress,
     )
-    return {"ranked": ranked, "count": len(ranked)}
+    return {
+        "ranked": ranked,
+        "count": len(ranked),
+        "score_scope": "ordinal_within_video",
+        "score_note": "Ordinal within this video; adjust weights and re-rank cached candidates without re-analysing media.",
+    }
 
 
 # ===========================================================================

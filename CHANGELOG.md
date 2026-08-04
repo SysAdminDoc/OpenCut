@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Explainable highlight scoring
+
+- Virality and highlight responses now expose named signals, normalized weights,
+  and point contributions, with an ordinal-within-video scope note.
+- The Wave H panel can analyze candidate paths once, then re-weight and
+  re-rank the cached signals locally without another media analysis.
+
 ### Added - Reversible Magic Cleanup chain
 
 - CEP and UXP now expose one review-first cleanup control that previews silence

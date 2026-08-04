@@ -15,6 +15,48 @@ from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
+VIRALITY_SIGNAL_DEFINITIONS = {
+    "hook_strength": {
+        "label": "Hook strength",
+        "description": "How strongly the opening earns attention.",
+    },
+    "emotional_peak": {
+        "label": "Emotional peak",
+        "description": "Emphasis and emotional intensity in the clip.",
+    },
+    "quotability": {
+        "label": "Quotability",
+        "description": "Whether the wording stands alone as a shareable quote.",
+    },
+    "pacing": {
+        "label": "Pacing",
+        "description": "Conversational energy measured from words per second.",
+    },
+}
+
+_DEFAULT_VIRALITY_WEIGHTS = {
+    "hook_strength": 0.35,
+    "emotional_peak": 0.25,
+    "quotability": 0.25,
+    "pacing": 0.15,
+}
+
+
+def _normalise_virality_weights(weights: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    if not weights:
+        return dict(_DEFAULT_VIRALITY_WEIGHTS)
+    cleaned = {}
+    for key, default in _DEFAULT_VIRALITY_WEIGHTS.items():
+        try:
+            value = float(weights.get(key, default))
+            if value < 0 or value != value or value in (float("inf"), float("-inf")):
+                value = default
+        except (TypeError, ValueError):
+            value = default
+        cleaned[key] = value
+    total = sum(cleaned.values()) or 1.0
+    return {key: value / total for key, value in cleaned.items()}
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -28,6 +70,8 @@ class EngagementScore:
     quotability: float = 0.0         # 0-1: how quotable/shareable the content is
     overall: float = 0.0             # 0-1: weighted composite score
     virality: int = 0                # 0-100: hook-forward, creator-sortable heuristic
+    virality_weights: Dict[str, float] = field(default_factory=dict)
+    virality_contributions: Dict[str, float] = field(default_factory=dict)
 
     def compute_overall(self):
         """Compute weighted overall engagement score."""
@@ -39,7 +83,35 @@ class EngagementScore:
         )
         return self.overall
 
-    def compute_virality(self) -> int:
+    def virality_breakdown(self, weights: Optional[Dict[str, float]] = None) -> List[Dict[str, object]]:
+        """Return the named virality signals with weights and point contributions."""
+
+        normalized = _normalise_virality_weights(weights or self.virality_weights)
+        values = {
+            "hook_strength": self.hook_strength,
+            "emotional_peak": self.emotional_peak,
+            "quotability": self.quotability,
+            "pacing": self.pacing,
+        }
+        rows = []
+        contributions = {}
+        for signal_id, definition in VIRALITY_SIGNAL_DEFINITIONS.items():
+            signal = max(0.0, min(1.0, float(values.get(signal_id, 0.0)))) * 100.0
+            contribution = signal * normalized[signal_id]
+            contributions[signal_id] = round(contribution, 2)
+            rows.append({
+                "id": signal_id,
+                "label": definition["label"],
+                "description": definition["description"],
+                "signal": round(signal, 2),
+                "weight": round(normalized[signal_id], 4),
+                "contribution": round(contribution, 2),
+            })
+        self.virality_weights = normalized
+        self.virality_contributions = contributions
+        return rows
+
+    def compute_virality(self, weights: Optional[Dict[str, float]] = None) -> int:
         """Deterministic 0-100 virality/hook score from the engagement dimensions.
 
         A single normalized number creators can sort and threshold on (the
@@ -48,12 +120,10 @@ class EngagementScore:
         repeatable mapping of the same four signals. It is a heuristic, not a
         guarantee of how a clip will actually perform.
         """
-        raw = (
-            self.hook_strength * 0.35 +
-            self.emotional_peak * 0.25 +
-            self.quotability * 0.25 +
-            self.pacing * 0.15
-        )
+        raw = sum(
+            float(row["contribution"])
+            for row in self.virality_breakdown(weights)
+        ) / 100.0
         self.virality = max(0, min(100, round(raw * 100)))
         return self.virality
 

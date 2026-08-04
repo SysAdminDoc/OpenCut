@@ -15,7 +15,7 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
-> surface map: **264 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> surface map: **265 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
 > while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
@@ -265,7 +265,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,547 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **264** have literal first-party panel, palette, CLI, and curated MCP references; **1,283** are explicitly classified as integration-only rather than presented as direct user workflows.
+OpenCut v1.46.0 includes **1,547 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **265** have literal first-party panel, palette, CLI, and curated MCP references; **1,282 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 

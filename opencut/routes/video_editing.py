@@ -393,7 +393,11 @@ def video_highlights(job_id, filepath, data):
                         "quotability": h.engagement.quotability,
                         "overall": h.engagement.overall,
                         "virality": h.engagement.virality,
+                        "virality_weights": dict(h.engagement.virality_weights),
+                        "virality_contributions": dict(h.engagement.virality_contributions),
+                        "virality_breakdown": h.engagement.virality_breakdown(),
                     } if h.engagement else None,
+                    "virality_breakdown": h.engagement.virality_breakdown() if h.engagement else [],
                 }
                 for h in result.highlights
             ],

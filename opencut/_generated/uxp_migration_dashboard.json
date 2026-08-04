@@ -43,10 +43,11 @@
     },
     "gate": {
       "errors": [
-        "CEP routes without a UXP path or justified exclusion: /analyze/virality, /assistant/dismiss, /assistant/suggest, /audio/beats, /audio/duck-video, /audio/effects/apply, /audio/gen/sfx, /audio/gen/tone, /audio/music-ai/generate, /audio/pro/apply, /audio/pro/deepfilter, /audio/pro/effects, /audio/pro/install, /audio/tts/generate, /audio/tts/install, /batch, /batch/create, /cancel, /caption-styles, /captions/burnin/segments, /captions/enhanced/capabilities, /captions/whisperx, /context/analyze, /deliverables, /export/presets, /export/thumbnails, /favorites, /favorites/save, /info, /interview-polish, /interview-polish/state, /jobs/history, /journal/clear, /journal/list, /llm/test, /models/list, /outputs/recent, /preflight, /presets, /presets/save, /queue/list, /queue/replay, /settings/auto-zoom, /settings/gist/pull, /settings/gist/push, /settings/loudness-target, /settings/onboarding, /shutdown, /silence/speed-up, /social/platforms, /status, /system/changelog/mark-seen, /system/demo/sample, /system/dependencies, /system/estimate-time, /system/gpu, /system/gpu-recommend, /system/issue-report/bundle, /system/open-path, /system/qe-reflect, /system/status, /templates/apply, /templates/list, /templates/save, /timeline/batch-rename, /timeline/beat-cut, /timeline/smart-bins, /transcript, /transcript/export, /transcript/summarize, /video/ai/capabilities, /video/ai/denoise, /video/ai/install, /video/ai/interpolate, /video/ai/rembg, /video/auto-detect-watermark, /video/auto-edit, /video/blend, /video/chromakey, /video/color/correct, /video/cursor-zoom/resolve, /video/face/blur, /video/face/enhance, /video/face/install, /video/face/swap, /video/highlights, /video/lut/apply, /video/lut/generate-from-ref, /video/merge, /video/particles/apply, /video/pip, /video/reframe/face, /video/remove/watermark, /video/speed/ramp, /video/speed/reverse, /video/title/overlay, /video/title/render, /video/transitions/apply, /video/trim, /video/upscale/run, /video/watermark, /whisper/clear-cache, /whisper/reinstall, /whisper/settings, /workflow/presets, /workflow/run, /workflow/save, /workflows, /workflows/list"
+        "CEP routes without a UXP path or justified exclusion: /analyze/virality, /analyze/virality/rank, /assistant/dismiss, /assistant/suggest, /audio/beats, /audio/duck-video, /audio/effects/apply, /audio/gen/sfx, /audio/gen/tone, /audio/music-ai/generate, /audio/pro/apply, /audio/pro/deepfilter, /audio/pro/effects, /audio/pro/install, /audio/tts/generate, /audio/tts/install, /batch, /batch/create, /cancel, /caption-styles, /captions/burnin/segments, /captions/enhanced/capabilities, /captions/whisperx, /context/analyze, /deliverables, /export/presets, /export/thumbnails, /favorites, /favorites/save, /info, /interview-polish, /interview-polish/state, /jobs/history, /journal/clear, /journal/list, /llm/test, /models/list, /outputs/recent, /preflight, /presets, /presets/save, /queue/list, /queue/replay, /settings/auto-zoom, /settings/gist/pull, /settings/gist/push, /settings/loudness-target, /settings/onboarding, /shutdown, /silence/speed-up, /social/platforms, /status, /system/changelog/mark-seen, /system/demo/sample, /system/dependencies, /system/estimate-time, /system/gpu, /system/gpu-recommend, /system/issue-report/bundle, /system/open-path, /system/qe-reflect, /system/status, /templates/apply, /templates/list, /templates/save, /timeline/batch-rename, /timeline/beat-cut, /timeline/smart-bins, /transcript, /transcript/export, /transcript/summarize, /video/ai/capabilities, /video/ai/denoise, /video/ai/install, /video/ai/interpolate, /video/ai/rembg, /video/auto-detect-watermark, /video/auto-edit, /video/blend, /video/chromakey, /video/color/correct, /video/cursor-zoom/resolve, /video/face/blur, /video/face/enhance, /video/face/install, /video/face/swap, /video/highlights, /video/lut/apply, /video/lut/generate-from-ref, /video/merge, /video/particles/apply, /video/pip, /video/reframe/face, /video/remove/watermark, /video/speed/ramp, /video/speed/reverse, /video/title/overlay, /video/title/render, /video/transitions/apply, /video/trim, /video/upscale/run, /video/watermark, /whisper/clear-cache, /whisper/reinstall, /whisper/settings, /workflow/presets, /workflow/run, /workflow/save, /workflows, /workflows/list"
       ],
       "missing_routes": [
         "/analyze/virality",
+        "/analyze/virality/rank",
         "/assistant/dismiss",
         "/assistant/suggest",
         "/audio/beats",
@@ -176,6 +177,16 @@
         "justification": "",
         "priority": false,
         "route": "/analyze/virality",
+        "status": "missing",
+        "uxp_sources": []
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "",
+        "priority": false,
+        "route": "/analyze/virality/rank",
         "status": "missing",
         "uxp_sources": []
       },
@@ -2012,11 +2023,11 @@
       }
     ],
     "summary": {
-      "cep_route_count": 171,
-      "coverage_percent": 36.3,
+      "cep_route_count": 172,
+      "coverage_percent": 36.0,
       "covered": 61,
       "excluded": 1,
-      "missing": 109,
+      "missing": 110,
       "priority_count": 7,
       "priority_covered": 7,
       "priority_missing": 0,
