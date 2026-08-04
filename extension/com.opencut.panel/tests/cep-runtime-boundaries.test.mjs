@@ -12,6 +12,7 @@ const components = require("../client/component-utils.js");
 const timeline = require("../client/timeline-utils.js");
 const onboarding = require("../client/onboarding-state.js");
 const bootstrap = require("../client/bootstrap.js");
+const { createUpdateController } = require("../client/update-controller.js");
 
 function requestHarness() {
   const requests = [];
@@ -296,21 +297,108 @@ describe("CEP bootstrap", () => {
 describe("CEP update-check boundary", () => {
   it("surfaces failed checks and retries from the header refresh control", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const controller = readFileSync(new URL("../client/update-controller.js", import.meta.url), "utf8");
     const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
 
-    expect(main).toContain("function checkForUpdateNotice(force)");
-    expect(main).toContain("function renderUpdateNotice(result, checking)");
-    expect(main).toContain("normalizeReleaseUrl");
-    expect(main).toContain("function dismissUpdateNotice()");
-    expect(main).toContain("udata.error || !udata.latest_version");
-    expect(main).toContain("toast.update_check_failed");
+    expect(main).toContain("OpenCutUpdateController.createUpdateController");
+    expect(main).toContain("UpdateController.check(false)");
+    expect(main).toContain("UpdateController.check(true)");
+    expect(main).toContain("UpdateController.bind()");
+    expect(main).toContain("UpdateController.dispose()");
+    expect(main).not.toContain("function checkForUpdateNotice(force)");
+    expect(main).not.toContain("function renderUpdateNotice(result, checking)");
+    expect(controller).toContain("function createUpdateController(options)");
+    expect(controller).toContain('"/system/update-check"');
+    expect(controller).toContain("updateCheckFailed");
+    expect(controller).toContain("function dispose()");
     const refreshStart = main.indexOf("function refreshAll()");
     expect(refreshStart).toBeGreaterThan(-1);
-    expect(main.slice(refreshStart, refreshStart + 500)).toContain("checkForUpdateNotice(true)");
+    expect(main.slice(refreshStart, refreshStart + 500)).toContain("UpdateController.check(true)");
     expect(index).toContain('id="refreshAllBtn"');
     for (const id of ["updateNoticeCard", "updateOpenBtn", "updateDismissBtn", "updateRetryBtn"]) {
       expect(index).toContain(`id="${id}"`);
     }
+  });
+
+  it("owns retry, release, dismiss, and teardown behavior", () => {
+    const ids = [
+      "updateNoticeCard",
+      "updateStatusText",
+      "updateSummary",
+      "updateCurrentVersion",
+      "updateAvailableVersion",
+      "updateReleaseName",
+      "updateReleaseNotes",
+      "updateNotesDetails",
+      "updateReleaseDetails",
+      "updateRetryBtn",
+      "updateOpenBtn",
+      "updateDismissBtn",
+    ];
+    const elements = new Map();
+    for (const id of ids) {
+      const listeners = new Map();
+      elements.set(id, {
+        textContent: id === "updateCurrentVersion" ? "1.46.0" : "",
+        hidden: false,
+        disabled: false,
+        attributes: {},
+        classList: { toggle: vi.fn() },
+        setAttribute(name, value) { this.attributes[name] = value; },
+        addEventListener(type, listener) { listeners.set(type, listener); },
+        removeEventListener(type, listener) {
+          if (listeners.get(type) === listener) listeners.delete(type);
+        },
+        dispatch(type) {
+          if (listeners.has(type)) listeners.get(type)({ type, target: this });
+        },
+      });
+    }
+    const storage = new Map();
+    const requests = [];
+    const toasts = vi.fn();
+    const openExternalUrl = vi.fn(() => true);
+    const controller = createUpdateController({
+      documentRef: { getElementById: (id) => elements.get(id) || null },
+      storage: {
+        getItem: (key) => storage.get(key) || null,
+        setItem: (key, value) => storage.set(key, value),
+      },
+      request: (method, path, body, callback) => requests.push({ method, path, callback }),
+      translate: (_key, fallback) => fallback,
+      showToast: toasts,
+      normalizeReleaseUrl: (value) => value === "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.47.0" ? value : "",
+      openExternalUrl,
+    });
+
+    controller.bind();
+    expect(controller.check(false)).toBe(true);
+    expect(requests[0].path).toBe("/system/update-check");
+    expect(elements.get("updateNoticeCard").attributes["data-state"]).toBe("checking");
+    requests[0].callback(new Error("offline"));
+    expect(elements.get("updateNoticeCard").attributes["data-state"]).toBe("error");
+    expect(controller.check(false)).toBe(false);
+
+    expect(controller.check(true)).toBe(true);
+    requests[1].callback(null, {
+      current_version: "1.46.0",
+      latest_version: "1.47.0",
+      update_available: true,
+      release_name: "OpenCut 1.47.0",
+      release_url: "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.47.0",
+      release_notes: "Notes",
+    });
+    expect(elements.get("updateNoticeCard").attributes["data-state"]).toBe("available");
+    elements.get("updateOpenBtn").dispatch("click");
+    expect(openExternalUrl).toHaveBeenCalledWith("https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.47.0");
+    elements.get("updateDismissBtn").dispatch("click");
+    expect(storage.get("opencut_update_dismissed_version")).toBe("1.47.0");
+    expect(elements.get("updateNoticeCard").attributes["data-state"]).toBe("dismissed");
+
+    controller.dispose();
+    elements.get("updateRetryBtn").dispatch("click");
+    expect(requests).toHaveLength(2);
+    expect(controller.check(true)).toBe(false);
   });
 });
 

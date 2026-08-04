@@ -82,12 +82,7 @@
     var pollTimer = null;
     var healthTimer = null;
     var csrfToken = "";
-    var _updateCheckDone = false;
-    var _updateCheckFailed = false;
-    var _updateCheckInFlight = false;
     var _sessionContextShown = false;
-    var UPDATE_DISMISSED_VERSION_KEY = "opencut_update_dismissed_version";
-    var _latestUpdate = null;
     var projectMedia = [];
     var projectFolder = "";
     // Raw project folder detected by JSX (app.project.path → parent dir,
@@ -2389,6 +2384,29 @@
         translate: t
     });
     var api = backendClient.request;
+    var UpdateController = OpenCutUpdateController.createUpdateController({
+        documentRef: document,
+        storage: typeof localStorage !== "undefined" ? localStorage : null,
+        request: function (method, path, body, callback) {
+            api(method, path, body, callback);
+        },
+        translate: t,
+        showToast: showToast,
+        normalizeReleaseUrl: normalizeReleaseUrl,
+        openExternalUrl: function (url) {
+            try {
+                if (cs && cs.openURLInDefaultBrowser) {
+                    cs.openURLInDefaultBrowser(url);
+                    return true;
+                }
+                if (window.open) {
+                    window.open(url, "_blank");
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+    });
     var rememberButtonText = OpenCutComponents.rememberButtonText;
     var setButtonText = OpenCutComponents.setButtonText;
 
@@ -2445,159 +2463,6 @@
         } catch (e) {}
     }
 
-    function getDismissedUpdateVersion() {
-        try { return localStorage.getItem(UPDATE_DISMISSED_VERSION_KEY) || ""; } catch (e) { return ""; }
-    }
-
-    function setDismissedUpdateVersion(version) {
-        try { localStorage.setItem(UPDATE_DISMISSED_VERSION_KEY, String(version || "")); } catch (e) {}
-    }
-
-    function setUpdateElementHidden(id, hidden) {
-        var node = document.getElementById(id);
-        if (!node) return;
-        node.hidden = !!hidden;
-        node.classList.toggle("hidden", !!hidden);
-    }
-
-    function formatUpdatePublishedAt(value) {
-        if (!value) return "";
-        try {
-            var date = new Date(value);
-            if (!isNaN(date.getTime())) return date.toLocaleDateString();
-        } catch (e) {}
-        return String(value);
-    }
-
-    function renderUpdateNotice(result, checking) {
-        var card = document.getElementById("updateNoticeCard");
-        var status = document.getElementById("updateStatusText");
-        var summary = document.getElementById("updateSummary");
-        var current = document.getElementById("updateCurrentVersion");
-        var available = document.getElementById("updateAvailableVersion");
-        var releaseName = document.getElementById("updateReleaseName");
-        var notes = document.getElementById("updateReleaseNotes");
-        var notesDetails = document.getElementById("updateNotesDetails");
-        var retry = document.getElementById("updateRetryBtn");
-        if (!card || !status || !summary) return;
-
-        var currentVersion = (result && result.current_version)
-            || (current && current.textContent)
-            || "—";
-        if (current) current.textContent = currentVersion;
-        if (retry) retry.disabled = !!checking;
-
-        if (checking) {
-            card.setAttribute("data-state", "checking");
-            status.setAttribute("data-state", "working");
-            status.textContent = t("settings.update_checking", "Checking…");
-            summary.textContent = t("settings.update_checking_summary", "Checking GitHub for the latest OpenCut release.");
-            setUpdateElementHidden("updateReleaseDetails", true);
-            return;
-        }
-
-        if (!result || result.error || !result.latest_version) {
-            card.setAttribute("data-state", "error");
-            status.setAttribute("data-state", "error");
-            status.textContent = t("settings.update_unavailable_status", "Unavailable");
-            summary.textContent = t("settings.update_check_failed", "Couldn't check for updates. Click Check again to retry.");
-            if (available) available.textContent = "—";
-            setUpdateElementHidden("updateReleaseDetails", true);
-            return;
-        }
-
-        var latestVersion = String(result.latest_version);
-        if (available) available.textContent = latestVersion;
-        if (!result.update_available) {
-            card.setAttribute("data-state", "current");
-            status.setAttribute("data-state", "success");
-            status.textContent = t("settings.update_current_status", "Up to date");
-            summary.textContent = t("settings.update_up_to_date", "You're up to date on v{version}.").replace("{version}", currentVersion);
-            setUpdateElementHidden("updateReleaseDetails", true);
-            return;
-        }
-
-        if (getDismissedUpdateVersion() === latestVersion) {
-            card.setAttribute("data-state", "dismissed");
-            status.setAttribute("data-state", "neutral");
-            status.textContent = t("settings.update_dismissed_status", "Dismissed");
-            summary.textContent = t("settings.update_dismissed", "Update v{version} is dismissed for this panel. A newer release will appear here.").replace("{version}", latestVersion);
-            setUpdateElementHidden("updateReleaseDetails", true);
-            return;
-        }
-
-        card.setAttribute("data-state", "available");
-        status.setAttribute("data-state", "warning");
-        status.textContent = t("settings.update_available_status", "Update available");
-        var published = formatUpdatePublishedAt(result.published_at);
-        var availableSummary = t(
-            "settings.update_available_summary",
-            "OpenCut v{version} is available. Review the release notes before opening GitHub."
-        ).replace("{version}", latestVersion);
-        if (published) availableSummary += " " + t("settings.update_published_at", "Published {date}.").replace("{date}", published);
-        summary.textContent = availableSummary;
-        if (releaseName) releaseName.textContent = result.release_name || ("OpenCut " + latestVersion);
-        if (notes) notes.textContent = result.release_notes || t("settings.update_no_release_notes", "No release notes were published.");
-        if (notesDetails) notesDetails.hidden = !result.release_notes;
-        setUpdateElementHidden("updateReleaseDetails", false);
-    }
-
-    function openUpdateRelease() {
-        var raw = _latestUpdate && _latestUpdate.release_url;
-        var releaseUrl = typeof normalizeReleaseUrl === "function" ? normalizeReleaseUrl(raw) : "";
-        if (!releaseUrl) {
-            showToast(t("settings.update_invalid_release", "The release link could not be verified."), "error");
-            return false;
-        }
-        try {
-            if (cs && cs.openURLInDefaultBrowser) cs.openURLInDefaultBrowser(releaseUrl);
-            else if (window.open) window.open(releaseUrl, "_blank");
-            else throw new Error("No browser launch API is available.");
-            showToast(t("settings.update_opened", "Release page opened."), "success");
-            return true;
-        } catch (e) {
-            showToast(t("settings.update_invalid_release", "The release link could not be verified."), "error");
-            return false;
-        }
-    }
-
-    function dismissUpdateNotice() {
-        if (!_latestUpdate || !_latestUpdate.latest_version) return;
-        setDismissedUpdateVersion(_latestUpdate.latest_version);
-        renderUpdateNotice(_latestUpdate, false);
-        showToast(
-            t("settings.update_dismissed_toast", "Update v{version} dismissed until a newer release is available.")
-                .replace("{version}", _latestUpdate.latest_version),
-            "info"
-        );
-    }
-
-    function checkForUpdateNotice(force) {
-        force = !!force;
-        if (_updateCheckInFlight || _updateCheckDone || (_updateCheckFailed && !force)) return;
-        _updateCheckInFlight = true;
-        renderUpdateNotice(null, true);
-        api("GET", "/system/update-check", null, function (uerr, udata) {
-            _updateCheckInFlight = false;
-            if (uerr || !udata || udata.error || !udata.latest_version) {
-                _updateCheckDone = false;
-                _updateCheckFailed = true;
-                renderUpdateNotice(udata || { error: "offline" }, false);
-                showToast(t("toast.update_check_failed", "Couldn't check for updates. Click Refresh to try again."), "warning");
-                return;
-            }
-            _updateCheckDone = true;
-            _updateCheckFailed = false;
-            _latestUpdate = udata;
-            renderUpdateNotice(udata, false);
-            if (udata.update_available && getDismissedUpdateVersion() !== String(udata.latest_version)) {
-                var _template = t("toast.update_available", "OpenCut v{version} available — visit GitHub to update");
-                var _msg = _template.replace("{version}", udata.latest_version || "");
-                showToast(_msg, "info");
-            }
-        });
-    }
-
     function checkHealth() {
         api("GET", "/health", null, function (err, data) {
             var ok = !err && data && data.status === "ok";
@@ -2636,9 +2501,7 @@
                 }
                 // One-time checks after server connects. A failed check stays
                 // retryable from the visible Refresh control.
-                if (!_updateCheckDone && !_updateCheckFailed) {
-                    checkForUpdateNotice(false);
-                }
+                UpdateController.check(false);
                 if (!_sessionContextShown) {
                     _sessionContextShown = true;
                     // Surface last-session history + interrupted jobs in a
@@ -9364,7 +9227,7 @@
         settingsLoaded = false;
         capabilitiesLoaded = false;
         checkHealth();
-        checkForUpdateNotice(true);
+        UpdateController.check(true);
         scanProjectMedia();
         loadStylePreview();
         setTimeout(function () {
@@ -17910,9 +17773,7 @@
         if (el.whisperCpuMode) el.whisperCpuMode.addEventListener("change", toggleCpuMode);
         if (el.restartBackendBtn) el.restartBackendBtn.addEventListener("click", restartBackend);
         if (el.openLogsBtn) el.openLogsBtn.addEventListener("click", openLogs);
-        if (el.updateRetryBtn) el.updateRetryBtn.addEventListener("click", function () { checkForUpdateNotice(true); });
-        if (el.updateOpenBtn) el.updateOpenBtn.addEventListener("click", openUpdateRelease);
-        if (el.updateDismissBtn) el.updateDismissBtn.addEventListener("click", dismissUpdateNotice);
+        UpdateController.bind();
 
         // Settings persistence
         if (el.settingsAutoImport) el.settingsAutoImport.addEventListener("change", saveLocalSettings);
@@ -18136,6 +17997,7 @@
         // Cleanup SSE/WS connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {
             stopHostThemeSync();
+            UpdateController.dispose();
             wsDisconnect();
             if (activeStream) {
                 activeStream.close();
