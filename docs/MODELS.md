@@ -46,7 +46,7 @@ Total optional AI/model surfaces: **68**. Each row carries license, hardware, in
 | [SeamlessM4T v2 caption translation](https://huggingface.co/facebook/seamless-m4t-v2-large) | CC-BY-NC-4.0 | gpu (recommended) | local-only (model downloads only) | `pip install transformers torch sentencepiece` |
 
 **Advisory notes**:
-- *pyannote speaker diarization* — The community-1 pipeline is the default; legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms.
+- *pyannote speaker diarization* — The community-1 pipeline is the default; pyannote 4 exclusive_speaker_diarization output is used for multicam boundaries when available and the boundary source is reported. Legacy pyannote 3.1 remains a fallback and may require accepting gated Hugging Face terms.
 - *Moonshine ASR (CPU-optimized STT)* — Multilingual models use a community (non-commercial) license and are gated separately.
 - *Multimodal diarisation pipeline* — pyannote checkpoints are gated by Hugging Face acceptance — set HUGGINGFACE_HUB_TOKEN.
 - *NVIDIA NeMo ASR (Parakeet / Canary)* — Parakeet and Canary are selectable ASR engines; verify each downloaded model card before redistributing weights.

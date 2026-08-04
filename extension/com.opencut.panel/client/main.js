@@ -15515,8 +15515,15 @@
         var res = document.getElementById("multicamResult");
         var sum = document.getElementById("multicamSummary");
         if (res) res.classList.remove("hidden");
+        var boundarySource = r.boundary_source;
+        var boundaryLabel = boundarySource === "exclusive_speaker_diarization"
+            ? t("timeline.multicam_boundary_exclusive", "Exclusive speaker boundaries")
+            : boundarySource === "asr_segments"
+                ? t("timeline.multicam_boundary_fallback", "ASR fallback boundaries")
+                : t("timeline.multicam_boundary_other", "Provided speaker boundaries");
         if (sum) sum.textContent = t("timeline.multicam_cuts_generated", "{count} cuts generated.")
-            .replace("{count}", r.total_cuts || (r.cuts && r.cuts.length) || 0);
+            .replace("{count}", r.total_cuts || (r.cuts && r.cuts.length) || 0)
+            + " " + boundaryLabel;
     });
 
     function applyMulticamCuts() {

@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Ship diarization-driven cutting on pyannote's exclusive-speaker output
-  Why: Cutting at speaker changes is the single most-requested Premiere automation with no free implementation, and pyannote 4.x added an output built specifically to reconcile diarization against imprecise ASR timestamps that OpenCut does not use.
-  Evidence: Adobe feature request 1555738 asks for speaker-change cuts "similar to Scene Edit Detection" plus auto track placement and speaker colour-coding; multicam-by-speaker is paywalled by AutoPod ($29/mo), FireCut Pro, and AutoCut. pyannote-audio 4.0 adds `exclusive_speaker_diarization` alongside regular diarization and VBx clustering in `speaker-diarization-community-1`; repo-wide search for `exclusive_speaker` returns zero hits while `opencut/core/diarize.py` already references `community-1`.
-  Touches: `opencut/core/diarize.py`, `opencut/core/multicam.py`, `opencut/routes/video_core.py` (`/video/multicam-cuts`), panel multicam surfaces, `docs/MODELS.md`.
-  Acceptance: Multicam cut generation consumes the exclusive-speaker output when available, cuts land on speaker boundaries rather than ASR segment boundaries, and a fixture with two overlapping speakers produces cuts within one frame of the diarization boundary.
-  Complexity: M
-
 - [ ] P2 — Give the cleanup chain one reversible verb
   Why: OpenCut has every component of the standard cleanup pass and no single entry point, while every competitor ships one button for it.
   Evidence: Podcastle "Magic Dust", FireCut "Magic Cut" (2026-07-22), Descript Underlord all collapse silence trim → denoise → loudness → captions into one action. OpenCut exposes them as separate operations plus workflow presets in `opencut/data/workflow_presets.json` that require the user to know which preset to choose.

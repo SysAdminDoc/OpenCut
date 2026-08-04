@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Exclusive speaker-boundary multicam cuts
+
+- Multicam generation now consumes pyannote 4's `exclusive_speaker_diarization`
+  output when available, reports the boundary source, and falls back explicitly
+  to ASR segments when the optional diarization stack is unavailable.
+- The UXP multicam control defaults to speaker boundaries and both Premiere
+  panel surfaces explain the reviewable boundary-driven workflow; fixture tests
+  cover overlapping turns and one-frame boundary accuracy.
+
 ### Changed - Restate native Premiere overlap
 
 - README, MCP positioning, and CEP/UXP copy now name Premiere's native
