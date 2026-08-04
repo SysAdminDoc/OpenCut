@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Fixed - Ordered UXP Sequence Index filters
+
+- Sequence Index search, facet, and sort responses now use a monotonic request
+  generation so a slow earlier response cannot overwrite the latest results or
+  clear the busy state owned by a newer request.
+
 ### Added - Reproducible performance benchmark runner
 
 - The opt-in `opencut benchmark run` lane now records pinned fixture hashes
