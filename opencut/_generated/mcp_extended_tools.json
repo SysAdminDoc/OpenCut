@@ -6,12 +6,12 @@
     "DELETE": 16,
     "GET": 381,
     "PATCH": 1,
-    "POST": 1060,
+    "POST": 1061,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1460,
+  "tool_count": 1461,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -36519,6 +36519,36 @@
         "response_schema": "ExportMarkersResult"
       },
       "name": "opencut_route_post_timeline_export_from_markers"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /timeline/export-mlt"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/export-mlt.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "timeline",
+        "endpoint": "timeline.timeline_export_mlt",
+        "generated": true,
+        "method": "POST",
+        "path": "/timeline/export-mlt",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_timeline_export_mlt"
     },
     {
       "annotations": {
