@@ -18,6 +18,11 @@ record also lives in the git commit messages.
   function-based interpolator, preserving replacement-pattern characters such
   as `$&`, `$```, and `$$`.
 
+### Chore - Panel lint warning ceiling
+
+- The panel lint command now permits the recorded 23-warning baseline but
+  fails when the warning count grows beyond 24.
+
 ### Fixed - Ordered UXP Sequence Index filters
 
 - Sequence Index search, facet, and sort responses now use a monotonic request
