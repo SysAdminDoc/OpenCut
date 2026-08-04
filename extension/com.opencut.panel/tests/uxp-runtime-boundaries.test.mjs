@@ -10,6 +10,7 @@ import { createJobController } from "../../com.opencut.uxp/job-controller.js";
 import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
 import { createUxpUiController } from "../../com.opencut.uxp/uxp-ui-controller.js";
 import { createUxpUpdateController } from "../../com.opencut.uxp/uxp-update-controller.js";
+import { createUxpSettingsController } from "../../com.opencut.uxp/uxp-settings-controller.js";
 import {
   buildChatActionRequest,
   buildLoudnessMatchPayload,
@@ -225,11 +226,16 @@ describe("UXP feature control contracts", () => {
 
   it("keeps first-run, support export, and portability seams wired", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const settings = readFileSync(new URL("../../com.opencut.uxp/uxp-settings-controller.js", import.meta.url), "utf8");
     const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
-    expect(main).toContain('BackendClient.post("/system/support-bundle"');
-    expect(main).toContain('BackendClient.post("/settings/onboarding"');
-    expect(main).toContain('BackendClient.get("/settings/onboarding")');
-    expect(main).toContain("opencut.support_bundle.v1");
+    expect(main).toContain('import { createUxpSettingsController } from "./uxp-settings-controller.js";');
+    expect(main).toContain("UxpSettingsController.initOnboardingEvents();");
+    expect(main).toContain("UxpSettingsController.dispose();");
+    expect(settings).toContain('BackendClient.post("/system/support-bundle"');
+    expect(settings).toContain('BackendClient.post("/settings/onboarding"');
+    expect(settings).toContain('BackendClient.get("/settings/onboarding")');
+    expect(settings).toContain("opencut.support_bundle.v1");
+    expect(settings).toContain("function dispose()");
     expect(main).toContain("getUxpLocalFileSystem");
     expect(index).toContain('id="uxpExportSupportBundleBtn"');
     expect(index).toContain('id="uxpOnboardingOverlay"');
@@ -636,6 +642,54 @@ describe("UXP update-check boundary", () => {
     for (const id of ["uxpUpdateNoticeCard", "uxpUpdateOpenBtn", "uxpUpdateDismissBtn", "uxpUpdateRetryBtn"]) {
       expect(index).toContain(`id="${id}"`);
     }
+  });
+});
+
+describe("UXP settings controller", () => {
+  it("owns settings navigation and onboarding listeners behind one teardown", async () => {
+    const nav = fakeElement();
+    const settingsButton = fakeElement({ classes: ["oc-settings-nav-item", "active"] });
+    settingsButton.dataset.settingsSection = "workspace";
+    const settingsPane = fakeElement();
+    settingsPane.dataset.settingsPane = "workspace";
+    nav.querySelectorAll = (selector) => selector === ".oc-settings-nav-item" ? [settingsButton] : [];
+    const ids = new Map([
+      ["uxpOnboardingOverlay", fakeElement()],
+      ["uxpOnboardingTitle", fakeElement()],
+      ["uxpOnboardingBody", fakeElement()],
+      ["uxpOnboardingStep", fakeElement()],
+      ["uxpOnboardingActionBtn", fakeElement()],
+      ["uxpOnboardingBackBtn", fakeElement()],
+      ["uxpOnboardingNextBtn", fakeElement()],
+      ["uxpOnboardingSkipBtn", fakeElement()],
+    ]);
+    ids.get("uxpOnboardingOverlay").hidden = true;
+    const documentRef = {
+      activeElement: settingsButton,
+      body: fakeElement(),
+      querySelector: (selector) => selector === ".oc-settings-nav" ? nav : null,
+      querySelectorAll: (selector) => selector === "#tab-settings [data-settings-pane]" ? [settingsPane] : [],
+      getElementById: (id) => ids.get(id) || null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const controller = createUxpSettingsController({
+      documentRef,
+      requestAnimationFrameFn: (callback) => callback(),
+      client: {
+        get: vi.fn().mockResolvedValue({ ok: true, data: { seen: false, step: 0 } }),
+        post: vi.fn(),
+      },
+      isBackendConnected: () => true,
+    });
+
+    controller.initSettingsNavigation();
+    controller.initOnboardingEvents();
+    await controller.loadOnboarding();
+    expect(ids.get("uxpOnboardingOverlay").hidden).toBe(false);
+    controller.dispose();
+    expect(nav.removeEventListener).toHaveBeenCalled();
+    expect(documentRef.removeEventListener).toHaveBeenCalled();
   });
 });
 
