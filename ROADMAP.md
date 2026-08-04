@@ -161,13 +161,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-07-25
 
-- [ ] P2 — Split the remaining panel controller hotspots
-  Why: CEP and UXP controllers still centralize lifecycle, bridge state, navigation, settings, and result rendering, and were among the highest-churn files in the last 200 commits.
-  Evidence: `extension/com.opencut.panel/client/main.js` (~18,200 lines), `extension/com.opencut.uxp/main.js` (~8,700 lines), recent decomposition commits.
-  Touches: CEP/UXP controller modules, build/source-safety checks, unit and rendered tests.
-  Acceptance: Navigation, update lifecycle, settings/diagnostics, and result-state controllers have explicit imports and teardown contracts; no duplicate global ownership remains; controller size/churn budgets are machine-checked; behavior and rendered snapshots remain unchanged.
-  Complexity: L
-
 ### P2 — 2026-07-29
 
 - [ ] P2 — Compile workflows into preflighted resumable plans
