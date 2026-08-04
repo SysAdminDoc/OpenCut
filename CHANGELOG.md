@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Reproducible performance benchmark runner
+
+- The opt-in `opencut benchmark run` lane now records pinned fixture hashes
+  and licenses, dependency/model versions, host compatibility, timing and
+  memory samples, quality metrics, truthful unavailable-backend skips, and
+  tolerance-aware same-host receipt comparisons.
+
 ### Added - Production breakpoint state coverage
 
 - Rendered CEP and UXP regression coverage now exercises every production

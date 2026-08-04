@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -147,6 +148,70 @@ def step_route_manifest(_args: argparse.Namespace) -> StepResult:
         exit_code=result.returncode,
         duration_ms=duration,
         message="manifest in sync" if status == "ok" else "route manifest drift",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_performance_benchmark(args: argparse.Namespace) -> StepResult:
+    """Validate the opt-in benchmark lane and compare an optional baseline.
+
+    Normal release smoke never runs heavyweight adapters.  A caller can pass
+    both ``--performance-receipt`` and ``--performance-baseline`` to consume a
+    previously captured same-host receipt; incompatible hardware is reported
+    as skipped so a release is never penalised for running elsewhere.
+    """
+    start = time.time()
+    current = getattr(args, "performance_receipt", None) or os.environ.get("OPENCUT_PERF_RECEIPT", "")
+    baseline = getattr(args, "performance_baseline", None) or os.environ.get("OPENCUT_PERF_BASELINE", "")
+    module = "opencut.tools.run_performance_benchmarks"
+    if not current and not baseline:
+        result = _run([sys.executable, "-m", module, "list", "--json"], cwd=REPO_ROOT)
+        duration = int((time.time() - start) * 1000)
+        status = "ok" if result.returncode == 0 else "fail"
+        return StepResult(
+            "performance-benchmark",
+            status,
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message=("benchmark registry valid; execution remains opt-in" if status == "ok" else "benchmark registry unavailable"),
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    if not current or not baseline:
+        return StepResult(
+            "performance-benchmark",
+            "fail",
+            exit_code=2,
+            duration_ms=int((time.time() - start) * 1000),
+            message="both performance receipt and baseline are required",
+        )
+    result = _run(
+        [sys.executable, "-m", module, "compare", current, baseline, "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    comparison_status = payload.get("status")
+    if comparison_status == "incompatible":
+        return StepResult(
+            "performance-benchmark",
+            "skipped",
+            duration_ms=duration,
+            skipped_reason="benchmark baseline is not compatible with this hardware/software host",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    status = "ok" if result.returncode == 0 and comparison_status != "regression" else "fail"
+    return StepResult(
+        "performance-benchmark",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=("benchmark baseline within declared tolerances" if status == "ok" else "benchmark regression or comparison failure"),
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
     )
@@ -1455,6 +1520,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),
     StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
+    StepDefinition("performance-benchmark", step_performance_benchmark, "Validate optional benchmark receipts and same-host baselines"),
     StepDefinition("openapi-contract", step_openapi_contract, "Check typed OpenAPI contract manifest + coverage ratchet"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
@@ -1566,6 +1632,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             + ", ".join(sorted(CRITICAL_STEP_NAMES))
             + ") self-skips because its tool is missing, instead of reporting ok"
         ),
+    )
+    parser.add_argument(
+        "--performance-receipt",
+        default="",
+        help="optional current benchmark receipt for the performance-benchmark step",
+    )
+    parser.add_argument(
+        "--performance-baseline",
+        default="",
+        help="optional compatible benchmark baseline for the performance-benchmark step",
     )
     parser.add_argument("--list", action="store_true", help="list available steps and exit")
     args = parser.parse_args(argv)
