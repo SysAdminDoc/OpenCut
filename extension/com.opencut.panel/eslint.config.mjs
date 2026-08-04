@@ -15,6 +15,7 @@ export default [
       "client/cep-theme.js",
       "client/timeline-utils.js",
       "client/bootstrap.js",
+      "client/update-controller.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -23,6 +24,7 @@ export default [
         ...globals.browser,
         CSInterface: "readonly",
         CSEvent: "readonly",
+        OpenCutUpdateController: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },
