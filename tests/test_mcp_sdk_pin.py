@@ -1,14 +1,9 @@
-"""The `mcp` extra is a convenience, not a runtime dependency.
+"""The `mcp` extra stays on the tested 1.x client-tooling line.
 
-F137 originally capped the extra at ``<2`` on the grounds that the 2.x
-FastMCP -> McpServer rewrite "breaks our JSON-RPC server". It cannot:
-``opencut/mcp_server.py`` implements JSON-RPC directly and never imports the
-SDK, so the cap excluded SDK 2 users for no benefit.
-
-The cap is gone; these tests enforce the invariant that made it unnecessary
-in the first place. If OpenCut ever does start importing `mcp`, the
-no-import test fails and whoever adds the import has to make a deliberate
-decision about pinning.
+OpenCut's server implementation speaks JSON-RPC directly and does not import
+the SDK, but the extra is still consumed by users as reference client
+tooling. Keep the dependency bounded to one major API line until the 1.x to
+2.x protocol/client break has a dedicated compatibility pass.
 """
 
 from __future__ import annotations
@@ -40,11 +35,11 @@ def test_mcp_extra_pins_minimum_to_1_26_or_higher():
     )
 
 
-def test_mcp_extra_does_not_exclude_sdk_2():
+def test_mcp_extra_is_bounded_to_the_tested_major_line():
     body = _mcp_extra_block()
-    assert "<2" not in body, (
-        "The `<2` cap excluded SDK 2 users while OpenCut does not import the "
-        "SDK at all. Re-add it only alongside a real import that breaks."
+    assert "<2" in body, (
+        "The mcp extra must stay on the tested 1.x SDK line until the 2.x "
+        "protocol/client compatibility pass is complete."
     )
 
 

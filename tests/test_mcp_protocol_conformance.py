@@ -169,7 +169,16 @@ class TestVersionNegotiation(unittest.TestCase):
             "_meta": {mcp_server.META_PROTOCOL_VERSION: "2019-01-01"}
         })["error"]
         self.assertEqual(error["code"], mcp_server.ERROR_UNSUPPORTED_PROTOCOL_VERSION)
+        self.assertEqual(error["data"]["requested"], "2019-01-01")
         self.assertIn(mcp_server.LATEST_PROTOCOL_VERSION, error["data"]["supported"])
+
+    def test_2026_standard_error_codes_are_final_assignments(self):
+        self.assertEqual(mcp_server.ERROR_HEADER_MISMATCH, -32020)
+        self.assertEqual(
+            mcp_server.ERROR_MISSING_REQUIRED_CLIENT_CAPABILITY,
+            -32021,
+        )
+        self.assertEqual(mcp_server.ERROR_UNSUPPORTED_PROTOCOL_VERSION, -32022)
 
     def test_error_code_is_inside_the_specification_range(self):
         # -32020..-32099 is reserved for the specification.

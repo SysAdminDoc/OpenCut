@@ -194,6 +194,161 @@ def test_mcp_http_requires_token_for_loopback_post(monkeypatch):
     assert payload["code"] == "TOKEN_REQUIRED"
 
 
+def test_mcp_http_legacy_requests_remain_headerless(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server,
+        "_mcp_http_csrf_token_is_valid",
+        lambda token: token == "csrf",
+    )
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {},
+        }).encode()
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 200
+    assert "resultType" not in payload["result"]
+
+
+def test_mcp_http_modern_requests_validate_standard_headers(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server,
+        "_mcp_http_csrf_token_is_valid",
+        lambda token: token == "csrf",
+    )
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+            "MCP-Protocol-Version": mcp_server.LATEST_PROTOCOL_VERSION,
+            "Mcp-Method": "server/discover",
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "server/discover",
+            "params": {},
+        }).encode()
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 200
+    assert payload["result"]["resultType"] == "complete"
+
+
+def test_mcp_http_modern_requests_reject_missing_or_mismatched_headers(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server,
+        "_mcp_http_csrf_token_is_valid",
+        lambda token: token == "csrf",
+    )
+    server = _new_loopback_mcp_http_server()
+    try:
+        base_headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+            "MCP-Protocol-Version": mcp_server.LATEST_PROTOCOL_VERSION,
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "server/discover",
+            "params": {},
+        }).encode()
+        status, payload = _mcp_http_post(
+            server,
+            headers=base_headers,
+            body=body,
+        )
+        assert status == 400
+        assert payload["error"]["code"] == mcp_server.ERROR_HEADER_MISMATCH
+
+        mismatched_headers = dict(base_headers)
+        mismatched_headers["Mcp-Method"] = "tools/list"
+        status, payload = _mcp_http_post(
+            server,
+            headers=mismatched_headers,
+            body=body,
+        )
+        assert status == 400
+        assert payload["error"]["code"] == mcp_server.ERROR_HEADER_MISMATCH
+    finally:
+        server.server_close()
+
+
+def test_mcp_http_modern_tools_call_requires_matching_name_header(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server,
+        "_mcp_http_csrf_token_is_valid",
+        lambda token: token == "csrf",
+    )
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+            "MCP-Protocol-Version": mcp_server.LATEST_PROTOCOL_VERSION,
+            "Mcp-Method": "tools/call",
+            "Mcp-Name": "wrong_tool",
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "actual_tool",
+                "arguments": {},
+            },
+        }).encode()
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 400
+    assert payload["error"]["code"] == mcp_server.ERROR_HEADER_MISMATCH
+
+
+def test_mcp_http_rejects_unsupported_protocol_header(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server,
+        "_mcp_http_csrf_token_is_valid",
+        lambda token: token == "csrf",
+    )
+    server = _new_loopback_mcp_http_server()
+    try:
+        headers = {
+            "Host": f"127.0.0.1:{server.server_port}",
+            "X-OpenCut-Token": "csrf",
+            "MCP-Protocol-Version": "2019-01-01",
+            "Mcp-Method": "server/discover",
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "server/discover",
+            "params": {},
+        }).encode()
+        status, payload = _mcp_http_post(server, headers=headers, body=body)
+    finally:
+        server.server_close()
+
+    assert status == 400
+    assert payload["error"]["code"] == mcp_server.ERROR_UNSUPPORTED_PROTOCOL_VERSION
+    assert payload["error"]["data"]["requested"] == "2019-01-01"
+
+
 def test_mcp_http_rejects_body_over_cap_before_reading(monkeypatch):
     monkeypatch.setattr(mcp_server._auth, "is_token_valid", lambda _token: False)
     monkeypatch.setattr(mcp_server, "_mcp_http_csrf_token_is_valid", lambda token: token == "csrf")
@@ -204,8 +359,12 @@ def test_mcp_http_rejects_body_over_cap_before_reading(monkeypatch):
             "Host": f"127.0.0.1:{server.server_port}",
             "X-OpenCut-Token": "csrf",
         }
-        body = b"x" * (mcp_server._MCP_HTTP_MAX_BODY_BYTES + 1)
-        status, payload = _mcp_http_post(server, headers=headers, body=body)
+        # Declare an oversized body without sending it. The handler must
+        # reject from Content-Length alone, and this keeps the Windows socket
+        # test deterministic instead of racing a client write against the
+        # intentional early connection close.
+        headers["Content-Length"] = str(mcp_server._MCP_HTTP_MAX_BODY_BYTES + 1)
+        status, payload = _mcp_http_post(server, headers=headers, body=b"")
     finally:
         server.server_close()
 
