@@ -1,8 +1,8 @@
 """F128 — FFmpeg filter-graph regression suite.
 
-The bundled FFmpeg is on track to bump from 8.0.1 to 8.1 (see F129).
-Without a regression suite, a filter name change or behaviour shift in
-the new build would silently break production pipelines.
+The bundled FFmpeg is pinned to a post-fix full snapshot. Without a
+regression suite, a filter name change or behaviour shift in the new build
+would silently break production pipelines.
 
 This file is the lightweight first slice of that suite. It is **not** a
 full output-bitwise comparison (which is expensive and fragile across
@@ -21,8 +21,8 @@ FFmpeg versions). Instead it:
 3. Skips automatically when FFmpeg is not installed so the dev VM
    without the bundled binary still passes ``pytest-fast``.
 
-When F129 lands (FFmpeg 8.1 bump), this file is the first thing CI
-runs to confirm no regression. Adding a new filter graph to OpenCut?
+This file is the first thing CI runs after an FFmpeg floor change to confirm
+no regression. Adding a new filter graph to OpenCut?
 Add it here too.
 """
 
@@ -289,9 +289,10 @@ def test_loudnorm_runs_two_pass_compatible():
     assert rc == 0, f"loudnorm regression: {stderr}"
 
 
-def test_ffmpeg_version_is_8_or_newer():
-    """Defensive — OpenCut's bundled FFmpeg is 8.0.1+. A drastic downgrade
-    would break filters that ship only in 7+ (xfade modes, etc.)."""
+def test_ffmpeg_version_clears_declared_security_floor():
+    """Defensive — the bundled release or dated snapshot must clear its floor."""
+    from opencut.core import ffmpeg_provenance as fp
+
     proc = subprocess.run(
         [_ffmpeg(), "-hide_banner", "-version"],
         capture_output=True,
@@ -302,13 +303,12 @@ def test_ffmpeg_version_is_8_or_newer():
     assert proc.returncode == 0
     first_line = (proc.stdout.splitlines() or [""])[0]
     assert "ffmpeg version" in first_line.lower()
-    # The version token follows `ffmpeg version`. We accept anything
-    # that starts with `n` (n4.4, n5.x, etc.) or `7.` / `8.` / `9.`.
-    if "ffmpeg version " in first_line:
-        version_token = first_line.split("ffmpeg version ", 1)[1].split()[0]
-        # Just make sure it's not a 0.x or 1.x — OpenCut needs >= 4.
-        first_char = version_token[0]
-        if first_char.isdigit():
-            assert int(first_char) >= 4, (
-                f"FFmpeg version too old: {version_token!r}. OpenCut requires >=4.x"
-            )
+    grade = fp.check_security_floor(first_line)
+    assert grade["ok"], grade["reason"]
+
+    record = fp.parse_version_banner(first_line)
+    if record["release"] is not None:
+        assert record["release"] >= fp.RELEASE_FLOOR
+    else:
+        assert record["is_git_snapshot"]
+        assert record["snapshot_date"] >= fp.SNAPSHOT_FLOOR_DATE
