@@ -19,9 +19,21 @@ import time
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
-# Ensure ~/.opencut/packages is on sys.path (pip --target fallback dir)
+# OpenCut user data directory
 # ---------------------------------------------------------------------------
-_opencut_pkg_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+def _resolve_opencut_dir() -> str:
+    configured = os.environ.get("OPENCUT_HOME", "").strip()
+    if configured:
+        return os.path.abspath(os.path.expanduser(os.path.expandvars(configured)))
+    return os.path.join(os.path.expanduser("~"), ".opencut")
+
+
+OPENCUT_DIR = _resolve_opencut_dir()
+
+# Ensure the configured packages directory is on sys.path (pip --target
+# fallback dir). Package data follows OPENCUT_HOME just like settings and
+# model caches, so bundled launchers and the application share one contract.
+_opencut_pkg_dir = os.path.join(OPENCUT_DIR, "packages")
 if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
     _sys.path.append(_opencut_pkg_dir)
 
@@ -31,6 +43,37 @@ if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
 _ffmpeg_path = None
 _ffprobe_path = None
 _media_binary_security_cache = {}
+
+
+def _bundled_binary_path(binary: str) -> str | None:
+    """Return a packaged FFmpeg-family binary before falling back to PATH."""
+    candidates = []
+    configured_dir = os.environ.get("OPENCUT_FFMPEG_DIR", "").strip()
+    if configured_dir:
+        candidates.append(os.path.expanduser(os.path.expandvars(configured_dir)))
+
+    executable = getattr(_sys, "executable", "")
+    if executable:
+        candidates.append(os.path.dirname(os.path.abspath(executable)))
+    meipass = getattr(_sys, "_MEIPASS", "")
+    if meipass:
+        candidates.append(os.path.abspath(meipass))
+    candidates.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    seen = set()
+    names = [binary]
+    if os.name == "nt":
+        names.append(f"{binary}.exe")
+    for base in candidates:
+        normalized = os.path.normcase(os.path.abspath(base))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        for name in names:
+            path = os.path.join(base, "ffmpeg", name)
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return os.path.abspath(path)
+    return None
 
 
 def _binary_identity(path: str):
@@ -69,7 +112,7 @@ def get_ffmpeg_path() -> str:
     size changes, so replacing a PATH binary forces a fresh version probe.
     """
     global _ffmpeg_path
-    candidate = _ffmpeg_path or shutil.which("ffmpeg") or "ffmpeg"
+    candidate = _ffmpeg_path or _bundled_binary_path("ffmpeg") or shutil.which("ffmpeg") or "ffmpeg"
     if candidate == "ffmpeg" and not shutil.which(candidate):
         logger.warning("ffmpeg not found in PATH — subprocess calls may fail")
     _ffmpeg_path = _require_safe_media_binary(candidate)
@@ -79,7 +122,7 @@ def get_ffmpeg_path() -> str:
 def get_ffprobe_path() -> str:
     """Return a cached, CVE-floor-verified FFprobe binary path."""
     global _ffprobe_path
-    candidate = _ffprobe_path or shutil.which("ffprobe") or "ffprobe"
+    candidate = _ffprobe_path or _bundled_binary_path("ffprobe") or shutil.which("ffprobe") or "ffprobe"
     if candidate == "ffprobe" and not shutil.which(candidate):
         logger.warning("ffprobe not found in PATH — media probing may fail")
     _ffprobe_path = _require_safe_media_binary(candidate)
@@ -101,12 +144,6 @@ def _guard_ffmpeg_command(cmd: list) -> list:
     else:
         guarded = _require_safe_media_binary(executable)
     return [guarded, *cmd[1:]]
-
-# ---------------------------------------------------------------------------
-# OpenCut user data directory
-# ---------------------------------------------------------------------------
-OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
-
 
 def _ensure_opencut_dir():
     """Create the OpenCut user directory if it doesn't exist."""

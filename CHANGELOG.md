@@ -60,6 +60,12 @@ record also lives in the git commit messages.
 - `install.py` now stops after a failed critical verification and exits with a
   non-zero status instead of printing a successful installation banner.
 
+### Fixed - Linux package runtime paths
+
+- AppImage and Flatpak launchers now point the application at their declared
+  user-data directory and bundled FFmpeg directory; the package build stages
+  and verifies both `ffmpeg` and `ffprobe` before creating artifacts.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter

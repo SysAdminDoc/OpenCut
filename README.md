@@ -197,6 +197,9 @@ The repository includes Flatpak and AppImage packaging for local release builds,
 but no Flatpak or AppImage is currently published. See
 [`docs/LINUX_DISTRIBUTION.md`](docs/LINUX_DISTRIBUTION.md) for the
 `io.github.sysadmindoc.opencut` contract and local package-build command.
+The package launchers store user data in
+`${XDG_DATA_HOME:-$HOME/.local/share}/opencut` (override with `OPENCUT_HOME`)
+and include security-verified `ffmpeg`/`ffprobe` binaries in the bundle.
 
 ### Uninstall data safety
 

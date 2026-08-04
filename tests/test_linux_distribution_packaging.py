@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import stat
 import subprocess
+import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -94,8 +96,42 @@ def test_linux_package_launchers_pin_user_data_and_loopback_defaults():
         assert "127.0.0.1" in text
         assert "OPENCUT_PORT" in text
         assert "OPENCUT_HOME" in text
+        assert "${XDG_DATA_HOME:-$HOME/.local/share}/opencut" in text
+        assert "OPENCUT_FFMPEG_DIR" in text
+        assert "export PATH=\"$OPENCUT_FFMPEG_DIR" in text
         assert "OpenCut-Server" in text
         assert '"$@"' in text
+
+
+def test_helpers_honor_launcher_data_dir_and_prefer_packaged_media(monkeypatch, tmp_path):
+    helpers_source = _read(REPO_ROOT / "opencut" / "helpers.py")
+    assert 'os.environ.get("OPENCUT_HOME"' in helpers_source
+    assert 'os.environ.get("OPENCUT_FFMPEG_DIR"' in helpers_source
+    assert "_bundled_binary_path" in helpers_source
+
+    data_dir = tmp_path / "opencut-data"
+    env = os.environ.copy()
+    env["OPENCUT_HOME"] = str(data_dir)
+    probe = subprocess.run(
+        [sys.executable, "-c", "import opencut.helpers as h; print(h.OPENCUT_DIR)"],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert probe.returncode == 0, probe.stderr
+    assert Path(probe.stdout.strip()) == data_dir
+
+    import opencut.helpers as helpers
+
+    monkeypatch.setattr(helpers, "_bundled_binary_path", lambda binary: f"/bundled/{binary}")
+    monkeypatch.setattr(helpers, "_require_safe_media_binary", lambda binary: binary)
+    monkeypatch.setattr(helpers.shutil, "which", lambda binary: f"/path/{binary}")
+    monkeypatch.setattr(helpers, "_ffmpeg_path", None)
+    monkeypatch.setattr(helpers, "_ffprobe_path", None)
+    assert helpers.get_ffmpeg_path() == "/bundled/ffmpeg"
+    assert helpers.get_ffprobe_path() == "/bundled/ffprobe"
 
 
 def test_build_script_builds_appdir_appimage_and_flatpak_bundle():
@@ -107,6 +143,10 @@ def test_build_script_builds_appdir_appimage_and_flatpak_bundle():
     assert "appimagetool" in text
     assert "flatpak-builder" in text
     assert "flatpak build-bundle" in text
+    assert "OPENCUT_FFMPEG_DIR" in text
+    assert "verify_ffmpeg_provenance.py" in text
+    assert '--ffprobe "$DIST_DIR/ffmpeg/ffprobe"' in text
+    assert '--ffmpeg-provenance "$FFMPEG_PROVENANCE"' in text
     assert "https://flathub.org/repo/flathub.flatpakrepo" in text
     assert "$APP_ID-$VERSION.flatpak" in text
     assert "$APP_NAME-$VERSION-$ARCH.AppImage" in text
