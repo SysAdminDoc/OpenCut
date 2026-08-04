@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - OTIO transitions and interchange boundaries
+
+- OTIO export now emits and round-trips explicit transitions, and timeline
+  diff reports detect transition additions, removals, and changes.
+- Interchange documentation now states that OTIO carries timeline data but no
+  caption schema; captions remain separate SRT/VTT/ASS artifacts.
+
 ### Added - Kdenlive and Shotcut MLT export
 
 - The timeline API and `opencut silence --format mlt` now write deterministic

@@ -672,6 +672,8 @@ def timeline_export_otio():
         cuts (list): [{start, end}, ...] — regions to remove (mode=cuts)
         segments (list): [{start, end}, ...] — regions to keep (mode=segments)
         markers (list): [{time, name, color}, ...] — marker list (mode=markers)
+        transitions (list): [{after, in_offset, out_offset, type}, ...]
+            — OTIO transitions inserted after a kept segment index
         output_dir (str): Output directory
         sequence_name (str): Name for the timeline
         adapter_name (str): Discovered writable adapter (default: otio_json)
@@ -691,12 +693,19 @@ def timeline_export_otio():
     schema_target = str(data.get("schema_target", "current")).strip() or "current"
     preflight_only = safe_bool(data.get("preflight_only"), default=False)
     accept_lossy = safe_bool(data.get("accept_lossy"), default=False)
+    transitions = data.get("transitions", [])
 
     if len(adapter_name) > 100 or len(schema_target) > 100:
         return jsonify({"error": "OTIO adapter or schema target is too long"}), 400
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
+
+    if mode in {"cuts", "segments"}:
+        if not isinstance(transitions, list):
+            return jsonify({"error": "transitions must be a list"}), 400
+        if len(transitions) > 1000:
+            return jsonify({"error": "Too many transitions (max 1000)"}), 400
 
     try:
         filepath = validate_filepath(filepath)
@@ -787,6 +796,7 @@ def timeline_export_otio():
                 accept_lossy=accept_lossy,
                 preflight_only=preflight_only,
                 return_report=True,
+                transitions=transitions,
             )
         elif mode == "cuts":
             # mode == "cuts" (default)
@@ -805,6 +815,7 @@ def timeline_export_otio():
                 accept_lossy=accept_lossy,
                 preflight_only=preflight_only,
                 return_report=True,
+                transitions=transitions,
             )
         else:
             return jsonify({"error": "mode must be cuts, segments, or markers"}), 400

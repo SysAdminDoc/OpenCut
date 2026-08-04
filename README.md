@@ -250,11 +250,11 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 | Stem separation | Demucs / BS-RoFormer / MDX-Net (unlimited) | No bundled stem separator; OpenCut adds unlimited local models |
 | Voice cloning | Chatterbox TTS (15-sec training, local) | No bundled local clone; OpenCut adds local training and exportable narration |
 | Filler word cleanup | CrisperWhisper verbatim markers, custom words, reviewable ranges, and REST/CLI access | Text-Based Editing Delete Filler Words; OpenCut adds provenance and batch scope |
-| Animated captions | 55 styles, word-level animation, native/burn-in/interchange outputs | Captions + Single-Word Captions; OpenCut adds template breadth and export choices |
+| Animated captions | 55 styles, word-level animation, native/burn-in/sidecar outputs; OTIO carries no caption schema | Captions + Single-Word Captions; OpenCut adds template breadth and export choices |
 | LLM highlights | Ollama (local, no API key), engagement scoring, and exportable highlight artifacts | Media Intelligence search; OpenCut adds local ranking and deliverables |
 | Cross-project footage search | Whole-library FTS5 search through REST/MCP/CLI | Media Intelligence search in the open project; OpenCut adds cross-project/headless scope |
 | Social export | Direct YouTube/TikTok/Instagram OAuth upload | No direct social handoff; OpenCut adds explicit upload workflows |
-| Cross-NLE export | OTIO to Resolve, FCP, Avid plus MLT projects for Kdenlive and Shotcut | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
+| Cross-NLE export | OTIO clips, markers, and supported transitions to compatible adapters, plus MLT projects for Kdenlive and Shotcut | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
 | Repeated take detection | Jaccard-overlap transcript similarity with reviewable proposals | OpenCut adds a dedicated repeated-take pass |
 | Cut review panel | Human-in-loop approve/reject before applying or exporting ranges | Native editing controls; OpenCut adds a dedicated proposal/review pass |
 | Loudness and profanity reports | Explicit LUFS targets, batch measurement, and auditable bleep/mute ranges | Auto-Match Loudness and bulk bleep/mute; OpenCut adds reports and headless access |
@@ -401,7 +401,7 @@ without returning transcript text.
 | Smart Bins | Auto-sort project items into bins by rule (name, type, duration) |
 | Export from Markers | Batch-export clip ranges defined by sequence markers |
 | SRT to Native Captions | Import SRT as a native Premiere Pro caption track |
-| OTIO Export | Export edits as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, and any OTIO-compatible editor |
+| OTIO Export | Export timeline clips, markers, and supported transitions as OpenTimelineIO; captions remain SRT/VTT/ASS sidecars |
 | MLT Export | Export cut lists, speed changes, and keyframed volume to Kdenlive and Shotcut |
 
 ### Search & AI Commands
@@ -421,7 +421,7 @@ without returning transcript text.
 | 13 Platform Presets | YouTube, TikTok, Instagram, Twitter/X, LinkedIn, Podcast, Snapchat, Facebook, Pinterest | FFmpeg encode |
 | Batch Processing | Process multiple clips in parallel with GPU-aware concurrency | ThreadPool |
 | Transcript Export | SRT, VTT, ASS, plain text, timestamped | Built-in |
-| OTIO Timeline Export | Universal timeline interchange for Premiere, Resolve, FCP, Avid | OpenTimelineIO |
+| OTIO Timeline Export | Clips, markers, and supported transitions for Premiere, Resolve, FCP, and Avid adapters; no caption schema | OpenTimelineIO |
 | MLT Timeline Export | Kdenlive and Shotcut project interchange with source ranges, speed, and volume automation | MLT XML |
 | Social Media Upload | Direct posting to YouTube, TikTok, and Instagram with OAuth | Platform APIs |
 
@@ -887,9 +887,11 @@ A: Core editing is local by default, and fresh installs emit no telemetry. Optio
 **Q: Can I export edits to DaVinci Resolve or Final Cut Pro?**
 A: Yes. Use the OTIO (OpenTimelineIO) export in the Timeline tab. Both panels
 discover the installed adapters and let you choose the current schema or a
-supported legacy `OTIO_CORE` target. OpenCut reports lossy downgrade fields
-before writing and records the exact adapter/runtime versions inside the
-timeline. Resolve also has a direct Python scripting bridge.
+supported legacy `OTIO_CORE` target. OpenCut exports timeline clips, markers,
+and supported transitions, reports lossy downgrade fields before writing, and
+records the exact adapter/runtime versions inside the timeline. OTIO has no
+caption schema, so export captions separately as SRT, VTT, or ASS. Resolve
+also has a direct Python scripting bridge.
 
 **Q: How do I update?**
 A: `git pull` and restart the server. Or download the latest exe from [Releases](https://github.com/SysAdminDoc/OpenCut/releases).

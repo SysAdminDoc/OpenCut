@@ -14,12 +14,88 @@ Requires: pip install opentimelineio
 """
 
 import logging
+import math
 import os
-from typing import Any, List
+from typing import Any, List, Mapping, Sequence
 
 from ..core.silence import TimeSegment
 
 logger = logging.getLogger("opencut")
+
+
+def _coerce_transition_specs(
+    transitions: Sequence[Mapping[str, Any]] | None,
+    clip_count: int,
+) -> dict[int, dict[str, Any]]:
+    """Normalize transition requests keyed by the clip they follow.
+
+    A transition is described as ``{"after": 0, "in_offset": 0.5,
+    "out_offset": 0.5, "type": "SMPTE_Dissolve"}``.  ``index`` and
+    ``clip_index`` are accepted aliases for ``after`` so API callers can use
+    the terminology already present in their timeline model.
+    """
+
+    if transitions is None:
+        return {}
+    if not isinstance(transitions, Sequence) or isinstance(transitions, (str, bytes, bytearray)):
+        raise ValueError("transitions must be a list")
+
+    normalized: dict[int, dict[str, Any]] = {}
+    for raw in transitions:
+        if not isinstance(raw, Mapping):
+            continue
+        position = raw.get("after", raw.get("index", raw.get("clip_index")))
+        try:
+            after = int(position)
+        except (TypeError, ValueError):
+            raise ValueError("Each OTIO transition needs an integer after/index") from None
+        if after < 0 or after >= clip_count - 1:
+            raise ValueError(
+                f"OTIO transition after index {after} must be between 0 and {max(0, clip_count - 2)}"
+            )
+
+        transition_type = str(
+            raw.get("transition_type", raw.get("type", "SMPTE_Dissolve"))
+        ).strip() or "SMPTE_Dissolve"
+        in_offset = raw.get("in_offset", raw.get("in", None))
+        out_offset = raw.get("out_offset", raw.get("out", None))
+        duration = raw.get("duration", None)
+        try:
+            duration_value = max(0.0, float(duration)) if duration is not None else 0.0
+            in_value = max(0.0, float(in_offset)) if in_offset is not None else duration_value / 2
+            out_value = max(0.0, float(out_offset)) if out_offset is not None else duration_value / 2
+        except (TypeError, ValueError):
+            raise ValueError("OTIO transition offsets must be finite numbers") from None
+        if not all(math.isfinite(value) for value in (duration_value, in_value, out_value)):
+            raise ValueError("OTIO transition offsets must be finite numbers")
+
+        metadata = raw.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        metadata = dict(metadata)
+        opencut_metadata = metadata.get("opencut", {})
+        if not isinstance(opencut_metadata, Mapping):
+            opencut_metadata = {}
+        opencut_metadata = dict(opencut_metadata)
+        opencut_metadata.setdefault("transition_type", transition_type)
+        metadata["opencut"] = opencut_metadata
+        normalized[after] = {
+            "name": str(raw.get("name", "Dissolve"))[:200] or "Dissolve",
+            "type": transition_type,
+            "in_offset": in_value,
+            "out_offset": out_value,
+            "metadata": metadata,
+        }
+    return normalized
+
+
+def _transition_type(otio: Any, value: str) -> Any:
+    """Map friendly transition labels to OTIO's small built-in enum."""
+
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {"dissolve", "cross_dissolve", "smpte_dissolve"}:
+        return otio.schema.TransitionTypes.SMPTE_Dissolve
+    return otio.schema.TransitionTypes.Custom
 
 
 def check_otio_available() -> bool:
@@ -42,6 +118,7 @@ def export_otio(
     accept_lossy: bool = False,
     preflight_only: bool = False,
     return_report: bool = False,
+    transitions: Sequence[Mapping[str, Any]] | None = None,
 ) -> str | dict[str, Any]:
     """
     Export an edited timeline as an OTIO file.
@@ -90,16 +167,31 @@ def export_otio(
             source_range=otio.opentime.TimeRange(start_time=start_time, duration=duration),
         )
 
+    transition_specs = _coerce_transition_specs(transitions, len(speech_segments))
+
+    def _make_transition(spec: dict[str, Any]) -> Any:
+        return otio.schema.Transition(
+            name=spec["name"],
+            transition_type=_transition_type(otio, spec["type"]),
+            in_offset=otio.opentime.RationalTime.from_seconds(spec["in_offset"], framerate),
+            out_offset=otio.opentime.RationalTime.from_seconds(spec["out_offset"], framerate),
+            metadata=spec["metadata"],
+        )
+
     # Create video track
     track = otio.schema.Track(name="V1", kind=otio.schema.TrackKind.Video)
     for i, segment in enumerate(speech_segments):
         track.append(_make_clip(segment, i))
+        if i in transition_specs:
+            track.append(_make_transition(transition_specs[i]))
     timeline.tracks.append(track)
 
     # Create matching audio track
     audio_track = otio.schema.Track(name="A1", kind=otio.schema.TrackKind.Audio)
     for i, segment in enumerate(speech_segments):
         audio_track.append(_make_clip(segment, i, " (audio)"))
+        if i in transition_specs:
+            audio_track.append(_make_transition(transition_specs[i]))
     timeline.tracks.append(audio_track)
 
     from .otio_compat import write_otio_timeline
@@ -137,6 +229,7 @@ def export_otio_from_cuts(
     accept_lossy: bool = False,
     preflight_only: bool = False,
     return_report: bool = False,
+    transitions: Sequence[Mapping[str, Any]] | None = None,
 ) -> str | dict[str, Any]:
     """
     Export an OTIO timeline from cut regions (regions to REMOVE).
@@ -205,6 +298,7 @@ def export_otio_from_cuts(
         accept_lossy=accept_lossy,
         preflight_only=preflight_only,
         return_report=return_report,
+        transitions=transitions,
     )
 
 

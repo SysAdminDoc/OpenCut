@@ -7,6 +7,7 @@ and reports structural differences at three layers:
 1. **Track-level**: tracks added, removed, renamed, or reordered.
 2. **Clip-level**: clips added, removed, moved, retimed, or renamed.
 3. **Marker-level**: markers added, removed, shifted.
+4. **Transition-level**: transitions added, removed, or changed.
 
 Output is a structured :class:`OtioDiffResult` that serialises to JSON
 so panels / CI can highlight conflicts before a merge.  The module is
@@ -76,6 +77,16 @@ class MarkerDiff:
 
 
 @dataclass
+class TransitionDiff:
+    """A single transition-level difference between two timelines."""
+    kind: str                           # added / removed / changed
+    track: str = ""
+    left: Dict[str, Any] = field(default_factory=dict)
+    right: Dict[str, Any] = field(default_factory=dict)
+    details: str = ""
+
+
+@dataclass
 class OtioDiffResult:
     """Structured return for :func:`diff_timelines`."""
     left: str = ""
@@ -83,6 +94,7 @@ class OtioDiffResult:
     track_diffs: List[TrackDiff] = field(default_factory=list)
     clip_diffs: List[ClipDiff] = field(default_factory=list)
     marker_diffs: List[MarkerDiff] = field(default_factory=list)
+    transition_diffs: List[TransitionDiff] = field(default_factory=list)
     summary: Dict[str, int] = field(default_factory=dict)
     identical: bool = False
     notes: List[str] = field(default_factory=list)
@@ -104,6 +116,7 @@ class OtioDiffResult:
             "track_diffs": [asdict(d) for d in self.track_diffs],
             "clip_diffs": [asdict(d) for d in self.clip_diffs],
             "marker_diffs": [asdict(d) for d in self.marker_diffs],
+            "transition_diffs": [asdict(d) for d in self.transition_diffs],
             "summary": dict(self.summary),
             "identical": self.identical,
             "notes": list(self.notes),
@@ -161,8 +174,8 @@ def _marker_signature(marker) -> Dict[str, Any]:
 def _collect_clips(track) -> List[Dict[str, Any]]:
     """Walk a track and emit a flat list of clip signatures.
 
-    Only keeps ``otio.schema.Clip`` items — transitions and gaps are
-    ignored because the diff operates on *content*, not *layout*.
+    Only keeps ``otio.schema.Clip`` items; transitions are collected by
+    :func:`_collect_transitions` so content and layout changes stay separate.
     """
     import opentimelineio as otio  # local import so module import stays cheap
 
@@ -181,6 +194,35 @@ def _collect_markers(clip) -> List[Dict[str, Any]]:
         sig = _marker_signature(m)
         sig["clip"] = getattr(clip, "name", "") or ""
         out.append(sig)
+    return out
+
+
+def _transition_signature(transition) -> Dict[str, Any]:
+    def _seconds(value) -> float:
+        try:
+            return round(float(value.to_seconds()), 4)
+        except Exception:  # noqa: BLE001
+            return 0.0
+
+    transition_type = getattr(transition, "transition_type", "")
+    return {
+        "name": getattr(transition, "name", "") or "",
+        "type": str(getattr(transition_type, "value", transition_type) or ""),
+        "in_offset": _seconds(getattr(transition, "in_offset", None)),
+        "out_offset": _seconds(getattr(transition, "out_offset", None)),
+    }
+
+
+def _collect_transitions(track) -> List[Dict[str, Any]]:
+    """Collect transitions separately from clips so they are not discarded."""
+    import opentimelineio as otio  # local import so module import stays cheap
+
+    out: List[Dict[str, Any]] = []
+    for index, item in enumerate(track):
+        if isinstance(item, otio.schema.Transition):
+            signature = _transition_signature(item)
+            signature["index"] = index
+            out.append(signature)
     return out
 
 
@@ -297,6 +339,46 @@ def _diff_markers(
     return out
 
 
+def _diff_transitions(
+    track_name: str,
+    left_transitions: List[Dict[str, Any]],
+    right_transitions: List[Dict[str, Any]],
+) -> List[TransitionDiff]:
+    """Compare transitions by their track position and name."""
+    out: List[TransitionDiff] = []
+    left_index = {(item["index"], item["name"]): item for item in left_transitions}
+    right_index = {(item["index"], item["name"]): item for item in right_transitions}
+    for key in sorted(set(left_index) | set(right_index)):
+        left = left_index.get(key)
+        right = right_index.get(key)
+        if left and right:
+            left_comparable = {k: v for k, v in left.items() if k != "index"}
+            right_comparable = {k: v for k, v in right.items() if k != "index"}
+            if left_comparable != right_comparable:
+                out.append(TransitionDiff(
+                    kind="changed",
+                    track=track_name,
+                    left=left_comparable,
+                    right=right_comparable,
+                    details=(
+                        f"{left['name']} offsets/type changed "
+                        f"{left['in_offset']}/{left['out_offset']}→"
+                        f"{right['in_offset']}/{right['out_offset']}"
+                    ),
+                ))
+        elif left:
+            out.append(TransitionDiff(
+                kind="removed", track=track_name, left=left,
+                details=f"{left['name']} at track index {left['index']}",
+            ))
+        else:
+            out.append(TransitionDiff(
+                kind="added", track=track_name, right=right,
+                details=f"{right['name']} at track index {right['index']}",
+            ))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -354,6 +436,7 @@ def diff_timelines(
     track_diffs: List[TrackDiff] = []
     clip_diffs: List[ClipDiff] = []
     marker_diffs: List[MarkerDiff] = []
+    transition_diffs: List[TransitionDiff] = []
 
     l_by_name: Dict[str, Tuple[int, Any]] = {}
     for i, t in enumerate(left_tracks):
@@ -388,6 +471,13 @@ def diff_timelines(
 
         clip_diffs.extend(_diff_clips_in_track(tname, l_clip_sigs, r_clip_sigs))
         marker_diffs.extend(_diff_markers(l_clips_raw, r_clips_raw))
+        transition_diffs.extend(
+            _diff_transitions(
+                tname,
+                _collect_transitions(l_entry[1]),
+                _collect_transitions(r_entry[1]),
+            )
+        )
 
     if on_progress:
         on_progress(90, "Summarising diff…")
@@ -402,6 +492,9 @@ def diff_timelines(
         "markers_added": sum(1 for d in marker_diffs if d.kind == "added"),
         "markers_removed": sum(1 for d in marker_diffs if d.kind == "removed"),
         "markers_shifted": sum(1 for d in marker_diffs if d.kind == "shifted"),
+        "transitions_added": sum(1 for d in transition_diffs if d.kind == "added"),
+        "transitions_removed": sum(1 for d in transition_diffs if d.kind == "removed"),
+        "transitions_changed": sum(1 for d in transition_diffs if d.kind == "changed"),
     }
     identical = all(v == 0 for v in summary.values())
 
@@ -414,6 +507,7 @@ def diff_timelines(
         track_diffs=track_diffs,
         clip_diffs=clip_diffs,
         marker_diffs=marker_diffs,
+        transition_diffs=transition_diffs,
         summary=summary,
         identical=identical,
         notes=[
@@ -452,4 +546,8 @@ def format_diff_text(result: OtioDiffResult, max_entries: int = 60) -> str:
                 f"    [{d.kind}] {d.name}@{d.clip} "
                 f"{d.t_left}→{d.t_right}"
             )
+    if result.transition_diffs:
+        lines.append("  transitions:")
+        for d in result.transition_diffs[:max_entries]:
+            lines.append(f"    [{d.kind}] track={d.track or '<?>'} {d.details}")
     return "\n".join(lines)
