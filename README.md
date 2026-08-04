@@ -14,7 +14,10 @@
 > excluded from the advertised count. Run
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
-> shipped count and stub list.
+> shipped count and stub list. The same manifest carries a literal first-party
+> surface map: **261 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited silence-cut direct to timeline, stem separation, voice cloning, animated captions, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
 
@@ -260,7 +263,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,544 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.46.0 includes **1,544 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **261** have literal first-party panel, palette, CLI, and curated MCP references; **1,283** are explicitly classified as integration-only rather than presented as direct user workflows.
 
 ### Cut & Clean
 

@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Triage the routes that no surface reaches
-  Why: 1,253 of 1,518 non-stub routes are referenced by no panel, no command palette entry, no CLI command, and no MCP tool — the product's breadth is unreachable by its own users.
-  Evidence: Literal-path matching against `opencut/_generated/route_manifest.json` gives 211 routes referenced across all panel JS, 38 in `opencut/core/command_palette.py`, 93 in `opencut/mcp_server.py`, 5 in `opencut/cli.py`. Margin is small: `client/main.js` builds zero route paths by template literal and the UXP panel builds eight. Cross-reference: the existing P3 "Reconcile the queue allowlist with the documented invariant" is the same judgement at one-tenth the scale and should be decided together.
-  Touches: `opencut/_generated/route_manifest.json` generator, `opencut/registry.py`, `opencut/core/command_palette.py`, `docs/` API documentation, `scripts/release_smoke.py`.
-  Acceptance: Every shipped route carries a declared surface class (panel / palette / CLI / MCP / integration-only) in the generated manifest; a gate fails on an unclassified route; the README's route claim is restated in terms of what a user can reach.
-  Complexity: L
-
 - [ ] P2 — Apply timeline cuts as interchange, not per-clip razor operations
   Why: Razoring clip-by-clip through the host is the mechanism that makes a silence pass leave Premiere unusable, and the panel's own success toast miscounts the result.
   Evidence: `ocApplySequenceCuts` in `extension/com.opencut.panel/host/index.jsx` increments per clip removed per track, so `client/main.js:15157` reports "Applied 9 cuts" for a 3-cut apply on a 1V/2A sequence; an Adobe forum report has a comparable tool's >1000-cut pass leaving Premiere "unusably laggy" on a 4090/i9-14900K/64 GB machine. Round-trip risks to cover: OTIO #569 (FCP XML losing trim points on Premiere import) and auto-editor #70 (only the first audio track survives).
