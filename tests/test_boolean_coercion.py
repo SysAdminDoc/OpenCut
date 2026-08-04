@@ -165,6 +165,48 @@ def test_video_auto_zoom_string_false_does_not_apply_file(client, csrf_token, tm
     )
 
 
+def test_video_auto_zoom_apply_uses_shared_tracking_filter(client, csrf_token, tmp_path):
+    media = tmp_path / "clip.mp4"
+    media.write_bytes(b"fake-mp4")
+    keyframes = {
+        "fps": 30.0,
+        "keyframes": [
+            {"time": 0.0, "scale": 1.0, "anchor_x": 0.8, "anchor_y": 0.75},
+        ],
+    }
+
+    with patch("opencut.core.auto_zoom.generate_zoom_keyframes", return_value=keyframes), \
+            patch("opencut.core.auto_zoom.build_zoompan_filter", return_value="tracked-zoompan") as build_filter, \
+            patch("opencut.helpers.get_video_info", return_value={"width": 1920, "height": 1080, "fps": 30.0}), \
+            patch("opencut.routes.video_editing.get_ffmpeg_path", return_value="ffmpeg"), \
+            patch("opencut.routes.video_editing._sp.run") as mock_run:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stderr = b""
+        resp = client.post(
+            "/video/auto-zoom",
+            data=json.dumps({
+                "filepath": str(media),
+                "apply_to_file": True,
+            }),
+            headers=csrf_headers(csrf_token),
+        )
+        job = poll_job(client, resp.get_json()["job_id"])
+
+    assert resp.status_code == 200
+    assert job["status"] == "complete"
+    assert job["result"]["output"].endswith("clip_autozoom.mp4")
+    build_filter.assert_called_once_with(
+        keyframes["keyframes"], 1920, 1080, keyframes["fps"]
+    )
+    render_calls = [
+        call for call in mock_run.call_args_list
+        if call.args and "-vf" in call.args[0]
+    ]
+    assert render_calls
+    command = render_calls[-1].args[0]
+    assert "tracked-zoompan" in command
+
+
 def test_video_shorts_pipeline_string_false_flags_stay_false(client, csrf_token, tmp_path):
     media = tmp_path / "interview.mp4"
     media.write_bytes(b"fake-mp4")

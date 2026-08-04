@@ -949,6 +949,26 @@ class TestAutoZoomInterface(unittest.TestCase):
         finally:
             az._CV2_AVAILABLE = original
 
+    def test_build_zoompan_filter_tracks_lower_right_anchor(self):
+        """The filter must pan toward tracked anchors instead of top-left."""
+        from opencut.core.auto_zoom import build_zoompan_filter
+
+        graph = build_zoompan_filter(
+            [
+                {"time": 0.0, "scale": 1.0, "anchor_x": 0.8, "anchor_y": 0.75},
+                {"time": 1.0, "scale": 1.5, "anchor_x": 0.85, "anchor_y": 0.8},
+            ],
+            width=1920,
+            height=1080,
+            fps=30.0,
+        )
+
+        self.assertIn("zoompan=", graph)
+        self.assertIn("if(lt(on,30)", graph)
+        self.assertIn("iw*(if(lt(on,30),(0.8", graph)
+        self.assertIn("ih*(if(lt(on,30),(0.75", graph)
+        self.assertIn(":d=1:s=1920x1080:fps=30", graph)
+
 
 # ============================================================
 # TestColorMatchInterface

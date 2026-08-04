@@ -7,6 +7,7 @@ Uses OpenCV face detection (Haar cascade fallback if no DNN model available).
 """
 
 import logging
+import math
 import os
 import threading
 from typing import List, Optional
@@ -181,6 +182,120 @@ def _interpolate_anchors(
         smoothed.append({**curr, "anchor_x": round(ax, 4), "anchor_y": round(ay, 4)})
 
     return smoothed
+
+
+def _expression_number(value: float) -> str:
+    """Render a finite numeric value compactly for an FFmpeg expression."""
+    if math.isclose(value, round(value), rel_tol=0.0, abs_tol=1e-9):
+        return str(int(round(value)))
+    return f"{value:.6f}".rstrip("0").rstrip(".")
+
+
+def _normalise_filter_keyframes(keyframes, fps: float) -> list[dict]:
+    """Convert generated keyframes into safe output-frame samples."""
+    try:
+        fps = float(fps)
+    except (TypeError, ValueError):
+        fps = 30.0
+    if not math.isfinite(fps) or fps <= 0:
+        fps = 30.0
+
+    if isinstance(keyframes, dict):
+        keyframes = keyframes.get("keyframes", [])
+    if not isinstance(keyframes, list):
+        keyframes = []
+
+    normalised = []
+    for item in keyframes:
+        if not isinstance(item, dict):
+            continue
+        try:
+            time = float(item.get("time", 0.0))
+            scale = float(item.get("scale", item.get("zoom", 1.0)))
+            anchor_x = float(item.get("anchor_x", 0.5))
+            anchor_y = float(item.get("anchor_y", 0.5))
+        except (TypeError, ValueError):
+            continue
+        if not all(math.isfinite(value) for value in (time, scale, anchor_x, anchor_y)):
+            continue
+        sample = {
+            "frame": max(0, int(round(time * fps))),
+            "scale": max(1.0, min(10.0, scale)),
+            "anchor_x": max(0.0, min(1.0, anchor_x)),
+            "anchor_y": max(0.0, min(1.0, anchor_y)),
+        }
+        if normalised and sample["frame"] == normalised[-1]["frame"]:
+            normalised[-1] = sample
+        else:
+            normalised.append(sample)
+
+    if not normalised:
+        return [{"frame": 0, "scale": 1.0, "anchor_x": 0.5, "anchor_y": 0.5}]
+    if normalised[0]["frame"] > 0:
+        normalised.insert(0, {**normalised[0], "frame": 0})
+    return normalised
+
+
+def _piecewise_expression(keyframes: list[dict], field: str) -> str:
+    """Build an ``on``-indexed linear interpolation for one keyframe field."""
+    if len(keyframes) == 1:
+        return _expression_number(keyframes[0][field])
+
+    expression = _expression_number(keyframes[-1][field])
+    for index in range(len(keyframes) - 1, 0, -1):
+        start = keyframes[index - 1]
+        end = keyframes[index]
+        span = end["frame"] - start["frame"]
+        if span <= 0:
+            continue
+        start_value = _expression_number(start[field])
+        end_value = _expression_number(end[field])
+        progress = f"(on-{start['frame']})/{span}"
+        segment = f"({start_value}+({end_value}-{start_value})*{progress})"
+        expression = f"if(lt(on,{end['frame']}),{segment},{expression})"
+    return expression
+
+
+def build_zoompan_filter(
+    keyframes,
+    width: int = 1920,
+    height: int = 1080,
+    fps: float = 30.0,
+) -> str:
+    """Build a tracked zoompan graph shared by CLI and REST workflows.
+
+    ``anchor_x``/``anchor_y`` describe the point that should remain centred
+    in the output. The generated expressions interpolate each sampled
+    keyframe over FFmpeg's output-frame counter instead of silently using a
+    fixed top-left crop.
+    """
+    try:
+        width = max(1, int(width))
+    except (TypeError, ValueError):
+        width = 1920
+    try:
+        height = max(1, int(height))
+    except (TypeError, ValueError):
+        height = 1080
+    try:
+        fps = float(fps)
+    except (TypeError, ValueError):
+        fps = 30.0
+    if not math.isfinite(fps) or fps <= 0:
+        fps = 30.0
+
+    samples = _normalise_filter_keyframes(keyframes, fps)
+    zoom_expr = _piecewise_expression(samples, "scale")
+    anchor_x_expr = _piecewise_expression(samples, "anchor_x")
+    anchor_y_expr = _piecewise_expression(samples, "anchor_y")
+    # zoompan's x/y values are the top-left of the visible input rectangle.
+    # Clamp them so anchors near an edge never ask for pixels outside the frame.
+    x_expr = f"max(0,min(iw-iw/zoom,iw*({anchor_x_expr})-iw/(2*zoom)))"
+    y_expr = f"max(0,min(ih-ih/zoom,ih*({anchor_y_expr})-ih/(2*zoom)))"
+    return (
+        f"zoompan=z='{zoom_expr}':x='{x_expr}':y='{y_expr}':"
+        f"d=1:s={width}x{height}:fps={_expression_number(fps)}"
+    )
 
 
 # ---------------------------------------------------------------------------
