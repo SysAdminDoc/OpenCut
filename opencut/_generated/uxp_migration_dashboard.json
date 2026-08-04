@@ -1321,6 +1321,18 @@
         ],
         "justification": "",
         "priority": false,
+        "route": "/timeline/export-premiere-interchange",
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "",
+        "priority": false,
         "route": "/timeline/index-status",
         "status": "covered",
         "uxp_sources": [
@@ -1976,15 +1988,15 @@
       }
     ],
     "summary": {
-      "cep_route_count": 168,
-      "coverage_percent": 35.1,
-      "covered": 58,
+      "cep_route_count": 169,
+      "coverage_percent": 35.5,
+      "covered": 59,
       "excluded": 1,
       "missing": 109,
       "priority_count": 7,
       "priority_covered": 7,
       "priority_missing": 0,
-      "uxp_route_count": 73
+      "uxp_route_count": 74
     },
     "uxp_sources": [
       "extension/com.opencut.uxp/main.js",

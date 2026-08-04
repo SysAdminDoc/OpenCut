@@ -402,6 +402,22 @@ describe("CEP source ownership", () => {
     expect(main).toContain('backendVersion = String(data.version || "")');
   });
 
+  it("imports oversized cut passes as one requested-count interchange", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const source = main.slice(
+      main.indexOf("function applySequenceCutsViaInterchange"),
+      main.indexOf("function runBeatMarkers()"),
+    );
+
+    expect(source).toContain("getInterchangeCutThreshold");
+    expect(source).toContain('"/timeline/export-premiere-interchange"');
+    expect(source).toContain('action: "import_sequence"');
+    expect(source).toContain("PremiereBridge.importXML");
+    expect(source).toContain("requestedCount");
+    expect(source).toContain("timeline.interchange_imported");
+    expect(source).toContain('.replace("{count}", cutPlan.length)');
+  });
+
   it("keeps extracted responsibilities out of the orchestration entrypoint", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
     expect(main).toContain("OpenCutBackendClient.createBackendClient");

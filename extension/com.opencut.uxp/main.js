@@ -1385,6 +1385,31 @@ const PProBridge = (() => {
     }
   }
 
+  /**
+   * Import a generated FCP 7 XML timeline into the project.
+   *
+   * Unlike generic media import, the XML import call may return undefined
+   * even when Premiere accepts the sequence, so success is determined by the
+   * absence of an API exception. The path stem is retained for recovery when
+   * the host does not expose the newly-created sequence object.
+   */
+  async function importTimelineInterchange(outputPath) {
+    if (!available || !ppro) return { ok: false, reason: "UXP API unavailable" };
+    if (!outputPath) return { ok: false, reason: "No timeline interchange path supplied." };
+    try {
+      const context = await _projectRoot();
+      if (!context?.proj) return { ok: false, reason: "No open project" };
+      await context.proj.importFiles([outputPath]);
+      const normalized = String(outputPath).replace(/\\/g, "/");
+      const filename = normalized.split("/").pop() || "OpenCut Interchange.xml";
+      const sequenceName = filename.replace(/\.[^.]+$/, "");
+      return { ok: true, imported: 1, outputPath, sequence_name: sequenceName };
+    } catch (e) {
+      console.warn("[PProBridge] importTimelineInterchange failed:", e.message);
+      return { ok: false, reason: e.message };
+    }
+  }
+
   async function getProjectBins() {
     try {
       const context = await _projectRoot();
@@ -2139,6 +2164,7 @@ const PProBridge = (() => {
     getProjectBins,
     getSelectedClips,
     importFiles,
+    importTimelineInterchange,
     batchRenameProjectItems,
     createSmartBins,
     removeImportedProjectItem,
@@ -5342,6 +5368,53 @@ async function runMulticamCuts() {
 }
 
 /** ── APPLY TIMELINE CUTS (UXP + fallback) ── */
+const DEFAULT_INTERCHANGE_CUT_THRESHOLD = 100;
+
+function getInterchangeCutThreshold() {
+  const input = document.getElementById("timelineInterchangeThreshold");
+  let value = Number.parseInt(input?.value, 10);
+  if (!Number.isFinite(value)) value = DEFAULT_INTERCHANGE_CUT_THRESHOLD;
+  value = Math.max(1, Math.min(10000, value));
+  if (input && String(value) !== input.value) input.value = String(value);
+  return value;
+}
+
+async function applyTimelineCutsViaInterchange(cutsToApply) {
+  const sourcePath = getWorkspaceSource();
+  if (!sourcePath) return { ok: false, reason: t("uxp.timeline.runtime.interchange_source_required", "Select a source clip before importing a timeline interchange."), phase: "export" };
+
+  UIController.setStatus(formatI18n("uxp.timeline.runtime.interchange_preparing", "Preparing one linked timeline for {count} requested cuts...", { count: cutsToApply.length }));
+  const exported = await BackendClient.post("/timeline/export-premiere-interchange", {
+    filepath: sourcePath,
+    cuts: cutsToApply,
+    sequence_name: t("uxp.timeline.runtime.interchange_sequence_name", "OpenCut Timeline Interchange"),
+  });
+  if (!exported.ok || !exported.data?.output_path) {
+    return {
+      ok: false,
+      reason: exported.data?.error || exported.error || t("common.unknown", "unknown"),
+      phase: "export",
+    };
+  }
+
+  const outputPath = exported.data.output_path;
+  const imported = await runCheckpointedUxpHostWrite({
+    action: "import_sequence",
+    label: t("uxp.timeline.runtime.interchange_import_label", "Import large timeline cut pass"),
+    clipPath: sourcePath,
+    preview: {
+      clips: [sourcePath],
+      settings: {
+        artifact: outputPath,
+        source: "timeline_interchange",
+        requested_cuts: cutsToApply.length,
+      },
+    },
+    inverseFromResult: (result) => result.sequence_name ? { name: result.sequence_name } : {},
+  }, () => PProBridge.importTimelineInterchange(outputPath));
+  return imported.ok ? { ...imported, outputPath } : { ...imported, phase: "import" };
+}
+
 async function applyTimelineCuts(cuts) {
   const cutsToApply = cuts ?? lastCuts;
   if (!cutsToApply || cutsToApply.length === 0) {
@@ -5362,6 +5435,30 @@ async function applyTimelineCuts(cuts) {
     UIController.setButtonLoading("applyTimelineCutsBtn", true);
     let result;
     try {
+      if (cutsToApply.length > getInterchangeCutThreshold()) {
+        result = await applyTimelineCutsViaInterchange(cutsToApply);
+        if (result.ok) {
+          UIController.showToast(formatI18n("uxp.timeline.runtime.interchange_imported", "Imported {count} requested cuts as one linked timeline.", { count: cutsToApply.length }), "success");
+          UIController.setStatus(formatI18n("uxp.timeline.runtime.interchange_imported_status", "Imported {count} requested cuts as one timeline interchange.", { count: cutsToApply.length }));
+          noteTimelineAction(
+            t("uxp.timeline.runtime.interchange_imported_title", "Timeline interchange imported"),
+            "success",
+            formatI18n("uxp.timeline.runtime.interchange_imported_detail", "Imported {count} requested cuts as one linked timeline.", { count: cutsToApply.length }),
+            result.outputPath || t("uxp.timeline.runtime.interchange_sequence_name", "OpenCut Timeline Interchange"),
+            formatI18n("uxp.timeline.runtime.interchange_imported_short", "{count} requested cuts imported", { count: cutsToApply.length })
+          );
+        } else {
+          const errorKey = result.phase === "import"
+            ? "uxp.timeline.runtime.interchange_import_failed"
+            : "uxp.timeline.runtime.interchange_export_failed";
+          const fallback = result.phase === "import"
+            ? "Could not import the timeline interchange: {error}"
+            : "Could not prepare the timeline interchange: {error}";
+          UIController.showToast(formatI18n(errorKey, fallback, { error: result.reason || t("common.unknown", "unknown") }), "error");
+          UIController.setStatus(t("uxp.timeline.runtime.interchange_failed_status", "Timeline interchange failed - no direct clip writes were made."));
+        }
+        return;
+      }
       result = await runCheckpointedUxpHostWrite({
         action: "apply_cuts",
         label: t("uxp.journal.apply_cuts_label", "Apply reviewed timeline cuts"),

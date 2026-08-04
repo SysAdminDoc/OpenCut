@@ -443,6 +443,20 @@ describe("UXP source ownership", () => {
     expect(main).toContain('runtimeState.backendVersion = String(r.data?.version || "")');
   });
 
+  it("imports oversized cut passes as one requested-count interchange", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const start = main.indexOf("async function applyTimelineCutsViaInterchange");
+    const end = main.indexOf("/** ── ADD SEQUENCE MARKERS", start);
+    const source = main.slice(start, end);
+
+    expect(source).toContain('"/timeline/export-premiere-interchange"');
+    expect(source).toContain('action: "import_sequence"');
+    expect(source).toContain("PProBridge.importTimelineInterchange");
+    expect(source).toContain("requested_cuts");
+    expect(source).toContain("cutsToApply.length");
+    expect(source).toContain("interchange_imported");
+  });
+
   it("keeps extracted runtime implementations out of main.js", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
     expect(main).toContain("createBackendClient");
