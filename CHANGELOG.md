@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Compiled resumable workflow plans
+
+- Workflow saves now retain a source-independent definition and workflow runs
+  compile immutable, typed plans with readiness, media-stream, disk, output,
+  network, and side-effect preflight evidence before processing starts.
+- CEP runs review destructive or external steps before approval, while durable
+  artifact checksums let interrupted workflows resume without repeating a
+  completed idempotent step.
+
 ### Added - UXP first-run portability and support tools
 
 - UXP now offers a server-backed Getting Started tour that connects a new

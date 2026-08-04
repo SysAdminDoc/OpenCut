@@ -295,6 +295,112 @@ async function preparePage(page, surface, theme, backendFixtures = {}) {
         });
       }
     }
+    if (backendFixtures.workflowPreflight) {
+      const method = route.request().method();
+      if (url.pathname === "/health" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ status: "ok", csrf_token: "fixture-token" }),
+        });
+      }
+      if (url.pathname === "/workflow/presets" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            builtins: [{
+              name: "Reviewable Cloud Fixture",
+              builtin: true,
+              description: "A fixture workflow that requires approval.",
+              steps: [{ endpoint: "/audio/tts/generate", params: { url: "https://example.test/voice" } }],
+            }],
+            custom: [],
+          }),
+        });
+      }
+      if (url.pathname === "/workflows/list" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        });
+      }
+      if (url.pathname === "/workflow/compile" && method === "POST") {
+        const body = route.request().postDataJSON() || {};
+        capturedRequests.push({ workflowCompile: body });
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            requires_approval: true,
+            plan: {
+              schema_version: 1,
+              plan_id: "workflow-plan-fixture",
+              definition_id: "workflow-definition-fixture",
+              source: { filepath: body.filepath, fingerprint: {}, media: {} },
+              steps: [{
+                index: 0,
+                endpoint: "/audio/tts/generate",
+                label: "Generating TTS",
+                params: { url: "https://example.test/voice" },
+                side_effect: "cloud",
+                idempotent: false,
+              }],
+              preflight: {
+                status: "ready",
+                blocked_reasons: [],
+                approval_reasons: ["/audio/tts/generate: external network or remote service"],
+                checks: [],
+              },
+              approval: {
+                required: true,
+                approved: false,
+                plan_id: "workflow-plan-fixture",
+                token: "",
+              },
+              resume: { enabled: true, strategy: "idempotent-artifact-checksum", completed_steps: 0 },
+            },
+          }),
+        });
+      }
+      if (url.pathname === "/workflow/approve" && method === "POST") {
+        const body = route.request().postDataJSON() || {};
+        capturedRequests.push({ workflowApprove: body });
+        const plan = body.plan || {};
+        plan.approval = {
+          required: true,
+          approved: true,
+          plan_id: plan.plan_id,
+          token: "workflow-approval-fixture",
+        };
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, plan, approval: plan.approval }),
+        });
+      }
+      if (url.pathname === "/workflow/run" && method === "POST") {
+        capturedRequests.push({ workflowRun: route.request().postDataJSON() || {} });
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ job_id: "workflow-fixture" }),
+        });
+      }
+      if (url.pathname === "/status/workflow-fixture" && method === "GET") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "complete",
+            progress: 100,
+            result: { success: true, steps_completed: 1 },
+          }),
+        });
+      }
+    }
     if (backendFixtures.liveBridge) {
       const method = route.request().method();
       if (url.pathname === "/health" && method === "GET") {
@@ -1083,6 +1189,54 @@ test("UXP first run guides a connected user from media to review", async ({ page
   await expect.poll(() => capturedRequests.some(
     (request) => request.onboarding === "POST" && request.body?.seen === true,
   )).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
+test("CEP workflow runs compile before approval and dispatch", async ({ page }) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "cep",
+    "dark",
+    900,
+    { workflowPreflight: true },
+  );
+
+  await page.evaluate(() => {
+    const select = document.getElementById("clipSelect");
+    const option = document.createElement("option");
+    option.value = "C:/media/interview.mov";
+    option.textContent = "interview.mov";
+    option.setAttribute("data-name", "interview.mov");
+    select.appendChild(option);
+    select.value = option.value;
+    select._customDropdown.update();
+  });
+  const clipTrigger = page.locator(
+    ".custom-dropdown[data-for='clipSelect'] .custom-dropdown-trigger",
+  );
+  await clipTrigger.click();
+  await page.locator("#clipSelect-listbox .custom-dropdown-item").last().click();
+
+  await page.locator(".nav-tab[data-nav='export']").click();
+  await page.locator("#exportSubTabs .sub-tab[data-sub='exp-batch']").click();
+  const preset = page.locator("#workflowPreset");
+  await expect(preset.locator("option")).toHaveCount(1);
+  await page.locator(".custom-dropdown[data-for='workflowPreset'] .custom-dropdown-trigger").click();
+  await page.locator("#workflowPreset-listbox .custom-dropdown-item[data-value='idx:0']").click();
+  const run = page.locator("#runWorkflowBtn");
+  await expect(run).toBeEnabled();
+  await run.click();
+
+  await expect.poll(() => capturedRequests.filter((item) => item.workflowCompile).length).toBe(1);
+  const dialog = page.locator(".panel-dialog-overlay");
+  await expect(dialog).toContainText("Review workflow side effects");
+  await expect(dialog).toContainText("external network or remote service");
+  expect(capturedRequests.some((item) => item.workflowRun)).toBe(false);
+
+  await dialog.getByRole("button", { name: "Approve and run" }).click();
+  await expect.poll(() => capturedRequests.filter((item) => item.workflowApprove).length).toBe(1);
+  await expect.poll(() => capturedRequests.filter((item) => item.workflowRun).length).toBe(1);
+  expect(capturedRequests.find((item) => item.workflowRun).workflowRun.plan.approval.approved).toBe(true);
   expect(pageErrors).toEqual([]);
 });
 

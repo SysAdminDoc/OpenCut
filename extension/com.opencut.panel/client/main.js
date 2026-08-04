@@ -7234,6 +7234,73 @@
         return isNaN(idx) ? -1 : idx;
     }
 
+    function workflowPreflightDetails(plan, name) {
+        var preflight = plan && plan.preflight ? plan.preflight : {};
+        var lines = [
+            t("workflow.preflight_title", "OpenCut preflighted {name}.").replace("{name}", name || t("workflow.custom_default", "this workflow")),
+            t("workflow.preflight_steps", "Steps: {count}").replace("{count}", (plan && plan.steps || []).length),
+        ];
+        var reasons = preflight.approval_reasons || [];
+        for (var i = 0; i < Math.min(reasons.length, 6); i++) lines.push("• " + reasons[i]);
+        return lines.join("\n");
+    }
+
+    function runWorkflowWithPreflight(steps, name, onRunStarted) {
+        if (!selectedPath || !steps || !steps.length) return;
+        var request = {
+            filepath: selectedPath,
+            workflow: steps,
+            output_dir: projectFolder,
+        };
+        api("POST", "/workflow/compile", request, function (err, data) {
+            var plan = data && data.plan;
+            if (err || !plan) {
+                showAlert(data && data.error ? data.error : t("workflow.preflight_failed", "Workflow preflight failed."), data);
+                return;
+            }
+            var preflight = plan.preflight || {};
+            if (preflight.status === "blocked") {
+                var blocked = (preflight.blocked_reasons || []).slice(0, 6).join("\n");
+                showAlert(t("workflow.preflight_blocked", "Workflow cannot run until preflight blockers are resolved:\n{reasons}")
+                    .replace("{reasons}", blocked || t("workflow.preflight_review", "Review the compiled plan.")), data);
+                return;
+            }
+
+            function dispatch(compiledPlan) {
+                var runPayload = {};
+                for (var key in request) {
+                    if (Object.prototype.hasOwnProperty.call(request, key)) runPayload[key] = request[key];
+                }
+                runPayload.plan = compiledPlan;
+                if (compiledPlan.approval && compiledPlan.approval.token) {
+                    runPayload.approval_token = compiledPlan.approval.token;
+                }
+                if (typeof onRunStarted === "function") onRunStarted(compiledPlan);
+                startJob("/workflow/run", runPayload);
+            }
+
+            if (!(plan.approval && plan.approval.required)) {
+                dispatch(plan);
+                return;
+            }
+            showPanelConfirm({
+                title: t("workflow.approval_title", "Review workflow side effects"),
+                message: workflowPreflightDetails(plan, name),
+                confirmLabel: t("workflow.approval_confirm", "Approve and run"),
+                confirmClass: "btn btn-primary",
+            }, function (confirmed) {
+                if (!confirmed) return;
+                api("POST", "/workflow/approve", { plan: plan }, function (approveErr, approveData) {
+                    if (approveErr || !approveData || !approveData.plan) {
+                        showAlert(approveData && approveData.error ? approveData.error : t("workflow.approval_failed", "Workflow approval failed."), approveData);
+                        return;
+                    }
+                    dispatch(approveData.plan);
+                });
+            });
+        });
+    }
+
     function runWorkflowPreset() {
         var sel = el.workflowPreset;
         if (!sel || !sel.value || !selectedPath) {
@@ -7259,12 +7326,8 @@
                 .replace("{clip}", clipName),
             "working"
         );
-        // Use server-side workflow runner for reliable chained execution
-        startJob("/workflow/run", {
-            filepath: selectedPath,
-            workflow: preset.steps,
-            output_dir: projectFolder,
-        });
+        // Compile and review the immutable plan before the server-side runner.
+        runWorkflowWithPreflight(preset.steps, preset.name);
     }
 
     // --- TTS VOICE GENERATION ---
@@ -13157,17 +13220,21 @@
                 };
                 var clipName = selectedName || selectedPath.split(/[/\\]/).pop();
                 updateCustomWorkflowSummary(
-                    t("workflow.running_on", "Running {name} across {steps} on {clip}.")
+                    t("workflow.preflighting_on", "Preflighting {name} across {steps} on {clip}.")
                         .replace("{name}", draftName)
                         .replace("{steps}", workflowStepCountLabel(_workflowSteps.length))
                         .replace("{clip}", clipName),
                     "working"
                 );
-                // Use server-side workflow runner for reliable chained execution
-                startJob("/workflow/run", {
-                    filepath: selectedPath,
-                    workflow: _workflowSteps,
-                    output_dir: projectFolder,
+                // Compile and review the immutable plan before the server-side runner.
+                runWorkflowWithPreflight(_workflowSteps, draftName, function () {
+                    updateCustomWorkflowSummary(
+                        t("workflow.running_on", "Running {name} across {steps} on {clip}.")
+                            .replace("{name}", draftName)
+                            .replace("{steps}", workflowStepCountLabel(_workflowSteps.length))
+                            .replace("{clip}", clipName),
+                        "working"
+                    );
                 });
             });
         }
@@ -17669,11 +17736,7 @@
             // Find the workflow by name from loaded presets
             for (var qi = 0; qi < _workflowPresets.length; qi++) {
                 if (_workflowPresets[qi].name === workflowName) {
-                    startJob("/workflow/run", {
-                        filepath: selectedPath,
-                        workflow: _workflowPresets[qi].steps,
-                        output_dir: projectFolder,
-                    });
+                    runWorkflowWithPreflight(_workflowPresets[qi].steps, workflowName);
                     return;
                 }
             }
