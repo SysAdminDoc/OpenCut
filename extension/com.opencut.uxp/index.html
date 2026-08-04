@@ -1115,6 +1115,11 @@
                 <span class="oc-inline-value" id="timelineSequenceValue" data-i18n="uxp.timeline.checking_uxp_bridge">Checking UXP bridge</span>
               </div>
             </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="timelineInterchangeThreshold" data-i18n="uxp.timeline.interchange_threshold">Interchange threshold (cuts)</label>
+              <input type="number" class="oc-input oc-input-sm" id="timelineInterchangeThreshold" value="100" min="1" max="10000" step="1" aria-label="Interchange threshold in cuts" data-i18n-aria-label="uxp.timeline.interchange_threshold_aria">
+            </div>
+            <p class="oc-hint" data-i18n="uxp.timeline.interchange_threshold_hint">Above this count, import one linked FCP XML timeline instead of razoring clips one by one.</p>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn" data-i18n="uxp.timeline.apply_latest_cuts">Apply Latest Cuts</button>
           </div>
         </div>

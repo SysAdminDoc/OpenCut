@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Timeline interchange for large cut passes
+
+- Cut lists above the configurable panel threshold now become one linked FCP
+  7 XML timeline import, preserving synchronized video and every source audio
+  channel while reporting the requested cut count.
+
 ### Added - UXP route migration dashboard
 
 - The generated migration dashboard now inventories literal CEP capability

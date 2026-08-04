@@ -15313,9 +15313,83 @@
     // v1.5.0 — Timeline Tab Functions
     // ================================================================
 
+    var DEFAULT_INTERCHANGE_CUT_THRESHOLD = 100;
+
+    function getInterchangeCutThreshold() {
+        var input = document.getElementById("timelineInterchangeThreshold");
+        var value = input ? parseInt(input.value, 10) : DEFAULT_INTERCHANGE_CUT_THRESHOLD;
+        if (!isFinite(value)) value = DEFAULT_INTERCHANGE_CUT_THRESHOLD;
+        value = Math.max(1, Math.min(10000, value));
+        if (input && String(value) !== input.value) input.value = String(value);
+        return value;
+    }
+
+    function applySequenceCutsViaInterchange(cutPlan) {
+        var requestedCount = cutPlan.length;
+        var sourcePath = selectedPath;
+        if (!sourcePath) {
+            showAlert(t("timeline.interchange_source_required", "Select a source clip before importing a timeline interchange."));
+            return;
+        }
+
+        var statusEl = document.getElementById("tlWritebackStatus");
+        if (statusEl) statusEl.textContent = t("timeline.interchange_preparing", "Preparing one linked timeline for {count} requested cuts…")
+            .replace("{count}", requestedCount);
+
+        api("POST", "/timeline/export-premiere-interchange", {
+            filepath: sourcePath,
+            cuts: cutPlan,
+            output_dir: projectFolder || "",
+            sequence_name: t("timeline.interchange_sequence_name", "OpenCut Timeline Interchange")
+        }, function (exportErr, exportData) {
+            if (exportErr || !exportData || exportData.error || !exportData.output_path) {
+                var exportMessage = (exportData && exportData.error) ||
+                    (exportErr && (exportErr.message || exportErr.error)) ||
+                    t("common.unknown", "Unknown");
+                showAlert(t("timeline.interchange_export_failed", "Could not prepare the timeline interchange: {error}")
+                    .replace("{error}", exportMessage));
+                return;
+            }
+
+            var xmlPath = exportData.output_path;
+            journalCheckpointedHostWrite({
+                action: "import_sequence",
+                label: t("timeline.interchange_import_label", "Import large timeline cut pass"),
+                clipPath: sourcePath,
+                preview: {
+                    clips: selectedName ? [selectedName] : [],
+                    settings: {
+                        artifact: xmlPath,
+                        source: "timeline_interchange",
+                        requested_cuts: requestedCount
+                    }
+                },
+                inverseFromResult: function (result) {
+                    return result.sequence_name ? { name: result.sequence_name } : {};
+                }
+            }, function (cb) {
+                PremiereBridge.importXML(xmlPath, cb);
+            }, function (result) {
+                if (result.error) {
+                    showAlert(t("timeline.interchange_import_failed", "Could not import the timeline interchange: {error}")
+                        .replace("{error}", result.error));
+                    return;
+                }
+                showToast(t("timeline.interchange_imported", "Imported {count} requested cuts as one linked timeline.")
+                    .replace("{count}", requestedCount), "success");
+                if (statusEl) statusEl.textContent = t("timeline.interchange_imported_status", "Imported {count} requested cuts as one timeline interchange.")
+                    .replace("{count}", requestedCount);
+            });
+        });
+    }
+
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         var cutPlan = OpenCutTimeline.cloneCuts(cuts);
+        if (cutPlan.length > getInterchangeCutThreshold()) {
+            applySequenceCutsViaInterchange(cutPlan);
+            return;
+        }
         var payload = JSON.stringify(cutPlan);
         journalCheckpointedHostWrite({
             action: "apply_cuts",
@@ -15331,10 +15405,10 @@
                 return;
             }
             showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
-                .replace("{count}", r.applied || 0), "success");
+                .replace("{count}", cutPlan.length), "success");
             var statusEl = document.getElementById("tlWritebackStatus");
             if (statusEl) statusEl.textContent = t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
-                .replace("{count}", r.applied || 0);
+                .replace("{count}", cutPlan.length);
         });
     }
 

@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Apply timeline cuts as interchange, not per-clip razor operations
-  Why: Razoring clip-by-clip through the host is the mechanism that makes a silence pass leave Premiere unusable, and the panel's own success toast miscounts the result.
-  Evidence: `ocApplySequenceCuts` in `extension/com.opencut.panel/host/index.jsx` increments per clip removed per track, so `client/main.js:15157` reports "Applied 9 cuts" for a 3-cut apply on a 1V/2A sequence; an Adobe forum report has a comparable tool's >1000-cut pass leaving Premiere "unusably laggy" on a 4090/i9-14900K/64 GB machine. Round-trip risks to cover: OTIO #569 (FCP XML losing trim points on Premiere import) and auto-editor #70 (only the first audio track survives).
-  Touches: `extension/com.opencut.panel/host/index.jsx`, `extension/com.opencut.uxp/main.js`, `opencut/export/otio_export.py`, `opencut/core/multicam_xml.py`, panel result rendering and locale strings.
-  Acceptance: A cut list above a configurable threshold is written as a timeline interchange import instead of per-clip razors; a fixture with 1,000 cuts across 1V/2A round-trips with in/out points and all audio tracks intact; the toast reports cuts requested, not clip-removals.
-  Complexity: L
-
 - [ ] P2 — Make the CEP panel build a real bundle
   Why: The shipped artifact is a byte-identical copy of the 18,360-line source, so a Chromium-99 runtime parses unbundled, unminified source on every panel open.
   Evidence: `extension/com.opencut.panel/client/dist/main.js` and `client/main.js` have identical MD5 (`5282cc69…`) and identical line counts, despite `vite.config.mjs` and a `build` script in `extension/com.opencut.panel/package.json`.

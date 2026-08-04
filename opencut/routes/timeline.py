@@ -52,6 +52,66 @@ make_install_route(
 
 
 # ---------------------------------------------------------------------------
+# Timeline: Premiere FCP 7 Interchange (large cut-list write-back)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/export-premiere-interchange", methods=["POST"])
+@require_csrf
+def timeline_export_premiere_interchange():
+    """Write a reviewed cut list as one Premiere-importable FCP 7 timeline.
+
+    Large cut passes use this route instead of asking the host to razor every
+    clip. The exporter links the video track to every audio channel and keeps
+    source in/out points frame-aligned across all tracks.
+    """
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+
+    filepath = str(data.get("filepath", "")).strip()
+    cuts = data.get("cuts", [])
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    if not isinstance(cuts, list) or not cuts:
+        return jsonify({"error": "No cuts provided (must be a non-empty list)"}), 400
+    if len(cuts) > 10000:
+        return jsonify({"error": "Too many cuts (max 10000)"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+        output_dir = str(data.get("output_dir", "")).strip()
+        if output_dir:
+            output_dir = validate_path(output_dir)
+        else:
+            output_dir = os.path.dirname(filepath)
+        sequence_name = str(data.get("sequence_name", "OpenCut Interchange"))[:200]
+        output_path = validate_output_path(
+            os.path.join(
+                output_dir,
+                f"{os.path.splitext(os.path.basename(filepath))[0]}_opencut_interchange.xml",
+            )
+        )
+
+        from opencut.export.premiere import export_premiere_xml_from_cuts
+
+        result = export_premiere_xml_from_cuts(
+            filepath,
+            cuts,
+            output_path,
+            sequence_name=sequence_name,
+        )
+        return jsonify({
+            **result,
+            "format": "fcp7_xml",
+            "message": f"Exported Premiere interchange: {os.path.basename(output_path)}",
+        })
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "timeline_export_premiere_interchange")
+
+
+# ---------------------------------------------------------------------------
 # Timeline: Export Clips from Markers
 # ---------------------------------------------------------------------------
 def _validate_timeline_export(data):

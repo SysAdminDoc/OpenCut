@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T05:29:47Z",
-  "total_routes": 1569,
-  "shipped_route_count": 1544,
+  "generated_at": "2026-08-04T06:06:57Z",
+  "total_routes": 1570,
+  "shipped_route_count": 1545,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 402,
     "PATCH": 1,
-    "POST": 1151,
+    "POST": 1152,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1516,
+    "implemented": 1517,
     "stub": 25
   },
   "blueprints": {
@@ -902,14 +902,14 @@
       ]
     },
     "timeline": {
-      "route_count": 14,
+      "route_count": 15,
       "method_counts": {
         "GET": 2,
-        "POST": 12
+        "POST": 13
       },
       "sample_rules": [
-        "/timeline/beat-cut",
         "/timeline/export-from-markers",
+        "/timeline/export-premiere-interchange",
         "/timeline/otio/install"
       ]
     },
@@ -20871,6 +20871,23 @@
       ]
     },
     {
+      "rule": "/timeline/export-premiere-interchange",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_export_premiere_interchange",
+      "blueprint": "timeline",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
+      ]
+    },
+    {
       "rule": "/timeline/export/aaf",
       "methods": [
         "POST"
@@ -26808,20 +26825,20 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1544,
-      "direct_surface_routes": 261,
+      "shipped_routes": 1545,
+      "direct_surface_routes": 262,
       "integration_only_routes": 1283,
-      "coverage_percent": 16.9,
+      "coverage_percent": 17.0,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 206,
+        "panel": 207,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
         "integration-only": 1308
       },
       "assigned_counts": {
-        "panel": 206,
+        "panel": 207,
         "palette": 33,
         "cli": 1,
         "mcp": 92,

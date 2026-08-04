@@ -17,6 +17,11 @@ from ..utils.config import ExportConfig
 from ..utils.media import MediaInfo, probe
 
 
+# Above this many reviewed cut ranges, importing one interchange timeline is
+# materially cheaper for Premiere than issuing one host mutation per range.
+INTERCHANGE_CUT_THRESHOLD = 100
+
+
 def export_premiere_xml(
     filepath: str,
     speech_segments: List[TimeSegment],
@@ -48,6 +53,115 @@ def export_premiere_xml(
         info = probe(filepath)
     except (FileNotFoundError, RuntimeError) as e:
         raise ValueError(f"Cannot probe media file for XML export: {e}") from e
+
+    return _write_premiere_xml(info, speech_segments, output_path, config, zoom_events)
+
+
+def normalize_cut_ranges(cuts: List[dict], total_duration: float) -> List[dict]:
+    """Normalize and merge regions that should be removed from a timeline.
+
+    Cut producers are allowed to return extra fields, strings for numeric
+    values, and overlapping ranges. Interchange needs one deterministic,
+    frame-safe set of ranges so every video and audio track gets the same
+    source in/out pairs.
+    """
+    if not isinstance(cuts, list):
+        raise ValueError("cuts must be a list")
+
+    try:
+        duration = float(total_duration)
+    except (TypeError, ValueError):
+        duration = 0.0
+    if duration <= 0:
+        raise ValueError("Timeline duration must be greater than zero")
+
+    ranges = []
+    for cut in cuts:
+        if not isinstance(cut, dict):
+            continue
+        try:
+            start = float(cut.get("start", cut.get("time", 0.0)))
+            if "end" in cut:
+                end = float(cut["end"])
+            else:
+                end = start + float(cut.get("duration", 0.0))
+        except (TypeError, ValueError):
+            continue
+        if start != start or end != end or start == float("inf") or end == float("inf"):
+            continue
+        if start == float("-inf") or end == float("-inf") or end <= start:
+            continue
+        start = max(0.0, min(start, duration))
+        end = max(0.0, min(end, duration))
+        if end - start > 1e-6:
+            ranges.append({"start": start, "end": end})
+
+    ranges.sort(key=lambda item: (item["start"], item["end"]))
+    merged = []
+    for current in ranges:
+        if merged and current["start"] <= merged[-1]["end"] + 1e-6:
+            merged[-1]["end"] = max(merged[-1]["end"], current["end"])
+        else:
+            merged.append(current)
+    return merged
+
+
+def cut_ranges_to_segments(cuts: List[dict], total_duration: float) -> tuple[List[dict], List[TimeSegment]]:
+    """Return normalized removed ranges and the kept source segments."""
+    normalized = normalize_cut_ranges(cuts, total_duration)
+    kept = []
+    cursor = 0.0
+    for cut in normalized:
+        if cut["start"] > cursor + 1e-6:
+            kept.append(TimeSegment(start=cursor, end=cut["start"], label="speech"))
+        cursor = max(cursor, cut["end"])
+    if cursor < float(total_duration) - 1e-6:
+        kept.append(TimeSegment(start=cursor, end=float(total_duration), label="speech"))
+    return normalized, kept
+
+
+def export_premiere_xml_from_cuts(
+    filepath: str,
+    cuts: List[dict],
+    output_path: str,
+    sequence_name: str = "OpenCut Interchange",
+) -> dict:
+    """Write one FCP 7 interchange timeline for a reviewed cut list.
+
+    The returned counts describe the interchange artifact, not host clip
+    removals. This distinction is important for large passes: a 1,000-range
+    request should remain a 1,000-cut operation even though the XML contains
+    one linked clip per kept region on each source track.
+    """
+    try:
+        info = probe(filepath)
+    except (FileNotFoundError, RuntimeError) as e:
+        raise ValueError(f"Cannot probe media file for XML export: {e}") from e
+
+    normalized, kept_segments = cut_ranges_to_segments(cuts, info.duration)
+    if not kept_segments:
+        raise ValueError("The cut list removes the entire source timeline")
+
+    config = ExportConfig(sequence_name=sequence_name or "OpenCut Interchange")
+    _write_premiere_xml(info, kept_segments, output_path, config, None)
+    audio_tracks = int(info.audio.channels) if info.has_audio and info.audio else 0
+    return {
+        "output_path": output_path,
+        "requested_cuts": len(cuts),
+        "normalized_cuts": len(normalized),
+        "kept_segments": len(kept_segments),
+        "audio_tracks": max(0, audio_tracks),
+    }
+
+
+def _write_premiere_xml(
+    info: MediaInfo,
+    speech_segments: List[TimeSegment],
+    output_path: str,
+    config: ExportConfig,
+    zoom_events: Optional[List[ZoomEvent]] = None,
+) -> str:
+    """Build and write an FCP 7 XML document from probed media metadata."""
 
     # Build XML document
     xmeml = ET.Element("xmeml", version="4")
@@ -132,7 +246,7 @@ def _build_sequence(
     # operations (unlink, slip, etc.) in Premiere misbehaved.
     num_audio_tracks = 0
     if config.include_audio and info.has_audio and info.audio is not None:
-        num_audio_tracks = min(info.audio.channels, 2)
+        num_audio_tracks = max(0, int(info.audio.channels))
     has_video_track = bool(config.include_video and info.has_video)
 
     link_group = []  # list of (id_prefix, media_type, track_index)
@@ -185,10 +299,12 @@ def _build_sequence(
         _add_text(group, "index", "1")
         _add_text(group, "numchannels", str(num_audio_tracks))
         _add_text(group, "downmix", "0")
-        ch = ET.SubElement(group, "channel")
-        _add_text(ch, "index", "1")
+        for output_index in range(num_audio_tracks):
+            ch = ET.SubElement(group, "channel")
+            _add_text(ch, "index", str(output_index + 1))
 
-        # Create one audio track per channel (up to stereo)
+        # Create one audio track per source channel so multichannel audio is
+        # preserved instead of silently truncating the interchange to stereo.
         for ch_idx in range(num_audio_tracks):
             track = ET.SubElement(audio_elem, "track")
             _add_text(track, "locked", "FALSE")

@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1544-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1545-orange)
 ![Tests](https://img.shields.io/badge/Tests-12800+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -15,7 +15,7 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
-> surface map: **261 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> surface map: **262 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
 > while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
@@ -263,7 +263,7 @@ Premiere 26.x (Jan 2026) ships Object Mask, Generative Extend, Media Intelligenc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,544 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **261** have literal first-party panel, palette, CLI, and curated MCP references; **1,283** are explicitly classified as integration-only rather than presented as direct user workflows.
+OpenCut v1.46.0 includes **1,545 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **262** have literal first-party panel, palette, CLI, and curated MCP references; **1,283** are explicitly classified as integration-only rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -492,7 +492,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,544 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,545 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -834,7 +834,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-12,800+ estimated tests across 320 root test files covering route smoke tests,
+12,800+ estimated tests across 321 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -901,7 +901,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (12,800+ estimated tests, 320 root test files)
+tests/               # pytest test suite (12,800+ estimated tests, 321 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
