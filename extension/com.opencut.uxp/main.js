@@ -8665,6 +8665,7 @@ async function initApp() {
     UxpUpdateController.dispose();
     UxpSettingsController.dispose();
     JobPoller.closeSse();
+    uxpWsDisconnect();
     stopMediaScanInterval();
   }, { once: true });
   const headerVersion = document.getElementById("uxpHeaderVersion");
