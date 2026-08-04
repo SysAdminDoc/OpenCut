@@ -507,6 +507,28 @@ describe("CEP source ownership", () => {
     expect(source).toContain("requestedCount");
     expect(source).toContain("timeline.interchange_imported");
     expect(source).toContain('.replace("{count}", cutPlan.length)');
+
+    const normalApply = main.slice(
+      main.indexOf("function applySequenceCuts(cuts)"),
+      main.indexOf("function runBeatMarkers()"),
+    );
+    expect(normalApply).toContain('.replace("{count}", cutPlan.length)');
+  });
+
+  it("keeps panel copy on the backend term and removes the unreachable wizard body", () => {
+    const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
+    const locale = JSON.parse(readFileSync(new URL("../client/locales/en.json", import.meta.url), "utf8"));
+    const descriptionEntries = Object.entries(locale).filter(([key]) => key.endsWith("_desc"));
+    expect(descriptionEntries.filter(([, value]) => /\s--\s/.test(value))).toEqual([]);
+
+    const serverReferences = Object.entries(locale).filter(([, value]) => /\bserver\b/i.test(value));
+    expect(serverReferences.every(([, value]) => value.includes("opencut-server") || value.includes("opencut.server"))).toBe(true);
+
+    expect(index).toContain('<div class="wizard-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true">');
+    expect(index).toContain('<div class="wizard-card" tabindex="-1"></div>');
+    for (const id of ["wizardDontShow", "wizardCloseBtn", "wizardSteps"]) {
+      expect(index).not.toContain(`id="${id}"`);
+    }
   });
 
   it("keeps extracted responsibilities out of the orchestration entrypoint", () => {

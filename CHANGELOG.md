@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Fixed - Panel copy and onboarding shell
+
+- Panel descriptions now use the established em dash and backend terminology;
+  the unreachable static wizard body is removed while its server-backed
+  onboarding shell remains, and cut write-back reports the requested cut
+  count.
+
 ### Fixed - Ordered UXP Sequence Index filters
 
 - Sequence Index search, facet, and sort responses now use a monotonic request
