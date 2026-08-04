@@ -30,6 +30,7 @@ import {
 import { bootstrapApplication } from "./uxp-bootstrap.js";
 import { createPremiereThemeSync } from "./uxp-theme.js";
 import { createUxpUiController } from "./uxp-ui-controller.js";
+import { createUxpUpdateController } from "./uxp-update-controller.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -426,11 +427,6 @@ const runtimeState = createUxpState({
   healthBackoffMs: HEALTH_CHECK_MS,
 });
 let BACKEND = runtimeState.backendUrl;
-let uxpUpdateCheckDone = false;
-let uxpUpdateCheckFailed = false;
-let uxpUpdateCheckInFlight = null;
-const UXP_UPDATE_DISMISSED_VERSION_KEY = "opencut_update_dismissed_version";
-let uxpLatestUpdate = null;
 
 async function refreshBackendBaseUrl() {
   const detected = await detectBackend();
@@ -440,228 +436,6 @@ async function refreshBackendBaseUrl() {
   BACKEND = detected;
   runtimeState.backendUrl = detected;
   return BACKEND;
-}
-
-function getDismissedUpdateVersionUxp() {
-  try {
-    return localStorage.getItem(UXP_UPDATE_DISMISSED_VERSION_KEY) || "";
-  } catch (_) {
-    return "";
-  }
-}
-
-function setDismissedUpdateVersionUxp(version) {
-  try {
-    localStorage.setItem(UXP_UPDATE_DISMISSED_VERSION_KEY, String(version || ""));
-  } catch (_) {
-    // UXP storage can be unavailable during host startup. The card remains usable.
-  }
-}
-
-function setUxpUpdateHidden(id, hidden) {
-  const node = document.getElementById(id);
-  if (node) node.hidden = Boolean(hidden);
-}
-
-function formatUxpUpdatePublishedAt(value) {
-  if (!value) return "";
-  try {
-    const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
-  } catch (_) {
-    // Fall through to the server value if the host cannot parse the date.
-  }
-  return String(value);
-}
-
-function renderUpdateNoticeUxp(result, checking = false) {
-  const card = document.getElementById("uxpUpdateNoticeCard");
-  const status = document.getElementById("uxpUpdateStatusText");
-  const summary = document.getElementById("uxpUpdateSummary");
-  const current = document.getElementById("uxpUpdateCurrentVersion");
-  const available = document.getElementById("uxpUpdateAvailableVersion");
-  const releaseName = document.getElementById("uxpUpdateReleaseName");
-  const notes = document.getElementById("uxpUpdateReleaseNotes");
-  const notesDetails = document.getElementById("uxpUpdateNotesDetails");
-  const retry = document.getElementById("uxpUpdateRetryBtn");
-  if (!card || !summary) return;
-
-  const currentVersion = String(result?.current_version || current?.textContent || "—");
-  if (current) current.textContent = currentVersion;
-  if (retry) retry.disabled = Boolean(checking);
-
-  if (checking) {
-    card.dataset.state = "checking";
-    if (status) {
-      status.dataset.state = "working";
-      status.textContent = t("uxp.settings.update_checking", "Checking…");
-    }
-    summary.textContent = t(
-      "uxp.settings.update_checking_summary",
-      "Checking GitHub for the latest OpenCut release.",
-    );
-    setUxpUpdateHidden("uxpUpdateReleaseDetails", true);
-    return;
-  }
-
-  if (!result || result.error || !result.latest_version) {
-    card.dataset.state = "error";
-    if (status) {
-      status.dataset.state = "error";
-      status.textContent = t("uxp.settings.update_unavailable_status", "Unavailable");
-    }
-    summary.textContent = t(
-      "uxp.settings.update_check_failed",
-      "Couldn't check for updates. Use Check again to retry.",
-    );
-    if (available) available.textContent = "—";
-    setUxpUpdateHidden("uxpUpdateReleaseDetails", true);
-    return;
-  }
-
-  const latestVersion = String(result.latest_version);
-  if (available) available.textContent = latestVersion;
-  if (!result.update_available) {
-    card.dataset.state = "current";
-    if (status) {
-      status.dataset.state = "success";
-      status.textContent = t("uxp.settings.update_current_status", "Up to date");
-    }
-    summary.textContent = formatI18n(
-      "uxp.settings.update_up_to_date",
-      "You're up to date on v{version}.",
-      { version: currentVersion },
-    );
-    setUxpUpdateHidden("uxpUpdateReleaseDetails", true);
-    return;
-  }
-
-  if (getDismissedUpdateVersionUxp() === latestVersion) {
-    card.dataset.state = "dismissed";
-    if (status) {
-      status.dataset.state = "neutral";
-      status.textContent = t("uxp.settings.update_dismissed_status", "Dismissed");
-    }
-    summary.textContent = formatI18n(
-      "uxp.settings.update_dismissed",
-      "Update v{version} is dismissed for this panel. A newer release will appear here.",
-      { version: latestVersion },
-    );
-    setUxpUpdateHidden("uxpUpdateReleaseDetails", true);
-    return;
-  }
-
-  card.dataset.state = "available";
-  if (status) {
-    status.dataset.state = "warning";
-    status.textContent = t("uxp.settings.update_available_status", "Update available");
-  }
-  let availableSummary = formatI18n(
-    "uxp.settings.update_available_summary",
-    "OpenCut v{version} is available. Review the release notes before opening GitHub.",
-    { version: latestVersion },
-  );
-  const published = formatUxpUpdatePublishedAt(result.published_at);
-  if (published) {
-    availableSummary += ` ${formatI18n(
-      "uxp.settings.update_published_at",
-      "Published {date}.",
-      { date: published },
-    )}`;
-  }
-  summary.textContent = availableSummary;
-  if (releaseName) releaseName.textContent = result.release_name || `OpenCut ${latestVersion}`;
-  if (notes) notes.textContent = result.release_notes || t(
-    "uxp.settings.update_no_release_notes",
-    "No release notes were published.",
-  );
-  if (notesDetails) notesDetails.hidden = !result.release_notes;
-  setUxpUpdateHidden("uxpUpdateReleaseDetails", false);
-}
-
-async function openUpdateReleaseUxp() {
-  const releaseUrl = normalizeReleaseUrl(uxpLatestUpdate?.release_url);
-  if (!releaseUrl) {
-    UIController.showToast(t("uxp.settings.update_invalid_release", "The release link could not be verified."), "error");
-    return false;
-  }
-  const opened = await openHttpsExternalUrl(
-    releaseUrl,
-    t("uxp.settings.update_opening_release", "Opening the verified release page in your browser"),
-  );
-  if (opened) UIController.showToast(t("uxp.settings.update_opened", "Release page opened."), "success");
-  return opened;
-}
-
-function dismissUpdateNoticeUxp() {
-  if (!uxpLatestUpdate?.latest_version) return;
-  const version = String(uxpLatestUpdate.latest_version);
-  setDismissedUpdateVersionUxp(version);
-  renderUpdateNoticeUxp(uxpLatestUpdate);
-  UIController.showToast(formatI18n(
-    "uxp.settings.update_dismissed_toast",
-    "Update v{version} dismissed until a newer release is available.",
-    { version },
-  ), "info");
-}
-
-async function checkForUpdatesUxp({ force = false } = {}) {
-  if (!force && (uxpUpdateCheckDone || uxpUpdateCheckFailed)) {
-    return uxpUpdateCheckDone;
-  }
-  if (uxpUpdateCheckInFlight) return uxpUpdateCheckInFlight;
-
-  uxpUpdateCheckInFlight = (async () => {
-    renderUpdateNoticeUxp(null, true);
-    UIController.setStatus(t("uxp.status.update_checking", "Checking for updates..."), "working");
-    let result;
-    try {
-      result = await BackendClient.get("/system/update-check");
-    } catch (error) {
-      result = { ok: false, error: error?.message || "offline", data: null };
-    }
-
-    const data = result?.data;
-    if (!result?.ok || !data || data.error || !data.latest_version) {
-      uxpUpdateCheckDone = false;
-      uxpUpdateCheckFailed = true;
-      const message = t(
-        "uxp.status.update_check_failed",
-        "Couldn't check for updates. Use Refresh to try again."
-      );
-      UIController.setStatus(message, "error");
-      UIController.showToast({
-        title: t("uxp.status.update_check_failed_title", "Couldn't check for updates"),
-        message,
-        type: "error",
-        duration: 0,
-      });
-      renderUpdateNoticeUxp(data || { error: "offline" });
-      return false;
-    }
-
-    uxpUpdateCheckDone = true;
-    uxpUpdateCheckFailed = false;
-    uxpLatestUpdate = data;
-    renderUpdateNoticeUxp(data);
-    UIController.setStatus(t("uxp.status.backend_connected", "OpenCut backend connected."), "success");
-    if (data.update_available && getDismissedUpdateVersionUxp() !== String(data.latest_version)) {
-      UIController.showToast(
-        formatI18n(
-          "uxp.status.update_available",
-          "OpenCut v{version} available - visit GitHub to update",
-          { version: data.latest_version }
-        ),
-        "info",
-        6000
-      );
-    }
-    return true;
-  })().finally(() => {
-    uxpUpdateCheckInFlight = null;
-  });
-
-  return uxpUpdateCheckInFlight;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2302,6 +2076,19 @@ const UIController = createUxpUiController({
   getWorkspaceTitle,
   onQuickActionStateChange: syncQuickActionButtons,
   escapeHtmlValue: escapeHtmlForUiController,
+});
+
+const UxpUpdateController = createUxpUpdateController({
+  documentRef: document,
+  windowRef: window,
+  client: BackendClient,
+  translate: t,
+  formatTranslate: formatI18n,
+  normalizeReleaseUrl,
+  openExternalUrl: openHttpsExternalUrl,
+  setStatus: (message, tone) => UIController.setStatus(message, tone),
+  showToast: (...args) => UIController.showToast(...args),
+  currentVersion: VERSION,
 });
 
 function clearButtonLoadingStates() {
@@ -6758,18 +6545,11 @@ function bindEvents() {
   });
 
   // ── Refresh button ──
-  document.getElementById("refreshBtn")?.addEventListener("click", async () => {
-    const alive = await checkConnection({ rescan: true });
-    if (alive) await checkForUpdatesUxp({ force: true });
-  });
-  document.getElementById("uxpUpdateRetryBtn")?.addEventListener("click", () => {
-    void checkForUpdatesUxp({ force: true });
-  });
-  document.getElementById("uxpUpdateOpenBtn")?.addEventListener("click", () => {
-    void openUpdateReleaseUxp();
-  });
-  document.getElementById("uxpUpdateDismissBtn")?.addEventListener("click", () => {
-    dismissUpdateNoticeUxp();
+  UxpUpdateController.bind({
+    onRefresh: async () => {
+      const alive = await checkConnection({ rescan: true });
+      if (alive) await UxpUpdateController.checkForUpdates({ force: true });
+    },
   });
   document.querySelectorAll("[data-quick-action]").forEach((btn) => {
     btn.addEventListener("click", (event) => {
@@ -9383,6 +9163,7 @@ async function initApp() {
   window.addEventListener("beforeunload", () => {
     UXPThemeSync.dispose();
     UIController.dispose();
+    UxpUpdateController.dispose();
     JobPoller.closeSse();
     stopMediaScanInterval();
   }, { once: true });
@@ -9450,7 +9231,7 @@ async function initApp() {
 
     // One-time update check. A failed check stays retryable from either
     // visible Refresh control instead of being silently treated as current.
-    await checkForUpdatesUxp();
+    await UxpUpdateController.checkForUpdates();
   } else {
     await refreshFootageIndexStats({ silent: true });
   }
