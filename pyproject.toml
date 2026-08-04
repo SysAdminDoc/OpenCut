@@ -135,6 +135,13 @@ nemo-asr = [
     "picklescan>=1.0.3; sys_platform == 'linux'",
 ]
 auto-edit = [
+    # LEGACY ONLY. Upstream rewrote auto-editor in Nim and stopped publishing
+    # to PyPI at 29.3.1 (2025-11-04), so this pin is frozen and receives no
+    # fixes: partial-lossless GOP-copy rendering, linked dissolve transitions,
+    # Parakeet TDT word timestamps, and MLT export ship only in the native
+    # binary. OpenCut resolves that binary first (OPENCUT_AUTO_EDITOR, then a
+    # bundled copy, then PATH) and only falls back to this package.
+    # Native builds: https://github.com/WyattBlue/auto-editor/releases
     "auto-editor>=29.3,<30",
 ]
 scene-ml = [
@@ -209,6 +216,8 @@ all = [
     "rembg>=2.0,<3",
     "insightface>=0.7,<1",
     "onnxruntime>=1.26,<2",
+    # Legacy-only; see the [auto-edit] extra for why the native binary is
+    # the supported path.
     "auto-editor>=29.3,<30",
     "opentimelineio>=0.17,<1",
     "otio-aaf-adapter>=2.0,<3",

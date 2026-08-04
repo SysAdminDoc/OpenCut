@@ -60,13 +60,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Acceptance: A cut list above a configurable threshold is written as a timeline interchange import instead of per-clip razors; a fixture with 1,000 cuts across 1V/2A round-trips with in/out points and all audio tracks intact; the toast reports cuts requested, not clip-removals.
   Complexity: L
 
-- [ ] P2 — Retire the dead `auto-editor` pip pin
-  Why: The pinned branch is nine months stale and upstream left PyPI, so every 2026 capability — partial-lossless GOP-copy rendering, linked dissolve transitions, Parakeet TDT word timestamps, MLT export — is unreachable.
-  Evidence: `pyproject.toml` pins `auto-editor>=29.3,<30`; PyPI's last release is 29.3.1 (2025-11-04). Upstream was rewritten in Nim and now ships prebuilt native binaries. Positioning note for the docs: distributed builds now gate rendering above 3200×1800 and all professional-NLE export behind a licence key while the repository stays Unlicense.
-  Touches: `pyproject.toml`, `requirements.txt`, `opencut/core/auto_edit.py` (binary resolution, same pattern as `get_ffmpeg_path()`), `opencut/checks.py`, `docs/MODELS.md`, installer optional-tools step.
-  Acceptance: The integration resolves a bundled or system `auto-editor` binary with a version probe and a clear message when absent; the pip pin is removed or documented as legacy-only; a test asserts the resolver prefers the native binary.
-  Complexity: M
-
 - [ ] P2 — Make the CEP panel build a real bundle
   Why: The shipped artifact is a byte-identical copy of the 18,360-line source, so a Chromium-99 runtime parses unbundled, unminified source on every panel open.
   Evidence: `extension/com.opencut.panel/client/dist/main.js` and `client/main.js` have identical MD5 (`5282cc69…`) and identical line counts, despite `vite.config.mjs` and a `build` script in `extension/com.opencut.panel/package.json`.

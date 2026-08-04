@@ -3,6 +3,18 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Changed - auto-editor resolves the native binary
+
+- Upstream rewrote auto-editor in Nim and stopped publishing to PyPI at 29.3.1
+  (2025-11-04), so the pinned package receives no fixes and none of the 2026
+  capabilities. OpenCut now resolves the native binary through
+  `OPENCUT_AUTO_EDITOR`, then `~/.opencut/bin`, then `PATH`, and only falls
+  back to the frozen pip package.
+- The availability check honors the same resolution, so a machine with the
+  binary and no pip package reports the feature as available. The "not
+  installed" message names the download and the environment variable, and the
+  pip pin is documented as legacy-only.
+
 ### Changed - Stem separation defaults to a maintained backend
 
 - `python-audio-separator` (Mel-Band / BS-RoFormer, SCNet, MDX23C) is declared

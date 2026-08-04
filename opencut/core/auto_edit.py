@@ -59,19 +59,75 @@ class AutoEditResult:
 # ---------------------------------------------------------------------------
 # Availability
 # ---------------------------------------------------------------------------
+INSTALL_HINT = (
+    "auto-editor was rewritten in Nim and left PyPI at 29.3.1 (2025-11-04); "
+    "every 2026 capability ships only in the native binary. Download it from "
+    "https://github.com/WyattBlue/auto-editor/releases and put it on PATH, "
+    "drop it in ~/.opencut/bin, or point OPENCUT_AUTO_EDITOR at it. "
+    'The frozen pip package (pip install "auto-editor>=29.3,<30") still works '
+    "but receives no fixes."
+)
+
+# Where a bundled binary may live, in resolution order after the env override.
+# Mirrors the ffmpeg convention: an explicitly provisioned copy beats PATH,
+# and PATH beats the frozen pip package.
+_BUNDLED_SUBDIRS = ("bin", "auto-editor")
+
+
+def _binary_names():
+    return ("auto-editor.exe", "auto-editor") if os.name == "nt" else ("auto-editor",)
+
+
+def _bundled_auto_editor():
+    """An auto-editor binary provisioned alongside OpenCut, if there is one."""
+    roots = [
+        os.path.join(os.path.expanduser("~"), ".opencut"),
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ]
+    for root in roots:
+        for subdir in _BUNDLED_SUBDIRS:
+            for name in _binary_names():
+                candidate = os.path.join(root, subdir, name)
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    return candidate
+    return None
+
+
+def resolve_auto_editor_binary():
+    """Path to the native auto-editor binary, or None.
+
+    Order: ``OPENCUT_AUTO_EDITOR`` env override, a bundled copy, then PATH.
+    The frozen pip package is deliberately not considered here - it is the
+    last-resort fallback in :func:`_find_auto_editor`, never the preference.
+    """
+    override = os.environ.get("OPENCUT_AUTO_EDITOR", "").strip().strip('"')
+    if override:
+        if os.path.isfile(override):
+            return override
+        logger.warning(
+            "OPENCUT_AUTO_EDITOR points at %s, which is not a file; ignoring", override
+        )
+
+    bundled = _bundled_auto_editor()
+    if bundled:
+        return bundled
+
+    return shutil.which("auto-editor")
+
+
 def _find_auto_editor():
     """
-    Find auto-editor binary. Prefers native Nim binary (v30+) over pip package (v29.x).
+    Find auto-editor. Prefers the native Nim binary (v30+) over the frozen pip
+    package (v29.x), which upstream stopped publishing on 2025-11-04.
 
     Returns:
         List of command tokens, e.g. ["C:/path/auto-editor.exe"] or
         ["python", "-m", "auto_editor"].
     """
-    # Check for native Nim binary first (v30+)
-    native = shutil.which("auto-editor")
+    native = resolve_auto_editor_binary()
     if native:
         return [native]
-    # Fallback to legacy pip package (v29.x)
+    # Last resort: the frozen pip package (v29.x), which receives no fixes.
     return [sys.executable, "-m", "auto_editor"]
 
 
@@ -123,7 +179,7 @@ def detect_auto_editor_generation():
         native (bool), path (str|None).
     """
     result = {"version": None, "generation": None, "native": False, "path": None}
-    native = shutil.which("auto-editor")
+    native = resolve_auto_editor_binary()
     if native:
         result["path"] = native
         result["native"] = True
@@ -337,11 +393,7 @@ def auto_edit(
     # Verify auto-editor is available
     version = check_auto_editor_version()
     if version is None:
-        raise RuntimeError(
-            "auto-editor not found. Install the native binary (v30+) from "
-            "https://github.com/WyattBlue/auto-editor/releases or the pip "
-            "package (v29.x): pip install auto-editor"
-        )
+        raise RuntimeError(f"auto-editor not found. {INSTALL_HINT}")
 
     if on_progress:
         on_progress(5, f"auto-editor {version} found, preparing...")

@@ -229,11 +229,8 @@ def video_auto_edit(job_id, filepath, data):
     """Run auto-editor to detect interesting segments by motion/audio."""
     from opencut.checks import check_auto_editor_available
     if not check_auto_editor_available():
-        raise ValueError(
-            "auto-editor not installed. Install the native binary (v30+) from "
-            "https://github.com/WyattBlue/auto-editor/releases or the pip "
-            "package (v29.x): pip install auto-editor"
-        )
+        from opencut.core.auto_edit import INSTALL_HINT
+        raise ValueError(f"auto-editor not installed. {INSTALL_HINT}")
     method = data.get("method", "motion").strip()
     if method not in ("motion", "audio", "both"):
         method = "motion"

@@ -202,11 +202,17 @@ def check_scenedetect_available():
 def check_auto_editor_available():
     """Check if auto-editor (motion-based editing) is available.
 
-    Checks for native Nim binary (v30+) on PATH first, then falls back
-    to the legacy pip package (v29.x).
+    Resolves the native Nim binary (v30+) via OPENCUT_AUTO_EDITOR, a bundled
+    copy, then PATH, and falls back to the frozen pip package (v29.x), which
+    upstream stopped publishing on 2025-11-04.
     """
-    import shutil
-    return shutil.which("auto-editor") is not None or _try_import("auto_editor") is not None
+    try:
+        from opencut.core.auto_edit import resolve_auto_editor_binary
+    except ImportError:
+        resolve_auto_editor_binary = None
+    if resolve_auto_editor_binary is not None and resolve_auto_editor_binary():
+        return True
+    return _try_import("auto_editor") is not None
 
 
 def check_transnetv2_available():
