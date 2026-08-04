@@ -35,7 +35,12 @@ TIMECODE_TOLERANCE_FRAMES = 2
 
 
 def ffmpeg_available() -> bool:
-    return bool(get_ffmpeg_path()) and bool(get_ffprobe_path())
+    try:
+        return bool(get_ffmpeg_path()) and bool(get_ffprobe_path())
+    except (OSError, RuntimeError):
+        # A missing or below-floor binary makes this optional integration
+        # corpus unavailable; it must not abort test collection.
+        return False
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess:
