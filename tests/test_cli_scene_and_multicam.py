@@ -191,3 +191,38 @@ class TestMulticamCutNormalization:
         # 7.5s at 30fps: the sequence is not the zero-length one the old
         # `.get("end", 0)` path produced.
         assert "<duration>225</duration>" in result["xml"]
+
+
+def test_auto_zoom_cli_apply_uses_shared_tracking_filter(tmp_path, monkeypatch):
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"fake")
+    keyframes = {
+        "fps": 24.0,
+        "keyframes": [
+            {"time": 0.0, "scale": 1.0, "anchor_x": 0.82, "anchor_y": 0.76},
+        ],
+    }
+    captured = {}
+
+    monkeypatch.setattr(
+        "opencut.core.auto_zoom.generate_zoom_keyframes",
+        lambda *_args, **_kwargs: keyframes,
+    )
+
+    def fake_filter(samples, width, height, fps):
+        captured["args"] = (samples, width, height, fps)
+        return "tracked-zoompan"
+
+    monkeypatch.setattr("opencut.core.auto_zoom.build_zoompan_filter", fake_filter)
+    monkeypatch.setattr(
+        "opencut.helpers.get_video_info",
+        lambda _path: {"width": 1920, "height": 1080, "fps": 24.0},
+    )
+    monkeypatch.setattr("opencut.helpers.get_ffmpeg_path", lambda: "ffmpeg")
+    monkeypatch.setattr("opencut.helpers.run_ffmpeg", lambda command: captured.update(command=command))
+
+    result = CliRunner().invoke(cli_module.cli, ["auto-zoom", str(clip), "--apply"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"] == (keyframes["keyframes"], 1920, 1080, keyframes["fps"])
+    assert "tracked-zoompan" in captured["command"]

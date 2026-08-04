@@ -506,22 +506,21 @@ def video_auto_zoom(job_id, filepath, data):
         # Build FFmpeg zoompan filter from keyframes
         kf_data = keyframes.get("keyframes", []) if isinstance(keyframes, dict) else keyframes if isinstance(keyframes, list) else []
         if kf_data:
-            # zoompan: z='zoom_expr':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'
-            zoom_val = zoom_amount
             # Get source dimensions via probe
             src_w, src_h = 1920, 1080
+            source_fps = keyframes.get("fps", 30.0) if isinstance(keyframes, dict) else 30.0
             try:
                 from opencut.helpers import get_video_info
                 info = get_video_info(filepath)
                 if info and info.get("width"):
                     src_w = int(info["width"])
                     src_h = int(info["height"])
+                if not isinstance(keyframes, dict) and info and info.get("fps"):
+                    source_fps = info["fps"]
             except Exception:
                 pass
-            zoompan_filter = (
-                f"zoompan=z='min(zoom+0.0015,{zoom_val})'"
-                f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
-                f":d=1:s={src_w}x{src_h}"
+            zoompan_filter = auto_zoom.build_zoompan_filter(
+                kf_data, src_w, src_h, source_fps
             )
             cmd = [
                 get_ffmpeg_path(), "-y", "-i", filepath,

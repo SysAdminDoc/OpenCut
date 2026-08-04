@@ -31,6 +31,11 @@ record also lives in the git commit messages.
   plugin API they support, and the timecode filter probes the source frame
   rate instead of assuming 25 fps.
 
+### Fixed - Tracked auto-zoom application
+
+- CLI and REST auto-zoom application now share a keyframed FFmpeg filter that
+  interpolates tracked zoom anchors and keeps the detected subject in frame.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter

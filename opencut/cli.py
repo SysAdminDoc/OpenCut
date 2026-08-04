@@ -1274,7 +1274,7 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
     print_banner()
 
     try:
-        from .core.auto_zoom import generate_zoom_keyframes
+        from .core.auto_zoom import build_zoompan_filter, generate_zoom_keyframes
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         console.print("Ensure opencv-python is installed: pip install opencv-python")
@@ -1313,14 +1313,14 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
         fps = info.get("fps", 30)
         output_path = f"{base}_autozoom{ext}"
         console.print("[bold]Applying zoom to video...[/bold]")
-        # Build zoompan filter — simplified: use first keyframe zoom for now
-        zoom_val = keyframes[0].get("zoom", zoom_amount) if keyframes else zoom_amount
         w = info.get("width", 1920)
         h = info.get("height", 1080)
+        source_fps = result.get("fps", fps) if isinstance(result, dict) else fps
+        zoompan_filter = build_zoompan_filter(keyframes, w, h, source_fps)
         run_ffmpeg([
             get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", file,
-            "-vf", f"zoompan=z={zoom_val}:d=1:s={w}x{h}:fps={fps}",
+            "-vf", zoompan_filter,
             "-c:a", "copy", output_path,
         ])
         console.print(f"\n[green bold]Saved:[/green bold] {output_path}\n")
