@@ -2255,6 +2255,48 @@ html body #captionDisplaySettingsCard select:disabled {
    loads, so they win the cascade against the command-center sheets that
    follow style.css. */
 
+/* Light-theme contrast corrections for the compact command-center overrides.
+   These selectors intentionally outrank the legacy panel-specific dark
+   treatment in style.css while keeping the command-center tokens as the
+   single source of truth for the light palette. */
+html.theme-light body .workspace-stage-actions .stage-action:first-child {
+  color: #ffffff;
+}
+
+html.theme-light body:not(.has-clip) #panel-cut.active .sub-tabs,
+html.theme-light body:not(.has-clip) #panel-captions.active .sub-tabs,
+html.theme-light body:not(.has-clip) #panel-audio.active .sub-tabs,
+html.theme-light body:not(.has-clip) #panel-video.active .sub-tabs,
+html.theme-light body:not(.has-clip) #panel-export.active .sub-tabs {
+  background: var(--cc-sidebar);
+  border-color: var(--cc-border);
+  box-shadow: none;
+}
+
+html.theme-light body:not(.has-clip) #panel-cut.active .sub-tab.active,
+html.theme-light body:not(.has-clip) #panel-captions.active .sub-tab.active,
+html.theme-light body:not(.has-clip) #panel-audio.active .sub-tab.active,
+html.theme-light body:not(.has-clip) #panel-video.active .sub-tab.active,
+html.theme-light body:not(.has-clip) #panel-export.active .sub-tab.active {
+  background: var(--cc-selected);
+  border-bottom-color: var(--cc-accent);
+  color: var(--cc-text);
+}
+
+html.theme-light body .footer-toggle-btn .toggle-count {
+  background: var(--cc-control);
+  border-color: var(--cc-border);
+  color: var(--cc-muted);
+}
+
+html.theme-light body #fccComplianceNotice a {
+    color: var(--neon-cyan);
+}
+
+html.theme-light body .oc-wave-h-note {
+    color: var(--cc-muted);
+}
+
 /* ==========================================================================
    Windows High Contrast / forced-colors
    --------------------------------------------------------------------------

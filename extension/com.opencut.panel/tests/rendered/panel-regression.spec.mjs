@@ -1,7 +1,35 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 
 const THEMES = ["dark", "light", "auto"];
+const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+// Every exception must be a narrowly scoped selector with a rule id and a
+// reviewable reason. Keep this registry empty unless a production fixture has
+// a documented, non-actionable host limitation.
+const WCAG_SUPPRESSIONS = [];
+
+function formatWcagViolations(violations) {
+  return violations.map(({ id, impact, help, nodes }) => ({
+    id,
+    impact,
+    help,
+    targets: nodes.map((node) => node.target),
+  }));
+}
+
+async function assertWcagCompliance(page, stateName) {
+  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  for (const suppression of WCAG_SUPPRESSIONS) {
+    builder = builder.exclude(suppression.selector);
+  }
+  const results = await builder.analyze();
+  expect(
+    formatWcagViolations(results.violations),
+    `${stateName} WCAG 2.2 AA violations`,
+  ).toEqual([]);
+}
 const BREAKPOINT_BOUNDARIES = {
   // These are the layout transitions used by the production command-center
   // styles. UXP's 820px max-width rule hands off to the 821px min-width rule,
@@ -988,6 +1016,10 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
             await visibleControlsWithoutNames(page),
             `unnamed controls in ${surfaceName}/${tabName}`,
           ).toEqual([]);
+          await assertWcagCompliance(
+            page,
+            `${surfaceName}/${theme}/${width}/${tabName || index}`,
+          );
         }
 
         expect(pageErrors).toEqual([]);

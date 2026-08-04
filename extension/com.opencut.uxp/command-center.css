@@ -2596,3 +2596,32 @@ html body .oc-icon-btn:disabled {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Keep the legacy narrow-panel refinements from reintroducing dark-theme
+   ink into the light UXP surface. */
+html.theme-light body #workspaceGuideKicker {
+  background: rgba(168, 63, 60, 0.08);
+  border-color: rgba(168, 63, 60, 0.24);
+  color: var(--cc-danger);
+}
+
+html.theme-light body .oc-slider-row .oc-label,
+html.theme-light body .oc-field-row .oc-label {
+  color: var(--cc-text);
+}
+
+html.theme-light body .oc-slider-val {
+  color: var(--cc-text);
+}
+
+html.theme-light body .oc-workspace-meta-label {
+  color: var(--cc-muted);
+}
+
+html.theme-light body .oc-workspace-meta-value {
+  color: var(--cc-text);
+}
+
+html.theme-light body .oc-settings-nav-item.active {
+  color: #315dbd;
+}
