@@ -175,11 +175,17 @@ def _get_onnx_session(model_path: str) -> "onnxruntime.InferenceSession":
 
     import onnxruntime as ort
 
-    providers = []
     available = ort.get_available_providers()
-    if "CUDAExecutionProvider" in available:
-        providers.append("CUDAExecutionProvider")
-    providers.append("CPUExecutionProvider")
+    from opencut.gpu import selected_onnx_providers
+
+    providers = [
+        provider for provider in selected_onnx_providers()
+        if provider == "CPUExecutionProvider"
+        or (isinstance(provider, tuple) and provider[0] in available)
+        or (isinstance(provider, str) and provider in available)
+    ]
+    if "CPUExecutionProvider" not in providers:
+        providers.append("CPUExecutionProvider")
 
     session = ort.InferenceSession(model_path, providers=providers)
     _onnx_session_cache[model_path] = session

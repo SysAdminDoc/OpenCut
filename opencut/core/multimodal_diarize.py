@@ -137,8 +137,11 @@ def _extract_face_segments(
 
         try:
             from insightface.app import FaceAnalysis
-            app = FaceAnalysis(providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-            app.prepare(ctx_id=0, det_size=(640, 640))
+            from opencut.gpu import get_device_index, selected_onnx_providers
+
+            gpu_index = get_device_index()
+            app = FaceAnalysis(providers=selected_onnx_providers())
+            app.prepare(ctx_id=gpu_index if gpu_index is not None else -1, det_size=(640, 640))
             detector = app
             backend = "insightface"
             logger.debug("Using InsightFace for face detection + embedding")

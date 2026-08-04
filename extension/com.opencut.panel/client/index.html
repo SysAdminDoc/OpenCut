@@ -3663,6 +3663,13 @@
                         <span class="settings-label" data-i18n="settings.system_vram_label">VRAM</span>
                         <span class="settings-value" id="gpuVram">--</span>
                     </div>
+                    <div class="form-group mt-md">
+                        <label for="gpuDeviceSelect" data-i18n="settings.gpu_adapter_label">GPU adapter</label>
+                        <select id="gpuDeviceSelect" aria-describedby="gpuSelectionStatus">
+                            <option value="auto" data-i18n="settings.gpu_adapter_auto">Auto (recommended)</option>
+                        </select>
+                    </div>
+                    <div class="oc-status-line mt-xs" id="gpuSelectionStatus" role="status" aria-live="polite" data-i18n="settings.gpu_adapter_checking">Checking GPU adapters...</div>
                     <div class="settings-row">
                         <span class="settings-label" data-i18n="settings.system_backend_label">Backend</span>
                         <span class="settings-value" id="backendPort">--</span>
@@ -4272,6 +4279,7 @@
     <script src="update-controller.js"></script>
     <script src="results-controller.js"></script>
     <script src="settings-diagnostics-controller.js"></script>
+    <script src="gpu-selection-controller.js"></script>
     <script src="navigation-controller.js"></script>
     <script src="bootstrap.js"></script>
     <script src="transcript-correction-controller.js"></script>

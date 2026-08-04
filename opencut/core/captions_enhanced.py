@@ -204,6 +204,10 @@ def whisperx_transcribe(
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        from opencut.gpu import activate_selected_gpu
+
+        activate_selected_gpu(torch_module=torch)
     compute_type = "float16" if device == "cuda" else "int8"
 
     if on_progress:
@@ -399,7 +403,9 @@ def translate_text(
     if on_progress:
         on_progress(30, "Loading translation model...")
 
-    translator = ctranslate2.Translator(model_dir, device="auto")
+    from opencut.gpu import selected_ct2_device_kwargs
+
+    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
     try:
         sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
 
@@ -478,7 +484,9 @@ def translate_segments(
     if on_progress:
         on_progress(20, "Loading translation model...")
 
-    translator = ctranslate2.Translator(model_dir, device="auto")
+    from opencut.gpu import selected_ct2_device_kwargs
+
+    translator = ctranslate2.Translator(model_dir, **selected_ct2_device_kwargs())
     try:
         sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
         if not os.path.isfile(sp_path):
@@ -556,6 +564,10 @@ def translate_text_seamless(
     from transformers import AutoProcessor, SeamlessM4Tv2ForTextToText
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        from opencut.gpu import activate_selected_gpu
+
+        activate_selected_gpu(torch_module=torch)
     model_id = "facebook/seamless-m4t-v2-large"
 
     processor = AutoProcessor.from_pretrained(model_id)
@@ -619,6 +631,10 @@ def translate_segments_auto(
         from transformers import AutoProcessor, SeamlessM4Tv2ForTextToText
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda":
+            from opencut.gpu import activate_selected_gpu
+
+            activate_selected_gpu(torch_module=torch)
         model_id = "facebook/seamless-m4t-v2-large"
 
         processor = AutoProcessor.from_pretrained(model_id)

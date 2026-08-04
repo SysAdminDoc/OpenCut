@@ -1009,6 +1009,12 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     except Exception as exc:  # noqa: BLE001 - diagnostics only
                         logger.debug("Failed to start resource sampler for %s: %s", job_id, exc)
                         resource_sampler = None
+                    # CUDA's active device is thread-local. Apply the
+                    # persisted adapter after the worker thread starts and
+                    # before any route-specific model import or inference.
+                    from opencut.gpu import activate_selected_gpu
+
+                    activate_selected_gpu()
                     result = f(job_id, filepath, data)
                     resource_update = _stop_resource_sampler(resource_sampler)
                     resource_sampler = None

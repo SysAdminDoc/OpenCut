@@ -165,7 +165,9 @@ def _deflicker_neural_onnx(frame_paths: List[str], on_progress) -> None:
     from PIL import Image
 
     onnx_path = os.environ["OPENCUT_DEFLICKER_ONNX"]
-    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    from opencut.gpu import selected_onnx_providers
+
+    providers = selected_onnx_providers()
     sess = ort.InferenceSession(onnx_path, providers=providers)
     input_name = sess.get_inputs()[0].name
 

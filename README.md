@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1557-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1558-orange)
 ![Tests](https://img.shields.io/badge/Tests-13100+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
@@ -15,8 +15,8 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
-> surface map: **271 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
-> while **1,286 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> surface map: **273 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
+> while **1,285 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
@@ -266,7 +266,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,557 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **271** have literal first-party panel, palette, CLI, and curated MCP references; **1,286 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.46.0 includes **1,558 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **273** have literal first-party panel, palette, CLI, and curated MCP references; **1,285 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -466,6 +466,7 @@ without returning transcript text.
 | Keyboard Shortcuts | Configurable shortcuts with reference card (Ctrl+Shift+S for silence, etc.) |
 | Quick Action Buttons | One-click workflows on Cut, Captions, Audio, and Video tabs |
 | Status Bar | Live system health, GPU usage, uptime, and job count |
+| GPU Adapter Selection | Choose and persist a CUDA adapter in CEP/UXP Settings; selection and available devices are exposed through `/system/status` and `/system/gpu` | CUDA / nvidia-smi |
 | i18n | Internationalization system with extensible locale files (417 keys) |
 | Responsive Layout | 4 breakpoints for compact panels (800px, 480px, 440px, 380px) |
 | Context-Aware Guidance | Clip-specific recommendations and smart tab reordering |
@@ -500,7 +501,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,557 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,558 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -613,7 +614,7 @@ inference is Linux-only.
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support.
+GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancellation support. Choose the active CUDA adapter from the CEP or UXP Settings panel, or set `OPENCUT_GPU_INDEX` to a non-negative device index before starting the server. The selected adapter is reported by `/system/status`; invalid indexes return the available-device list instead of silently falling back.
 
 ---
 
@@ -624,6 +625,7 @@ GPU-heavy routes have built-in rate limiting (one GPU job at a time) and cancell
 | `OPENCUT_PORT` | `5679` | Server port |
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
+| `OPENCUT_GPU_INDEX` | unset (Auto) | CUDA adapter index for GPU-backed operations; the Settings panel can persist the same selection |
 | `OPENCUT_LOCAL_ONLY` | `0` | Set to `1` to deny all non-loopback outbound network access before DNS, socket, browser-launch, or network-capable subprocess I/O |
 | `OPENCUT_ALLOW_REMOTE` | `0` | Set to `1` to permit a non-loopback bind; remote requests require the OS-vault or secure secret-file token |
 | `OPENCUT_TRUSTED_HOSTS` | unset | Comma-separated hostnames this server answers for, beyond loopback and `OPENCUT_HOST`. Any other `Host` header is rejected with `UNTRUSTED_HOST` before auth, CSRF, or `/health` runs, which blocks DNS rebinding. A leading dot (`.studio.lan`) trusts that subtree |
@@ -869,7 +871,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-13,100+ estimated tests across 328 root test files covering route smoke tests,
+13,100+ estimated tests across 329 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -938,7 +940,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (13,100+ estimated tests, 328 root test files)
+tests/               # pytest test suite (13,100+ estimated tests, 329 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

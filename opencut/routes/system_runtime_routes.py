@@ -4,6 +4,7 @@ __all__ = [
     "shutdown_server",
     "media_info",
     "system_gpu",
+    "select_system_gpu",
     "system_status",
     "gpu_recommend",
     "check_dependencies",
@@ -35,6 +36,7 @@ from .system import (
     time,
     validate_filepath,
 )
+from opencut.gpu import GPUSelectionError, gpu_selection_status, save_gpu_selection
 
 
 # ---------------------------------------------------------------------------
@@ -149,27 +151,30 @@ _GPU_CACHE_TTL = 30  # seconds
 
 
 def _detect_gpu():
-    """Detect GPU via nvidia-smi with 30s cache."""
+    """Detect all GPUs and annotate the configured adapter with 30s cache."""
     now = time.time()
     with _gpu_cache_lock:
         if _gpu_cache["info"] is not None and (now - _gpu_cache["ts"]) < _GPU_CACHE_TTL:
             return dict(_gpu_cache["info"])
-    gpu_info = {"available": False, "name": "None", "vram_mb": 0}
-    try:
-        result = _sp.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5, check=False,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            line = result.stdout.strip().split("\n")[0]  # First GPU only
-            # Use rsplit to handle GPU names containing commas (e.g. "NVIDIA GeForce RTX 4090, 24564")
-            parts = line.rsplit(",", 1)
-            gpu_info["available"] = True
-            gpu_info["name"] = parts[0].strip()
-            gpu_info["vram_mb"] = safe_int(parts[1].strip()) if len(parts) > 1 else 0
-    except Exception:
-        pass
+    selection = gpu_selection_status()
+    devices = selection.get("devices", [])
+    selected_index = selection.get("selected_index")
+    selected = next(
+        (device for device in devices if device.get("index") == selected_index),
+        None,
+    )
+    gpu_info = {
+        "available": bool(devices),
+        "name": (selected or {}).get("name", "None"),
+        "vram_mb": (selected or {}).get("memory_total_mb", 0),
+        "index": selected_index,
+        "configured_index": selection.get("configured_index"),
+        "selected_index": selected_index,
+        "selection_mode": selection.get("selection_mode", "auto"),
+        "device": selection.get("device", "cpu"),
+        "devices": devices,
+        "selection_error": selection.get("selection_error"),
+    }
     with _gpu_cache_lock:
         _gpu_cache["info"] = dict(gpu_info)
         _gpu_cache["ts"] = now
@@ -182,33 +187,70 @@ def system_gpu():
     return jsonify(_detect_gpu())
 
 
+@system_bp.route("/system/gpu", methods=["POST"])
+@require_csrf
+def select_system_gpu():
+    """Persist and immediately activate a selected CUDA adapter."""
+    try:
+        data = get_json_dict()
+        value = data.get("gpu_index", data.get("index", "auto"))
+        save_gpu_selection(value)
+    except GPUSelectionError as exc:
+        return jsonify(exc.to_dict()), exc.status_code
+    except ValueError as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "INVALID_INPUT",
+            "suggestion": "Send gpu_index as a non-negative integer or auto.",
+        }), 400
+    with _gpu_cache_lock:
+        _gpu_cache["info"] = None
+        _gpu_cache["ts"] = 0
+    with _vram_cache_lock:
+        _vram_cache["used_mb"] = 0
+        _vram_cache["index"] = None
+        _vram_cache["ts"] = 0
+    return jsonify({"success": True, **gpu_selection_status()})
+
+
 # ---------------------------------------------------------------------------
 # System Status (lightweight, polled every 5s by frontend status bar)
 # ---------------------------------------------------------------------------
-_vram_cache = {"used_mb": 0, "ts": 0}
+_vram_cache = {"used_mb": 0, "index": None, "ts": 0}
 _vram_cache_lock = threading.Lock()
 _VRAM_CACHE_TTL = 30  # seconds — same as GPU info cache
 
 
-def _get_vram_used():
+def _get_vram_used(selected_index=None):
     """Get VRAM usage with 30s cache to avoid frequent nvidia-smi calls."""
     now = time.time()
     with _vram_cache_lock:
-        if (now - _vram_cache["ts"]) < _VRAM_CACHE_TTL:
+        if (
+            _vram_cache["index"] == selected_index
+            and (now - _vram_cache["ts"]) < _VRAM_CACHE_TTL
+        ):
             return _vram_cache["used_mb"]
     used = 0
     try:
         result = _sp.run(
-            ["nvidia-smi", "--query-gpu=memory.used",
+            ["nvidia-smi", "--query-gpu=index,memory.used",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=5, check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
-            used = safe_int(result.stdout.strip().split("\n")[0].strip())
+            lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            for line in lines:
+                parts = [part.strip() for part in line.split(",")]
+                if len(parts) < 2:
+                    continue
+                if selected_index is None or safe_int(parts[0]) == selected_index:
+                    used = safe_int(parts[-1])
+                    break
     except Exception:
         pass
     with _vram_cache_lock:
         _vram_cache["used_mb"] = used
+        _vram_cache["index"] = selected_index
         _vram_cache["ts"] = now
     return used
 
@@ -254,8 +296,17 @@ def system_status():
         "vram_used_mb": 0,
         "vram_total_mb": gpu_raw.get("vram_mb", 0),
     }
-    if gpu_raw.get("available"):
-        gpu_info["vram_used_mb"] = _get_vram_used()
+    if gpu_raw.get("available") and gpu_raw.get("selected_index") is not None:
+        gpu_info["vram_used_mb"] = _get_vram_used(gpu_raw.get("selected_index"))
+    gpu_info.update({
+        "index": gpu_raw.get("index"),
+        "configured_index": gpu_raw.get("configured_index"),
+        "selected_index": gpu_raw.get("selected_index"),
+        "selection_mode": gpu_raw.get("selection_mode", "auto"),
+        "device": gpu_raw.get("device", "cpu"),
+        "devices": gpu_raw.get("devices", []),
+        "selection_error": gpu_raw.get("selection_error"),
+    })
 
     # Job counts
     running = 0
@@ -307,6 +358,7 @@ def gpu_recommend():
         "whisper_device": "cpu",
         "caption_quality": "fast",
         "batch_size": 1,
+        "gpu_index": gpu_info.get("selected_index"),
         "notes": []
     }
     if gpu_info["available"]:

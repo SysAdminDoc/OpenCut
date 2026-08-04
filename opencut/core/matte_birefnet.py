@@ -157,7 +157,9 @@ def _postprocess_alpha(mask, src_size):
 
 def _infer_onnx(onnx_path: str, preprocessed):
     import onnxruntime as ort
-    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    from opencut.gpu import selected_onnx_providers
+
+    providers = selected_onnx_providers()
     sess = ort.InferenceSession(onnx_path, providers=providers)
     ort_inputs = {sess.get_inputs()[0].name: preprocessed}
     outs = sess.run(None, ort_inputs)

@@ -846,13 +846,16 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     import os
 
     import whisper
+    from opencut.gpu import get_device
+
+    device = get_device()
 
     # Use bundled model path if available
     download_root = os.environ.get("WHISPER_MODELS_DIR", None)
+    load_kwargs = {"device": device}
     if download_root and os.path.isdir(download_root):
-        model = whisper.load_model(config.model, download_root=download_root)
-    else:
-        model = whisper.load_model(config.model)
+        load_kwargs["download_root"] = download_root
+    model = whisper.load_model(config.model, **load_kwargs)
 
     task = "translate" if config.translate else "transcribe"
     result = model.transcribe(
@@ -992,6 +995,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         pass
 
     # Determine device and compute type
+    device_index = None
     if force_cpu:
         logger.debug("CPU mode enabled via settings - skipping GPU")
         device = "cpu"
@@ -1008,6 +1012,11 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 logger.debug("CUDA not available, using CPU")
                 device = "cpu"
                 compute_type = "int8"
+            else:
+                from opencut.gpu import activate_selected_gpu, get_device_index
+
+                activate_selected_gpu(torch_module=torch)
+                device_index = get_device_index()
         except ImportError:
             # No torch, let faster-whisper decide but be ready to fall back
             pass
@@ -1018,11 +1027,16 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     for attempt in range(max_attempts):
         try:
             logger.debug(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
+            model_kwargs = {
+                "device": device,
+                "compute_type": compute_type,
+                "revision": model_revision,
+            }
+            if device == "cuda" and device_index is not None:
+                model_kwargs["device_index"] = device_index
             model = WhisperModel(
                 config.model,
-                device=device,
-                compute_type=compute_type,
-                revision=model_revision,
+                **model_kwargs,
             )
             break
         except RuntimeError as e:
@@ -1033,6 +1047,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 runtime_fallback_reason = "CUDA model load failed; retried on CPU"
                 device = "cpu"
                 compute_type = "int8"
+                device_index = None
                 model = WhisperModel(
                     config.model,
                     device=device,
@@ -1099,6 +1114,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 runtime_fallback_reason = "CUDA inference failed; retried on CPU"
                 device = "cpu"
                 compute_type = "int8"
+                device_index = None
                 model = WhisperModel(
                     config.model,
                     device=device,

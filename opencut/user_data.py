@@ -31,6 +31,8 @@ TRANSCRIPT_GLOSSARY_FILE = "transcript_glossaries.json"
 TRANSCRIPT_CORRECTION_HISTORY_FILE = "transcript_correction_history.json"
 TRANSCRIPT_GLOSSARY_MAX_RULES = 500
 TRANSCRIPT_CORRECTION_HISTORY_MAX = 25
+GPU_SETTINGS_FILE = "gpu_settings.json"
+GPU_SETTINGS_SCHEMA_VERSION = 1
 
 # Per-file locks to prevent concurrent read-modify-write corruption.
 # Bounded: only OpenCut user-data files should be locked (< 20 files).
@@ -648,6 +650,7 @@ register_config_schema(
     version=WHISPER_SETTINGS_SCHEMA_VERSION,
     migrations={1: _migrate_whisper_settings_v1},
 )
+register_config_schema(GPU_SETTINGS_FILE, version=GPU_SETTINGS_SCHEMA_VERSION)
 
 def load_whisper_settings() -> dict:
     saved = read_user_file_versioned("whisper_settings.json", default=None)
@@ -660,6 +663,27 @@ def save_whisper_settings(settings: dict):
     payload = dict(settings)
     payload["_schema_version"] = WHISPER_SETTINGS_SCHEMA_VERSION
     write_user_file("whisper_settings.json", payload)
+
+
+# GPU selection
+_GPU_DEFAULTS = {"gpu_index": None}
+
+
+def load_gpu_settings() -> dict:
+    """Load the user-selected CUDA adapter, if one has been saved."""
+    saved = read_user_file_versioned(GPU_SETTINGS_FILE, default=None)
+    result = dict(_GPU_DEFAULTS)
+    if isinstance(saved, dict):
+        result.update({key: value for key, value in saved.items() if key != "_schema_version"})
+    return result
+
+
+def save_gpu_settings(settings: dict) -> dict:
+    """Persist GPU selection settings using the standard versioned JSON path."""
+    payload = dict(settings or {})
+    payload["_schema_version"] = GPU_SETTINGS_SCHEMA_VERSION
+    write_user_file(GPU_SETTINGS_FILE, payload)
+    return {key: value for key, value in payload.items() if key != "_schema_version"}
 
 
 # ---------------------------------------------------------------------------

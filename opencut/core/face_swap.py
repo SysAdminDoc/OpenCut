@@ -272,8 +272,11 @@ def swap_face(
     if on_progress:
         on_progress(5, "Loading face analysis model...")
 
-    app = FaceAnalysis(name="buffalo_l", providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
-    app.prepare(ctx_id=0, det_size=(640, 640))
+    from opencut.gpu import get_device_index, selected_onnx_providers
+
+    gpu_index = get_device_index()
+    app = FaceAnalysis(name="buffalo_l", providers=selected_onnx_providers())
+    app.prepare(ctx_id=gpu_index if gpu_index is not None else -1, det_size=(640, 640))
 
     # Load swapper model
     model_dir = os.path.expanduser("~/.opencut/models")

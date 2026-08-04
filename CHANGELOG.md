@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Selectable GPU adapters
+
+- GPU-backed workers and model helpers now honor a persisted CUDA adapter
+  index, with CEP and UXP Settings selectors plus `OPENCUT_GPU_INDEX` for
+  headless startup. `/system/gpu`, `/system/status`, and structured invalid
+  selection errors expose the selected adapter and available-device list.
+
 ## Unreleased - Reachable installs and a stack you can trust
 
 ### Added - Subtitle resynchronisation

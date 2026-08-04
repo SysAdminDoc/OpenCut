@@ -45,6 +45,7 @@ class GPUInfo:
     power_draw_w: float = 0.0
     power_limit_w: float = 0.0
     fan_speed_pct: float = 0.0
+    selected: bool = False
 
     @property
     def memory_used_pct(self) -> float:
@@ -232,15 +233,29 @@ def get_gpu_info(on_progress: Optional[Callable] = None) -> List[GPUInfo]:
 
     gpus = _query_nvidia_smi()
     if gpus:
+        _mark_selected_gpu(gpus)
         if on_progress:
             on_progress(100, "GPU info retrieved")
         return gpus
 
     # Fallback to torch.cuda
     gpus = _query_torch_cuda()
+    _mark_selected_gpu(gpus)
     if on_progress:
         on_progress(100, "GPU info retrieved")
     return gpus
+
+
+def _mark_selected_gpu(gpus: List[GPUInfo]) -> None:
+    """Annotate snapshots with the adapter selected for new GPU work."""
+    try:
+        from opencut.gpu import gpu_selection_status
+
+        selected = gpu_selection_status(devices=[gpu.to_dict() for gpu in gpus]).get("selected_index")
+        for gpu in gpus:
+            gpu.selected = selected is not None and gpu.index == selected
+    except Exception as exc:  # noqa: BLE001 - monitoring must remain best-effort
+        logger.debug("Could not mark selected GPU: %s", exc)
 
 
 def _query_nvidia_smi() -> List[GPUInfo]:
@@ -301,6 +316,9 @@ def _query_torch_cuda() -> List[GPUInfo]:
         import torch
         if not torch.cuda.is_available():
             return []
+        from opencut.gpu import activate_selected_gpu
+
+        activate_selected_gpu(torch_module=torch)
         gpus = []
         for i in range(torch.cuda.device_count()):
             props = torch.cuda.get_device_properties(i)
