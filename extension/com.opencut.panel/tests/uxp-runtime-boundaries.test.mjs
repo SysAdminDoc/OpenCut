@@ -9,6 +9,7 @@ import { createI18nRuntime } from "../../com.opencut.uxp/uxp-i18n.js";
 import { createJobController } from "../../com.opencut.uxp/job-controller.js";
 import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
 import { createUxpUiController } from "../../com.opencut.uxp/uxp-ui-controller.js";
+import { createUxpUpdateController } from "../../com.opencut.uxp/uxp-update-controller.js";
 import {
   buildChatActionRequest,
   buildLoudnessMatchPayload,
@@ -563,17 +564,73 @@ describe("UXP journal restore contract", () => {
 });
 
 describe("UXP update-check boundary", () => {
+  it("renders a failed check, recovers on retry, and opens only the normalized release", async () => {
+    const ids = new Map([
+      ["uxpUpdateNoticeCard", fakeElement()],
+      ["uxpUpdateStatusText", fakeElement()],
+      ["uxpUpdateSummary", fakeElement()],
+      ["uxpUpdateCurrentVersion", fakeElement()],
+      ["uxpUpdateAvailableVersion", fakeElement()],
+      ["uxpUpdateReleaseName", fakeElement()],
+      ["uxpUpdateReleaseNotes", fakeElement()],
+      ["uxpUpdateNotesDetails", fakeElement()],
+      ["uxpUpdateReleaseDetails", fakeElement()],
+      ["uxpUpdateRetryBtn", fakeElement()],
+      ["uxpUpdateOpenBtn", fakeElement()],
+      ["uxpUpdateDismissBtn", fakeElement()],
+    ]);
+    const client = {
+      get: vi.fn()
+        .mockResolvedValueOnce({ ok: false, error: "offline", data: { error: "offline" } })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            current_version: "1.46.0",
+            latest_version: "1.47.0",
+            update_available: true,
+            release_url: "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.47.0",
+            release_name: "OpenCut 1.47.0",
+            release_notes: "Fixes",
+          },
+        }),
+    };
+    const showToast = vi.fn();
+    const openExternalUrl = vi.fn().mockResolvedValue(true);
+    const controller = createUxpUpdateController({
+      documentRef: { getElementById: (id) => ids.get(id) || null },
+      client,
+      showToast,
+      openExternalUrl,
+      normalizeReleaseUrl: (value) => value?.startsWith("https://") ? value : null,
+    });
+
+    await expect(controller.checkForUpdates()).resolves.toBe(false);
+    expect(ids.get("uxpUpdateNoticeCard").dataset.state).toBe("error");
+    await expect(controller.checkForUpdates({ force: true })).resolves.toBe(true);
+    expect(ids.get("uxpUpdateNoticeCard").dataset.state).toBe("available");
+    await expect(controller.openRelease()).resolves.toBe(true);
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      "https://github.com/SysAdminDoc/OpenCut/releases/tag/v1.47.0",
+      expect.any(String),
+    );
+    controller.dispose();
+  });
+
   it("surfaces failed checks and retries from the visible refresh controls", () => {
     const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const update = readFileSync(new URL("../../com.opencut.uxp/uxp-update-controller.js", import.meta.url), "utf8");
     const index = readFileSync(new URL("../../com.opencut.uxp/index.html", import.meta.url), "utf8");
 
-    expect(main).toContain("async function checkForUpdatesUxp");
-    expect(main).toContain("function renderUpdateNoticeUxp");
-    expect(main).toContain("normalizeReleaseUrl(uxpLatestUpdate?.release_url)");
-    expect(main).toContain("function dismissUpdateNoticeUxp()");
-    expect(main).toContain("data.error || !data.latest_version");
-    expect(main).toContain("uxp.status.update_check_failed");
-    expect(main).toContain("await checkForUpdatesUxp({ force: true });");
+    expect(main).toContain('import { createUxpUpdateController } from "./uxp-update-controller.js";');
+    expect(main).toContain("UxpUpdateController.bind");
+    expect(main).toContain("await UxpUpdateController.checkForUpdates({ force: true });");
+    expect(main).toContain("UxpUpdateController.dispose();");
+    expect(update).toContain("async function checkForUpdates");
+    expect(update).toContain("function renderNotice");
+    expect(update).toContain("normalizeReleaseUrl(latestUpdate?.release_url)");
+    expect(update).toContain("function dismissNotice()");
+    expect(update).toContain("data.error || !data.latest_version");
+    expect(update).toContain("uxp.status.update_check_failed");
     expect(index).toContain('id="refreshBtn"');
     expect(index).toContain('data-workspace-command="refresh-backend"');
     for (const id of ["uxpUpdateNoticeCard", "uxpUpdateOpenBtn", "uxpUpdateDismissBtn", "uxpUpdateRetryBtn"]) {
