@@ -7,6 +7,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CEP_HTML = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 CEP_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
+CEP_RESULTS_CONTROLLER_JS = (
+    REPO_ROOT
+    / "extension"
+    / "com.opencut.panel"
+    / "client"
+    / "results-controller.js"
+)
 UXP_HTML = REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html"
 UXP_JS = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
 
@@ -26,6 +33,7 @@ class TestCepMagicClipsReviewBoard(unittest.TestCase):
     def setUpClass(cls):
         cls.html = _read(CEP_HTML)
         cls.js = _read(CEP_JS)
+        cls.results_js = _read(CEP_RESULTS_CONTROLLER_JS)
 
     def test_review_board_controls_are_declared(self):
         for html_id in (
@@ -74,7 +82,7 @@ class TestCepMagicClipsReviewBoard(unittest.TestCase):
         self.assertIn("result.magic_clips_bundle_manifest", bundle_flow)
         listener_flow = _between(self.js, 'job.type !== "shorts_pipeline"', "// --- Slider value display updaters ---")
         self.assertIn("renderShortsBundleSummary(job.result)", listener_flow)
-        results_flow = _between(self.js, "function showResults(job)", "function cancelJob()")
+        results_flow = _between(self.results_js, "function showSuccess", "function showFailure")
         self.assertIn("r.magic_clips_bundle", results_flow)
         self.assertIn("r.magic_clips_bundle_manifest ||", results_flow)
 
