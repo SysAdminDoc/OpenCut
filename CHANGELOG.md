@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - UXP route migration dashboard
+
+- The generated migration dashboard now inventories literal CEP capability
+  routes against UXP dispatch paths, records transport exclusions, and shows
+  unresolved and priority gaps in UXP Settings instead of reporting only host
+  function coverage.
+
 ### Changed - Pin FFmpeg to the post-July security snapshot
 
 - The bundled Windows media runtime is now Gyan's `git-full` snapshot

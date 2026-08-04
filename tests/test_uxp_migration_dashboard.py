@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from opencut.core.cep_uxp_parity import build_dashboard_manifest
+from opencut.core.cep_uxp_parity import build_dashboard_manifest, validate_route_coverage
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATED_DASHBOARD = REPO_ROOT / "opencut" / "_generated" / "uxp_migration_dashboard.json"
@@ -24,7 +24,7 @@ def _read(path: Path) -> str:
 def test_f260_dashboard_manifest_derives_from_f198_catalogue():
     manifest = build_dashboard_manifest()
 
-    assert manifest["dashboard_version"] == 1
+    assert manifest["dashboard_version"] == 2
     assert manifest["source_catalogue_version"] == 1
     assert manifest["summary"]["function_count"] == 18
     assert manifest["summary"]["direct_uxp"] == 14
@@ -37,6 +37,41 @@ def test_f260_dashboard_manifest_derives_from_f198_catalogue():
         "ocQeReflect",
         "ocApplySequenceCuts",
     }
+
+    route_coverage = manifest["route_coverage"]
+    assert route_coverage["cep_source"] == "extension/com.opencut.panel/client/main.js"
+    assert route_coverage["summary"]["cep_route_count"] >= 80
+    assert route_coverage["priority_routes"] == [
+        "/install-whisper",
+        "/audio/separate",
+        "/captions/translate",
+        "/audio/enhance",
+        "/captions/animated/render",
+        "/export/preset",
+        "/full",
+    ]
+    assert route_coverage["gate"]["passes"] is False
+    assert "/install-whisper" in route_coverage["gate"]["priority_missing"]
+
+
+def test_f260_route_gate_rejects_uncovered_routes_and_accepts_justified_exclusions():
+    priority_routes = [
+        "/install-whisper",
+        "/audio/separate",
+        "/captions/translate",
+        "/audio/enhance",
+        "/captions/animated/render",
+        "/export/preset",
+        "/full",
+    ]
+    assert validate_route_coverage(
+        ["/known", "/excluded", *priority_routes],
+        ["/known", *priority_routes],
+        {"/excluded": "legacy"},
+    ) == []
+    errors = validate_route_coverage(["/known", "/missing", *priority_routes], ["/known", *priority_routes], {})
+    assert errors
+    assert "/missing" in errors[0]
 
 
 def test_f260_generated_and_panel_dashboards_are_in_sync():
@@ -95,6 +130,7 @@ def test_f260_settings_panel_surfaces_migration_dashboard():
     assert "settingsMigrationDirectValue" in html
     assert "settingsMigrationFallbackValue" in html
     assert "settingsMigrationRiskValue" in html
+    assert "settingsMigrationRouteValue" in html
     assert "uxpMigrationRiskGrid" in html
     assert "uxpRefreshMigrationRiskBtn" in html
 
@@ -107,6 +143,8 @@ def test_f260_panel_loads_dashboard_json_and_renders_rows():
     assert "migrationStatusLabel" in source
     assert "migrationStateClass" in source
     assert "settingsMigrationStatus" in source
+    assert "route_coverage" in source
+    assert "settingsMigrationRouteValue" in source
     assert "uxpLoadMigrationRisk();" in source
     assert 'document.getElementById("uxpRefreshMigrationRiskBtn")?.addEventListener("click", uxpLoadMigrationRisk)' in source
 
