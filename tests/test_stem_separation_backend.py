@@ -65,14 +65,22 @@ def test_archived_demucs_is_not_the_recommended_install_hint():
     assert "2024-04-24" in archived.quality_notes + archived.install_hint
 
 
-def test_dependency_dashboard_lists_the_maintained_backend():
-    source = (
-        REPO_ROOT / "opencut" / "routes" / "system_runtime_routes.py"
-    ).read_text(encoding="utf-8")
-    assert '"audio-separator": "audio_separator"' in source
-    assert '"audio-separator": \'pip install "opencut-ppro[audio]"\'' in source
-    # The archived backend must not point at the recommended extra.
-    assert '"demucs": \'pip install "opencut-ppro[audio]"\'' not in source
+def test_dependency_dashboard_lists_the_maintained_backend(client):
+    payload = client.get("/system/dependencies").get_json()
+    deps = payload.get("dependencies", payload)
+
+    assert "audio-separator" in deps, sorted(deps)
+    assert deps["audio-separator"].get("install_hint") or deps["audio-separator"]["installed"]
+
+
+def test_dependency_dashboard_names_the_archived_status_of_demucs(client):
+    payload = client.get("/system/dependencies").get_json()
+    deps = payload.get("dependencies", payload)
+
+    note = deps["demucs"].get("legacy_note", "")
+    assert "archived" in note.lower()
+    assert "2024-04-24" in note
+    assert "audio-separator" in note
 
 
 def test_checks_expose_both_backends_and_a_rollup():

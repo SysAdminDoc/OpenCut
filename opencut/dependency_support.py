@@ -77,6 +77,7 @@ UNSUPPORTED_DEPENDENCIES: Mapping[str, str] = {
 
 DEPENDENCY_EXTRAS: Mapping[str, str] = {
     "faster-whisper": "captions",
+    "audio_separator": "audio",
     "demucs": "audio",
     "pedalboard": "audio",
     "deepfilternet": "audio",
