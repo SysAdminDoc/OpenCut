@@ -31,6 +31,7 @@ const CHAT_ACTION_ENDPOINTS = Object.freeze({
   "/video/speed/change": "/video/speed/change",
   "/video/depth/bokeh": "/video/depth/bokeh",
   "/export/preset": "/export/preset",
+  "/full": "/full",
 });
 
 /** Build a validated chat action request without permitting arbitrary routes. */

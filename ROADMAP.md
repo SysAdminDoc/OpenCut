@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Give the cleanup chain one reversible verb
-  Why: OpenCut has every component of the standard cleanup pass and no single entry point, while every competitor ships one button for it.
-  Evidence: Podcastle "Magic Dust", FireCut "Magic Cut" (2026-07-22), Descript Underlord all collapse silence trim → denoise → loudness → captions into one action. OpenCut exposes them as separate operations plus workflow presets in `opencut/data/workflow_presets.json` that require the user to know which preset to choose.
-  Touches: `opencut/core/workflow.py`, `opencut/data/workflow_presets.json`, CEP/UXP quick actions, locale strings, cut review panel.
-  Acceptance: One control runs the chain, shows a single preview of every proposed change before anything is written, and is reversible from the journal as one unit; it degrades honestly when an optional dependency in the chain is missing. Depends on the existing P2 "Compile workflows into preflighted resumable plans".
-  Complexity: M
-
 - [ ] P2 — Make the highlight score explainable and re-weightable
   Why: The category's incumbent locks an opaque 0–99 score behind its paid tier and users treat it as triage, not verdict — an inspectable score is the differentiator a local tool can own.
   Evidence: Opus Clip's Virality Score is free-tier-locked and blends hook strength, topic-transition density, speaker engagement, and category history; `opencut/core/virality_score.py` already computes a weighted blend of audio energy, transcript hook, and visual salience, and its own documentation warns the absolute numbers are not comparable across video types.

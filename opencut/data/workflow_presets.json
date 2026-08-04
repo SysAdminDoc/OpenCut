@@ -1,5 +1,38 @@
 [
     {
+        "id": "magic-cleanup",
+        "name": "Magic Cleanup",
+        "description": "Preview one cleanup pass, then apply silence trim, denoise, loudness, and captions as one reversible host write",
+        "category": "speech",
+        "mode": "reviewable_chain",
+        "preview_endpoint": "/cleanup/preview",
+        "apply_endpoint": "/cleanup/apply",
+        "journal_action": "import_sequence",
+        "reversible": true,
+        "steps": [
+            {
+                "id": "silence_trim",
+                "label": "Trim silence",
+                "operation": "review_ranges"
+            },
+            {
+                "id": "denoise",
+                "label": "Remove background noise",
+                "operation": "ffmpeg_denoise"
+            },
+            {
+                "id": "loudness",
+                "label": "Normalize loudness",
+                "operation": "ffmpeg_loudnorm"
+            },
+            {
+                "id": "captions",
+                "label": "Generate captions",
+                "operation": "caption_backend"
+            }
+        ]
+    },
+    {
         "id": "clean-interview",
         "name": "Clean Interview",
         "description": "Remove silence and dead air, normalize audio levels",

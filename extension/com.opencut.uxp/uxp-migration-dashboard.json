@@ -568,6 +568,30 @@
         ],
         "justification": "",
         "priority": false,
+        "route": "/cleanup/apply",
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "",
+        "priority": false,
+        "route": "/cleanup/preview",
+        "status": "covered",
+        "uxp_sources": [
+          "extension/com.opencut.uxp/main.js"
+        ]
+      },
+      {
+        "cep_sources": [
+          "extension/com.opencut.panel/client/main.js"
+        ],
+        "justification": "",
+        "priority": false,
         "route": "/context/analyze",
         "status": "missing",
         "uxp_sources": []
@@ -681,7 +705,7 @@
         "route": "/full",
         "status": "covered",
         "uxp_sources": [
-          "extension/com.opencut.uxp/main.js"
+          "extension/com.opencut.uxp/uxp-utils.js"
         ]
       },
       {
@@ -1988,15 +2012,15 @@
       }
     ],
     "summary": {
-      "cep_route_count": 169,
-      "coverage_percent": 35.5,
-      "covered": 59,
+      "cep_route_count": 171,
+      "coverage_percent": 36.3,
+      "covered": 61,
       "excluded": 1,
       "missing": 109,
       "priority_count": 7,
       "priority_covered": 7,
       "priority_missing": 0,
-      "uxp_route_count": 74
+      "uxp_route_count": 76
     },
     "uxp_sources": [
       "extension/com.opencut.uxp/main.js",

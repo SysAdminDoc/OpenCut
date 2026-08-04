@@ -672,6 +672,7 @@ let _lastIndexStats = { total_files: 0, total_segments: 0, index_size_bytes: 0 }
 let _clearIndexConfirmUntil = 0;
 let _clearIndexConfirmTimer = null;
 let _lastCaptionsResult = null;
+let _pendingCleanupPlanUxp = null;
 let _lastTranscriptSegments = [];
 let _lastCutsInfo = null;
 let _lastMarkersInfo = null;
@@ -4473,25 +4474,165 @@ async function runFillerDetection() {
 }
 
 /** ── FULL CLEANUP PIPELINE ── */
+function renderCleanupPreviewUxp(plan) {
+  if (!plan) return;
+  _pendingCleanupPlanUxp = plan;
+  const area = document.getElementById("cleanupPreviewAreaUxp");
+  const body = document.getElementById("cleanupPreviewBodyUxp");
+  const summary = document.getElementById("cleanupPreviewSummaryUxp");
+  const apply = document.getElementById("applyCleanupChainUxpBtn");
+  if (!area || !body) return;
+  area.classList.remove("hidden");
+  const planSummary = plan.summary || {};
+  if (summary) {
+    summary.textContent = formatI18n(
+      "cleanup_chain.review_summary",
+      "{ranges} silence range{plural} proposed ({seconds}s removed). Review the full chain before applying it.",
+      {
+        ranges: Number(planSummary.removed_ranges || 0),
+        plural: Number(planSummary.removed_ranges || 0) === 1 ? "" : "s",
+        seconds: Number(planSummary.removed_seconds || 0).toFixed(1),
+      },
+    );
+  }
+  while (body.firstChild) body.removeChild(body.firstChild);
+  for (const step of (Array.isArray(plan.steps) ? plan.steps : [])) {
+    const row = document.createElement("div");
+    row.className = `oc-result-row${step.state === "skipped" ? " is-muted" : ""}`;
+    const chip = document.createElement("span");
+    chip.className = "oc-result-chip";
+    chip.textContent = step.state === "skipped"
+      ? t("cleanup_chain.skipped", "Skipped")
+      : t("cleanup_chain.ready", "Ready");
+    const copy = document.createElement("div");
+    copy.className = "oc-result-copy";
+    const title = document.createElement("strong");
+    title.textContent = step.label || step.id || t("cleanup_chain.step", "Cleanup step");
+    const detail = document.createElement("span");
+    detail.textContent = step.reason || (
+      step.id === "silence_trim"
+        ? formatI18n("cleanup_chain.review_summary", "{ranges} silence range{plural} proposed ({seconds}s removed).", {
+            ranges: Number(step.proposed_changes?.length || 0),
+            plural: Number(step.proposed_changes?.length || 0) === 1 ? "" : "s",
+            seconds: Number(step.removed_seconds || 0).toFixed(1),
+          })
+        : step.id === "loudness"
+          ? formatI18n("cleanup_chain.loudness_target", "Target {target} LUFS", { target: step.target_lufs ?? "preset" })
+          : step.id === "captions"
+            ? (step.backend || t("cleanup_chain.optional", "Optional caption backend"))
+            : (step.method || t("cleanup_chain.optional", "Optional FFmpeg pass"))
+    );
+    copy.appendChild(title);
+    copy.appendChild(detail);
+    row.appendChild(chip);
+    row.appendChild(copy);
+    body.appendChild(row);
+  }
+  if (apply) {
+    apply.classList.remove("hidden");
+    apply.disabled = false;
+  }
+  area.focus();
+}
+
+async function importCleanupChainUxp(result, sourcePath) {
+  if (!result?.xml_path) return;
+  if (!PProBridge.available()) {
+    UIController.showToast(formatI18n("cleanup_chain.artifacts_ready", "Cleanup artifacts are ready: {path}", { path: result.xml_path }), "success");
+    UIController.setStatus(t("cleanup_chain.cep_import_needed", "Cleanup artifacts are ready. Use the CEP panel to import the reviewed sequence."), "warning");
+    return;
+  }
+
+  const imported = await runCheckpointedUxpHostWrite({
+    action: "import_sequence",
+    label: t("cleanup_chain.journal_label", "Import Magic Cleanup sequence"),
+    clipPath: sourcePath,
+    forward: {
+      endpoint: "/cleanup/apply",
+      payload: {
+        filepath: sourcePath,
+        output_dir: result.output_dir || "",
+        cleanup_plan: _pendingCleanupPlanUxp,
+      },
+    },
+    preview: {
+      clips: sourcePath ? [sourcePath] : [],
+      settings: {
+        artifact: result.xml_path,
+        captions_artifact: result.srt_path || "",
+        chain: result.chain || "standard-cleanup",
+        plan_id: result.plan_id || "",
+      },
+    },
+    inverseFromResult: (hostResult) => hostResult.sequence_name ? { name: hostResult.sequence_name } : {},
+  }, () => PProBridge.importTimelineInterchange(result.xml_path));
+  if (imported.ok) {
+    UIController.showToast(t("cleanup_chain.imported", "Magic Cleanup imported as one reversible Premiere sequence."), "success");
+    UIController.setStatus(t("cleanup_chain.imported_status", "Magic Cleanup imported and journaled as one reversible host write."), "success");
+  }
+}
+
+async function applyCleanupChainUxp() {
+  const plan = _pendingCleanupPlanUxp;
+  if (!plan?.source?.filepath) {
+    UIController.showToast(t("cleanup_chain.preview_required", "Preview the cleanup chain before applying it."), "warning");
+    return;
+  }
+  const sourcePath = plan.source.filepath;
+  UIController.setButtonLoading("applyCleanupChainUxpBtn", true);
+  UIController.showProcessing(t("cleanup_chain.applying", "Applying the reviewed cleanup chain..."));
+  await JobPoller.start(
+    "/cleanup/apply",
+    {
+      filepath: sourcePath,
+      output_dir: plan.artifacts?.output_dir || "",
+      cleanup_plan: plan,
+    },
+    (pct, msg) => {
+      UIController.setProgress(pct);
+      UIController.setProcessingMsg(msg || t("processing.processing", "Processing..."));
+    },
+    async (result) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("applyCleanupChainUxpBtn", false);
+      document.getElementById("applyCleanupChainUxpBtn")?.classList.add("hidden");
+      const summary = document.getElementById("cleanupPreviewSummaryUxp");
+      if (summary) summary.textContent = t("cleanup_chain.applied_summary", "Cleanup artifacts prepared. Premiere will receive the reviewed pass as one journaled write.");
+      await importCleanupChainUxp(result, sourcePath);
+    },
+    (err) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("applyCleanupChainUxpBtn", false);
+      UIController.showToast(formatI18n("cleanup_chain.apply_error", "Cleanup apply failed: {error}", { error: err }), "error");
+    },
+  );
+}
+
 async function runFullPipelineUxp() {
   const clipPath = document.getElementById("clipPathCut")?.value?.trim();
   if (!clipPath) { showSelectClipWarning(); return; }
   const preset = document.getElementById("fullPresetUxp")?.value || "youtube";
-  const skipZoom = !(document.getElementById("fullZoomUxp")?.checked ?? true);
-  const skipCaptions = !(document.getElementById("fullCaptionsUxp")?.checked ?? true);
-  const removeFillers = document.getElementById("fullFillersUxp")?.checked ?? false;
+  const denoise = document.getElementById("cleanupDenoiseUxp")?.checked ?? true;
+  const loudness = document.getElementById("cleanupLoudnessUxp")?.checked ?? true;
+  const captions = document.getElementById("fullCaptionsUxp")?.checked ?? true;
+  _pendingCleanupPlanUxp = null;
+  document.getElementById("applyCleanupChainUxpBtn")?.classList.add("hidden");
   UIController.setButtonLoading("runFullPipelineBtn", true);
-  UIController.showProcessing(t("uxp.cut.runtime.running_full_pipeline", "Running the full cleanup pipeline..."));
+  UIController.showProcessing(t("cleanup_chain.previewing", "Previewing the cleanup chain..."));
+  // Keep the legacy "/full" route available to UXP chat actions while
+  // the visible control uses the review-first cleanup contract below.
   await JobPoller.start(
-    "/full",
-    { filepath: clipPath, preset, skip_zoom: skipZoom, skip_captions: skipCaptions, remove_fillers: removeFillers },
+    "/cleanup/preview",
+    { filepath: clipPath, cleanup_preset: preset, denoise, loudness, captions },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || t("processing.processing", "Processing...")); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFullPipelineBtn", false);
-      const output = result?.xml_path || result?.output_path || t("uxp.runtime.saved", "saved");
-      UIController.showToast(formatI18n("uxp.cut.runtime.full_pipeline_complete", "Full cleanup complete: {output}", { output }), "success");
-      UIController.setStatus(t("uxp.cut.runtime.full_pipeline_complete_status", "Full cleanup pipeline complete."), "success");
+      if (result?.cleanup_plan) {
+        renderCleanupPreviewUxp(result.cleanup_plan);
+        UIController.showToast(t("cleanup_chain.preview_ready", "Magic Cleanup preview ready for review."), "success");
+        UIController.setStatus(t("cleanup_chain.review_status", "Review the proposed cleanup steps, then apply the pass."), "success");
+      }
     },
     (err) => {
       UIController.hideProcessing();
@@ -7048,6 +7189,7 @@ function bindEvents() {
   document.getElementById("runSilenceBtn")?.addEventListener("click", runSilenceRemoval);
   document.getElementById("runFillerBtn")?.addEventListener("click", runFillerDetection);
   document.getElementById("runFullPipelineBtn")?.addEventListener("click", runFullPipelineUxp);
+  document.getElementById("applyCleanupChainUxpBtn")?.addEventListener("click", applyCleanupChainUxp);
   document.getElementById("applyCutResultBtn")?.addEventListener("click", () => applyTimelineCuts(lastCuts));
 
   // ── Captions ──

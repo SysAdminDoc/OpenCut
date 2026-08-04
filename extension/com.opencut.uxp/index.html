@@ -254,7 +254,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="fullPipelineBody">
-            <p class="oc-caption-intro" data-i18n="uxp.cut.full_pipeline_hint">Run silence cleanup, optional zoom, captions, and filler removal as one backend job.</p>
+            <p class="oc-caption-intro" data-i18n="uxp.cut.full_pipeline_hint">Preview silence trim, denoise, loudness, and captions together, then apply the reviewed pass as one reversible host write.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="fullPresetUxp" data-i18n="uxp.cut.full_preset">Preset</label>
               <select class="oc-select" id="fullPresetUxp">
@@ -266,11 +266,19 @@
               </select>
             </div>
             <div class="oc-checkbox-row">
-              <label class="oc-checkbox-label"><input type="checkbox" id="fullZoomUxp" checked> <span data-i18n="uxp.cut.auto_zoom">Auto Zoom</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="cleanupDenoiseUxp" checked> <span data-i18n="uxp.cut.cleanup_denoise">Denoise</span></label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="cleanupLoudnessUxp" checked> <span data-i18n="uxp.cut.cleanup_loudness">Loudness</span></label>
               <label class="oc-checkbox-label"><input type="checkbox" id="fullCaptionsUxp" checked> <span data-i18n="uxp.cut.captions_srt">Captions (SRT)</span></label>
-              <label class="oc-checkbox-label"><input type="checkbox" id="fullFillersUxp"> <span data-i18n="uxp.cut.remove_fillers">Remove Filler Words</span></label>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFullPipelineBtn" data-i18n="uxp.cut.full_run">Run Full Pipeline</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFullPipelineBtn" data-i18n="cleanup_chain.preview">Preview Magic Cleanup</button>
+            <div class="oc-result-area hidden" id="cleanupPreviewAreaUxp" tabindex="-1" aria-live="polite">
+              <div class="oc-result-header-row">
+                <div class="oc-result-header" data-i18n="cleanup_chain.review_title">Magic Cleanup Review</div>
+                <div class="oc-result-summary" id="cleanupPreviewSummaryUxp" data-i18n="cleanup_chain.review_hint">Review every proposed step before writing.</div>
+              </div>
+              <div class="oc-result-body" id="cleanupPreviewBodyUxp"></div>
+              <button type="button" class="oc-btn oc-btn-primary oc-btn-sm hidden" id="applyCleanupChainUxpBtn" data-i18n="cleanup_chain.apply">Apply Reviewed Cleanup</button>
+            </div>
           </div>
         </div>
       </div>

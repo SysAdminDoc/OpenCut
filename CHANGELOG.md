@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Reversible Magic Cleanup chain
+
+- CEP and UXP now expose one review-first cleanup control that previews silence
+  ranges, FFmpeg denoise, loudness normalization, and caption generation before
+  writing any artifacts.
+- The reviewed plan is content-bound and applies through one journaled sequence
+  import, while unavailable FFmpeg or caption backends remain explicitly
+  marked as skipped instead of being presented as completed.
+
 ### Added - Exclusive speaker-boundary multicam cuts
 
 - Multicam generation now consumes pyannote 4's `exclusive_speaker_diarization`
