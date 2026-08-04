@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T12:01:23Z",
-  "total_routes": 1575,
-  "shipped_route_count": 1550,
+  "generated_at": "2026-08-04T14:23:01Z",
+  "total_routes": 1576,
+  "shipped_route_count": 1551,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 402,
     "PATCH": 1,
-    "POST": 1157,
+    "POST": 1158,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1522,
+    "implemented": 1523,
     "stub": 25
   },
   "blueprints": {
@@ -902,13 +902,13 @@
       ]
     },
     "timeline": {
-      "route_count": 15,
+      "route_count": 16,
       "method_counts": {
         "GET": 2,
-        "POST": 13
+        "POST": 14
       },
       "sample_rules": [
-        "/timeline/export-from-markers",
+        "/timeline/export-mlt",
         "/timeline/export-premiere-interchange",
         "/timeline/otio/install"
       ]
@@ -20908,6 +20908,22 @@
       ]
     },
     {
+      "rule": "/timeline/export-mlt",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_export_mlt",
+      "blueprint": "timeline",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
       "rule": "/timeline/export-otio",
       "methods": [
         "POST"
@@ -26888,6 +26904,7 @@
         "extension/com.opencut.uxp/uxp-bootstrap.js",
         "extension/com.opencut.uxp/uxp-components.js",
         "extension/com.opencut.uxp/uxp-i18n.js",
+        "extension/com.opencut.uxp/uxp-sequence-index-controller.js",
         "extension/com.opencut.uxp/uxp-settings-controller.js",
         "extension/com.opencut.uxp/uxp-state.js",
         "extension/com.opencut.uxp/uxp-theme.js",
@@ -26914,9 +26931,9 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1550,
+      "shipped_routes": 1551,
       "direct_surface_routes": 267,
-      "integration_only_routes": 1283,
+      "integration_only_routes": 1284,
       "coverage_percent": 17.2,
       "multi_surface_routes": 60,
       "primary_counts": {
@@ -26924,14 +26941,14 @@
         "palette": 22,
         "cli": 0,
         "mcp": 33,
-        "integration-only": 1308
+        "integration-only": 1309
       },
       "assigned_counts": {
         "panel": 212,
         "palette": 33,
         "cli": 1,
         "mcp": 92,
-        "integration-only": 1308
+        "integration-only": 1309
       }
     },
     "gate": {

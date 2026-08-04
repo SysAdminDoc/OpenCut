@@ -5,8 +5,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1550-orange)
-![Tests](https://img.shields.io/badge/Tests-12900+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1551-orange)
+![Tests](https://img.shields.io/badge/Tests-13000+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -16,7 +16,7 @@
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
 > surface map: **267 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
-> while **1,283 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> while **1,284 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
@@ -254,7 +254,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 | LLM highlights | Ollama (local, no API key), engagement scoring, and exportable highlight artifacts | Media Intelligence search; OpenCut adds local ranking and deliverables |
 | Cross-project footage search | Whole-library FTS5 search through REST/MCP/CLI | Media Intelligence search in the open project; OpenCut adds cross-project/headless scope |
 | Social export | Direct YouTube/TikTok/Instagram OAuth upload | No direct social handoff; OpenCut adds explicit upload workflows |
-| Cross-NLE export | OTIO to Resolve, FCP, Avid | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
+| Cross-NLE export | OTIO to Resolve, FCP, Avid plus MLT projects for Kdenlive and Shotcut | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
 | Repeated take detection | Jaccard-overlap transcript similarity with reviewable proposals | OpenCut adds a dedicated repeated-take pass |
 | Cut review panel | Human-in-loop approve/reject before applying or exporting ranges | Native editing controls; OpenCut adds a dedicated proposal/review pass |
 | Loudness and profanity reports | Explicit LUFS targets, batch measurement, and auditable bleep/mute ranges | Auto-Match Loudness and bulk bleep/mute; OpenCut adds reports and headless access |
@@ -265,7 +265,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.46.0 includes **1,550 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **267** have literal first-party panel, palette, CLI, and curated MCP references; **1,283 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.46.0 includes **1,551 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **267** have literal first-party panel, palette, CLI, and curated MCP references; **1,284 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -402,6 +402,7 @@ without returning transcript text.
 | Export from Markers | Batch-export clip ranges defined by sequence markers |
 | SRT to Native Captions | Import SRT as a native Premiere Pro caption track |
 | OTIO Export | Export edits as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, and any OTIO-compatible editor |
+| MLT Export | Export cut lists, speed changes, and keyframed volume to Kdenlive and Shotcut |
 
 ### Search & AI Commands
 
@@ -421,6 +422,7 @@ without returning transcript text.
 | Batch Processing | Process multiple clips in parallel with GPU-aware concurrency | ThreadPool |
 | Transcript Export | SRT, VTT, ASS, plain text, timestamped | Built-in |
 | OTIO Timeline Export | Universal timeline interchange for Premiere, Resolve, FCP, Avid | OpenTimelineIO |
+| MLT Timeline Export | Kdenlive and Shotcut project interchange with source ranges, speed, and volume automation | MLT XML |
 | Social Media Upload | Direct posting to YouTube, TikTok, and Instagram with OAuth | Platform APIs |
 
 ### DaVinci Resolve Integration
@@ -494,7 +496,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,550 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,551 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -679,6 +681,9 @@ opencut silence interview.mp4 --format otio --otio-schema OTIO_CORE:0.14.0 --oti
 # Write only after reviewing any reported downgrade fields
 opencut silence interview.mp4 --format otio --otio-schema OTIO_CORE:0.14.0 --accept-lossy-otio
 
+# Export the detected speech segments as an MLT project for Kdenlive or Shotcut
+opencut silence interview.mp4 --format mlt --name "Interview Edit"
+
 # Call any generated backend route from scripts
 opencut route GET /system/check-failures
 opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepath":"C:/clip.mp4"}}'
@@ -856,7 +861,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-12,900+ estimated tests across 324 root test files covering route smoke tests,
+13,000+ estimated tests across 326 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -904,7 +909,7 @@ opencut/
   server.py          # Flask app factory + startup
   core/              # 621 processing modules (silence, captions, audio, video, AI, VR, dubbing)
   routes/            # 128 route modules / 107 manifest blueprints
-  export/            # Premiere XML, SRT, VTT, ASS, OTIO exporters
+  export/            # Premiere/Resolve XML, MLT, SRT, VTT, ASS, OTIO exporters
   utils/             # Media probing, config dataclasses
   checks.py          # Dependency availability checks
   errors.py          # Structured error taxonomy
@@ -923,7 +928,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (12,900+ estimated tests, 324 root test files)
+tests/               # pytest test suite (13,000+ estimated tests, 326 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

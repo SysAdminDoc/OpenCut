@@ -5,6 +5,12 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Kdenlive and Shotcut MLT export
+
+- The timeline API and `opencut silence --format mlt` now write deterministic
+  MLT projects with source ranges, speed changes, and keyframed volume for
+  Kdenlive and Shotcut.
+
 ### Fixed - Panel copy and onboarding shell
 
 - Panel descriptions now use the established em dash and backend terminology;

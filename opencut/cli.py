@@ -239,7 +239,7 @@ def cli():
 @click.option("--padding-after", type=float, default=0.1, help="Padding after speech in seconds (default: 0.1)")
 @click.option("--min-speech", type=float, default=0.25, help="Minimum speech segment duration (default: 0.25)")
 @click.option("--preset", type=click.Choice(["default", "aggressive", "conservative", "podcast", "youtube"]), default=None, help="Use a preset configuration")
-@click.option("--format", "export_format", type=click.Choice(["premiere", "resolve", "otio"]), default="premiere", help="Export format (default: premiere)")
+@click.option("--format", "export_format", type=click.Choice(["premiere", "resolve", "otio", "mlt"]), default="premiere", help="Export format (default: premiere)")
 @click.option("--name", "seq_name", type=str, default="OpenCut Edit", help="Sequence name in the exported timeline")
 @click.option("--otio-schema", default="current", help="OTIO schema target: current or OTIO_CORE:<version>")
 @click.option("--otio-adapter", default="otio_json", help="Installed OTIO adapter name (default: otio_json)")
@@ -265,8 +265,9 @@ def silence(
 ):
     """Remove silences from a video/audio file.
 
-    Detects silent sections and exports a Premiere/Resolve XML or
-    version-targeted OpenTimelineIO timeline with only the speech segments.
+    Detects silent sections and exports a Premiere/Resolve XML, an MLT project
+    for Kdenlive/Shotcut, or a version-targeted OpenTimelineIO timeline with
+    only the speech segments.
     """
     print_banner()
 
@@ -300,6 +301,8 @@ def silence(
             except (ImportError, ValueError) as exc:
                 raise click.ClickException(str(exc)) from exc
             output = f"{base}_opencut.{suffix}"
+        elif export_format == "mlt":
+            output = f"{base}_opencut.mlt"
         else:
             output = f"{base}_opencut.xml"
 
@@ -362,6 +365,13 @@ def silence(
             console.print("[green bold]Preflight passed.[/green bold] No file was written.\n")
         else:
             console.print("[green bold]Done![/green bold] Import the timeline into an OTIO-compatible editor.\n")
+    elif export_format == "mlt":
+        from .export.mlt_export import export_mlt
+
+        result = export_mlt(input_file, segments, output, sequence_name=seq_name)
+        console.print(
+            f"[green bold]Done![/green bold] Import {result['output_path']} into Kdenlive or Shotcut.\n"
+        )
     else:
         export_premiere_xml(input_file, segments, output, config=ecfg)
         console.print("[green bold]Done![/green bold] Import this XML into Premiere Pro via File > Import.\n")

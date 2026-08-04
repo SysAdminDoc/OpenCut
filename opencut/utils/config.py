@@ -95,7 +95,7 @@ class ZoomConfig:
 @dataclass
 class ExportConfig:
     """Configuration for export settings."""
-    # Export format: "premiere", "resolve", "fcpxml"
+    # Export format: "premiere", "resolve", "fcpxml", or "mlt"
     format: str = "premiere"
     # Sequence/timeline name
     sequence_name: str = "OpenCut Edit"
