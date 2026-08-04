@@ -9,9 +9,10 @@
 #                  -e OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut-token \
 #                  -v ./opencut-token:/run/secrets/opencut-token:ro \
 #                  -v opencut-data:/home/opencut/.opencut opencut
-# Run (GPU):   add --gpus all to the command above
 # Compose:     docker compose up opencut-server (mounts the same token via the
 #              opencut_remote_auth_token secret; see docker-compose.yml)
+# GPU:         not included; this locked image is CPU-only and has no CUDA or
+#              NVENC runtime. Use the native ai-gpu installation lane instead.
 # Runtime:     publishes the HTTP API only. Optional WebSocket/MCP sidecars
 #              are separate opt-in processes, not default container ports.
 # ============================================================
