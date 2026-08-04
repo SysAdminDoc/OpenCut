@@ -178,7 +178,7 @@ def test_uxp_spanish_locale_pack_covers_current_uxp_catalog():
     assert sorted(key for key in english if key.startswith("uxp.agent.") and key not in spanish) == []
     assert spanish["uxp.agent.chat_conductor_f143"] == "Conductor de chat"
     assert spanish["uxp.agent.runtime.plan_ready"] == "Plan: {count} paso(s) via {source}. Sesion {session}."
-    assert spanish["uxp.agent.runtime.sequence_index_built"].startswith("Indice creado:")
+    assert spanish["uxp.agent.runtime.sequence_index_built"].startswith("Informe creado:")
     assert spanish["nav.feature_tabs"] == "Pestanas de funciones"
     assert sorted(key for key in english if key.startswith("uxp.deliverables.") and key not in spanish) == []
     assert spanish["uxp.deliverables.generate_deliverable_documents"] == "Generar documentos de entrega"
@@ -667,7 +667,7 @@ def test_uxp_agent_runtime_feedback_uses_locale_helpers():
     assert "renderPlan(data.plan)" in agent_js
     assert "renderReview(data)" in agent_js
     assert "Plan:" in _locale()["uxp.agent.runtime.plan_ready"]
-    assert "Index built" in _locale()["uxp.agent.runtime.sequence_index_built"]
+    assert "Report built" in _locale()["uxp.agent.runtime.sequence_index_built"]
 
 
 def test_uxp_settings_runtime_feedback_uses_locale_helpers():

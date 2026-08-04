@@ -17,6 +17,16 @@
 > **Tracking F-number:** **F147** — registration in the upstream
 > `modelcontextprotocol/servers` directory.
 
+## Positioning after Premiere 26.x
+
+Premiere now provides first-party active-sequence indexing, Single-Word
+Captions, transcript pause/filler deletion, Media Intelligence search,
+loudness matching, and bulk bleep/mute. OpenCut's MCP and REST surfaces are
+not marketed as replacements for those host controls. The differentiated
+value is whole-library and cross-project scope, reviewable proposal ranges,
+exportable artifacts, unlimited local runs, and headless automation from a
+script or MCP client.
+
 ---
 
 ## 1. Quick start

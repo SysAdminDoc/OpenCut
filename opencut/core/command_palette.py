@@ -117,13 +117,27 @@ def _score_entry(query: str, entry: dict) -> float:
     return best
 
 
+def _palette_score(relevance: float, entry: dict) -> float:
+    """Apply a small ordering adjustment to native-overlap commands.
+
+    Native Premiere workflows remain searchable and runnable, but the palette
+    should lead with the scope or artifact that OpenCut adds instead of
+    presenting a first-party host capability as a missing feature.
+    """
+    try:
+        priority = float(entry.get("palette_priority", 1.0))
+    except (TypeError, ValueError):
+        priority = 1.0
+    return relevance * max(0.0, min(1.0, priority))
+
+
 # ---------------------------------------------------------------------------
 # Feature Registry (all 302+ features)
 # ---------------------------------------------------------------------------
 _FEATURE_DEFS: List[dict] = [
     # --- Audio ---
-    {"id": "normalize_audio", "name": "Normalize Audio", "description": "Normalize audio loudness to broadcast standards", "category": "audio", "aliases": ["loudness", "audio level"], "route": "/audio/normalize", "tags": ["loudness", "lufs", "level"]},
-    {"id": "remove_silence", "name": "Remove Silence", "description": "Detect and cut silent segments from audio", "category": "audio", "aliases": ["silence", "dead air", "trim silence"], "route": "/silence", "tags": ["silence", "trim", "pacing"]},
+    {"id": "normalize_audio", "name": "Normalize Audio", "description": "Measure and normalize audio to an explicit LUFS target with a reviewable result", "category": "audio", "aliases": ["loudness", "audio level"], "route": "/audio/normalize", "tags": ["loudness", "lufs", "level"], "native_overlap": True, "palette_priority": 0.86},
+    {"id": "remove_silence", "name": "Remove Silence", "description": "Detect and stage silent segments for reviewable timeline cuts", "category": "audio", "aliases": ["silence", "dead air", "trim silence"], "route": "/silence", "tags": ["silence", "trim", "pacing"], "native_overlap": True, "palette_priority": 0.84},
     {"id": "audio_enhance", "name": "Enhance Audio", "description": "AI-powered audio cleanup and enhancement", "category": "audio", "aliases": ["clean audio", "noise reduction", "denoise audio"], "route": "/audio/enhance", "tags": ["enhance", "noise", "cleanup"]},
     {"id": "audio_duck", "name": "Audio Ducking", "description": "Auto-duck music under speech", "category": "audio", "aliases": ["duck", "lower music", "sidechain"], "route": "/audio/duck", "tags": ["duck", "music", "speech"]},
     {"id": "stem_split", "name": "Stem Separation", "description": "Separate vocals, drums, bass, and instruments", "category": "audio", "aliases": ["stem", "separate", "isolate vocals"], "route": "/audio/stems", "tags": ["stems", "vocals", "instruments"]},
@@ -132,9 +146,9 @@ _FEATURE_DEFS: List[dict] = [
     {"id": "spectral_repair", "name": "Spectral Repair", "description": "Repair audio using spectral editing", "category": "audio", "aliases": ["spectral", "frequency repair"], "route": "/audio/spectral-repair", "tags": ["spectral", "frequency"]},
     {"id": "surround_mix", "name": "Surround Sound Mix", "description": "Create 5.1/7.1 surround sound mix", "category": "audio", "aliases": ["surround", "5.1", "7.1", "spatial"], "route": "/audio/surround", "tags": ["surround", "spatial", "5.1"]},
     {"id": "audio_visualizer", "name": "Audio Visualizer", "description": "Generate waveform and spectrum visualizations", "category": "audio", "aliases": ["visualizer", "waveform", "spectrum"], "route": "/audio/visualize", "tags": ["waveform", "spectrum", "visualizer"]},
-    {"id": "profanity_bleep", "name": "Profanity Bleep", "description": "Auto-detect and bleep profanity", "category": "audio", "aliases": ["bleep", "censor", "mute words"], "route": "/audio/profanity-bleep", "tags": ["bleep", "censor", "profanity"]},
+    {"id": "profanity_bleep", "name": "Profanity Bleep", "description": "Detect profanity and stage bleep or mute ranges for review or export", "category": "audio", "aliases": ["bleep", "censor", "mute words"], "route": "/audio/profanity-bleep", "tags": ["bleep", "censor", "profanity"], "native_overlap": True, "palette_priority": 0.88},
     {"id": "dialogue_premix", "name": "Dialogue Premix", "description": "Automated dialogue premix with EQ and compression", "category": "audio", "aliases": ["premix", "dialogue mix"], "route": "/audio/dialogue-premix", "tags": ["dialogue", "premix", "mix"]},
-    {"id": "loudness_match", "name": "Loudness Match", "description": "Match loudness between multiple clips", "category": "audio", "aliases": ["match loudness", "level match"], "route": "/audio/loudness-match", "tags": ["loudness", "match", "level"]},
+    {"id": "loudness_match", "name": "Loudness Match", "description": "Batch-match clips to an explicit LUFS target with measurement results", "category": "audio", "aliases": ["match loudness", "level match"], "route": "/audio/loudness-match", "tags": ["loudness", "match", "level"], "native_overlap": True, "palette_priority": 0.86},
     {"id": "audio_fingerprint", "name": "Audio Fingerprint", "description": "Generate audio fingerprint for content ID", "category": "audio", "aliases": ["fingerprint", "content id"], "route": "/audio/fingerprint", "tags": ["fingerprint", "identification"]},
     {"id": "music_gen", "name": "AI Music Generation", "description": "Generate background music with AI", "category": "audio", "aliases": ["generate music", "ai music", "background music"], "route": "/audio/music-gen", "tags": ["music", "generate", "ai"]},
     {"id": "sfx_gen", "name": "AI Sound Effects", "description": "Generate sound effects from text descriptions", "category": "audio", "aliases": ["sound effects", "sfx", "foley"], "route": "/audio/sfx-gen", "tags": ["sfx", "sound effects", "foley"]},
@@ -144,10 +158,10 @@ _FEATURE_DEFS: List[dict] = [
     {"id": "audiogram", "name": "Audiogram", "description": "Create audiogram video from audio file", "category": "audio", "aliases": ["podcast video", "audio video"], "route": "/audio/audiogram", "tags": ["audiogram", "podcast", "waveform"]},
 
     # --- Captions & Subtitles ---
-    {"id": "add_captions", "name": "Generate Captions", "description": "Transcribe speech and generate captions", "category": "captions", "aliases": ["transcribe", "subtitles", "srt"], "route": "/captions", "tags": ["captions", "transcribe", "subtitles"]},
-    {"id": "styled_captions", "name": "Styled Captions", "description": "Animated captions with custom styles", "category": "captions", "aliases": ["fancy captions", "animated text"], "route": "/captions/styled", "tags": ["styled", "animated", "captions"]},
+    {"id": "add_captions", "name": "Generate Captions", "description": "Transcribe speech into editable, exportable caption deliverables", "category": "captions", "aliases": ["transcribe", "subtitles", "srt"], "route": "/captions", "tags": ["captions", "transcribe", "subtitles"], "native_overlap": True, "palette_priority": 0.9},
+    {"id": "styled_captions", "name": "Styled Captions", "description": "Render 55-style animated caption templates to native, burn-in, or interchange outputs", "category": "captions", "aliases": ["fancy captions", "animated text"], "route": "/captions/styled", "tags": ["styled", "animated", "captions"], "native_overlap": True, "palette_priority": 0.92},
     {"id": "caption_burnin", "name": "Burn-in Captions", "description": "Permanently burn captions into video", "category": "captions", "aliases": ["hardcode subs", "embed captions"], "route": "/captions/burnin", "tags": ["burnin", "hardcode", "embed"]},
-    {"id": "multilang_subtitle", "name": "Multi-Language Subtitles", "description": "Translate subtitles to multiple languages", "category": "captions", "aliases": ["translate subs", "multi language"], "route": "/captions/translate", "tags": ["translate", "multilingual", "subtitles"]},
+    {"id": "multilang_subtitle", "name": "Multi-Language Subtitles", "description": "Translate subtitle deliverables with offline and exportable outputs", "category": "captions", "aliases": ["translate subs", "multi language"], "route": "/captions/translate", "tags": ["translate", "multilingual", "subtitles"], "native_overlap": True, "palette_priority": 0.92},
     {"id": "social_captions", "name": "Social Captions", "description": "Platform-optimized caption styles", "category": "captions", "aliases": ["tiktok captions", "reel captions"], "route": "/captions/social", "tags": ["social", "tiktok", "instagram"]},
     {"id": "sdh_format", "name": "SDH Formatting", "description": "Format subtitles for deaf and hard of hearing", "category": "captions", "aliases": ["sdh", "accessibility subs"], "route": "/captions/sdh", "tags": ["sdh", "accessibility", "deaf"]},
     {"id": "diarize", "name": "Speaker Diarization", "description": "Identify and label different speakers", "category": "captions", "aliases": ["speakers", "who said what"], "route": "/diarize", "tags": ["diarize", "speakers", "identification"]},
@@ -212,9 +226,9 @@ _FEATURE_DEFS: List[dict] = [
     # --- Editing ---
     {"id": "ripple_edit", "name": "Ripple Edit", "description": "Ripple edit with automatic gap closure", "category": "editing", "aliases": ["ripple", "gap close"], "route": "/edit/ripple", "tags": ["ripple", "edit", "gap"]},
     {"id": "multicam", "name": "Multicam Edit", "description": "Multi-camera editing and sync", "category": "editing", "aliases": ["multicam", "multi angle", "camera switch"], "route": "/multicam", "tags": ["multicam", "angle", "switch"]},
-    {"id": "paper_edit", "name": "Paper Edit", "description": "Edit video by editing transcript text", "category": "editing", "aliases": ["text edit", "transcript edit"], "route": "/edit/paper", "tags": ["paper", "transcript", "text"]},
+    {"id": "paper_edit", "name": "Paper Edit", "description": "Build a reviewable transcript paper edit with exportable timeline ranges", "category": "editing", "aliases": ["text edit", "transcript edit"], "route": "/edit/paper", "tags": ["paper", "transcript", "text"], "native_overlap": True, "palette_priority": 0.92},
     {"id": "rough_cut", "name": "Rough Cut Assembly", "description": "Auto-assemble rough cut from selects", "category": "editing", "aliases": ["assembly", "first cut"], "route": "/edit/rough-cut", "tags": ["rough cut", "assembly", "selects"]},
-    {"id": "dead_time", "name": "Dead Time Removal", "description": "Remove dead time and pauses", "category": "editing", "aliases": ["dead air", "remove pauses", "tighten"], "route": "/edit/dead-time", "tags": ["dead time", "pauses", "tighten"]},
+    {"id": "dead_time", "name": "Dead Time Removal", "description": "Detect dead time and stage reviewable pause cuts", "category": "editing", "aliases": ["dead air", "remove pauses", "tighten"], "route": "/edit/dead-time", "tags": ["dead time", "pauses", "tighten"], "native_overlap": True, "palette_priority": 0.84},
     {"id": "beat_cuts", "name": "Beat-Synced Cuts", "description": "Cut video to the beat of music", "category": "editing", "aliases": ["beat sync", "music sync", "rhythm"], "route": "/edit/beat-cuts", "tags": ["beat", "sync", "rhythm"]},
     {"id": "long_to_shorts", "name": "Long to Shorts", "description": "Extract short clips from long video", "category": "editing", "aliases": ["shorts", "clips", "tiktok"], "route": "/edit/long-to-shorts", "tags": ["shorts", "clips", "extract"]},
 
@@ -362,7 +376,7 @@ _FEATURE_DEFS: List[dict] = [
     {"id": "mood_board", "name": "Mood Board", "description": "Generate visual mood boards", "category": "ai", "aliases": ["mood", "inspiration", "visual board"], "route": "/ai/mood-board", "tags": ["mood", "board", "visual"]},
     {"id": "brand_kit", "name": "Brand Kit", "description": "Manage brand colors, fonts, and logos", "category": "platform", "aliases": ["brand", "style guide", "identity"], "route": "/platform/brand-kit", "tags": ["brand", "kit", "identity"]},
     {"id": "google_fonts", "name": "Google Fonts", "description": "Browse and use Google Fonts", "category": "platform", "aliases": ["fonts", "typography", "google fonts"], "route": "/platform/fonts", "tags": ["fonts", "google", "typography"]},
-    {"id": "footage_search", "name": "Footage Search", "description": "Semantic search across footage library", "category": "platform", "aliases": ["search", "find footage", "clip search"], "route": "/search/query", "tags": ["search", "footage", "semantic"]},
+    {"id": "footage_search", "name": "Footage Search", "description": "Search spoken content across the whole media library and projects", "category": "platform", "aliases": ["search", "find footage", "clip search"], "route": "/search/query", "tags": ["search", "footage", "semantic"], "native_overlap": True, "palette_priority": 0.9},
     {"id": "stock_search", "name": "Stock Search", "description": "Search royalty-free stock footage", "category": "platform", "aliases": ["stock footage", "royalty free", "stock video"], "route": "/search/stock", "tags": ["stock", "footage", "royalty free"]},
     {"id": "c2pa_embed", "name": "C2PA Embed", "description": "Embed content credentials (C2PA)", "category": "platform", "aliases": ["c2pa", "content credentials", "provenance"], "route": "/video/c2pa/embed", "tags": ["c2pa", "credentials", "provenance"]},
     {"id": "evidence_chain", "name": "Evidence Chain", "description": "Chain of custody for forensic video", "category": "platform", "aliases": ["chain of custody", "forensic", "evidence"], "route": "/platform/evidence", "tags": ["evidence", "chain", "forensic"]},
@@ -376,7 +390,8 @@ def build_feature_index(on_progress: Optional[Callable] = None) -> List[dict]:
     """Build (or return cached) feature index.
 
     Returns list of feature entry dicts with id, name, description,
-    category, aliases, route, tags, readiness, route_valid, and runnable.
+    category, aliases, route, tags, native-overlap positioning metadata,
+    readiness, route_valid, and runnable.
     """
     global _feature_index
 
@@ -402,6 +417,8 @@ def build_feature_index(on_progress: Optional[Callable] = None) -> List[dict]:
                 "aliases": list(feat.get("aliases", [])),
                 "route": feat.get("route", ""),
                 "tags": list(feat.get("tags", [])),
+                "native_overlap": bool(feat.get("native_overlap", False)),
+                "palette_priority": float(feat.get("palette_priority", 1.0)),
             }))
 
         _feature_index = index
@@ -444,7 +461,7 @@ def fuzzy_search(
     scored = []
 
     for entry in index:
-        score = _score_entry(query, entry)
+        score = _palette_score(_score_entry(query, entry), entry)
         if score > 0.05:
             result = enrich_feature_entry(entry)
             result["score"] = round(score, 4)

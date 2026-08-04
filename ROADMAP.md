@@ -34,13 +34,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P2 — 2026-08-02 (research pass)
 
-- [ ] P2 — Restate the product claims Premiere 26.2/26.3 made first-party
-  Why: Several headline features now ship in the host, so the README and panel copy advertise parity work instead of the differentiated capability.
-  Evidence: Premiere 26.2 shipped the Sequence Index panel (search, sort, column chooser, filter funnel, jump, CSV export); 26.3 shipped Single-Word Captions; 25.2 shipped Media Intelligence search; 25.6 added bulk bleep/mute; Auto-Match Loudness and Text-Based-Editing Delete Pauses / Delete Filler Words predate both; Adobe's on-device Speechmatics STT (April 2026) claims 12–16% better accuracy than Whisper-powered creative tools. See RESEARCH.md "Rejected Ideas" for the per-feature verdicts.
-  Touches: `README.md` feature overview and comparison sections, `extension/*/locales/en.json` descriptions, `docs/` positioning, `opencut/core/command_palette.py` ordering.
-  Acceptance: Every claim that overlaps a native 26.x feature is restated as the differentiated part (cross-project scope, exportable artifacts, unlimited/uncapped, headless/REST access, template breadth) or removed; a doc test asserts no claim states the host cannot do something it now does.
-  Complexity: S
-
 - [ ] P2 — Ship diarization-driven cutting on pyannote's exclusive-speaker output
   Why: Cutting at speaker changes is the single most-requested Premiere automation with no free implementation, and pyannote 4.x added an output built specifically to reconcile diarization against imprecise ASR timestamps that OpenCut does not use.
   Evidence: Adobe feature request 1555738 asks for speaker-change cuts "similar to Scene Edit Detection" plus auto track placement and speaker colour-coding; multicam-by-speaker is paywalled by AutoPod ($29/mo), FireCut Pro, and AutoCut. pyannote-audio 4.0 adds `exclusive_speaker_diarization` alongside regular diarization and VBx clustering in `speaker-diarization-community-1`; repo-wide search for `exclusive_speaker` returns zero hits while `opencut/core/diarize.py` already references `community-1`.
