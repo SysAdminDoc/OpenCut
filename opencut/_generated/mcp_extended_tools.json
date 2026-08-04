@@ -6,12 +6,12 @@
     "DELETE": 16,
     "GET": 381,
     "PATCH": 1,
-    "POST": 1058,
+    "POST": 1060,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1458,
+  "tool_count": 1460,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -43929,6 +43929,66 @@
         "response_schema": "SettingsResult"
       },
       "name": "opencut_route_post_whisper_settings"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /workflow/approve"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /workflow/approve.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "workflow",
+        "endpoint": "workflow.approve_workflow_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/workflow/approve",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_workflow_approve"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /workflow/compile"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /workflow/compile.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "workflow",
+        "endpoint": "workflow.compile_workflow_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/workflow/compile",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_workflow_compile"
     },
     {
       "annotations": {
