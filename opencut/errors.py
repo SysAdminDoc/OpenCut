@@ -107,20 +107,28 @@ class OpenCutError(Exception):
     """Application error with a machine-readable code and HTTP status."""
 
     def __init__(self, code: str, message: str, status: int = 400,
-                 suggestion: str = ""):
+                 suggestion: str = "", details: dict | None = None):
         self.code = code
         self.message = message
         self.status = status
         self.suggestion = suggestion
+        self.details = dict(details or {})
         super().__init__(message)
 
-    def to_response(self, *, log: bool = True, context: str = ""):
+    def to_dict(self) -> dict:
+        """Return the JSON-safe error body without requiring Flask context."""
         body = {
             "error": self.message,
             "code": self.code,
         }
         if self.suggestion:
             body["suggestion"] = self.suggestion
+        if self.details:
+            body["details"] = self.details
+        return body
+
+    def to_response(self, *, log: bool = True, context: str = ""):
+        body = self.to_dict()
         if log:
             _log_open_cut_error(self, context)
         return jsonify(_attach_request_id(body)), self.status

@@ -10,6 +10,7 @@ CPU-only systems.
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 
@@ -97,6 +98,78 @@ def _safe_float(value) -> float:
         return 0.0
 
 
+def gpu_architecture(device: dict | None) -> str:
+    """Return a stable architecture label for a detected CUDA adapter.
+
+    NVIDIA's RTX 50-series is Blackwell and is exposed as compute capability
+    12.x by current CUDA runtimes.  Name matching keeps the probe useful when
+    ``nvidia-smi`` is available but PyTorch is not; capability matching covers
+    renamed workstation and laptop variants.
+    """
+    device = device if isinstance(device, dict) else {}
+    name = str(device.get("name", "")).strip().lower()
+    if "blackwell" in name or re.search(r"\brtx\s*(?:50\d{2})\b", name):
+        return "blackwell"
+
+    capability = device.get("compute_capability", device.get("compute_cap"))
+    if isinstance(capability, (tuple, list)) and capability:
+        capability = ".".join(str(part) for part in capability[:2])
+    match = re.search(r"(\d+)(?:\.(\d+))?", str(capability or ""))
+    if match:
+        major = int(match.group(1))
+        minor = int(match.group(2) or 0)
+        if major >= 12:
+            return "blackwell"
+        if (major, minor) >= (8, 9):
+            return "ada-lovelace"
+        if major >= 8:
+            return "ampere"
+        if (major, minor) >= (7, 5):
+            return "turing"
+    return "unknown"
+
+
+def faster_whisper_compute_recommendation(device: dict | None) -> dict:
+    """Describe the safe faster-whisper compute type for one GPU.
+
+    CTranslate2's automatic compute-type selection can choose an unsupported
+    path on RTX 50-series/Blackwell adapters.  Pinning float16 is the known
+    compatible choice while preserving ``auto`` for other hardware.
+    """
+    architecture = gpu_architecture(device)
+    affected = architecture == "blackwell"
+    requested_compute_type = "auto"
+    compute_type = "float16" if affected else requested_compute_type
+    reason = ""
+    warning = ""
+    if affected:
+        reason = (
+            "RTX 50-series/Blackwell GPU detected; faster-whisper changed "
+            "compute_type from auto to float16 to avoid unsupported cuBLAS execution."
+        )
+        warning = (
+            "RTX 50-series/Blackwell GPU detected; forcing faster-whisper "
+            "compute_type=float16 because automatic selection can fail in cuBLAS."
+        )
+    return {
+        "architecture": architecture,
+        "affected": affected,
+        "requested_compute_type": requested_compute_type,
+        "compute_type": compute_type,
+        "changed": compute_type != requested_compute_type,
+        "reason": reason,
+        "warning": warning,
+    }
+
+
+def _annotate_gpu_device(device: dict) -> dict:
+    annotated = dict(device)
+    recommendation = faster_whisper_compute_recommendation(annotated)
+    annotated["architecture"] = recommendation["architecture"]
+    annotated["faster_whisper"] = recommendation
+    return annotated
+
+
 def list_gpu_devices() -> list[dict]:
     """Return all visible NVIDIA CUDA adapters with stable integer indexes."""
     nvidia_smi = shutil.which("nvidia-smi")
@@ -126,13 +199,13 @@ def list_gpu_devices() -> list[dict]:
                     # GPU names can contain commas; the final three fields are
                     # always memory total, memory free, and driver version.
                     name = ",".join(parts[1:-3]).strip()
-                    devices.append({
+                    devices.append(_annotate_gpu_device({
                         "index": index,
                         "name": name,
                         "memory_total_mb": _safe_float(parts[-3]),
                         "memory_free_mb": _safe_float(parts[-2]),
                         "driver_version": parts[-1],
-                    })
+                    }))
                 if devices:
                     return sorted(devices, key=lambda device: device["index"])
         except (OSError, subprocess.TimeoutExpired) as exc:
@@ -147,13 +220,22 @@ def list_gpu_devices() -> list[dict]:
         for index in range(torch.cuda.device_count()):
             props = torch.cuda.get_device_properties(index)
             total = float(getattr(props, "total_memory", getattr(props, "total_mem", 0))) / (1024 * 1024)
-            devices.append({
+            capability = None
+            try:
+                capability = torch.cuda.get_device_capability(index)
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                major = getattr(props, "major", None)
+                minor = getattr(props, "minor", None)
+                if major is not None:
+                    capability = (major, minor or 0)
+            devices.append(_annotate_gpu_device({
                 "index": index,
                 "name": str(getattr(props, "name", "CUDA device")),
                 "memory_total_mb": round(total, 1),
                 "memory_free_mb": 0.0,
                 "driver_version": "",
-            })
+                "compute_capability": capability,
+            }))
         return devices
     except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
         logger.debug("PyTorch GPU query failed: %s", exc)
@@ -162,7 +244,7 @@ def list_gpu_devices() -> list[dict]:
 
 def gpu_selection_status(devices: list[dict] | None = None) -> dict:
     """Return a JSON-safe description of configured and active GPU state."""
-    devices = list_gpu_devices() if devices is None else list(devices)
+    devices = list_gpu_devices() if devices is None else [_annotate_gpu_device(device) for device in devices]
     configured = _configured_gpu_index()
     available_indexes = {int(device.get("index")) for device in devices if "index" in device}
     error = None
@@ -173,6 +255,10 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
         if configured in available_indexes
         else (min(available_indexes) if available_indexes and error is None else None)
     )
+    selected_device = next(
+        (device for device in devices if device.get("index") == selected),
+        None,
+    )
     return {
         "configured_index": configured,
         "selected_index": selected,
@@ -180,6 +266,7 @@ def gpu_selection_status(devices: list[dict] | None = None) -> dict:
         "device": f"cuda:{selected}" if selected is not None else "cpu",
         "devices": devices,
         "selection_error": error,
+        "faster_whisper": faster_whisper_compute_recommendation(selected_device),
     }
 
 

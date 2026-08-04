@@ -174,6 +174,11 @@ def _detect_gpu():
         "device": selection.get("device", "cpu"),
         "devices": devices,
         "selection_error": selection.get("selection_error"),
+        "architecture": (selected or {}).get(
+            "architecture",
+            selection.get("faster_whisper", {}).get("architecture", "unknown"),
+        ),
+        "faster_whisper": selection.get("faster_whisper", {}),
     }
     with _gpu_cache_lock:
         _gpu_cache["info"] = dict(gpu_info)
@@ -306,6 +311,8 @@ def system_status():
         "device": gpu_raw.get("device", "cpu"),
         "devices": gpu_raw.get("devices", []),
         "selection_error": gpu_raw.get("selection_error"),
+        "architecture": gpu_raw.get("architecture", "unknown"),
+        "faster_whisper": gpu_raw.get("faster_whisper", {}),
     })
 
     # Job counts
@@ -359,10 +366,14 @@ def gpu_recommend():
         "caption_quality": "fast",
         "batch_size": 1,
         "gpu_index": gpu_info.get("selected_index"),
+        "faster_whisper": gpu_info.get("faster_whisper", {}),
         "notes": []
     }
     if gpu_info["available"]:
         rec["whisper_device"] = "cuda"
+        rec["whisper_compute_type"] = rec["faster_whisper"].get("compute_type", "auto")
+        if rec["faster_whisper"].get("changed"):
+            rec["notes"].append(rec["faster_whisper"].get("warning", ""))
         if vram >= 10000:
             rec["whisper_model"] = "large-v3"
             rec["caption_quality"] = "best"
@@ -384,6 +395,7 @@ def gpu_recommend():
             rec["batch_size"] = 1
             rec["notes"].append("Low VRAM: use smaller models for best performance")
     else:
+        rec["whisper_compute_type"] = "int8"
         rec["notes"].append("No NVIDIA GPU detected. Using CPU mode (slower).")
     return jsonify(rec)
 
