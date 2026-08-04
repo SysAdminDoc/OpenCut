@@ -5,6 +5,13 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - Production breakpoint state coverage
+
+- Rendered CEP and UXP regression coverage now exercises every production
+  command-center breakpoint at minus one, exact, and plus one pixels in dark
+  and light themes, checking overflow, keyboard focus, semantic state nodes,
+  and accessible-name sources.
+
 ### Added - Compiled resumable workflow plans
 
 - Workflow saves now retain a source-independent definition and workflow runs

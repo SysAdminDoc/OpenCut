@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const THEMES = ["dark", "light", "auto"];
+const BREAKPOINT_BOUNDARIES = {
+  // These are the layout transitions used by the production command-center
+  // styles. UXP's 820px max-width rule hands off to the 821px min-width rule,
+  // so the 821 boundary exercises 820/821 explicitly.
+  cep: [620, 700, 980],
+  uxp: [620, 821, 1020, 1050],
+};
 const SURFACES = {
   cep: {
     url: "/extension/com.opencut.panel/client/index.html",
@@ -746,6 +753,14 @@ async function visibleControlsWithoutNames(page) {
               ?.textContent || ""
           : "";
         const wrapping = element.closest("label")?.textContent || "";
+        // Placeholder and current value are not reliable accessible names
+        // for text controls. Keep this oracle aligned with the platform name
+        // computation: explicit ARIA, associated labels, title fallback, and
+        // content-bearing controls only.
+        const content = /^(BUTTON|A)$/.test(element.tagName)
+          || ["button", "tab", "menuitem"].includes(element.getAttribute("role"))
+          ? element.textContent
+          : "";
         return [
           element.getAttribute("aria-label"),
           labelledBy,
@@ -753,9 +768,7 @@ async function visibleControlsWithoutNames(page) {
           wrapping,
           element.getAttribute("title"),
           element.getAttribute("alt"),
-          element.textContent,
-          element.getAttribute("placeholder"),
-          element.getAttribute("value"),
+          content,
         ]
           .filter(Boolean)
           .join(" ")
@@ -789,6 +802,42 @@ async function assertNoPageOverflow(page) {
   expect(geometry.app, JSON.stringify(geometry)).toBeLessThanOrEqual(
     geometry.viewport + 1,
   );
+}
+
+async function assertProductionBoundaryContract(page, surfaceName, surface) {
+  const emptyStateSelector = surfaceName === "cep"
+    ? "#deliverablesSeqPill"
+    : "#captionsSessionPill";
+  await expect(page.locator("#connLabel")).toContainText(/offline|disconnected/i);
+  await expect(page.locator(emptyStateSelector)).toHaveAttribute(
+    "data-state",
+    /^(empty|error)$/,
+  );
+  await expect(page.locator(surface.activePanelSelector)).toHaveCount(1);
+
+  const statusNodes = await page.locator("[role='status']").count();
+  expect(statusNodes).toBeGreaterThan(0);
+
+  const firstTab = page.locator(surface.tabSelector).first();
+  await firstTab.focus();
+  await expect(firstTab).toBeFocused();
+  await page.keyboard.press("Tab");
+  const focusState = await page.evaluate(() => {
+    const node = document.activeElement;
+    if (!node) return { visible: false, insideDocument: false };
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return {
+      visible: style.display !== "none"
+        && style.visibility !== "hidden"
+        && rect.width > 0
+        && rect.height > 0,
+      insideDocument: document.documentElement.contains(node),
+    };
+  });
+  expect(focusState).toEqual({ visible: true, insideDocument: true });
+  expect(await visibleControlsWithoutNames(page)).toEqual([]);
+  await assertNoPageOverflow(page);
 }
 
 test("panel styles use the compact radius scale without pill geometry", async () => {
@@ -1935,7 +1984,45 @@ test("offline, empty, loading, error, permission, and confirmation states stay s
   expect(state.busy).toBe("true");
   expect(state.dialogName).toBe("renderedConfirmTitle");
   expect(await visibleControlsWithoutNames(page)).toEqual([]);
+
+  await page.evaluate(() => {
+    const probe = document.createElement("input");
+    probe.id = "placeholderOnlyNameProbe";
+    probe.type = "text";
+    probe.placeholder = "Placeholder only";
+    probe.value = "Current value only";
+    document.getElementById("renderedStateFixture").append(probe);
+  });
+  expect(await visibleControlsWithoutNames(page)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "placeholderOnlyNameProbe" }),
+    ]),
+  );
+  await page.locator("#placeholderOnlyNameProbe").evaluate((probe) => probe.remove());
   expect(pageErrors).toEqual([]);
+});
+
+test("production states stay semantic at every real breakpoint boundary", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  for (const surfaceName of ["cep", "uxp"]) {
+    for (const theme of ["dark", "light"]) {
+      for (const boundary of BREAKPOINT_BOUNDARIES[surfaceName]) {
+        for (const width of [boundary - 1, boundary, boundary + 1]) {
+          const { surface, pageErrors } = await openSurface(
+            page,
+            surfaceName,
+            theme,
+            width,
+            { height: 800 },
+          );
+          await assertProductionBoundaryContract(page, surfaceName, surface);
+          expect(pageErrors).toEqual([]);
+        }
+      }
+    }
+  }
 });
 
 const PLUGIN_TRUST_FIXTURE = {
