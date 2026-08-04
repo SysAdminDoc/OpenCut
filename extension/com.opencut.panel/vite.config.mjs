@@ -48,6 +48,7 @@ const classicScriptFiles = [
   "timeline-utils.js",
   "onboarding-state.js",
   "update-controller.js",
+  "results-controller.js",
   "bootstrap.js",
   "main.js",
 ];

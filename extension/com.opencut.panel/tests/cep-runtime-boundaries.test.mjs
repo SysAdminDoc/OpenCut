@@ -13,6 +13,7 @@ const timeline = require("../client/timeline-utils.js");
 const onboarding = require("../client/onboarding-state.js");
 const bootstrap = require("../client/bootstrap.js");
 const { createUpdateController } = require("../client/update-controller.js");
+const { createResultsController } = require("../client/results-controller.js");
 
 function requestHarness() {
   const requests = [];
@@ -523,6 +524,7 @@ describe("CEP source ownership", () => {
 
   it("announces every terminal job result through the live regions", () => {
     const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const results = readFileSync(new URL("../client/results-controller.js", import.meta.url), "utf8");
     const index = readFileSync(new URL("../client/index.html", import.meta.url), "utf8");
 
     // Two regions, not one with a swapped politeness: assistive technology
@@ -537,7 +539,9 @@ describe("CEP source ownership", () => {
     expect(index.indexOf("announce-utils.js")).toBeLessThan(index.indexOf("main.js"));
 
     // Success is polite, failure is assertive and names the recovery route.
-    expect(main).toContain('announceJobResult("polite", t("progress.announce_finished"');
+    expect(main).toContain("ResultsController.showSuccess(job, lastJobPayload)");
+    expect(results).toContain('onAnnounce("polite", t("progress.announce_finished"');
+    expect(main).toContain("ResultsController.showFailure(job, enhanceError(");
     expect(main).toContain('announceJobResult("error", failureTemplate.replace("{reason}", failureReason));');
     expect(main).toContain('t("progress.announce_failed_retry"');
     expect(main).toContain('announceJobResult("polite", t("progress.announce_cancelled"');
@@ -554,6 +558,70 @@ describe("CEP source ownership", () => {
 
     // A dismissed card must not leave a stale result to be re-read.
     expect(main.match(/clearResultAnnouncement\(\);/g).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("keeps terminal result rendering behind an injected controller boundary", () => {
+    const main = readFileSync(new URL("../client/main.js", import.meta.url), "utf8");
+    const results = readFileSync(new URL("../client/results-controller.js", import.meta.url), "utf8");
+
+    expect(main).toContain("OpenCutResultsController.createResultsController");
+    expect(main).toContain("ResultsController.dispose()");
+    expect(main).not.toContain("function showResults(job)");
+    expect(results).toContain("function showSuccess(job, sourcePayload)");
+    expect(results).toContain("function showFailure(job, message, canRetry)");
+    expect(results).toContain("function dispose()");
+  });
+
+  it("renders success and failure states without owning the job lifecycle", () => {
+    function node() {
+      return {
+        classList: { add: vi.fn(), remove: vi.fn() },
+        textContent: "",
+        innerHTML: "",
+        title: "",
+        removeAttribute: vi.fn(),
+        setAttribute: vi.fn(),
+      };
+    }
+    const elements = {
+      resultsSection: node(),
+      resultsTitle: node(),
+      resultsStats: node(),
+      resultsPath: node(),
+      retryJobBtn: node(),
+    };
+    const boundaryReview = vi.fn();
+    const announce = vi.fn();
+    const controller = createResultsController({
+      elements,
+      translate: (_key, fallback) => fallback,
+      escapeHtml: (value) => String(value),
+      safeFixed: (value, digits) => Number(value).toFixed(digits),
+      onBoundaryReview: boundaryReview,
+      onAnnounce: announce,
+    });
+
+    expect(controller.showSuccess({
+      result: {
+        summary: "Finished safely",
+        segments: 2,
+        boundary_review: { required: true, review_hits: 1, items: [] },
+        output_path: "C:/exports/result.wav",
+      },
+    }, { filepath: "clip.mov" })).toBe(true);
+    expect(elements.resultsTitle.textContent).toBe("Finished");
+    expect(elements.resultsPath.textContent).toBe("C:/exports/result.wav");
+    expect(boundaryReview).toHaveBeenCalledWith(
+      { required: true, review_hits: 1, items: [] },
+      { filepath: "clip.mov" },
+    );
+    expect(announce).toHaveBeenCalledWith("polite", expect.stringContaining("Run finished"));
+
+    expect(controller.showFailure({ error: "bad media" }, "Readable failure", true)).toBe(true);
+    expect(elements.resultsTitle.textContent).toBe("Run failed");
+    expect(elements.resultsStats.textContent).toBe("Readable failure");
+    expect(controller.dispose()).toBeUndefined();
+    expect(controller.showSuccess({ result: {} })).toBe(false);
   });
 
   it("settles the registered lifecycle before sending a user cancel", () => {

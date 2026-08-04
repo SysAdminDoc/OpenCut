@@ -16,6 +16,7 @@ export default [
       "client/timeline-utils.js",
       "client/bootstrap.js",
       "client/update-controller.js",
+      "client/results-controller.js",
     ],
     languageOptions: {
       ecmaVersion: 2021,
@@ -25,6 +26,7 @@ export default [
         CSInterface: "readonly",
         CSEvent: "readonly",
         OpenCutUpdateController: "readonly",
+        OpenCutResultsController: "readonly",
         SystemPath: "readonly",
         module: "readonly",
       },
