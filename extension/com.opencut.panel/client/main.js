@@ -12,7 +12,7 @@
     var HEALTH_MS = 4000;
     var CHECKPOINT_MIN_BACKEND_VERSION = "1.42.0";
     var SSE_OK = typeof EventSource !== "undefined";
-    var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {};
+    var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {}; var OpenCutGpuSelectionController = (typeof window !== "undefined" && window.OpenCutGpuSelectionController) ? window.OpenCutGpuSelectionController : {};
     var normalizeOAuthUrl = PanelUtils.normalizeOAuthUrl;
     var normalizeReleaseUrl = PanelUtils.normalizeReleaseUrl;
     var OpenCutFormat = (typeof window !== "undefined" && window.OpenCutFormat) ? window.OpenCutFormat : {};
@@ -2074,8 +2074,8 @@
         el.updateDismissBtn = $("updateDismissBtn");
         el.restartBackendBtn = $("restartBackendBtn");
         el.openLogsBtn = $("openLogsBtn");
-        el.gpuName = $("gpuName");
-        el.gpuVram = $("gpuVram");
+        el.gpuName = $("gpuName"); el.gpuVram = $("gpuVram");
+        el.gpuDeviceSelect = $("gpuDeviceSelect"); el.gpuSelectionStatus = $("gpuSelectionStatus");
         el.backendPort = $("backendPort");
         el.testLLMBtn = $("testLLMBtn");
         el.llmProvider = $("llmProvider");
@@ -2429,6 +2429,7 @@
         onBoundaryReview: renderFillerBoundaryReview,
         onAnnounce: announceJobResult
     });
+    var GpuSelectionController = OpenCutGpuSelectionController.createGpuSelectionController({documentRef: document, selectElement: el.gpuDeviceSelect, statusElement: el.gpuSelectionStatus, request: function (method, path, body, callback) { api(method, path, body, callback); }, translate: t, notify: function (message, level) { showToast(typeof message === "string" ? message : formatInstallError(message, t("settings.gpu_adapter_invalid", "GPU adapter selection failed.")), level || "error"); }}); GpuSelectionController.bind();
     var SettingsDiagnosticsController = OpenCutSettingsDiagnosticsController.createSettingsDiagnosticsController({
         request: function (method, path, body, callback) {
             api(method, path, body, callback);
@@ -2438,6 +2439,7 @@
         syncBackendSummary: syncSettingsBackendSummary,
         updateWhisperState: updateWhisperSettingsState,
         renderGpuState: function (data) {
+            GpuSelectionController.render(data);
             if (data) {
                 el.gpuName.textContent = data.available ? data.name : t("settings.system_gpu_none_detected", "None detected");
                 el.gpuVram.textContent = data.available
@@ -17929,7 +17931,7 @@
         window.addEventListener("beforeunload", function () {
             stopHostThemeSync();
             UpdateController.dispose();
-            ResultsController.dispose();
+            ResultsController.dispose(); GpuSelectionController.dispose();
             SettingsDiagnosticsController.dispose();
             NavigationController.dispose();
             wsDisconnect();

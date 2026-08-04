@@ -1862,6 +1862,16 @@
         <section class="oc-settings-group oc-settings-group--engines" id="settingsPaneEngines" data-settings-pane="engines" role="tabpanel" aria-labelledby="settingsNavEngines">
         <div class="oc-section-title" data-i18n="uxp.settings.engine_routing">Engines</div>
         <div class="oc-card">
+          <p class="oc-hint" data-i18n="uxp.settings.gpu_adapter_hint">Choose which visible CUDA adapter should run GPU-backed OpenCut operations. Auto uses the first available adapter.</p>
+          <div class="oc-field-row">
+            <label class="oc-label" for="uxpGpuDeviceSelect" data-i18n="uxp.settings.gpu_adapter_label">GPU adapter</label>
+            <select class="oc-select" id="uxpGpuDeviceSelect" aria-describedby="uxpGpuSelectionStatus">
+              <option value="auto" data-i18n="uxp.settings.gpu_adapter_auto">Auto (recommended)</option>
+            </select>
+          </div>
+          <div class="oc-status-line" id="uxpGpuSelectionStatus" role="status" aria-live="polite" data-i18n="uxp.settings.gpu_adapter_checking">Checking available GPU adapters...</div>
+        </div>
+        <div class="oc-card">
           <p class="oc-hint" data-i18n="uxp.settings.engine_routing_hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
           <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Engine routing summary" data-i18n-aria-label="uxp.settings.engine_routing_summary">
             <div class="oc-inline-stat">

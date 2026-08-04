@@ -1,3 +1,5 @@
+import { createUxpGpuSelectionController } from "./uxp-gpu-selection-controller.js";
+
 export function createUxpSettingsController({
   documentRef = globalThis.document,
   windowRef = globalThis.window || globalThis,
@@ -22,6 +24,13 @@ export function createUxpSettingsController({
   const handleWorkspaceAction = onWorkspaceAction;
   const t = translate;
   const formatI18n = formatTranslate;
+  const GpuSelectionController = createUxpGpuSelectionController({
+    documentRef: document,
+    client: BackendClient,
+    translate: t,
+    formatTranslate: formatI18n,
+    showToast,
+  });
   const cleanupCallbacks = [];
   let settingsNavigationBound = false;
   let settingsIOBound = false;
@@ -122,6 +131,7 @@ export function createUxpSettingsController({
   
   async function initSettingsIO() {
     if (settingsIOBound || disposed) return;
+    GpuSelectionController.bind();
     const exportButton = document.getElementById("uxpExportSettingsBtn");
     const importButton = document.getElementById("uxpImportSettingsBtn");
     const status = document.getElementById("uxpSettingsIOStatus");
@@ -489,6 +499,7 @@ export function createUxpSettingsController({
   
   async function loadUxpOnboarding() {
     if (!isBackendConnected()) return;
+    await GpuSelectionController.load();
     const response = await BackendClient.get("/settings/onboarding");
     if (!response?.ok) return;
     const state = response.data || {};
@@ -562,6 +573,7 @@ export function createUxpSettingsController({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    GpuSelectionController.dispose();
     cleanupCallbacks.splice(0).reverse().forEach((cleanup) => cleanup());
   }
 

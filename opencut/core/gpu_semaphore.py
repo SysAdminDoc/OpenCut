@@ -247,6 +247,12 @@ def gpu_exclusive(
                     "queue_depth": depth,
                 }
             try:
+                # CUDA's current device is worker-thread local. Activate the
+                # persisted selection at the same boundary as the exclusive
+                # slot so every guarded model load uses the chosen adapter.
+                from opencut.gpu import activate_selected_gpu
+
+                activate_selected_gpu()
                 return func(*args, **kwargs)
             finally:
                 release()

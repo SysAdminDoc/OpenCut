@@ -38,6 +38,18 @@ def _env_int(name: str, default: int, *, min_val: Optional[int] = None,
     return value
 
 
+def _env_optional_int(name: str) -> Optional[int]:
+    """Parse an optional non-negative integer, treating ``auto`` as unset."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip().lower() in {"", "auto", "default", "none", "-1"}:
+        return None
+    try:
+        value = int(raw.strip())
+    except (TypeError, ValueError):
+        return None
+    return value if value >= 0 else None
+
+
 def _env_csv(name: str, default: list[str]) -> list[str]:
     """Parse a comma-separated env var.
 
@@ -63,6 +75,10 @@ class OpenCutConfig:
     torch_home: Optional[str] = None
     florence_model_dir: Optional[str] = None
     lama_model_dir: Optional[str] = None
+    # CUDA device index used by GPU-backed work. ``None`` keeps the runtime's
+    # automatic/default-device behaviour; a non-negative index pins work to a
+    # specific CUDA adapter.
+    gpu_index: Optional[int] = None
     max_content_length: int = 100 * 1024 * 1024  # 100 MB
     # Cross-origin browser development must opt in with OPENCUT_CORS_ORIGINS.
     # The default stays closed because /health is the CSRF bootstrap endpoint.
@@ -97,6 +113,7 @@ class OpenCutConfig:
             torch_home=os.environ.get("TORCH_HOME", None),
             florence_model_dir=os.environ.get("OPENCUT_FLORENCE_DIR", None),
             lama_model_dir=os.environ.get("OPENCUT_LAMA_DIR", None),
+            gpu_index=_env_optional_int("OPENCUT_GPU_INDEX"),
             max_content_length=_env_int(
                 "OPENCUT_MAX_CONTENT_LENGTH",
                 100 * 1024 * 1024,

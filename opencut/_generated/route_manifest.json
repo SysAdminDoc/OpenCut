@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T15:42:11Z",
-  "total_routes": 1582,
-  "shipped_route_count": 1557,
+  "generated_at": "2026-08-04T16:20:22Z",
+  "total_routes": 1583,
+  "shipped_route_count": 1558,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 403,
     "PATCH": 1,
-    "POST": 1163,
+    "POST": 1164,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1529,
+    "implemented": 1530,
     "stub": 25
   },
   "blueprints": {
@@ -889,11 +889,11 @@
       ]
     },
     "system": {
-      "route_count": 66,
+      "route_count": 67,
       "method_counts": {
         "DELETE": 1,
         "GET": 34,
-        "POST": 33
+        "POST": 34
       },
       "sample_rules": [
         "/health",
@@ -20139,12 +20139,28 @@
       "endpoint": "system.system_gpu",
       "blueprint": "system",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "panel",
       "surface_classes": [
-        "integration-only"
+        "panel"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "extension/com.opencut.uxp/uxp-gpu-selection-controller.js"
+      ]
+    },
+    {
+      "rule": "/system/gpu",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.select_system_gpu",
+      "blueprint": "system",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.uxp/uxp-gpu-selection-controller.js"
       ]
     },
     {
@@ -27001,6 +27017,7 @@
         "extension/com.opencut.uxp/udt-smoke.js",
         "extension/com.opencut.uxp/uxp-bootstrap.js",
         "extension/com.opencut.uxp/uxp-components.js",
+        "extension/com.opencut.uxp/uxp-gpu-selection-controller.js",
         "extension/com.opencut.uxp/uxp-i18n.js",
         "extension/com.opencut.uxp/uxp-sequence-index-controller.js",
         "extension/com.opencut.uxp/uxp-settings-controller.js",
@@ -27030,24 +27047,24 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1557,
-      "direct_surface_routes": 271,
-      "integration_only_routes": 1286,
-      "coverage_percent": 17.4,
+      "shipped_routes": 1558,
+      "direct_surface_routes": 273,
+      "integration_only_routes": 1285,
+      "coverage_percent": 17.5,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 216,
+        "panel": 218,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
-        "integration-only": 1311
+        "integration-only": 1310
       },
       "assigned_counts": {
-        "panel": 216,
+        "panel": 218,
         "palette": 33,
         "cli": 1,
         "mcp": 92,
-        "integration-only": 1311
+        "integration-only": 1310
       }
     },
     "gate": {

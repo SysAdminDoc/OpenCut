@@ -12,6 +12,8 @@ UXP_HTML = UXP_ROOT / "index.html"
 UXP_JS = UXP_ROOT / "main.js"
 UXP_I18N = UXP_ROOT / "uxp-i18n.js"
 UXP_UTILS = UXP_ROOT / "uxp-utils.js"
+UXP_GPU_CONTROLLER = UXP_ROOT / "uxp-gpu-selection-controller.js"
+UXP_UPDATE_CONTROLLER = UXP_ROOT / "uxp-update-controller.js"
 UXP_LOCALE = UXP_ROOT / "locales" / "en.json"
 UXP_ES_LOCALE = UXP_ROOT / "locales" / "es.json"
 
@@ -45,11 +47,11 @@ def _format_placeholders(value: str) -> list[str]:
     return sorted(set(re.findall(r"\{[A-Za-z0-9_]+\}", value)))
 
 
-def _js_locale_string_keys() -> set[str]:
+def _js_locale_string_keys(js: str | None = None) -> set[str]:
     return set(
         re.findall(
             r"""["']((?:common|conn|nav|processing|uxp)\.[a-z0-9_.-]+)["']""",
-            _js(),
+            _js() if js is None else js,
         )
     )
 
@@ -63,9 +65,15 @@ def _html_i18n_keys() -> set[str]:
 
 
 def _js_i18n_keys() -> set[str]:
-    js = _js()
-    keys = set(re.findall(r'(?<![A-Za-z0-9_$])t\(\s*"([^"]+)"', js))
-    keys.update(_js_locale_string_keys())
+    js = "\n".join(
+        (
+            _js(),
+            UXP_GPU_CONTROLLER.read_text(encoding="utf-8"),
+            UXP_UPDATE_CONTROLLER.read_text(encoding="utf-8"),
+        )
+    )
+    keys = set(re.findall(r'(?<![A-Za-z0-9_$])(?:t|translate|formatTranslate)\(\s*"([^"]+)"', js))
+    keys.update(_js_locale_string_keys(js))
     keys.update(
         re.findall(
             r'(?<![A-Za-z0-9_$])setStatus\(\s*"([a-z0-9_.-]+\.[a-z0-9_.-]+)"',
@@ -360,6 +368,15 @@ def test_uxp_dynamic_i18n_keys_are_covered_by_locale():
         "uxp.workspace.library_clip_count_many",
         "uxp.settings.bridge_unavailable",
         "uxp.settings.engine_availability_failed",
+        "uxp.settings.gpu_adapter_auto",
+        "uxp.settings.gpu_adapter_checking",
+        "uxp.settings.gpu_adapter_device",
+        "uxp.settings.gpu_adapter_invalid",
+        "uxp.settings.gpu_adapter_load_failed",
+        "uxp.settings.gpu_adapter_none",
+        "uxp.settings.gpu_adapter_saved",
+        "uxp.settings.gpu_adapter_saving",
+        "uxp.settings.gpu_adapter_status",
         "uxp.settings.migration_dashboard_unavailable_status",
         "uxp.runtime.select_clip_first",
         "uxp.runtime.clipboard_unavailable",

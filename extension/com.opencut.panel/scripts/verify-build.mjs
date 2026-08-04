@@ -38,6 +38,7 @@ const CLASSIC_SCRIPT_FILES = [
   "timeline-utils.js",
   "onboarding-state.js",
   "transcript-correction-controller.js",
+  "gpu-selection-controller.js",
   "bootstrap.js",
   "main.js",
 ];

@@ -148,7 +148,9 @@ def _infer_onnx(frame_paths: List[str], window: int, on_progress):
     from PIL import Image
 
     onnx_path = os.environ["OPENCUT_VRT_ONNX"]
-    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    from opencut.gpu import selected_onnx_providers
+
+    providers = selected_onnx_providers()
     sess = ort.InferenceSession(onnx_path, providers=providers)
     input_name = sess.get_inputs()[0].name
 

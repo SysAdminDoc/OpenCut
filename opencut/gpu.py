@@ -9,8 +9,279 @@ CPU-only systems.
 """
 
 import logging
+import os
+import shutil
+import subprocess
 
 logger = logging.getLogger("opencut")
+
+
+class GPUSelectionError(ValueError):
+    """A requested CUDA adapter is not available on this machine."""
+
+    code = "INVALID_GPU_INDEX"
+    status_code = 400
+
+    def __init__(self, requested, devices):
+        self.requested = requested
+        self.available_devices = [dict(device) for device in (devices or [])]
+        available = ", ".join(
+            f"{device.get('index')}: {device.get('name') or 'CUDA device'}"
+            for device in self.available_devices
+        ) or "none"
+        super().__init__(
+            f"GPU index {requested!r} is not available. Available CUDA devices: {available}."
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "error": str(self),
+            "code": self.code,
+            "requested_index": self.requested,
+            "available_devices": self.available_devices,
+            "suggestion": "Choose one of the listed device indexes or select Auto.",
+        }
+
+
+def _normalise_gpu_index(value, *, allow_auto: bool = True):
+    """Return a non-negative CUDA index or ``None`` for automatic selection."""
+    if value is None and allow_auto:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("GPU index must be a non-negative integer or auto")
+    if isinstance(value, str):
+        raw = value.strip().lower()
+        if allow_auto and raw in {"", "auto", "default", "none", "-1"}:
+            return None
+        if not raw or not raw.isdigit():
+            raise ValueError("GPU index must be a non-negative integer or auto")
+        value = int(raw)
+    if not isinstance(value, int) or value < 0:
+        raise ValueError("GPU index must be a non-negative integer or auto")
+    return value
+
+
+def _configured_gpu_index():
+    """Read the saved selection, falling back to the process configuration."""
+    try:
+        from opencut.user_data import read_user_file
+
+        saved = read_user_file("gpu_settings.json", default=None)
+        if isinstance(saved, dict) and "gpu_index" in saved:
+            return _normalise_gpu_index(saved.get("gpu_index"))
+    except (TypeError, ValueError, OSError) as exc:
+        logger.warning("Ignoring invalid saved GPU selection: %s", exc)
+
+    try:
+        from flask import current_app, has_app_context
+
+        if has_app_context():
+            config = current_app.config.get("OPENCUT")
+            if config is not None and hasattr(config, "gpu_index"):
+                return _normalise_gpu_index(config.gpu_index)
+    except (ImportError, RuntimeError, TypeError, ValueError):
+        pass
+
+    raw = os.environ.get("OPENCUT_GPU_INDEX")
+    try:
+        return _normalise_gpu_index(raw)
+    except ValueError:
+        logger.warning("Ignoring invalid OPENCUT_GPU_INDEX=%r", raw)
+        return None
+
+
+def _safe_float(value) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def list_gpu_devices() -> list[dict]:
+    """Return all visible NVIDIA CUDA adapters with stable integer indexes."""
+    nvidia_smi = shutil.which("nvidia-smi")
+    if nvidia_smi:
+        try:
+            result = subprocess.run(
+                [
+                    nvidia_smi,
+                    "--query-gpu=index,name,memory.total,memory.free,driver_version",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if result.returncode == 0:
+                devices = []
+                for line in (result.stdout or "").splitlines():
+                    parts = [part.strip() for part in line.split(",")]
+                    if len(parts) < 5:
+                        continue
+                    try:
+                        index = int(parts[0])
+                    except (TypeError, ValueError):
+                        continue
+                    # GPU names can contain commas; the final three fields are
+                    # always memory total, memory free, and driver version.
+                    name = ",".join(parts[1:-3]).strip()
+                    devices.append({
+                        "index": index,
+                        "name": name,
+                        "memory_total_mb": _safe_float(parts[-3]),
+                        "memory_free_mb": _safe_float(parts[-2]),
+                        "driver_version": parts[-1],
+                    })
+                if devices:
+                    return sorted(devices, key=lambda device: device["index"])
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            logger.debug("nvidia-smi GPU query failed: %s", exc)
+
+    if not _HAS_TORCH:
+        return []
+    try:
+        if not torch.cuda.is_available():
+            return []
+        devices = []
+        for index in range(torch.cuda.device_count()):
+            props = torch.cuda.get_device_properties(index)
+            total = float(getattr(props, "total_memory", getattr(props, "total_mem", 0))) / (1024 * 1024)
+            devices.append({
+                "index": index,
+                "name": str(getattr(props, "name", "CUDA device")),
+                "memory_total_mb": round(total, 1),
+                "memory_free_mb": 0.0,
+                "driver_version": "",
+            })
+        return devices
+    except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        logger.debug("PyTorch GPU query failed: %s", exc)
+        return []
+
+
+def gpu_selection_status(devices: list[dict] | None = None) -> dict:
+    """Return a JSON-safe description of configured and active GPU state."""
+    devices = list_gpu_devices() if devices is None else list(devices)
+    configured = _configured_gpu_index()
+    available_indexes = {int(device.get("index")) for device in devices if "index" in device}
+    error = None
+    if configured is not None and configured not in available_indexes:
+        error = GPUSelectionError(configured, devices).to_dict()
+    selected = (
+        configured
+        if configured in available_indexes
+        else (min(available_indexes) if available_indexes and error is None else None)
+    )
+    return {
+        "configured_index": configured,
+        "selected_index": selected,
+        "selection_mode": "manual" if configured is not None else "auto",
+        "device": f"cuda:{selected}" if selected is not None else "cpu",
+        "devices": devices,
+        "selection_error": error,
+    }
+
+
+def validate_gpu_index(value, devices: list[dict] | None = None):
+    """Validate an API-provided index and return its normalized value."""
+    devices = list_gpu_devices() if devices is None else list(devices)
+    try:
+        index = _normalise_gpu_index(value)
+    except ValueError:
+        raise GPUSelectionError(value, devices) from None
+    if index is not None and index not in {
+        int(device.get("index")) for device in devices if "index" in device
+    }:
+        raise GPUSelectionError(index, devices)
+    return index
+
+
+def save_gpu_selection(value, devices: list[dict] | None = None) -> dict:
+    """Validate and persist a user selection, returning the new status."""
+    devices = list_gpu_devices() if devices is None else list(devices)
+    index = validate_gpu_index(value, devices)
+    from opencut.user_data import load_gpu_settings, save_gpu_settings
+
+    settings = load_gpu_settings()
+    settings["gpu_index"] = index
+    save_gpu_settings(settings)
+    # Switch the request thread immediately; future worker threads activate
+    # the same persisted selection at their boundary.
+    activate_selected_gpu(devices=devices)
+    return gpu_selection_status(devices)
+
+
+def activate_selected_gpu(*, torch_module=None, devices: list[dict] | None = None):
+    """Make the configured adapter current for the calling worker thread."""
+    module = torch_module if torch_module is not None else torch
+    configured = _configured_gpu_index()
+    if module is None:
+        if configured is not None:
+            raise GPUSelectionError(configured, devices or list_gpu_devices())
+        return None
+    try:
+        available = bool(module.cuda.is_available())
+    except Exception as exc:
+        logger.warning("CUDA availability check failed: %s", exc)
+        return None
+    if not available:
+        if configured is not None:
+            raise GPUSelectionError(configured, devices or list_gpu_devices())
+        return None
+
+    devices = list_gpu_devices() if devices is None else list(devices)
+    indexes = {int(device.get("index")) for device in devices if "index" in device}
+    index = configured if configured is not None else 0
+    if index not in indexes:
+        # A mocked/limited torch runtime may not have nvidia-smi metadata;
+        # use its runtime count as the authoritative fallback.
+        try:
+            count = int(module.cuda.device_count())
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            count = 0
+        if index < 0 or index >= count:
+            raise GPUSelectionError(index, devices)
+    try:
+        module.cuda.set_device(index)
+    except (AttributeError, RuntimeError, TypeError, ValueError) as exc:
+        raise GPUSelectionError(index, devices) from exc
+    return index
+
+
+def get_device_index() -> int | None:
+    """Return the effective CUDA index, or ``None`` when CPU is active."""
+    status = gpu_selection_status()
+    return status.get("selected_index")
+
+
+def selected_ct2_device_kwargs() -> dict:
+    """Return CTranslate2 constructor kwargs for the selected adapter."""
+    status = gpu_selection_status()
+    if status.get("selection_error"):
+        error = status["selection_error"]
+        raise GPUSelectionError(error.get("requested_index"), status.get("devices", []))
+    index = status.get("selected_index")
+    if index is None:
+        return {"device": "auto"}
+    return {"device": "cuda", "device_index": index}
+
+
+def selected_onnx_providers() -> list:
+    """Return ONNX Runtime providers pinned to the selected CUDA index."""
+    status = gpu_selection_status()
+    if status.get("selection_error"):
+        error = status["selection_error"]
+        raise GPUSelectionError(error.get("requested_index"), status.get("devices", []))
+    index = status.get("selected_index")
+    if index is None:
+        # Keep ONNX Runtime's provider probing behaviour when no CUDA device
+        # metadata is available (for example, a vendor runtime without torch).
+        return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    return [
+        ("CUDAExecutionProvider", {"device_id": index}),
+        "CPUExecutionProvider",
+    ]
 
 # ---------------------------------------------------------------------------
 # Optional torch import
@@ -35,7 +306,12 @@ def _cuda_available() -> bool:
     if not _HAS_TORCH:
         return False
     try:
-        return bool(torch.cuda.is_available())
+        if not torch.cuda.is_available():
+            return False
+        activate_selected_gpu(torch_module=torch)
+        return True
+    except GPUSelectionError:
+        raise
     except Exception as exc:
         logger.warning("torch.cuda.is_available() raised %s — falling back to CPU", exc)
         return False
@@ -164,6 +440,7 @@ class GPUContext:
 
     def __enter__(self):
         if self._device_str == "cuda":
+            activate_selected_gpu(torch_module=torch)
             self.available_gb, self.total_gb = check_vram(self._min_vram_gb)
             logger.info(
                 "GPUContext entered: %.2f / %.2f GB VRAM free",

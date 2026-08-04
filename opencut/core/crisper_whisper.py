@@ -62,6 +62,10 @@ def detect_fillers_crisper(
         on_progress(5, "Loading CrisperWhisper model...")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        from opencut.gpu import activate_selected_gpu
+
+        activate_selected_gpu(torch_module=torch)
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     model_id = "nyrahealth/CrisperWhisper"
@@ -179,7 +183,15 @@ def _fallback_filler_detection(
     if on_progress:
         on_progress(10, "Falling back to faster-whisper for filler detection...")
 
-    model = WhisperModel("base", device="auto", compute_type="auto")
+    from opencut.gpu import get_device, get_device_index
+
+    device = get_device()
+    model_kwargs = {"device": device, "compute_type": "auto"}
+    if device == "cuda":
+        index = get_device_index()
+        if index is not None:
+            model_kwargs["device_index"] = index
+    model = WhisperModel("base", **model_kwargs)
 
     try:
         segments, info = model.transcribe(

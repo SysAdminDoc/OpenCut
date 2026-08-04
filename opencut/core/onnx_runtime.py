@@ -201,8 +201,13 @@ def run_onnx_inference(
     if provider is None:
         provider = get_optimal_provider()
 
-    providers = [provider]
-    if provider != "CPUExecutionProvider":
+    if provider == "CUDAExecutionProvider":
+        from opencut.gpu import selected_onnx_providers
+
+        providers = selected_onnx_providers()
+    else:
+        providers = [provider]
+    if provider != "CPUExecutionProvider" and "CPUExecutionProvider" not in providers:
         providers.append("CPUExecutionProvider")
 
     if on_progress:
