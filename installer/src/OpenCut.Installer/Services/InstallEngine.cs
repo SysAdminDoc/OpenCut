@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using OpenCut.Installer.Models;
 
 namespace OpenCut.Installer.Services;
@@ -29,12 +30,18 @@ public class InstallEngine
         int step = 0;
 
         var tempDir = Path.Combine(Path.GetTempPath(), $"OpenCut-Install-{Guid.NewGuid():N}");
+        using var transaction = new InstallTransaction(_config, _registryManager);
 
         try
         {
             // Step 1: Kill existing processes
             step = 1;
             _processKiller.KillOpenCutProcesses(progress, step, totalSteps);
+
+            // Capture every stateful surface before an upgrade uninstaller or
+            // the first file copy can mutate it.
+            transaction.Begin(progress, totalSteps);
+            PrepareUpgrade(transaction, progress, step, totalSteps);
 
             // Step 2: Extract payload
             step = 2;
@@ -192,16 +199,104 @@ public class InstallEngine
                     $"Could not remove temp dir: {ex.Message}", LogLevel.Warning);
             }
 
+            transaction.Commit(progress, step, totalSteps);
             Report(progress, totalSteps, totalSteps, "Installation complete",
                 "OpenCut has been installed successfully!", LogLevel.Success);
         }
         catch (Exception ex)
         {
+            Exception? rollbackError = null;
+            try
+            {
+                transaction.Rollback(progress, Math.Max(step, 1), totalSteps);
+            }
+            catch (Exception restoreException)
+            {
+                rollbackError = restoreException;
+            }
+
             // Cleanup temp on failure
             try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); }
             catch { /* Ignore cleanup errors */ }
 
-            throw new InvalidOperationException($"Installation failed at step {step}: {ex.Message}", ex);
+            if (rollbackError is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Installation failed at step {step}: {ex.Message} Rollback also failed: {rollbackError.Message}",
+                    new AggregateException(ex, rollbackError));
+            }
+
+            throw new InvalidOperationException($"Installation failed at step {step}; the previous state was restored: {ex.Message}", ex);
+        }
+    }
+
+    private static void PrepareUpgrade(
+        InstallTransaction transaction,
+        IProgress<InstallProgress> progress,
+        int step,
+        int totalSteps)
+    {
+        var previousPath = transaction.PreviousInstallPath;
+        if (!string.IsNullOrWhiteSpace(previousPath) && Directory.Exists(previousPath))
+        {
+            var uninstallerPath = Path.Combine(previousPath, "OpenCut-Uninstall.exe");
+            if (!File.Exists(uninstallerPath))
+            {
+                throw new InvalidOperationException(
+                    $"An existing OpenCut installation was found at {previousPath}, " +
+                    "but its uninstaller is missing. Remove that installation or restore OpenCut-Uninstall.exe before upgrading.");
+            }
+
+            Report(progress, step, totalSteps, "Preparing upgrade",
+                $"Removing the previous installation from {previousPath}...", LogLevel.Info);
+            RunPreviousUninstaller(uninstallerPath, previousPath);
+            Report(progress, step, totalSteps, "Preparing upgrade",
+                "Previous installation removed; continuing with a clean install root.", LogLevel.Success);
+        }
+
+        transaction.PrepareCleanInstallRoot();
+    }
+
+    private static void RunPreviousUninstaller(string uninstallerPath, string installPath)
+    {
+        var currentProcessPath = Environment.ProcessPath;
+        if (currentProcessPath is not null &&
+            string.Equals(currentProcessPath, uninstallerPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The installer cannot run the previous uninstaller because they are the same executable.");
+        }
+
+        var logPath = Path.Combine(
+            Path.GetTempPath(), $"OpenCut-Upgrade-Uninstall-{Guid.NewGuid():N}.log");
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = uninstallerPath,
+            WorkingDirectory = installPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        startInfo.ArgumentList.Add("--uninstall");
+        startInfo.ArgumentList.Add("--quiet");
+        startInfo.ArgumentList.Add("--dir");
+        startInfo.ArgumentList.Add(installPath);
+        startInfo.ArgumentList.Add("--log");
+        startInfo.ArgumentList.Add(logPath);
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start the previous OpenCut uninstaller.");
+        if (!process.WaitForExit(TimeSpan.FromMinutes(5)))
+        {
+            try { process.Kill(entireProcessTree: true); }
+            catch { /* Preserve the timeout as the actionable failure. */ }
+            throw new TimeoutException("The previous OpenCut uninstaller did not finish within five minutes.");
+        }
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"The previous OpenCut uninstaller failed with exit code {process.ExitCode}. " +
+                $"See {logPath} for details.");
         }
     }
 

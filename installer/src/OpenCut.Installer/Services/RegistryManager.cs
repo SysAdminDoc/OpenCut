@@ -14,7 +14,8 @@ public class RegistryManager
             using var envKey = Registry.CurrentUser.OpenSubKey(AppConstants.EnvironmentRegKey, writable: true);
             if (envKey == null) return;
 
-            var currentPath = envKey.GetValue("Path", "") as string ?? "";
+            var currentPath = envKey.GetValue(
+                "Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
 
             var pathSegments = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries);
             if (pathSegments.Any(p => p.Equals(directory, StringComparison.OrdinalIgnoreCase)))
@@ -46,7 +47,8 @@ public class RegistryManager
             using var envKey = Registry.CurrentUser.OpenSubKey(AppConstants.EnvironmentRegKey, writable: true);
             if (envKey == null) return;
 
-            var currentPath = envKey.GetValue("Path", "") as string ?? "";
+            var currentPath = envKey.GetValue(
+                "Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames) as string ?? "";
             var parts = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => !p.Equals(directory, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
@@ -84,6 +86,52 @@ public class RegistryManager
     public void RemovePlayerDebugMode()
     {
         // We don't remove PlayerDebugMode on uninstall since other extensions may need it
+    }
+
+    public RegistryInstallState CaptureInstallState()
+    {
+        var playerDebugModes = new Dictionary<int, RegistryValueSnapshot?>();
+        foreach (var version in AppConstants.CsxsVersions)
+        {
+            using var key = Registry.CurrentUser.OpenSubKey($@"Software\Adobe\CSXS.{version}");
+            playerDebugModes[version] = CaptureValue(key, "PlayerDebugMode");
+        }
+
+        return new RegistryInstallState
+        {
+            UserEnvironment = CaptureKey(Registry.CurrentUser, AppConstants.EnvironmentRegKey),
+            UserApplication = CaptureKey(Registry.CurrentUser, AppConstants.AppRegKey),
+            MachineUninstall = CaptureKey(Registry.LocalMachine, AppConstants.UninstallRegKey),
+            PlayerDebugModes = playerDebugModes,
+        };
+    }
+
+    public void RestoreInstallState(RegistryInstallState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        RestoreKey(Registry.CurrentUser, AppConstants.EnvironmentRegKey, state.UserEnvironment);
+        RestoreKey(Registry.CurrentUser, AppConstants.AppRegKey, state.UserApplication);
+        RestoreKey(Registry.LocalMachine, AppConstants.UninstallRegKey, state.MachineUninstall);
+
+        foreach (var version in AppConstants.CsxsVersions)
+        {
+            var keyPath = $@"Software\Adobe\CSXS.{version}";
+            using var key = Registry.CurrentUser.OpenSubKey(keyPath, writable: true);
+            var snapshot = state.PlayerDebugModes.TryGetValue(version, out var value)
+                ? value
+                : null;
+
+            if (snapshot is null)
+            {
+                key?.DeleteValue("PlayerDebugMode", throwOnMissingValue: false);
+            }
+            else
+            {
+                using var writableKey = key ?? Registry.CurrentUser.CreateSubKey(keyPath);
+                writableKey?.SetValue("PlayerDebugMode", CloneValue(snapshot.Value), snapshot.Kind);
+            }
+        }
     }
 
     public void WriteInstallPath(string installPath, IProgress<InstallProgress> progress, int step, int totalSteps)
@@ -177,6 +225,60 @@ public class RegistryManager
         }
         catch { return null; }
     }
+
+    private static RegistryKeySnapshot CaptureKey(RegistryKey root, string path)
+    {
+        using var key = root.OpenSubKey(path);
+        if (key is null)
+            return new RegistryKeySnapshot(false, new Dictionary<string, RegistryValueSnapshot>());
+
+        var values = new Dictionary<string, RegistryValueSnapshot>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in key.GetValueNames())
+        {
+            var value = CaptureValue(key, name);
+            if (value is not null)
+                values[name] = value;
+        }
+
+        return new RegistryKeySnapshot(true, values);
+    }
+
+    private static RegistryValueSnapshot? CaptureValue(RegistryKey? key, string name)
+    {
+        if (key is null)
+            return null;
+
+        var value = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+        if (value is null)
+            return null;
+        return new RegistryValueSnapshot(CloneValue(value), key.GetValueKind(name));
+    }
+
+    private static void RestoreKey(RegistryKey root, string path, RegistryKeySnapshot snapshot)
+    {
+        if (!snapshot.Exists)
+        {
+            root.DeleteSubKeyTree(path, throwOnMissingSubKey: false);
+            return;
+        }
+
+        using var key = root.CreateSubKey(path);
+        if (key is null)
+            throw new InvalidOperationException($"Could not open registry key {path} for restore.");
+
+        foreach (var currentName in key.GetValueNames())
+            key.DeleteValue(currentName, throwOnMissingValue: false);
+        foreach (var value in snapshot.Values)
+            key.SetValue(value.Key, CloneValue(value.Value.Value), value.Value.Kind);
+    }
+
+    private static object CloneValue(object value) => value switch
+    {
+        string[] strings => strings.ToArray(),
+        byte[] bytes => bytes.ToArray(),
+        int[] ints => ints.ToArray(),
+        _ => value,
+    };
 
     private static long GetDirectorySize(string path)
     {
