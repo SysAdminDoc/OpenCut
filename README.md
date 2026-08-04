@@ -682,7 +682,26 @@ opencut silence interview.mp4 --format otio --otio-schema OTIO_CORE:0.14.0 --acc
 # Call any generated backend route from scripts
 opencut route GET /system/check-failures
 opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepath":"C:/clip.mp4"}}'
+
+# Run the opt-in benchmark control lane (model/cloud adapters never download)
+# PowerShell: $env:OPENCUT_RUN_PERF_BENCHMARKS=1
+# POSIX:      export OPENCUT_RUN_PERF_BENCHMARKS=1
+opencut benchmark run --benchmark declarative_compose --backend ffmpeg-compose \
+  --warmup 1 --repeats 3 --output .opencut/performance/current.json
+
+# Compare only a compatible host receipt; incompatible hardware is not a failure
+opencut benchmark compare .opencut/performance/current.json .opencut/performance/baseline.json --json
 ```
+
+The benchmark receipt records the MIT synthetic-fixture hash and license,
+model/dependency versions, hardware/software compatibility key, seed, warm-up
+and repeat counts, timing percentiles, RSS/Python allocation peaks, and
+adapter-supplied quality metrics. Optional backends that are not installed or
+do not have a local no-download adapter are recorded as `skipped`. Release
+smoke validates the registry by default and consumes a baseline only when
+`--performance-receipt` and `--performance-baseline` (or their
+`OPENCUT_PERF_RECEIPT` / `OPENCUT_PERF_BASELINE` environment variables) are
+provided.
 
 ---
 

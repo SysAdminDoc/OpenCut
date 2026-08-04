@@ -1743,6 +1743,107 @@ def plugins_doctor(as_json):
         raise SystemExit(1)
 
 
+@cli.group("benchmark")
+def benchmark_group():
+    """Run the explicit, provenance-rich performance benchmark lane."""
+    pass
+
+
+@benchmark_group.command("list")
+@click.option("--json", "as_json", is_flag=True, help="Emit the registry as JSON.")
+def benchmark_list(as_json):
+    """List benchmark IDs, registered backends, and local adapter probes."""
+    from opencut.core.performance_benchmark_runner import list_backend_adapters
+    from opencut.core.performance_benchmarks import backend_matrix, list_benchmarks
+
+    payload = {
+        "benchmarks": [spec.as_dict() for spec in list_benchmarks()],
+        "backend_matrix": backend_matrix(),
+        "adapters": list_backend_adapters(),
+        "opt_in_environment": "OPENCUT_RUN_PERF_BENCHMARKS=1",
+    }
+    if as_json:
+        click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+    for spec in list_benchmarks():
+        click.echo(f"{spec.benchmark_id}: {spec.title}")
+        click.echo(f"  backends: {', '.join(spec.backends)}")
+        click.echo(f"  metric: {spec.metric_name}; sample: {spec.sample_description}")
+    click.echo("\nAdapters: " + ", ".join(list_backend_adapters()))
+    click.echo("Opt in with OPENCUT_RUN_PERF_BENCHMARKS=1 before running.")
+
+
+@benchmark_group.command("run")
+@click.option("--benchmark", "benchmark_ids", multiple=True, help="Benchmark ID; repeatable.")
+@click.option("--backend", "backends", multiple=True, help="Backend name; repeatable.")
+@click.option("--seed", type=int, default=0, show_default=True)
+@click.option("--warmup", "warmup_runs", type=click.IntRange(min=0), default=1, show_default=True)
+@click.option("--repeats", type=click.IntRange(min=1), default=3, show_default=True)
+@click.option("--allow-network", is_flag=True, help="Allow an adapter that explicitly requires network.")
+@click.option("--output", type=click.Path(), default=None, help="Receipt path (default: ~/.opencut/performance/...).")
+@click.option("--json", "as_json", is_flag=True, help="Emit the receipt as JSON.")
+def benchmark_run(benchmark_ids, backends, seed, warmup_runs, repeats, allow_network, output, as_json):
+    """Run selected adapters after OPENCUT_RUN_PERF_BENCHMARKS=1 is set."""
+    from datetime import datetime, timezone
+
+    from opencut.core.performance_benchmark_runner import BenchmarkOptInRequired, run_benchmarks
+
+    output_path = Path(output).expanduser() if output else (
+        Path.home()
+        / ".opencut"
+        / "performance"
+        / f"benchmark-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    )
+    try:
+        receipt = run_benchmarks(
+            benchmark_ids or None,
+            backends or None,
+            seed=seed,
+            warmup_runs=warmup_runs,
+            repeats=repeats,
+            allow_network=allow_network,
+            output_path=output_path,
+        )
+    except (BenchmarkOptInRequired, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    if as_json:
+        click.echo(json.dumps(receipt, indent=2, ensure_ascii=False))
+    else:
+        for result in receipt["results"]:
+            status = str(result["status"]).upper()
+            reason = result.get("skip_reason") or result.get("error") or ""
+            timing = result.get("timing") or {}
+            speed = timing.get("seconds_per_unit")
+            suffix = f" ({speed}s/unit)" if speed is not None else ""
+            click.echo(
+                f"[{status}] {result['benchmark_id']} / {result['backend']}"
+                f"{suffix}{': ' + reason if reason else ''}"
+            )
+    click.echo(f"receipt: {output_path}", err=True)
+
+
+@benchmark_group.command("compare")
+@click.argument("current", type=click.Path(exists=True, dir_okay=False))
+@click.argument("baseline", type=click.Path(exists=True, dir_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="Emit the comparison as JSON.")
+def benchmark_compare(current, baseline, as_json):
+    """Compare CURRENT with BASELINE only when compatibility keys match."""
+    from opencut.core.performance_benchmark_runner import compare_receipts, load_receipt
+
+    try:
+        comparison = compare_receipts(load_receipt(Path(current)), load_receipt(Path(baseline)))
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if as_json:
+        click.echo(json.dumps(comparison, indent=2, ensure_ascii=False))
+    else:
+        click.echo(f"{comparison['status'].upper()}: {comparison.get('reason', '')}".rstrip())
+        for item in comparison.get("comparisons", []):
+            click.echo(f"  {item.get('benchmark_id')} / {item.get('backend')}: {item.get('status')}")
+    if comparison["status"] == "regression":
+        raise click.exceptions.Exit(1)
+
+
 @cli.group()
 def config():
     """Manage ~/.opencut configuration files."""
