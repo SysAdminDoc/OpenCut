@@ -14,7 +14,7 @@ from importlib import resources
 from flask import Blueprint, jsonify, request, send_file
 
 from opencut import __version__, credential_store
-from opencut.core.workflow import validate_workflow_steps
+from opencut.core.workflow import compile_workflow_template, validate_workflow_steps
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import (
@@ -330,6 +330,16 @@ def save_workflow():
         return jsonify({"error": "Steps must be a non-empty list"}), 400
     if len(steps) > 50:
         return jsonify({"error": "Too many workflow steps (max 50)"}), 400
+    try:
+        plan_template = compile_workflow_template(steps)
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_WORKFLOW"}), 400
+    if (plan_template.get("preflight") or {}).get("status") == "blocked":
+        return jsonify({
+            "error": "Workflow cannot be saved until preflight blockers are resolved",
+            "code": "WORKFLOW_PREFLIGHT_BLOCKED",
+            "plan": plan_template,
+        }), 400
     with user_file_lock("workflows.json"):
         workflows = load_workflows()
         # Update or add
@@ -337,15 +347,27 @@ def save_workflow():
         for wf in workflows:
             if wf.get("name") == name:
                 wf["steps"] = steps
+                wf["definition_id"] = plan_template.get("definition_id", "")
+                wf["plan_template"] = plan_template
                 wf["updated"] = time.time()
                 found = True
                 break
         if not found:
             if len(workflows) >= 100:
                 return jsonify({"error": "Too many workflows (max 100)"}), 400
-            workflows.append({"name": name, "steps": steps, "created": time.time()})
+            workflows.append({
+                "name": name,
+                "steps": steps,
+                "definition_id": plan_template.get("definition_id", ""),
+                "plan_template": plan_template,
+                "created": time.time(),
+            })
         save_workflows(workflows)
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "definition_id": plan_template.get("definition_id", ""),
+        "plan_template": plan_template,
+    })
 
 
 @settings_bp.route("/workflows/delete", methods=["POST"])

@@ -11,6 +11,8 @@ Smoke tests for:
 import json
 import time
 
+import pytest
+
 from tests.conftest import csrf_headers
 
 # =====================================================================
@@ -19,6 +21,221 @@ from tests.conftest import csrf_headers
 
 class TestWorkflowValidation:
     """Tests for workflow step validation."""
+
+    def test_compile_plan_binds_source_definition_and_preflight(self, tmp_path):
+        from opencut.core.workflow import (
+            compile_workflow_plan,
+            validate_workflow_plan,
+            workflow_definition_id,
+        )
+
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        steps = [{"endpoint": "/audio/denoise", "params": {"strength": 0.5}}]
+        plan = compile_workflow_plan(
+            str(source),
+            steps,
+            capabilities={"ffmpeg": True},
+            media_info={"duration": 2, "has_audio": True, "has_video": False},
+            check_disk=False,
+        )
+
+        assert plan["definition_id"] == workflow_definition_id(steps)
+        assert plan["preflight"]["status"] == "ready"
+        assert validate_workflow_plan(plan, filepath=str(source), steps=steps) == (True, "")
+
+        tampered = dict(plan)
+        tampered["steps"] = [dict(plan["steps"][0], params={"strength": 0.9})]
+        assert validate_workflow_plan(tampered, filepath=str(source))[0] is False
+
+    def test_compile_plan_rejects_typed_parameters(self, tmp_path):
+        from opencut.core.workflow import compile_workflow_plan
+
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        with pytest.raises(ValueError, match="target_lufs.*number"):
+            compile_workflow_plan(
+                str(source),
+                [{"endpoint": "/audio/loudness-match", "params": {"target_lufs": "-16"}}],
+                media_info={"duration": 2, "has_audio": True},
+                capabilities={"ffmpeg": True},
+                check_disk=False,
+            )
+
+    def test_compile_plan_requires_explicit_approval_for_external_step(self, tmp_path):
+        from opencut.core.workflow import compile_workflow_plan, workflow_plan_requires_approval
+
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        plan = compile_workflow_plan(
+            str(source),
+            [{"endpoint": "/audio/tts/generate", "params": {"url": "https://example.test/voice"}}],
+            media_info={"duration": 2, "has_audio": True},
+            capabilities={"ffmpeg": True},
+            check_disk=False,
+        )
+
+        assert workflow_plan_requires_approval(plan)
+        assert any(item["state"] == "approval_required" for item in plan["preflight"]["checks"])
+
+    def test_validate_plan_rejects_unknown_endpoint_even_with_matching_hash(self, tmp_path):
+        from opencut.core.workflow import (
+            compile_workflow_plan,
+            validate_workflow_plan,
+            workflow_definition_id,
+            workflow_plan_id,
+        )
+
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        plan = compile_workflow_plan(
+            str(source),
+            [{"endpoint": "/audio/denoise", "params": {}}],
+            media_info={"duration": 2, "has_audio": True},
+            capabilities={"ffmpeg": True},
+            check_disk=False,
+        )
+        plan["steps"][0]["endpoint"] = "/workflow/save"
+        plan["definition_id"] = workflow_definition_id(
+            [{"endpoint": "/workflow/save", "params": {}}],
+        )
+        plan["plan_id"] = workflow_plan_id(plan)
+
+        valid, reason = validate_workflow_plan(plan, filepath=str(source))
+        assert valid is False
+        assert "unknown endpoint" in reason
+
+    def test_resume_accepts_persisted_approval_after_token_redaction(self, app, tmp_path):
+        from opencut.core.workflow import compile_workflow_plan
+        from opencut.routes.workflow import _workflow_plan_from_request
+
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        steps = [{
+            "endpoint": "/audio/tts/generate",
+            "params": {"url": "https://example.test/voice"},
+        }]
+        plan = compile_workflow_plan(
+            str(source),
+            steps,
+            media_info={"duration": 2, "has_audio": True},
+            capabilities={"ffmpeg": True},
+            check_disk=False,
+        )
+        approved_plan = json.loads(json.dumps(plan))
+        approved_plan["approval"].update({
+            "approved": True,
+            "plan_id": plan["plan_id"],
+            "token": "[REDACTED]",
+        })
+        resume_state = {
+            "result": {"plan_id": plan["plan_id"], "steps_completed": 1},
+            "payload": {"plan": approved_plan},
+        }
+
+        with app.app_context():
+            resumed_plan = _workflow_plan_from_request(
+                {"filepath": str(source), "workflow": steps, "plan": approved_plan},
+                str(source),
+                resume_state=resume_state,
+            )
+
+        assert resumed_plan["plan_id"] == plan["plan_id"]
+
+    def test_compile_and_approve_routes_return_the_same_plan(self, client, csrf_token, tmp_path):
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"source")
+        payload = {
+            "filepath": str(source),
+            "workflow": [{"endpoint": "/audio/tts/generate", "params": {"url": "https://example.test/voice"}}],
+        }
+        compiled = client.post(
+            "/workflow/compile",
+            data=json.dumps(payload),
+            headers=csrf_headers(csrf_token),
+        )
+        assert compiled.status_code == 200
+        plan = compiled.get_json()["plan"]
+        assert plan["approval"]["required"] is True
+
+        approved = client.post(
+            "/workflow/approve",
+            data=json.dumps({"plan": plan}),
+            headers=csrf_headers(csrf_token),
+        )
+        assert approved.status_code == 200
+        approved_plan = approved.get_json()["plan"]
+        assert approved_plan["plan_id"] == plan["plan_id"]
+        assert approved_plan["approval"]["approved"] is True
+
+    def test_compiled_workflow_resumes_from_matching_artifact_checksum(self, tmp_path, monkeypatch):
+        import opencut.core.workflow as workflow_core
+
+        source = tmp_path / "source.txt"
+        artifact = tmp_path / "source_denoised.txt"
+        source.write_bytes(b"source")
+        artifact.write_bytes(b"derived")
+        steps = [{"endpoint": "/audio/denoise", "params": {}}]
+        plan = workflow_core.compile_workflow_plan(
+            str(source),
+            steps,
+            capabilities={"ffmpeg": True},
+            media_info={"duration": 2, "has_audio": True},
+            check_disk=False,
+        )
+
+        class _Response:
+            status_code = 200
+
+            @staticmethod
+            def get_json():
+                return {"job_id": "workflow-step-1"}
+
+        class _Client:
+            def __init__(self):
+                self.posts = 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def post(self, *_args, **_kwargs):
+                self.posts += 1
+                return _Response()
+
+        class _App:
+            def __init__(self):
+                self.client = _Client()
+
+            def test_client(self):
+                return self.client
+
+        monkeypatch.setattr(
+            workflow_core,
+            "_wait_for_job",
+            lambda *_args, **_kwargs: {"status": "complete", "result": {"output_path": str(artifact)}},
+        )
+        first_app = _App()
+        first = workflow_core.run_workflow(
+            first_app, str(source), steps, "csrf", plan=plan,
+        )
+        assert first["step_results"][0]["artifact_checksum"]
+        assert first_app.client.posts == 1
+
+        resumed_app = _App()
+        resumed = workflow_core.run_workflow(
+            resumed_app,
+            str(source),
+            steps,
+            "csrf",
+            plan=plan,
+            resume_state=first,
+        )
+        assert resumed["success"] is True
+        assert resumed["step_results"][0]["resumed"] is True
+        assert resumed_app.client.posts == 0
 
     def test_known_endpoints_come_from_manifest_workflow_metadata(self):
         """Workflow validation should use route-manifest workflow opt-ins."""
