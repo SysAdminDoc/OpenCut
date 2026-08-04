@@ -2,8 +2,9 @@
 
 The README and roadmap quote route counts that drift with every release.
 This module is the single source of truth: it walks
-:class:`~flask.Flask.url_map`, categorises by blueprint, and writes a
-deterministic JSON manifest to ``opencut/_generated/route_manifest.json``.
+:class:`~flask.Flask.url_map`, categorises by blueprint and first-party
+surface, and writes a deterministic JSON manifest to
+``opencut/_generated/route_manifest.json``.
 
 Use it three ways:
 
@@ -35,7 +36,18 @@ from typing import Dict, Iterable, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "opencut" / "_generated" / "route_manifest.json"
-MANIFEST_VERSION = 3
+MANIFEST_VERSION = 4
+SURFACE_MANIFEST_VERSION = 1
+
+SURFACE_CLASSES = (
+    "panel",
+    "palette",
+    "cli",
+    "mcp",
+    "integration-only",
+)
+_SURFACE_PRECEDENCE = SURFACE_CLASSES
+_ROUTE_STRING_RE = re.compile(r'''(?P<quote>["'`])(?P<route>/[^"'`\r\n]*)(?P=quote)''')
 
 _STD_METHODS = {"HEAD", "OPTIONS"}
 
@@ -286,6 +298,166 @@ def _summarise(entries: Iterable[RouteEntry]) -> Manifest:
     )
 
 
+def _surface_source_paths() -> Dict[str, List[Path]]:
+    """Return the first-party source files used by the route surface scan.
+
+    The scan deliberately uses the same literal-reference boundary as the
+    research audit. Generated bundles, route manifests, and backend route
+    implementations are excluded so a backend route is not mistaken for a
+    user-facing surface merely because it exists.
+    """
+
+    uxp_root = REPO_ROOT / "extension" / "com.opencut.uxp"
+    panel_sources = [
+        REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js",
+        *sorted(uxp_root.glob("*.js")),
+    ]
+    return {
+        "panel": sorted(set(panel_sources)),
+        "palette": [REPO_ROOT / "opencut" / "core" / "command_palette.py"],
+        "cli": [REPO_ROOT / "opencut" / "cli.py"],
+        "mcp": [REPO_ROOT / "opencut" / "mcp_server.py"],
+    }
+
+
+def _literal_surface_references(route_rules: Iterable[str]) -> Dict[str, Dict[str, List[str]]]:
+    """Map route rules to source files containing exact route literals."""
+
+    rules = {str(rule) for rule in route_rules if str(rule).startswith("/")}
+    references: Dict[str, Dict[str, List[str]]] = {rule: {} for rule in rules}
+    for surface, paths in _surface_source_paths().items():
+        for path in paths:
+            if not path.is_file():
+                continue
+            try:
+                source = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            literals = {
+                match.group("route")
+                for match in _ROUTE_STRING_RE.finditer(source)
+                if match.group("route") in rules
+            }
+            relative = path.relative_to(REPO_ROOT).as_posix()
+            for rule in literals:
+                references[rule].setdefault(surface, []).append(relative)
+
+    for rule in references:
+        for surface in references[rule]:
+            references[rule][surface] = sorted(set(references[rule][surface]))
+    return references
+
+
+def validate_surface_coverage(routes: Iterable[dict]) -> List[str]:
+    """Return gate errors for routes without a valid declared surface class."""
+
+    errors: List[str] = []
+    allowed = set(SURFACE_CLASSES)
+    for route in routes:
+        if not isinstance(route, dict):
+            errors.append("route entry is not an object")
+            continue
+        rule = str(route.get("rule") or "<unknown>")
+        primary = route.get("surface_class")
+        classes = route.get("surface_classes")
+        evidence = route.get("surface_evidence")
+        if primary not in allowed:
+            errors.append(f"{rule} has no valid surface_class")
+        if not isinstance(classes, list) or not classes or not set(classes).issubset(allowed):
+            errors.append(f"{rule} has no valid surface_classes")
+        elif primary not in classes:
+            errors.append(f"{rule} surface_class is absent from surface_classes")
+        if not isinstance(evidence, list) or not evidence:
+            errors.append(f"{rule} has no surface evidence")
+    return errors
+
+
+def _apply_surface_metadata(manifest: dict) -> dict:
+    """Attach route surface declarations and the classification gate."""
+
+    routes = manifest.get("routes", [])
+    references = _literal_surface_references(
+        route.get("rule", "") for route in routes if isinstance(route, dict)
+    )
+    primary_counts = {surface: 0 for surface in SURFACE_CLASSES}
+    assigned_counts = {surface: 0 for surface in SURFACE_CLASSES}
+    direct_routes = 0
+    multi_surface_routes = 0
+    shipped_routes = 0
+
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        rule = str(route.get("rule") or "")
+        matched = references.get(rule, {})
+        classes = [surface for surface in _SURFACE_PRECEDENCE if surface in matched]
+        if not classes:
+            classes = ["integration-only"]
+            evidence = [
+                "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+            ]
+        else:
+            evidence = [
+                source
+                for surface in classes
+                for source in matched.get(surface, [])
+            ]
+            direct_routes += 1
+        if len(classes) > 1:
+            multi_surface_routes += 1
+        primary = classes[0]
+        route["surface_class"] = primary
+        route["surface_classes"] = classes
+        route["surface_evidence"] = evidence
+        primary_counts[primary] += 1
+        for surface in classes:
+            assigned_counts[surface] += 1
+        if route.get("readiness") != READINESS_STUB:
+            shipped_routes += 1
+
+    errors = validate_surface_coverage(routes)
+    shipped_integration_only = sum(
+        1
+        for route in routes
+        if route.get("readiness") != READINESS_STUB
+        and route.get("surface_class") == "integration-only"
+    )
+    shipped_direct = shipped_routes - shipped_integration_only
+    manifest["surface_coverage"] = {
+        "version": SURFACE_MANIFEST_VERSION,
+        "sources": {
+            surface: [
+                path.relative_to(REPO_ROOT).as_posix()
+                for path in paths
+                if path.is_file()
+            ]
+            for surface, paths in _surface_source_paths().items()
+        },
+        "classes": list(SURFACE_CLASSES),
+        "summary": {
+            "shipped_routes": shipped_routes,
+            "direct_surface_routes": shipped_direct,
+            "integration_only_routes": shipped_integration_only,
+            "coverage_percent": round((shipped_direct / shipped_routes) * 100, 1)
+            if shipped_routes
+            else 0.0,
+            "multi_surface_routes": multi_surface_routes,
+            "primary_counts": primary_counts,
+            "assigned_counts": assigned_counts,
+        },
+        "gate": {
+            "passes": not errors,
+            "errors": errors,
+            "unclassified_routes": [
+                str(route.get("rule") or "<unknown>")
+                for route in routes
+                if route.get("surface_class") not in SURFACE_CLASSES
+            ],
+        },
+    }
+    return manifest
+
+
 def build_manifest(app=None) -> dict:
     """Return the manifest dict computed from a live Flask app.
 
@@ -303,7 +475,7 @@ def build_manifest(app=None) -> dict:
         app = create_app(introspection=True)
 
     entries = _collect_routes(app)
-    return _summarise(entries).as_dict()
+    return _apply_surface_metadata(_summarise(entries).as_dict())
 
 
 def write_manifest(manifest: dict, path: Path = MANIFEST_PATH) -> Path:
@@ -332,7 +504,13 @@ def diff_manifests(expected: dict, live: dict) -> List[str]:
     expected_sig = _manifest_signature(expected)
     live_sig = _manifest_signature(live)
 
-    for key in ("version", "total_routes", "shipped_route_count", "blueprint_count"):
+    for key in (
+        "version",
+        "total_routes",
+        "shipped_route_count",
+        "blueprint_count",
+        "surface_coverage",
+    ):
         if expected_sig.get(key) != live_sig.get(key):
             diffs.append(
                 f"{key}: committed={expected_sig.get(key)!r} live={live_sig.get(key)!r}"

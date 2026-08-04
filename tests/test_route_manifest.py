@@ -95,6 +95,50 @@ def test_manifest_tags_every_route_with_readiness(committed_manifest):
         )
 
 
+def test_manifest_declares_route_surface_classes_and_gate(committed_manifest):
+    from opencut.tools.dump_route_manifest import SURFACE_CLASSES, validate_surface_coverage
+
+    surface = committed_manifest["surface_coverage"]
+    assert surface["version"] == 1
+    assert surface["classes"] == list(SURFACE_CLASSES)
+    assert surface["gate"]["passes"] is True
+    assert surface["gate"]["unclassified_routes"] == []
+    assert validate_surface_coverage(committed_manifest["routes"]) == []
+
+    summary = surface["summary"]
+    assert summary["shipped_routes"] == committed_manifest["shipped_route_count"]
+    assert summary["direct_surface_routes"] + summary["integration_only_routes"] == summary["shipped_routes"]
+    assert summary["integration_only_routes"] > 0
+    assert summary["direct_surface_routes"] > 0
+    assert all(route.get("surface_class") in SURFACE_CLASSES for route in committed_manifest["routes"])
+    assert all(route.get("surface_classes") for route in committed_manifest["routes"])
+    assert all(route.get("surface_evidence") for route in committed_manifest["routes"])
+
+
+def test_surface_gate_rejects_an_unclassified_route():
+    from opencut.tools.dump_route_manifest import validate_surface_coverage
+
+    errors = validate_surface_coverage([
+        {
+            "rule": "/missing-surface",
+            "surface_class": "",
+            "surface_classes": [],
+            "surface_evidence": [],
+        }
+    ])
+    assert errors
+    assert any("/missing-surface" in error for error in errors)
+
+
+def test_readme_explains_backend_route_count_and_reachable_surface(committed_manifest):
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    summary = committed_manifest["surface_coverage"]["summary"]
+
+    assert "literal first-party panel, palette, CLI, and curated MCP references" in readme
+    assert f"{summary['direct_surface_routes']:,} shipped routes" in readme
+    assert f"{summary['integration_only_routes']:,} integration-only routes" in readme
+
+
 def test_shipped_count_excludes_stubs(committed_manifest):
     counts = committed_manifest["readiness_counts"]
     stub_count = counts.get("stub", 0)

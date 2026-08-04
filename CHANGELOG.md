@@ -19,6 +19,12 @@ record also lives in the git commit messages.
   full cleanup, and single-clip export presets, including the required NLLB
   license opt-in and word-timing validation.
 
+### Added - Route surface classification
+
+- The generated route manifest now declares panel, command-palette, CLI,
+  curated MCP, or integration-only reachability for every route and fails its
+  surface gate when a route is missing a valid classification.
+
 ### Changed - Pin FFmpeg to the post-July security snapshot
 
 - The bundled Windows media runtime is now Gyan's `git-full` snapshot
