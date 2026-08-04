@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Added - UXP first-run portability and support tools
+
+- UXP now offers a server-backed Getting Started tour that connects a new
+  user to media selection, the first Cut & Clean pass, and reviewable timeline
+  handoff while keeping unavailable host capabilities explicit.
+- Settings exports carry a schema version and future bundles are rejected
+  before mutation with an actionable response; Settings also exposes a local
+  redacted support-bundle export alongside the reviewed issue-report path.
+
 ### Added - Explainable highlight scoring
 
 - Virality and highlight responses now expose named signals, normalized weights,

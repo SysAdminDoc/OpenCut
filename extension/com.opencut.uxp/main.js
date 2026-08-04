@@ -2640,9 +2640,14 @@ const UIController = (() => {
 // ─────────────────────────────────────────────────────────────
 // File browse helper (UXP localFileSystem)
 // ─────────────────────────────────────────────────────────────
+async function getUxpLocalFileSystem() {
+  const uxp = await import("uxp").catch(() => null);
+  return uxp?.localFileSystem || uxp?.storage?.localFileSystem || null;
+}
+
 async function browseFile(inputId, options = {}) {
   try {
-    const { localFileSystem } = await import("uxp").catch(() => null) ?? {};
+    const localFileSystem = await getUxpLocalFileSystem();
     if (!localFileSystem) throw new Error("UXP localFileSystem not available");
 
     const entry = await localFileSystem.getFileForOpening({
@@ -2674,7 +2679,7 @@ async function browseFile(inputId, options = {}) {
 
 async function browseFolder(inputId) {
   try {
-    const { localFileSystem } = await import("uxp").catch(() => null) ?? {};
+    const localFileSystem = await getUxpLocalFileSystem();
     if (!localFileSystem) throw new Error("UXP localFileSystem not available");
 
     const entry = await localFileSystem.getFolder();
@@ -7031,6 +7036,7 @@ let _otioAdapterListenerBound = false;
 let _otioSyncSchemaTarget = null;
 
 function bindEvents() {
+  initUxpOnboardingEvents();
   // ── Tab navigation ──
   const tabs = Array.from(document.querySelectorAll(".oc-tab"));
   tabs.forEach((btn, index) => {
@@ -9309,10 +9315,6 @@ async function initSettingsIO() {
       if (button) button.disabled = busy;
     }
   };
-  const getLocalFileSystem = async () => {
-    const uxp = await import("uxp").catch(() => null);
-    return uxp?.localFileSystem || uxp?.storage?.localFileSystem || null;
-  };
   const responseData = (response) => response?.data ?? response ?? {};
   const responseError = (response) => response?.error || responseData(response)?.error || t("common.unknown", "unknown");
 
@@ -9325,7 +9327,7 @@ async function initSettingsIO() {
       try {
         bundle.localStorage = JSON.parse(window.localStorage?.getItem("opencut_settings") || "{}");
       } catch (_) { /* local panel state is optional */ }
-      const localFileSystem = await getLocalFileSystem();
+      const localFileSystem = await getUxpLocalFileSystem();
       if (!localFileSystem) throw new Error(t("uxp.settings.settings_file_api_unavailable", "UXP file storage is unavailable."));
       const date = new Date().toISOString().slice(0, 10);
       const folder = await localFileSystem.getFolder();
@@ -9345,7 +9347,7 @@ async function initSettingsIO() {
   importButton?.addEventListener("click", async () => {
     setBusy(true);
     try {
-      const localFileSystem = await getLocalFileSystem();
+      const localFileSystem = await getUxpLocalFileSystem();
       if (!localFileSystem) throw new Error(t("uxp.settings.settings_file_api_unavailable", "UXP file storage is unavailable."));
       const file = await localFileSystem.getFileForOpening({ allowMultiple: false, types: ["json"] });
       if (!file) return;
@@ -9376,6 +9378,365 @@ async function initSettingsIO() {
   });
 }
 
+async function initSupportIO() {
+  const exportButton = document.getElementById("uxpExportSupportBundleBtn");
+  const issueButton = document.getElementById("uxpOpenIssueReportBtn");
+  const restartButton = document.getElementById("uxpRestartOnboardingBtn");
+  const status = document.getElementById("uxpSupportStatus");
+  if (!exportButton && !issueButton && !restartButton) return;
+
+  const setBusy = (busy) => {
+    for (const button of [exportButton, issueButton, restartButton]) {
+      if (button) button.disabled = busy;
+    }
+  };
+  const setStatus = (message, state = "") => {
+    if (!status) return;
+    status.textContent = message;
+    if (state) status.dataset.state = state;
+    else delete status.dataset.state;
+  };
+  const responseData = (response) => response?.data ?? response ?? {};
+  const responseError = (response, fallback) => (
+    response?.error || responseData(response)?.error || fallback
+  );
+
+  const requestSupportBundle = async () => {
+    const response = await BackendClient.post("/system/support-bundle", {
+      title: "OpenCut UXP support bundle",
+      description: "UXP panel support bundle requested from Settings.",
+      include_crash: true,
+      include_logs: true,
+      log_tail_lines: 200,
+    });
+    if (!response?.ok) {
+      throw new Error(responseError(
+        response,
+        t("uxp.settings.support_bundle_unavailable", "The local support bundle could not be created."),
+      ));
+    }
+    const data = responseData(response);
+    if (data.redacted !== true || data.kind !== "support_bundle") {
+      throw new Error(t(
+        "uxp.settings.support_bundle_invalid",
+        "The backend returned an invalid support bundle. Nothing was exported.",
+      ));
+    }
+    return data;
+  };
+
+  exportButton?.addEventListener("click", async () => {
+    setBusy(true);
+    try {
+      const bundle = await requestSupportBundle();
+      const localFileSystem = await getUxpLocalFileSystem();
+      if (!localFileSystem) {
+        throw new Error(t(
+          "uxp.settings.support_file_api_unavailable",
+          "UXP file storage is unavailable. Copy the report from the issue workflow instead.",
+        ));
+      }
+      const folder = await localFileSystem.getFolder();
+      if (!folder) return;
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `opencut_support_bundle_${date}.json`;
+      const file = await folder.createFile(filename, { overwrite: true });
+      await file.write(JSON.stringify({
+        schema_version: "opencut.support_bundle.v1",
+        kind: bundle.kind,
+        redacted: true,
+        title: bundle.title,
+        body: bundle.body,
+        size_bytes: bundle.size_bytes,
+      }, null, 2));
+      const message = formatI18n(
+        "uxp.settings.support_bundle_exported",
+        "Redacted support bundle exported as {filename}.",
+        { filename },
+      );
+      setStatus(message, "success");
+      UIController.showToast(message, "success");
+    } catch (error) {
+      const message = formatI18n(
+        "uxp.settings.support_bundle_failed",
+        "Support bundle export failed: {error}",
+        { error: error?.message || error },
+      );
+      setStatus(message, "error");
+      UIController.showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  issueButton?.addEventListener("click", async () => {
+    setBusy(true);
+    try {
+      const response = await BackendClient.post("/system/issue-report/bundle", {
+        title: "OpenCut UXP issue report",
+        description: "Issue report opened from the UXP Settings panel.",
+        include_crash: true,
+        include_logs: true,
+        log_tail_lines: 200,
+      });
+      if (!response?.ok) {
+        throw new Error(responseError(
+          response,
+          t(
+            "uxp.settings.issue_report_network_required",
+            "Opening an issue report requires network access. Export a local support bundle instead.",
+          ),
+        ));
+      }
+      const data = responseData(response);
+      if (!data.url) {
+        throw new Error(t(
+          "uxp.settings.issue_report_failed",
+          "The issue report URL was not returned. Export a local support bundle instead.",
+        ));
+      }
+      const opened = await openHttpsExternalUrl(
+        data.url,
+        t("uxp.settings.issue_report_opening", "Opening a reviewed OpenCut issue report"),
+      );
+      if (opened) {
+        const message = t("uxp.settings.issue_report_opened", "Issue report opened for review.");
+        setStatus(message, "success");
+        UIController.showToast(message, "success");
+      }
+    } catch (error) {
+      const message = formatI18n(
+        "uxp.settings.issue_report_failed",
+        "Issue report could not be opened: {error}",
+        { error: error?.message || error },
+      );
+      setStatus(message, "error");
+      UIController.showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  restartButton?.addEventListener("click", async () => {
+    setBusy(true);
+    try {
+      await restartUxpOnboarding();
+      setStatus(t("uxp.settings.onboarding_restarted", "Getting Started is ready to review."), "success");
+    } catch (error) {
+      const message = formatI18n(
+        "uxp.settings.onboarding_restart_failed",
+        "Getting Started could not be opened: {error}",
+        { error: error?.message || error },
+      );
+      setStatus(message, "error");
+      UIController.showToast(message, "error");
+    } finally {
+      setBusy(false);
+    }
+  });
+}
+
+const UXP_ONBOARDING_STEPS = Object.freeze([
+  {
+    titleKey: "uxp.onboarding.step_welcome_title",
+    bodyKey: "uxp.onboarding.step_welcome_body",
+  },
+  {
+    titleKey: "uxp.onboarding.step_media_title",
+    bodyKey: "uxp.onboarding.step_media_body",
+    action: "choose-clip",
+    actionKey: "uxp.onboarding.action_choose_media",
+  },
+  {
+    titleKey: "uxp.onboarding.step_cut_title",
+    bodyKey: "uxp.onboarding.step_cut_body",
+    action: "switch-cut",
+    actionKey: "uxp.onboarding.action_open_cut",
+  },
+  {
+    titleKey: "uxp.onboarding.step_review_title",
+    bodyKey: "uxp.onboarding.step_review_body",
+    action: "open-timeline",
+    actionKey: "uxp.onboarding.action_open_timeline",
+  },
+]);
+
+let uxpOnboardingIndex = 0;
+let uxpOnboardingReturnFocus = null;
+
+function readUxpOnboardingLocalState() {
+  try {
+    const raw = window.localStorage?.getItem("opencut_uxp_onboarding");
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeUxpOnboardingLocalState(patch) {
+  try {
+    window.localStorage?.setItem(
+      "opencut_uxp_onboarding",
+      JSON.stringify({ ...readUxpOnboardingLocalState(), ...patch }),
+    );
+  } catch (_) {
+    // Local state is only a fallback; the backend remains authoritative.
+  }
+}
+
+async function persistUxpOnboarding(patch) {
+  writeUxpOnboardingLocalState(patch);
+  if (!isBackendConnected()) return false;
+  const response = await BackendClient.post("/settings/onboarding", patch);
+  if (!response?.ok) {
+    console.warn("[OpenCut UXP] Could not persist onboarding state", response?.error);
+  }
+  return !!response?.ok;
+}
+
+function renderUxpOnboarding() {
+  const step = UXP_ONBOARDING_STEPS[uxpOnboardingIndex] || UXP_ONBOARDING_STEPS[0];
+  const title = document.getElementById("uxpOnboardingTitle");
+  const body = document.getElementById("uxpOnboardingBody");
+  const stepLabel = document.getElementById("uxpOnboardingStep");
+  const action = document.getElementById("uxpOnboardingActionBtn");
+  const back = document.getElementById("uxpOnboardingBackBtn");
+  const next = document.getElementById("uxpOnboardingNextBtn");
+
+  if (title) title.textContent = t(step.titleKey, "Getting started");
+  if (body) body.textContent = t(step.bodyKey, "OpenCut is ready to help you move from media to a first edit.");
+  if (stepLabel) {
+    stepLabel.textContent = formatI18n(
+      "uxp.onboarding.step_count",
+      "Step {current} of {total}",
+      { current: uxpOnboardingIndex + 1, total: UXP_ONBOARDING_STEPS.length },
+    );
+  }
+  if (action) {
+    action.hidden = !step.action;
+    action.dataset.action = step.action || "";
+    action.textContent = step.action
+      ? t(step.actionKey, "Open next step")
+      : "";
+  }
+  if (back) {
+    back.disabled = uxpOnboardingIndex === 0;
+    back.setAttribute("aria-disabled", back.disabled ? "true" : "false");
+  }
+  if (next) {
+    next.textContent = uxpOnboardingIndex === UXP_ONBOARDING_STEPS.length - 1
+      ? t("uxp.onboarding.finish", "Finish")
+      : t("uxp.onboarding.next", "Next");
+  }
+}
+
+function closeUxpOnboarding() {
+  const overlay = document.getElementById("uxpOnboardingOverlay");
+  if (!overlay) return;
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("oc-onboarding-open");
+  if (uxpOnboardingReturnFocus && typeof uxpOnboardingReturnFocus.focus === "function") {
+    uxpOnboardingReturnFocus.focus();
+  }
+  uxpOnboardingReturnFocus = null;
+}
+
+function showUxpOnboarding(step = 0, returnFocus = document.activeElement) {
+  if (!isBackendConnected()) {
+    UIController.showToast(
+      t("uxp.onboarding.unavailable", "Connect the OpenCut backend before opening Getting Started."),
+      "warning",
+    );
+    return false;
+  }
+  const overlay = document.getElementById("uxpOnboardingOverlay");
+  if (!overlay) return false;
+  uxpOnboardingIndex = Math.max(0, Math.min(UXP_ONBOARDING_STEPS.length - 1, Number(step) || 0));
+  uxpOnboardingReturnFocus = returnFocus && returnFocus !== document.body ? returnFocus : null;
+  renderUxpOnboarding();
+  overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("oc-onboarding-open");
+  requestAnimationFrame(() => {
+    document.getElementById("uxpOnboardingActionBtn")?.hidden
+      ? document.getElementById("uxpOnboardingNextBtn")?.focus()
+      : document.getElementById("uxpOnboardingActionBtn")?.focus();
+  });
+  return true;
+}
+
+async function loadUxpOnboarding() {
+  if (!isBackendConnected()) return;
+  const response = await BackendClient.get("/settings/onboarding");
+  if (!response?.ok) return;
+  const state = response.data || {};
+  if (state.seen === true) {
+    writeUxpOnboardingLocalState({ seen: true, step: state.step || 0 });
+    return;
+  }
+  const localState = readUxpOnboardingLocalState();
+  showUxpOnboarding(
+    Number.isFinite(Number(state.step)) ? Number(state.step) : Number(localState.step) || 0,
+  );
+}
+
+async function restartUxpOnboarding() {
+  if (!isBackendConnected()) {
+    throw new Error(t(
+      "uxp.onboarding.unavailable",
+      "Connect the OpenCut backend before opening Getting Started.",
+    ));
+  }
+  const response = await BackendClient.post("/settings/onboarding", { seen: false, step: 0 });
+  if (!response?.ok) {
+    throw new Error(response?.error || t("common.unknown", "unknown"));
+  }
+  writeUxpOnboardingLocalState({ seen: false, step: 0 });
+  showUxpOnboarding(0, document.getElementById("uxpRestartOnboardingBtn"));
+}
+
+function initUxpOnboardingEvents() {
+  const overlay = document.getElementById("uxpOnboardingOverlay");
+  if (!overlay) return;
+  document.getElementById("uxpOnboardingActionBtn")?.addEventListener("click", async (event) => {
+    const action = event.currentTarget?.dataset?.action || "";
+    await persistUxpOnboarding({ seen: false, step: uxpOnboardingIndex });
+    closeUxpOnboarding();
+    if (action) handleWorkspaceAction(action);
+  });
+  document.getElementById("uxpOnboardingBackBtn")?.addEventListener("click", async () => {
+    if (uxpOnboardingIndex <= 0) return;
+    uxpOnboardingIndex -= 1;
+    await persistUxpOnboarding({ seen: false, step: uxpOnboardingIndex });
+    renderUxpOnboarding();
+  });
+  document.getElementById("uxpOnboardingSkipBtn")?.addEventListener("click", async () => {
+    await persistUxpOnboarding({ seen: true, step: uxpOnboardingIndex });
+    closeUxpOnboarding();
+  });
+  document.getElementById("uxpOnboardingNextBtn")?.addEventListener("click", async () => {
+    if (uxpOnboardingIndex >= UXP_ONBOARDING_STEPS.length - 1) {
+      await persistUxpOnboarding({ seen: true, step: uxpOnboardingIndex });
+      closeUxpOnboarding();
+      UIController.showToast(t("uxp.onboarding.ready", "You are ready to make your first edit."), "success");
+      return;
+    }
+    uxpOnboardingIndex += 1;
+    await persistUxpOnboarding({ seen: false, step: uxpOnboardingIndex });
+    renderUxpOnboarding();
+  });
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) closeUxpOnboarding();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (overlay.hidden || event.key !== "Escape") return;
+    event.preventDefault();
+    closeUxpOnboarding();
+  });
+}
+
 async function initApp() {
   console.log(`[OpenCut UXP] v${VERSION} initialising...`);
   UXPThemeSync.start();
@@ -9395,6 +9756,7 @@ async function initApp() {
   UIController.initCollapsibles();
   initSettingsNavigation();
   await initSettingsIO();
+  await initSupportIO();
   bindSliders();
   bindEvents();
   syncQuickActionButtons();
@@ -9440,6 +9802,7 @@ async function initApp() {
     // Scan project media so clip path inputs have autocomplete
     await scanProjectClips();
     await refreshFootageIndexStats({ silent: true });
+    await loadUxpOnboarding();
 
     // Start periodic backend media scan
     startMediaScanInterval();

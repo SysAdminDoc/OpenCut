@@ -1050,6 +1050,42 @@ test("CEP onboarding exposes explicit backend-offline recovery", async ({ page }
   expect(pageErrors).toEqual([]);
 });
 
+test("UXP first run guides a connected user from media to review", async ({ page }) => {
+  const { capturedRequests, pageErrors } = await openSurface(
+    page,
+    "uxp",
+    "dark",
+    520,
+    { boundaryReview: true, onboardingState: { seen: false, step: 0 } },
+  );
+  const overlay = page.locator("#uxpOnboardingOverlay");
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toHaveAttribute("aria-hidden", "false");
+  await expect(page.locator("#uxpOnboardingTitle")).toHaveText("Start with a connected workspace");
+  await page.locator("#uxpOnboardingNextBtn").click();
+  await expect(page.locator("#uxpOnboardingTitle")).toHaveText("Choose your source media");
+  await expect(page.locator("#uxpOnboardingActionBtn")).toHaveText("Choose Media");
+  await page.locator("#uxpOnboardingActionBtn").click();
+  await expect(overlay).toBeHidden();
+  await expect.poll(() => capturedRequests.some(
+    (request) => request.onboarding === "POST" && request.body?.seen === false,
+  )).toBe(true);
+
+  await page.locator(".oc-tab[data-tab='settings']").click();
+  await page.locator("#uxpRestartOnboardingBtn").click();
+  await expect(overlay).toBeVisible();
+  await expect.poll(() => capturedRequests.some(
+    (request) => request.onboarding === "POST" &&
+      request.body?.seen === false && request.body?.step === 0,
+  )).toBe(true);
+  await page.locator("#uxpOnboardingSkipBtn").click();
+  await expect(overlay).toBeHidden();
+  await expect.poll(() => capturedRequests.some(
+    (request) => request.onboarding === "POST" && request.body?.seen === true,
+  )).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
 test("CEP exposes interrupted queue recovery without overflowing", async ({ page }) => {
   const queueEntries = [
     {

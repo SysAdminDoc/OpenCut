@@ -10,6 +10,7 @@ Tier 1 (fully working):
   POST /system/changelog/mark-seen    — persist last-seen release tag
   GET  /system/issue-report/bundle    — pre-filled GitHub issue URL
   POST /system/issue-report/bundle    — same, with custom title + description
+  POST /system/support-bundle         — local redacted support artifact
   GET  /system/demo/list              — list bundled demo assets
   GET  /system/demo/sample            — return primary sample.mp4 path
   POST /system/demo/download          — download sample from GitHub release
@@ -297,6 +298,37 @@ def route_issue_report_bundle_post():
         ))
     except Exception as exc:  # noqa: BLE001
         return safe_error(exc, "issue_report_bundle_post")
+
+
+@wave_h_bp.route("/system/support-bundle", methods=["POST"])
+@require_csrf
+def route_support_bundle():
+    """Build a redacted local support bundle without opening a network URL."""
+    try:
+        from opencut.core import issue_report
+
+        data = get_json_dict() or {}
+        payload = issue_report.bundle(
+            title=str(data.get("title") or "OpenCut support bundle"),
+            description=str(data.get("description") or ""),
+            log_tail_lines=safe_int(
+                data.get("log_tail_lines", 200),
+                200,
+                min_val=10,
+                max_val=2000,
+            ),
+            include_crash=safe_bool(data.get("include_crash"), True),
+            include_logs=safe_bool(data.get("include_logs"), True),
+        )
+        # A support export is intentionally a local artifact.  Do not expose
+        # the pre-filled GitHub URL in the file or imply that anything was
+        # submitted on the user's behalf.
+        payload.pop("url", None)
+        payload["kind"] = "support_bundle"
+        payload["redacted"] = True
+        return jsonify(payload)
+    except Exception as exc:  # noqa: BLE001
+        return safe_error(exc, "support_bundle")
 
 
 # ===========================================================================

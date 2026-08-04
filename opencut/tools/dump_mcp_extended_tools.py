@@ -27,6 +27,10 @@ _SPECIAL_CURATED_ROUTES = {
 # destructive confirmation contract. Agents can still use established curated
 # queue and journal tools where their confirmation contract is explicit.
 _REST_ONLY_ROUTES = {
+    # Support bundles contain local diagnostics.  Keep this owner-initiated
+    # privacy-sensitive export in the UXP/REST surface rather than exposing
+    # it as a broad generated agent action.
+    ("POST", "/system/support-bundle"),
     # Diagnostic cache identity is intentionally not an agent action. Keeping
     # this REST/CLI-only also avoids making local cache keys discoverable via
     # the broad generated route catalogue.
