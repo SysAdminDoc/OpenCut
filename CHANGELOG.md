@@ -73,6 +73,15 @@ record also lives in the git commit messages.
   GPU status and ASR provenance, and return an actionable typed error if both
   CUDA and CPU recovery fail.
 
+### Audited - Remaining core module surface
+
+- The 625-module core surface now has a clean compile and Ruff pass; all 120
+  modules not referenced by the breadth gate still import successfully in a
+  fresh process. Test-reference coverage is 80.8%, above the 75% release floor.
+- UXP English/Spanish locale parity is clean at 1,927 keys, including duplicate,
+  placeholder, and common-diacritic checks. Qualitative Spanish review and live
+  Premiere-host behavior remain explicitly blocked in `Roadmap_Blocked.md`.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
