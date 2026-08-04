@@ -12,6 +12,12 @@ record also lives in the git commit messages.
   onboarding shell remains, and cut write-back reports the requested cut
   count.
 
+### Fixed - Literal error interpolation
+
+- Panel error and failure messages now insert backend text through a shared
+  function-based interpolator, preserving replacement-pattern characters such
+  as `$&`, `$```, and `$$`.
+
 ### Fixed - Ordered UXP Sequence Index filters
 
 - Sequence Index search, facet, and sort responses now use a monotonic request

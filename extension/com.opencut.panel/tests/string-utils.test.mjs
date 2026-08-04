@@ -91,3 +91,11 @@ describe("wsFormatListenerCount", () => {
     expect(su.wsFormatListenerCount(0, "{count} listener{plural} online")).toBe("0 listeners online");
   });
 });
+
+describe("replaceTemplateValue", () => {
+  it("keeps replacement-pattern characters literal", () => {
+    expect(su.replaceTemplateValue("Failure: {error}", "{error}", "$& / $` / $$")).toBe(
+      "Failure: $& / $` / $$",
+    );
+  });
+});
