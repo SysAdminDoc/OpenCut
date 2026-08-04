@@ -365,10 +365,13 @@ def test_cep_exposes_boundary_audition_and_provenance_diagnostics():
     )
     html = (root / "index.html").read_text(encoding="utf-8")
     script = (root / "main.js").read_text(encoding="utf-8")
+    results_controller = (root / "results-controller.js").read_text(
+        encoding="utf-8"
+    )
 
     assert 'id="fillerBoundaryReview"' in html
     assert 'id="fillerBoundaryPlayer"' in html
     assert "renderFillerBoundaryReview" in script
     assert 'filter: "raw"' not in script  # server-provided audition plan is authoritative
     assert "accept_low_confidence_boundaries" in script
-    assert "r.asr_provenance" in script
+    assert "r.asr_provenance" in results_controller
