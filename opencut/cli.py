@@ -463,6 +463,94 @@ def captions(input_file, output, sub_format, model, language, translate, word_ti
     console.print(f"\n[green bold]Saved:[/green bold] {output}\n")
 
 
+@cli.command("subtitle-resync")
+@click.argument("subtitle_file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--video", "video_file", type=click.Path(exists=True, dir_okay=False), default=None,
+              help="Video/audio file to transcribe for reference timing")
+@click.option("--reference-json", type=click.Path(exists=True, dir_okay=False), default=None,
+              help="JSON transcript with a segments array (useful for offline review/tests)")
+@click.option("-o", "--output", type=click.Path(dir_okay=False), default=None,
+              help="Output SRT path (preview mode never writes it)")
+@click.option("--fps", type=float, default=30.0, show_default=True,
+              help="Video frame rate used for the one-frame quality report")
+@click.option("--match-threshold", type=float, default=0.72, show_default=True,
+              help="Minimum normalized text similarity for a cue match")
+@click.option("--model", type=str, default="base", show_default=True,
+              help="Whisper model used when --video is supplied")
+@click.option("--language", type=str, default=None,
+              help="Language code for reference transcription")
+@click.option("--apply", is_flag=True, help="Write the reviewed timing transform")
+@click.option("--overwrite", is_flag=True, help="Allow replacing an existing output, including the source")
+def subtitle_resync(
+    subtitle_file,
+    video_file,
+    reference_json,
+    output,
+    fps,
+    match_threshold,
+    model,
+    language,
+    apply,
+    overwrite,
+):
+    """Preview or apply timing corrections to an existing SRT file.
+
+    Supply --video to transcribe the source media, or --reference-json to use
+    an existing timestamped transcript. Without --apply this command is
+    strictly read-only and prints the transformed SRT for review.
+    """
+    print_banner()
+    if not video_file and not reference_json:
+        raise click.ClickException("Pass --video or --reference-json to provide reference timing")
+    if video_file and reference_json:
+        raise click.ClickException("Pass only one of --video or --reference-json")
+
+    reference_segments = None
+    if reference_json:
+        try:
+            reference_payload = json.loads(
+                Path(reference_json).read_text(encoding="utf-8-sig")
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            raise click.ClickException(f"Cannot read reference JSON: {exc}") from exc
+        reference_segments = reference_payload
+
+    from .core.subtitle_resync import resync_subtitles, write_resynced_srt
+
+    console.print(f"\n[bold]Resynchronising:[/bold] {subtitle_file}")
+    preview = resync_subtitles(
+        subtitle_file,
+        reference_segments=reference_segments,
+        video_path=video_file,
+        fps=fps,
+        match_threshold=match_threshold,
+        model=model,
+        language=language,
+    )
+    console.print(
+        "[bold]Timing fit:[/bold] "
+        f"{preview['fit_mode']} | offset {preview['offset_seconds']:.3f}s | "
+        f"rate {preview['rate']:.6f} | matched {preview['matched_count']}/"
+        f"{preview['source_cue_count']}"
+    )
+    quality = "within one frame" if preview["within_one_frame"] else "needs review"
+    console.print(f"[bold]Boundary check:[/bold] {quality} (max error {preview['max_boundary_error']:.4f}s)")
+    console.print("\n[bold]Preview (no file written):[/bold]")
+    console.print(preview["preview_srt"], markup=False)
+
+    if not apply:
+        console.print("\n[yellow]Preview only — pass --apply after reviewing the result.[/yellow]\n")
+        return
+
+    if output is None:
+        output = f"{os.path.splitext(subtitle_file)[0]}_resynced.srt"
+    try:
+        written = write_resynced_srt(preview, output, overwrite=overwrite)
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    console.print(f"\n[green bold]Saved:[/green bold] {written['output_path']}\n")
+
+
 @cli.command()
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("-o", "--output", type=click.Path(), default=None, help="Output XML file path")

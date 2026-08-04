@@ -452,6 +452,7 @@ let _clearIndexConfirmUntil = 0;
 let _clearIndexConfirmTimer = null;
 let _lastCaptionsResult = null;
 let _pendingCleanupPlanUxp = null;
+let _pendingSrtResyncUxp = null;
 let _lastTranscriptSegments = [];
 let _lastCutsInfo = null;
 let _lastMarkersInfo = null;
@@ -2909,6 +2910,14 @@ function updateTimelineReadiness() {
   const srtBtn = document.getElementById("runSrtImportBtn");
   if (srtBtn && !srtBtn.classList.contains("loading")) {
     srtBtn.disabled = !backendOnline || !srtPath;
+  }
+  const srtResyncPreviewBtn = document.getElementById("runSrtResyncPreviewBtn");
+  if (srtResyncPreviewBtn && !srtResyncPreviewBtn.classList.contains("loading")) {
+    srtResyncPreviewBtn.disabled = !backendOnline || !srtPath || !clipPath;
+  }
+  const srtResyncApplyBtn = document.getElementById("runSrtResyncApplyBtn");
+  if (srtResyncApplyBtn && !srtResyncApplyBtn.classList.contains("loading")) {
+    srtResyncApplyBtn.disabled = !backendOnline || !_pendingSrtResyncUxp;
   }
 
   if (!backendOnline) {
@@ -5541,6 +5550,114 @@ async function runSrtImport() {
   );
 }
 
+function setSrtResyncStatus(message, state = "idle") {
+  const line = document.getElementById("srtResyncStatus");
+  if (!line) return;
+  line.textContent = message;
+  line.dataset.state = state;
+  line.title = message;
+}
+
+function srtResyncVideoPath() {
+  return document.getElementById("clipPathVideo")?.value?.trim()
+    || document.getElementById("clipPathCaptions")?.value?.trim()
+    || getWorkspaceSource("timeline")
+    || getWorkspaceSource("captions")
+    || "";
+}
+
+async function runSrtResyncPreview() {
+  const srtPath = document.getElementById("srtFilePath")?.value?.trim();
+  const videoPath = srtResyncVideoPath();
+  if (!srtPath) {
+    UIController.showToast(t("uxp.timeline.runtime.select_srt_file", "Please select an SRT file."), "warning");
+    return;
+  }
+  if (!videoPath) {
+    UIController.showToast(t("uxp.timeline.runtime.select_resync_source", "Choose a source clip before previewing subtitle timing."), "warning");
+    return;
+  }
+
+  const applyBtn = document.getElementById("runSrtResyncApplyBtn");
+  UIController.setButtonLoading("runSrtResyncPreviewBtn", true);
+  if (applyBtn) applyBtn.disabled = true;
+  setSrtResyncStatus(t("uxp.timeline.runtime.resync_working", "Matching subtitle cues to the source clip..."), "working");
+
+  const payload = {
+    srt_path: srtPath,
+    video_path: videoPath,
+    model: document.getElementById("subModel")?.value || "base",
+    overwrite: !!document.getElementById("srtResyncOverwrite")?.checked,
+  };
+  const response = await BackendClient.post("/subtitle/resync", payload);
+  UIController.setButtonLoading("runSrtResyncPreviewBtn", false);
+  if (!response.ok) {
+    _pendingSrtResyncUxp = null;
+    setSrtResyncStatus(
+      formatI18n("uxp.timeline.runtime.resync_failed", "Resync failed: {error}", { error: response.error || "unknown error" }),
+      "error"
+    );
+    updateTimelineReadiness();
+    return;
+  }
+
+  const result = response.data?.result || {};
+  _pendingSrtResyncUxp = {
+    payload,
+    confirmToken: response.data?.plan?.confirm_token || "",
+  };
+  setSrtResyncStatus(
+    formatI18n(
+      "uxp.timeline.runtime.resync_ready",
+      "Preview ready: {matched} cue(s), offset {offset}s, rate {rate}. Review before applying.",
+      {
+        matched: result.matched_count || 0,
+        offset: Number(result.offset_seconds || 0).toFixed(3),
+        rate: Number(result.rate || 1).toFixed(6),
+      }
+    ),
+    "success"
+  );
+  noteTimelineAction(
+    t("uxp.timeline.runtime.resync_preview_title", "Subtitle resync preview"),
+    "success",
+    t("uxp.timeline.runtime.resync_preview_status", "Review the subtitle timing preview before applying the sidecar."),
+    srtPath,
+    formatI18n("uxp.timeline.runtime.resync_match_count", "{count} cue(s) matched", { count: result.matched_count || 0 })
+  );
+  updateTimelineReadiness();
+}
+
+async function runSrtResyncApply() {
+  if (!_pendingSrtResyncUxp) {
+    UIController.showToast(t("uxp.timeline.runtime.resync_preview_first", "Preview the resync before applying it."), "warning");
+    return;
+  }
+  const applyBtn = document.getElementById("runSrtResyncApplyBtn");
+  UIController.setButtonLoading("runSrtResyncApplyBtn", true);
+  setSrtResyncStatus(t("uxp.timeline.runtime.resync_applying", "Writing the reviewed subtitle timing..."), "working");
+  const response = await BackendClient.post("/subtitle/resync", {
+    ..._pendingSrtResyncUxp.payload,
+    apply: true,
+    confirm_token: _pendingSrtResyncUxp.confirmToken,
+  });
+  UIController.setButtonLoading("runSrtResyncApplyBtn", false);
+  if (!response.ok) {
+    setSrtResyncStatus(
+      formatI18n("uxp.timeline.runtime.resync_failed", "Resync failed: {error}", { error: response.error || "unknown error" }),
+      "error"
+    );
+    updateTimelineReadiness();
+    return;
+  }
+  _pendingSrtResyncUxp = null;
+  setSrtResyncStatus(
+    formatI18n("uxp.timeline.runtime.resync_applied", "Resync saved to {path}.", { path: response.data?.output_path || "the output file" }),
+    "success"
+  );
+  updateTimelineReadiness();
+}
+
 /** ── INDEX LIBRARY ── */
 async function runIndexLibrary() {
   const folder       = document.getElementById("indexFolder")?.value?.trim();
@@ -6547,8 +6664,14 @@ function bindEvents() {
   ["exportDir", "srtFilePath", "renamePattern"].forEach((id) => {
     const control = document.getElementById(id);
     if (!control) return;
-    control.addEventListener("input", () => updateTimelineReadiness());
-    control.addEventListener("change", () => updateTimelineReadiness());
+    control.addEventListener("input", () => {
+      if (id === "srtFilePath") _pendingSrtResyncUxp = null;
+      updateTimelineReadiness();
+    });
+    control.addEventListener("change", () => {
+      if (id === "srtFilePath") _pendingSrtResyncUxp = null;
+      updateTimelineReadiness();
+    });
   });
 
   ["renameScope", "binStrategy", "srtTrackIndex", "exportPreset", "beatMarkerColor", "otioExportMode", "otioAdapter", "otioSchemaTarget"].forEach((id) => {
@@ -6709,6 +6832,12 @@ function bindEvents() {
   document.getElementById("runBatchRenameBtn")?.addEventListener("click", runBatchRename);
   document.getElementById("runSmartBinsBtn")?.addEventListener("click",   runSmartBins);
   document.getElementById("runSrtImportBtn")?.addEventListener("click",   runSrtImport);
+  document.getElementById("runSrtResyncPreviewBtn")?.addEventListener("click", runSrtResyncPreview);
+  document.getElementById("runSrtResyncApplyBtn")?.addEventListener("click", runSrtResyncApply);
+  document.getElementById("srtResyncOverwrite")?.addEventListener("change", () => {
+    _pendingSrtResyncUxp = null;
+    updateTimelineReadiness();
+  });
 
   // ── OTIO Export ──
   loadOtioCapabilities = async function () {

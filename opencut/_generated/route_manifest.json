@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-04T14:23:01Z",
-  "total_routes": 1576,
-  "shipped_route_count": 1551,
+  "generated_at": "2026-08-04T15:00:30Z",
+  "total_routes": 1577,
+  "shipped_route_count": 1552,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 17,
     "GET": 402,
     "PATCH": 1,
-    "POST": 1158,
+    "POST": 1159,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1523,
+    "implemented": 1524,
     "stub": 25
   },
   "blueprints": {
@@ -866,13 +866,13 @@
       ]
     },
     "subtitle": {
-      "route_count": 9,
+      "route_count": 10,
       "method_counts": {
-        "POST": 9
+        "POST": 10
       },
       "sample_rules": [
         "/subtitle/embed",
-        "/subtitle/sdh-format",
+        "/subtitle/resync",
         "/subtitle/tracks"
       ]
     },
@@ -19535,6 +19535,23 @@
       ]
     },
     {
+      "rule": "/subtitle/resync",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "subtitle.subtitle_resync",
+      "blueprint": "subtitle",
+      "readiness": "implemented",
+      "surface_class": "panel",
+      "surface_classes": [
+        "panel"
+      ],
+      "surface_evidence": [
+        "extension/com.opencut.panel/client/main.js",
+        "extension/com.opencut.uxp/main.js"
+      ]
+    },
+    {
       "rule": "/subtitle/sdh-format",
       "methods": [
         "POST"
@@ -26931,20 +26948,20 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1551,
-      "direct_surface_routes": 267,
+      "shipped_routes": 1552,
+      "direct_surface_routes": 268,
       "integration_only_routes": 1284,
-      "coverage_percent": 17.2,
+      "coverage_percent": 17.3,
       "multi_surface_routes": 60,
       "primary_counts": {
-        "panel": 212,
+        "panel": 213,
         "palette": 22,
         "cli": 0,
         "mcp": 33,
         "integration-only": 1309
       },
       "assigned_counts": {
-        "panel": 212,
+        "panel": 213,
         "palette": 33,
         "cli": 1,
         "mcp": 92,
