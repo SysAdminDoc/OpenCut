@@ -16,7 +16,8 @@ def test_readme_docker_commands_match_committed_compose_file():
     readme = _read("README.md")
     assert "docker-compose.gpu.yml" not in readme
     assert "docker compose up opencut-server" in readme
-    assert "docker compose --profile gpu up opencut-server-gpu" in readme
+    assert "docker compose --profile gpu" not in readme
+    assert "docker compose --profile mcp up opencut-mcp" in readme
 
 
 def test_docker_run_examples_use_non_root_data_home():
@@ -33,7 +34,7 @@ def test_docker_runtime_is_http_only_by_default():
     assert re.search(r"^EXPOSE 5679$", dockerfile, re.M)
     assert "EXPOSE 5679 5680" not in dockerfile
     assert "5680:5680" not in compose
-    default_service = compose.split("  # GPU-enabled variant", maxsplit=1)[0]
+    default_service = compose.split("  # MCP sidecar", maxsplit=1)[0]
     assert "5681:5681" not in default_service
     assert "Docker publishes the HTTP API on port 5679" in readme
     assert "does not publish the optional WebSocket 5680 or\nMCP 5681 sidecars by default" in readme
@@ -46,7 +47,7 @@ def test_docker_remote_bind_explicitly_opts_into_auth_gate():
     assert "ENV OPENCUT_HOST=0.0.0.0" in dockerfile
     assert "ENV OPENCUT_ALLOW_REMOTE=1" in dockerfile
     assert re.search(r"opencut-server:\s+.*?OPENCUT_ALLOW_REMOTE=1", compose, re.S)
-    assert re.search(r"opencut-server-gpu:\s+.*?OPENCUT_ALLOW_REMOTE=1", compose, re.S)
+    assert "opencut-server-gpu:" not in compose
 
 
 def test_every_remote_compose_profile_mounts_the_required_secret_file():
@@ -54,7 +55,7 @@ def test_every_remote_compose_profile_mounts_the_required_secret_file():
 
     assert "file: ${OPENCUT_REMOTE_AUTH_TOKEN_FILE:?" in compose
     assert "OPENCUT_ALLOW_INSECURE_SECRET_STORAGE" not in compose
-    for service in ["opencut-server", "opencut-server-gpu", "opencut-mcp"]:
+    for service in ["opencut-server", "opencut-mcp"]:
         block = compose.split(f"  {service}:", maxsplit=1)[1]
         block = re.split(r"\n  [a-zA-Z][\w-]*:", block, maxsplit=1)[0]
         assert "- opencut_remote_auth_token" in block
@@ -80,6 +81,17 @@ def test_mcp_compose_profile_uses_supported_http_arguments_and_backend_url():
     assert '"--http", "--http-bind", "0.0.0.0", "--http-port", "5681"' in mcp_block
     assert "OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679" in mcp_block
     assert 'entrypoint: ["python", "-m", "opencut.mcp_server"]' not in mcp_block
+    assert "OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-opencut-server,opencut-mcp}" in mcp_block
+
+
+def test_mcp_backend_service_name_is_trusted_by_default():
+    compose = _read("docker-compose.yml")
+    server_block = compose.split("  opencut-server:", maxsplit=1)[1].split(
+        "\n  # MCP sidecar", maxsplit=1
+    )[0]
+
+    assert "OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679" in compose
+    assert "OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-opencut-server,opencut-mcp}" in server_block
 
 
 def test_documented_compose_override_files_exist():
@@ -90,11 +102,14 @@ def test_documented_compose_override_files_exist():
     assert missing == []
 
 
-def test_gpu_compose_command_targets_gpu_service_only():
+def test_docker_does_not_advertise_unsupported_gpu_profile():
     compose = _read("docker-compose.yml")
+    dockerfile = _read("Dockerfile")
     assert not compose.startswith("version:")
-    assert "docker compose --profile gpu up opencut-server-gpu" in compose
-    assert re.search(r"opencut-server-gpu:\s+build:", compose, re.S)
+    assert "opencut-server-gpu" not in compose
+    assert "profiles:" not in compose or "gpu" not in compose
+    assert "CPU-only" in dockerfile
+    assert "--gpus all" not in dockerfile
 
 
 def test_dockerfile_uses_tracked_dependency_surface():

@@ -12,9 +12,10 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
       - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
-      # Loopback names and IP literals are trusted here. Add any DNS name
-      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
-      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
+      # Loopback names and IP literals are trusted here. The Compose service
+      # names are included so the MCP sidecar can reach this backend without
+      # requiring a hand-edited environment file.
+      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-opencut-server,opencut-mcp}
     deploy:
       resources:
         limits:
@@ -32,50 +33,6 @@ services:
         max-size: "50m"
         max-file: "3"
 
-  # GPU-enabled variant - use: docker compose --profile gpu up opencut-server-gpu
-  opencut-server-gpu:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "5679:5679"
-    volumes:
-      - opencut-data:/home/opencut/.opencut
-    secrets:
-      - opencut_remote_auth_token
-    environment:
-      - OPENCUT_BUNDLED=false
-      - PYTHONUNBUFFERED=1
-      - OPENCUT_ALLOW_REMOTE=1
-      - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
-      # Loopback names and IP literals are trusted here. Add any DNS name
-      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
-      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
-      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
-    deploy:
-      resources:
-        limits:
-          cpus: "8.0"
-          memory: 16G
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5679/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "100m"
-        max-file: "5"
-    profiles:
-      - gpu
-
   # MCP sidecar - use: docker compose --profile mcp up opencut-mcp
   opencut-mcp:
     build: .
@@ -91,9 +48,9 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENCUT_ALLOW_REMOTE=1
       - OPENCUT_REMOTE_AUTH_TOKEN_FILE=/run/secrets/opencut_remote_auth_token
-      # Loopback names and IP literals are trusted here. Add any DNS name
-      # clients use to reach this container, e.g. OPENCUT_TRUSTED_HOSTS=opencut
-      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-}
+      # Loopback names and IP literals are trusted here. Keep the Compose
+      # service names when overriding this value for a container deployment.
+      - OPENCUT_TRUSTED_HOSTS=${OPENCUT_TRUSTED_HOSTS:-opencut-server,opencut-mcp}
       - OPENCUT_MCP_BACKEND_URL=http://opencut-server:5679
     depends_on:
       opencut-server:

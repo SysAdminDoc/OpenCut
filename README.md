@@ -161,16 +161,19 @@ openssl rand -hex 32 > .opencut-auth-token
 chmod 600 .opencut-auth-token
 export OPENCUT_REMOTE_AUTH_TOKEN_FILE=./.opencut-auth-token
 docker compose up opencut-server
-docker compose --profile gpu up opencut-server-gpu
 docker compose --profile mcp up opencut-mcp
 ```
 
 Docker publishes the HTTP API on port 5679 and persists data under
 `/home/opencut/.opencut`. It does not publish the optional WebSocket 5680 or
 MCP 5681 sidecars by default; the explicit `mcp` profile publishes MCP with the
-same mounted API token. All CPU, GPU, and MCP Compose profiles require the host
-secret file and boot without a desktop credential vault or plaintext-storage
-opt-in. The image validates a private runtime copy as a regular, non-symlink
+same mounted API token and trusts the backend's Compose service name by
+default. The Docker image is intentionally CPU-only: its locked dependencies,
+FFmpeg build, and base image do not include CUDA, NVENC, or a GPU runtime. Use
+the native Linux installation with the `ai-gpu` extra for NVIDIA acceleration.
+Both Compose services require the host secret file and boot without a desktop
+credential vault or plaintext-storage opt-in. The image validates a private
+runtime copy as a regular, non-symlink
 `0400` file; the value is never placed in Compose environment variables,
 OpenCut JSON, logs, image layers, or API responses.
 
@@ -742,7 +745,7 @@ provided.
 | JSON Structured Logging | File handler outputs JSON logs with job-ID correlation |
 | Workflow Engine | Chain multi-step processing with cancellation between steps |
 | Plugin System | Authenticated installs plus supervised workers for third-party routes and jobs |
-| Docker Support | Multi-stage Dockerfile + docker-compose with GPU variant |
+| Docker Support | Multi-stage Dockerfile + docker-compose CPU and MCP profiles |
 | Log Viewer | Filtered log tail endpoint for real-time debugging |
 | CSRF Protection | Token-based cross-site request forgery protection |
 | Rate Limiting | Per-endpoint rate limits to prevent abuse |

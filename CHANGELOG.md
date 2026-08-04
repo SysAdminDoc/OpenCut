@@ -17,6 +17,14 @@ record also lives in the git commit messages.
   responses for protocol validation failures. Legacy HTTP remains compatible,
   and the optional MCP SDK extra is bounded to the tested 1.x line.
 
+### Fixed - Docker Compose onboarding
+
+- The MCP profile now trusts the Compose service names by default, allowing
+  its authenticated backend round-trip without manual environment editing.
+- Removed the misleading Docker GPU profile because the locked image is
+  CPU-only and has no CUDA/NVENC runtime; NVIDIA acceleration remains in the
+  native `ai-gpu` installation lane.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
