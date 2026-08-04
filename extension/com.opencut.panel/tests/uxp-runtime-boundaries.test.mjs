@@ -8,6 +8,7 @@ import { escapeHtml, safeDomIdSegment, setButtonBusy } from "../../com.opencut.u
 import { createI18nRuntime } from "../../com.opencut.uxp/uxp-i18n.js";
 import { createJobController } from "../../com.opencut.uxp/job-controller.js";
 import { createUxpState } from "../../com.opencut.uxp/uxp-state.js";
+import { createUxpUiController } from "../../com.opencut.uxp/uxp-ui-controller.js";
 import {
   buildChatActionRequest,
   buildLoudnessMatchPayload,
@@ -32,6 +33,100 @@ function response(status, data, headers = {}) {
     headers: { get: (name) => normalized.get(name) || null },
     json: async () => data,
     text: async () => JSON.stringify(data),
+  };
+}
+
+function fakeElement({ id = "", tab = "", classes = [] } = {}) {
+  const listeners = new Map();
+  const classNames = new Set(classes);
+  const element = {
+    id,
+    dataset: tab ? { tab } : {},
+    classList: {
+      add: (...names) => names.forEach((name) => classNames.add(name)),
+      remove: (...names) => names.forEach((name) => classNames.delete(name)),
+      contains: (name) => classNames.has(name),
+      toggle: (name, force) => {
+        const next = force === undefined ? !classNames.has(name) : force;
+        if (next) classNames.add(name);
+        else classNames.delete(name);
+        return next;
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    disabled: false,
+    scrollLeft: 0,
+    scrollWidth: 0,
+    clientWidth: 0,
+    focus: vi.fn(),
+    setAttribute: vi.fn((name, value) => { element[name] = value; }),
+    addEventListener: vi.fn((type, listener) => {
+      const handlers = listeners.get(type) || [];
+      handlers.push(listener);
+      listeners.set(type, handlers);
+    }),
+    removeEventListener: vi.fn((type, listener) => {
+      const handlers = listeners.get(type) || [];
+      listeners.set(type, handlers.filter((candidate) => candidate !== listener));
+    }),
+    dispatch: (type, event = {}) => {
+      (listeners.get(type) || []).forEach((listener) => listener({ currentTarget: element, preventDefault: vi.fn(), ...event }));
+    },
+    getBoundingClientRect: () => ({ left: 0, right: 100 }),
+    querySelectorAll: (selector) => selector === ".oc-tab" ? element.children : [],
+    querySelector: () => null,
+    appendChild: (child) => {
+      child.parentNode = element;
+      element.children.push(child);
+    },
+    remove: vi.fn(),
+  };
+  Object.defineProperty(element, "firstElementChild", { get: () => element.children[0] || null });
+  element.dataset = { ...element.dataset };
+  return element;
+}
+
+function fakeUiDocument() {
+  const tabs = [
+    fakeElement({ tab: "cut", classes: ["oc-tab", "active"] }),
+    fakeElement({ tab: "audio", classes: ["oc-tab"] }),
+  ];
+  const panels = [
+    fakeElement({ id: "tab-cut", classes: ["oc-tab-panel", "active"] }),
+    fakeElement({ id: "tab-audio", classes: ["oc-tab-panel"] }),
+  ];
+  const nav = fakeElement({ id: "tabNav" });
+  nav.children.push(...tabs);
+  nav.scrollWidth = 200;
+  nav.clientWidth = 100;
+  const ids = new Map([
+    ["tabNav", nav],
+    ["tabNavShell", fakeElement({ id: "tabNavShell" })],
+    ["tabScrollPrev", fakeElement({ id: "tabScrollPrev" })],
+    ["tabScrollNext", fakeElement({ id: "tabScrollNext" })],
+    ["mainContent", fakeElement({ id: "mainContent" })],
+    ["processingBanner", fakeElement({ id: "processingBanner" })],
+    ["processingMsg", fakeElement({ id: "processingMsg" })],
+    ["progressFill", fakeElement({ id: "progressFill" })],
+    ["processingElapsed", fakeElement({ id: "processingElapsed" })],
+    ["statusText", fakeElement({ id: "statusText" })],
+    ["statusBar", fakeElement({ id: "statusBar" })],
+    ["connDot", fakeElement({ id: "connDot" })],
+    ["connLabel", fakeElement({ id: "connLabel" })],
+    ["connectionStatus", fakeElement({ id: "connectionStatus" })],
+  ]);
+  return {
+    tabs,
+    panels,
+    nav,
+    ids,
+    documentRef: {
+      getElementById: (id) => ids.get(id) || null,
+      querySelectorAll: (selector) => selector === ".oc-tab" ? tabs : selector === ".oc-tab-panel" ? panels : [],
+      createElement: () => fakeElement(),
+    },
   };
 }
 
@@ -138,6 +233,60 @@ describe("UXP feature control contracts", () => {
     expect(index).toContain('id="uxpExportSupportBundleBtn"');
     expect(index).toContain('id="uxpOnboardingOverlay"');
     expect(index).toContain('id="uxpRestartOnboardingBtn"');
+  });
+});
+
+describe("UXP UI controller", () => {
+  it("owns navigation listeners and clears processing resources on dispose", () => {
+    const { documentRef, tabs, panels } = fakeUiDocument();
+    const windowRef = fakeElement();
+    const intervalHandle = {};
+    const setIntervalFn = vi.fn(() => intervalHandle);
+    const clearIntervalFn = vi.fn();
+    const invalidateCache = vi.fn();
+    const workspaceChanged = vi.fn();
+    const observer = { observe: vi.fn(), disconnect: vi.fn() };
+    const controller = createUxpUiController({
+      documentRef,
+      windowRef,
+      requestAnimationFrameFn: (callback) => callback(),
+      setIntervalFn,
+      clearIntervalFn,
+      ResizeObserverCtor: class {
+        constructor() {
+          return observer;
+        }
+      },
+      isBackendConnected: () => false,
+      onInvalidatePProCache: invalidateCache,
+      onWorkspaceTabChange: workspaceChanged,
+    });
+
+    controller.bindNavigation();
+    tabs[1].dispatch("click");
+    expect(tabs[1].classList.contains("active")).toBe(true);
+    expect(panels[1].hidden).toBe(false);
+    expect(invalidateCache).toHaveBeenCalledOnce();
+    expect(workspaceChanged).toHaveBeenCalledWith("audio");
+
+    controller.showProcessing("Working");
+    expect(setIntervalFn).toHaveBeenCalledWith(expect.any(Function), 1000);
+    expect(documentRef.getElementById("processingMsg").textContent).toBe("Working");
+    controller.dispose();
+    expect(clearIntervalFn).toHaveBeenCalledWith(intervalHandle);
+    expect(observer.disconnect).toHaveBeenCalledOnce();
+    expect(windowRef.removeEventListener).toHaveBeenCalled();
+  });
+
+  it("keeps the controller implementation and teardown in the extracted module", () => {
+    const main = readFileSync(new URL("../../com.opencut.uxp/main.js", import.meta.url), "utf8");
+    const ui = readFileSync(new URL("../../com.opencut.uxp/uxp-ui-controller.js", import.meta.url), "utf8");
+    expect(main).toContain('import { createUxpUiController } from "./uxp-ui-controller.js";');
+    expect(main).toContain("UIController.bindNavigation();");
+    expect(main).toContain("UIController.dispose();");
+    expect(main).not.toContain("const UIController = (() =>");
+    expect(ui).toContain("export function createUxpUiController");
+    expect(ui).toContain("function dispose()");
   });
 });
 

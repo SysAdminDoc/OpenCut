@@ -29,6 +29,11 @@ import {
 } from "./uxp-timeline.js";
 import { bootstrapApplication } from "./uxp-bootstrap.js";
 import { createPremiereThemeSync } from "./uxp-theme.js";
+import { createUxpUiController } from "./uxp-ui-controller.js";
+
+function escapeHtmlForUiController(str) {
+  return escapeHtmlValue(str);
+}
 
 /**
  * OpenCut UXP Panel — main.js
@@ -662,8 +667,6 @@ async function checkForUpdatesUxp({ force = false } = {}) {
 // ─────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────
-let elapsedTimer  = null;
-let elapsedSec    = 0;
 let lastCuts      = [];     // cuts array from last silence/filler run
 let lastMarkers   = [];     // marker array from last beat detection
 let _lastSequenceInfo = null;
@@ -2289,353 +2292,22 @@ const JobPoller = createJobController({
 // ─────────────────────────────────────────────────────────────
 // UIController — DOM manipulation, tabs, toasts, sliders
 // ─────────────────────────────────────────────────────────────
-function syncTabOverflowControls() {
-  const nav = document.getElementById("tabNav");
-  const shell = document.getElementById("tabNavShell");
-  const previous = document.getElementById("tabScrollPrev");
-  const next = document.getElementById("tabScrollNext");
-  if (!nav || !shell || !previous || !next) return;
-  const overflowing = nav.scrollWidth > nav.clientWidth + 2;
-  shell.dataset.overflow = overflowing ? "true" : "false";
-  previous.hidden = !overflowing;
-  next.hidden = !overflowing;
-  if (!overflowing) {
-    nav.scrollLeft = 0;
-    previous.disabled = true;
-    next.disabled = true;
-    return;
-  }
-  // The buttons move the ACTIVE tab (activateRelativeTab), not the scroll
-  // position, so derive disabled state from the active tab index — scroll
-  // position can be changed manually and would desync from the action.
-  const tabs = Array.from(nav.querySelectorAll(".oc-tab"));
-  const activeIndex = tabs.findIndex((tab) => tab.classList.contains("active"));
-  previous.disabled = activeIndex <= 0;
-  next.disabled = activeIndex < 0 || activeIndex >= tabs.length - 1;
+const UIController = createUxpUiController({
+  documentRef: document,
+  windowRef: window,
+  translate: t,
+  onInvalidatePProCache: () => PProBridge.invalidateCache(),
+  onWorkspaceTabChange: updateWorkspaceOverview,
+  isBackendConnected,
+  getWorkspaceTitle,
+  onQuickActionStateChange: syncQuickActionButtons,
+  escapeHtmlValue: escapeHtmlForUiController,
+});
+
+function clearButtonLoadingStates() {
+  // The extracted controller owns document.querySelectorAll("button.loading").
+  UIController.clearButtonLoadingStates();
 }
-
-function revealTabButton(button) {
-  const nav = document.getElementById("tabNav");
-  if (!nav || !button) return;
-  const alignButton = () => {
-    const navBounds = nav.getBoundingClientRect();
-    const tabBounds = button.getBoundingClientRect();
-    if (tabBounds.left < navBounds.left) {
-      nav.scrollLeft -= navBounds.left - tabBounds.left + 6;
-    } else if (tabBounds.right > navBounds.right) {
-      nav.scrollLeft += tabBounds.right - navBounds.right + 6;
-    }
-    syncTabOverflowControls();
-  };
-  alignButton();
-  requestAnimationFrame(alignButton);
-}
-
-function activateRelativeTab(delta) {
-  const tabs = Array.from(document.querySelectorAll(".oc-tab"));
-  const activeIndex = tabs.findIndex((tab) => tab.classList.contains("active"));
-  if (activeIndex < 0) return;
-  const target = tabs[Math.max(0, Math.min(tabs.length - 1, activeIndex + delta))];
-  if (!target || target === tabs[activeIndex]) return;
-  UIController.switchTab(target.dataset.tab);
-  target.focus();
-}
-
-const UIController = (() => {
-  // ── Tab switching ──
-  function switchTab(tabId) {
-    // Invalidate Premiere state cache on tab switch
-    PProBridge.invalidateCache();
-    let activeButton = null;
-    document.querySelectorAll(".oc-tab").forEach(btn => {
-      const active = btn.dataset.tab === tabId;
-      btn.classList.toggle("active", active);
-      btn.setAttribute("aria-selected", active ? "true" : "false");
-      btn.tabIndex = active ? 0 : -1;
-      if (active) activeButton = btn;
-    });
-    document.querySelectorAll(".oc-tab-panel").forEach(panel => {
-      const active = panel.id === `tab-${tabId}`;
-      panel.classList.toggle("active", active);
-      panel.hidden = !active;
-      panel.setAttribute("aria-hidden", active ? "false" : "true");
-    });
-    const main = document.getElementById("mainContent");
-    if (main) main.scrollTop = 0;
-    revealTabButton(activeButton);
-    updateWorkspaceOverview(tabId);
-    if (isBackendConnected()) {
-      setStatus(
-        t("uxp.status.workspace", "{workspace} workspace").replace("{workspace}", getWorkspaceTitle(tabId))
-      );
-    } else {
-      setStatus(
-        t("uxp.status.backend_offline", "OpenCut backend offline. Start the local service to run jobs."),
-        "error"
-      );
-    }
-  }
-
-  // ── Processing banner ──
-  function showProcessing(msg = t("processing.processing", "Processing...")) {
-    const banner = document.getElementById("processingBanner");
-    if (banner) banner.classList.remove("hidden");
-    document.getElementById("mainContent")?.setAttribute("aria-busy", "true");
-    setProcessingMsg(msg);
-    setProgress(0);
-    startElapsedTimer();
-    syncQuickActionButtons();
-  }
-
-  function hideProcessing() {
-    const banner = document.getElementById("processingBanner");
-    if (banner) banner.classList.add("hidden");
-    document.getElementById("mainContent")?.setAttribute("aria-busy", "false");
-    stopElapsedTimer();
-    syncQuickActionButtons();
-  }
-
-  function setProcessingMsg(msg) {
-    const el = document.getElementById("processingMsg");
-    if (el) el.textContent = msg;
-  }
-
-  function setProgress(pct) {
-    const fill = document.getElementById("progressFill");
-    if (fill) {
-      const clamped = Math.min(100, Math.max(0, pct));
-      fill.style.width = `${clamped}%`;
-      fill.setAttribute("aria-valuenow", String(Math.round(clamped)));
-    }
-  }
-
-  function startElapsedTimer() {
-    stopElapsedTimer();
-    elapsedSec = 0;
-    updateElapsedDisplay();
-    elapsedTimer = setInterval(() => {
-      elapsedSec++;
-      updateElapsedDisplay();
-    }, 1000);
-  }
-
-  function stopElapsedTimer() {
-    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
-    elapsedSec = 0;
-    updateElapsedDisplay();
-  }
-
-  function updateElapsedDisplay() {
-    const el = document.getElementById("processingElapsed");
-    if (!el) return;
-    const m = Math.floor(elapsedSec / 60);
-    const s = elapsedSec % 60;
-    el.textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
-  }
-
-  function inferStatusTone(msg) {
-    const text = String(msg || "").toLowerCase();
-    if (!text) return "neutral";
-    if (/(error|failed|offline|unavailable|timed out|timeout|could not|stopped)/.test(text)) return "error";
-    if (/(connecting|running|processing|loading|refreshing|starting|detecting|indexing|scanning)/.test(text)) return "working";
-    if (/(online|connected|saved|ready|done|complete|loaded|updated|synced)/.test(text)) return "success";
-    return "neutral";
-  }
-
-  // ── Status bar ──
-  function setStatus(msg, tone) {
-    const el = document.getElementById("statusText");
-    if (el) el.textContent = msg || "";
-    const bar = document.getElementById("statusBar");
-    if (bar) {
-      bar.dataset.state = tone || inferStatusTone(msg);
-      bar.title = msg || "";
-    }
-  }
-
-  function setStatusRight(msg) {
-    const el = document.getElementById("statusRight");
-    if (el) {
-      el.textContent = msg || "";
-      el.classList.toggle("is-empty", !msg);
-    }
-  }
-
-  // ── Connection indicator ──
-  function setConnection(state) {
-    // state: "connected" | "connecting" | "disconnected"
-    const dot   = document.getElementById("connDot");
-    const label = document.getElementById("connLabel");
-    const status = document.getElementById("connectionStatus");
-    const statusBar = document.getElementById("statusBar");
-    if (!dot || !label) return;
-    dot.className = `oc-conn-dot ${state}`;
-    if (status) status.dataset.state = state;
-    if (statusBar) statusBar.dataset.connection = state;
-    const labels = {
-      connected: t("conn.online", "Online"),
-      connecting: t("conn.connecting", "Connecting..."),
-      disconnected: t("conn.offline", "Offline"),
-    };
-    label.textContent = labels[state] ?? state;
-    updateWorkspaceOverview();
-  }
-
-  // ── Toast notifications ──
-  function getToastHeading(type, message) {
-    const lower = String(message || "").toLowerCase();
-    if (type === "success") {
-      return /(saved|loaded|opened|exported|copied|ready)/.test(lower)
-        ? t("uxp.toast.heading_ready", "Ready")
-        : t("uxp.toast.heading_done", "Done");
-    }
-    if (type === "warning") {
-      return /(select|choose|enter|required)/.test(lower)
-        ? t("uxp.toast.heading_action_needed", "Action needed")
-        : t("uxp.toast.heading_heads_up", "Heads up");
-    }
-    if (type === "error") {
-      return t("uxp.toast.heading_needs_attention", "Needs attention");
-    }
-    if (/(step \d+\/\d+|installing|reinstalling|restarting|loading|checking|processing|transcribing|translating|burning|indexing)/.test(lower)) {
-      return t("uxp.toast.heading_in_progress", "In progress");
-    }
-    return t("uxp.toast.heading_status_update", "Status update");
-  }
-
-  function getToastDuration(type, explicitDuration) {
-    if (typeof explicitDuration === "number") return explicitDuration;
-    if (type === "error") return 0;
-    if (type === "warning") return 5600;
-    return 4000;
-  }
-
-  function showToast(message, type = "info", duration) {
-    const area = document.getElementById("toastArea");
-    if (!area) return;
-    const maxVisibleToasts = 4;
-    while (area.children.length >= maxVisibleToasts) {
-      area.firstElementChild?.remove();
-    }
-
-    const payload = (message && typeof message === "object")
-      ? message
-      : { message };
-    const tone = payload.type || type || "info";
-    const text = String(payload.message ?? payload.text ?? "").trim()
-      || String(message ?? "").trim();
-    const title = String(payload.title ?? getToastHeading(tone, text)).trim() || getToastHeading(tone, text);
-    const detail = String(payload.detail ?? "").trim();
-
-    const icons = {
-      success: `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>`,
-      error:   `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 4.646a.5.5 0 000 .708L7.293 8l-2.647 2.646a.5.5 0 00.708.708L8 8.707l2.646 2.647a.5.5 0 00.708-.708L8.707 8l2.647-2.646a.5.5 0 00-.708-.708L8 7.293 5.354 4.646a.5.5 0 00-.708 0z"/></svg>`,
-      warning: `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>`,
-      info:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.93 6.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 7.588z"/></svg>`,
-    };
-
-    const toast = document.createElement("div");
-    toast.className = `oc-toast ${tone}`;
-    toast.dataset.state = tone;
-    toast.setAttribute("role", tone === "error" ? "alert" : "status");
-    toast.setAttribute("aria-live", tone === "error" ? "assertive" : "polite");
-    toast.innerHTML = `
-      <span class="oc-toast-icon" aria-hidden="true">${icons[tone] ?? icons.info}</span>
-      <span class="oc-toast-content">
-        <span class="oc-toast-title">${escapeHtml(title)}</span>
-        <span class="oc-toast-msg">${escapeHtml(text || title)}</span>
-        ${detail ? `<span class="oc-toast-detail">${escapeHtml(detail)}</span>` : ""}
-      </span>
-      <button type="button" class="oc-toast-dismiss" aria-label="${escapeHtml(t("uxp.toast.dismiss", "Dismiss notification"))}">&times;</button>`;
-
-    area.appendChild(toast);
-
-    const dismiss = () => {
-      if (toast.dataset.closing === "true") return;
-      toast.dataset.closing = "true";
-      toast.classList.add("fade-out");
-      setTimeout(() => toast.remove(), 320);
-    };
-    toast.querySelector(".oc-toast-dismiss")?.addEventListener("click", dismiss);
-
-    const resolvedDuration = getToastDuration(
-      tone,
-      payload.duration ?? (arguments.length >= 3 ? duration : undefined)
-    );
-    if (resolvedDuration > 0) setTimeout(dismiss, resolvedDuration);
-  }
-
-  // ── Slider live value display ──
-  function bindSlider(sliderId, valId, formatter) {
-    const slider = document.getElementById(sliderId);
-    const valEl  = document.getElementById(valId);
-    if (!slider || !valEl) return;
-    const update = () => { valEl.textContent = formatter(parseFloat(slider.value)); };
-    slider.addEventListener("input", update);
-    update();
-  }
-
-  // ── Collapsible cards ──
-  function initCollapsibles() {
-    document.querySelectorAll(".oc-card-header.collapsible").forEach(header => {
-      if (header.dataset.collapsibleBound === "true") return;
-      const targetId = header.dataset.target;
-      const initialBody = targetId ? document.getElementById(targetId) : null;
-      header.setAttribute("role", "button");
-      header.tabIndex = 0;
-      if (targetId) header.setAttribute("aria-controls", targetId);
-      header.setAttribute("aria-expanded", initialBody?.classList.contains("collapsed") ? "false" : "true");
-
-      const toggle = () => {
-        const targetId = header.dataset.target;
-        const body = document.getElementById(targetId);
-        if (!body) return;
-        const collapsed = body.classList.toggle("collapsed");
-        header.classList.toggle("collapsed", collapsed);
-        header.setAttribute("aria-expanded", collapsed ? "false" : "true");
-      };
-
-      header.addEventListener("click", toggle);
-      header.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          toggle();
-        }
-      });
-      header.dataset.collapsibleBound = "true";
-    });
-  }
-
-  // ── Button loading state ──
-  function setButtonLoading(btnId, loading) {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    btn.classList.toggle("loading", loading);
-    const locked = btn.dataset.backendLocked === "true" || btn.dataset.jobLocked === "true";
-    btn.disabled = loading || locked;
-    btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
-  }
-
-  function clearButtonLoadingStates() {
-    document.querySelectorAll("button.loading").forEach((btn) => {
-      btn.classList.remove("loading");
-      const locked = btn.dataset.backendLocked === "true" || btn.dataset.jobLocked === "true";
-      btn.disabled = locked;
-      btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
-    });
-  }
-
-  function escapeHtml(str) {
-    return escapeHtmlValue(str);
-  }
-
-  return {
-    switchTab, showProcessing, hideProcessing, setProcessingMsg, setProgress,
-    setStatus, setStatusRight, setConnection, showToast,
-    bindSlider, initCollapsibles, setButtonLoading, clearButtonLoadingStates,
-    escapeHtml,
-  };
-})();
 
 // ─────────────────────────────────────────────────────────────
 // File browse helper (UXP localFileSystem)
@@ -6971,7 +6643,7 @@ async function cancelActiveJobFromSettings() {
   }
   const cancelled = await JobPoller.cancel();
   if (!cancelled) return;
-  UIController.clearButtonLoadingStates();
+  clearButtonLoadingStates();
   UIController.hideProcessing();
   UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   syncQuickActionButtons();
@@ -7038,39 +6710,7 @@ let _otioSyncSchemaTarget = null;
 function bindEvents() {
   initUxpOnboardingEvents();
   // ── Tab navigation ──
-  const tabs = Array.from(document.querySelectorAll(".oc-tab"));
-  tabs.forEach((btn, index) => {
-    btn.addEventListener("click", () => UIController.switchTab(btn.dataset.tab));
-    btn.addEventListener("keydown", (event) => {
-      let target = null;
-      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        target = tabs[(index + 1) % tabs.length];
-      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        target = tabs[(index - 1 + tabs.length) % tabs.length];
-      } else if (event.key === "Home") {
-        target = tabs[0];
-      } else if (event.key === "End") {
-        target = tabs[tabs.length - 1];
-      }
-
-      if (target) {
-        event.preventDefault();
-        target.focus();
-        UIController.switchTab(target.dataset.tab);
-      }
-    });
-  });
-  const tabNav = document.getElementById("tabNav");
-  tabNav?.addEventListener("scroll", syncTabOverflowControls, { passive: true });
-  document.getElementById("tabScrollPrev")?.addEventListener("click", () => activateRelativeTab(-1));
-  document.getElementById("tabScrollNext")?.addEventListener("click", () => activateRelativeTab(1));
-  window.addEventListener("resize", syncTabOverflowControls);
-  if (typeof ResizeObserver !== "undefined" && tabNav) {
-    const tabResizeObserver = new ResizeObserver(syncTabOverflowControls);
-    tabResizeObserver.observe(tabNav);
-  }
-  requestAnimationFrame(syncTabOverflowControls);
-
+  UIController.bindNavigation();
   PRIMARY_CLIP_INPUT_IDS.forEach((id) => {
     const input = document.getElementById(id);
     if (!input) return;
@@ -7156,7 +6796,7 @@ function bindEvents() {
   document.getElementById("cancelBtn")?.addEventListener("click", async () => {
     const cancelled = await JobPoller.cancel();
     if (!cancelled) return;
-    UIController.clearButtonLoadingStates();
+    clearButtonLoadingStates();
     UIController.hideProcessing();
     UIController.showToast(t("uxp.runtime.job_cancelled", "Job cancelled."), "warning");
   });
@@ -9742,6 +9382,7 @@ async function initApp() {
   UXPThemeSync.start();
   window.addEventListener("beforeunload", () => {
     UXPThemeSync.dispose();
+    UIController.dispose();
     JobPoller.closeSse();
     stopMediaScanInterval();
   }, { once: true });
