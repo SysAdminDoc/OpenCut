@@ -89,7 +89,7 @@ record also lives in the git commit messages.
   headless startup. `/system/gpu`, `/system/status`, and structured invalid
   selection errors expose the selected adapter and available-device list.
 
-## Unreleased - Reachable installs and a stack you can trust
+## 1.47.0 - Reachable installs and a stack you can trust
 
 ### Added - Subtitle resynchronisation
 

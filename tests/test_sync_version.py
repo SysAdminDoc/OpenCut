@@ -128,6 +128,40 @@ def test_panel_lock_and_c2pa_targets_sync_release_version(monkeypatch, tmp_path)
     assert all(module.check_file(path, pattern, replacement, "1.33.0") for path, pattern, replacement in targets)
 
 
+def test_panel_update_and_about_versions_sync_together(monkeypatch, tmp_path):
+    module = _sync_version_module()
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    panel = tmp_path / "extension" / "com.opencut.panel" / "client" / "index.html"
+    uxp = tmp_path / "extension" / "com.opencut.uxp" / "index.html"
+    panel.parent.mkdir(parents=True)
+    uxp.parent.mkdir(parents=True)
+    panel.write_text(
+        '<span class="settings-value" id="updateCurrentVersion">1.32.0</span>\n'
+        '<span class="settings-label" data-i18n="settings.version">Version</span>\n'
+        '<span class="settings-value">1.32.0</span>\n',
+        encoding="utf-8",
+    )
+    uxp.write_text(
+        '<strong class="oc-inline-value" id="uxpUpdateCurrentVersion">1.32.0</strong>\n',
+        encoding="utf-8",
+    )
+
+    targets = [
+        *_targets(module, "extension/com.opencut.panel/client/index.html"),
+        *_targets(module, "extension/com.opencut.uxp/index.html"),
+    ]
+    assert len(targets) == 5
+    for path, pattern, replacement in targets:
+        module.sync_file(path, pattern, replacement, "1.33.0")
+
+    assert panel.read_text(encoding="utf-8").count("1.33.0") == 2
+    assert uxp.read_text(encoding="utf-8").count("1.33.0") == 1
+    assert all(
+        module.check_file(path, pattern, replacement, "1.33.0")
+        for path, pattern, replacement in targets
+    )
+
+
 def test_sync_file_preserves_crlf_bytes(monkeypatch, tmp_path):
     module = _sync_version_module()
     monkeypatch.setattr(module, "ROOT", tmp_path)
