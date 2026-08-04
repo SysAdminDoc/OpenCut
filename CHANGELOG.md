@@ -12,6 +12,13 @@ record also lives in the git commit messages.
   unresolved and priority gaps in UXP Settings instead of reporting only host
   function coverage.
 
+### Added - UXP priority capability routes
+
+- The UXP panel now exposes direct job-backed controls for Whisper installation,
+  stem separation, speech enhancement, caption translation, animated captions,
+  full cleanup, and single-clip export presets, including the required NLLB
+  license opt-in and word-timing validation.
+
 ### Changed - Pin FFmpeg to the post-July security snapshot
 
 - The bundled Windows media runtime is now Gyan's `git-full` snapshot

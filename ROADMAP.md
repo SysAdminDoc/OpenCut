@@ -25,13 +25,6 @@ a working file, not part of a clone. This file is the tracked queue.
   Note: installing and then downgrading opencv leaves a mixed `site-packages/cv2` (the 5.0 payload survives a downgrade and `cv2.__version__` keeps reporting 5.0.0). Uninstall all three opencv distributions and delete the leftover `cv2/` directory before reinstalling.
   Complexity: M
 
-- [ ] P1 — Close the UXP capability gap before ExtendScript support ends
-  Why: Adobe states verbatim that ExtendScript is supported "through September 2026" and CEP 12 is the last CEP release, yet 133 user-facing capabilities exist only in the CEP panel — a UXP-only user cannot even install Whisper.
-  Evidence: Literal route references resolve to 189 non-stub routes in `extension/com.opencut.panel/client/main.js` and 77 across `extension/com.opencut.uxp/*.js`; the CEP-only set includes `/audio/separate`, `/captions/translate`, `/audio/enhance`, `/captions/animated/render`, `/export/preset`, `/full`, `/install-whisper`. `opencut/_generated/uxp_migration_dashboard.json` measures the 18 ExtendScript host functions (nearly all `direct_uxp`) and therefore reports migration as near-complete; `extension/PANEL_PARITY.json` already records `"$adobe_cep_eol": "approximately 2026-09"`. Host-write itself is sound — `main.js:812-833` feature-detects `project.lockedAccess()` for 26.3. Cross-references the existing P2 "Complete UXP first-run and settings portability", which covers onboarding/settings but not feature reach.
-  Touches: `extension/com.opencut.uxp/*`, `opencut/tools/dump_uxp_migration_dashboard.py` (or equivalent generator), `extension/PANEL_PARITY.json`, `tests/test_panel_tab_parity.py`, `tests/test_cep_uxp_parity_catalogue.py`, locale files.
-  Acceptance: The migration dashboard reports **route coverage**, not host-function coverage, and a gate fails when a CEP-reachable route has no UXP path or a recorded, justified exclusion; the CEP-only set is driven to zero for capabilities the product claims, starting with dependency installation, stem separation, translation, enhancement, and export presets.
-  Complexity: XL
-
 - [ ] P1 — Publish a downloadable release for the current source tree
   Why: The newest artifact anyone can install is 21 versions old, so no user has any fix shipped since 2026-04-20 — including the security work this roadmap tracks.
   Evidence: `gh release list` shows v1.25.1 (2026-04-20) as the latest; `pyproject.toml:13` is 1.46.0; `git rev-parse refs/tags/v1.34.0` … `v1.46.0` all fail — thirteen shipped versions carry no tag.
