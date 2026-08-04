@@ -8,11 +8,187 @@ away from ``extension/com.opencut.panel/host/index.jsx``.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Iterable, Sequence
+from pathlib import Path
+import re
+from typing import Iterable, Mapping, Sequence
 
 CATALOGUE_VERSION = 1
 SOURCE_HOST_FILE = "extension/com.opencut.panel/host/index.jsx"
 UXP_TYPINGS = "@adobe/premierepro@26.3.0-beta.67"
+ROUTE_CATALOGUE_VERSION = 1
+ROUTE_CEP_SOURCE = "extension/com.opencut.panel/client/main.js"
+ROUTE_UXP_SOURCES = (
+    "extension/com.opencut.uxp/main.js",
+    "extension/com.opencut.uxp/uxp-utils.js",
+)
+
+# These are the user-facing capability routes that must be present in UXP
+# before the CEP sunset. Keep the list small and explicit so the dashboard
+# cannot call a transport or an incidental backend string a migrated feature.
+PRIORITY_ROUTE_COVERAGE = (
+    "/install-whisper",
+    "/audio/separate",
+    "/captions/translate",
+    "/audio/enhance",
+    "/captions/animated/render",
+    "/export/preset",
+    "/full",
+)
+
+# ``/jobs`` is the CEP panel's polling transport, not a capability that needs
+# a feature-level UXP button. It is retained as a visible, justified
+# exclusion instead of being silently dropped from the inventory.
+ROUTE_EXCLUSIONS: Mapping[str, str] = {
+    "/jobs": "CEP job-status polling transport; UXP uses JobPoller internally.",
+}
+
+_CEP_ROUTE_PATTERNS = (
+    re.compile(r"\bstartJob\s*\(\s*[\"'](/[^\"']+)"),
+    re.compile(
+        r"\bapi\s*\(\s*[\"'](?:GET|POST|PUT|PATCH|DELETE)[\"']\s*,\s*[\"'](/[^\"']+)"
+    ),
+)
+_UXP_ROUTE_PATTERNS = (
+    re.compile(
+        r"\b(?:BackendClient\.(?:get|post|del)|JobPoller\.start)\s*\(\s*[\"'](/[^\"']+)"
+    ),
+    re.compile(r"CHAT_ACTION_ENDPOINTS\s*=\s*Object\.freeze\(\{(?P<body>.*?)\}\s*\)", re.S),
+)
+_ROUTE_LITERAL_PATTERN = re.compile(r"[\"'](/[^\"']+)[\"']")
+
+
+def _repo_root() -> Path:
+    """Return the repository root for source-derived route inspection."""
+
+    return Path(__file__).resolve().parents[2]
+
+
+def _normalize_route(route: str) -> str:
+    """Normalize a literal endpoint while preserving dynamic route intent."""
+
+    normalized = route.split("?", 1)[0].strip()
+    if normalized != "/":
+        normalized = normalized.rstrip("/")
+    return normalized or "/"
+
+
+def _read_route_source(relative_path: str) -> str:
+    try:
+        return (_repo_root() / relative_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _extract_routes(text: str, patterns: Sequence[re.Pattern[str]]) -> set[str]:
+    routes: set[str] = set()
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            if "body" in match.groupdict():
+                routes.update(_normalize_route(value) for value in _ROUTE_LITERAL_PATTERN.findall(match.group("body")))
+            else:
+                routes.add(_normalize_route(match.group(1)))
+    return {route for route in routes if route}
+
+
+def _route_sources(relative_paths: Sequence[str], patterns: Sequence[re.Pattern[str]]) -> dict[str, list[str]]:
+    sources: dict[str, list[str]] = {}
+    for relative_path in relative_paths:
+        text = _read_route_source(relative_path)
+        for route in _extract_routes(text, patterns):
+            sources.setdefault(route, []).append(relative_path)
+    return {route: sorted(paths) for route, paths in sources.items()}
+
+
+def _route_gate_errors(
+    cep_routes: Iterable[str],
+    uxp_routes: Iterable[str],
+    exclusions: Mapping[str, str] = ROUTE_EXCLUSIONS,
+) -> list[str]:
+    cep = {_normalize_route(route) for route in cep_routes}
+    uxp = {_normalize_route(route) for route in uxp_routes}
+    excluded = {_normalize_route(route) for route in exclusions}
+    missing = sorted(cep - uxp - excluded)
+    priority_missing = sorted(set(PRIORITY_ROUTE_COVERAGE) - uxp - excluded)
+    errors: list[str] = []
+    if missing:
+        errors.append(f"CEP routes without a UXP path or justified exclusion: {', '.join(missing)}")
+    if priority_missing:
+        errors.append(f"priority routes without a UXP path: {', '.join(priority_missing)}")
+    return errors
+
+
+def validate_route_coverage(
+    cep_routes: Iterable[str],
+    uxp_routes: Iterable[str],
+    exclusions: Mapping[str, str] = ROUTE_EXCLUSIONS,
+) -> list[str]:
+    """Return route-parity gate errors for a CEP/UXP route inventory."""
+
+    return _route_gate_errors(cep_routes, uxp_routes, exclusions)
+
+
+def build_route_coverage_manifest() -> dict:
+    """Build a source-derived route coverage inventory for the two panels."""
+
+    cep_sources = _route_sources((ROUTE_CEP_SOURCE,), _CEP_ROUTE_PATTERNS)
+    uxp_sources = _route_sources(ROUTE_UXP_SOURCES, _UXP_ROUTE_PATTERNS)
+    cep_routes = sorted(cep_sources)
+    uxp_routes = sorted(uxp_sources)
+    excluded = {_normalize_route(route): reason for route, reason in ROUTE_EXCLUSIONS.items()}
+    rows: list[dict] = []
+    for route in cep_routes:
+        if route in uxp_sources:
+            status = "covered"
+        elif route in excluded:
+            status = "excluded"
+        else:
+            status = "missing"
+        rows.append(
+            {
+                "route": route,
+                "status": status,
+                "priority": route in PRIORITY_ROUTE_COVERAGE,
+                "cep_sources": cep_sources[route],
+                "uxp_sources": uxp_sources.get(route, []),
+                "justification": excluded.get(route, ""),
+            }
+        )
+
+    errors = _route_gate_errors(cep_routes, uxp_routes, excluded)
+    covered_count = sum(row["status"] == "covered" for row in rows)
+    excluded_count = sum(row["status"] == "excluded" for row in rows)
+    missing_routes = [row["route"] for row in rows if row["status"] == "missing"]
+    priority_missing = [
+        route
+        for route in PRIORITY_ROUTE_COVERAGE
+        if route not in uxp_sources and route not in excluded
+    ]
+    total = len(rows)
+    return {
+        "version": ROUTE_CATALOGUE_VERSION,
+        "cep_source": ROUTE_CEP_SOURCE,
+        "uxp_sources": list(ROUTE_UXP_SOURCES),
+        "priority_routes": list(PRIORITY_ROUTE_COVERAGE),
+        "exclusions": excluded,
+        "summary": {
+            "cep_route_count": total,
+            "uxp_route_count": len(uxp_routes),
+            "covered": covered_count,
+            "excluded": excluded_count,
+            "missing": len(missing_routes),
+            "coverage_percent": round(((covered_count + excluded_count) / total) * 100, 1) if total else 100.0,
+            "priority_count": len(PRIORITY_ROUTE_COVERAGE),
+            "priority_covered": len(PRIORITY_ROUTE_COVERAGE) - len(priority_missing),
+            "priority_missing": len(priority_missing),
+        },
+        "gate": {
+            "passes": not errors,
+            "errors": errors,
+            "missing_routes": missing_routes,
+            "priority_missing": priority_missing,
+        },
+        "rows": rows,
+    }
 
 
 @dataclass(frozen=True)
@@ -258,7 +434,7 @@ def build_manifest() -> dict:
 
 
 def build_dashboard_manifest() -> dict:
-    """Return the F260 UXP migration dashboard derived from the catalogue."""
+    """Return the F260 UXP migration dashboard derived from live sources."""
 
     source = build_manifest()
     entries = source["functions"]
@@ -297,7 +473,7 @@ def build_dashboard_manifest() -> dict:
         for entry in entries
     ]
     return {
-        "dashboard_version": 1,
+        "dashboard_version": 2,
         "source_catalogue_version": source["catalogue_version"],
         "source": source["source"],
         "uxp_typings": source["uxp_typings"],
@@ -318,6 +494,7 @@ def build_dashboard_manifest() -> dict:
         "hybrid_candidates": hybrid_candidates,
         "priority": priority,
         "rows": rows,
+        "route_coverage": build_route_coverage_manifest(),
     }
 
 

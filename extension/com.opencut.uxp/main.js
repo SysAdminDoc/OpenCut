@@ -7809,6 +7809,7 @@ async function uxpLoadMigrationRisk() {
   setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_direct_uxp_coverage", "Loading direct UXP host-action coverage."));
   setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_cep_fallback_count", "Loading CEP fallback count."));
   setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_high_risk_migration_count", "Loading high-risk migration count."));
+  setTextAndTitle("settingsMigrationRouteValue", t("uxp.settings.loading", "Loading..."), t("uxp.settings.loading_route_coverage", "Loading CEP and UXP route coverage."));
   setSettingsStatus("settingsMigrationStatus", t("uxp.settings.loading_migration_risk_data", "Loading UXP migration risk data..."), "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
@@ -7828,6 +7829,14 @@ async function uxpLoadMigrationRisk() {
     const partial = Number(summary.partial_uxp ?? 0);
     const fallback = Number(summary.cep_only ?? 0);
     const highRisk = Number(summary.high_risk ?? 0);
+    const routeCoverage = manifest.route_coverage || {};
+    const routeSummary = routeCoverage.summary || {};
+    const routeGate = routeCoverage.gate || {};
+    const routeTotal = Number(routeSummary.cep_route_count ?? 0);
+    const routeCovered = Number(routeSummary.covered ?? 0);
+    const routeExcluded = Number(routeSummary.excluded ?? 0);
+    const routeMissing = Number(routeSummary.missing ?? 0);
+    const priorityMissing = Array.isArray(routeGate.priority_missing) ? routeGate.priority_missing : [];
 
     setTextAndTitle(
       "settingsMigrationDirectValue",
@@ -7844,6 +7853,15 @@ async function uxpLoadMigrationRisk() {
       formatI18n("uxp.settings.high_risk_count", "{count} high", { count: highRisk }),
       formatI18n("uxp.settings.high_risk_count_title", "{count} host actions are high-risk migration items.", { count: highRisk })
     );
+    setTextAndTitle(
+      "settingsMigrationRouteValue",
+      formatI18n("uxp.settings.route_coverage_value", "{covered}/{total}", { covered: routeCovered, total: routeTotal }),
+      formatI18n(
+        "uxp.settings.route_coverage_title",
+        "{covered} of {total} CEP routes have a direct UXP path; {excluded} are explicitly excluded.",
+        { covered: routeCovered, total: routeTotal, excluded: routeExcluded }
+      )
+    );
 
     if (!rows.length) {
       grid.innerHTML = `
@@ -7855,7 +7873,47 @@ async function uxpLoadMigrationRisk() {
       return;
     }
 
-    grid.innerHTML = rows.map((row) => {
+    const routeRows = Array.isArray(routeCoverage.rows)
+      ? routeCoverage.rows.filter((row) => row.status !== "covered" || row.priority).slice(0, 80)
+      : [];
+    const routeStatus = routeGate.passes
+      ? t("uxp.settings.route_gate_pass", "Route parity gate passes.")
+      : formatI18n(
+          "uxp.settings.route_gate_missing",
+          "{missing} CEP routes still need a UXP path or a justified exclusion.",
+          { missing: routeMissing }
+        );
+    const routeRowsHtml = [
+      `<div class="oc-engine-row">
+        <div class="oc-engine-copy">
+          <div class="oc-engine-title-row">
+            <span class="oc-engine-domain">${UIController.escapeHtml(t("uxp.settings.route_coverage", "Route coverage"))}</span>
+            <span class="oc-engine-state is-${routeGate.passes ? "auto" : "warning"}">${UIController.escapeHtml(routeGate.passes ? t("uxp.settings.covered", "Covered") : t("uxp.settings.needs_attention", "Needs attention"))}</span>
+          </div>
+          <p class="oc-engine-meta">${UIController.escapeHtml(routeStatus)}</p>
+          <p class="oc-engine-meta">${UIController.escapeHtml(priorityMissing.length ? formatI18n("uxp.settings.priority_routes_missing", "Priority gaps: {routes}", { routes: priorityMissing.join(", ") }) : t("uxp.settings.priority_routes_clear", "All priority capability routes have a UXP path."))}</p>
+        </div>
+      </div>`,
+      ...routeRows.map((row) => {
+        const routeState = row.status === "covered" ? "auto" : row.status === "excluded" ? "manual" : "warning";
+        const routeLabel = row.status === "covered"
+          ? t("uxp.settings.covered", "Covered")
+          : row.status === "excluded"
+            ? t("uxp.settings.excluded", "Excluded")
+            : t("uxp.settings.missing", "Missing");
+        const priorityLabel = row.priority ? t("uxp.settings.priority_route", "Priority") : "";
+        return `<div class="oc-engine-row">
+          <div class="oc-engine-copy">
+            <div class="oc-engine-title-row">
+              <span class="oc-engine-domain">${UIController.escapeHtml(row.route || t("uxp.settings.unknown_route", "Unknown route"))}</span>
+              <span class="oc-engine-state is-${routeState}">${UIController.escapeHtml([routeLabel, priorityLabel].filter(Boolean).join(" - "))}</span>
+            </div>
+            <p class="oc-engine-meta">${UIController.escapeHtml(row.justification || row.uxp_sources?.join(", ") || t("uxp.settings.route_no_uxp_path", "No UXP dispatch path detected."))}</p>
+          </div>
+        </div>`;
+      }),
+    ].join("");
+    grid.innerHTML = routeRowsHtml + rows.map((row) => {
       const statusLabel = migrationStatusLabel(row.status);
       const stateClass = migrationStateClass(row);
       const tags = [
@@ -7879,14 +7937,16 @@ async function uxpLoadMigrationRisk() {
       </div>`;
     }).join("");
 
-    const status = fallback || partial || highRisk
+    const hostStatus = fallback || partial || highRisk
       ? formatI18n("uxp.settings.migration_remaining_status", "{fallback} CEP fallback and {partial} partial UXP host actions remain.", { fallback, partial })
       : t("uxp.settings.migration_resolved_status", "All catalogued host actions are direct UXP or resolved through non-CEP mechanisms.");
-    setSettingsStatus("settingsMigrationStatus", status, fallback || highRisk ? "warning" : "success");
+    const status = routeGate.passes ? hostStatus : `${hostStatus} ${routeStatus}`;
+    setSettingsStatus("settingsMigrationStatus", status, routeGate.passes && !fallback && !partial && !highRisk ? "success" : "warning");
   } catch (e) {
     setTextAndTitle("settingsMigrationDirectValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_direct_unavailable_title", "OpenCut could not load the generated UXP migration dashboard."));
     setTextAndTitle("settingsMigrationFallbackValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.migration_fallback_unavailable_title", "OpenCut could not load CEP fallback count."));
     setTextAndTitle("settingsMigrationRiskValue", t("uxp.settings.refresh_needed", "Refresh needed"), t("uxp.settings.migration_refresh_needed_title", "Refresh after regenerating or packaging the dashboard artifact."));
+    setTextAndTitle("settingsMigrationRouteValue", t("uxp.settings.unavailable", "Unavailable"), t("uxp.settings.route_coverage_unavailable_title", "OpenCut could not load CEP and UXP route coverage."));
     setSettingsStatus("settingsMigrationStatus", t("uxp.settings.migration_dashboard_unavailable_status", "Migration dashboard could not be loaded. Regenerate the F260 dashboard artifact, then refresh."), "error");
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
