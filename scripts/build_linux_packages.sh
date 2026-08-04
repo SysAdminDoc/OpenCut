@@ -20,6 +20,42 @@ if [[ ! -f "$SERVER_BIN" ]]; then
   exit 2
 fi
 
+# Linux packages must carry the same security-verified media tools as the
+# Windows release lane. Prefer an explicit directory, then an already-staged
+# bundle directory, then the builder's PATH so local builds remain convenient.
+if [[ -n "${OPENCUT_FFMPEG_DIR:-}" ]]; then
+  MEDIA_BIN_DIR="$OPENCUT_FFMPEG_DIR"
+elif [[ -f "$DIST_DIR/ffmpeg/ffmpeg" && -f "$DIST_DIR/ffmpeg/ffprobe" ]]; then
+  MEDIA_BIN_DIR="$DIST_DIR/ffmpeg"
+elif [[ -f "$REPO_ROOT/ffmpeg/ffmpeg" && -f "$REPO_ROOT/ffmpeg/ffprobe" ]]; then
+  MEDIA_BIN_DIR="$REPO_ROOT/ffmpeg"
+else
+  FFMPEG_ON_PATH="$(command -v ffmpeg || true)"
+  FFPROBE_ON_PATH="$(command -v ffprobe || true)"
+  if [[ -z "$FFMPEG_ON_PATH" || -z "$FFPROBE_ON_PATH" ]]; then
+    echo "Missing FFmpeg/ffprobe. Set OPENCUT_FFMPEG_DIR to a directory containing both binaries." >&2
+    exit 2
+  fi
+  MEDIA_BIN_DIR="$(dirname "$FFMPEG_ON_PATH")"
+fi
+
+if [[ ! -f "$MEDIA_BIN_DIR/ffmpeg" || ! -f "$MEDIA_BIN_DIR/ffprobe" ]]; then
+  echo "OPENCUT_FFMPEG_DIR must contain executable ffmpeg and ffprobe binaries: $MEDIA_BIN_DIR" >&2
+  exit 2
+fi
+
+mkdir -p "$DIST_DIR/ffmpeg"
+if [[ "$(cd "$MEDIA_BIN_DIR" && pwd)" != "$(cd "$DIST_DIR/ffmpeg" && pwd)" ]]; then
+  install -m755 "$MEDIA_BIN_DIR/ffmpeg" "$DIST_DIR/ffmpeg/ffmpeg"
+  install -m755 "$MEDIA_BIN_DIR/ffprobe" "$DIST_DIR/ffmpeg/ffprobe"
+fi
+
+FFMPEG_PROVENANCE="$OUT_DIR/release-metadata/ffmpeg-provenance.json"
+python "$REPO_ROOT/scripts/verify_ffmpeg_provenance.py" \
+  "$DIST_DIR/ffmpeg/ffmpeg" \
+  --ffprobe "$DIST_DIR/ffmpeg/ffprobe" \
+  --manifest "$FFMPEG_PROVENANCE"
+
 if [[ ! -x "$SERVER_BIN" ]]; then
   chmod +x "$SERVER_BIN"
 fi
@@ -27,10 +63,12 @@ fi
 mkdir -p "$OUT_DIR"
 
 RELEASE_METADATA="$OUT_DIR/release-metadata"
+mkdir -p "$RELEASE_METADATA"
 python "$REPO_ROOT/scripts/release_composition.py" \
   --lane linux \
   --artifact "$DIST_DIR" \
   --build-lock "$REPO_ROOT/requirements-build-lock.txt" \
+  --ffmpeg-provenance "$FFMPEG_PROVENANCE" \
   --output-dir "$RELEASE_METADATA"
 
 DESKTOP_FILE="$REPO_ROOT/packaging/linux/$APP_ID.desktop"

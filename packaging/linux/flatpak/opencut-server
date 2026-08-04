@@ -5,6 +5,8 @@ export OPENCUT_FLATPAK=1
 export OPENCUT_HOST="${OPENCUT_HOST:-127.0.0.1}"
 export OPENCUT_PORT="${OPENCUT_PORT:-5679}"
 export OPENCUT_HOME="${OPENCUT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/opencut}"
+export OPENCUT_FFMPEG_DIR="${OPENCUT_FFMPEG_DIR:-/app/lib/opencut/OpenCut-Server/ffmpeg}"
 
 mkdir -p "$OPENCUT_HOME"
+export PATH="$OPENCUT_FFMPEG_DIR${PATH:+:$PATH}"
 exec /app/lib/opencut/OpenCut-Server/OpenCut-Server "$@"
