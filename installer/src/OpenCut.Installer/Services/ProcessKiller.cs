@@ -89,7 +89,7 @@ public class ProcessKiller
             // Use netstat to find PID
             var psi = new ProcessStartInfo
             {
-                FileName = "cmd.exe",
+                FileName = WindowsProcessPaths.CommandProcessor,
                 Arguments = $"/c netstat -ano | findstr :{port} | findstr LISTENING",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
@@ -128,7 +128,7 @@ public class ProcessKiller
             // Use PowerShell CIM instead of deprecated wmic (removed in Win11 23H2+)
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = WindowsProcessPaths.PowerShell,
                 Arguments = $"-NoProfile -Command \"(Get-CimInstance Win32_Process -Filter 'ProcessId={process.Id}').CommandLine\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,

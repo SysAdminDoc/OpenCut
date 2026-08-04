@@ -189,7 +189,7 @@ public class UninstallEngine
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = "cmd.exe",
+                FileName = WindowsProcessPaths.CommandProcessor,
                 Arguments = cmd,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true,

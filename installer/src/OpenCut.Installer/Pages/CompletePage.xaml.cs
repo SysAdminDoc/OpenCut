@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
 using OpenCut.Installer.Models;
+using OpenCut.Installer.Services;
 
 namespace OpenCut.Installer.Pages;
 
@@ -69,7 +70,7 @@ public partial class CompletePage : Page
                 {
                     Process.Start(new ProcessStartInfo
                     {
-                        FileName = "wscript.exe",
+                        FileName = WindowsProcessPaths.WindowsScriptHost,
                         Arguments = $"\"{vbsPath}\"",
                         UseShellExecute = true
                     });

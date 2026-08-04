@@ -48,6 +48,13 @@ record also lives in the git commit messages.
   detected prior uninstaller during upgrades, replace the install root cleanly
   to prune stale files, and restore the snapshot if a later step fails.
 
+### Fixed - Installer helper resolution
+
+- Windows installer helpers now launch through validated System32 paths, and
+  optional Python tools use a validated absolute Python 3.11-3.14 executable.
+- User PATH edits preserve expandable variables such as `%USERPROFILE%` and
+  retain the original string/expand-string registry kind.
+
 ### Added - Selectable GPU adapters
 
 - GPU-backed workers and model helpers now honor a persisted CUDA adapter
