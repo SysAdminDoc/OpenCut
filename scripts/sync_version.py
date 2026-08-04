@@ -39,11 +39,6 @@ TARGETS = [
         r"\g<1>{v}",
     ),
     (
-        "extension/com.opencut.panel/client/index.html",
-        r'(<span class="settings-value">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
-        r"\g<1>{v}\g<2>",
-    ),
-    (
         "extension/com.opencut.panel/client/main.js",
         r"(OpenCut CEP Panel - Main Controller v)[0-9]+\.[0-9]+\.[0-9]+",
         r"\g<1>{v}",
@@ -208,6 +203,23 @@ TARGETS = [
     # (pinned by tests/test_linux_distribution_packaging.py), not the source
     # version; add a dated <release> block there only when a Flathub build
     # actually ships.
+    # CEP update card current version and About dialog version. Keep these
+    # selectors scoped so one sync updates both numeric surfaces.
+    (
+        "extension/com.opencut.panel/client/index.html",
+        r'(<span class="settings-value" id="updateCurrentVersion">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r"\g<1>{v}\g<2>",
+    ),
+    (
+        "extension/com.opencut.panel/client/index.html",
+        r'(<span class="settings-label" data-i18n="settings.version">Version</span>\s*<span class="settings-value">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r"\g<1>{v}\g<2>",
+    ),
+    (
+        "extension/com.opencut.uxp/index.html",
+        r'(<strong class="oc-inline-value" id="uxpUpdateCurrentVersion">)[0-9]+\.[0-9]+\.[0-9]+(</strong>)',
+        r"\g<1>{v}\g<2>",
+    ),
     # README.md version badge and feature-overview heading
     (
         "README.md",
