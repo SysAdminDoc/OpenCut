@@ -106,10 +106,13 @@ if ($payloadReady) {
     & $PythonExe $provenanceGate $ffmpegExe `
         --ffprobe $ffprobeExe `
         --release `
-        --source-url "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz" `
-        --source-sha256 "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c" `
-        --build-origin "gyan.dev release essentials 2026-06-27; FFmpeg commit 38b88335f9" `
-        --corresponding-source "Download and verify the FFmpeg 8.1.2 archive named by source.url/source.sha256. The exact binary configuration is in this manifest; gyan.dev/builds identifies release 8.1.2 commit 38b88335f9 and its MSYS2 toolchain." `
+        --source-url "https://github.com/FFmpeg/FFmpeg/archive/01a25f74cc446a683318bab13dfd98a467082ef7.tar.gz" `
+        --source-sha256 "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf" `
+        --package-url "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z" `
+        --package-sha256 "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc" `
+        --build-origin "gyan.dev git-full snapshot 2026-08-03; FFmpeg commit 01a25f74cc446a683318bab13dfd98a467082ef7" `
+        --corresponding-source "Download and verify the exact FFmpeg source archive at source.url/source.sha256, then build commit 01a25f74cc446a683318bab13dfd98a467082ef7 with the recorded configuration. The Windows payload is the Gyan git-full package at package.url/package.sha256." `
+        --require-pinned-snapshot `
         --manifest $FfmpegManifest
     if ($LASTEXITCODE -ne 0) {
         Write-Err "FFmpeg payload failed the mandatory security-floor gate."

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/CI gate: assert the bundled FFmpeg clears the June-2026 security floor.
+"""Build/CI gate: assert the bundled FFmpeg clears the July-2026 security floor.
 
 Runs ``<ffmpeg> -version`` and grades the banner via
 :mod:`opencut.core.ffmpeg_provenance`. Exits non-zero (fails closed) when the
@@ -91,12 +91,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--release", action="store_true", help="require complete redistribution evidence")
     parser.add_argument("--source-url", default="", help="exact corresponding-source archive URL")
     parser.add_argument("--source-sha256", default="", help="SHA-256 of the corresponding-source archive")
+    parser.add_argument("--package-url", default="", help="URL of the binary package used to obtain the artifact")
+    parser.add_argument("--package-sha256", default="", help="SHA-256 of the binary package used to obtain the artifact")
     parser.add_argument("--build-origin", default="", help="builder, release date, and source revision")
     parser.add_argument("--license", default="GPL-3.0-or-later", help="effective binary license")
     parser.add_argument(
         "--corresponding-source",
         default="",
         help="instructions for obtaining and rebuilding the exact corresponding source",
+    )
+    parser.add_argument(
+        "--require-pinned-snapshot",
+        action="store_true",
+        help="forbid release evidence unless a passing snapshot matches the bundled full-build commit",
     )
     args = parser.parse_args(argv)
 
@@ -120,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
             )
     record["artifacts"] = artifacts
     record["source"] = {"url": args.source_url.strip(), "sha256": args.source_sha256.strip().lower()}
+    record["package"] = {
+        "url": args.package_url.strip(),
+        "sha256": args.package_sha256.strip().lower(),
+    }
     record["build"] = {
         "origin": args.build_origin.strip(),
         "configuration": _configuration(banner),
@@ -129,6 +140,7 @@ def main(argv: list[str] | None = None) -> int:
         "license": args.license.strip(),
         "corresponding_source": args.corresponding_source.strip(),
     }
+    bundled = record.get("bundled")
 
     release_missing = []
     if args.release:
@@ -147,12 +159,24 @@ def main(argv: list[str] | None = None) -> int:
         if not record["redistribution"]["corresponding_source"]:
             release_missing.append("corresponding-source instructions")
 
+    if args.require_pinned_snapshot:
+        if not bundled or bundled.get("lane") != "snapshot":
+            release_missing.append("pinned git-full snapshot")
+        else:
+            if not fp.is_pinned_snapshot(bundled):
+                release_missing.append("pinned snapshot commit")
+            if bundled.get("flavor") != "full":
+                release_missing.append("full snapshot flavor")
+        if not record["package"]["url"]:
+            release_missing.append("binary package URL")
+        if not re.fullmatch(r"[0-9a-f]{64}", record["package"]["sha256"]):
+            release_missing.append("binary package SHA-256")
+
     if args.manifest and not release_missing:
         Path(args.manifest).parent.mkdir(parents=True, exist_ok=True)
         Path(args.manifest).write_text(json.dumps(record, indent=2), encoding="utf-8")
         print(f"wrote provenance manifest -> {args.manifest}")
 
-    bundled = record.get("bundled")
     print(f"ffmpeg binary:   {ffmpeg_bin}")
     print(f"required floor:  release>={record['required_release_floor']} "
           f"OR git-master>={record['required_snapshot_floor_date']} "

@@ -77,7 +77,7 @@ def _probe_check(key: str, required) -> dict:
     if key == "ffmpeg":
         ok = c.ffmpeg_security_available()
         return {"ok": ok, "label": _check_name(key),
-                "fix": "Install FFmpeg 8.1.2+ or rely on the verified bundled binary."
+                "fix": "Install FFmpeg 8.1.3+ or a dated post-fix snapshot, or rely on the verified bundled binary."
                        if not ok else ""}
     if key == "repeat_detect":
         ok = _try_import("faster_whisper") is not None or _try_import("whisper") is not None

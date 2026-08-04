@@ -84,7 +84,7 @@ function Test-CommandExists {
 }
 
 function Get-FFmpegSecurityStatus {
-    $required = "release>=8.1.2 OR git-master>=2026-06-10"
+    $required = "release>=8.1.3 OR git-master>=2026-07-06"
     $command = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if (-not $command) {
         return [pscustomobject]@{ Safe = $false; Version = "missing"; Reason = "FFmpeg was not found" }
@@ -102,16 +102,16 @@ function Get-FFmpegSecurityStatus {
 
     $token = $Matches[1]
     if ($token -match "^(\d{4}-\d{2}-\d{2})-git-[0-9a-f]{7,40}") {
-        $safe = $Matches[1] -ge "2026-06-10"
-        $reason = if ($safe) { "Post-fix snapshot lane" } else { "Snapshot predates 2026-06-10" }
+        $safe = $Matches[1] -ge "2026-07-06"
+        $reason = if ($safe) { "Post-fix snapshot lane (CVE-2026-64832/64833/64835/66041)" } else { "Snapshot predates 2026-07-06 (CVE-2026-64832/64833/64835/66041)" }
         return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
     }
 
     if ($token -match "^n?(\d+)\.(\d+)(?:\.(\d+))?") {
         $patch = if ($Matches[3]) { [int]$Matches[3] } else { 0 }
         $version = [version]::new([int]$Matches[1], [int]$Matches[2], $patch)
-        $safe = $version -ge [version]::new(8, 1, 2)
-        $reason = if ($safe) { "Release lane clears $required" } else { "Release predates 8.1.2 (CVE-2026-8461)" }
+        $safe = $version -ge [version]::new(8, 1, 3)
+        $reason = if ($safe) { "Release lane clears $required" } else { "Release predates 8.1.3 (CVE-2026-64832/64833/64835/66041)" }
         return [pscustomobject]@{ Safe = $safe; Version = $token; Reason = $reason }
     }
 
@@ -407,7 +407,7 @@ if ($ffmpegStatus.Safe) {
     $ffmpegStatus = Get-FFmpegSecurityStatus
     if (-not $ffmpegStatus.Safe) {
         Write-Err "FFmpeg remains blocked: $($ffmpegStatus.Version) — $($ffmpegStatus.Reason)"
-        Write-Err "Install FFmpeg 8.1.2+ or a dated snapshot from https://ffmpeg.org/download.html"
+        Write-Err "Install FFmpeg 8.1.3+ or a dated post-fix full snapshot from https://www.gyan.dev/ffmpeg/builds/"
         exit 1
     }
     Write-Ok "FFmpeg verified after install: $($ffmpegStatus.Version)"
@@ -700,7 +700,7 @@ $allGood = $true
 if ((Get-FFmpegSecurityStatus).Safe) {
     Write-Ok "FFmpeg .............. OK (security floor verified)"
 } else {
-    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.2+ or post-fix snapshot)"
+    Write-Err "FFmpeg .............. BLOCKED (requires 8.1.3+ or post-fix snapshot >= 2026-07-06)"
     $allGood = $false
 }
 

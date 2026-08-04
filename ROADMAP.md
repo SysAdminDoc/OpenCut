@@ -15,13 +15,6 @@ a working file, not part of a clone. This file is the tracked queue.
 
 ### P1 — 2026-08-02 (research pass)
 
-- [ ] P1 — Advance the FFmpeg snapshot floor past the July 2026 fixes and ship the `full` build
-  Why: The accepted release lane and the current snapshot floor both predate four HIGH-severity crafted-media fixes, and the bundled variant lacks every FFmpeg 8.x capability the project could expose.
-  Evidence: CVE-2026-64832/64833/64835/66041 list 8.1.2 as affected; fix commits `4c6217477f`, `6f80e27654`, `1836ef9684`, `4da9812e25` landed on master 2026-07-02…07-05 and are not on `release/8.1` (Debian tracker marks all four unfixed; ffmpeg.org/security.html omits them). `opencut/core/ffmpeg_provenance.py:47,53,72` still sets `RELEASE_FLOOR=(8,1,2)`, `SNAPSHOT_FLOOR_DATE="2026-06-10"`, and pins `8.1.2-essentials_build-www.gyan.dev`. The bundled `ffmpeg/ffmpeg.exe` reports `8.1.2-essentials` with `--enable-nvdec --enable-cuvid` and without `libsvtav1`/`libdav1d`/`whisper`/`libplacebo`/`vulkan`/`libjxl`/`libvvenc`. Cross-reference: `Roadmap_Blocked.md` P0 "Replace the FFmpeg 8.1.2 security floor" is blocked on the *release* lane only — the snapshot lane already exists in code and makes this actionable now.
-  Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, installer FFmpeg constants (`AppConstants.cs`, `OpenCut.iss`, `Install.ps1`), `Dockerfile` pinned source + SHA-256, `release_licenses/` source archive, `README.md` install instructions.
-  Acceptance: The release lane is refused with a named-CVE message until `n8.1.3` exists; the snapshot floor is `>= 2026-07-06` and records the four CVEs plus their fix commits; the bundled and documented build is a `git-full` snapshot pinned by exact commit hash with its source archived beside it; a probe flips the release lane back on when a fixed tag appears.
-  Complexity: M
-
 - [ ] P1 — Test against the dependency versions the project declares
   Why: The 10,726-pass baseline runs on a stack that violates four of OpenCut's own constraints, two at major-version boundaries, so users installing per `pyproject.toml` execute code paths the suite has never run.
   Evidence: In the environment that produced the recorded baseline: `opencv-python` 4.11.0.86 vs declared `>=5,<6`; `edge-tts` 7.2.7 vs `<7`; `cryptography` 49.0.0 vs `<49`; `scenedetect` 0.6.7.1 vs `>=0.7.1`. PySceneDetect 0.7 is a documented breaking release (VFR handling, seconds-vs-frames option semantics, `save-fcp`). `scripts/check_dependency_matrix.py` resolves declared lanes but never compares them to what is installed.

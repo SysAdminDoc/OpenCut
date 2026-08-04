@@ -31,9 +31,14 @@
     "verified_on": "2026-07-22"
   },
   "ffmpeg": {
-    "pinned_installer_build": "8.1.2-essentials_build-www.gyan.dev",
-    "release_floor": "8.1.2",
-    "snapshot_floor_date": "2026-06-10"
+    "pinned_installer_archive_sha256": "8c32ed9800ff421bbcfda96beb0a66783a64a7cd98869b87ec1b494d3c855fcc",
+    "pinned_installer_archive_url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2026-08-03-git-01a25f74cc-full_build.7z",
+    "pinned_installer_build": "2026-08-03-git-01a25f74cc-full_build-www.gyan.dev",
+    "pinned_installer_commit": "01a25f74cc446a683318bab13dfd98a467082ef7",
+    "pinned_source_sha256": "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf",
+    "pinned_source_url": "https://github.com/FFmpeg/FFmpeg/archive/01a25f74cc446a683318bab13dfd98a467082ef7.tar.gz",
+    "release_floor": "8.1.3",
+    "snapshot_floor_date": "2026-07-06"
   },
   "project": {
     "distribution_name": "opencut-ppro",

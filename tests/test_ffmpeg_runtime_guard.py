@@ -17,8 +17,8 @@ from opencut.core import ffmpeg_provenance as fp
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SAFE_BANNER = "ffmpeg version 8.1.2-essentials_build-www.gyan.dev\n"
-UNSAFE_BANNER = "ffmpeg version 8.1.1-essentials_build-www.gyan.dev\n"
+SAFE_BANNER = "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev\n"
+UNSAFE_BANNER = "ffmpeg version 8.1.2-essentials_build-www.gyan.dev\n"
 
 
 @pytest.fixture(autouse=True)
@@ -47,11 +47,11 @@ def test_shared_resolver_rejects_release_811(monkeypatch, tmp_path):
         lambda path: (_ for _ in ()).throw(fp.FfmpegSecurityError(path, grade)),
     )
 
-    with pytest.raises(fp.FfmpegSecurityError, match="8.1.2"):
+    with pytest.raises(fp.FfmpegSecurityError, match="8.1.3"):
         helpers.get_ffmpeg_path()
 
 
-def test_shared_resolver_accepts_and_caches_release_812(monkeypatch, tmp_path):
+def test_shared_resolver_accepts_and_caches_pinned_snapshot(monkeypatch, tmp_path):
     binary = tmp_path / "ffmpeg"
     binary.write_bytes(b"safe")
     calls = []
@@ -119,7 +119,7 @@ def test_feature_checks_and_preflight_report_unsafe_ffmpeg_unavailable(monkeypat
     assert checks.ffmpeg_security_available() is False
     result = preflight._probe_check("ffmpeg", True)
     assert result["ok"] is False
-    assert "8.1.2+" in result["fix"]
+    assert "8.1.3+" in result["fix"]
 
 
 def test_capability_probe_reports_unsafe_binary_unavailable(monkeypatch, tmp_path):
@@ -138,11 +138,11 @@ def test_capability_probe_reports_unsafe_binary_unavailable(monkeypatch, tmp_pat
     assert payload["detected"] is True
     assert payload["available"] is False
     assert payload["blocked_reason"] == "security_floor"
-    assert payload["security"]["version"].startswith("8.1.1")
+    assert payload["security"]["version"].startswith("8.1.2")
     findings = cp._derive_findings(cp.CapabilityProfile(ffmpeg=payload))
     blocked = [item for item in findings if item.rule == "ffmpeg_below_security_floor"]
     assert blocked and blocked[0].severity == "error"
-    assert "CVE-2026-8461" in blocked[0].message
+    assert "CVE-2026-64832" in blocked[0].message
 
 
 def test_no_core_subprocess_bypasses_the_shared_ffmpeg_resolver():
@@ -170,8 +170,9 @@ def test_distribution_lanes_pin_and_verify_the_same_floor():
     install_ps1 = (REPO_ROOT / "Install.ps1").read_text(encoding="utf-8")
     builder = (REPO_ROOT / "installer" / "InstallerBuilder.ps1").read_text(encoding="utf-8")
 
-    assert "FFMPEG_VERSION=8.1.2" in dockerfile
-    assert "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c" in dockerfile
+    assert "FFMPEG_VERSION=2026-08-03-git-01a25f74cc" in dockerfile
+    assert "02f09346860e4b0549eb03003443c66dceb9f355c2db4f01746db33984f1e3cf" in dockerfile
+    assert "01a25f74cc446a683318bab13dfd98a467082ef7" in dockerfile
     assert "verify_ffmpeg_provenance.py /opt/ffmpeg/bin/ffmpeg" in dockerfile
     assert "    ffmpeg \\\n" not in dockerfile
     assert "probe_binary_security" in install_py
@@ -194,7 +195,7 @@ def test_source_installer_rejects_unsafe_ffmpeg(monkeypatch):
     assert exc.value.code == 1
 
 
-def test_source_installer_accepts_release_812(monkeypatch, capsys):
+def test_source_installer_accepts_pinned_snapshot(monkeypatch, capsys):
     source_installer = importlib.import_module("install")
     monkeypatch.setattr(source_installer.shutil, "which", lambda _name: "safe-ffmpeg")
     monkeypatch.setattr(

@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased - Reachable installs and a stack you can trust
 
+### Changed - Pin FFmpeg to the post-July security snapshot
+
+- The bundled Windows media runtime is now Gyan's `git-full` snapshot
+  `2026-08-03-git-01a25f74cc`, with its binary package and corresponding
+  source archive SHA-256 values recorded in the provenance gate and installer
+  receipt.
+- The release lane now rejects 8.1.2 until upstream publishes 8.1.3. The
+  snapshot floor moved to 2026-07-06 and names CVE-2026-64832, -64833, -64835,
+  and -66041 plus their upstream fix commits.
+
 ### Changed - auto-editor resolves the native binary
 
 - Upstream rewrote auto-editor in Nim and stopped publishing to PyPI at 29.3.1
