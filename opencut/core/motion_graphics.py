@@ -18,7 +18,13 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import escape_drawtext, get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
+from opencut.helpers import (
+    drawtext_font_option,
+    escape_drawtext,
+    get_ffmpeg_path,
+    get_ffprobe_path,
+    run_ffmpeg,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -95,18 +101,20 @@ def render_title_card(
 
     escaped_text = escape_drawtext(text)
     escaped_sub = escape_drawtext(subtitle) if subtitle else ""
+    font_option = drawtext_font_option("Arial", text)
+    subtitle_font_option = drawtext_font_option("Arial", subtitle or text)
 
     if preset == "fade_center":
         fade_in = min(1.0, duration * 0.2)
         fade_out = min(1.0, duration * 0.2)
         vf = (
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=(w-text_w)/2:y=(h-text_h)/2:"
             f"alpha='if(lt(t,{fade_in}),t/{fade_in},if(gt(t,{duration-fade_out}),(({duration}-t)/{fade_out}),1))'"
         )
         if escaped_sub:
             vf += (
-                f",drawtext=expansion=none:text='{escaped_sub}':fontsize={font_size//2}:fontcolor={font_color}@0.8:"
+                f",drawtext=expansion=none:text='{escaped_sub}':{subtitle_font_option}:fontsize={font_size//2}:fontcolor={font_color}@0.8:"
                 f"x=(w-text_w)/2:y=(h/2)+{font_size}:"
                 f"alpha='if(lt(t,{fade_in+0.3}),max(0,(t-0.3)/{fade_in}),if(gt(t,{duration-fade_out}),(({duration}-t)/{fade_out}),1))'"
             )
@@ -114,7 +122,7 @@ def render_title_card(
     elif preset == "slide_left":
         slide_dur = min(1.5, duration * 0.3)
         vf = (
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x='if(lt(t,{slide_dur}),-text_w+(w/2+text_w/2)*t/{slide_dur},(w-text_w)/2)':"
             f"y=(h-text_h)/2"
         )
@@ -124,14 +132,14 @@ def render_title_card(
         chars = max(1, len(text))
         char_dur = max(0.01, min(duration * 0.6, chars * 0.08))
         vf = (
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=(w-text_w)/2:y=(h-text_h)/2:"
             f"enable='gte(t,0)'"
         )
         # Approximate typewriter via alpha reveal per character isn't possible in one drawtext
         # Use full text with delayed fade-in as approximation
         vf = (
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=(w-text_w)/2:y=(h-text_h)/2:"
             f"alpha='min(1,t/{char_dur})'"
         )
@@ -142,13 +150,13 @@ def render_title_card(
         vf = (
             f"drawbox=x=0:y={y_bar}:w=iw:h={bar_h}:color=black@0.7:t=fill:"
             f"enable='between(t,0.5,{duration-0.5})',"
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=60:y={y_bar + 10}:"
             f"enable='between(t,0.7,{duration-0.5})'"
         )
         if escaped_sub:
             vf += (
-                f",drawtext=expansion=none:text='{escaped_sub}':fontsize={font_size*2//3}:fontcolor={font_color}@0.8:"
+                f",drawtext=expansion=none:text='{escaped_sub}':{subtitle_font_option}:fontsize={font_size*2//3}:fontcolor={font_color}@0.8:"
                 f"x=60:y={y_bar + font_size + 15}:"
                 f"enable='between(t,0.9,{duration-0.5})'"
             )
@@ -161,7 +169,7 @@ def render_title_card(
             t_start = i * seg
             t_end = t_start + seg
             parts.append(
-                f"drawtext=expansion=none:text='{escape_drawtext(num)}':fontsize={font_size*3}:fontcolor={font_color}:"
+                f"drawtext=expansion=none:text='{escape_drawtext(num)}':{font_option}:fontsize={font_size*3}:fontcolor={font_color}:"
                 f"x=(w-text_w)/2:y=(h-text_h)/2:"
                 f"enable='between(t,{t_start},{t_end})':"
                 f"alpha='if(lt(t-{t_start},0.3),(t-{t_start})/0.3,if(gt(t,{t_end-0.3}),({t_end}-t)/0.3,1))'"
@@ -177,13 +185,13 @@ def render_title_card(
             ew = escape_drawtext(word)
             t_start = i * word_dur + 0.2
             parts.append(
-                f"drawtext=expansion=none:text='{ew} ':fontsize={font_size}:fontcolor={font_color}:"
+                f"drawtext=expansion=none:text='{ew} ':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
                 f"x=(w/2)-{len(text)*font_size//4}+{i*font_size*len(word)*2//3}:"
                 f"y=(h/2):"
                 f"enable='gte(t,{t_start})':"
                 f"alpha='min(1,(t-{t_start})/0.3)'"
             )
-        vf = ",".join(parts) if parts else f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2"
+        vf = ",".join(parts) if parts else f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2"
 
     cmd = [
         get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
@@ -226,6 +234,8 @@ def overlay_title(
 
     escaped_text = escape_drawtext(text)
     escaped_sub = escape_drawtext(subtitle) if subtitle else ""
+    font_option = drawtext_font_option("Arial", text)
+    subtitle_font_option = drawtext_font_option("Arial", subtitle or text)
     end_time = start_time + duration
 
     fade_in = min(1.0, duration * 0.2)
@@ -246,19 +256,19 @@ def overlay_title(
         vf = (
             f"drawbox=x=0:y={y_bar}:w=iw:h={bar_h}:color=black@0.7:t=fill:"
             f"enable='between(t,{start_time+0.3},{end_time-0.3})',"
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=60:y={y_bar+10}:"
             f"enable='between(t,{start_time+0.5},{end_time-0.3})'"
         )
         if escaped_sub:
             vf += (
-                f",drawtext=expansion=none:text='{escaped_sub}':fontsize={font_size*2//3}:fontcolor={font_color}@0.8:"
+                f",drawtext=expansion=none:text='{escaped_sub}':{subtitle_font_option}:fontsize={font_size*2//3}:fontcolor={font_color}@0.8:"
                 f"x=60:y={y_bar+font_size+15}:"
                 f"enable='between(t,{start_time+0.7},{end_time-0.3})'"
             )
     else:
         vf = (
-            f"drawtext=expansion=none:text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
+            f"drawtext=expansion=none:text='{escaped_text}':{font_option}:fontsize={font_size}:fontcolor={font_color}:"
             f"x=(w-text_w)/2:y=(h-text_h)/2:"
             f"enable='between(t,{start_time},{end_time})':"
             f"alpha='if(lt(t-{start_time},{fade_in}),(t-{start_time})/{fade_in},"
@@ -266,7 +276,7 @@ def overlay_title(
         )
         if escaped_sub:
             vf += (
-                f",drawtext=expansion=none:text='{escaped_sub}':fontsize={font_size//2}:fontcolor={font_color}@0.8:"
+                f",drawtext=expansion=none:text='{escaped_sub}':{subtitle_font_option}:fontsize={font_size//2}:fontcolor={font_color}@0.8:"
                 f"x=(w-text_w)/2:y=(h/2)+{font_size}:"
                 f"enable='between(t,{start_time+0.3},{end_time})'"
             )

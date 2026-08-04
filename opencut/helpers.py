@@ -466,6 +466,26 @@ def escape_drawtext(text: str) -> str:
             .replace("'", "\\'\\''"))
 
 
+def drawtext_font_option(font_family: str = "Arial", text_hint: str = "") -> str:
+    """Return a deterministic font option for FFmpeg ``drawtext`` filters.
+
+    Portable FFmpeg builds may include Fontconfig support without shipping a
+    Fontconfig database.  In that environment a family-only ``font=`` option
+    can fail even though the host has usable fonts.  Reuse OpenCut's existing
+    caption font resolver and prefer an explicit file path whenever one is
+    available; this also keeps Windows drive-letter escaping in one place.
+    """
+    try:
+        from opencut.core.caption_styles import resolve_caption_font
+
+        resolution = resolve_caption_font(font_family, text_hint)
+        if resolution.font_path:
+            return f"fontfile='{escape_filter_path(resolution.font_path)}'"
+        return f"font='{escape_drawtext(resolution.font_family)}'"
+    except Exception:  # noqa: BLE001 - filters remain buildable without font discovery.
+        return ""
+
+
 def _concat_quote(path: str) -> str:
     """Escape one path for an FFmpeg concat-demuxer ``file '...'`` line.
 
