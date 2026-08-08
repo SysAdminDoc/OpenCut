@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import (
+    MAX_BATCH_FILES,
     _is_cancelled,
     _update_job,
     async_job,
@@ -29,6 +30,22 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 search_bp = Blueprint("search", __name__)
+
+
+def _validate_auto_index_payload(data):
+    """Validate the synchronous portion of an auto-index request."""
+    files = data.get("files", [])
+    if not files or not isinstance(files, list):
+        return "files must be a non-empty list"
+    if len(files) > MAX_BATCH_FILES:
+        return f"Too many files (max {MAX_BATCH_FILES})"
+
+    from opencut.security import VALID_WHISPER_MODELS
+
+    model = data.get("model", "base")
+    if model not in VALID_WHISPER_MODELS:
+        return f"Invalid model: {model}"
+    return None
 
 # ---------------------------------------------------------------------------
 # Search: Index Files
@@ -166,56 +183,127 @@ def search_clear_index():
 # ---------------------------------------------------------------------------
 @search_bp.route("/search/auto-index", methods=["POST"])
 @require_csrf
-def auto_index_project():
-    """Trigger background indexing for all project media files.
+@async_job(
+    "auto-index",
+    filepath_required=False,
+    pre_validate=_validate_auto_index_payload,
+    resumable=True,
+)
+def auto_index_project(job_id, filepath, data):
+    """Index changed project media through the durable job system.
 
     Expects JSON body:
     {
         "files": [{"path": "/path/to/file.mp4", "duration": 120.5}, ...]
     }
 
-    Only files that need re-indexing (new or modified) will be processed.
+    Only files that need re-indexing (new or modified) are processed. Invalid,
+    missing, and up-to-date entries are reported in the completed job result.
     """
-    data = request.get_json(force=True, silent=True) or {}
     files = data.get("files", [])
+    model = data.get("model", "base")
+    language = data.get("language")
 
-    if not files or not isinstance(files, list):
-        return jsonify({"error": "files must be a non-empty list"}), 400
+    from opencut.core.captions import check_whisper_available, transcribe
+    from opencut.core.footage_index_db import (
+        index_file as db_index_file,
+    )
+    from opencut.core.footage_index_db import (
+        init_db,
+        needs_reindex,
+    )
+    from opencut.helpers import get_video_info
+    from opencut.utils.config import CaptionConfig
 
-    try:
-        from opencut.core.footage_index_db import init_db, needs_reindex
-        init_db()
-    except Exception as e:
-        logger.error("Failed to init footage index DB: %s", e)
-        return safe_error(e, "auto_index_project")
-
-    # Filter to only files that need indexing
+    init_db()
     to_index = []
+    skipped_files = []
     for f in files:
-        path = f.get("path", "") if isinstance(f, dict) else str(f)
+        raw_path = f.get("path", "") if isinstance(f, dict) else str(f)
+        path = str(raw_path).strip()
         if not path:
+            skipped_files.append({"path": "", "reason": "missing_path"})
             continue
         try:
-            path = validate_filepath(path.strip())
-        except ValueError:
+            path = validate_filepath(path)
+        except ValueError as exc:
+            skipped_files.append({"path": path, "reason": "invalid_path", "error": str(exc)})
             continue
         if needs_reindex(path):
-            to_index.append(f if isinstance(f, dict) else {"path": path})
+            to_index.append((path, f if isinstance(f, dict) else {"path": path}))
+        else:
+            skipped_files.append({"path": path, "reason": "up_to_date"})
 
     if not to_index:
-        return jsonify({
+        return {
             "message": "All files are up to date",
             "queued": 0,
-            "skipped": len(files),
-        })
+            "skipped": len(skipped_files),
+            "skipped_files": skipped_files,
+            "indexed": 0,
+            "total": 0,
+            "errors": [],
+        }
 
-    # Queue each file for background transcription + indexing
-    return jsonify({
-        "message": f"Queued {len(to_index)} files for indexing",
-        "queued": len(to_index),
-        "skipped": len(files) - len(to_index),
-        "files": [f.get("path", "") if isinstance(f, dict) else str(f) for f in to_index],
-    })
+    available, _backend = check_whisper_available()
+    if not available:
+        raise ValueError("No Whisper backend installed. Run: pip install faster-whisper")
+
+    total = len(to_index)
+    indexed = 0
+    errors = []
+    for idx, (fpath, metadata) in enumerate(to_index):
+        if _is_cancelled(job_id):
+            return {
+                "message": "Indexing cancelled",
+                "queued": total,
+                "skipped": len(skipped_files),
+                "skipped_files": skipped_files,
+                "indexed": indexed,
+                "total": total,
+                "errors": errors,
+            }
+
+        _update_job(
+            job_id,
+            progress=int((idx / total) * 90),
+            message=f"Indexing {os.path.basename(fpath)} ({idx + 1}/{total})...",
+        )
+        try:
+            config = CaptionConfig(model=model, language=language, word_timestamps=True)
+            result = transcribe(fpath, config=config)
+            transcript = ""
+            if hasattr(result, "segments"):
+                transcript = " ".join(
+                    str(getattr(segment, "text", "") or "").strip()
+                    for segment in result.segments
+                ).strip()
+
+            duration = metadata.get("duration") if isinstance(metadata, dict) else None
+            try:
+                duration = float(duration) if duration is not None else None
+            except (TypeError, ValueError):
+                duration = None
+            if duration is None:
+                info = get_video_info(fpath)
+                duration = float(info.get("duration", 0) or 0)
+
+            db_index_file(fpath, transcript, duration=duration)
+            indexed += 1
+        except Exception as file_exc:
+            logger.warning("Failed to auto-index %s: %s", fpath, file_exc)
+            errors.append({"file": fpath, "error": str(file_exc)})
+
+    return {
+        "message": f"Indexed {indexed} of {total} changed files",
+        "queued": total,
+        "skipped": len(skipped_files),
+        "skipped_files": skipped_files,
+        "files": [path for path, _metadata in to_index],
+        "indexed": indexed,
+        "total": total,
+        "errors": errors,
+    }
 
 
 # ---------------------------------------------------------------------------

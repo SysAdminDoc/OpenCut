@@ -3,6 +3,12 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Fixed - Durable incremental auto-indexing
+
+- `/search/auto-index` now creates a persisted, resumable background job for
+  changed files, reports progress and per-file errors, and records explicit
+  up-to-date or invalid-path skips in the completed result.
+
 ### Added - Rendered WCAG scans
 
 - CEP and UXP rendered regression states now run an axe WCAG 2.2 AA scan
