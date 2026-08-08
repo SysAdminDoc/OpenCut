@@ -6,8 +6,8 @@ stateless, state their version per request in `_meta`, and require
 `resultType`, server identity, and cache hints on every result.
 
 These tests pin both eras and — just as importantly — pin what OpenCut does
-*not* claim. An advertised capability nobody implemented is worse than an
-absent one, so the capability report is asserted closed.
+*not* claim. The Tasks extension is asserted against the durable backend job
+adapter; subscriptions and other unimplemented capabilities remain closed.
 """
 from __future__ import annotations
 
@@ -74,11 +74,11 @@ class TestCapabilityHonesty(unittest.TestCase):
         # `subscriptions/listen` is unimplemented, so it must not be routable.
         self.assertEqual(rpc("subscriptions/listen")["error"]["code"], -32601)
 
-    def test_tasks_extension_is_not_claimed(self):
-        self.assertEqual(self.capabilities["extensions"], {})
-        for method in ("tasks/get", "tasks/update"):
-            with self.subTest(method=method):
-                self.assertEqual(rpc(method)["error"]["code"], -32601)
+    def test_tasks_extension_is_claimed(self):
+        self.assertEqual(
+            self.capabilities["extensions"],
+            {mcp_server.TASKS_EXTENSION: {}},
+        )
 
     def test_removed_methods_are_not_served(self):
         # 2026-07-28 removed ping and logging/setLevel outright.
