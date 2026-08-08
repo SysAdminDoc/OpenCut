@@ -27,7 +27,8 @@ operation in the required MCP headers; the legacy
 pre-2026 clients keep working unchanged.
 
 Methods: server/discover, initialize (legacy), tools/list, tools/call,
-resources/list, resources/templates/list, prompts/list.
+tasks/get, tasks/update, tasks/cancel, resources/list,
+resources/templates/list, prompts/list.
 """
 
 import argparse
@@ -1680,6 +1681,9 @@ META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
 META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 META_LOG_LEVEL = "io.modelcontextprotocol/logLevel"
+TASKS_EXTENSION = "io.modelcontextprotocol/tasks"
+TASK_TTL_MS = 24 * 60 * 60 * 1000
+TASK_POLL_INTERVAL_MS = 1000
 
 #: OpenTelemetry context keys the spec documents for `_meta` propagation.
 _TRACE_META_KEYS = ("traceparent", "tracestate", "baggage")
@@ -1723,15 +1727,15 @@ def server_info() -> dict:
 def server_capabilities() -> dict:
     """Capabilities OpenCut actually implements.
 
-    Deliberately narrow: subscriptions, tasks, and sampling are *not*
-    advertised because they are not implemented, and a claimed capability the
-    client then calls is worse than an absent one.
+    The task extension is backed by the existing durable Flask job store.
+    Subscriptions, sampling, and roots remain unadvertised because they are not
+    implemented.
     """
     return {
         "tools": {"listChanged": False},
         "resources": {"listChanged": False, "subscribe": False},
         "prompts": {"listChanged": False},
-        "extensions": {},
+        "extensions": {TASKS_EXTENSION: {}},
     }
 
 
@@ -1771,7 +1775,8 @@ def decorate_result(result: dict, method: str, params) -> dict:
         # Older clients must not receive fields their schema rejects.
         return result
     decorated = dict(result)
-    decorated["resultType"] = "complete"
+    if decorated.get("resultType") != "task":
+        decorated["resultType"] = "complete"
     decorated["_meta"] = _result_meta(params)
     if method in _CACHEABLE_METHODS:
         decorated["ttlMs"] = _LIST_CACHE_TTL_MS
@@ -1804,12 +1809,151 @@ def _unsupported_version_error(msg_id, requested: str) -> dict:
     }
 
 
+def _client_supports_tasks(params) -> bool:
+    """Return whether this request declares the Tasks extension."""
+    capabilities = _request_meta(params).get(META_CLIENT_CAPABILITIES)
+    if not isinstance(capabilities, dict):
+        return False
+    extensions = capabilities.get("extensions")
+    return isinstance(extensions, dict) and TASKS_EXTENSION in extensions
+
+
+def _task_id_is_valid(task_id) -> bool:
+    return isinstance(task_id, str) and bool(re.fullmatch(r"[a-f0-9]{12}", task_id))
+
+
+def _task_timestamp(value) -> str:
+    """Convert an OpenCut epoch timestamp to the MCP ISO-8601 shape."""
+    from datetime import datetime, timezone
+
+    try:
+        timestamp = float(value)
+    except (TypeError, ValueError):
+        timestamp = time.time()
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
+
+
+def _task_job(task_id):
+    """Read a durable backend job by its unguessable task/job identifier."""
+    if not _task_id_is_valid(task_id):
+        return None
+    job = _api("GET", f"/jobs/{task_id}")
+    if not isinstance(job, dict) or not isinstance(job.get("status"), str):
+        return None
+    return job
+
+
+def _task_result_from_job(job) -> dict:
+    """Return the original CallToolResult for a completed backend job."""
+    result = job.get("result")
+    payload = {
+        "content": [{
+            "type": "text",
+            "text": json.dumps(result if result is not None else {}, indent=2, default=str),
+        }],
+    }
+    if isinstance(result, dict) and result.get("error"):
+        payload["isError"] = True
+    return payload
+
+
+def _task_state(task_id, job) -> dict:
+    """Translate an OpenCut job record into a detailed MCP Task."""
+    status = str(job.get("status") or "running").lower()
+    task_status = {
+        "running": "working",
+        "queued": "working",
+        "pending": "working",
+        "complete": "completed",
+        "completed": "completed",
+        "cancelled": "cancelled",
+        "error": "failed",
+        "failed": "failed",
+        "interrupted": "failed",
+    }.get(status, "working")
+    created = job.get("created") or time.time()
+    updated = job.get("completed_at") or job.get("started_at") or created
+    message = str(job.get("message") or "").strip()
+    progress = job.get("progress")
+    if task_status == "working" and isinstance(progress, (int, float)):
+        message = f"{message or 'OpenCut job in progress'} ({int(progress)}%)"
+
+    task = {
+        "taskId": task_id,
+        "status": task_status,
+        "createdAt": _task_timestamp(created),
+        "lastUpdatedAt": _task_timestamp(updated),
+        "ttlMs": TASK_TTL_MS,
+        "pollIntervalMs": TASK_POLL_INTERVAL_MS,
+    }
+    if message:
+        task["statusMessage"] = message
+    if task_status == "completed":
+        task["result"] = _task_result_from_job(job)
+    elif task_status == "failed":
+        task["error"] = {
+            "code": -32000,
+            "message": str(job.get("error") or job.get("message") or "OpenCut job failed"),
+            "data": {"taskId": task_id, "jobId": task_id},
+        }
+    return task
+
+
+def _task_error(msg_id, task_id, message):
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "error": {
+            "code": -32004,
+            "message": message,
+            "data": {"taskId": task_id},
+        },
+    }
+
+
+def _dispatch_task_method(msg_id, method, params):
+    """Serve the Tasks extension against the backend job endpoints."""
+    task_id = params.get("taskId", "")
+    job = _task_job(task_id)
+    if job is None:
+        return _task_error(msg_id, task_id, "Task not found")
+
+    if method == "tasks/get":
+        result = _task_state(task_id, job)
+    elif method == "tasks/update":
+        # OpenCut has no input_required jobs. The extension requires an empty
+        # acknowledgement and permits unknown/already-satisfied responses to
+        # be ignored, so this is intentionally a read-validated no-op.
+        result = {}
+    else:
+        _api("POST", f"/cancel/{task_id}", {})
+        result = {}
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "result": decorate_result(result, method, params),
+    }
+
+
 def _tool_call_result(params) -> dict:
     tool_name = params.get("name", "")
     arguments = params.get("arguments", {})
     if not isinstance(arguments, dict):
         arguments = {}
     result = handle_tool_call(tool_name, arguments)
+    job_id = result.get("job_id") if isinstance(result, dict) else None
+    if (
+        _client_supports_tasks(params)
+        and tool_name != "opencut_job_status"
+        and _task_id_is_valid(job_id)
+    ):
+        job = _task_job(job_id)
+        if job is not None:
+            task = _task_state(job_id, job)
+            task["resultType"] = "task"
+            return task
     return {"content": [{"type": "text", "text": json.dumps(result, indent=2)}]}
 
 
@@ -1855,6 +1999,8 @@ def dispatch_jsonrpc(msg: dict):
         result = {"tools": get_mcp_tools()}
     elif method == "tools/call":
         result = _tool_call_result(params)
+    elif method in ("tasks/get", "tasks/update", "tasks/cancel"):
+        return _dispatch_task_method(msg_id, method, params)
     elif method == "resources/list":
         result = {"resources": []}
     elif method == "resources/templates/list":

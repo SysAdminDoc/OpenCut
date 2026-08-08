@@ -9,6 +9,13 @@ record also lives in the git commit messages.
   changed files, reports progress and per-file errors, and records explicit
   up-to-date or invalid-path skips in the completed result.
 
+### Added - MCP Tasks adapter
+
+- The stateless MCP server now advertises `io.modelcontextprotocol/tasks` and
+  maps durable OpenCut jobs to `tasks/get`, `tasks/update`, and `tasks/cancel`.
+  Clients that do not declare the extension retain the existing `job_id`
+  polling contract.
+
 ### Added - Rendered WCAG scans
 
 - CEP and UXP rendered regression states now run an axe WCAG 2.2 AA scan
