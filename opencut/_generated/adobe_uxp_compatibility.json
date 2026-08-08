@@ -1,0 +1,2879 @@
+{
+  "api_version": 2,
+  "capabilities": [
+    {
+      "api_version": 2,
+      "fallback": "Disable direct host actions and retain the CEP/backend path.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "module.import",
+      "member": "import",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "premierepro",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 18,
+          "symbol": "module.import"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 548,
+          "symbol": "module.import"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return no active project and surface the UXP capability state.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Application.getProjectList",
+      "member": "getProjectList",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Application",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 41,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 54,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 75,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 94,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 113,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 564,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1029,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1096,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1140,
+          "symbol": "module.app.getProjectList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1370,
+          "symbol": "module.app.getProjectList"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return no active sequence and keep backend-only workflows available.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.getActiveSequence",
+      "member": "getActiveSequence",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 56,
+          "symbol": "Project.getActiveSequence"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1375,
+          "symbol": "Project.getActiveSequence"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty project name in the returned summary.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.getName",
+      "member": "getName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 48,
+          "symbol": "Project.getName"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Treat the project tree as unavailable and return an empty result.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.getRootItem",
+      "member": "getRootItem",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1032,
+          "symbol": "Project.getRootItem"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1099,
+          "symbol": "Project.getRootItem"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1147,
+          "symbol": "Project.getRootItem"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report import unavailable and leave the source file untouched.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.importFiles",
+      "member": "importFiles",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 118,
+          "symbol": "Project.importFiles"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1162,
+          "symbol": "Project.importFiles"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1184,
+          "symbol": "Project.importFiles"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Skip optional bin creation and continue with the project root.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.createBin",
+      "member": "createBin",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1157,
+          "symbol": "Project.createBin"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1249,
+          "symbol": "Project.createBin"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the project-item delete/remove methods when exposed.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Project.deleteItem",
+      "member": "deleteItem",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1274,
+          "symbol": "Project.deleteItem"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Reject the mutating action and retain the CEP fallback.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Project.executeTransaction",
+      "member": "executeTransaction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 826,
+          "symbol": "Project.executeTransaction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 832,
+          "symbol": "Project.executeTransaction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 841,
+          "symbol": "Project.executeTransaction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Run executeTransaction without the optional lock wrapper on 25.6-26.2.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "26.3",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Project.lockedAccess",
+      "member": "lockedAccess",
+      "minimum_host": "26.3",
+      "minimum_package_version": "26.3.0",
+      "owner": "Project",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 829,
+          "symbol": "Project.lockedAccess"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 830,
+          "symbol": "Project.lockedAccess"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Reject the transaction rather than partially mutating the sequence.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "CompoundAction.addAction",
+      "member": "addAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "CompoundAction",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 833,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 834,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 842,
+          "symbol": "CompoundAction.addAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 843,
+          "symbol": "CompoundAction.addAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an incomplete sequence summary and keep backend reports available.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getSettings",
+      "member": "getSettings",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 60,
+          "symbol": "Sequence.getSettings"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 705,
+          "symbol": "Sequence.getSettings"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 762,
+          "symbol": "Sequence.getSettings"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty sequence name in the returned summary.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getName",
+      "member": "getName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 63,
+          "symbol": "Sequence.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 733,
+          "symbol": "Sequence.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 764,
+          "symbol": "Sequence.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1554,
+          "symbol": "Sequence.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1872,
+          "symbol": "Sequence.getName"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use a zero duration in the returned summary.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getEnd",
+      "member": "getEnd",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 64,
+          "symbol": "Sequence.getEnd"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 735,
+          "symbol": "Sequence.getEnd"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 765,
+          "symbol": "Sequence.getEnd"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return no video tracks and keep sequence metadata readable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getVideoTrackList",
+      "member": "getVideoTrackList",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 706,
+          "symbol": "Sequence.getVideoTrackList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 770,
+          "symbol": "Sequence.getVideoTrackList"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return no audio tracks and keep sequence metadata readable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getAudioTrackList",
+      "member": "getAudioTrackList",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 707,
+          "symbol": "Sequence.getAudioTrackList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 769,
+          "symbol": "Sequence.getAudioTrackList"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty sequence identifier.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getGuid",
+      "member": "getGuid",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 728,
+          "symbol": "Sequence.getGuid"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Do not create a range export when the original range cannot be read.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getInPoint",
+      "member": "getInPoint",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 850,
+          "symbol": "Sequence.getInPoint"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Do not create a range export when the original range cannot be read.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getOutPoint",
+      "member": "getOutPoint",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 851,
+          "symbol": "Sequence.getOutPoint"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Reject sequence-range export and keep the original range unchanged.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Sequence.createSetInPointAction",
+      "member": "createSetInPointAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 833,
+          "symbol": "Sequence.createSetInPointAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 842,
+          "symbol": "Sequence.createSetInPointAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1661,
+          "symbol": "Sequence.createSetInPointAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Reject sequence-range export and keep the original range unchanged.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Sequence.createSetOutPointAction",
+      "member": "createSetOutPointAction",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 834,
+          "symbol": "Sequence.createSetOutPointAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 843,
+          "symbol": "Sequence.createSetOutPointAction"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1661,
+          "symbol": "Sequence.createSetOutPointAction"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report range export unavailable and retain OTIO/interchange output.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.createSubsequence",
+      "member": "createSubsequence",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1658,
+          "symbol": "Sequence.createSubsequence"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1704,
+          "symbol": "Sequence.createSubsequence"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty clip selection.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getSelection",
+      "member": "getSelection",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1111,
+          "symbol": "Sequence.getSelection"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Do not mutate selection when the host behavior is unknown.",
+      "fixture_only": true,
+      "host_behavior": [
+        {
+          "maximum_host": "26.2",
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        },
+        {
+          "minimum_host": "26.3",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Sequence.setSelection",
+      "member": "setSelection",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return no markers and keep marker-based workflows backend-only.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getMarkerList",
+      "member": "getMarkerList",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 77,
+          "symbol": "Sequence.getMarkerList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 880,
+          "symbol": "Sequence.getMarkerList"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 919,
+          "symbol": "Sequence.getMarkerList"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Reject direct cuts and use the CEP timeline action.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.rippleDelete",
+      "member": "rippleDelete",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 103,
+          "symbol": "Sequence.rippleDelete"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1005,
+          "symbol": "Sequence.rippleDelete"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return a read-only caption capability error.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getCaptionTrackCount",
+      "member": "getCaptionTrackCount",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1555,
+          "symbol": "Sequence.getCaptionTrackCount"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return a read-only caption capability error.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.getCaptionTrack",
+      "member": "getCaptionTrack",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1576,
+          "symbol": "Sequence.getCaptionTrack"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1577,
+          "symbol": "Sequence.getCaptionTrack"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Try the legacy playhead alias or report no positioning API.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.setPlayerPosition",
+      "member": "setPlayerPosition",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1635,
+          "symbol": "Sequence.setPlayerPosition"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Try setPlayerPosition or the Source Monitor fallback.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Sequence.setPlayheadPosition",
+      "member": "setPlayheadPosition",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Sequence",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1636,
+          "symbol": "Sequence.setPlayheadPosition"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty track list.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "TrackList.getTrackCount",
+      "member": "getTrackCount",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 583,
+          "symbol": "TrackList.getTrackCount"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Skip the inaccessible track and continue the walk.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "TrackList.getTrackAtIndex",
+      "member": "getTrackAtIndex",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 590,
+          "symbol": "TrackList.getTrackAtIndex"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty track and preserve the sequence index contract.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Track.getTrackItems",
+      "member": "getTrackItems",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Track",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 605,
+          "symbol": "Track.getTrackItems"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1461,
+          "symbol": "Track.getTrackItems"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty project tree.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "ProjectItem.getItems",
+      "member": "getItems",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1049,
+          "symbol": "Object.getItems"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1075,
+          "symbol": "Object.getItems"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty label for the unreadable host object.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getName",
+      "member": "getName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/TrackItem/Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 901,
+          "symbol": "Object.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1060,
+          "symbol": "Object.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1079,
+          "symbol": "Object.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1117,
+          "symbol": "Object.getName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1151,
+          "symbol": "Object.getName"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty media path and mark the item unresolved.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getMediaPath",
+      "member": "getMediaPath",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1058,
+          "symbol": "Object.getMediaPath"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1082,
+          "symbol": "Object.getMediaPath"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use a zero duration for the unreadable object.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getOutPoint",
+      "member": "getOutPoint",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1061,
+          "symbol": "Object.getOutPoint"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1119,
+          "symbol": "Object.getOutPoint"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the marker's stored numeric time or zero.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getTime",
+      "member": "getTime",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 900,
+          "symbol": "Object.getTime"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty identifier and do not persist a host locator.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getNodeId",
+      "member": "getNodeId",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1083,
+          "symbol": "Object.getNodeId"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty identifier and do not persist a host locator.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getId",
+      "member": "getId",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Treat the item as a leaf and avoid recursive traversal.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.isFolder",
+      "member": "isFolder",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1053,
+          "symbol": "Object.isFolder"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1081,
+          "symbol": "Object.isFolder"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1151,
+          "symbol": "Object.isFolder"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Skip the rename and report the item as unchanged.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.setName",
+      "member": "setName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1226,
+          "symbol": "Object.setName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1227,
+          "symbol": "Object.setName"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Try remove() or the project delete-item action.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.delete",
+      "member": "delete",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 978,
+          "symbol": "Object.delete"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1272,
+          "symbol": "Object.delete"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Try delete() or the project delete-item action.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.remove",
+      "member": "remove",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectItem/Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 979,
+          "symbol": "Object.remove"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1273,
+          "symbol": "Object.remove"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an unresolved clip without media metadata.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getProjectItem",
+      "member": "getProjectItem",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 615,
+          "symbol": "Object.getProjectItem"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty effect list.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getComponentChain",
+      "member": "getComponentChain",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/ProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 646,
+          "symbol": "Object.getComponentChain"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use a zero start time for the unreadable item.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getInPoint",
+      "member": "getInPoint",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1118,
+          "symbol": "Object.getInPoint"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use track index zero for the returned selection summary.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getTrackIndex",
+      "member": "getTrackIndex",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1120,
+          "symbol": "Object.getTrackIndex"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty caption segment text.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getText",
+      "member": "getText",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty caption segment text.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getTitle",
+      "member": "getTitle",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the segment's zero start time.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getStartTime",
+      "member": "getStartTime",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 900,
+          "symbol": "Object.getStartTime"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the segment's zero start time.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getStart",
+      "member": "getStart",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the segment's start time as its end time.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getEndTime",
+      "member": "getEndTime",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the segment's start time as its end time.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Object.getEnd",
+      "member": "getEnd",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TrackItem/CaptionItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Keep markers staged for CEP/backend execution.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.createMarker",
+      "member": "createMarker",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 83,
+          "symbol": "MarkerList.createMarker"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 882,
+          "symbol": "MarkerList.createMarker"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Create the marker without optional label/color enrichment.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.getFirstMarkerAtTime",
+      "member": "getFirstMarkerAtTime",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 84,
+          "symbol": "MarkerList.getFirstMarkerAtTime"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 885,
+          "symbol": "MarkerList.getFirstMarkerAtTime"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty marker snapshot.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.getMarkers",
+      "member": "getMarkers",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 923,
+          "symbol": "MarkerList.getMarkers"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty marker snapshot.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.getFirstMarker",
+      "member": "getFirstMarker",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 929,
+          "symbol": "MarkerList.getFirstMarker"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Stop marker traversal at the last readable marker.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.getNextMarker",
+      "member": "getNextMarker",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 933,
+          "symbol": "MarkerList.getNextMarker"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Try the marker object's delete/remove fallback.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "MarkerList.removeMarker",
+      "member": "removeMarker",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "MarkerList",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 977,
+          "symbol": "MarkerList.removeMarker"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty marker name.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Marker.getName",
+      "member": "getName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "async",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use an empty marker comment.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Marker.getComment",
+      "member": "getComment",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 902,
+          "symbol": "Marker.getComment"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use no marker color metadata.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Marker.getColorIndex",
+      "member": "getColorIndex",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 903,
+          "symbol": "Marker.getColorIndex"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Keep the default marker name.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Marker.setName",
+      "member": "setName",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts",
+          "line": 85,
+          "symbol": "Marker.setName"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 887,
+          "symbol": "Marker.setName"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Keep the host's default marker color.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Marker.setColorIndex",
+      "member": "setColorIndex",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "Marker",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 888,
+          "symbol": "Marker.setColorIndex"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return an empty effect list.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "ComponentChain.getComponentCount",
+      "member": "getComponentCount",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ComponentChain",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Skip the unreadable effect component.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "ComponentChain.getComponentAtIndex",
+      "member": "getComponentAtIndex",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ComponentChain",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the opaque project item object without transcript access.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "ClipProjectItem.cast",
+      "member": "cast",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ClipProjectItem",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1297,
+          "symbol": "module.ClipProjectItem.cast"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report transcript language discovery unavailable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "26.3",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Transcript.querySupportedLanguages",
+      "member": "querySupportedLanguages",
+      "minimum_host": "26.3",
+      "minimum_package_version": "26.3.0",
+      "owner": "Transcript",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1309,
+          "symbol": "module.Transcript.querySupportedLanguages"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report no transcript without changing the project.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "26.3",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "Transcript.hasTranscript",
+      "member": "hasTranscript",
+      "minimum_host": "26.3",
+      "minimum_package_version": "26.3.0",
+      "owner": "Transcript",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1318,
+          "symbol": "module.Transcript.hasTranscript"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1325,
+          "symbol": "module.Transcript.hasTranscript"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Return transcript state without JSON export.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "26.3",
+          "sync_async": "async"
+        }
+      ],
+      "id": "Transcript.exportToJSON",
+      "member": "exportToJSON",
+      "minimum_host": "26.3",
+      "minimum_package_version": "26.3.0",
+      "owner": "Transcript",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1327,
+          "symbol": "module.Transcript.exportToJSON"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1328,
+          "symbol": "module.Transcript.exportToJSON"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report object-mask inspection unavailable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "ObjectMaskUtils.hasObjectMask",
+      "member": "hasObjectMask",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ObjectMaskUtils",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1353,
+          "symbol": "module.ObjectMaskUtils.hasObjectMask"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use a plain seconds/ticks compatibility value.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "TickTime.createWithSeconds",
+      "member": "createWithSeconds",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TickTime",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 819,
+          "symbol": "module.TickTime.createWithSeconds"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use a plain seconds/ticks compatibility value.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "TickTime.createWithTicks",
+      "member": "createWithTicks",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "TickTime",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 820,
+          "symbol": "module.TickTime.createWithTicks"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report no supported playhead positioning API.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "SourceMonitor.setPosition",
+      "member": "setPosition",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "SourceMonitor",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1637,
+          "symbol": "module.SourceMonitor.setPosition"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report encoder export unavailable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "EncoderManager.getManager",
+      "member": "getManager",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "EncoderManager",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1755,
+          "symbol": "module.EncoderManager.getManager"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Leave Adobe Media Encoder closed and report the queue failure.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "EncoderManager.launchEncoder",
+      "member": "launchEncoder",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "EncoderManager",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1780,
+          "symbol": "EncoderManager.launchEncoder"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1781,
+          "symbol": "EncoderManager.launchEncoder"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report export unavailable without deleting source media.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "EncoderManager.exportSequence",
+      "member": "exportSequence",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "EncoderManager",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1787,
+          "symbol": "EncoderManager.exportSequence"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Leave the queue pending for manual AME start.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "EncoderManager.startBatchEncode",
+      "member": "startBatchEncode",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "EncoderManager",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1790,
+          "symbol": "EncoderManager.startBatchEncode"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1791,
+          "symbol": "EncoderManager.startBatchEncode"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Report Adobe Media Encoder as unavailable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "EncoderManager.isAMEInstalled",
+      "member": "isAMEInstalled",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "EncoderManager",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1775,
+          "symbol": "EncoderManager.isAMEInstalled"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Keep the sequence available for OTIO/XML export instead.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "async"
+        }
+      ],
+      "id": "ProjectConverter.exportAAF",
+      "member": "exportAAF",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "ProjectConverter",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1871,
+          "symbol": "module.ProjectConverter.exportAAF"
+        }
+      ],
+      "sync_async": "async",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use default AAF options or report AAF export unavailable.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.constructor",
+      "member": "constructor",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1818,
+          "symbol": "module.AAFExportOptions"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for mixdown video.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setMixdownVideo",
+      "member": "setMixdownVideo",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for channel layout.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setExplodeToMono",
+      "member": "setExplodeToMono",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for embedded audio.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setEmbedAudio",
+      "member": "setEmbedAudio",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for source trimming.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setTrimSources",
+      "member": "setTrimSources",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for rendered audio effects.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setRenderAudioEffects",
+      "member": "setRenderAudioEffects",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for interleaving.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setInterleaveWithoutEffects",
+      "member": "setInterleaveWithoutEffects",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default for parent-folder preservation.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setPreserveParentFolder",
+      "member": "setPreserveParentFolder",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default sample rate.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setSampleRate",
+      "member": "setSampleRate",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default bit depth.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setBitsPerSample",
+      "member": "setBitsPerSample",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default handle length.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setHandleFrames",
+      "member": "setHandleFrames",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default AAF audio format.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setAudioFileFormat",
+      "member": "setAudioFileFormat",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1851,
+          "symbol": "AAFExportOptions.setAudioFileFormat"
+        },
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1852,
+          "symbol": "AAFExportOptions.setAudioFileFormat"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the host default video mixdown preset.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "AAFExportOptions.setVideoMixdownPresetPath",
+      "member": "setVideoMixdownPresetPath",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "AAFExportOptions",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/main.js",
+          "line": 1855,
+          "symbol": "AAFExportOptions.setVideoMixdownPresetPath"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Use the darkest theme class.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "uxp.document.theme.getCurrent",
+      "member": "getCurrent",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "UXP document.theme",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    },
+    {
+      "api_version": 2,
+      "fallback": "Apply the initial theme without live theme updates.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "uxp.document.theme.onUpdated.addListener",
+      "member": "addListener",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "UXP document.theme.onUpdated",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [
+        {
+          "file": "extension/com.opencut.uxp/uxp-theme.js",
+          "line": 63,
+          "symbol": "uxp.document.theme.onUpdated.addListener"
+        }
+      ],
+      "sync_async": "sync",
+      "used": true
+    },
+    {
+      "api_version": 2,
+      "fallback": "Leave the listener lifecycle to the host panel teardown.",
+      "fixture_only": false,
+      "host_behavior": [
+        {
+          "minimum_host": "25.6",
+          "sync_async": "sync"
+        }
+      ],
+      "id": "uxp.document.theme.onUpdated.removeListener",
+      "member": "removeListener",
+      "minimum_host": "25.6",
+      "minimum_package_version": "25.6.0",
+      "owner": "UXP document.theme.onUpdated",
+      "package": "@adobe/premierepro",
+      "package_version": "26.3.0",
+      "source_refs": [],
+      "sync_async": "sync",
+      "used": false
+    }
+  ],
+  "capability_count": 97,
+  "diagnostics": {
+    "live_host_checks": "blocked_separate",
+    "undeclared_capabilities": []
+  },
+  "generated_at": "2026-08-08T23:22:03Z",
+  "host_bands": [
+    {
+      "api_version": 2,
+      "id": "25.6",
+      "maximum_host": "26.1",
+      "minimum_host": "25.6"
+    },
+    {
+      "api_version": 2,
+      "id": "26.2",
+      "maximum_host": "26.2",
+      "minimum_host": "26.2"
+    },
+    {
+      "api_version": 2,
+      "id": "26.3",
+      "maximum_host": null,
+      "minimum_host": "26.3"
+    }
+  ],
+  "host_fixtures": [
+    {
+      "assertions": [
+        {
+          "capability": "Sequence.setSelection",
+          "sync_async": "async"
+        }
+      ],
+      "host": "25.6"
+    },
+    {
+      "assertions": [
+        {
+          "capability": "Sequence.setSelection",
+          "sync_async": "async"
+        }
+      ],
+      "host": "26.2"
+    },
+    {
+      "assertions": [
+        {
+          "capability": "Sequence.setSelection",
+          "sync_async": "sync"
+        }
+      ],
+      "host": "26.3"
+    }
+  ],
+  "manifest_version": 1,
+  "minimum_host": "25.6",
+  "package": "@adobe/premierepro",
+  "package_drift": {
+    "pinned_package_version": "26.3.0",
+    "requires_live_premiere": false,
+    "snapshot_latest": "26.3.0",
+    "snapshot_path": "opencut/_generated/adobe_premierepro_versions.json",
+    "status": "in_sync"
+  },
+  "package_version": "26.3.0",
+  "source_files": [
+    "extension/com.opencut.uxp/main.js",
+    "extension/com.opencut.uxp/uxp-theme.js",
+    "extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts"
+  ],
+  "used_capability_count": 75
+}

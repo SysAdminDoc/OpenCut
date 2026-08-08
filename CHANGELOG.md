@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Adobe UXP compatibility drift gate
+
+- Generated compatibility metadata now records used Premiere UXP APIs,
+  minimum host/package versions, sync/async behavior, fallbacks, source
+  locations, and 25.6/26.2/26.3 host fixtures. Release smoke reports package
+  drift and rejects undeclared static API calls without requiring Premiere.
+
 ### Fixed - Durable incremental auto-indexing
 
 - `/search/auto-index` now creates a persisted, resumable background job for

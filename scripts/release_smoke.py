@@ -26,6 +26,7 @@ Steps (in order):
 17. ``panel-rendered`` — headless Chromium panel state, accessibility, and screenshot regression tests
 18. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
 19. ``panel-source`` — CEP panel source tree smoke
+20. ``adobe-uxp-compatibility`` — static UXP capability and host-band drift gate
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -420,6 +421,55 @@ def step_adobe_premierepro_versions(_args: argparse.Namespace) -> StepResult:
         message = f"could not probe registry (exit {result.returncode})"
     return StepResult(
         "adobe-premierepro-versions",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_adobe_uxp_compatibility(_args: argparse.Namespace) -> StepResult:
+    """Check UXP source declarations without requiring a live Premiere host."""
+    start = time.time()
+    result = _run(
+        [
+            sys.executable,
+            "-m",
+            "opencut.tools.adobe_uxp_compatibility",
+            "--check",
+            "--json",
+        ],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return StepResult(
+            "adobe-uxp-compatibility",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message="compatibility gate did not emit JSON",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    diagnostics = payload.get("diagnostics") or []
+    if result.returncode == 0:
+        message = "static UXP declarations and host-band fixtures are in sync"
+        status = "ok"
+    elif result.returncode == 2:
+        message = "@adobe/premierepro package drift detected (informational)"
+        status = "warn"
+    else:
+        message = "static UXP compatibility drift"
+        if diagnostics:
+            message += f": {diagnostics[0]}"
+        status = "fail"
+    return StepResult(
+        "adobe-uxp-compatibility",
         status,
         exit_code=result.returncode,
         duration_ms=duration,
@@ -1550,6 +1600,11 @@ STEPS: List[StepDefinition] = [
         "adobe-premierepro-versions",
         step_adobe_premierepro_versions,
         "Notify on @adobe/premierepro npm registry drift (informational, F251)",
+    ),
+    StepDefinition(
+        "adobe-uxp-compatibility",
+        step_adobe_uxp_compatibility,
+        "Check static UXP capability declarations and host-band behavior",
     ),
 ]
 
