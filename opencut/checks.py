@@ -1109,7 +1109,7 @@ def check_gen_video_ltx(verbose=False):
 
 
 def check_audio_reactive_fx(verbose=False):
-    """K2.18 — Audio Reactive FX stub."""
+    """K2.18 — deterministic local audio-reactive renderer."""
     from opencut.core.audio_reactive_fx import INSTALL_HINT, check_audio_reactive_available
     ok = check_audio_reactive_available()
     if verbose:
