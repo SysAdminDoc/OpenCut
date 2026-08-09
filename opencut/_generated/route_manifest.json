@@ -1,19 +1,19 @@
 {
   "version": 4,
   "generated_at": "2026-08-04T16:20:22Z",
-  "total_routes": 1583,
-  "shipped_route_count": 1558,
+  "total_routes": 1590,
+  "shipped_route_count": 1565,
   "blueprint_count": 107,
   "method_counts": {
-    "DELETE": 17,
-    "GET": 403,
+    "DELETE": 18,
+    "GET": 405,
     "PATCH": 1,
-    "POST": 1164,
+    "POST": 1168,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1530,
+    "implemented": 1537,
     "stub": 25
   },
   "blueprints": {
@@ -793,11 +793,11 @@
       ]
     },
     "search": {
-      "route_count": 13,
+      "route_count": 20,
       "method_counts": {
-        "DELETE": 3,
-        "GET": 3,
-        "POST": 7
+        "DELETE": 4,
+        "GET": 5,
+        "POST": 11
       },
       "sample_rules": [
         "/search/footage",
@@ -18078,6 +18078,118 @@
       ]
     },
     {
+      "rule": "/search/federated/index",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.federated_index",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/search/federated/prune",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.federated_prune",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/search/federated/query",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.federated_query",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/search/federated/roots",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "search.federated_list_roots",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/search/federated/roots",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.federated_add_root",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
+      "rule": "/search/federated/roots/<int:root_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "search.federated_remove_root",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
+      "rule": "/search/federated/status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "search.federated_status",
+      "blueprint": "search",
+      "readiness": "implemented",
+      "surface_class": "mcp",
+      "surface_classes": [
+        "mcp"
+      ],
+      "surface_evidence": [
+        "opencut/mcp_server.py"
+      ]
+    },
+    {
       "rule": "/search/footage",
       "methods": [
         "POST"
@@ -27047,24 +27159,24 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1558,
-      "direct_surface_routes": 273,
-      "integration_only_routes": 1285,
-      "coverage_percent": 17.5,
+      "shipped_routes": 1565,
+      "direct_surface_routes": 279,
+      "integration_only_routes": 1286,
+      "coverage_percent": 17.8,
       "multi_surface_routes": 60,
       "primary_counts": {
         "panel": 218,
         "palette": 22,
         "cli": 0,
-        "mcp": 33,
-        "integration-only": 1310
+        "mcp": 39,
+        "integration-only": 1311
       },
       "assigned_counts": {
         "panel": 218,
         "palette": 33,
         "cli": 1,
-        "mcp": 92,
-        "integration-only": 1310
+        "mcp": 98,
+        "integration-only": 1311
       }
     },
     "gate": {
