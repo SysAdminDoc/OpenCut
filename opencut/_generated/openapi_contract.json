@@ -56,10 +56,10 @@
   ],
   "coverage": {
     "component_schemas": 51,
-    "csrf_documented_operations": 1184,
-    "error_typed_operations": 1586,
-    "operations": 1586,
-    "typed_requests": 77,
+    "csrf_documented_operations": 1189,
+    "error_typed_operations": 1593,
+    "operations": 1593,
+    "typed_requests": 78,
     "typed_responses": 138
   },
   "json_schema_dialect": "https://json-schema.org/draft/2020-12/schema",
@@ -98,6 +98,7 @@
     "POST /provenance/c2pa",
     "POST /review/bundle",
     "POST /search/ai",
+    "POST /search/federated/query",
     "POST /search/footage",
     "POST /search/index",
     "POST /search/ingest",

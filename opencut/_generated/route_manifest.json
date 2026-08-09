@@ -2942,12 +2942,12 @@
       "endpoint": "collab_review.approval_advance",
       "blueprint": "collab_review",
       "readiness": "implemented",
-      "surface_class": "integration-only",
+      "surface_class": "mcp",
       "surface_classes": [
-        "integration-only"
+        "mcp"
       ],
       "surface_evidence": [
-        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+        "opencut/mcp_server.py"
       ]
     },
     {
@@ -27160,23 +27160,23 @@
     ],
     "summary": {
       "shipped_routes": 1565,
-      "direct_surface_routes": 279,
-      "integration_only_routes": 1286,
-      "coverage_percent": 17.8,
+      "direct_surface_routes": 280,
+      "integration_only_routes": 1285,
+      "coverage_percent": 17.9,
       "multi_surface_routes": 60,
       "primary_counts": {
         "panel": 218,
         "palette": 22,
         "cli": 0,
-        "mcp": 39,
-        "integration-only": 1311
+        "mcp": 40,
+        "integration-only": 1310
       },
       "assigned_counts": {
         "panel": 218,
         "palette": 33,
         "cli": 1,
-        "mcp": 98,
-        "integration-only": 1311
+        "mcp": 99,
+        "integration-only": 1310
       }
     },
     "gate": {

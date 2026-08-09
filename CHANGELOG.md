@@ -3,6 +3,8 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## 1.48.0 - Durable media automation and review surfaces
+
 ### Added - MCP Apps review and progress surface
 
 - Apps-capable clients can discover a versioned `ui://` review/progress

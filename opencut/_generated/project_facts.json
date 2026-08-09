@@ -43,14 +43,14 @@
   "project": {
     "distribution_name": "opencut-ppro",
     "name": "OpenCut",
-    "version": "1.47.0"
+    "version": "1.48.0"
   },
   "routes": {
     "blueprints": 107,
-    "shipped": 1558,
+    "shipped": 1565,
     "source": "opencut/_generated/route_manifest.json",
     "stubs": 25,
-    "total": 1583
+    "total": 1590
   },
   "runtime": {
     "platform_display": [
