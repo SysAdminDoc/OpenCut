@@ -75,10 +75,8 @@ class TestCapabilityHonesty(unittest.TestCase):
         self.assertEqual(rpc("subscriptions/listen")["error"]["code"], -32601)
 
     def test_tasks_extension_is_claimed(self):
-        self.assertEqual(
-            self.capabilities["extensions"],
-            {mcp_server.TASKS_EXTENSION: {}},
-        )
+        self.assertEqual(self.capabilities["extensions"][mcp_server.TASKS_EXTENSION], {})
+        self.assertEqual(self.capabilities["extensions"][mcp_server.MCP_APPS_EXTENSION], {})
 
     def test_removed_methods_are_not_served(self):
         # 2026-07-28 removed ping and logging/setLevel outright.

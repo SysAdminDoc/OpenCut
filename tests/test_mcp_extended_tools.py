@@ -44,11 +44,11 @@ def test_committed_extended_manifest_matches_live_generator():
 def test_extended_tools_are_opt_in_and_do_not_change_curated_default(monkeypatch):
     monkeypatch.delenv(mcp_extended_tools.EXTENDED_MCP_ENV, raising=False)
 
-    assert len(mcp_server.MCP_TOOLS) == 87
-    assert len(mcp_server.get_mcp_tools()) == 87
+    assert len(mcp_server.MCP_TOOLS) == 88
+    assert len(mcp_server.get_mcp_tools()) == 88
 
     extended_count = len(mcp_server.get_mcp_tools(include_extended=True))
-    assert extended_count == 87 + len(mcp_extended_tools.get_extended_tools())
+    assert extended_count == 88 + len(mcp_extended_tools.get_extended_tools())
     assert extended_count >= 1000
 
     monkeypatch.setenv(mcp_extended_tools.EXTENDED_MCP_ENV, "1")

@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - MCP Apps review and progress surface
+
+- Apps-capable clients can discover a versioned `ui://` review/progress
+  resource with restrictive CSP metadata and structured, path-redacted tool
+  results. Unsupported clients keep the existing text response; fixed
+  refresh, cancellation, and approval actions remain allowlisted.
+
 ### Added - Federated offline media search
 
 - Configured project roots now reconcile transcript, OCR, audio-tag, and

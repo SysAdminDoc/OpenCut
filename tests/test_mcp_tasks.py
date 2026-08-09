@@ -25,7 +25,8 @@ def _rpc(method, params):
 
 def test_discovery_advertises_tasks_extension():
     capabilities = _rpc("server/discover", {"_meta": _task_meta()})["result"]["capabilities"]
-    assert capabilities["extensions"] == {mcp_server.TASKS_EXTENSION: {}}
+    assert capabilities["extensions"][mcp_server.TASKS_EXTENSION] == {}
+    assert capabilities["extensions"][mcp_server.MCP_APPS_EXTENSION] == {}
 
 
 def test_non_task_client_keeps_legacy_job_result(monkeypatch):

@@ -27,7 +27,7 @@ operation in the required MCP headers; the legacy
 pre-2026 clients keep working unchanged.
 
 Methods: server/discover, initialize (legacy), tools/list, tools/call,
-tasks/get, tasks/update, tasks/cancel, resources/list,
+tasks/get, tasks/update, tasks/cancel, resources/list, resources/read,
 resources/templates/list, prompts/list.
 """
 
@@ -45,7 +45,7 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from opencut import __version__, mcp_extended_tools
+from opencut import __version__, mcp_apps, mcp_extended_tools
 from opencut import auth as _auth
 from opencut import trusted_hosts as _trusted_hosts
 
@@ -353,6 +353,24 @@ MCP_TOOLS = [
                 "job_id": {"type": "string", "description": "Job ID to check"},
             },
             "required": ["job_id"],
+        },
+    },
+    {
+        "name": "opencut_review_action",
+        "description": "Refresh, cancel, or advance an allowlisted OpenCut review/job action.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["refresh", "cancel", "approve", "reject", "request_changes"],
+                    "default": "refresh",
+                },
+                "job_id": {"type": "string", "description": "OpenCut job ID for refresh/cancel"},
+                "workflow_id": {"type": "string", "description": "Approval workflow ID for review decisions"},
+                "actor": {"type": "string", "description": "Named reviewer for an approval decision"},
+                "notes": {"type": "string", "description": "Optional review decision notes"},
+            },
         },
     },
     {
@@ -1385,6 +1403,7 @@ _TOOL_ROUTES = {
     # below builds the real path from validated args so the literal curly
     # braces never hit the wire.
     "opencut_job_status": ("GET", "/status/{job_id}"),
+    "opencut_review_action": ("GET", "/status/{job_id}"),
     "opencut_repeat_detect": ("POST", "/captions/repeat-detect"),
     "opencut_chapters": ("POST", "/captions/chapters"),
     "opencut_footage_search": ("POST", "/search/footage"),
@@ -1474,11 +1493,31 @@ _TOOL_ROUTES = {
 }
 
 
-def get_mcp_tools(include_extended=None):
-    """Return curated MCP tools, optionally with generated route-level tools."""
+_APP_UI_TOOL_NAMES = frozenset(
+    {
+        "opencut_job_status",
+        "opencut_review_action",
+        "opencut_review_bundle",
+        "opencut_federated_search",
+    }
+)
+
+
+def get_mcp_tools(include_extended=None, *, apps_supported: bool = False):
+    """Return curated tools, optionally enhanced for an MCP Apps client."""
     if include_extended is None:
         include_extended = mcp_extended_tools.extended_tools_enabled()
-    tools = list(MCP_TOOLS)
+    tools = []
+    for tool in MCP_TOOLS:
+        if apps_supported and tool.get("name") in _APP_UI_TOOL_NAMES:
+            enhanced = dict(tool)
+            ui_meta = {"resourceUri": mcp_apps.RESOURCE_URI}
+            if tool.get("name") == "opencut_review_action":
+                ui_meta["visibility"] = ["app"]
+            enhanced["_meta"] = {"ui": ui_meta}
+            tools.append(enhanced)
+        else:
+            tools.append(tool)
     if include_extended:
         tools.extend(mcp_extended_tools.get_extended_tools())
     return tools
@@ -1642,6 +1681,29 @@ def handle_tool_call(tool_name, arguments):
         path = f"/status/{job_id}"
         return _api("GET", path)
 
+    if tool_name == "opencut_review_action":
+        action = str(arguments.get("action") or "refresh").strip().lower()
+        if action in {"refresh", "cancel"}:
+            job_id = str(arguments.get("job_id") or "").strip()
+            if not re.fullmatch(r"[a-f0-9-]{1,128}", job_id):
+                return {"error": "job_id is required and must contain only hex characters or hyphens"}
+            if action == "cancel":
+                return _api("POST", f"/cancel/{job_id}", {})
+            return _api("GET", f"/status/{job_id}")
+        if action in {"approve", "reject", "request_changes"}:
+            workflow_id = str(arguments.get("workflow_id") or "").strip()
+            actor = str(arguments.get("actor") or "").strip()
+            if not workflow_id or not actor:
+                return {"error": "workflow_id and actor are required for a review decision"}
+            payload = {
+                "workflow_id": workflow_id[:200],
+                "action": action,
+                "actor": actor[:200],
+                "notes": str(arguments.get("notes") or "")[:2000],
+            }
+            return _api("POST", "/api/approval/advance", payload)
+        return {"error": "Invalid action for opencut_review_action"}
+
     if tool_name == "opencut_generate_music":
         engine = arguments.get("engine", "ace-step")
         if engine == "ace-step":
@@ -1745,6 +1807,7 @@ META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 META_LOG_LEVEL = "io.modelcontextprotocol/logLevel"
 TASKS_EXTENSION = "io.modelcontextprotocol/tasks"
+MCP_APPS_EXTENSION = mcp_apps.EXTENSION_ID
 TASK_TTL_MS = 24 * 60 * 60 * 1000
 TASK_POLL_INTERVAL_MS = 1000
 
@@ -1792,13 +1855,15 @@ def server_capabilities() -> dict:
 
     The task extension is backed by the existing durable Flask job store.
     Subscriptions, sampling, and roots remain unadvertised because they are not
-    implemented.
+    implemented. MCP Apps is advertised as a progressive extension; UI
+    metadata is still omitted for clients that do not declare the supported
+    HTML resource MIME type.
     """
     return {
         "tools": {"listChanged": False},
         "resources": {"listChanged": False, "subscribe": False},
         "prompts": {"listChanged": False},
-        "extensions": {TASKS_EXTENSION: {}},
+        "extensions": {TASKS_EXTENSION: {}, MCP_APPS_EXTENSION: {}},
     }
 
 
@@ -1881,6 +1946,25 @@ def _client_supports_tasks(params) -> bool:
     return isinstance(extensions, dict) and TASKS_EXTENSION in extensions
 
 
+def _client_supports_apps(params) -> bool:
+    """Return true only for clients that advertise the MCP Apps MIME type."""
+    capabilities = _request_meta(params).get(META_CLIENT_CAPABILITIES)
+    if not isinstance(capabilities, dict) and isinstance(params, dict):
+        # Legacy initialize/tools-list clients place capabilities directly in
+        # params. Modern stateless clients use the namespaced _meta key.
+        capabilities = params.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return False
+    extensions = capabilities.get("extensions")
+    if not isinstance(extensions, dict):
+        return False
+    app_capability = extensions.get(MCP_APPS_EXTENSION)
+    if not isinstance(app_capability, dict):
+        return False
+    mime_types = app_capability.get("mimeTypes")
+    return isinstance(mime_types, list) and mcp_apps.RESOURCE_MIME_TYPE in mime_types
+
+
 def _task_id_is_valid(task_id) -> bool:
     return isinstance(task_id, str) and bool(re.fullmatch(r"[a-f0-9]{12}", task_id))
 
@@ -1908,9 +1992,11 @@ def _task_job(task_id):
     return job
 
 
-def _task_result_from_job(job) -> dict:
+def _task_result_from_job(job, *, redact: bool = False) -> dict:
     """Return the original CallToolResult for a completed backend job."""
     result = job.get("result")
+    if redact:
+        result = mcp_apps.redact_payload(result)
     payload = {
         "content": [{
             "type": "text",
@@ -1922,7 +2008,7 @@ def _task_result_from_job(job) -> dict:
     return payload
 
 
-def _task_state(task_id, job) -> dict:
+def _task_state(task_id, job, *, redact: bool = False) -> dict:
     """Translate an OpenCut job record into a detailed MCP Task."""
     status = str(job.get("status") or "running").lower()
     task_status = {
@@ -1954,7 +2040,7 @@ def _task_state(task_id, job) -> dict:
     if message:
         task["statusMessage"] = message
     if task_status == "completed":
-        task["result"] = _task_result_from_job(job)
+        task["result"] = _task_result_from_job(job, redact=redact)
     elif task_status == "failed":
         task["error"] = {
             "code": -32000,
@@ -2006,6 +2092,7 @@ def _tool_call_result(params) -> dict:
     if not isinstance(arguments, dict):
         arguments = {}
     result = handle_tool_call(tool_name, arguments)
+    app_enhanced = _client_supports_apps(params) and tool_name in _APP_UI_TOOL_NAMES
     job_id = result.get("job_id") if isinstance(result, dict) else None
     if (
         _client_supports_tasks(params)
@@ -2014,9 +2101,22 @@ def _tool_call_result(params) -> dict:
     ):
         job = _task_job(job_id)
         if job is not None:
-            task = _task_state(job_id, job)
+            task = _task_state(job_id, job, redact=app_enhanced)
             task["resultType"] = "task"
+            if app_enhanced:
+                task["structuredContent"] = mcp_apps.build_surface_payload(
+                    tool_name, task
+                )
             return task
+    if app_enhanced:
+        surface = mcp_apps.build_surface_payload(tool_name, result)
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps(surface, indent=2, default=str),
+            }],
+            "structuredContent": surface,
+        }
     return {"content": [{"type": "text", "text": json.dumps(result, indent=2)}]}
 
 
@@ -2059,15 +2159,43 @@ def dispatch_jsonrpc(msg: dict):
             "serverInfo": server_info(),
         }
     elif method == "tools/list":
-        result = {"tools": get_mcp_tools()}
+        result = {
+            "tools": get_mcp_tools(apps_supported=_client_supports_apps(params))
+        }
     elif method == "tools/call":
         result = _tool_call_result(params)
     elif method in ("tasks/get", "tasks/update", "tasks/cancel"):
         return _dispatch_task_method(msg_id, method, params)
     elif method == "resources/list":
-        result = {"resources": []}
+        result = {
+            "resources": (
+                [mcp_apps.resource_listing()]
+                if _client_supports_apps(params)
+                else []
+            )
+        }
     elif method == "resources/templates/list":
         result = {"resourceTemplates": []}
+    elif method == "resources/read":
+        if not _client_supports_apps(params):
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {
+                    "code": ERROR_MISSING_REQUIRED_CLIENT_CAPABILITY,
+                    "message": "MCP Apps capability is required to read UI resources",
+                },
+            }
+        if params.get("uri") != mcp_apps.RESOURCE_URI:
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {
+                    "code": -32602,
+                    "message": "Unknown MCP Apps resource URI",
+                },
+            }
+        result = mcp_apps.resource_contents()
     elif method == "prompts/list":
         result = {"prompts": []}
     elif method == "notifications/initialized":
