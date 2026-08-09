@@ -45,7 +45,7 @@
     "captions",
     "ai"
   ],
-  "tool_count": 87,
+  "tool_count": 88,
   "tools": [
     {
       "description": "Generate an ADR (Automated Dialogue Replacement) cue list from sequence data.",
@@ -282,6 +282,10 @@
     {
       "description": "Detect and identify repeated/fumbled takes in a video or audio file using transcript similarity analysis.",
       "name": "opencut_repeat_detect"
+    },
+    {
+      "description": "Refresh, cancel, or advance an allowlisted OpenCut review/job action.",
+      "name": "opencut_review_action"
     },
     {
       "description": "Build a portable review bundle zip with media, captions, markers, notes, and extra files.",
