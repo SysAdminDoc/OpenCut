@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Deterministic audio-reactive renderer
+
+- `/video/audio-reactive` now creates a durable cancellable job and renders
+  beat-driven FFmpeg effects from local PCM/onset analysis without BeatNet or
+  model downloads. Bounded presets, keyframe metadata, no-audio handling, and
+  atomic partial-output cleanup are covered by media and route contract tests.
+
 ### Added - Adobe UXP compatibility drift gate
 
 - Generated compatibility metadata now records used Premiere UXP APIs,

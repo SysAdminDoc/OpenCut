@@ -14,9 +14,17 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, missing_dependency, safe_error
-from opencut.jobs import _update_job, async_job
+from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.routes._common import _stub_503
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import (
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    validate_filepath,
+    validate_output_path,
+    validate_path,
+)
 
 logger = logging.getLogger("opencut")
 wave_k_bp = Blueprint("wave_k", __name__)
@@ -31,6 +39,12 @@ def _stub_501(name: str) -> tuple:
         status=501,
         suggestion="Track the live ROADMAP.md entry for this capability.",
     )
+
+
+def _validate_audio_reactive_payload(data):
+    from opencut.core.audio_reactive_fx import validate_request_payload
+
+    return validate_request_payload(data)
 
 
 # =============================================================
@@ -798,23 +812,46 @@ def route_gen_ltx_backends():
 
 @wave_k_bp.route("/video/audio-reactive", methods=["POST"])
 @require_csrf
-def route_audio_reactive_fx():
-    try:
-        from opencut.core import audio_reactive_fx
-        if not audio_reactive_fx.check_audio_reactive_available():
-            return _stub_503("Audio Reactive FX", audio_reactive_fx.INSTALL_HINT)
-        data = request.get_json(force=True, silent=True) or {}
-        result = audio_reactive_fx.render(
-            validate_filepath(str(data.get("video_path") or "")),
-            audio_path=str(data.get("audio_path") or ""),
-            preset=str(data.get("preset") or "boom"),
-            custom_params=data.get("custom_params") or None,
-            output=str(data.get("output") or "") or None,
-        )
-        return jsonify({"output": result.output, "preset": result.preset,
-                        "beat_count": result.beat_count, "notes": result.notes})
-    except Exception as exc:
-        return safe_error(exc, "audio_reactive_fx")
+@async_job(
+    "audio_reactive_fx",
+    filepath_param="video_path",
+    pre_validate=_validate_audio_reactive_payload,
+)
+def route_audio_reactive_fx(job_id, filepath, data):
+    """Render deterministic beat-driven effects as a durable background job."""
+    from opencut.core import audio_reactive_fx
+
+    if not audio_reactive_fx.check_audio_reactive_available():
+        raise missing_dependency("OpenCut audio-reactive renderer")
+
+    audio_path = str(data.get("audio_path") or filepath).strip()
+    audio_path = validate_filepath(audio_path)
+    output = str(data.get("output") or "").strip() or None
+    if output:
+        output = validate_output_path(output)
+
+    def _progress(percent, message=""):
+        _update_job(job_id, progress=int(percent), message=str(message))
+
+    result = audio_reactive_fx.render(
+        filepath,
+        audio_path=audio_path,
+        preset=str(data.get("preset") or "boom"),
+        custom_params=data.get("custom_params") or None,
+        output=output,
+        on_progress=_progress,
+        is_cancelled=lambda: _is_cancelled(job_id),
+    )
+    return {
+        "output": result.output,
+        "preset": result.preset,
+        "beat_count": result.beat_count,
+        "keyframes": result.keyframes,
+        "analysis": result.analysis,
+        "backend": result.backend,
+        "capabilities": result.capabilities,
+        "notes": result.notes,
+    }
 
 
 @wave_k_bp.route("/video/audio-reactive/presets", methods=["GET"])
