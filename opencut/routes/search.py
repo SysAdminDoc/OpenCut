@@ -372,6 +372,188 @@ def search_clear_db_index():
 
 
 # ---------------------------------------------------------------------------
+# Federated media index: configured roots, offline scan, and query
+# ---------------------------------------------------------------------------
+def _validate_federated_index_payload(data):
+    root_ids = data.get("root_ids")
+    if root_ids is not None and not isinstance(root_ids, list):
+        return "root_ids must be a list"
+    for value in root_ids or []:
+        try:
+            if int(value) < 1:
+                return "root_ids must contain positive integers"
+        except (TypeError, ValueError):
+            return "root_ids must contain integers"
+    for key, minimum, maximum in (
+        ("max_files", 1, 5000),
+        ("max_bytes", 1, 50 * 1024 * 1024 * 1024),
+    ):
+        if key in data:
+            try:
+                value = int(data[key])
+            except (TypeError, ValueError):
+                return f"{key} must be an integer"
+            if not minimum <= value <= maximum:
+                return f"{key} must be between {minimum} and {maximum}"
+    return None
+
+
+@search_bp.route("/search/federated/roots", methods=["GET"])
+def federated_list_roots():
+    """List configured media roots with paths redacted by default."""
+    from opencut.core.federated_media_index import list_roots
+
+    include_paths = safe_bool(request.args.get("include_paths"), False)
+    include_disabled = safe_bool(request.args.get("include_disabled"), False)
+    try:
+        return jsonify(
+            {
+                "manifest_version": 1,
+                "roots": list_roots(
+                    include_paths=include_paths,
+                    include_disabled=include_disabled,
+                ),
+                "include_paths": include_paths,
+            }
+        )
+    except Exception as exc:
+        return safe_error(exc, "federated_list_roots")
+
+
+@search_bp.route("/search/federated/roots", methods=["POST"])
+@require_csrf
+def federated_add_root():
+    """Register one existing local directory for offline federation."""
+    data = request.get_json(silent=True) or {}
+    raw_path = data.get("path", data.get("root_path", ""))
+    try:
+        from opencut.security import validate_path
+
+        path = validate_path(str(raw_path).strip())
+        if not os.path.isdir(path):
+            return jsonify({"error": "root path is not a directory", "code": "INVALID_INPUT"}), 400
+        from opencut.core.federated_media_index import add_root
+
+        record = add_root(
+            path,
+            label=str(data.get("label") or ""),
+            retention_days=data.get("retention_days", 30),
+            max_files=data.get("max_files", 5000),
+            max_bytes=data.get("max_bytes", 50 * 1024 * 1024 * 1024),
+        )
+        record.pop("path", None)
+        return jsonify({"manifest_version": 1, "root": record}), 201
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "federated_add_root")
+
+
+@search_bp.route("/search/federated/roots/<int:root_id>", methods=["DELETE"])
+@require_csrf
+def federated_remove_root(root_id):
+    """Disable a root, or purge it when the caller explicitly requests it."""
+    data = request.get_json(silent=True) or {}
+    purge = safe_bool(data.get("purge"), False)
+    try:
+        from opencut.core.federated_media_index import remove_root
+
+        return jsonify(remove_root(root_id, purge=purge))
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "federated_remove_root")
+
+
+@search_bp.route("/search/federated/index", methods=["POST"])
+@require_csrf
+@async_job(
+    "federated-index",
+    filepath_required=False,
+    pre_validate=_validate_federated_index_payload,
+    resumable=True,
+)
+def federated_index(job_id, filepath, data):
+    """Incrementally scan configured media roots without network/model work."""
+    from opencut.core.federated_media_index import scan_roots
+
+    def on_progress(progress, message):
+        _update_job(job_id, progress=int(progress), message=str(message))
+
+    return scan_roots(
+        data.get("root_ids"),
+        max_files=data.get("max_files"),
+        max_bytes=data.get("max_bytes"),
+        on_progress=on_progress,
+        is_cancelled=lambda: _is_cancelled(job_id),
+    )
+
+
+@search_bp.route("/search/federated/query", methods=["POST"])
+@require_csrf
+def federated_query():
+    """Query the single redacted federation manifest."""
+    data = request.get_json(silent=True) or {}
+    query = str(data.get("query") or "").strip()
+    try:
+        from opencut.core.federated_media_index import search
+
+        result = search(
+            query,
+            modalities=data.get("modalities"),
+            root_ids=data.get("root_ids"),
+            limit=safe_int(data.get("limit", 50), 50, min_val=1, max_val=100),
+            include_paths=safe_bool(data.get("include_paths"), False),
+            include_stale=safe_bool(data.get("include_stale"), False),
+        )
+        return jsonify(result)
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "federated_query")
+
+
+@search_bp.route("/search/federated/status", methods=["GET"])
+def federated_status():
+    """Return federation schema, counts, limits, and capability states."""
+    raw_root_ids = request.args.getlist("root_id") or None
+    try:
+        from opencut.core.federated_media_index import status
+
+        return jsonify(
+            status(
+                root_ids=raw_root_ids,
+                include_paths=safe_bool(request.args.get("include_paths"), False),
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "federated_status")
+
+
+@search_bp.route("/search/federated/prune", methods=["POST"])
+@require_csrf
+def federated_prune():
+    """Preview or apply retention for records missing from complete scans."""
+    data = request.get_json(silent=True) or {}
+    try:
+        from opencut.core.federated_media_index import prune_missing
+
+        return jsonify(
+            prune_missing(
+                retention_days=data.get("retention_days"),
+                root_ids=data.get("root_ids"),
+                dry_run=safe_bool(data.get("dry_run"), False),
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except Exception as exc:
+        return safe_error(exc, "federated_prune")
+
+
+# ---------------------------------------------------------------------------
 # Multimodal index: transcript + OCR text + audio event tags
 # ---------------------------------------------------------------------------
 @search_bp.route("/search/multimodal-index", methods=["POST"])

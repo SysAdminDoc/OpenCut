@@ -1181,6 +1181,168 @@ def search_query(query, top_k):
     console.print()
 
 
+@search.group("federated")
+def federated_search():
+    """Manage the offline, configured-root media search index."""
+    pass
+
+
+def _print_federated_payload(payload, *, as_json=False):
+    if as_json:
+        console.print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
+        return
+    if isinstance(payload, dict) and isinstance(payload.get("roots"), list):
+        table = Table(title="Federated media roots", box=box.ROUNDED)
+        table.add_column("ID", justify="right")
+        table.add_column("Label", style="cyan")
+        table.add_column("Enabled")
+        table.add_column("Files", justify="right")
+        for root in payload["roots"]:
+            counts = root.get("file_counts") or {}
+            table.add_row(
+                str(root.get("root_id", "")),
+                str(root.get("label", "")),
+                "yes" if root.get("enabled") else "no",
+                str(counts.get("active", counts.get("total", 0))),
+            )
+        console.print(table)
+        return
+    if isinstance(payload, dict) and isinstance(payload.get("results"), list):
+        table = Table(title="Federated search results", box=box.ROUNDED)
+        table.add_column("Root", style="cyan")
+        table.add_column("File")
+        table.add_column("Modalities")
+        table.add_column("Timecodes", justify="right")
+        for result in payload["results"]:
+            table.add_row(
+                str(result.get("root_label", result.get("root_id", ""))),
+                str(result.get("relative_path", "")),
+                ", ".join(result.get("matched_modalities") or []),
+                str(len(result.get("timestamps") or [])),
+            )
+        console.print(table)
+        return
+    console.print_json(json.dumps(payload, ensure_ascii=False))
+
+
+@federated_search.command("root-add")
+@click.argument("path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.option("--label", default="", help="Human-readable root label")
+@click.option("--retention-days", default=30, show_default=True, type=click.IntRange(1, 3650))
+@click.option("--max-files", default=5000, show_default=True, type=click.IntRange(1, 5000))
+@click.option("--max-bytes", default=50 * 1024 * 1024 * 1024, show_default=True, type=click.IntRange(1, 50 * 1024 * 1024 * 1024))
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_root_add(path, label, retention_days, max_files, max_bytes, as_json):
+    """Add or re-enable a local project root."""
+    from .core.federated_media_index import add_root
+
+    try:
+        payload = add_root(
+            path,
+            label=label,
+            retention_days=retention_days,
+            max_files=max_files,
+            max_bytes=max_bytes,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    payload = dict(payload)
+    payload.pop("path", None)
+    _print_federated_payload({"root": payload}, as_json=as_json)
+
+
+@federated_search.command("roots")
+@click.option("--include-paths", is_flag=True, help="Include absolute root paths")
+@click.option("--include-disabled", is_flag=True, help="Include disabled roots")
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_roots(include_paths, include_disabled, as_json):
+    """List configured federation roots."""
+    from .core.federated_media_index import list_roots
+
+    _print_federated_payload(
+        {"manifest_version": 1, "roots": list_roots(include_paths=include_paths, include_disabled=include_disabled)},
+        as_json=as_json,
+    )
+
+
+@federated_search.command("root-remove")
+@click.argument("root_id", type=click.IntRange(1))
+@click.option("--purge", is_flag=True, help="Permanently remove indexed records for the root")
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_root_remove(root_id, purge, as_json):
+    """Disable or purge one configured root."""
+    from .core.federated_media_index import remove_root
+
+    try:
+        payload = remove_root(root_id, purge=purge)
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    _print_federated_payload(payload, as_json=as_json)
+
+
+@federated_search.command("index")
+@click.option("--root-id", "root_ids", multiple=True, type=click.IntRange(1), help="Restrict scan to a root (repeatable)")
+@click.option("--max-files", type=click.IntRange(1, 5000))
+@click.option("--max-bytes", type=click.IntRange(1, 50 * 1024 * 1024 * 1024))
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_index(root_ids, max_files, max_bytes, as_json):
+    """Incrementally scan configured roots offline."""
+    from .core.federated_media_index import scan_roots
+
+    payload = scan_roots(
+        list(root_ids) or None,
+        max_files=max_files,
+        max_bytes=max_bytes,
+    )
+    _print_federated_payload(payload, as_json=as_json)
+
+
+@federated_search.command("query")
+@click.argument("query", required=False, default="")
+@click.option("--modality", "modalities", multiple=True, help="Limit to text, ocr, audio, or visual")
+@click.option("--root-id", "root_ids", multiple=True, type=click.IntRange(1), help="Restrict to a root (repeatable)")
+@click.option("--limit", default=50, show_default=True, type=click.IntRange(1, 100))
+@click.option("--include-paths", is_flag=True, help="Include absolute media and thumbnail paths")
+@click.option("--include-stale", is_flag=True, help="Include stale or missing media records")
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_query(query, modalities, root_ids, limit, include_paths, include_stale, as_json):
+    """Search federated transcript, OCR, audio, and sidecar metadata."""
+    from .core.federated_media_index import search
+
+    try:
+        payload = search(
+            query,
+            modalities=list(modalities) or None,
+            root_ids=list(root_ids) or None,
+            limit=limit,
+            include_paths=include_paths,
+            include_stale=include_stale,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    _print_federated_payload(payload, as_json=as_json)
+
+
+@federated_search.command("prune")
+@click.option("--retention-days", type=click.IntRange(1, 3650))
+@click.option("--root-id", "root_ids", multiple=True, type=click.IntRange(1))
+@click.option("--dry-run", is_flag=True, help="Preview retention actions without changing the index")
+@click.option("--json", "as_json", is_flag=True, help="Print machine-readable JSON")
+def federated_prune(retention_days, root_ids, dry_run, as_json):
+    """Prune records missing longer than their retention window."""
+    from .core.federated_media_index import prune_missing
+
+    try:
+        payload = prune_missing(
+            retention_days=retention_days,
+            root_ids=list(root_ids) or None,
+            dry_run=dry_run,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    _print_federated_payload(payload, as_json=as_json)
+
+
 @cli.command("color-match")
 @click.argument("source", type=click.Path(exists=True))
 @click.argument("reference", type=click.Path(exists=True))

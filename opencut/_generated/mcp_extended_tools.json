@@ -3,15 +3,15 @@
   "enabled_by": "OPENCUT_MCP_EXTENDED_TOOLS=1 or opencut-mcp-server --extended-tools",
   "manifest_version": 1,
   "method_counts": {
-    "DELETE": 16,
-    "GET": 382,
+    "DELETE": 17,
+    "GET": 384,
     "PATCH": 1,
-    "POST": 1067,
+    "POST": 1070,
     "PUT": 2
   },
   "response_schema_count": 90,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1468,
+  "tool_count": 1474,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -409,6 +409,47 @@
         "response_schema": ""
       },
       "name": "opencut_route_delete_search_db_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false,
+        "title": "DELETE /search/federated/roots/<int:root_id>"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /search/federated/roots/<int:root_id>.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          },
+          "root_id": {
+            "description": "Path parameter `root_id` for `/search/federated/roots/<int:root_id>`.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "root_id"
+        ],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_remove_root",
+        "generated": true,
+        "method": "DELETE",
+        "path": "/search/federated/roots/<int:root_id>",
+        "path_params": [
+          {
+            "converter": "int",
+            "name": "root_id"
+          }
+        ],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_delete_search_federated_roots_by_root_id"
     },
     {
       "annotations": {
@@ -8566,6 +8607,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_search_db_stats"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /search/federated/roots"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /search/federated/roots.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_list_roots",
+        "generated": true,
+        "method": "GET",
+        "path": "/search/federated/roots",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_search_federated_roots"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /search/federated/status"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /search/federated/status.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_status",
+        "generated": true,
+        "method": "GET",
+        "path": "/search/federated/status",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_search_federated_status"
     },
     {
       "annotations": {
@@ -33429,6 +33530,96 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_search_db_search"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /search/federated/index"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /search/federated/index.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_index",
+        "generated": true,
+        "method": "POST",
+        "path": "/search/federated/index",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_search_federated_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /search/federated/prune"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /search/federated/prune.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_prune",
+        "generated": true,
+        "method": "POST",
+        "path": "/search/federated/prune",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_search_federated_prune"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /search/federated/roots"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /search/federated/roots.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "search",
+        "endpoint": "search.federated_add_root",
+        "generated": true,
+        "method": "POST",
+        "path": "/search/federated/roots",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_search_federated_roots"
     },
     {
       "annotations": {

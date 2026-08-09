@@ -45,7 +45,7 @@
     "captions",
     "ai"
   ],
-  "tool_count": 86,
+  "tool_count": 87,
   "tools": [
     {
       "description": "Generate an ADR (Automated Dialogue Replacement) cue list from sequence data.",
@@ -186,6 +186,10 @@
     {
       "description": "Return the enabled/disabled state of all feature flags.",
       "name": "opencut_feature_state"
+    },
+    {
+      "description": "Manage configured local media roots and search transcript, OCR, audio tags, and available visual sidecars offline.",
+      "name": "opencut_federated_search"
     },
     {
       "description": "Detect and remove filler words (um, uh, like, etc.) from audio.",

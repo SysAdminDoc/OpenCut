@@ -495,3 +495,26 @@ def get_all_indexed_files():
     init_db()
     rows = conn.execute("SELECT file_path FROM footage ORDER BY indexed_at DESC").fetchall()
     return [row["file_path"] for row in rows]
+
+
+def get_indexed_file(file_path):
+    """Return one complete indexed row for *file_path*, or ``None``.
+
+    The federated media index uses this small read-only accessor to import
+    transcript, OCR, and audio-tag data without duplicating the footage DB's
+    schema or reaching into its private connection state.
+    """
+    if not isinstance(file_path, str) or not file_path.strip():
+        return None
+    conn = _get_conn()
+    init_db()
+    row = conn.execute(
+        """
+        SELECT file_path, transcript, indexed_at, file_mtime, duration,
+               file_size, ocr_text, audio_tags
+        FROM footage
+        WHERE file_path = ?
+        """,
+        (file_path,),
+    ).fetchone()
+    return dict(row) if row is not None else None

@@ -759,6 +759,35 @@ MCP_TOOLS = [
         },
     },
     {
+        "name": "opencut_federated_search",
+        "description": "Manage configured local media roots and search transcript, OCR, audio tags, and available visual sidecars offline.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "default": "search",
+                    "enum": ["roots", "add_root", "remove_root", "index", "search", "status", "prune"],
+                },
+                "root_path": {"type": "string", "description": "Local directory for add_root"},
+                "root_id": {"type": "integer", "description": "Configured root ID"},
+                "root_ids": {"type": "array", "items": {"type": "integer"}},
+                "label": {"type": "string"},
+                "query": {"type": "string", "description": "Transcript/OCR/audio query"},
+                "modalities": {"type": "array", "items": {"type": "string"}},
+                "limit": {"type": "integer", "default": 50},
+                "include_paths": {"type": "boolean", "default": False},
+                "include_stale": {"type": "boolean", "default": False},
+                "include_disabled": {"type": "boolean", "default": False},
+                "purge": {"type": "boolean", "default": False},
+                "dry_run": {"type": "boolean", "default": False},
+                "retention_days": {"type": "integer", "default": 30},
+                "max_files": {"type": "integer", "default": 5000},
+                "max_bytes": {"type": "integer", "default": 53687091200},
+            },
+        },
+    },
+    {
         "name": "opencut_spectral_match",
         "description": "Match a clip's spectral profile to a reference audio or video file.",
         "inputSchema": {
@@ -1386,6 +1415,7 @@ _TOOL_ROUTES = {
     "opencut_capability_probe": ("GET", "/system/capabilities"),
     "opencut_brand_kit": ("GET", "/settings/brand-kit"),
     "opencut_semantic_search": ("POST", "/search/ai"),
+    "opencut_federated_search": ("POST", "/search/federated/query"),
     "opencut_spectral_match": ("POST", "/audio/spectral-match"),
     # Video editing tools
     "opencut_trim_video": ("POST", "/video/trim"),
@@ -1472,6 +1502,7 @@ _REQUIRED_MCP_PATH_KEYS = (
     "lut_path",
     "music_path",
     "speech_path",
+    "root_path",
 )
 _OPTIONAL_MCP_PATH_KEYS = (
     "style_image",
@@ -1481,7 +1512,7 @@ _OPTIONAL_MCP_PATH_KEYS = (
     "output_path",
     "sidecar_path",
 )
-_MCP_PATH_ARRAY_KEYS = ("files", "media_paths", "extra_files")
+_MCP_PATH_ARRAY_KEYS = ("files", "media_paths", "extra_files", "root_paths")
 _NESTED_MCP_PATH_CONTAINERS = ("body", "query")
 
 
@@ -1644,6 +1675,38 @@ def handle_tool_call(tool_name, arguments):
             return _api("GET", "/search/ai/index/status")
         elif action != "search":
             return {"error": "Invalid action for opencut_semantic_search"}
+
+    if tool_name == "opencut_federated_search":
+        action = str(arguments.get("action") or "search").strip().lower()
+        if action == "roots":
+            params = {
+                "include_paths": "true" if arguments.get("include_paths") else "false",
+                "include_disabled": "true" if arguments.get("include_disabled") else "false",
+            }
+            path = "/search/federated/roots?" + urllib.parse.urlencode(params)
+            return _api("GET", path)
+        if action == "add_root":
+            return _api("POST", "/search/federated/roots", arguments)
+        if action == "remove_root":
+            try:
+                root_id = int(arguments.get("root_id"))
+            except (TypeError, ValueError):
+                return {"error": "root_id is required for remove_root"}
+            return _api("DELETE", f"/search/federated/roots/{root_id}", arguments)
+        if action == "index":
+            return _api("POST", "/search/federated/index", arguments)
+        if action == "status":
+            query_items = []
+            if arguments.get("include_paths"):
+                query_items.append(("include_paths", "true"))
+            for root_id in arguments.get("root_ids") or []:
+                query_items.append(("root_id", str(root_id)))
+            suffix = "?" + urllib.parse.urlencode(query_items) if query_items else ""
+            return _api("GET", "/search/federated/status" + suffix)
+        if action == "prune":
+            return _api("POST", "/search/federated/prune", arguments)
+        if action != "search":
+            return {"error": "Invalid action for opencut_federated_search"}
 
     return _api(method, path, arguments)
 

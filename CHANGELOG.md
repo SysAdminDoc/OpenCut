@@ -3,6 +3,13 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+### Added - Federated offline media search
+
+- Configured project roots now reconcile transcript, OCR, audio-tag, and
+  available visual-sidecar metadata in one versioned local database, with
+  incremental scans, move/delete/content-change handling, retention pruning,
+  normalized timestamps, capability states, and redacted REST/CLI/MCP output.
+
 ### Added - Deterministic audio-reactive renderer
 
 - `/video/audio-reactive` now creates a durable cancellable job and renders
