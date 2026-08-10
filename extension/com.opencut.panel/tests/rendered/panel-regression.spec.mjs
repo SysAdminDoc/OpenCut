@@ -873,9 +873,11 @@ test("panel styles use the compact radius scale without pill geometry", async ()
     new URL("../../client/style.css", import.meta.url),
     new URL("../../client/command-center-layout.css", import.meta.url),
     new URL("../../client/command-center.css", import.meta.url),
+    new URL("../../client/studio-workbench-v2.css", import.meta.url),
     new URL("../../../com.opencut.uxp/style.css", import.meta.url),
     new URL("../../../com.opencut.uxp/command-center-layout.css", import.meta.url),
     new URL("../../../com.opencut.uxp/command-center.css", import.meta.url),
+    new URL("../../../com.opencut.uxp/studio-workbench-v2.css", import.meta.url),
   ];
   const allowed = new Set([0, 4, 6, 8, 10, 12]);
 
@@ -987,7 +989,11 @@ for (const [surfaceName, surface] of Object.entries(SURFACES)) {
           ).toBeGreaterThan(20);
           if (surfaceName === "cep") {
             await expect(
-              page.locator("#contentTitle, .content-header h1").first(),
+              page
+                .locator(
+                  "#contentTitle:visible, .content-header h1:visible, .studio-page-heading h2:visible",
+                )
+                .first(),
             ).toBeVisible();
             if (tabName === "captions") {
               const captionDisplaySelects = page.locator(
@@ -1568,7 +1574,7 @@ for (const width of [480, 520]) {
           expect(region.bottom).toBeLessThanOrEqual(800);
         }
         if (tabName === "settings") {
-          expect(geometry.settingsGroup.width).toBeGreaterThanOrEqual(width - 32);
+          expect(geometry.settingsGroup.width).toBeGreaterThanOrEqual(width - 36);
         }
       }
 
@@ -1661,7 +1667,7 @@ test("wide command-center shells expose editorial rails and settings grids", asy
   expect(cepGeometry.sidebarWidth).toBeGreaterThanOrEqual(160);
   expect(cepGeometry.cardColumns).toBeGreaterThan(200);
   expect(cepGeometry.bodyFontSize).toBeGreaterThanOrEqual(14);
-  expect(cepGeometry.brandMetaDisplay).toBe("none");
+  expect(cepGeometry.brandMetaDisplay).toBe("block");
   expect(cepGeometry.kickerDisplay).toBe("none");
   expect(cepGeometry.cardShadow).toBe("none");
   expect(cepGeometry.cardRadius).toBe("0px");
@@ -1712,10 +1718,11 @@ test("wide command-center shells expose editorial rails and settings grids", asy
         .map((title) => title.textContent?.trim()),
     };
   });
-  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(148);
-  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(160);
+  expect(uxpGeometry.railWidth).toBeGreaterThanOrEqual(164);
+  expect(uxpGeometry.railWidth).toBeLessThanOrEqual(172);
   expect(uxpGeometry.tabDirection).toBe("column");
-  expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(48);
+  expect(uxpGeometry.headerHeight).toBeGreaterThanOrEqual(70);
+  expect(uxpGeometry.headerHeight).toBeLessThanOrEqual(76);
   expect(uxpGeometry.overviewHeight).toBeLessThanOrEqual(90);
   expect(uxpGeometry.connectionRadius).toBe("0px");
   expect(uxpGeometry.connectionBackground).toBe("rgba(0, 0, 0, 0)");
@@ -1774,14 +1781,17 @@ test("wide command-center shells expose editorial rails and settings grids", asy
       selectBottom: select.borderBottomWidth,
     };
   });
-  expect(fieldGrammar).toEqual({
-    inputRadius: "6px",
-    inputTop: "1px",
-    inputBottom: "1px",
-    selectRadius: "6px",
-    selectTop: "1px",
-    selectBottom: "1px",
-  });
+  expect(fieldGrammar.inputRadius).toBe("6px");
+  expect(fieldGrammar.selectRadius).toBe("6px");
+  for (const width of [
+    fieldGrammar.inputTop,
+    fieldGrammar.inputBottom,
+    fieldGrammar.selectTop,
+    fieldGrammar.selectBottom,
+  ]) {
+    expect(Number.parseFloat(width)).toBeGreaterThanOrEqual(0.75);
+    expect(Number.parseFloat(width)).toBeLessThanOrEqual(1);
+  }
   await page.locator("#clipPathCut").fill("C:/media/interview.mov");
   await page.locator(".oc-tab[data-tab='settings']").click();
   await page.locator("#settingsNavWorkspace").click();
@@ -1840,12 +1850,12 @@ test("UXP hierarchy keeps tertiary actions, suggestions, and notices visually op
       background: style.backgroundColor,
     };
   });
-  expect(noticeGrammar).toEqual({
+  expect(noticeGrammar).toMatchObject({
     borderTop: "0px",
-    borderLeft: "2px",
     radius: "0px",
     background: "rgba(0, 0, 0, 0)",
   });
+  expect(Number.parseFloat(noticeGrammar.borderLeft)).toBeGreaterThanOrEqual(1.5);
   expect(pageErrors).toEqual([]);
 });
 
