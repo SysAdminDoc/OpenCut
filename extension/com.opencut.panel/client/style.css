@@ -16519,7 +16519,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     resize: vertical;
     background: var(--bg-input, #151a22);
     border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    border-radius: var(--r-xs, 3px);
+    border-radius: var(--r-xs, 4px);
     color: var(--text-primary, #eef2f8);
     font: 11px/1.4 var(--font-mono, monospace);
     padding: 7px 8px;
@@ -16629,7 +16629,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     align-items: center;
     padding: 6px 8px;
     border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    border-radius: var(--r-xs, 3px);
+    border-radius: var(--r-xs, 4px);
 }
 
 .oc-wave-h-virality-rank {
