@@ -2,10 +2,27 @@
 
 > **Deadline:** CEP support removed from Premiere Pro ~September 2026
 > **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
-> **Last updated:** 2026-05-19
+> **Last updated:** 2026-08-08
 > **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)
 > **UDT smoke harness:** `opencut/_generated/uxp_udt_harness.json` and bundled panel copy `extension/com.opencut.uxp/uxp-udt-harness.json`
 > **UDT result validation:** `python -m opencut.tools.validate_uxp_udt_results <capture.json> --json`
+
+## Static UXP Compatibility Gate
+
+The generated `opencut/_generated/adobe_uxp_compatibility.json` records the
+minimum Premiere host, pinned `@adobe/premierepro` package/API version,
+sync/async expectation, fallback, and source locations for the UXP APIs used
+by OpenCut. Regenerate it with:
+
+```text
+python -m opencut.tools.adobe_uxp_compatibility
+python -m opencut.tools.adobe_uxp_compatibility --check --json
+```
+
+The check is static and does not require Premiere. It covers host fixtures for
+25.6, 26.2, and 26.3, including the `Sequence.setSelection` behavior change.
+An undeclared call reports its UXP source file and line. Live Premiere/UDT
+verification remains a separate operator-gated check.
 
 ## Migration Strategy
 

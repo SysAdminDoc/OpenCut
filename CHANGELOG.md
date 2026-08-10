@@ -3180,3 +3180,88 @@ record also lives in the git commit messages.
   test runs via `create_app(testing=True)`.
 - README: added June 2026 cost comparison table vs CapCut Pro, Submagic,
   AutoCut, and FireCut.
+
+## Roadmap archive — 2026-08-10 — ROADMAP.md
+
+<details>
+<summary>Original roadmap snapshot</summary>
+
+```markdown
+# Roadmap
+
+Single task tracker for known issues and planned work. Items below come from
+verified engineering/product audits through 2026-07-29 (with file locations);
+fixes already shipped are recorded in CHANGELOG.md and git
+history, not here.
+
+Blocked items (credential/license/hardware-gated) are tracked separately in a
+maintainer-local `Roadmap_Blocked.md`, which is deliberately untracked — it is
+a working file, not part of a clone. This file is the tracked queue.
+
+## Research-Driven Additions
+
+### P0 — 2026-08-02 (research pass)
+
+### P1 — 2026-08-02 (research pass)
+
+### P3 — 2026-08-02 (research pass)
+
+### P0 — 2026-07-29
+
+### P1 — 2026-07-25
+
+### P1 — 2026-07-29
+
+### P2 — 2026-07-25
+
+### P2 — 2026-07-29
+
+### P1 — 2026-08-08 (research pass)
+
+### P2 — 2026-08-08 (research pass)
+
+## Audit Findings — 2026-08-02
+
+Baseline recorded before this audit (all green, so every item below is a new
+finding, not a pre-existing failure): `py -3.12 -m pytest tests/ -q` →
+**10726 passed, 21 skipped, 4656 subtests, 0 failed** (686 s);
+`ruff check opencut/ --select E,F,I --ignore E501` → clean;
+`scripts/sync_version.py --check` → all files in sync at v1.46.0; all five
+generated manifests report in-sync; `npx playwright test` (panel rendered
+suite) → 57 passed, 1 skipped; `npm run lint` → 0 errors, 24 warnings.
+
+### P1 — 2026-08-02
+
+
+### P2 — 2026-08-02
+```
+
+</details>
+
+## Roadmap archive — 2026-08-10 — docs/ROADMAP.md
+
+<details>
+<summary>Original roadmap snapshot</summary>
+
+```markdown
+# OpenCut — Implementation Roadmap
+
+> **Moved.** F184 resolved the dual-roadmap drift. The canonical
+> roadmap lives at [`../ROADMAP.md`](../ROADMAP.md) at the repo root.
+> Per-pass changelog status and the F-numbered governance ledger
+> are all maintained there.
+>
+> This stub exists only so old links / bookmarks to
+> `docs/ROADMAP.md` keep resolving. Do not edit it; do not add new
+> entries here. The `roadmap-mirror` release-smoke step (see
+> [`scripts/release_smoke.py`](../scripts/release_smoke.py)) refuses
+> a release if this file grows back into a parallel roadmap.
+
+See:
+
+- [`../ROADMAP.md`](../ROADMAP.md) — canonical roadmap and active task tracker.
+- [`../CHANGELOG.md`](../CHANGELOG.md) — shipped-history ledger.
+- [`../RESEARCH.md`](../RESEARCH.md) — consolidated research conclusions.
+```
+
+</details>

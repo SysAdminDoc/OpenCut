@@ -3,10 +3,10 @@
 > **What:** The `opencut-mcp-server` console script speaks the [Model
 > Context Protocol](https://modelcontextprotocol.io) so AI clients
 > (Claude Code, Cursor, Continue, Aider, etc.) can drive OpenCut's
-> 86 curated MCP tools and 1,468 generated route-level tools without
+> 88 curated MCP tools and 1,474 generated route-level tools without
 > writing one-off HTTP shims.
 >
-> **Status:** Shipped since v1.30.0. 86 curated tools cover the most
+> **Status:** Shipped since v1.30.0. 88 curated tools cover the most
 > common silence/filler/captions/highlights/export pipelines plus
 > the Pass-2 expansion (Brand Kit, semantic search, marker import,
 > review bundles, C2PA provenance, ElevenLabs TTS, caption QC,
@@ -74,13 +74,18 @@ the stdio and HTTP transports cannot drift apart.
   answered on a guess.
 - OpenTelemetry `traceparent` / `tracestate` / `baggage` values supplied in a
   request's `_meta` are echoed back in the result's `_meta`.
-- **Not claimed, because not implemented:** `subscriptions/listen`, the
-  `io.modelcontextprotocol/tasks` extension, sampling, and roots. Calling them
-  returns `-32601` rather than a half-working stub.
+- The `io.modelcontextprotocol/tasks` extension is backed by the durable
+  backend job store. A client that declares the extension can receive a
+  `resultType: "task"` handle from a long-running `tools/call`; the handle's
+  `taskId` is the existing OpenCut `job_id` and remains pollable after the MCP
+  sidecar reconnects. `tasks/get`, `tasks/update`, and `tasks/cancel` map to
+  persisted job state and cooperative backend cancellation.
+- **Not claimed, because not implemented:** `subscriptions/listen`, sampling,
+  and roots. Calling them returns `-32601` rather than a half-working stub.
 - The `mcp` SDK is not imported by OpenCut — the server speaks JSON-RPC
   directly — so both the 1.x and 2.x SDK lines work as client-side tooling.
 
-## 3. Tool catalogue (86 tools)
+## 3. Tool catalogue (88 tools)
 
 The full schema for each tool lives in
 [`opencut/mcp_server.py`](../opencut/mcp_server.py)
@@ -98,11 +103,37 @@ under `MCP_TOOLS`. Categories:
   capability probe, face reshape, skin retouch, smart upscale, C2PA
   provenance, ElevenLabs TTS.
 
-Every curated tool returns either a synchronous `result` dict or a `job_id`
-the client can poll via `opencut_job_status`. The list is curated:
+Every curated tool returns either a synchronous `result` dict or a `job_id`.
+Clients without Tasks support can poll that ID via `opencut_job_status`. Clients
+that declare `io.modelcontextprotocol/tasks` receive a standard task handle for
+eligible long-running calls and should use `tasks/get` instead. The list is curated:
 core editing routes are exposed; install / settings / housekeeping
 routes are deliberately left to the HTTP REST surface so MCP clients
 can't accidentally reconfigure the backend.
+
+### MCP Tasks compatibility
+
+Tasks are created only after the backend confirms the returned job is durable.
+The adapter maps `running` to `working`, `complete` to `completed`, `error` or
+`interrupted` to `failed`, and `cancelled` to `cancelled`. OpenCut does not
+currently create `input_required` jobs, so `tasks/update` is an empty,
+read-validated acknowledgement. Clients that do not declare the extension keep
+the pre-existing text-wrapped job response and `opencut_job_status` workflow.
+
+### MCP Apps review/progress surface
+
+Clients that advertise the `io.modelcontextprotocol/ui` extension with the
+`text/html;profile=mcp-app` MIME type receive a versioned
+`ui://opencut/review-progress/v1/index.html` resource. `tools/list` links the
+resource only for the job-status, review-bundle, federated-search, and review
+action tools; clients without that capability continue to receive the normal
+text result and an empty `resources/list` response.
+
+The bundled view has no network, frame, or browser permissions. Tool results
+are copied into `structuredContent` after local-path redaction, and its
+buttons can call only `opencut_review_action` for refresh, cancellation, or
+approval decisions. `resources/read` rejects the URI unless the client
+advertised the Apps capability, and unknown resource URIs are rejected.
 
 ### Extended route catalogue (F194)
 
@@ -156,8 +187,8 @@ Fields the manifest captures:
 | `license` | `MIT` from `pyproject.toml`. |
 
 The extended manifest is separate on purpose: upstream registries and
-most users should see the 86 curated tools by default, while local
-power users can opt into the generated 1,468 route-level set.
+most users should see the 88 curated tools by default, while local
+power users can opt into the generated 1,474 route-level set.
 
 ## 5. Registering with `modelcontextprotocol/servers`
 
@@ -238,7 +269,7 @@ tracked as the only remaining external action for F147.
 
 ## 8. References
 
-- `opencut/mcp_server.py` — full implementation, 1,160+ lines, 86
+- `opencut/mcp_server.py` — full implementation, 1,160+ lines, 88
   curated tools, JSON-RPC 2.0 over stdio + HTTP.
 - `opencut/_generated/mcp_server_registry.json` — registry manifest
   this doc points at.
