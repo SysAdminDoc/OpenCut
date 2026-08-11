@@ -1,5 +1,7 @@
 """Tests for opencut.core.ffmpeg_provenance — version parsing + security floor."""
 
+import re
+
 from opencut.core import ffmpeg_provenance as fp
 
 # Real gyan.dev banner shapes (first line of `ffmpeg -version`).
@@ -68,14 +70,17 @@ def test_floor_release_801_is_below():
     res = fp.check_security_floor(BANNER_801)
     assert res["ok"] is False
     assert res["lane"] == "release"
-    assert "predates" in res["reason"]
+    # The matrix names which advisories are unresolved rather than quoting a
+    # single global floor, so assert the verdict instead of the prose.
+    assert "CVE-2026-64832" in res["unresolved_cves"]
+    assert "at/below the last affected release" in res["reason"]
 
 
 def test_floor_release_811_is_below_cve_floor():
     res = fp.check_security_floor(BANNER_811)
     assert res["ok"] is False
     assert res["lane"] == "release"
-    assert "8.1.3" in res["reason"]
+    assert set(res["unresolved_cves"]) >= set(fp.JULY_2026_CVES)
 
 
 def test_floor_release_812_is_rejected_for_july_cves():
@@ -128,7 +133,9 @@ def test_floor_undated_git_snapshot_is_not_confirmable():
     res = fp.check_security_floor(BANNER_BTBN_NODATE)
     assert res["ok"] is False
     assert res["lane"] == "snapshot"
-    assert "no embedded date" in res["reason"]
+    assert "carries no date" in res["reason"]
+    # An unknown build must fail closed on every advisory, not just the newest.
+    assert set(res["unresolved_cves"]) == {a.cve for a in fp.SECURITY_ADVISORIES}
 
 
 def test_floor_unparseable_banner():
@@ -182,3 +189,75 @@ def test_require_security_floor_raises_actionable_error(monkeypatch):
         assert exc.grade["version"].startswith("8.1.1")
     else:  # pragma: no cover - defensive
         raise AssertionError("unsafe FFmpeg should be blocked")
+
+
+# ---------------------------------------------------------------------------
+# F304 — per-CVE advisory matrix
+# ---------------------------------------------------------------------------
+
+BANNER_SNAPSHOT_PARTIAL = (
+    "ffmpeg version 2026-07-01-git-1111111111-full_build-www.gyan.dev Copyright (c)"
+)
+CONF_FULL = "--enable-nvdec --enable-cuvid --enable-libquirc --enable-libx264"
+CONF_MINIMAL = "--enable-libx264 --enable-gpl"
+CONF_DISABLED = (
+    "--disable-demuxer=spdif --disable-decoder=adpcm_adx --disable-decoder=magicyuv"
+)
+
+
+def test_every_advisory_names_a_fix_commit_and_landing_date():
+    assert fp.SECURITY_ADVISORIES, "the matrix must not be empty"
+    for advisory in fp.SECURITY_ADVISORIES:
+        assert len(advisory.fix_commit) == 40, advisory.cve
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", advisory.fix_landed), advisory.cve
+        assert advisory.capability_tokens, advisory.cve
+
+
+def test_matrix_covers_every_declared_july_cve():
+    """The gate must not certify a CVE it does not actually grade."""
+    graded = {advisory.cve for advisory in fp.SECURITY_ADVISORIES}
+    assert set(fp.JULY_2026_CVES) <= graded
+
+
+def test_snapshot_is_graded_per_cve_not_by_one_global_date():
+    """A snapshot can carry some fixes and not others."""
+    res = fp.check_security_floor(BANNER_SNAPSHOT_PARTIAL, configure_line=CONF_FULL)
+    assert res["ok"] is False
+    # spdif (2026-06-29) and ADX (2026-06-30) landed before this build.
+    assert "CVE-2026-64833" not in res["unresolved_cves"]
+    assert "CVE-2026-64835" not in res["unresolved_cves"]
+    # NVDEC (2026-07-04) and quirc (2026-07-05) did not.
+    assert "CVE-2026-64832" in res["unresolved_cves"]
+    assert "CVE-2026-66041" in res["unresolved_cves"]
+
+
+def test_absent_component_waives_its_advisory():
+    """'Prove the component absent' is the acceptance path a date cannot give."""
+    res = fp.check_security_floor(BANNER_SNAPSHOT_PARTIAL, configure_line=CONF_MINIMAL)
+    assert res["ok"] is True
+    assert {"CVE-2026-64832", "CVE-2026-66041"} <= set(res["not_applicable_cves"])
+
+
+def test_default_built_component_needs_an_explicit_disable_to_be_waived():
+    affected = fp.check_security_floor(BANNER_812, configure_line=CONF_MINIMAL)
+    assert affected["ok"] is False
+    assert "CVE-2026-64833" in affected["unresolved_cves"]
+
+    disabled = fp.check_security_floor(BANNER_812, configure_line=CONF_DISABLED)
+    assert "CVE-2026-64833" in disabled["not_applicable_cves"]
+
+
+def test_missing_configure_line_never_waives_an_advisory():
+    """Absence of evidence is not evidence of absence."""
+    res = fp.check_security_floor(BANNER_812)
+    assert res["ok"] is False
+    assert res["not_applicable_cves"] == []
+
+
+def test_pinned_bundled_snapshot_still_clears_every_advisory():
+    res = fp.check_security_floor(
+        f"ffmpeg version {fp.PINNED_INSTALLER_VERSION} Copyright (c)"
+    )
+    assert res["ok"] is True
+    assert res["unresolved_cves"] == []
+    assert all(entry["status"] == "fixed" for entry in res["advisories"])

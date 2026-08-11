@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - FFmpeg acceptance is now decided per CVE
+
+- The security floor graded builds against one global snapshot date, so a
+  differently-branched build dated after the floor was accepted without
+  containing the fixes, and a build that simply did not compile the affected
+  component could not be accepted at all. Each advisory now carries its own
+  upstream fix commit, the date it landed on master, the last affected
+  release, and the `configure` tokens that decide whether the vulnerable
+  component is even present. A build passes only when every advisory is fixed
+  or provably not applicable; an undated snapshot still fails closed, because
+  absence of evidence never waives an advisory. The `configure` probe runs only
+  when the version alone is insufficient, so the common path still costs one
+  subprocess call.
+
 ### Fixed - Panel CSRF bootstrap on host-embedded panels
 
 - The CEP panel is a `file://` document, so its requests carry `Origin: null`

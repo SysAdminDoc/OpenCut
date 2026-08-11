@@ -7,16 +7,6 @@ Actionable work only. Historical and completed roadmap material is archived in C
 Added 2026-08-10 from the research pass recorded in `RESEARCH.md`. IDs continue the existing F-number
 scheme (highest prior allocation: F302).
 
-### P0
-
-- [ ] P0 — F304 — Replace the FFmpeg snapshot date heuristic with a per-CVE fix-commit and capability matrix
-  Why: The blocker that parked this work is resolved — the bundled binary is the pinned post-fix snapshot and `require_security_floor()` passes — but the accepted lane is still a date comparison, so a differently-branched build dated after the floor would be accepted without containing the fixes.
-  Evidence: `opencut/core/ffmpeg_provenance.py:40-105` (`SNAPSHOT_FLOOR_DATE = "2026-07-06"`, `JULY_2026_FIX_COMMITS`); measured 2026-08-10 — bundled `ffmpeg/ffmpeg.exe` reports `2026-08-03-git-01a25f74cc-full_build-www.gyan.dev` matching `PINNED_INSTALLER_VERSION`, `require_security_floor()` returns `{"ok": true, "lane": "snapshot"}`, and GitHub's compare API places `01a25f74cc` 493 commits ahead of fix commit `4c6217477fc64305055b37d9d1d0d76d30e37f97` with `behind_by: 0`; https://www.ffmpeg.org/security.html
-  Touches: `opencut/core/ffmpeg_provenance.py`, `opencut/helpers.py`, `scripts/verify_ffmpeg_provenance.py`, release/provenance tests
-  Acceptance: Acceptance is decided per CVE from recorded upstream fix commits plus compiled capability probing rather than a snapshot date; a build that is newer than the floor date but lacks a fix commit and exposes the implicated component fails closed; the existing bundled snapshot still passes; the corresponding entry is removed from `Roadmap_Blocked.md` in the same change.
-  Complexity: M
-  Note: Supersedes and unblocks the `P0 — Replace the FFmpeg 8.1.2 security floor` entry in `Roadmap_Blocked.md:9-19`, whose "no compliant binary exists" premise was measured stale on 2026-08-10.
-
 ### P1
 
 - [ ] P1 — F305 — Migrate the 13 `cv2.CascadeClassifier` call sites to `cv2.FaceDetectorYN`
