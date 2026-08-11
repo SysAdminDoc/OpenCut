@@ -12,16 +12,25 @@ The roadmap carries two related FFmpeg items:
 
 This module is the single source of truth for "which bundled FFmpeg build is
 acceptable". It parses the human-readable ``ffmpeg -version`` banner into a
-structured provenance record and grades it against two acceptance lanes:
+structured provenance record, then grades that record against the per-CVE
+matrix in :data:`SECURITY_ADVISORIES`. Each advisory carries its own upstream
+fix commit, the date that commit landed on master, the last affected release,
+and the ``configure`` tokens that decide whether this build even compiles the
+vulnerable component.
 
-* **release lane** — a tagged release ``>= 8.1.3``. The 8.1.2 release is
-  rejected until upstream publishes a point release containing the four July
-  2026 crafted-media fixes.
-* **snapshot lane** — a gyan.dev / BtbN git-master snapshot dated on/after
-  :data:`SNAPSHOT_FLOOR_DATE`, the guaranteed-clean lane that demonstrably
-  carries the July-2026 commits. The exact bundled snapshot
-  (:data:`REFERENCE_GIT_COMMIT`) is recorded so the Windows release can be
-  reproduced from a named source archive.
+A build is accepted only when every advisory resolves to one of:
+
+* **fixed** — the build is a recorded post-fix snapshot, a git-master snapshot
+  dated on/after that advisory's fix landed, or a release newer than the last
+  affected one; or
+* **not applicable** — the build's ``configure`` line proves the affected
+  component is not compiled in.
+
+Anything else fails closed, including an undated snapshot: absence of evidence
+never waives an advisory. :data:`RELEASE_FLOOR` and :data:`SNAPSHOT_FLOOR_DATE`
+remain as the documented summary of that matrix, and the exact bundled snapshot
+(:data:`REFERENCE_GIT_COMMIT`) is recorded so the Windows release can be
+reproduced from a named source archive.
 
 The module is deliberately stdlib-only so it works inside a fresh
 ``pip install -e .`` and inside the ``scripts/verify_ffmpeg_provenance.py``
@@ -34,6 +43,7 @@ import logging
 import re
 import shutil
 import subprocess
+from dataclasses import dataclass
 from typing import Optional
 
 logger = logging.getLogger("opencut")
@@ -78,6 +88,76 @@ JULY_2026_FIX_COMMITS: tuple[str, ...] = (
     "6f80e2765492700622596af720534cef33dd31b4",
     "1836ef96846937a6cc2443698a693104f5c0b21e",
     "4da9812e25894fb51d62a8875cfa8eb39b5e20f5",
+)
+
+
+@dataclass(frozen=True)
+class CveAdvisory:
+    """One advisory, the commit that fixed it, and the component it needs.
+
+    ``capability_tokens`` are substrings of the build's ``configure`` line. A
+    build that enables none of them cannot reach the vulnerable code at all,
+    which is the "prove the component absent" acceptance path — a date alone
+    can never establish that.
+    """
+
+    cve: str
+    component: str
+    fix_commit: str
+    #: Date the fix landed on master. Master is linear, so a snapshot built
+    #: on/after this date contains it.
+    fix_landed: str
+    #: Releases at or below this are affected; ``None`` means every release.
+    affected_max_release: Optional[tuple[int, int, int]]
+    capability_tokens: tuple[str, ...]
+
+
+#: Per-CVE acceptance matrix. Replaces the single global snapshot-date
+#: heuristic: each advisory is graded against its own fix commit, its own
+#: landing date, and whether this build even compiles the affected component.
+SECURITY_ADVISORIES: tuple[CveAdvisory, ...] = (
+    CveAdvisory(
+        cve="CVE-2026-64832",
+        component="NVDEC hardware decoder (libavcodec/nvdec.c)",
+        fix_commit="4c6217477fc64305055b37d9d1d0d76d30e37f97",
+        fix_landed="2026-07-04",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("--enable-nvdec", "--enable-cuvid", "--enable-ffnvcodec"),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-64833",
+        component="S/PDIF DTS demuxer",
+        fix_commit="6f80e2765492700622596af720534cef33dd31b4",
+        fix_landed="2026-06-29",
+        affected_max_release=(8, 1, 2),
+        # spdif is built unless explicitly disabled, so an explicit disable is
+        # the only way to prove absence.
+        capability_tokens=("!--disable-demuxer=spdif",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-64835",
+        component="ADX/AAX decoder",
+        fix_commit="1836ef96846937a6cc2443698a693104f5c0b21e",
+        fix_landed="2026-06-30",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("!--disable-decoder=adpcm_adx",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-66041",
+        component="quirc QR filter (vf_quirc)",
+        fix_commit="4da9812e25894fb51d62a8875cfa8eb39b5e20f5",
+        fix_landed="2026-07-05",
+        affected_max_release=(8, 1, 2),
+        capability_tokens=("--enable-libquirc",),
+    ),
+    CveAdvisory(
+        cve="CVE-2026-8461",
+        component="MagicYUV decoder",
+        fix_commit="374b726ffa878ee1cadb987bd1e1e20cc7ed8845",
+        fix_landed="2026-06-12",
+        affected_max_release=(8, 1, 1),
+        capability_tokens=("!--disable-decoder=magicyuv",),
+    ),
 )
 
 # The human-readable version string and exact redistribution inputs the
@@ -201,13 +281,155 @@ def parse_version_banner(banner: str) -> dict:
     return record
 
 
-def check_security_floor(banner: str) -> dict:
-    """Grade an ``ffmpeg -version`` banner against the security floor.
+#: Commits known to descend from every recorded fix. A build reporting one of
+#: these is accepted outright — this is how the pinned bundled snapshot passes
+#: without re-deriving ancestry offline.
+KNOWN_GOOD_COMMITS: tuple[str, ...] = (REFERENCE_GIT_COMMIT,)
 
-    Returns ``{ok, lane, version, snapshot_date, git_commit, reason, cves}``.
-    ``ok`` is ``True`` only when the build clears the release lane (``>= 8.1.3``)
-    or the snapshot lane (git-master dated ``>= SNAPSHOT_FLOOR_DATE``). The
-    grading never raises.
+
+def _advisory_applies(advisory: CveAdvisory, configure_line: str) -> Optional[bool]:
+    """Is *advisory*'s component compiled into this build?
+
+    Returns ``True``/``False`` when the configure line settles it, and ``None``
+    when no configure line is available — an unknown component must be treated
+    as present, never as absent.
+    """
+    if not configure_line:
+        return None
+    for token in advisory.capability_tokens:
+        if token.startswith("!"):
+            # Built by default: only an explicit disable proves absence.
+            if token[1:] in configure_line:
+                return False
+        elif token in configure_line:
+            return True
+    # Every token was an opt-in enable and none appeared -> not compiled in.
+    if all(not tok.startswith("!") for tok in advisory.capability_tokens):
+        return False
+    return True
+
+
+def grade_advisory(
+    advisory: CveAdvisory,
+    rec: dict,
+    configure_line: str = "",
+) -> dict:
+    """Grade one advisory against a parsed provenance record.
+
+    Status is ``fixed``, ``not_applicable`` (component absent from this build),
+    or ``vulnerable``.
+    """
+    entry = {
+        "cve": advisory.cve,
+        "component": advisory.component,
+        "fix_commit": advisory.fix_commit,
+        "fix_landed": advisory.fix_landed,
+        "status": "vulnerable",
+        "reason": "",
+    }
+
+    commit = str(rec.get("git_commit") or "").lower()
+    if commit and any(
+        known.lower().startswith(commit) or commit.startswith(known.lower())
+        for known in KNOWN_GOOD_COMMITS
+    ):
+        entry["status"] = "fixed"
+        entry["reason"] = f"build commit {commit[:10]} is a recorded post-fix snapshot"
+        return entry
+
+    if rec.get("is_git_snapshot"):
+        snapshot_date = rec.get("snapshot_date")
+        if snapshot_date and snapshot_date >= advisory.fix_landed:
+            entry["status"] = "fixed"
+            entry["reason"] = (
+                f"git-master snapshot {snapshot_date} is at/after {advisory.fix_landed}, "
+                f"when {advisory.fix_commit[:10]} landed"
+            )
+            return entry
+        detail = (
+            f"git-master snapshot {snapshot_date} predates {advisory.fix_landed}"
+            if snapshot_date
+            else "git snapshot carries no date, so the fix cannot be confirmed"
+        )
+    elif rec.get("release"):
+        release = rec["release"]
+        if advisory.affected_max_release is None or release > advisory.affected_max_release:
+            entry["status"] = "fixed"
+            entry["reason"] = (
+                f"release {'.'.join(map(str, release))} is newer than the last "
+                f"affected release {'.'.join(map(str, advisory.affected_max_release or ()))}"
+            )
+            return entry
+        detail = (
+            f"release {'.'.join(map(str, release))} is at/below the last affected "
+            f"release {'.'.join(map(str, advisory.affected_max_release))}"
+        )
+    else:
+        detail = "build token could not be classified as a release or a snapshot"
+
+    applies = _advisory_applies(advisory, configure_line)
+    if applies is False:
+        entry["status"] = "not_applicable"
+        entry["reason"] = f"{detail}, but {advisory.component} is not compiled into this build"
+        return entry
+
+    entry["reason"] = detail if applies is None else f"{detail}; {advisory.component} is enabled"
+    return entry
+
+
+def grade_advisories(rec: dict, configure_line: str = "") -> list[dict]:
+    """Grade every recorded advisory against a parsed provenance record."""
+    return [grade_advisory(adv, rec, configure_line) for adv in SECURITY_ADVISORIES]
+
+
+def probe_build_configuration(ffmpeg_bin: str, timeout: float = 8.0) -> str:
+    """Return the build's ``configure`` line, or ``""`` when unavailable."""
+    try:
+        result = subprocess.run(
+            [ffmpeg_bin, "-hide_banner", "-buildconf"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.debug("ffmpeg_provenance: buildconf probe failed: %s", exc)
+        return ""
+    return (result.stdout or "") + (result.stderr or "")
+
+
+def _matrix_reason(
+    rec: dict,
+    advisories: list[dict],
+    unresolved: list[str],
+    waived: list[str],
+) -> str:
+    """Human-readable verdict naming the advisories that decided it."""
+    if rec.get("is_git_snapshot"):
+        build = f"git-master snapshot {rec.get('snapshot_date') or rec.get('git_commit') or '?'}"
+    elif rec.get("release"):
+        build = f"release {'.'.join(map(str, rec['release']))}"
+    else:
+        build = f"build {rec.get('raw') or '?'}"
+
+    if unresolved:
+        blocking = next(a for a in advisories if a["status"] == "vulnerable")
+        extra = f" (+{len(unresolved) - 1} more)" if len(unresolved) > 1 else ""
+        return f"{build} does not clear {blocking['cve']}{extra}: {blocking['reason']}"
+
+    parts = [f"{build} clears all {len(advisories)} recorded advisories"]
+    if waived:
+        parts.append(f"{len(waived)} not applicable to this build ({', '.join(waived)})")
+    return "; ".join(parts)
+
+
+def check_security_floor(banner: str, configure_line: str = "") -> dict:
+    """Grade an ``ffmpeg -version`` banner against the per-CVE advisory matrix.
+
+    ``ok`` is ``True`` only when every advisory in :data:`SECURITY_ADVISORIES`
+    is either ``fixed`` (the build demonstrably carries its fix commit) or
+    ``not_applicable`` (the affected component is not compiled in). Pass
+    *configure_line* to enable the second test. The grading never raises.
     """
     rec = parse_version_banner(banner)
     result: dict = {
@@ -225,48 +447,29 @@ def check_security_floor(banner: str) -> dict:
 
     if not rec["raw"]:
         result["reason"] = "could not parse an ffmpeg version banner"
+        result["advisories"] = []
+        result["unresolved_cves"] = [adv.cve for adv in SECURITY_ADVISORIES]
         return result
+
+    # The per-CVE matrix decides acceptance. Lane/date reporting below is
+    # retained for the human-readable reason and for existing consumers.
+    advisories = grade_advisories(rec, configure_line)
+    unresolved = [a["cve"] for a in advisories if a["status"] == "vulnerable"]
+    waived = [a["cve"] for a in advisories if a["status"] == "not_applicable"]
+    result["advisories"] = advisories
+    result["unresolved_cves"] = unresolved
+    result["not_applicable_cves"] = waived
 
     if rec["is_git_snapshot"]:
         result["lane"] = "snapshot"
-        if rec["snapshot_date"]:
-            if rec["snapshot_date"] >= SNAPSHOT_FLOOR_DATE:
-                result["ok"] = True
-                result["reason"] = (
-                    f"git-master snapshot {rec['snapshot_date']} is at/after the "
-                    f"post-fix floor {SNAPSHOT_FLOOR_DATE} for "
-                    f"{', '.join(JULY_2026_CVES)}"
-                )
-            else:
-                result["reason"] = (
-                    f"git-master snapshot {rec['snapshot_date']} predates the "
-                    f"post-fix floor {SNAPSHOT_FLOOR_DATE} for "
-                    f"{', '.join(JULY_2026_CVES)}"
-                )
-        else:
-            result["reason"] = (
-                "git snapshot has no embedded date; cannot confirm it carries "
-                f"the July-2026 fixes ({', '.join(JULY_2026_CVES)}) — rebuild from "
-                f"a snapshot >= {SNAPSHOT_FLOOR_DATE}"
-            )
+        result["ok"] = not unresolved
+        result["reason"] = _matrix_reason(rec, advisories, unresolved, waived)
         return result
 
     if rec["release"]:
         result["lane"] = "release"
-        if rec["release"] >= RELEASE_FLOOR:
-            result["ok"] = True
-            result["reason"] = (
-                f"release {'.'.join(map(str, rec['release']))} is at/after the "
-                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor; the post-fix "
-                f"snapshot fallback is {REFERENCE_GIT_COMMIT[:10]} dated "
-                f"{REFERENCE_GIT_DATE}"
-            )
-        else:
-            result["reason"] = (
-                f"release {'.'.join(map(str, rec['release']))} predates the "
-                f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for "
-                f"{', '.join(JULY_2026_CVES)}"
-            )
+        result["ok"] = not unresolved
+        result["reason"] = _matrix_reason(rec, advisories, unresolved, waived)
         return result
 
     result["reason"] = f"unrecognised ffmpeg build token {rec['raw']!r}"
@@ -297,6 +500,20 @@ def provenance_record(banner: Optional[str] = None) -> dict:
             "url": PINNED_INSTALLER_SOURCE_URL,
             "sha256": PINNED_INSTALLER_SOURCE_SHA256,
         },
+        "advisory_matrix": [
+            {
+                "cve": adv.cve,
+                "component": adv.component,
+                "fix_commit": adv.fix_commit,
+                "fix_landed": adv.fix_landed,
+                "affected_max_release": (
+                    ".".join(map(str, adv.affected_max_release))
+                    if adv.affected_max_release
+                    else None
+                ),
+            }
+            for adv in SECURITY_ADVISORIES
+        ],
         "cves_addressed": list(SECURITY_CVES),
         "bundled": None,
     }
@@ -321,13 +538,14 @@ class FfmpegSecurityError(RuntimeError):
     def __init__(self, binary: str, grade: dict):
         self.binary = binary
         self.grade = grade
+        unresolved = grade.get("unresolved_cves") or list(JULY_2026_CVES)
         super().__init__(
-            f"FFmpeg is unavailable because {binary!r} does not clear the "
-            f"{'.'.join(map(str, RELEASE_FLOOR))} security floor for "
-            f"{', '.join(JULY_2026_CVES)}: "
+            f"FFmpeg is unavailable because {binary!r} does not clear "
+            f"{', '.join(unresolved)}: "
             f"{grade.get('reason') or 'version could not be verified'}. "
-            f"Install FFmpeg {'.'.join(map(str, RELEASE_FLOOR))}+ or a dated "
-            f"post-fix snapshot >= {SNAPSHOT_FLOOR_DATE} before processing media."
+            f"Install FFmpeg {'.'.join(map(str, RELEASE_FLOOR))}+, a git-master "
+            f"snapshot dated >= {SNAPSHOT_FLOOR_DATE}, or a build compiled "
+            f"without the affected components before processing media."
         )
 
 
@@ -344,7 +562,13 @@ def is_pinned_snapshot(grade: dict) -> bool:
 
 
 def probe_binary_security(ffmpeg_bin: str, timeout: float = 8.0) -> dict:
-    """Run ``-version`` for one binary and return its security grade."""
+    """Run ``-version`` for one binary and return its security grade.
+
+    When the version alone does not clear every advisory, the build's
+    ``configure`` line is probed as well so a build that simply does not
+    compile the affected component can still be accepted. That second probe is
+    deliberately lazy: the common case costs one subprocess call.
+    """
     try:
         result = subprocess.run(
             [ffmpeg_bin, "-version"],
@@ -360,6 +584,10 @@ def probe_binary_security(ffmpeg_bin: str, timeout: float = 8.0) -> dict:
 
     banner = result.stdout or result.stderr or ""
     grade = check_security_floor(banner)
+    if not grade.get("ok") and grade.get("unresolved_cves"):
+        configure_line = probe_build_configuration(ffmpeg_bin, timeout=timeout)
+        if configure_line:
+            grade = check_security_floor(banner, configure_line=configure_line)
     if result.returncode != 0 and grade.get("ok"):
         grade["ok"] = False
         grade["reason"] = f"version probe exited with status {result.returncode}"
