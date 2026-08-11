@@ -16,7 +16,6 @@ from ..core.zoom import ZoomEvent
 from ..utils.config import ExportConfig
 from ..utils.media import MediaInfo, probe
 
-
 # Above this many reviewed cut ranges, importing one interchange timeline is
 # materially cheaper for Premiere than issuing one host mutation per range.
 INTERCHANGE_CUT_THRESHOLD = 100

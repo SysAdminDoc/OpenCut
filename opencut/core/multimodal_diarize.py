@@ -137,6 +137,7 @@ def _extract_face_segments(
 
         try:
             from insightface.app import FaceAnalysis
+
             from opencut.gpu import get_device_index, selected_onnx_providers
 
             gpu_index = get_device_index()

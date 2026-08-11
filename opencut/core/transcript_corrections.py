@@ -16,7 +16,6 @@ import re
 from difflib import SequenceMatcher
 from typing import Any, Iterable, Mapping, Sequence
 
-
 MAX_TRANSCRIPT_SEGMENTS = 10_000
 MAX_CORRECTION_RULES = 500
 MAX_TERM_LENGTH = 500

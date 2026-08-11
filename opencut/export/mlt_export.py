@@ -21,7 +21,6 @@ from ..core.silence import TimeSegment
 from ..utils.media import MediaInfo, probe
 from .premiere import cut_ranges_to_segments
 
-
 MLT_VERSION = "7.22.0"
 DEFAULT_FPS = 25.0
 DEFAULT_WIDTH = 1920

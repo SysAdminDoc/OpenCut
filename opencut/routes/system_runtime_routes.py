@@ -10,6 +10,8 @@ __all__ = [
     "check_dependencies",
 ]
 
+from opencut.gpu import GPUSelectionError, gpu_selection_status, save_gpu_selection
+
 from .system import (
     __version__,
     _cancel_running_jobs,
@@ -36,7 +38,6 @@ from .system import (
     time,
     validate_filepath,
 )
-from opencut.gpu import GPUSelectionError, gpu_selection_status, save_gpu_selection
 
 
 # ---------------------------------------------------------------------------
