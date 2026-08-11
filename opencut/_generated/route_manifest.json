@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-11T15:48:50Z",
-  "total_routes": 1591,
-  "shipped_route_count": 1566,
+  "generated_at": "2026-08-11T16:02:16Z",
+  "total_routes": 1593,
+  "shipped_route_count": 1568,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 18,
-    "GET": 406,
+    "GET": 407,
     "PATCH": 1,
-    "POST": 1168,
+    "POST": 1169,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1538,
+    "implemented": 1540,
     "stub": 25
   },
   "blueprints": {
@@ -1150,10 +1150,10 @@
       ]
     },
     "wave_d": {
-      "route_count": 9,
+      "route_count": 11,
       "method_counts": {
-        "GET": 4,
-        "POST": 5
+        "GET": 5,
+        "POST": 6
       },
       "sample_rules": [
         "/video/encode/vvc",
@@ -23310,6 +23310,38 @@
       ]
     },
     {
+      "rule": "/video/encode/apv",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_d.route_apv_encode",
+      "blueprint": "wave_d",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
+      "rule": "/video/encode/apv/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_d.route_apv_info",
+      "blueprint": "wave_d",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
       "rule": "/video/encode/svtav1-psy",
       "methods": [
         "POST"
@@ -27176,9 +27208,9 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1566,
+      "shipped_routes": 1568,
       "direct_surface_routes": 280,
-      "integration_only_routes": 1286,
+      "integration_only_routes": 1288,
       "coverage_percent": 17.9,
       "multi_surface_routes": 60,
       "primary_counts": {
@@ -27186,14 +27218,14 @@
         "palette": 22,
         "cli": 0,
         "mcp": 40,
-        "integration-only": 1311
+        "integration-only": 1313
       },
       "assigned_counts": {
         "panel": 218,
         "palette": 33,
         "cli": 1,
         "mcp": 99,
-        "integration-only": 1311
+        "integration-only": 1313
       }
     },
     "gate": {

@@ -5,8 +5,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1565-orange)
-![Tests](https://img.shields.io/badge/Tests-13500+-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1568-orange)
+![Tests](https://img.shields.io/badge/Tests-13600+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -16,7 +16,7 @@
 > sync with the live Flask app, and `GET /system/route-readiness` for the live
 > shipped count and stub list. The same manifest carries a literal first-party
 > surface map: **280 shipped routes** have literal first-party panel, palette, CLI, and curated MCP references,
-> while **1,285 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
+> while **1,288 integration-only routes** are backend/integration surfaces rather than advertised panel workflows.
 > Generic `opencut route` and opt-in extended MCP remain available for deliberate route-level access.
 
 > **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Unlimited, reviewable silence-cut passes direct to timeline, cross-project media search, stem separation, voice cloning, 55-style animated captions with exportable artifacts, local LLM highlights, and multi-platform social export -- with no subscriptions, no usage caps, and no API keys required for core local features. Cloud providers, Edge-TTS, downloads, telemetry, and social uploads are optional, explicit network features.
@@ -272,7 +272,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 
 ## Feature Overview
 
-OpenCut v1.48.0 includes **1,565 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **280** have literal first-party panel, palette, CLI, and curated MCP references; **1,285 integration-only routes** are explicitly classified rather than presented as direct user workflows.
+OpenCut v1.48.0 includes **1,568 shipped API routes** (implemented or dependency-gated; 25 strategic 501 stubs are tracked separately and excluded), **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task. Of those shipped routes, **280** have literal first-party panel, palette, CLI, and curated MCP references; **1,288 integration-only routes** are explicitly classified rather than presented as direct user workflows.
 
 ### Cut & Clean
 
@@ -507,7 +507,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,565 shipped routes |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  1,568 shipped routes |
 |  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  621 core modules     |
 |  Keyboard shortcuts   |   SSE streaming    |  107 route blueprints |
 +-----------+-----------+                    +-----------+-----------+
@@ -877,7 +877,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-13,500+ estimated tests across 338 root test files covering route smoke tests,
+13,600+ estimated tests across 342 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -946,7 +946,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (13,500+ estimated tests, 338 root test files)
+tests/               # pytest test suite (13,600+ estimated tests, 342 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/

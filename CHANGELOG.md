@@ -5,6 +5,17 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - APV (IETF RFC 9924) mezzanine encode
+
+- `POST /video/encode/apv` and `GET /video/encode/apv/info` expose the APV
+  all-intra professional codec through the `liboapv` encoder the bundled
+  FFmpeg already ships. Unlike the existing AV1/VVC delivery lanes, APV is
+  built for repeated decode/encode generations, which is exactly what an
+  editing round-trip produces. Three mezzanine presets, `.mp4` or raw `.apv`
+  output, audio copied through untouched, and a probe-based availability
+  report so a build without the encoder returns a dependency error rather
+  than a failed job.
+
 ### Changed - Dependency pins and audit diagnosability
 
 - `mediapipe` now admits the 1.0 GA release; the previous `<1` ceiling pinned
