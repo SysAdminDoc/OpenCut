@@ -667,7 +667,15 @@ def queue_add():
         }), 400
     endpoint = data.get("endpoint", "")
     if endpoint not in _ALLOWED_QUEUE_ENDPOINTS:
-        return jsonify({"error": f"Endpoint not queueable: {endpoint}"}), 400
+        return jsonify({
+            "error": f"Endpoint not queueable: {endpoint}",
+            "code": "ENDPOINT_NOT_QUEUEABLE",
+            "endpoint": endpoint,
+            "suggestion": (
+                "Run this route directly, or check GET /queue/coverage to see "
+                "whether it is an async job that is simply not allowlisted yet."
+            ),
+        }), 400
     try:
         entry = _normalize_queue_entry({
             "id": str(uuid.uuid4())[:8],
@@ -700,6 +708,72 @@ def queue_add():
             }), 503
     _process_queue(current_app._get_current_object())
     return jsonify({"queue_id": entry["id"], "position": position})
+
+
+# ---------------------------------------------------------------------------
+# Queue coverage (F306)
+# ---------------------------------------------------------------------------
+def queue_coverage() -> dict:
+    """Report which async-job routes are queueable and which are not.
+
+    The allowlist is hand-maintained, so it silently certifies whatever is not
+    in it: a route omitted by accident and a route excluded on purpose look
+    identical from outside. This computes the gap instead of asserting it, so
+    the omission is visible without pre-empting the curation decision about
+    which routes *should* be queueable.
+    """
+    allowlisted: list[str] = []
+    missing: list[dict] = []
+    seen: set[str] = set()
+
+    for rule in current_app.url_map.iter_rules():
+        methods = (rule.methods or set()) - {"HEAD", "OPTIONS"}
+        if "POST" not in methods:
+            continue
+        if rule.arguments:
+            # Parameterised routes cannot be replayed from a stored path.
+            continue
+        view = current_app.view_functions.get(rule.endpoint)
+        if not getattr(view, "_opencut_async_job", False):
+            continue
+        path = str(rule.rule)
+        if path in seen:
+            continue
+        seen.add(path)
+        if path in _ALLOWED_QUEUE_ENDPOINTS:
+            allowlisted.append(path)
+        else:
+            missing.append({
+                "endpoint": path,
+                "job_type": getattr(view, "_opencut_job_type", "") or "",
+                "blueprint": rule.endpoint.rsplit(".", 1)[0] if "." in rule.endpoint else "",
+            })
+
+    allowlisted.sort()
+    missing.sort(key=lambda item: item["endpoint"])
+    total = len(allowlisted) + len(missing)
+    # Entries in the allowlist that no longer match a live async route.
+    stale = sorted(set(_ALLOWED_QUEUE_ENDPOINTS) - seen)
+    return {
+        "async_post_routes": total,
+        "queueable": len(allowlisted),
+        "not_queueable": len(missing),
+        "coverage_percent": round((len(allowlisted) / total) * 100, 1) if total else 0.0,
+        "allowlist_size": len(_ALLOWED_QUEUE_ENDPOINTS),
+        "stale_allowlist_entries": stale,
+        "missing": missing,
+    }
+
+
+@jobs_bp.route("/queue/coverage", methods=["GET"])
+def queue_coverage_route():
+    """Read-only queue allowlist coverage. Changes no behaviour."""
+    from opencut.errors import safe_error
+
+    try:
+        return jsonify(queue_coverage())
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not 500 the panel
+        return safe_error(exc, "queue_coverage")
 
 
 @jobs_bp.route("/queue/list", methods=["GET"])

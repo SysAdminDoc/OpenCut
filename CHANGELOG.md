@@ -5,6 +5,16 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Queue allowlist coverage is now measurable
+
+- `GET /queue/coverage` reports every parameterless async POST route with its
+  allowlist status, plus totals and any stale allowlist entries; release smoke
+  prints the same summary and fails only on a stale entry, since whether a
+  route *should* be queueable stays a curation decision. `POST /queue/add`
+  now rejects with a structured `ENDPOINT_NOT_QUEUEABLE` naming the endpoint
+  instead of a bare message. First measurement: 216 of 768 async POST routes
+  are queueable.
+
 ### Fixed - Face detection survives the declared OpenCV 5 dependency
 
 - OpenCV 5 moved the Haar and HOG detectors into `opencv_contrib`, which the

@@ -9,13 +9,6 @@ scheme (highest prior allocation: F302).
 
 ### P1
 
-- [ ] P1 — F306 — Report queue coverage instead of failing generically
-  Why: 223 endpoints are allowlisted against roughly 760 parameterless async POST routes, so whole route families fail `/queue/add` with an undiagnosable "Endpoint not queueable"; coverage can be computed and surfaced without pre-empting the maintainer's curation decision.
-  Evidence: `opencut/routes/jobs_routes.py:180` (`_ALLOWED_QUEUE_ENDPOINTS`, 223 entries), `:423,608,669` (rejection sites); `Roadmap_Blocked.md:125`
-  Touches: `opencut/routes/jobs_routes.py`, `opencut/errors.py`, `scripts/release_smoke.py`, `tests/test_queue_persistence.py`
-  Acceptance: A read-only diagnostic enumerates every async POST route with its allowlist status and totals; `/queue/add` returns a structured error naming the endpoint and its readiness rather than a bare message; release smoke prints the coverage delta without failing; behaviour of currently-queueable endpoints is unchanged.
-  Complexity: S
-
 - [ ] P1 — F307 — Expose an FFmpeg-native whisper.cpp transcription lane
   Why: The bundled FFmpeg is compiled with `--enable-whisper` and exposes the `whisper` audio filter, so a transcription path exists that needs no torch, no Python model stack, and no optional extra — directly reducing the 21-of-73 dependency-gated feature count on machines where the AI extras will not install.
   Evidence: `ffmpeg/ffmpeg.exe -filters` lists `whisper A->A Transcribe audio using whisper.cpp` in the pinned `2026-08-03-git-01a25f74cc-full_build` payload; no OpenCut module references the filter; `opencut/_generated/feature_readiness.json` reports 21 `missing_dependency` features

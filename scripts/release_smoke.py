@@ -1467,6 +1467,50 @@ def step_openapi_contract(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_queue_coverage(_args: argparse.Namespace) -> StepResult:
+    """Report queue-allowlist coverage. Informational: never fails the release.
+
+    Whether an async route *should* be queueable is a curation decision, so
+    this surfaces the gap rather than asserting a number. It does fail on a
+    stale allowlist entry, which is unambiguously wrong.
+    """
+    start = time.time()
+    try:
+        from opencut.routes.jobs_routes import queue_coverage
+        from opencut.server import create_app
+
+        app = create_app()
+        with app.test_request_context():
+            report = queue_coverage()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not block a release
+        return StepResult(
+            "queue-coverage",
+            "warn",
+            exit_code=0,
+            duration_ms=int((time.time() - start) * 1000),
+            message=f"queue coverage unavailable: {exc}",
+        )
+
+    duration = int((time.time() - start) * 1000)
+    stale = report["stale_allowlist_entries"]
+    summary = (
+        f"{report['queueable']}/{report['async_post_routes']} async POST routes "
+        f"queueable ({report['coverage_percent']}%); "
+        f"{report['not_queueable']} not allowlisted"
+    )
+    if stale:
+        return StepResult(
+            "queue-coverage",
+            "fail",
+            exit_code=1,
+            duration_ms=duration,
+            message=f"{summary}; {len(stale)} stale allowlist entries: {', '.join(stale[:5])}",
+        )
+    return StepResult(
+        "queue-coverage", "ok", exit_code=0, duration_ms=duration, message=summary,
+    )
+
+
 def step_standards_conformance(args: argparse.Namespace) -> StepResult:
     """Run the independent reference validators over OpenCut's own output.
 
@@ -1573,6 +1617,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("performance-benchmark", step_performance_benchmark, "Validate optional benchmark receipts and same-host baselines"),
     StepDefinition("openapi-contract", step_openapi_contract, "Check typed OpenAPI contract manifest + coverage ratchet"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
+    StepDefinition("queue-coverage", step_queue_coverage, "Report queue allowlist coverage; fail only on stale entries"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
     StepDefinition("mcp-registry", step_mcp_registry, "Check MCP server registry manifest is in sync (F147)"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),

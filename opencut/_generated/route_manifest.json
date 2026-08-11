@@ -1,19 +1,19 @@
 {
   "version": 4,
-  "generated_at": "2026-08-11T15:19:15Z",
-  "total_routes": 1590,
-  "shipped_route_count": 1565,
+  "generated_at": "2026-08-11T15:48:50Z",
+  "total_routes": 1591,
+  "shipped_route_count": 1566,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 18,
-    "GET": 405,
+    "GET": 406,
     "PATCH": 1,
     "POST": 1168,
     "PUT": 2
   },
   "readiness_counts": {
     "dependency-gated": 28,
-    "implemented": 1537,
+    "implemented": 1538,
     "stub": 25
   },
   "blueprints": {
@@ -498,9 +498,9 @@
       ]
     },
     "jobs": {
-      "route_count": 19,
+      "route_count": 20,
       "method_counts": {
-        "GET": 12,
+        "GET": 13,
         "POST": 7
       },
       "sample_rules": [
@@ -16846,6 +16846,22 @@
       ]
     },
     {
+      "rule": "/queue/coverage",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "jobs.queue_coverage_route",
+      "blueprint": "jobs",
+      "readiness": "implemented",
+      "surface_class": "integration-only",
+      "surface_classes": [
+        "integration-only"
+      ],
+      "surface_evidence": [
+        "no literal reference in first-party panel, palette, CLI, or curated MCP sources"
+      ]
+    },
+    {
       "rule": "/queue/export",
       "methods": [
         "GET"
@@ -27160,9 +27176,9 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1565,
+      "shipped_routes": 1566,
       "direct_surface_routes": 280,
-      "integration_only_routes": 1285,
+      "integration_only_routes": 1286,
       "coverage_percent": 17.9,
       "multi_surface_routes": 60,
       "primary_counts": {
@@ -27170,14 +27186,14 @@
         "palette": 22,
         "cli": 0,
         "mcp": 40,
-        "integration-only": 1310
+        "integration-only": 1311
       },
       "assigned_counts": {
         "panel": 218,
         "palette": 33,
         "cli": 1,
         "mcp": 99,
-        "integration-only": 1310
+        "integration-only": 1311
       }
     },
     "gate": {
