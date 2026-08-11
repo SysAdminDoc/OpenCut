@@ -14,7 +14,50 @@
         var setToken = options.setToken || function () {};
         var translate = options.translate || function (_key, fallback) { return fallback; };
         var createRequest = options.createRequest || function () { return new XMLHttpRequest(); };
+        // F303: proves to /health that this is the host-embedded panel and not
+        // a web page sharing its opaque `Origin: null`. Empty until the host
+        // bridge has read the local secret; the bootstrap simply falls back to
+        // the same-origin path until then.
+        var getBootstrapToken = options.getBootstrapToken || function () { return ""; };
+        // F308: transport faults used to vanish here. Reporting is on by
+        // default so a caller cannot silently opt out of diagnosability.
+        var onTransportError = options.onTransportError || function (info) {
+            if (typeof console !== "undefined" && console.error) {
+                console.error(
+                    "OpenCut transport error [" + info.stage + "]: " + info.detail,
+                    info.context
+                );
+            }
+        };
         var inflightRequests = {};
+
+        function reportTransportError(stage, detail, context) {
+            try {
+                onTransportError({ stage: stage, detail: String(detail), context: context || {} });
+            } catch (e) {
+                // The reporter itself must never break the request path.
+                if (typeof console !== "undefined" && console.error) {
+                    console.error("OpenCut transport reporter failed:", e);
+                }
+            }
+        }
+
+        function safeParse(text, context) {
+            try {
+                return { ok: true, data: JSON.parse(text) };
+            } catch (e) {
+                reportTransportError("parse", e && e.message ? e.message : e, context);
+                return { ok: false, data: null, error: e };
+            }
+        }
+
+        function invoke(fn, err, data, context) {
+            try {
+                fn(err, data);
+            } catch (e) {
+                reportTransportError("callback", e && e.message ? e.message : e, context);
+            }
+        }
 
         function formatHttpStatusError(status) {
             return translate("error.http_status", "HTTP {status}").replace("{status}", status);
@@ -25,13 +68,28 @@
             var xhr = createRequest();
             xhr.open("GET", getBaseUrl() + "/health", true);
             xhr.timeout = timeout || 10000;
+            var bootstrap = "";
+            try { bootstrap = getBootstrapToken() || ""; } catch (e) { bootstrap = ""; }
+            if (bootstrap) xhr.setRequestHeader("X-OpenCut-Panel-Bootstrap", bootstrap);
             xhr.onload = function () {
-                var data = null;
-                try { data = JSON.parse(xhr.responseText); } catch (e) {}
+                var parsed = safeParse(xhr.responseText, { path: "/health", status: xhr.status });
+                var data = parsed.data;
                 if (xhr.status >= 200 && xhr.status < 300 && data && data.csrf_token) {
                     setToken(data.csrf_token);
                     callback(true);
                     return;
+                }
+                if (xhr.status >= 200 && xhr.status < 300 && data && !data.csrf_token) {
+                    // Reached the backend but was refused the bootstrap token.
+                    // Without this the panel reports "connected" and then fails
+                    // every mutation with an unexplained CSRF error.
+                    reportTransportError(
+                        "csrf_bootstrap",
+                        bootstrap
+                            ? "Backend withheld the CSRF token despite a panel bootstrap secret."
+                            : "Backend withheld the CSRF token and no panel bootstrap secret was available.",
+                        { path: "/health", status: xhr.status }
+                    );
                 }
                 callback(false);
             };
@@ -64,7 +122,7 @@
                 function notifyPending(err, data) {
                     var callbacks = xhr._pendingCallbacks || [];
                     for (var i = 0; i < callbacks.length; i++) {
-                        try { callbacks[i](err, data); } catch (e) {}
+                        invoke(callbacks[i], err, data, { path: path, method: method, deduped: true });
                     }
                 }
 
@@ -72,7 +130,16 @@
                     delete inflightRequests[key];
                     var err = null;
                     var data = null;
-                    try { data = JSON.parse(xhr.responseText); } catch (e) { err = e; }
+                    var parsed = safeParse(xhr.responseText, {
+                        path: path,
+                        method: method,
+                        status: xhr.status
+                    });
+                    if (parsed.ok) {
+                        data = parsed.data;
+                    } else {
+                        err = parsed.error;
+                    }
                     if (!err && xhr.status === 403 && method !== "GET" && !retriedCsrf) {
                         var message = data && data.error ? String(data.error) : "";
                         if (/csrf|token/i.test(message)) {
@@ -92,19 +159,21 @@
                         err = new Error((data && data.error) ? data.error : formatHttpStatusError(xhr.status));
                         err.status = xhr.status;
                     }
-                    callback(err, data);
+                    invoke(callback, err, data, { path: path, method: method, status: xhr.status });
                     notifyPending(err, data);
                 };
                 xhr.onerror = function () {
                     delete inflightRequests[key];
                     var err = new Error(translate("error.network", "Network error"));
-                    callback(err, null);
+                    reportTransportError("network", err.message, { path: path, method: method });
+                    invoke(callback, err, null, { path: path, method: method });
                     notifyPending(err, null);
                 };
                 xhr.ontimeout = function () {
                     delete inflightRequests[key];
                     var err = new Error(translate("error.timeout", "Timeout"));
-                    callback(err, null);
+                    reportTransportError("timeout", err.message, { path: path, method: method });
+                    invoke(callback, err, null, { path: path, method: method });
                     notifyPending(err, null);
                 };
                 xhr.send(body ? JSON.stringify(body) : null);

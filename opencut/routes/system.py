@@ -408,22 +408,57 @@ def _build_capabilities():
     return caps
 
 
+def _record_bootstrap_withheld(origin: str, *, token_presented: bool) -> None:
+    """Audit a refused CSRF bootstrap so the cause is diagnosable.
+
+    Without this, a panel that cannot bootstrap reports only "Invalid or
+    missing CSRF token" on every later mutation, with nothing naming the
+    origin that was actually refused.
+    """
+    try:
+        from opencut.security_audit import record_security_event
+
+        record_security_event(
+            "csrf_bootstrap_withheld",
+            "CSRF bootstrap token withheld from /health for a non-allowlisted origin",
+            metadata={
+                "origin": origin,
+                "panel_bootstrap_presented": bool(token_presented),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001 - health must answer even if auditing fails
+        logger.warning("csrf bootstrap audit failed: %s", exc)
+
+
 def _health_should_expose_csrf_token() -> bool:
     """Expose the bootstrap CSRF token on an allowlist basis.
 
-    The panels fetch /health with no Origin header (same-origin/no-Origin), so
-    that case, an exact same-origin match, and explicitly configured CORS
-    origins are allowed. Any other cross-origin browser context is denied so a
-    hostile page cannot harvest the loopback mutation token.
+    A request with no Origin header, an exact same-origin match, and explicitly
+    configured CORS origins are allowed. Any other cross-origin browser context
+    is denied so a hostile page cannot harvest the loopback mutation token.
+
+    Host-embedded panels are the exception that the blocklist alone cannot
+    serve: the CEP panel is a ``file://`` document, so its XHR carries
+    ``Origin: null`` — indistinguishable from a hostile local page by headers
+    alone. It proves itself instead by presenting the 0600 bootstrap secret
+    from :mod:`opencut.panel_bootstrap`, which a browser page cannot read.
     """
     from flask import current_app
 
+    from opencut.panel_bootstrap import BOOTSTRAP_HEADER, is_bootstrap_secret_valid
+
     origin = (request.headers.get("Origin") or "").strip()
+    presented = request.headers.get(BOOTSTRAP_HEADER, "")
+    # Checked before the blocklist: the whole point is to readmit the real
+    # panel from an origin the blocklist must keep refusing for everyone else.
+    if presented and is_bootstrap_secret_valid(presented):
+        return True
     if not origin:
         return True
     origin_l = origin.lower()
     # The blocklist takes precedence, even over an (ill-advised) CORS entry.
     if origin_l in _CSRF_BOOTSTRAP_BLOCKED_ORIGINS:
+        _record_bootstrap_withheld(origin, token_presented=bool(presented))
         return False
     origin_norm = origin_l.rstrip("/")
     host = (request.host_url or "").strip().lower().rstrip("/")
@@ -434,7 +469,10 @@ def _health_should_expose_csrf_token() -> bool:
     except Exception:
         configured = []
     allowed = {str(o).strip().lower().rstrip("/") for o in configured}
-    return origin_norm in allowed
+    if origin_norm in allowed:
+        return True
+    _record_bootstrap_withheld(origin, token_presented=bool(presented))
+    return False
 
 
 @system_bp.route("/health", methods=["GET"])

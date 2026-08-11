@@ -40,6 +40,7 @@ const classicScriptFiles = [
   "i18n-utils.js",
   "panel-state.js",
   "backend-client.js",
+  "panel-bootstrap-token.js",
   "job-runtime.js",
   "job-lifecycle.js",
   "component-utils.js",
