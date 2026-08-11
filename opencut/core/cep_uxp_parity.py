@@ -7,9 +7,9 @@ away from ``extension/com.opencut.panel/host/index.jsx``.
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-import re
 from typing import Iterable, Mapping, Sequence
 
 CATALOGUE_VERSION = 1

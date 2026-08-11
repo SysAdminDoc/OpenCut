@@ -12,8 +12,8 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..utils.config import CaptionConfig
 from ..errors import OpenCutError
+from ..utils.config import CaptionConfig
 from . import transcript_cache
 from .asr_provenance import (
     ASRProvenance,
@@ -914,6 +914,7 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     import os
 
     import whisper
+
     from opencut.gpu import get_device
 
     device = get_device()

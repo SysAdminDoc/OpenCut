@@ -157,6 +157,7 @@ def _postprocess_alpha(mask, src_size):
 
 def _infer_onnx(onnx_path: str, preprocessed):
     import onnxruntime as ort
+
     from opencut.gpu import selected_onnx_providers
 
     providers = selected_onnx_providers()

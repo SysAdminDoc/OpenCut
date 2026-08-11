@@ -4,9 +4,9 @@ OpenCut Workflow Routes
 Run, list, save, and delete multi-step processing workflows.
 """
 
-import logging
 import copy
 import inspect
+import logging
 import time
 
 from flask import Blueprint, current_app, has_app_context, jsonify

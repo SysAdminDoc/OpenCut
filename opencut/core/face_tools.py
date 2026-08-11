@@ -157,6 +157,7 @@ def blur_faces(
             ensure_package("insightface", "insightface", on_progress)
             ensure_package("onnxruntime", "onnxruntime", on_progress)
             import insightface
+
             from opencut.gpu import get_device_index, selected_onnx_providers
 
             gpu_index = get_device_index()
