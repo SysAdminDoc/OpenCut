@@ -16,6 +16,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import ensure_package, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -78,8 +79,7 @@ def detect_faces(
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
 
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    face_cascade = cv2.CascadeClassifier(cascade_path)
+    face_cascade = get_shared_face_detector()
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     sample_step = max(1, int(fps / max(0.1, sample_rate)))

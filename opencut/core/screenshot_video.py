@@ -13,6 +13,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import (
     FFmpegCmd,
     run_ffmpeg,
@@ -199,7 +200,7 @@ def _detect_roi_faces(image_path: str) -> List[ROI]:
     if not os.path.isfile(cascade_path):
         return []
 
-    detector = cv2.CascadeClassifier(cascade_path)
+    detector = get_shared_face_detector()
     faces = detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
     rois = []

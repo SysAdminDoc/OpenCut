@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -179,8 +180,7 @@ def blur_faces(
             detector = "haar"
 
     if detector == "haar":
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        face_det = cv2.CascadeClassifier(cascade_path)
+        face_det = get_shared_face_detector()
 
     if on_progress:
         on_progress(10, "Processing video frames...")
@@ -327,13 +327,9 @@ def detect_faces_in_frame(
             ) as fd:
                 rects = _detect_faces_mediapipe(frame, fd)
         except Exception:
-            cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-            cascade = cv2.CascadeClassifier(cascade_path)
-            rects = _detect_faces_haar(frame, cascade)
+            rects = _detect_faces_haar(frame, get_shared_face_detector())
     else:
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        cascade = cv2.CascadeClassifier(cascade_path)
-        rects = _detect_faces_haar(frame, cascade)
+        rects = _detect_faces_haar(frame, get_shared_face_detector())
 
     return {
         "faces": len(rects),

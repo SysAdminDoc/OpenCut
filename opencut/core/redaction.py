@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -359,23 +360,9 @@ def _detect_faces_opencv(
         logger.debug("OpenCV not available for face detection")
         return None
 
-    cascade_path = None
-    # Try to find Haar cascade
-    for path in [
-        os.path.join(os.path.dirname(cv2.__file__), "data", "haarcascade_frontalface_default.xml"),
-        "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml",
-        "/usr/share/opencv/haarcascades/haarcascade_frontalface_default.xml",
-    ]:
-        if os.path.isfile(path):
-            cascade_path = path
-            break
-
-    if cascade_path is None:
-        logger.debug("Haar cascade file not found")
-        return None
-
-    cascade = cv2.CascadeClassifier(cascade_path)
-    if cascade.empty():
+    cascade = get_shared_face_detector()
+    if getattr(cascade, "empty", lambda: False)():
+        logger.debug("No face-detection backend available")
         return None
 
     cap = cv2.VideoCapture(input_path)

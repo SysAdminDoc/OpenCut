@@ -23,6 +23,7 @@ import tempfile
 from dataclasses import asdict, dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import (
     ensure_package,
     get_ffmpeg_path,
@@ -182,18 +183,9 @@ def _compute_output_dims(
 # Subject detection
 # ---------------------------------------------------------------------------
 def _detect_faces(frame_gray, frame_idx: int) -> List[SubjectInfo]:
-    """Detect faces using OpenCV Haar cascade."""
-    import cv2
-
-    cascade_path = os.path.join(
-        os.path.dirname(cv2.__file__), "data", FACE_CASCADE_FILE,
-    )
-    if not os.path.isfile(cascade_path):
-        # Try alternative location
-        cascade_path = cv2.data.haarcascades + FACE_CASCADE_FILE
-
+    """Detect faces through the shared OpenCV 4/5 detector."""
     try:
-        cascade = cv2.CascadeClassifier(cascade_path)
+        cascade = get_shared_face_detector(FACE_CASCADE_FILE)
     except Exception:
         return []
 

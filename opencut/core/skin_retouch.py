@@ -27,6 +27,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -252,8 +253,7 @@ def retouch(
             model_selection=1, min_detection_confidence=0.5
         )
     else:
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        haar_cascade = cv2.CascadeClassifier(cascade_path)
+        haar_cascade = get_shared_face_detector()
 
     # --- Set up GFPGAN restorer if needed ---
     gfpgan_restorer = None

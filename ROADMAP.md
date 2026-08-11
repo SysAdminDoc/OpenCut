@@ -9,14 +9,6 @@ scheme (highest prior allocation: F302).
 
 ### P1
 
-- [ ] P1 — F305 — Migrate the 13 `cv2.CascadeClassifier` call sites to `cv2.FaceDetectorYN`
-  Why: `pyproject.toml` declares `opencv-python>=5,<6`, and OpenCV 5 removed `cv2.CascadeClassifier`, so face-tracked auto-zoom, Haar face blur, reframe, redaction, and thumbnail selection raise `AttributeError` for anyone who installs per the manifest; YuNet exists in both 4.5.4+ and 5.x, so the migration dissolves the dependency standoff instead of waiting on it.
-  Evidence: `pyproject.toml:72,104,206`; `cv2.CascadeClassifier` callers in `opencut/core/`: `auto_zoom.py`, `face_tools.py`, `ai_reframe_multi.py`, `deepfake_detect.py`, `face_tagging.py`, `morph_cut.py`, `multimodal_diarize.py`, `redaction.py`, `screenshot_video.py`, `skin_retouch.py`, `smart_reframe.py`, `talking_head.py`, `thumbnail.py`
-  Touches: the 13 modules above, `opencut/checks.py`, `tests/test_core_modules*.py`, face/reframe route tests
-  Acceptance: No module imports or calls `cv2.CascadeClassifier`; face detection resolves through a single shared YuNet helper with an explicit no-face fallback preserving current behaviour; the suite passes against both an OpenCV 4.x and an OpenCV 5.x environment; a test asserts the absence of the removed symbol so the regression cannot return.
-  Complexity: L
-  Note: Removes the OpenCV half of the `Test against declared dependency versions` entry in `Roadmap_Blocked.md:40`; the Transformers/`huggingface-hub` half stays blocked.
-
 - [ ] P1 — F306 — Report queue coverage instead of failing generically
   Why: 223 endpoints are allowlisted against roughly 760 parameterless async POST routes, so whole route families fail `/queue/add` with an undiagnosable "Endpoint not queueable"; coverage can be computed and surfaced without pre-empting the maintainer's curation decision.
   Evidence: `opencut/routes/jobs_routes.py:180` (`_ALLOWED_QUEUE_ENDPOINTS`, 223 entries), `:423,608,669` (rejection sites); `Roadmap_Blocked.md:125`

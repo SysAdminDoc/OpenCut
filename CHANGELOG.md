@@ -5,6 +5,18 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Face detection survives the declared OpenCV 5 dependency
+
+- OpenCV 5 moved the Haar and HOG detectors into `opencv_contrib`, which the
+  declared `opencv-python>=5,<6` wheel does not ship, so every direct
+  `cv2.CascadeClassifier` call raised `AttributeError` for anyone installing
+  the project as specified. That silently broke face-tracked auto-zoom, face
+  blur, multi-subject and smart reframe, redaction, thumbnail selection,
+  talking-head detection, and diarization's face fallback. All 17 call sites
+  across 13 modules now resolve through one shared detector that prefers the
+  YuNet DNN backend, falls back to Haar where it still exists, and otherwise
+  reports no faces so callers keep their existing centre-crop fallback.
+
 ### Changed - FFmpeg acceptance is now decided per CVE
 
 - The security floor graded builds against one global snapshot date, so a
