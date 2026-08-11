@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Dependency pins and audit diagnosability
+
+- `mediapipe` now admits the 1.0 GA release; the previous `<1` ceiling pinned
+  face-tracked reframe to the pre-GA line.
+- The `transformers` floor moves to 5.10, clearing CVE-2026-9856
+  (`save_pretrained` path traversal via `chat_template` keys, affecting
+  through 5.9.x). OpenCut never calls `save_pretrained`, so this is hygiene
+  for transitive callers and does not resolve the separate
+  `huggingface-hub<1` conflict.
+- The security-audit module logged nothing when request enrichment failed, so
+  a persistently degraded audit record looked identical to a healthy one.
+  Those three paths now log at debug without changing control flow.
+
 ### Added - SQLite FTS5 memory-safety floor
 
 - CVE-2026-11822 corrupts memory when an FTS5 `MATCH` runs against a crafted

@@ -32,33 +32,12 @@ scheme (highest prior allocation: F302).
   Acceptance: `POST /video/encode/apv` runs as a durable cancellable job with bounded presets and `GET /video/encode/apv/info` reports probe-based availability; encoder absence returns a typed dependency error rather than a failed job; a small media fixture round-trips through encode and probe.
   Complexity: M
 
-- [ ] P2 — F312 — Allow mediapipe 1.0
-  Why: `mediapipe>=0.10,<1` excludes the 1.0.0 general-availability release, so face-tracking reframe is pinned to a pre-GA line on every install.
-  Evidence: `pyproject.toml:151`; PyPI reports mediapipe 1.0.0 as latest (queried 2026-08-10)
-  Touches: `pyproject.toml`, `requirements*.txt`, `opencut/core/face_reframe.py`, `scripts/check_installed_versions.py`, `tests/test_declared_floors.py`
-  Acceptance: The constraint admits 1.0.x, the face-reframe path is exercised against it, and any API change between 0.10 and 1.0 is handled behind the existing availability check rather than at import time.
-  Complexity: S
-
-- [ ] P2 — F313 — Raise the `transformers` floor past CVE-2026-9856
-  Why: The `ai`, `ai-gpu`, and `torch-stack` extras declare `transformers>=5.3`, which permits releases vulnerable to a `save_pretrained()` path traversal fixed in 5.10.0; OpenCut itself never calls `save_pretrained`, so this is hygiene for transitive callers rather than a live exposure, and it must be landed with the known `huggingface-hub` interaction stated.
-  Evidence: https://nvd.nist.gov/vuln/detail/CVE-2026-9856 (affects through 5.9.x, fixed 5.10.0); `pyproject.toml:185,200`; no `save_pretrained` call site in `opencut/`
-  Touches: `pyproject.toml`, `requirements*.txt`, `docs/PYTHON_ADVISORIES.md`, `scripts/check_installed_versions.py`
-  Acceptance: The floor is at or above 5.10.0 with the CVE cited inline in the same style as the existing pins; `docs/PYTHON_ADVISORIES.md` records the triage including the statement that OpenCut has no direct `save_pretrained` call site; the interaction with the blocked `huggingface-hub<1` lane is noted rather than silently resolved.
-  Complexity: S
-
 - [ ] P2 — F314 — Make caption burn-in incremental
   Why: The most-repeated Premiere captioning complaint is that a small caption change forces a full timeline re-render; OpenCut burns captions with a whole-file FFmpeg re-encode, so it inherits the same cost and has an unclaimed differentiator available.
   Evidence: https://community.adobe.com/feature-requests-730/overhaul-captioning-workflow-1555697; `opencut/core/caption_burnin.py`, `opencut/core/styled_captions.py`; existing segment machinery in `opencut/core/smart_render.py`
   Touches: `opencut/core/caption_burnin.py`, `opencut/core/smart_render.py`, `opencut/routes/captions.py`, `tests/test_smart_render_transactional.py`
   Acceptance: Re-burning after a caption edit re-encodes only the affected segments and stream-copies the remainder, with the unchanged regions bit-identical to the prior render; a changed-caption job on a multi-segment fixture measurably beats the full re-encode; falling back to a whole-file render is automatic and reported when segment boundaries cannot be honoured.
   Complexity: L
-
-- [ ] P2 — F315 — Stop the security-audit module from discarding its own failures
-  Why: `security_audit.py` silently swallows three classes of exception, which is the worst-placed instance of the 239 `except Exception: pass` sites in the tree — a module whose entire purpose is recording security events cannot fail invisibly.
-  Evidence: `opencut/security_audit.py:43,93,103`; 239 `except Exception: pass` occurrences repo-wide, 192 of them in `opencut/core/`
-  Touches: `opencut/security_audit.py`, `tests/`
-  Acceptance: Each of the three sites either handles the failure explicitly or logs at warning level with the operation that failed; recording a security event can never raise into a request path; a test proves a failing sink is logged rather than dropped.
-  Complexity: S
 
 ### P3
 

@@ -40,8 +40,10 @@ def _audit_path() -> str:
 
         if has_app_context() and current_app.config.get("TESTING"):
             return ""
-    except Exception:  # noqa: BLE001 - audit path discovery must stay best-effort
-        pass
+    except Exception as exc:  # noqa: BLE001 - audit path discovery stays best-effort
+        # Falling through to the default path is correct, but a persistent
+        # failure here would otherwise be invisible.
+        logger.debug("security audit: could not inspect app context: %s", exc)
     return DEFAULT_SECURITY_AUDIT_LOG
 
 
@@ -90,8 +92,8 @@ def _request_fields() -> dict[str, Any]:
             user_agent = _safe_preview(request.headers.get("User-Agent", ""), limit=120)
             if user_agent:
                 fields["user_agent"] = user_agent
-    except Exception:  # noqa: BLE001 - audit collection must not affect requests
-        pass
+    except Exception as exc:  # noqa: BLE001 - audit collection must not affect requests
+        logger.debug("security audit: request fields unavailable: %s", exc)
 
     if not fields.get("request_id"):
         try:
@@ -100,8 +102,8 @@ def _request_fields() -> dict[str, Any]:
             request_id = get_request_id()
             if request_id:
                 fields["request_id"] = request_id
-        except Exception:  # noqa: BLE001 - best-effort enrichment only
-            pass
+        except Exception as exc:  # noqa: BLE001 - best-effort enrichment only
+            logger.debug("security audit: request id unavailable: %s", exc)
     return fields
 
 

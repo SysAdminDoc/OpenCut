@@ -148,7 +148,9 @@ scene-ml = [
     "transnetv2-pytorch>=1.0.5,<2",
 ]
 reframe = [
-    "mediapipe>=0.10,<1",
+    # 1.0.0 is the GA release; the previous `<1` ceiling excluded it and
+    # pinned face-tracked reframe to the pre-GA line.
+    "mediapipe>=0.10,<2",
 ]
 standards = [
     # Independent reference validators for standards-labelled output:
@@ -182,7 +184,11 @@ depth = [
     "picklescan>=1.0.3",
     # Standalone depth/model-loading features can take the current
     # Transformers security floor because they are not coupled to WhisperX.
-    "transformers>=5.3",
+    # >=5.10 clears CVE-2026-9856 (save_pretrained path traversal via
+    # chat_template keys, affects through 5.9.x). OpenCut never calls
+    # save_pretrained, so this is hygiene for transitive callers; it does
+    # not resolve the separate huggingface-hub<1 conflict tracked as blocked.
+    "transformers>=5.10",
 ]
 torch-stack = [
     # WhisperX 3.8.x is intentionally absent: it requires torchvision<0.24,
@@ -197,7 +203,11 @@ torch-stack = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "picklescan>=1.0.3",
-    "transformers>=5.3",
+    # >=5.10 clears CVE-2026-9856 (save_pretrained path traversal via
+    # chat_template keys, affects through 5.9.x). OpenCut never calls
+    # save_pretrained, so this is hygiene for transitive callers; it does
+    # not resolve the separate huggingface-hub<1 conflict tracked as blocked.
+    "transformers>=5.10",
 ]
 all = [
     "faster-whisper>=1.1,<2",
