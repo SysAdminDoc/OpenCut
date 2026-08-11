@@ -10,6 +10,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_MAIN = REPO_ROOT / "extension" / "com.opencut.uxp" / "main.js"
 UXP_UTILS = REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-utils.js"
+# The studio-workbench-v2 split moved rendering helpers out of main.js. Scan
+# every module that can own an innerHTML sink, or the guard silently stops
+# covering whatever was extracted next.
+UXP_MARKUP_SOURCES = (
+    UXP_MAIN,
+    REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-ui-controller.js",
+    REPO_ROOT / "extension" / "com.opencut.uxp" / "uxp-components.js",
+    REPO_ROOT / "extension" / "com.opencut.uxp" / "studio-workbench-v2.js",
+)
 
 INNER_HTML_ASSIGNMENT_RE = re.compile(
     r"(?P<target>[A-Za-z0-9_.$?]+)\.innerHTML\s*=\s*(?P<rhs>.*?);",
@@ -142,7 +151,12 @@ SAFE_LITERAL_EXPR_RE = re.compile(
 
 
 def _source() -> str:
-    return UXP_MAIN.read_text(encoding="utf-8")
+    """Concatenate every scanned UXP module, keeping offsets self-consistent."""
+    parts = []
+    for path in UXP_MARKUP_SOURCES:
+        if path.is_file():
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
 
 
 def _line_for(source: str, offset: int) -> int:

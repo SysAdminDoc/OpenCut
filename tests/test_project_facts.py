@@ -48,6 +48,18 @@ INLINE_LINK_RE = re.compile(
     r"!?\[[^\]]*\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+['\"][^)]*['\"])?\)"
 )
 REFERENCE_LINK_RE = re.compile(r"^\s*\[[^\]]+\]:\s*(?P<target><[^>]+>|\S+)", re.MULTILINE)
+# Fenced blocks quote file contents verbatim — CHANGELOG.md reproduces the
+# docs/ROADMAP.md stub, whose links are relative to docs/, not to the quoting
+# file. Those are sample text, not links this repo has to resolve.
+FENCED_BLOCK_RE = re.compile(r"^[ \t]*(`{3,}|~{3,}).*?^[ \t]*\1[ \t]*$", re.MULTILINE | re.DOTALL)
+
+
+def _blank_fenced_blocks(text: str) -> str:
+    """Replace fenced-code content with newlines, preserving line numbers."""
+    def _blank(match: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    return FENCED_BLOCK_RE.sub(_blank, text)
 
 
 def _committed_markdown() -> list[Path]:
@@ -163,7 +175,7 @@ def test_every_local_markdown_link_resolves_to_a_committed_file():
     )
     broken: list[str] = []
     for markdown in markdown_files:
-        text = markdown.read_text(encoding="utf-8")
+        text = _blank_fenced_blocks(markdown.read_text(encoding="utf-8"))
         matches = [*INLINE_LINK_RE.finditer(text), *REFERENCE_LINK_RE.finditer(text)]
         for match in matches:
             target = _local_link_target(markdown, match.group("target"))
