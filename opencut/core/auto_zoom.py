@@ -8,9 +8,10 @@ Uses OpenCV face detection (Haar cascade fallback if no DNN model available).
 
 import logging
 import math
-import os
 import threading
 from typing import List, Optional
+
+from opencut.core.face_detect_compat import get_shared_face_detector
 
 logger = logging.getLogger("opencut")
 
@@ -86,30 +87,10 @@ def _get_cascade():
         if _CASCADE is not None:
             return _CASCADE
 
-        # Try the built-in OpenCV data path first
-        cascade_name = "haarcascade_frontalface_default.xml"
-        builtin_path = cv2.data.haarcascades + cascade_name  # type: ignore[union-attr]
-        if os.path.exists(builtin_path):
-            _CASCADE = cv2.CascadeClassifier(builtin_path)
-            return _CASCADE
-
-        # Fallback: search common locations
-        candidates = [
-            os.path.join(os.path.dirname(__file__), cascade_name),
-            os.path.join(os.path.expanduser("~"), ".opencut", cascade_name),
-        ]
-        for path in candidates:
-            if os.path.exists(path):
-                _CASCADE = cv2.CascadeClassifier(path)
-                return _CASCADE
-
-        # Return empty classifier — detection will always return no faces,
-        # and we fall back to centre-crop anchors.
-        logger.warning(
-            "Haar cascade not found at %s; face detection disabled, using centre crop.",
-            builtin_path,
-        )
-        _CASCADE = cv2.CascadeClassifier()
+        # The shared resolver owns backend selection and its own fallbacks.
+        # When nothing is available it returns a detector that reports no
+        # faces, so this path still degrades to centre-crop anchors.
+        _CASCADE = get_shared_face_detector()
         return _CASCADE
 
 

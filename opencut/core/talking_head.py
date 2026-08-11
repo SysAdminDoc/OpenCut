@@ -17,6 +17,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import (
     ensure_package,
     get_ffprobe_path,
@@ -116,7 +117,7 @@ def detect_face_in_image(image_path: str) -> Dict:
             "method": "fallback",
         }
 
-    cascade = cv2.CascadeClassifier(cascade_path)
+    cascade = get_shared_face_detector()
     faces = cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,

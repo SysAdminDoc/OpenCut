@@ -5,7 +5,7 @@
     "ocQeReflect"
   ],
   "cep_only_count": 2,
-  "function_count": 18,
+  "function_count": 19,
   "functions": [
     {
       "cep_only": false,
@@ -246,12 +246,24 @@
       "role": "Emit a panel acknowledgement event for host/panel round trips.",
       "status": "different_mechanism",
       "uxp_path": "UXP addon events or direct backend callback instead of CSXSEvent."
+    },
+    {
+      "cep_only": false,
+      "f_numbers": [
+        "F303"
+      ],
+      "name": "ocReadPanelBootstrapToken",
+      "replacement_plan": "Keep the secret contract identical and swap only the file-read transport when CEP retires.",
+      "risk": "low",
+      "role": "Read the local CSRF bootstrap secret so a file:// panel can prove it is host-embedded and not a web page.",
+      "status": "different_mechanism",
+      "uxp_path": "UXP reads the same secret through its own localFileSystem permission; no ExtendScript bridge is involved."
     }
   ],
   "source": "extension/com.opencut.panel/host/index.jsx",
   "status_counts": {
     "cep_only": 2,
-    "different_mechanism": 1,
+    "different_mechanism": 2,
     "direct_uxp": 14,
     "partial_uxp": 1
   },

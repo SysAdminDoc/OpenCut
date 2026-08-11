@@ -16,6 +16,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import ensure_package, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -96,8 +97,7 @@ def analyze_face_consistency(
         on_progress(5, "Loading face detector...")
 
     # Use Haar cascade for face detection (always available in OpenCV)
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    face_cascade = cv2.CascadeClassifier(cascade_path)
+    face_cascade = get_shared_face_detector()
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     num_segments = max(1, int(duration / segment_duration)) if duration > 0 else 1

@@ -15,6 +15,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -207,7 +208,7 @@ def _detect_face_positions(
     if cascade_path is None:
         return []
 
-    cascade = cv2.CascadeClassifier(cascade_path)
+    cascade = get_shared_face_detector()
     if cascade.empty():
         return []
 

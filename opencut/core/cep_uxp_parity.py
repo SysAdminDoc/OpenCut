@@ -384,6 +384,24 @@ CEP_UXP_PARITY: tuple[CepUxpParityEntry, ...] = (
         replacement_plan="Replace the event transport while keeping the acknowledgement semantics.",
         f_numbers=("F198", "F252"),
     ),
+    CepUxpParityEntry(
+        name="ocReadPanelBootstrapToken",
+        role=(
+            "Read the local CSRF bootstrap secret so a file:// panel can prove "
+            "it is host-embedded and not a web page."
+        ),
+        status="different_mechanism",
+        risk="low",
+        uxp_path=(
+            "UXP reads the same secret through its own localFileSystem "
+            "permission; no ExtendScript bridge is involved."
+        ),
+        replacement_plan=(
+            "Keep the secret contract identical and swap only the file-read "
+            "transport when CEP retires."
+        ),
+        f_numbers=("F303",),
+    ),
 )
 
 _ENTRY_BY_NAME = {entry.name: entry for entry in CEP_UXP_PARITY}

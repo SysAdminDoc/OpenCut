@@ -17,6 +17,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -62,8 +63,7 @@ def detect_face_region(frame) -> Optional[Tuple[int, int, int, int]]:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Use built-in Haar cascade
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    cascade = cv2.CascadeClassifier(cascade_path)
+    cascade = get_shared_face_detector()
 
     faces = cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5,

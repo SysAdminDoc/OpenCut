@@ -184,12 +184,15 @@ class TestFaceDetection(unittest.TestCase):
         mock_cascade = MagicMock()
         mock_cascade.detectMultiScale.return_value = mock_faces
 
+        # Face detection resolves through the shared OpenCV 4/5 compat
+        # detector, so mock that seam rather than cv2.CascadeClassifier —
+        # the latter is absent from the declared opencv-python 5 wheel.
         with patch("cv2.imread", return_value=mock_img), \
              patch("cv2.cvtColor", return_value=mock_gray), \
-             patch("cv2.CascadeClassifier", return_value=mock_cascade), \
-             patch("cv2.data") as mock_data, \
-             patch("os.path.isfile", side_effect=lambda p: True):
-            mock_data.haarcascades = "/mock/"
+             patch(
+                 "opencut.core.talking_head.get_shared_face_detector",
+                 return_value=mock_cascade,
+             ):
             result = detect_face_in_image(tmp.name)
 
         self.assertTrue(result["detected"])
@@ -213,12 +216,15 @@ class TestFaceDetection(unittest.TestCase):
         mock_cascade = MagicMock()
         mock_cascade.detectMultiScale.return_value = np.array([]).reshape(0, 4)
 
+        # Face detection resolves through the shared OpenCV 4/5 compat
+        # detector, so mock that seam rather than cv2.CascadeClassifier —
+        # the latter is absent from the declared opencv-python 5 wheel.
         with patch("cv2.imread", return_value=mock_img), \
              patch("cv2.cvtColor", return_value=mock_gray), \
-             patch("cv2.CascadeClassifier", return_value=mock_cascade), \
-             patch("cv2.data") as mock_data, \
-             patch("os.path.isfile", side_effect=lambda p: True):
-            mock_data.haarcascades = "/mock/"
+             patch(
+                 "opencut.core.talking_head.get_shared_face_detector",
+                 return_value=mock_cascade,
+             ):
             result = detect_face_in_image(tmp.name)
 
         self.assertFalse(result["detected"])

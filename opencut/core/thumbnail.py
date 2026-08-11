@@ -15,6 +15,7 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.face_detect_compat import get_shared_face_detector
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
@@ -175,8 +176,7 @@ def generate_thumbnails(
     has_faces = False
     if use_faces:
         try:
-            cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-            cascade = cv2.CascadeClassifier(cascade_path)
+            cascade = get_shared_face_detector()
 
             def _haar_detect(frame):
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

@@ -32,7 +32,7 @@ def _host_oc_functions() -> tuple[str, ...]:
 def test_catalogue_matches_host_jsx_surface():
     host_names = _host_oc_functions()
 
-    assert len(host_names) == 18
+    assert len(host_names) == 19
     assert tuple(parity_names()) == host_names
     assert validate_catalogue(host_names) == []
 
@@ -59,7 +59,7 @@ def test_committed_manifest_matches_live_catalogue():
     live = build_manifest()
 
     assert committed == live
-    assert committed["function_count"] == 18
+    assert committed["function_count"] == 19
     assert committed["cep_only_count"] == 2
     assert committed["status_counts"]["cep_only"] == 2
     assert committed["status_counts"]["partial_uxp"] == 1

@@ -16,6 +16,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core.face_detect_compat import get_shared_face_detector
+
 logger = logging.getLogger("opencut")
 
 
@@ -207,9 +209,7 @@ def _extract_face_segments(
                 else:
                     # Haar cascade fallback — no embeddings, just detection
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    cascade = cv2.CascadeClassifier(
-                        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-                    )
+                    cascade = get_shared_face_detector()
                     rects = cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60))
                     for (x, y, w, h) in rects:
                         faces_in_frame.append(((x, y, x + w, y + h), None, 0.7))
