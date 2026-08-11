@@ -348,12 +348,24 @@ def system_status():
         },
         "python_version": platform.python_version(),
         "server_version": __version__,
+        "sqlite": _sqlite_safety_payload(),
     })
 
 
 # ---------------------------------------------------------------------------
 # GPU Recommendation
 # ---------------------------------------------------------------------------
+def _sqlite_safety_payload() -> dict:
+    """FTS5 runtime floor (F309). Never raises into /system/status."""
+    try:
+        from opencut.core.sqlite_safety import fts5_safety_report
+
+        return fts5_safety_report()
+    except Exception as exc:  # noqa: BLE001 - status must render regardless
+        logger.warning("sqlite safety report unavailable: %s", exc)
+        return {}
+
+
 @system_bp.route("/system/gpu-recommend", methods=["GET"])
 def gpu_recommend():
     """Recommend model sizes and settings based on GPU."""

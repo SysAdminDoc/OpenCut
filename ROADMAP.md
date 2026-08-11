@@ -16,13 +16,6 @@ scheme (highest prior allocation: F302).
   Acceptance: The filter is capability-probed at runtime and reported as an ASR backend with provenance, never assumed present; a transcription job produces segment timings compatible with the existing `transcribe_audio()` contract; the lane is selectable through `asr_router` and degrades to the current backends when the filter or model is absent; model acquisition is explicit and offline-safe.
   Complexity: M
 
-- [ ] P1 — F309 — Enforce a runtime SQLite floor and refuse untrusted FTS5 databases
-  Why: CVE-2026-11822 is an out-of-bounds read in `fts5LeafSeek()` and a heap overflow in `fts5ChunkIterate()` reachable by running a MATCH query against a crafted database file, fixed in SQLite 3.53.2; OpenCut runs FTS5 over `~/.opencut/footage_index.db` and the federated index and asserts no `sqlite3.sqlite_version` anywhere.
-  Evidence: https://nvd.nist.gov/vuln/detail/CVE-2026-11822; `opencut/core/footage_index_db.py`, `opencut/core/federated_media_index.py`; no `sqlite_version` reference in the tree
-  Touches: `opencut/core/footage_index_db.py`, `opencut/core/federated_media_index.py`, `opencut/local_db_diagnostics.py`, `opencut/routes/system.py`, `scripts/release_smoke.py`
-  Acceptance: The running `sqlite3.sqlite_version` is reported in system status and release smoke; opening an FTS5 index that did not originate from this install is refused with a typed error when the runtime is below 3.53.2; self-created indexes on a compliant runtime behave unchanged.
-  Complexity: S
-
 ### P2
 
 - [ ] P2 — F310 — Resolve the Flathub lane against Flathub's 2026 generative-AI policy
