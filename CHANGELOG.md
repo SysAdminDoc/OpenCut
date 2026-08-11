@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - SQLite FTS5 memory-safety floor
+
+- CVE-2026-11822 corrupts memory when an FTS5 `MATCH` runs against a crafted
+  database file (fixed in SQLite 3.53.2). The linked SQLite version is now
+  reported in `/system/status` and release smoke, and on a runtime below the
+  floor OpenCut refuses to open a search index it did not create. Indexes this
+  install owns — including ones written before provenance stamping existed —
+  keep working on every runtime, so the guard does not strand existing users.
+
 ### Added - Queue allowlist coverage is now measurable
 
 - `GET /queue/coverage` reports every parameterless async POST route with its

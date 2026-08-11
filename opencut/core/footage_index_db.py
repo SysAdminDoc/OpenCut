@@ -11,6 +11,7 @@ import sqlite3
 import threading
 import time
 
+from opencut.core.sqlite_safety import ensure_fts5_database_trusted
 from opencut.local_db_diagnostics import build_sqlite_diagnostic
 from opencut.local_db_maintenance import count_rows, prepare_destructive_result
 from opencut.local_db_migrations import migrate_user_version
@@ -90,10 +91,18 @@ def _get_conn():
         conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
+        # F309: an index this install did not create is untrusted input for
+        # FTS5 MATCH on a runtime that predates the CVE-2026-11822 fixes.
+        created_here = not os.path.exists(_DB_PATH)
         conn = sqlite3.connect(_DB_PATH, timeout=10)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.row_factory = sqlite3.Row
+        try:
+            ensure_fts5_database_trusted(conn, _DB_PATH, created_here=created_here)
+        except Exception:
+            conn.close()
+            raise
         _thread_local.conn = conn
         _thread_local.conn_path = _DB_PATH
         with _CONN_LOCK:

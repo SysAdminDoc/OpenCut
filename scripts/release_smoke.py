@@ -1511,6 +1511,34 @@ def step_queue_coverage(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_sqlite_fts5_floor(_args: argparse.Namespace) -> StepResult:
+    """Report the linked SQLite version against the FTS5 memory-safety floor.
+
+    Informational: an older runtime is common on offline installs and the
+    active policy already refuses foreign indexes there.
+    """
+    start = time.time()
+    try:
+        from opencut.core.sqlite_safety import fts5_safety_report
+
+        report = fts5_safety_report()
+    except Exception as exc:  # noqa: BLE001
+        return StepResult(
+            "sqlite-fts5-floor", "warn", exit_code=0,
+            duration_ms=int((time.time() - start) * 1000),
+            message=f"sqlite safety report unavailable: {exc}",
+        )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if report["fts5_runtime_patched"] else "warn"
+    return StepResult(
+        "sqlite-fts5-floor", status, exit_code=0, duration_ms=duration,
+        message=(
+            f"SQLite {report['sqlite_version']} vs FTS5 floor "
+            f"{report['fts5_floor']} ({report['cve']}); {report['policy']}"
+        ),
+    )
+
+
 def step_standards_conformance(args: argparse.Namespace) -> StepResult:
     """Run the independent reference validators over OpenCut's own output.
 
@@ -1618,6 +1646,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("openapi-contract", step_openapi_contract, "Check typed OpenAPI contract manifest + coverage ratchet"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("queue-coverage", step_queue_coverage, "Report queue allowlist coverage; fail only on stale entries"),
+    StepDefinition("sqlite-fts5-floor", step_sqlite_fts5_floor, "Report SQLite FTS5 memory-safety floor (CVE-2026-11822)"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
     StepDefinition("mcp-registry", step_mcp_registry, "Check MCP server registry manifest is in sync (F147)"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),

@@ -22,6 +22,7 @@ import time
 from collections.abc import Callable, Iterable
 from typing import Any
 
+from opencut.core.sqlite_safety import ensure_fts5_database_trusted
 from opencut.local_db_migrations import migrate_user_version
 
 logger = logging.getLogger("opencut")
@@ -103,11 +104,19 @@ _SKIP_DIRS = frozenset(
 
 def _connect() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
+    # F309: see opencut.core.sqlite_safety — a foreign index is untrusted
+    # input for FTS5 MATCH on a runtime predating the CVE-2026-11822 fixes.
+    created_here = not os.path.exists(_DB_PATH)
     conn = sqlite3.connect(_DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
+    try:
+        ensure_fts5_database_trusted(conn, _DB_PATH, created_here=created_here)
+    except Exception:
+        conn.close()
+        raise
     return conn
 
 
