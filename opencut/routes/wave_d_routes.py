@@ -251,3 +251,62 @@ def route_grammar_parse():
         return jsonify(dict(action))
     except Exception as exc:  # noqa: BLE001
         return safe_error(exc, "voice_grammar_parse")
+
+
+# ---------------------------------------------------------------------------
+# APV (Advanced Professional Video, IETF RFC 9924)
+# ---------------------------------------------------------------------------
+
+@wave_d_bp.route("/video/encode/apv/info", methods=["GET"])
+def route_apv_info():
+    from opencut.core import apv_export
+
+    try:
+        return jsonify(apv_export.apv_info())
+    except Exception as exc:  # noqa: BLE001 - capability probes must not 500
+        return safe_error(exc, "apv_info")
+
+
+@wave_d_bp.route("/video/encode/apv", methods=["POST"])
+@require_csrf
+@async_job("apv_encode")
+def route_apv_encode(job_id, filepath, data):
+    """Encode to APV, the all-intra mezzanine codec for edit round-trips."""
+    from opencut.core import apv_export
+    from opencut.security import safe_int
+
+    preset = str(data.get("preset") or "balanced").lower()
+    if preset not in apv_export.APV_PRESETS:
+        preset = "balanced"
+
+    container = str(data.get("container") or ".mp4").lower()
+    if not container.startswith("."):
+        container = "." + container
+    if container not in apv_export.APV_CONTAINERS:
+        container = ".mp4"
+
+    pix_fmt = str(data.get("pix_fmt") or apv_export.DEFAULT_PIX_FMT)
+    if pix_fmt not in ("yuv422p10le", "yuv420p10le", "yuv444p10le", "yuv422p"):
+        pix_fmt = apv_export.DEFAULT_PIX_FMT
+
+    qp_override = data.get("qp")
+    if qp_override is not None:
+        qp_override = safe_int(qp_override, 22, min_val=0, max_val=51)
+
+    output = (data.get("output") or "").strip()
+    if output:
+        output = validate_path(output)
+
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+
+    result = apv_export.encode_apv(
+        filepath,
+        preset=preset,
+        output=output or None,
+        qp_override=qp_override,
+        container=container,
+        pix_fmt=pix_fmt,
+        on_progress=_on_progress,
+    )
+    return result

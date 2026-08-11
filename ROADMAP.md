@@ -9,28 +9,7 @@ scheme (highest prior allocation: F302).
 
 ### P1
 
-- [ ] P1 — F307 — Expose an FFmpeg-native whisper.cpp transcription lane
-  Why: The bundled FFmpeg is compiled with `--enable-whisper` and exposes the `whisper` audio filter, so a transcription path exists that needs no torch, no Python model stack, and no optional extra — directly reducing the 21-of-73 dependency-gated feature count on machines where the AI extras will not install.
-  Evidence: `ffmpeg/ffmpeg.exe -filters` lists `whisper A->A Transcribe audio using whisper.cpp` in the pinned `2026-08-03-git-01a25f74cc-full_build` payload; no OpenCut module references the filter; `opencut/_generated/feature_readiness.json` reports 21 `missing_dependency` features
-  Touches: new `opencut/core/asr_ffmpeg_whisper.py`, `opencut/core/asr_router.py`, `opencut/checks.py`, `opencut/core/ffmpeg_provenance.py` (capability probe), caption/transcribe routes, `tests/`
-  Acceptance: The filter is capability-probed at runtime and reported as an ASR backend with provenance, never assumed present; a transcription job produces segment timings compatible with the existing `transcribe_audio()` contract; the lane is selectable through `asr_router` and degrades to the current backends when the filter or model is absent; model acquisition is explicit and offline-safe.
-  Complexity: M
-
 ### P2
-
-- [ ] P2 — F310 — Resolve the Flathub lane against Flathub's 2026 generative-AI policy
-  Why: Flathub now states that applications containing "AI-generated or AI-assisted code, documentation, or any other content are not allowed" and that submission pull requests "must not be generated, opened, or automated using AI tools or agents", with permanent ban for repeat violations, and separately rejects console software; the repo ships a Flathub manifest while documenting AI-assisted development, so the lane carries a policy risk that no engineering work removes.
-  Evidence: https://docs.flathub.org/docs/for-app-authors/requirements (verified verbatim 2026-08-10); `io.github.sysadmindoc.opencut.yml`, `flathub.json`, `packaging/linux/flatpak/`
-  Touches: `io.github.sysadmindoc.opencut.yml`, `flathub.json`, `packaging/linux/`, `docs/LINUX_DISTRIBUTION.md`, `README.md`, `tests/test_linux_distribution_packaging.py`
-  Acceptance: The repository records an explicit decision to either retire the Flathub submission lane (keeping AppImage as the Linux channel and removing or clearly marking the Flathub-specific manifest) or to pursue it under an attestation the project can honestly make; documentation and tests no longer imply a Flathub submission that will not happen.
-  Complexity: S
-
-- [ ] P2 — F311 — Add APV (RFC 9924) encode and decode routes
-  Why: The bundled FFmpeg already ships the `liboapv` APV encoder plus `apv` and `apv_vulkan` decoders, APV is an IETF standard intermediate codec designed to survive multiple edit generations, and OpenCut has no route for it despite shipping VVC and SVT-AV1 lanes built on the same pattern.
-  Evidence: `ffmpeg/ffmpeg.exe -encoders` lists `liboapv APV (codec apv)`; `-decoders` lists `apv` and `apv_vulkan`; build configuration includes `--enable-liboapv`; existing pattern in `opencut/core/vvc_export.py` and `opencut/core/svtav1_psy.py`
-  Touches: new `opencut/core/apv_export.py`, `opencut/routes/encoding_routes.py`, `opencut/checks.py`, `opencut/routes/jobs_routes.py` (queue allowlist), `tests/`
-  Acceptance: `POST /video/encode/apv` runs as a durable cancellable job with bounded presets and `GET /video/encode/apv/info` reports probe-based availability; encoder absence returns a typed dependency error rather than a failed job; a small media fixture round-trips through encode and probe.
-  Complexity: M
 
 - [ ] P2 — F314 — Make caption burn-in incremental
   Why: The most-repeated Premiere captioning complaint is that a small caption change forces a full timeline re-render; OpenCut burns captions with a whole-file FFmpeg re-encode, so it inherits the same cost and has an unclaimed differentiator available.

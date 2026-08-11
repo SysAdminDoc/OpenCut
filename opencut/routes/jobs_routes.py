@@ -285,6 +285,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/quality/compare",
     "/video/quality/batch-compare",
     # v1.21.0 additions — Wave D (delivery + colour + voice grammar)
+    "/video/encode/apv",
     "/video/encode/vvc",
     "/video/stream/srt/start",
     "/video/scopes/pro",
