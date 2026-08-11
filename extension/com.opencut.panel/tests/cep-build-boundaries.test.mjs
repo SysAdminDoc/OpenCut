@@ -79,7 +79,9 @@ describe("CEP production build", () => {
 
 describe("panel controller budgets", () => {
   const budgets = [
-    ["client/main.js", 18800],
+    // F303 added the panel bootstrap wiring; the reader itself lives in
+    // client/panel-bootstrap-token.js, so only the wiring counts here.
+    ["client/main.js", 18815],
     ["client/update-controller.js", 300],
     ["client/results-controller.js", 300],
     ["client/settings-diagnostics-controller.js", 110],

@@ -403,6 +403,17 @@ def create_app(config=None, testing=False, introspection=False):
     except Exception as _rc_exc:  # noqa: BLE001
         logger.warning("request_correlation install failed: %s", _rc_exc)
 
+    # F303: host-embedded panels load from ``file://`` and so present
+    # ``Origin: null``, which /health must refuse a CSRF token to. Publish a
+    # 0600 secret the panel can read through ExtendScript to prove it is not a
+    # web page. Failure is non-fatal — the panel falls back to same-origin.
+    try:
+        from opencut.panel_bootstrap import ensure_bootstrap_secret
+
+        ensure_bootstrap_secret()
+    except Exception as _pb_exc:  # noqa: BLE001 - startup must survive a read-only home
+        logger.warning("panel bootstrap secret unavailable: %s", _pb_exc)
+
     # F112: per-install API token gate for non-loopback binds. The gate
     # only fires when ``OPENCUT_ALLOW_REMOTE=1`` is set AND the request
     # peer is non-loopback — local panel/CLI traffic stays trusted.

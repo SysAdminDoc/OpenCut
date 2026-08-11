@@ -3,6 +3,28 @@
 Notable changes from the June 2026 hardening/audit pass. The authoritative
 record also lives in the git commit messages.
 
+## Unreleased
+
+### Fixed - Panel CSRF bootstrap on host-embedded panels
+
+- The CEP panel is a `file://` document, so its requests carry `Origin: null`
+  and `/health` correctly withheld the CSRF token — a hostile local page
+  presents the same opaque origin. The panel connected, reported healthy, and
+  then failed every action with "Invalid or missing CSRF token". The server now
+  publishes an owner-only bootstrap secret that only a local process can read;
+  the panel proves itself by reading it through ExtendScript, which a web page
+  cannot do, so the origin blocklist stays fully effective. A refused bootstrap
+  is now recorded as a `csrf_bootstrap_withheld` audit event naming the origin
+  and is visible through `GET /system/audit-log`.
+
+### Fixed - Panel transport no longer swallows failures
+
+- The CEP transport discarded every JSON parse failure and every callback
+  exception, so panel-side faults vanished without a trace. Parse failures,
+  callback exceptions, network errors, timeouts, and a withheld CSRF bootstrap
+  are now reported with the request path and status; reporting is on by default
+  so a caller cannot opt out of diagnosability.
+
 ## 1.48.0 - Durable media automation and review surfaces
 
 ### Added - MCP Apps review and progress surface

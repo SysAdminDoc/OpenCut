@@ -2972,3 +2972,48 @@ function ocEmitPingEvent(tag) {
     });
     return JSON.stringify({ dispatched: !!ok });
 }
+
+
+/**
+ * F303 — Read the local panel bootstrap secret.
+ *
+ * The panel document is loaded over file://, so its XHR to the loopback
+ * backend carries "Origin: null" and /health refuses it a CSRF token — a
+ * hostile local page presents exactly the same origin. ExtendScript can read
+ * the filesystem while the panel's browser context cannot, so reading this
+ * 0600 file is how the real panel proves it is running inside Premiere.
+ *
+ * Returns JSON: {ok: true, token: "..."} or {ok: false, reason: "..."}.
+ * The token is never logged.
+ */
+function ocReadPanelBootstrapToken() {
+    var f = null;
+    try {
+        var home = Folder.userData ? Folder("~").fsName : "";
+        if (!home) {
+            return JSON.stringify({ ok: false, reason: "No home folder" });
+        }
+        var path = home + "/.opencut/panel_bootstrap.token";
+        f = new File(path);
+        if (!f.exists) {
+            return JSON.stringify({ ok: false, reason: "Bootstrap file not found" });
+        }
+        if (!f.open("r")) {
+            return JSON.stringify({ ok: false, reason: "Bootstrap file unreadable" });
+        }
+        var raw = f.read();
+        f.close();
+        f = null;
+        var token = String(raw || "").replace(/[\r\n\s]/g, "");
+        if (!token) {
+            return JSON.stringify({ ok: false, reason: "Bootstrap file empty" });
+        }
+        if (token.length > 256) {
+            return JSON.stringify({ ok: false, reason: "Bootstrap token too long" });
+        }
+        return JSON.stringify({ ok: true, token: token });
+    } catch (e) {
+        try { if (f) f.close(); } catch (e2) { }
+        return JSON.stringify({ ok: false, reason: "Bootstrap read failed" });
+    }
+}

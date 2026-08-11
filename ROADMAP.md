@@ -9,13 +9,6 @@ scheme (highest prior allocation: F302).
 
 ### P0
 
-- [ ] P0 — F303 — Give the CEP panel a CSRF bootstrap that survives an opaque origin
-  Why: GitHub issue #5 (2026-08-10, macOS, v1.48.0) reports the panel connecting and then failing every action with "Invalid or missing CSRF token"; `/health` withholds the token whenever `Origin` is `null` or `file://`, and the CEP panel is a `file://` document, so the panel can never obtain a token and the 403 retry cannot recover.
-  Evidence: `opencut/routes/system.py:230,411-437`; `extension/com.opencut.panel/CSXS/manifest.xml:29` (`MainPath` is a local file, no `<CEFCommandLine>` overrides); `extension/com.opencut.panel/client/backend-client.js:78-90`; https://github.com/SysAdminDoc/OpenCut/issues/5
-  Touches: `opencut/routes/system.py`, `opencut/security.py`, `opencut/security_audit.py`, `extension/com.opencut.panel/client/backend-client.js`, `extension/com.opencut.panel/host/index.jsx`, `tests/test_reliability_hardening.py`
-  Acceptance: A `GET /health` carrying `Origin: null` or `Origin: file://` still yields a working panel bootstrap through a channel a browser page cannot reach (an ExtendScript-mediated read of a 0600 local token file is the intended shape — CEP Node privileges stay removed), while a plain cross-origin browser request with those headers still receives no token; the withheld-bootstrap decision is recorded as a security-audit event with the offending origin and is readable from a diagnostics route; a regression test covers both the panel path and the hostile-page path.
-  Complexity: M
-
 - [ ] P0 — F304 — Replace the FFmpeg snapshot date heuristic with a per-CVE fix-commit and capability matrix
   Why: The blocker that parked this work is resolved — the bundled binary is the pinned post-fix snapshot and `require_security_floor()` passes — but the accepted lane is still a date comparison, so a differently-branched build dated after the floor would be accepted without containing the fixes.
   Evidence: `opencut/core/ffmpeg_provenance.py:40-105` (`SNAPSHOT_FLOOR_DATE = "2026-07-06"`, `JULY_2026_FIX_COMMITS`); measured 2026-08-10 — bundled `ffmpeg/ffmpeg.exe` reports `2026-08-03-git-01a25f74cc-full_build-www.gyan.dev` matching `PINNED_INSTALLER_VERSION`, `require_security_floor()` returns `{"ok": true, "lane": "snapshot"}`, and GitHub's compare API places `01a25f74cc` 493 commits ahead of fix commit `4c6217477fc64305055b37d9d1d0d76d30e37f97` with `behind_by: 0`; https://www.ffmpeg.org/security.html
@@ -47,13 +40,6 @@ scheme (highest prior allocation: F302).
   Touches: new `opencut/core/asr_ffmpeg_whisper.py`, `opencut/core/asr_router.py`, `opencut/checks.py`, `opencut/core/ffmpeg_provenance.py` (capability probe), caption/transcribe routes, `tests/`
   Acceptance: The filter is capability-probed at runtime and reported as an ASR backend with provenance, never assumed present; a transcription job produces segment timings compatible with the existing `transcribe_audio()` contract; the lane is selectable through `asr_router` and degrades to the current backends when the filter or model is absent; model acquisition is explicit and offline-safe.
   Complexity: M
-
-- [ ] P1 — F308 — Stop the panel transport from swallowing errors
-  Why: The CEP transport discards every JSON-parse failure and every callback exception, so panel-side faults vanish; this is why the only open external bug report arrived with an empty logs section and no reproduction detail.
-  Evidence: `extension/com.opencut.panel/client/backend-client.js:30,67`; 149 empty `catch (e) {}` blocks across `extension/com.opencut.panel/client/` and `extension/com.opencut.uxp/`
-  Touches: `extension/com.opencut.panel/client/backend-client.js`, `extension/com.opencut.panel/client/main.js`, `extension/com.opencut.uxp/main.js`, `opencut/core/issue_report.py`, panel unit tests
-  Acceptance: Transport-level parse failures and callback exceptions are logged with the request path and status and surface in the issue-report bundle; benign `focus()`-style swallows may remain but every load-bearing catch either handles or reports; a panel test asserts a malformed response body produces a diagnosable error rather than silence.
-  Complexity: S
 
 - [ ] P1 — F309 — Enforce a runtime SQLite floor and refuse untrusted FTS5 databases
   Why: CVE-2026-11822 is an out-of-bounds read in `fts5LeafSeek()` and a heap overflow in `fts5ChunkIterate()` reachable by running a MATCH query against a crafted database file, fixed in SQLite 3.53.2; OpenCut runs FTS5 over `~/.opencut/footage_index.db` and the federated index and asserts no `sqlite3.sqlite_version` anywhere.

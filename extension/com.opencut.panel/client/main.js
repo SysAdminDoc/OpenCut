@@ -2390,10 +2390,20 @@
     // ================================================================
     // Backend Communication
     // ================================================================
+    // F303: the panel is a file:// origin, so /health refuses it the CSRF token
+    // until the host bridge proves it is not a web page. panel-bootstrap-token.js.
+    var bootstrapTokenLoader = OpenCutPanelBootstrapToken.createBootstrapTokenLoader({
+        evalScript: cs && typeof cs.evalScript === "function"
+            ? function (script, cb) { cs.evalScript(script, cb); } : null,
+        onWarn: function (reason) { console.warn("OpenCut panel bootstrap:", reason); },
+        onReady: function () { backendClient.refreshCsrfToken(function () {}); }
+    });
+
     var backendClient = OpenCutBackendClient.createBackendClient({
         getBaseUrl: function () { return panelState.getBackendUrl(); },
         getToken: function () { return panelState.getCsrfToken(); },
         setToken: setCsrfToken,
+        getBootstrapToken: function () { return bootstrapTokenLoader.get(); },
         translate: t
     });
     var api = backendClient.request;
@@ -17774,6 +17784,9 @@
                 el.alertBanner.classList.add("hidden");
             });
         }
+
+        // F303: read the local bootstrap secret before the first health check.
+        bootstrapTokenLoader.load();
 
         // Health check loop
         checkHealth();
