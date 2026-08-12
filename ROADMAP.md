@@ -54,6 +54,20 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
   Note: distinct from the blocked "Localize the Python/CLI backend and add panel locales beyond en/es" item in `Roadmap_Blocked.md` — this ships no new translations and needs no human translator; it is the static refactor that makes that blocked item affordable when it unblocks.
   Complexity: M
 
+- [ ] P1 — F332 — Complete the FFmpeg per-CVE acceptance matrix for the whole 2026-07 batch
+  Why: F304 replaced the snapshot date heuristic with per-CVE fix-commit grading, but the matrix grades four CVEs out of roughly sixteen High-severity FFmpeg advisories published 2026-07-22→24 against "FFmpeg through 8.1.2" — so the gate reports a per-CVE verdict while being silent on twelve disclosures from the same batch, including the Vulkan HEVC and NVDEC hardware decode paths this product actually drives.
+  Evidence: `opencut/core/ffmpeg_provenance.py` names CVE-2026-64832, -64833, -64835, -66041 from the July batch (plus the earlier CVE-2026-39210…39218 and CVE-2026-6385/-8461 entries); a repo-wide grep finds no mention of CVE-2026-64830 (VobSub demuxer heap overflow), -64831 (Vulkan HEVC hwaccel stack overflow), -64834 (RTP/ASF infinite loop), -65703, -65704, -65705, -65706 (`vf_swaprect` OOB write), -66036 (`vf_hqdn3d` OOB write), -66037, -66038, -66039, or -66040 (native PNG/APNG encoder heap OOB write); NVD `cpe:2.3:a:ffmpeg:ffmpeg`, 2026-07 publication window
+  Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, `opencut/_generated/project_facts.json`, `docs/RELEASE_PROVENANCE.md`, `SECURITY.md`, `tests/`
+  Acceptance: Every FFmpeg advisory the project claims coverage for is enumerated with its upstream fix commit and the ancestry check that proves the pinned build contains it; the gate distinguishes "graded and clear", "graded and vulnerable", and "not yet graded" rather than reporting a clear verdict from partial coverage; adding a new advisory to the matrix without a fix commit fails the gate; the advertised claim in `SECURITY.md` and the README matches the matrix's actual scope.
+  Complexity: M
+
+- [ ] P1 — F334 — Raise the urllib3 floor above the two High-severity 2026-05 advisories
+  Why: The declared floor is `urllib3>=2.6.3`, annotated for CVE-2026-21441, but two further High-severity advisories published 2026-05-11 are fixed only in 2.7.0 — so the pin the project chose deliberately for security reasons is itself vulnerable, and one of them forwards sensitive headers across origins on proxied redirects, which matters for a service that makes outbound model and update requests.
+  Evidence: `pyproject.toml:86` (`urllib3>=2.6.3`) with the CVE-2026-21441 rationale at `:81-85`; GitHub Advisory API (`/advisories?ecosystem=pip&affects=urllib3`): GHSA-qccp-gfcp-xxvc / CVE-2026-44431 "sensitive headers forwarded across origins in proxied low-level redirects", High, `>=1.23, <2.7.0`, patched 2.7.0, published 2026-05-11; GHSA-mf9v-mfxr-j63j / CVE-2026-44432 "decompression-bomb safeguards bypassed in parts of the streaming API", High, `>=2.6.0, <2.7.0`, patched 2.7.0, same date
+  Touches: `pyproject.toml`, `requirements.txt`, `requirements-*-lock.txt`, `scripts/check_installed_versions.py`, `docs/PYTHON_ADVISORIES.md`, `tests/test_declared_floors.py`
+  Acceptance: The floor is `urllib3>=2.7.0` with both CVE ids in the inline rationale following the file's existing convention; the resolved lane still installs under the declared extras and the installed-version gate passes; the advisory policy doc records both ids so the next audit does not re-derive them.
+  Complexity: S
+
 ### P2
 
 - [ ] P2 — F314 — Make caption burn-in incremental
@@ -89,6 +103,14 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
   Evidence: `opencut/_generated/route_manifest.json` → `surface_coverage.summary` (`direct_surface_routes: 280`, `integration_only_routes: 1288`, `coverage_percent: 17.9`, `primary_counts.cli: 0`); 19 CLI commands in `opencut/cli.py`; 88 MCP tools in `opencut/_generated/mcp_server_registry.json`; the gate at `surface_coverage.gate` only asserts every route is classified, never that the ratio holds
   Touches: `opencut/tools/dump_route_manifest.py`, `scripts/release_smoke.py`, `opencut/cli.py`, `opencut/core/mcp_tools.py`, `opencut/core/command_palette.py`, `tests/`
   Acceptance: The release gate fails when `coverage_percent` falls below the value recorded at the time the ratchet lands; a new route must either declare a surface or carry an explicit `integration-only` justification that the gate records; the report names the largest integration-only route families so a triage or deprecation decision has data behind it.
+  Complexity: M
+
+- [ ] P2 — F333 — Decide the FFmpeg 9.0 release lane so users are not forced onto git-master snapshots
+  Why: `RELEASE_FLOOR` is `(8, 1, 3)` with the comment "the release lane remains closed until upstream publishes 8.1.3" — a version that never shipped, because upstream moved to 9.0 instead — so today every source installer must fetch a dated git-master snapshot, which is a harder and less auditable ask than a tagged release and leaves the documented release lane permanently dead.
+  Evidence: `opencut/core/ffmpeg_provenance.py:56-57` (`RELEASE_FLOOR = (8, 1, 3)`) and `:62` (`SNAPSHOT_FLOOR_DATE = "2026-07-06"`); https://ffmpeg.org/download.html — FFmpeg 9.0 "Lei" released 2026-08-04, branch cut from master 2026-06-26; 8.1.2 (2026-06-17) is the last 8.1 release and 8.0.3 (2026-06-18) closed the 8.0 branch; `README.md:110-118` and `Install.ps1` currently instruct users toward the gyan.dev git-master snapshot
+  Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, `README.md`, `Install.ps1`, `install.py`, `Dockerfile`, `docs/RELEASE_PROVENANCE.md`, `tests/`
+  Acceptance: The release lane either opens on a specific 9.x version proven by F332's per-CVE ancestry checks to carry every graded fix, or is documented as deliberately closed with the reason recorded in the module rather than a comment about an unshipped 8.1.3; the 9.0 branch point (2026-06-26, before the July fix commits landed on master) is explicitly accounted for rather than assumed, since a later release date does not by itself imply the fixes were backported; installation docs name whichever lane is supported.
+  Depends on: F332
   Complexity: M
 
 ### P3
