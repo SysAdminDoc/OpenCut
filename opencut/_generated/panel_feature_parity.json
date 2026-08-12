@@ -3286,7 +3286,7 @@
         "readiness": "implemented",
         "classification": "cep-terminal",
         "owner": "delivery",
-        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow."
+        "justification": "The legacy CEP export preset browser and thumbnail helper stay maintained with the CEP export tab through the support horizon, then terminate without one-for-one UXP ports because UXP deliverables and /export/preset are the supported successor workflow."
       },
       {
         "rule": "/export/thumbnails",
@@ -3298,7 +3298,7 @@
         "readiness": "implemented",
         "classification": "cep-terminal",
         "owner": "delivery",
-        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow."
+        "justification": "The legacy CEP export preset browser and thumbnail helper stay maintained with the CEP export tab through the support horizon, then terminate without one-for-one UXP ports because UXP deliverables and /export/preset are the supported successor workflow."
       },
       {
         "rule": "/favorites",

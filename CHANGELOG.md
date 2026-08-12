@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Sourced CEP support horizon
+
+- The migration policy now cites Adobe's November 2025 Premiere Pro 25.6
+  statement and treats approximately November 2026 as a planning inference,
+  not an announced removal date. CEP export and NLP remain maintained for
+  security, reliability, and user-blocking fixes while successor workflows
+  continue to land in UXP.
+
 ### Added - Feature-level CEP/UXP parity gate
 
 - A generated panel manifest now inventories the 185 CEP and 80 UXP backend

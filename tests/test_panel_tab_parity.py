@@ -1,8 +1,9 @@
 """
 CEP <-> UXP tab parity gate (RESEARCH_FEATURE_PLAN_2026-05-25 Q5).
 
-Adobe CEP end-of-life lands around 2026-09. The CEP -> UXP migration
-plan (F252) assumes panel parity that is not actually true at the tab
+Adobe's November 2025 guidance plans one calendar year of dual CEP/UXP
+support after Premiere Pro 25.6. The CEP -> UXP migration plan (F252)
+assumes panel parity that is not actually true at the tab
 level — CEP has 'export' and 'nlp' tabs that UXP doesn't, and UXP has
 'search' and 'deliverables' tabs that CEP doesn't.
 
@@ -22,6 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CEP_INDEX = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "index.html"
 UXP_INDEX = REPO_ROOT / "extension" / "com.opencut.uxp" / "index.html"
 PARITY_LEDGER = REPO_ROOT / "extension" / "PANEL_PARITY.json"
+README = REPO_ROOT / "README.md"
+UXP_MIGRATION = REPO_ROOT / "docs" / "UXP_MIGRATION.md"
 
 CEP_TAB_RE = re.compile(r'data-nav="([^"]+)"')
 UXP_TAB_RE = re.compile(r'data-tab="([^"]+)"')
@@ -101,6 +104,44 @@ class TestPanelTabParity(unittest.TestCase):
                     str(entry["justification"]).strip(),
                     f"PANEL_PARITY.json[{side}][{tab_id}].justification is empty",
                 )
+
+    def test_adobe_cep_timeline_has_primary_source_and_retrieval_date(self):
+        timeline = self.ledger.get("$adobe_cep_eol")
+        self.assertIsInstance(timeline, dict)
+        self.assertEqual(timeline.get("planning_horizon"), "approximately 2026-11")
+        self.assertIn("not announced an exact removal date", timeline.get("planning_note", ""))
+        self.assertEqual(
+            timeline.get("statement"),
+            "the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty",
+        )
+        self.assertEqual(
+            timeline.get("source_url"),
+            "https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md",
+        )
+        self.assertEqual(timeline.get("retrieved"), "2026-08-12")
+
+    def test_cep_only_tabs_remain_maintained_through_the_corrected_horizon(self):
+        for tab_id in ("export", "nlp"):
+            justification = self.ledger["cep_only"][tab_id]["justification"].lower()
+            self.assertIn("maintained", justification)
+            self.assertIn("security", justification)
+            self.assertIn("reliability", justification)
+            self.assertIn("november 2026", justification)
+            self.assertNotIn("do not invest further", justification)
+
+        serialized = json.dumps(self.ledger)
+        self.assertNotIn("2026-09", serialized)
+
+    def test_public_guidance_uses_the_sourced_planning_horizon(self):
+        for path in (README, UXP_MIGRATION):
+            source = _read(path)
+            self.assertIn("November 2026", source, path.name)
+            self.assertIn(
+                "https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md",
+                source,
+                path.name,
+            )
+            self.assertNotIn("September 2026", source, path.name)
 
 
 if __name__ == "__main__":

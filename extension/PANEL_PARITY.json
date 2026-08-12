@@ -2,7 +2,14 @@
   "$comment": "CEP <-> UXP tab parity ledger (RESEARCH_FEATURE_PLAN_2026-05-25 Q5).",
   "$generated_by": "manual tab and route-divergence ownership; generated route evidence is enforced by tests",
   "$updated": "2026-08-12",
-  "$adobe_cep_eol": "approximately 2026-09",
+  "$adobe_cep_eol": {
+    "planning_horizon": "approximately 2026-11",
+    "planning_note": "OpenCut derives this planning horizon from Adobe's November 2025 Premiere Pro 25.6 update; Adobe has not announced an exact removal date.",
+    "statement": "the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty",
+    "source_url": "https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md",
+    "source_last_updated": "2025-11",
+    "retrieved": "2026-08-12"
+  },
   "common_tabs": [
     "cut",
     "captions",
@@ -14,12 +21,12 @@
   "cep_only": {
     "export": {
       "tab_id": "export",
-      "justification": "Legacy multi-platform export wizard. Superseded in UXP by 'deliverables' which folds OTIO + AAF + IMF + Dolby Vision planning into one tab. CEP 'export' tab will be retired with CEP at ~2026-09; do not invest further. F252 migration consideration.",
+      "justification": "Legacy multi-platform export wizard. UXP 'deliverables' is its successor and receives net-new delivery workflows, but the CEP export tab remains maintained for security, reliability, and user-blocking fixes through Adobe's approximately November 2026 planning horizon. Retire it only after CEP removal or an explicit support decision.",
       "uxp_replacement": "deliverables"
     },
     "nlp": {
       "tab_id": "nlp",
-      "justification": "Legacy natural-language command tab. The F143 chat-conductor RFC (AGENT_UX_RFC.md) replaces this with a side-panel '/agent/chat' surface that ships first in UXP (F143/F252 sequencing). CEP 'nlp' tab will be retired with CEP at ~2026-09.",
+      "justification": "Legacy natural-language command tab. New agent workflows land in the UXP '/agent/chat' successor, but CEP command compatibility remains maintained for security, reliability, and user-blocking fixes through Adobe's approximately November 2026 planning horizon. Retire it only after CEP removal or an explicit support decision.",
       "uxp_replacement": "agent_chat_sidebar (F143; pending)"
     }
   },
@@ -214,7 +221,7 @@
       {
         "classification": "cep-terminal",
         "owner": "delivery",
-        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow.",
+        "justification": "The legacy CEP export preset browser and thumbnail helper stay maintained with the CEP export tab through the support horizon, then terminate without one-for-one UXP ports because UXP deliverables and /export/preset are the supported successor workflow.",
         "routes": [
           "/export/presets",
           "/export/thumbnails"

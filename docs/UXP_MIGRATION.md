@@ -1,8 +1,10 @@
 # OpenCut — CEP to UXP Migration Plan
 
-> **Deadline:** CEP support removed from Premiere Pro ~September 2026
-> **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
-> **Last updated:** 2026-08-08
+> **Planning horizon:** Approximately November 2026, inferred from Adobe's November 2025 Premiere Pro 25.6 update; Adobe has not announced an exact removal date.
+> **Adobe statement:** “the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty” ([source](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md), retrieved 2026-08-12).
+> **Current state:** Dual CEP + UXP panels. The host-action catalogue has 17/19 functions with a UXP path and 2 CEP-only; the feature-route gate records 61 shared, 124 CEP-only, and 19 UXP-only routes at the audited entrypoints.
+> **Investment policy:** Maintain CEP security, reliability, and user-blocking fixes while Adobe supports it. Put net-new successor workflows in UXP, but do not remove a CEP feature until its replacement is gated and usable.
+> **Last updated:** 2026-08-12
 > **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)
 > **UDT smoke harness:** `opencut/_generated/uxp_udt_harness.json` and bundled panel copy `extension/com.opencut.uxp/uxp-udt-harness.json`
 > **UDT result validation:** `python -m opencut.tools.validate_uxp_udt_results <capture.json> --json`
@@ -116,7 +118,7 @@ UXP Architecture (target):
 ## Implementation Progress
 
 ### Phase 1 Status: ~80% Ready
-- [x] UXP panel with full feature parity (settings, engine registry, WebSocket, all video features)
+- [x] UXP panel covers the shared core (settings, engine registry, WebSocket, and priority video features); the generated feature-route manifest owns the remaining divergence
 - [x] `csinterface-shim.js` — Drop-in CSInterface replacement for WebView mode
 - [x] Backend communication works natively (fetch in UXP/WebView)
 - [x] RA-17 live manifest schema guard: `extension/com.opencut.uxp/manifest.json`
@@ -173,7 +175,7 @@ UXP Architecture (target):
 
 ### Key Files
 - `extension/com.opencut.uxp/csinterface-shim.js` — CSInterface→postMessage bridge for WebView
-- `extension/com.opencut.uxp/main.js` — Native UXP panel (2000+ lines, full feature parity)
+- `extension/com.opencut.uxp/main.js` — Native UXP panel entrypoint; feature coverage is measured by `opencut/_generated/panel_feature_parity.json`
 - `extension/com.opencut.uxp/index.html` — UXP panel UI with all tabs including Settings
 - `extension/com.opencut.uxp/bolt-webview/` — F252.1 dormant Bolt/WebView scaffold with host API wrappers, WebView message bridge, and least-privilege config template
 - `tests/test_uxp_webview_scaffold.py` — Static guardrails for the scaffold contract
