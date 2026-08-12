@@ -154,6 +154,34 @@ def step_route_manifest(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_panel_feature_parity(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [
+            sys.executable,
+            "-m",
+            "opencut.tools.dump_panel_feature_parity",
+            "--check",
+        ],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "panel-feature-parity",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "CEP/UXP feature-route parity manifest in sync"
+            if status == "ok"
+            else "CEP/UXP feature-route divergence is unannotated or stale"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_performance_benchmark(args: argparse.Namespace) -> StepResult:
     """Validate the opt-in benchmark lane and compare an optional baseline.
 
@@ -1639,6 +1667,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("doc-sizes", step_doc_sizes, "Check documented sizes within ±15% of filesystem"),
     StepDefinition("subprocess-timeouts", step_subprocess_timeouts, "AST lint: every subprocess call must be bounded by a timeout"),
     StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
+    StepDefinition("panel-feature-parity", step_panel_feature_parity, "Gate owner-classified CEP/UXP backend-route parity"),
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),
     StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
