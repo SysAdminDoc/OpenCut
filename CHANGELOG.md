@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Feature-level CEP/UXP parity gate
+
+- A generated panel manifest now inventories the 185 CEP and 80 UXP backend
+  routes visible at their audited entrypoints, records the 61 shared routes,
+  and expands every divergence into an owner, classification, and
+  justification. Release smoke fails when a new CEP-only route is not assigned
+  to the UXP migration backlog or when any parity annotation becomes stale.
+
 ### Fixed - Premiere host writes prove their effect
 
 - CEP, UXP, and Bolt host mutations now return one read-back contract with

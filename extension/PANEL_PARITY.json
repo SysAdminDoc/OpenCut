@@ -1,7 +1,7 @@
 {
   "$comment": "CEP <-> UXP tab parity ledger (RESEARCH_FEATURE_PLAN_2026-05-25 Q5).",
-  "$generated_by": "manual; enforced by tests/test_panel_tab_parity.py",
-  "$updated": "2026-05-25",
+  "$generated_by": "manual tab and route-divergence ownership; generated route evidence is enforced by tests",
+  "$updated": "2026-08-12",
   "$adobe_cep_eol": "approximately 2026-09",
   "common_tabs": [
     "cut",
@@ -40,5 +40,236 @@
       "cep_equivalent": "command palette + nlp tab"
     }
   },
-  "$policy": "When a new tab is added to either panel, update this file AND tests/test_panel_tab_parity.py. The test fails CI on un-annotated divergence."
+  "feature_route_classifications": {
+    "uxp-pending": "The CEP route has no literal UXP entrypoint yet and must be migrated before CEP retirement.",
+    "cep-terminal": "The legacy CEP route will retire without an exact UXP route because a successor workflow replaces it.",
+    "intentional": "The route asymmetry is deliberate and has an equivalent, alias, or UXP-first product surface."
+  },
+  "feature_route_divergences": {
+    "cep_only": [
+      {
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement.",
+        "routes": [
+          "/audio/beats",
+          "/audio/crisper-whisper/install",
+          "/audio/duck-video",
+          "/audio/effects/apply",
+          "/audio/gen/sfx",
+          "/audio/gen/tone",
+          "/audio/music-ai/generate",
+          "/audio/pro/apply",
+          "/audio/pro/deepfilter",
+          "/audio/pro/effects",
+          "/audio/pro/install",
+          "/audio/tts/generate",
+          "/audio/tts/install",
+          "/audio/waveform",
+          "/demucs/install",
+          "/silence/speed-up"
+        ]
+      },
+      {
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage.",
+        "routes": [
+          "/captions/burnin/segments",
+          "/captions/enhanced/capabilities",
+          "/captions/whisperx",
+          "/interview-polish",
+          "/interview-polish/state",
+          "/transcript",
+          "/transcript/export",
+          "/transcript/summarize",
+          "/whisper/clear-cache",
+          "/whisper/reinstall",
+          "/whisper/settings"
+        ]
+      },
+      {
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane.",
+        "routes": [
+          "/analyze/virality",
+          "/analyze/virality/rank",
+          "/video/ai/capabilities",
+          "/video/ai/denoise",
+          "/video/ai/install",
+          "/video/ai/interpolate",
+          "/video/ai/rembg",
+          "/video/auto-detect-watermark",
+          "/video/auto-edit",
+          "/video/blend",
+          "/video/broll-generate/install",
+          "/video/chromakey",
+          "/video/color/correct",
+          "/video/cursor-zoom/resolve",
+          "/video/emotion/install",
+          "/video/face/blur",
+          "/video/face/enhance",
+          "/video/face/install",
+          "/video/face/swap",
+          "/video/fx/apply",
+          "/video/highlights",
+          "/video/lut/apply",
+          "/video/lut/generate-from-ref",
+          "/video/merge",
+          "/video/multimodal-diarize/install",
+          "/video/particles/apply",
+          "/video/pip",
+          "/video/preview-frame",
+          "/video/reframe",
+          "/video/reframe/face",
+          "/video/remove/watermark",
+          "/video/speed/change",
+          "/video/speed/ramp",
+          "/video/speed/reverse",
+          "/video/title/overlay",
+          "/video/title/render",
+          "/video/transitions/apply",
+          "/video/trim",
+          "/video/upscale/run",
+          "/video/watermark",
+          "/watermark/install"
+        ]
+      },
+      {
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface.",
+        "routes": [
+          "/batch/create",
+          "/templates/apply",
+          "/templates/list",
+          "/templates/save",
+          "/timeline/batch-rename",
+          "/timeline/beat-cut",
+          "/timeline/otio/install",
+          "/timeline/smart-bins",
+          "/workflow/approve",
+          "/workflow/compile",
+          "/workflow/delete",
+          "/workflow/presets",
+          "/workflow/run",
+          "/workflow/save",
+          "/workflows/list"
+        ]
+      },
+      {
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed.",
+        "routes": [
+          "/assistant/dismiss",
+          "/assistant/suggest",
+          "/context/analyze",
+          "/favorites",
+          "/favorites/save",
+          "/info",
+          "/journal/clear",
+          "/llm/test",
+          "/logs/clear",
+          "/logs/export",
+          "/models/delete",
+          "/models/list",
+          "/outputs/recent",
+          "/presets",
+          "/presets/delete",
+          "/presets/save",
+          "/preview/audio",
+          "/queue/clear",
+          "/queue/list",
+          "/settings/export",
+          "/settings/gist/pull",
+          "/settings/gist/push",
+          "/settings/import",
+          "/settings/loudness-target",
+          "/settings/onboarding",
+          "/shutdown",
+          "/social/platforms",
+          "/system/changelog/mark-seen",
+          "/system/demo/sample",
+          "/system/dependencies",
+          "/system/estimate-time",
+          "/system/gpu-recommend",
+          "/system/issue-report/bundle",
+          "/system/open-path",
+          "/system/qe-reflect",
+          "/system/status"
+        ]
+      },
+      {
+        "classification": "intentional",
+        "owner": "panel-parity",
+        "justification": "These CEP compatibility routes are intentionally asymmetric: UXP uses /captions/styles, /video/auto-zoom, and the shared /captions/animated/render flow respectively.",
+        "routes": [
+          "/caption-styles",
+          "/settings/auto-zoom",
+          "/styled-captions"
+        ]
+      },
+      {
+        "classification": "cep-terminal",
+        "owner": "delivery",
+        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow.",
+        "routes": [
+          "/export/presets",
+          "/export/thumbnails"
+        ]
+      }
+    ],
+    "uxp_only": [
+      {
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision.",
+        "routes": [
+          "/agent/chat/plan",
+          "/agent/chat/review",
+          "/chat",
+          "/enhance/auto",
+          "/enhance/auto/dry-run",
+          "/mcp/info",
+          "/shorts/variants",
+          "/shorts/variants/dry-run"
+        ]
+      },
+      {
+        "classification": "intentional",
+        "owner": "timeline-index",
+        "justification": "Sequence Index is an intentional UXP-first workflow attached to the UXP search and agent surfaces.",
+        "routes": [
+          "/timeline/sequence-index",
+          "/timeline/sequence-index/export-csv",
+          "/timeline/sequence-index/filter",
+          "/timeline/sequence-index/info"
+        ]
+      },
+      {
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable.",
+        "routes": [
+          "/captions/styles",
+          "/video/auto-zoom",
+          "/video/color-match",
+          "/video/depth/bokeh",
+          "/video/depth/map",
+          "/video/depth/parallax"
+        ]
+      },
+      {
+        "classification": "intentional",
+        "owner": "plugins",
+        "justification": "Plugin uninstall is intentionally exposed in the newer UXP trust-management surface while CEP retains install, quarantine, registry, trust, and worker controls.",
+        "routes": [
+          "/plugins/uninstall"
+        ]
+      }
+    ]
+  },
+  "$policy": "When a tab or literal backend-route reference is added to either panel, update this ledger. Tab tests and the generated feature-parity gate fail on every unannotated or stale divergence, including any new CEP-only route."
 }

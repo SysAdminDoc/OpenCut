@@ -1,0 +1,4746 @@
+{
+  "manifest_version": 1,
+  "source_route_manifest": "opencut/_generated/route_manifest.json",
+  "source_route_manifest_version": 4,
+  "panel_sources": {
+    "cep": "extension/com.opencut.panel/client/main.js",
+    "uxp": "extension/com.opencut.uxp/main.js"
+  },
+  "scan_contract": {
+    "method": "exact quoted slash-prefixed literals intersected with non-stub route-manifest rules",
+    "dynamic_routes": "reported as unmatched literals; no dynamic route is inferred",
+    "scope": "panel main entrypoints used by the 2026-08-11 F320 research baseline"
+  },
+  "classifications": [
+    "uxp-pending",
+    "cep-terminal",
+    "intentional"
+  ],
+  "counts": {
+    "cep_route_literals": 209,
+    "uxp_route_literals": 90,
+    "cep_backend_routes": 185,
+    "uxp_backend_routes": 80,
+    "shared_routes": 61,
+    "cep_only_routes": 124,
+    "uxp_only_routes": 19
+  },
+  "panels": {
+    "cep": {
+      "route_count": 185,
+      "routes": [
+        {
+          "rule": "/analyze/virality",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_virality_score",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/analyze/virality/rank",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_virality_rank",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/assistant/dismiss",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.assistant_dismiss",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/assistant/suggest",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.assistant_suggest",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/beat-markers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_beat_markers",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/beats",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_beats",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/crisper-whisper/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.install_crisper_whisper",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/denoise",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_denoise",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/duck-video",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_duck_video_route",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/effects/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_effects_apply",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/enhance",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_enhance",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/gen/sfx",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_gen_sfx",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/gen/tone",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_gen_tone",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/loudness-match",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_loudness_match",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/measure",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_measure",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/music-ai/generate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.music_ai_generate",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/normalize",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_normalize",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/pro/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_pro_apply",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/pro/deepfilter",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_pro_deepfilter",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/pro/effects",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "audio.audio_pro_effects",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/pro/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_pro_install",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/separate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_separate",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/tts/generate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.tts_generate",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/tts/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.tts_install",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/waveform",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_waveform",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/batch/create",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.batch_create",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/caption-styles",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "captions.get_caption_styles",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.generate_captions",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/animated/render",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.animated_caption_render",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/burnin/segments",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.burnin_from_segments",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/chapters",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_chapters",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/display-settings/preview",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.caption_display_setting_preview",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/display-settings/tokens",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "captions.caption_display_setting_tokens",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/enhanced/capabilities",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "captions.captions_enhanced_capabilities",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/enhanced/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_enhanced_install",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/repeat-detect",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_repeat_detect",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/translate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_translate",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/whisperx",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_whisperx",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/cleanup/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.cleanup_apply",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/cleanup/preview",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.cleanup_preview",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/context/analyze",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "context.analyze_clip_context",
+          "blueprint": "context",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/demucs/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.install_demucs",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/engines",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.engine_list",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/engines/preference",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.engine_set_preference",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/export/preset",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.export_with_preset_route",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/export/presets",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "video_core.export_presets_list",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/export/thumbnails",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.generate_thumbnails_route",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/favorites",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.get_favorites",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/favorites/save",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_favorites_route",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/fillers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.filler_removal",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/full",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.full_pipeline",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/health",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.health",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/info",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.media_info",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/install-whisper",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.install_whisper",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/interview-polish",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.interview_polish",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/interview-polish/state",
+          "methods": [
+            "DELETE"
+          ],
+          "endpoint": "captions.interview_polish_clear_state",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/jobs/interrupted",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "jobs.interrupted_jobs",
+          "blueprint": "jobs",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/journal/checkpoints",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "journal.journal_checkpoint_begin",
+          "blueprint": "journal",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/journal/clear",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "journal.journal_clear",
+          "blueprint": "journal",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/llm/test",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.llm_test",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/logs/clear",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.clear_logs",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/logs/export",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.export_logs",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/models/delete",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.delete_model",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/models/list",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.list_models",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/nlp/command",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "nlp.nlp_command",
+          "blueprint": "nlp",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/outputs/recent",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.recent_outputs",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/marketplace/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "platform_infra.plugins_install",
+          "blueprint": "platform_infra",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/quarantine/delete",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.delete_plugin_quarantine",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/quarantine/restore",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.restore_plugin_quarantine",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/registry",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "platform_infra.plugins_registry",
+          "blueprint": "platform_infra",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/trust",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "plugins.plugin_trust_dashboard",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/workers/restart",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.plugin_worker_restart",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/presets",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.list_presets",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/presets/delete",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.delete_preset",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/presets/save",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_preset",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/preview/audio",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.preview_audio",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/project/media",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.project_media",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/queue/clear",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "jobs.queue_clear",
+          "blueprint": "jobs",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/queue/list",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "jobs.queue_list",
+          "blueprint": "jobs",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/footage",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "search.search_footage",
+          "blueprint": "search",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/index",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "search.search_index",
+          "blueprint": "search",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/auto-zoom",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_auto_zoom_presets_route",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/export",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.export_settings",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/gist/pull",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_gist_pull",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/gist/push",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_gist_push",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/import",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.import_settings",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/llm",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_llm_settings_route",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/loudness-target",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_loudness_target_route",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/onboarding",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_onboarding_post",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/shutdown",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.shutdown_server",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/silence",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.silence_remove",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/silence/speed-up",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.silence_speed_up",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/social/auth-url",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.social_auth_url",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/social/platforms",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.social_platforms",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/social/upload",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.social_upload",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/styled-captions",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.styled_captions_route",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/subtitle/resync",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "subtitle.subtitle_resync",
+          "blueprint": "subtitle",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/changelog/mark-seen",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_changelog_mark_seen",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/demo/sample",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "wave_h.route_demo_sample",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/dependencies",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.check_dependencies",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/estimate-time",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.estimate_job_time",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/gpu-recommend",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.gpu_recommend",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/issue-report/bundle",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_issue_report_bundle_post",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/open-path",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.open_path",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/qe-reflect",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_qe_reflect_write",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/system/status",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.system_status",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/templates/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.apply_template",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/templates/list",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.list_templates",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/templates/save",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_template",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/batch-rename",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_batch_rename",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/beat-cut",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_beat_cut",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-from-markers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_from_markers",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-otio",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_otio",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-premiere-interchange",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_premiere_interchange",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/index-status",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "timeline.timeline_index_status",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/otio-capabilities",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "timeline.timeline_otio_capabilities",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/otio/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.install_otio",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/smart-bins",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_smart_bins",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/srt-to-captions",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_srt_to_captions",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/transcript",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.get_transcript",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/transcript/export",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.export_edited_transcript",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/transcript/summarize",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.transcript_summarize",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/capabilities",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "video_ai.video_ai_capabilities",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/denoise",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_denoise",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_install",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/interpolate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_interpolate",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/rembg",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_rembg",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/upscale",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_upscale",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/auto-detect-watermark",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_auto_detect_watermark",
+          "blueprint": "video_core",
+          "readiness": "dependency-gated"
+        },
+        {
+          "rule": "/video/auto-edit",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_auto_edit",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/blend",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.blend_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/broll-generate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.video_broll_generate",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/broll-generate/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.install_broll_generate",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/broll-plan",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_broll_plan",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/chromakey",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.chromakey_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/color/correct",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.color_correct_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/cursor-zoom/resolve",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "wave_h.route_cursor_zoom_resolve",
+          "blueprint": "wave_h",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/depth/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.install_depth_effects",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/emotion-highlights",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_emotion_highlights",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/emotion/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.install_emotion_highlights",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/face/blur",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.face_blur",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/face/enhance",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.face_enhance_route",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/face/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.install_mediapipe",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/face/swap",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.face_swap_route",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/fx/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.video_fx_apply",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/highlights",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_highlights",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/lut/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.lut_apply",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/lut/generate-from-ref",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.video_lut_from_ref",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/magic-clips/plan",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_magic_clips_plan",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/merge",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_merge",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/multicam-cuts",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_multicam_cuts",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/multimodal-diarize",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.video_multimodal_diarize",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/multimodal-diarize/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.install_multimodal_diarize",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/particles/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.particle_apply",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/pip",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.pip_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/preview-frame",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.preview_frame",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/reframe",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_reframe",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/reframe/face",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_reframe_face",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/remove/watermark",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.remove_watermark_route",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/scenes",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_scenes",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/shorts-pipeline",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_shorts_pipeline",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/speed/change",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.speed_change_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/speed/ramp",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.speed_ramp_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/speed/reverse",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.speed_reverse_route",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/style/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.style_apply",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/title/overlay",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.title_overlay",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/title/render",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.title_render",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/transitions/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_fx.transitions_apply",
+          "blueprint": "video_fx",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/trim",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_trim",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/upscale/run",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.upscale_run",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/watermark",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_watermark",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/watermark/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.install_watermark",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/whisper/clear-cache",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.whisper_clear_cache",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/whisper/reinstall",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.whisper_reinstall",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/whisper/settings",
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "endpoint": "system.whisper_settings",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/approve",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "workflow.approve_workflow_route",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/compile",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "workflow.compile_workflow_route",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/delete",
+          "methods": [
+            "DELETE"
+          ],
+          "endpoint": "workflow.delete_custom_workflow",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/presets",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "workflow.list_workflow_presets",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/run",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "workflow.run_workflow_route",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflow/save",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "workflow.save_custom_workflow",
+          "blueprint": "workflow",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/workflows/list",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "settings.list_workflows",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/start",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.ws_start",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/status",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.ws_status",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/stop",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.ws_stop",
+          "blueprint": "system",
+          "readiness": "implemented"
+        }
+      ]
+    },
+    "uxp": {
+      "route_count": 80,
+      "routes": [
+        {
+          "rule": "/agent/chat/plan",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "agent_chat.route_agent_chat_plan",
+          "blueprint": "agent_chat",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/agent/chat/review",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "agent_chat.route_agent_chat_review",
+          "blueprint": "agent_chat",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/beat-markers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_beat_markers",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/denoise",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_denoise",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/enhance",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_enhance",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/loudness-match",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_loudness_match",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/measure",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_measure",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/normalize",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_normalize",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/audio/separate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.audio_separate",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.generate_captions",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/animated/render",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.animated_caption_render",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/chapters",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_chapters",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/display-settings/preview",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.caption_display_setting_preview",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/display-settings/tokens",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "captions.caption_display_setting_tokens",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/enhanced/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_enhanced_install",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/repeat-detect",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_repeat_detect",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/styles",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "engagement_content.list_caption_styles",
+          "blueprint": "engagement_content",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/captions/translate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.captions_translate",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/chat",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.chat_message",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/cleanup/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.cleanup_apply",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/cleanup/preview",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.cleanup_preview",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/engines",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.engine_list",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/engines/preference",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.engine_set_preference",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/enhance/auto",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "enhance.route_enhance_auto",
+          "blueprint": "enhance",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/enhance/auto/dry-run",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "enhance.route_enhance_auto_dry_run",
+          "blueprint": "enhance",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/export/preset",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.export_with_preset_route",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/fillers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.filler_removal",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/full",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "captions.full_pipeline",
+          "blueprint": "captions",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/health",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.health",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/install-whisper",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.install_whisper",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/jobs/interrupted",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "jobs.interrupted_jobs",
+          "blueprint": "jobs",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/journal/checkpoints",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "journal.journal_checkpoint_begin",
+          "blueprint": "journal",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/mcp/info",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "mcp_bridge.route_mcp_info",
+          "blueprint": "mcp_bridge",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/nlp/command",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "nlp.nlp_command",
+          "blueprint": "nlp",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/marketplace/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "platform_infra.plugins_install",
+          "blueprint": "platform_infra",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/quarantine/delete",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.delete_plugin_quarantine",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/quarantine/restore",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.restore_plugin_quarantine",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/registry",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "platform_infra.plugins_registry",
+          "blueprint": "platform_infra",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/trust",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "plugins.plugin_trust_dashboard",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/uninstall",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.uninstall_plugin",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/plugins/workers/restart",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "plugins.plugin_worker_restart",
+          "blueprint": "plugins",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/project/media",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.project_media",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/footage",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "search.search_footage",
+          "blueprint": "search",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/search/index",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "search.search_index",
+          "blueprint": "search",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/settings/llm",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "settings.save_llm_settings_route",
+          "blueprint": "settings",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/shorts/variants",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "shorts_variants.route_shorts_variants",
+          "blueprint": "shorts_variants",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/shorts/variants/dry-run",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "shorts_variants.route_shorts_variants_dry_run",
+          "blueprint": "shorts_variants",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/silence",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "audio.silence_remove",
+          "blueprint": "audio",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/social/auth-url",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.social_auth_url",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/social/upload",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.social_upload",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/subtitle/resync",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "subtitle.subtitle_resync",
+          "blueprint": "subtitle",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-from-markers",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_from_markers",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-otio",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_otio",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/export-premiere-interchange",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_export_premiere_interchange",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/index-status",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "timeline.timeline_index_status",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/otio-capabilities",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "timeline.timeline_otio_capabilities",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/sequence-index",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "sequence_index.route_build_sequence_index",
+          "blueprint": "sequence_index",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/sequence-index/export-csv",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "sequence_index.route_export_sequence_index_csv",
+          "blueprint": "sequence_index",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/sequence-index/filter",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "sequence_index.route_filter_sequence_index",
+          "blueprint": "sequence_index",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/sequence-index/info",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "sequence_index.route_sequence_index_info",
+          "blueprint": "sequence_index",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/timeline/srt-to-captions",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "timeline.timeline_srt_to_captions",
+          "blueprint": "timeline",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/ai/upscale",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.video_ai_upscale",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/auto-zoom",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_auto_zoom",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/broll-generate",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.video_broll_generate",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/broll-plan",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_broll_plan",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/color-match",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_color_match",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/depth/bokeh",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_depth_bokeh",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/depth/install",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.install_depth_effects",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/depth/map",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_depth_map",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/depth/parallax",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_depth_parallax",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/emotion-highlights",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_emotion_highlights",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/magic-clips/plan",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_magic_clips_plan",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/multicam-cuts",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_editing.video_multicam_cuts",
+          "blueprint": "video_editing",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/multimodal-diarize",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.video_multimodal_diarize",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/scenes",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_core.video_scenes",
+          "blueprint": "video_core",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/shorts-pipeline",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_specialty.video_shorts_pipeline",
+          "blueprint": "video_specialty",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/video/style/apply",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "video_ai.style_apply",
+          "blueprint": "video_ai",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/start",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.ws_start",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/status",
+          "methods": [
+            "GET"
+          ],
+          "endpoint": "system.ws_status",
+          "blueprint": "system",
+          "readiness": "implemented"
+        },
+        {
+          "rule": "/ws/stop",
+          "methods": [
+            "POST"
+          ],
+          "endpoint": "system.ws_stop",
+          "blueprint": "system",
+          "readiness": "implemented"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "rule": "/audio/beat-markers",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_beat_markers",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/denoise",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_denoise",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/enhance",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_enhance",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/loudness-match",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_loudness_match",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/measure",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_measure",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/normalize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_normalize",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/audio/separate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.audio_separate",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.generate_captions",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/animated/render",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.animated_caption_render",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/chapters",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_chapters",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/display-settings/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.caption_display_setting_preview",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/display-settings/tokens",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "captions.caption_display_setting_tokens",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/enhanced/install",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_enhanced_install",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/repeat-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_repeat_detect",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/captions/translate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_translate",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/cleanup/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.cleanup_apply",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/cleanup/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.cleanup_preview",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/engines",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.engine_list",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/engines/preference",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.engine_set_preference",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/export/preset",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_core.export_with_preset_route",
+      "blueprint": "video_core",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/fillers",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.filler_removal",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/full",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.full_pipeline",
+      "blueprint": "captions",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/health",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.health",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/install-whisper",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.install_whisper",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/jobs/interrupted",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "jobs.interrupted_jobs",
+      "blueprint": "jobs",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/journal/checkpoints",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "journal.journal_checkpoint_begin",
+      "blueprint": "journal",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/nlp/command",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "nlp.nlp_command",
+      "blueprint": "nlp",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/marketplace/install",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "platform_infra.plugins_install",
+      "blueprint": "platform_infra",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/quarantine/delete",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.delete_plugin_quarantine",
+      "blueprint": "plugins",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/quarantine/restore",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.restore_plugin_quarantine",
+      "blueprint": "plugins",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/registry",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "platform_infra.plugins_registry",
+      "blueprint": "platform_infra",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/trust",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "plugins.plugin_trust_dashboard",
+      "blueprint": "plugins",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/plugins/workers/restart",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "plugins.plugin_worker_restart",
+      "blueprint": "plugins",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/project/media",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.project_media",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/footage",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.search_footage",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/search/index",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "search.search_index",
+      "blueprint": "search",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/settings/llm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "settings.save_llm_settings_route",
+      "blueprint": "settings",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/silence",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio.silence_remove",
+      "blueprint": "audio",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/social/auth-url",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.social_auth_url",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/social/upload",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.social_upload",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/subtitle/resync",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "subtitle.subtitle_resync",
+      "blueprint": "subtitle",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/export-from-markers",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_export_from_markers",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/export-otio",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_export_otio",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/export-premiere-interchange",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_export_premiere_interchange",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/index-status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "timeline.timeline_index_status",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/otio-capabilities",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "timeline.timeline_otio_capabilities",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/timeline/srt-to-captions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.timeline_srt_to_captions",
+      "blueprint": "timeline",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/ai/upscale",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_ai.video_ai_upscale",
+      "blueprint": "video_ai",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/broll-generate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.video_broll_generate",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/broll-plan",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_specialty.video_broll_plan",
+      "blueprint": "video_specialty",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/depth/install",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_specialty.install_depth_effects",
+      "blueprint": "video_specialty",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/emotion-highlights",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_editing.video_emotion_highlights",
+      "blueprint": "video_editing",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/magic-clips/plan",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_specialty.video_magic_clips_plan",
+      "blueprint": "video_specialty",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/multicam-cuts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_editing.video_multicam_cuts",
+      "blueprint": "video_editing",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/multimodal-diarize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.video_multimodal_diarize",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/scenes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_core.video_scenes",
+      "blueprint": "video_core",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/shorts-pipeline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_specialty.video_shorts_pipeline",
+      "blueprint": "video_specialty",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/video/style/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_ai.style_apply",
+      "blueprint": "video_ai",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/ws/start",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.ws_start",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/ws/status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.ws_status",
+      "blueprint": "system",
+      "readiness": "implemented"
+    },
+    {
+      "rule": "/ws/stop",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.ws_stop",
+      "blueprint": "system",
+      "readiness": "implemented"
+    }
+  ],
+  "divergences": {
+    "cep_only": [
+      {
+        "rule": "/analyze/virality",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_virality_score",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/analyze/virality/rank",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_virality_rank",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/assistant/dismiss",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.assistant_dismiss",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/assistant/suggest",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.assistant_suggest",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/audio/beats",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_beats",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/crisper-whisper/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.install_crisper_whisper",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/duck-video",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_duck_video_route",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/effects/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_effects_apply",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/gen/sfx",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_gen_sfx",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/gen/tone",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_gen_tone",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/music-ai/generate",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.music_ai_generate",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/pro/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_pro_apply",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/pro/deepfilter",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_pro_deepfilter",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/pro/effects",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "audio.audio_pro_effects",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/pro/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_pro_install",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/tts/generate",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.tts_generate",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/tts/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.tts_install",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/audio/waveform",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.audio_waveform",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/batch/create",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.batch_create",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/caption-styles",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "captions.get_caption_styles",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "panel-parity",
+        "justification": "These CEP compatibility routes are intentionally asymmetric: UXP uses /captions/styles, /video/auto-zoom, and the shared /captions/animated/render flow respectively."
+      },
+      {
+        "rule": "/captions/burnin/segments",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.burnin_from_segments",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/captions/enhanced/capabilities",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "captions.captions_enhanced_capabilities",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/captions/whisperx",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.captions_whisperx",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/context/analyze",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "context.analyze_clip_context",
+        "blueprint": "context",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/demucs/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.install_demucs",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/export/presets",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "video_core.export_presets_list",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "cep-terminal",
+        "owner": "delivery",
+        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow."
+      },
+      {
+        "rule": "/export/thumbnails",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.generate_thumbnails_route",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "cep-terminal",
+        "owner": "delivery",
+        "justification": "The legacy CEP export preset browser and thumbnail helper terminate with the CEP export tab; UXP deliverables and /export/preset are the supported successor workflow."
+      },
+      {
+        "rule": "/favorites",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.get_favorites",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/favorites/save",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.save_favorites_route",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/info",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.media_info",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/interview-polish",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.interview_polish",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/interview-polish/state",
+        "methods": [
+          "DELETE"
+        ],
+        "endpoint": "captions.interview_polish_clear_state",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/journal/clear",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "journal.journal_clear",
+        "blueprint": "journal",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/llm/test",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.llm_test",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/logs/clear",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.clear_logs",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/logs/export",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.export_logs",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/models/delete",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.delete_model",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/models/list",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.list_models",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/outputs/recent",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.recent_outputs",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/presets",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.list_presets",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/presets/delete",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.delete_preset",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/presets/save",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.save_preset",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/preview/audio",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.preview_audio",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/queue/clear",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "jobs.queue_clear",
+        "blueprint": "jobs",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/queue/list",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "jobs.queue_list",
+        "blueprint": "jobs",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/auto-zoom",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.save_auto_zoom_presets_route",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "panel-parity",
+        "justification": "These CEP compatibility routes are intentionally asymmetric: UXP uses /captions/styles, /video/auto-zoom, and the shared /captions/animated/render flow respectively."
+      },
+      {
+        "rule": "/settings/export",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.export_settings",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/gist/pull",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_gist_pull",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/gist/push",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_gist_push",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/import",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.import_settings",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/loudness-target",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.save_loudness_target_route",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/settings/onboarding",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_onboarding_post",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/shutdown",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.shutdown_server",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/silence/speed-up",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "audio.silence_speed_up",
+        "blueprint": "audio",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "audio",
+        "justification": "Audio production, generation, installation, waveform, and silence-speed controls still require UXP entrypoint wiring before CEP retirement."
+      },
+      {
+        "rule": "/social/platforms",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.social_platforms",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/styled-captions",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.styled_captions_route",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "panel-parity",
+        "justification": "These CEP compatibility routes are intentionally asymmetric: UXP uses /captions/styles, /video/auto-zoom, and the shared /captions/animated/render flow respectively."
+      },
+      {
+        "rule": "/system/changelog/mark-seen",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_changelog_mark_seen",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/demo/sample",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "wave_h.route_demo_sample",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/dependencies",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.check_dependencies",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/estimate-time",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.estimate_job_time",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/gpu-recommend",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.gpu_recommend",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/issue-report/bundle",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_issue_report_bundle_post",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/open-path",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.open_path",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/qe-reflect",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_qe_reflect_write",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/system/status",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "system.system_status",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "panel-platform",
+        "justification": "Panel operations, diagnostics, settings portability, queues, models, presets, and onboarding need equivalent UXP controls before CEP is removed."
+      },
+      {
+        "rule": "/templates/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.apply_template",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/templates/list",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.list_templates",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/templates/save",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "settings.save_template",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/timeline/batch-rename",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "timeline.timeline_batch_rename",
+        "blueprint": "timeline",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/timeline/beat-cut",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "timeline.timeline_beat_cut",
+        "blueprint": "timeline",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/timeline/otio/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "timeline.install_otio",
+        "blueprint": "timeline",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/timeline/smart-bins",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "timeline.timeline_smart_bins",
+        "blueprint": "timeline",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/transcript",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.get_transcript",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/transcript/export",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.export_edited_transcript",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/transcript/summarize",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "captions.transcript_summarize",
+        "blueprint": "captions",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/video/ai/capabilities",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "video_ai.video_ai_capabilities",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/ai/denoise",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.video_ai_denoise",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/ai/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.video_ai_install",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/ai/interpolate",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.video_ai_interpolate",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/ai/rembg",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.video_ai_rembg",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/auto-detect-watermark",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.video_auto_detect_watermark",
+        "blueprint": "video_core",
+        "readiness": "dependency-gated",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/auto-edit",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_auto_edit",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/blend",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.blend_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/broll-generate/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.install_broll_generate",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/chromakey",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.chromakey_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/color/correct",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.color_correct_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/cursor-zoom/resolve",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "wave_h.route_cursor_zoom_resolve",
+        "blueprint": "wave_h",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/emotion/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.install_emotion_highlights",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/face/blur",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.face_blur",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/face/enhance",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.face_enhance_route",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/face/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.install_mediapipe",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/face/swap",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.face_swap_route",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/fx/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.video_fx_apply",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/highlights",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_highlights",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/lut/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.lut_apply",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/lut/generate-from-ref",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.video_lut_from_ref",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/merge",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.video_merge",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/multimodal-diarize/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.install_multimodal_diarize",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/particles/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.particle_apply",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/pip",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.pip_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/preview-frame",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.preview_frame",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/reframe",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_reframe",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/reframe/face",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_reframe_face",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/remove/watermark",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.remove_watermark_route",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/speed/change",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.speed_change_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/speed/ramp",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.speed_ramp_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/speed/reverse",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.speed_reverse_route",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/title/overlay",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.title_overlay",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/title/render",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.title_render",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/transitions/apply",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_fx.transitions_apply",
+        "blueprint": "video_fx",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/trim",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.video_trim",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/upscale/run",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_ai.upscale_run",
+        "blueprint": "video_ai",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/video/watermark",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_core.video_watermark",
+        "blueprint": "video_core",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/watermark/install",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.install_watermark",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "video",
+        "justification": "The video editing and AI controls in this group have implemented backend routes but no literal UXP entrypoint and are owned by the video migration lane."
+      },
+      {
+        "rule": "/whisper/clear-cache",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.whisper_clear_cache",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/whisper/reinstall",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.whisper_reinstall",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/whisper/settings",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "endpoint": "system.whisper_settings",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "captions-asr",
+        "justification": "Caption burn-in, WhisperX, interview polish, transcript utilities, and Whisper maintenance remain CEP-only feature controls that need UXP coverage."
+      },
+      {
+        "rule": "/workflow/approve",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "workflow.approve_workflow_route",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflow/compile",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "workflow.compile_workflow_route",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflow/delete",
+        "methods": [
+          "DELETE"
+        ],
+        "endpoint": "workflow.delete_custom_workflow",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflow/presets",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "workflow.list_workflow_presets",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflow/run",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "workflow.run_workflow_route",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflow/save",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "workflow.save_custom_workflow",
+        "blueprint": "workflow",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      },
+      {
+        "rule": "/workflows/list",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "settings.list_workflows",
+        "blueprint": "settings",
+        "readiness": "implemented",
+        "classification": "uxp-pending",
+        "owner": "timeline-workflows",
+        "justification": "Batch, template, timeline mutation, and saved-workflow controls need direct UXP affordances rather than relying on the CEP workflow surface."
+      }
+    ],
+    "uxp_only": [
+      {
+        "rule": "/agent/chat/plan",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "agent_chat.route_agent_chat_plan",
+        "blueprint": "agent_chat",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/agent/chat/review",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "agent_chat.route_agent_chat_review",
+        "blueprint": "agent_chat",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/captions/styles",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "engagement_content.list_caption_styles",
+        "blueprint": "engagement_content",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      },
+      {
+        "rule": "/chat",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "system.chat_message",
+        "blueprint": "system",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/enhance/auto",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "enhance.route_enhance_auto",
+        "blueprint": "enhance",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/enhance/auto/dry-run",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "enhance.route_enhance_auto_dry_run",
+        "blueprint": "enhance",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/mcp/info",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "mcp_bridge.route_mcp_info",
+        "blueprint": "mcp_bridge",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/plugins/uninstall",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "plugins.uninstall_plugin",
+        "blueprint": "plugins",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "plugins",
+        "justification": "Plugin uninstall is intentionally exposed in the newer UXP trust-management surface while CEP retains install, quarantine, registry, trust, and worker controls."
+      },
+      {
+        "rule": "/shorts/variants",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "shorts_variants.route_shorts_variants",
+        "blueprint": "shorts_variants",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/shorts/variants/dry-run",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "shorts_variants.route_shorts_variants_dry_run",
+        "blueprint": "shorts_variants",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "agent-automation",
+        "justification": "Agent planning/review, one-click enhancement, shorts variants, chat, and MCP information are intentionally UXP-first surfaces documented by the agent tab decision."
+      },
+      {
+        "rule": "/timeline/sequence-index",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "sequence_index.route_build_sequence_index",
+        "blueprint": "sequence_index",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "timeline-index",
+        "justification": "Sequence Index is an intentional UXP-first workflow attached to the UXP search and agent surfaces."
+      },
+      {
+        "rule": "/timeline/sequence-index/export-csv",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "sequence_index.route_export_sequence_index_csv",
+        "blueprint": "sequence_index",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "timeline-index",
+        "justification": "Sequence Index is an intentional UXP-first workflow attached to the UXP search and agent surfaces."
+      },
+      {
+        "rule": "/timeline/sequence-index/filter",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "sequence_index.route_filter_sequence_index",
+        "blueprint": "sequence_index",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "timeline-index",
+        "justification": "Sequence Index is an intentional UXP-first workflow attached to the UXP search and agent surfaces."
+      },
+      {
+        "rule": "/timeline/sequence-index/info",
+        "methods": [
+          "GET"
+        ],
+        "endpoint": "sequence_index.route_sequence_index_info",
+        "blueprint": "sequence_index",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "timeline-index",
+        "justification": "Sequence Index is an intentional UXP-first workflow attached to the UXP search and agent surfaces."
+      },
+      {
+        "rule": "/video/auto-zoom",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_auto_zoom",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      },
+      {
+        "rule": "/video/color-match",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_editing.video_color_match",
+        "blueprint": "video_editing",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      },
+      {
+        "rule": "/video/depth/bokeh",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.video_depth_bokeh",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      },
+      {
+        "rule": "/video/depth/map",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.video_depth_map",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      },
+      {
+        "rule": "/video/depth/parallax",
+        "methods": [
+          "POST"
+        ],
+        "endpoint": "video_specialty.video_depth_parallax",
+        "blueprint": "video_specialty",
+        "readiness": "implemented",
+        "classification": "intentional",
+        "owner": "video",
+        "justification": "UXP owns the modern caption-style alias, auto-zoom and colour-match actions, and depth controls; CEP uses older aliases or shared fallback routes where applicable."
+      }
+    ]
+  },
+  "unmatched_literals": {
+    "cep": [
+      "/",
+      "/batch/",
+      "/cancel/",
+      "/complete",
+      "/deliverables/",
+      "/diagnostics",
+      "/file?path=",
+      "/g, ",
+      "/jobs/",
+      "/jobs/history?limit=20",
+      "/jobs/history?limit=5&status=complete",
+      "/journal/checkpoints/",
+      "/journal/list?limit=30",
+      "/journal/mark-reverted/",
+      "/preflight/",
+      "/queue/replay/",
+      "/recovered",
+      "/recovery-failed",
+      "/resume",
+      "/status/",
+      "/stream/",
+      "/system/changelog/unseen?limit=3",
+      "/video/depth/",
+      "/workflows"
+    ],
+    "uxp": [
+      "/",
+      "/deliverables/${type}",
+      "/journal/checkpoints/${encodeURIComponent(checkpoint.transaction_id)}/complete",
+      "/journal/checkpoints/${encodeURIComponent(checkpoint.transaction_id)}/recovery-failed",
+      "/journal/checkpoints/${encodeURIComponent(transactionId)}/diagnostics",
+      "/journal/checkpoints/${encodeURIComponent(transactionId)}/recovered",
+      "/journal/checkpoints/${encodeURIComponent(transactionId)}/recovery-failed",
+      "/journal/checkpoints/${encodeURIComponent(transactionId)}?resolve=1",
+      "/journal/recovery?limit=50",
+      "/mcp/tools?include_extended=false"
+    ]
+  },
+  "gate": {
+    "passes": true,
+    "errors": [],
+    "unannotated_cep_only": [],
+    "unannotated_uxp_only": []
+  }
+}

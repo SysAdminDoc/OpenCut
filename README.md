@@ -877,7 +877,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-13,700+ estimated tests across 343 root test files covering route smoke tests,
+13,700+ estimated tests across 344 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -946,7 +946,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (13,700+ estimated tests, 343 root test files)
+tests/               # pytest test suite (13,700+ estimated tests, 344 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
