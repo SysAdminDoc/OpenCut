@@ -4,10 +4,55 @@ Actionable work only. Historical and completed roadmap material is archived in C
 
 ## Research-Driven Additions
 
-Added 2026-08-10 from the research pass recorded in `RESEARCH.md`. IDs continue the existing F-number
-scheme (highest prior allocation: F302).
+Added 2026-08-10 and extended 2026-08-11 from the research passes recorded in `RESEARCH.md`. IDs continue
+the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
+
+### P0
+
+- [ ] P0 — F319 — Prove every Premiere write-back actually mutated the sequence
+  Why: All host mutations are fire-and-forget — `ocApplySequenceCuts` reports `applied` from its own loop counter and the UXP path treats a non-throwing `rippleDelete` as success — while an independent Premiere bridge measured that on Premiere 26.3 `ripple_delete`, `razor`, and `ComponentParam.setValue()` return success and mutate nothing, so the product's headline capability can fail completely without anything noticing.
+  Evidence: https://github.com/leancoderkavy/premiere-pro-mcp/issues/21 (2026-07-21, PPro 26.3); `extension/com.opencut.uxp/main.js:1005` (`await seq.rippleDelete(startTick, endTick)`); `extension/com.opencut.panel/host/index.jsx:1827` (`ocApplySequenceCuts`); `extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts:96-103`; a repo-wide grep for `verifyWrite|readBack|confirmApplied|assertApplied` returns nothing
+  Touches: `extension/com.opencut.panel/host/index.jsx`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts`, `extension/com.opencut.panel/client/main.js` (result surfacing), `opencut/core/issue_report.py`, `tests/`
+  Acceptance: Every mutating host call captures a pre-state and re-reads post-state through a *different* API than the one that wrote it (track-item count / clip boundaries / marker set), returns a verified count distinct from the attempted count, and surfaces an explicit "reported success but nothing changed" failure instead of a success toast; the diagnostic bundle records host version, the attempted and verified counts, and the read-back method so a user's report answers whether 26.x no-ops; unverifiable operations are named as unverified rather than counted as applied.
+  Complexity: M
 
 ### P1
+
+- [ ] P1 — F320 — Gate CEP→UXP parity at the feature level, not the tab level
+  Why: The CEP panel calls 124 real backend routes the UXP panel never calls (202 vs 80 referenced paths, 61 shared), the parity ledger and its test only assert that *tab* divergence is annotated, and Adobe removes CEP roughly a year after Premiere 25.6 — so every unguarded CEP-only feature is a silent regression on the only surviving panel.
+  Evidence: literal route-path strings referenced in `extension/com.opencut.panel/client/main.js` (202) vs `extension/com.opencut.uxp/main.js` (80), intersected with `opencut/_generated/route_manifest.json` — 124 CEP-only and 19 UXP-only real routes; treat these as a lower bound since dynamically composed paths are not captured, which is itself an argument for generating the manifest rather than grepping. Also `tests/test_panel_tab_parity.py:45-89` (four tests, all tab-scoped); `extension/PANEL_PARITY.json` annotates tabs only; `opencut/_generated/cep_uxp_parity.json` covers 19 host functions, not panel features
+  Touches: `extension/PANEL_PARITY.json`, `tests/test_panel_tab_parity.py`, a new generated feature-parity manifest under `opencut/_generated/`, `opencut/tools/`, `scripts/release_smoke.py`
+  Acceptance: A generated manifest lists every backend route each panel reaches and classifies each divergence as `uxp-pending`, `cep-terminal`, or `intentional` with a justification; a test fails on any unannotated divergence and on any *new* CEP-only route; the current 124-route gap is enumerated with an owner-assigned classification rather than silently baselined away.
+  Complexity: M
+
+- [ ] P1 — F321 — Correct the CEP end-of-life date and re-derive the panel investment policy from it
+  Why: The ledger asserts CEP EOL "approximately 2026-09" and uses it to justify freezing two CEP tabs, but Adobe's own current statement puts removal roughly a calendar year after Premiere 25.6 (~2026-11); the date is stale, unsourced, two months pessimistic, and is actively starving the only panel every installer ships.
+  Evidence: `extension/PANEL_PARITY.json` (`$adobe_cep_eol: "approximately 2026-09"`, `$updated: 2026-05-25`, "do not invest further" on the `export` and `nlp` tabs); https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md — "Last Updated: November 2025", "As of Premiere Pro 25.6, CEP extensions to Premiere Pro have been superseded by UXP Extensibility", "the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty"; https://community.adobe.com/questions-606/cep-uxp-roadmap-should-developers-stop-building-cep-plugins-and-what-happens-to-existing-ones-1614807 (2026-01-08, unanswered)
+  Touches: `extension/PANEL_PARITY.json`, `docs/UXP_MIGRATION.md`, `README.md`, `tests/test_panel_tab_parity.py`
+  Acceptance: The ledger cites the Adobe statement verbatim with its source URL and retrieval date instead of an unsourced estimate; the two frozen CEP tabs are re-justified against the corrected horizon; a test fails if the recorded EOL claim carries no source URL.
+  Complexity: S
+
+- [ ] P1 — F322 — Stop classifying hardcoded-501 handlers as `dependency-gated`
+  Why: Five routes return 503 when their dependency is absent and a hardcoded 501 when it is present, so installing the dependency never makes them work — yet the manifest labels them `dependency-gated` (a class its own comment defines as "fully implemented but require an optional dependency") and counts them inside the 1,568 shipped-route total the README advertises.
+  Evidence: `opencut/routes/wave_h_routes.py:491` (`/video/upscale/flashvsr`), `:522` (`/video/inpaint/rose`), `:540` (`/video/matte/sammie`), `:558` (`/audio/tts/omnivoice`), `:582` (`/video/style/reezsynth`) — each `_stub_503(...)` then `error_response("NOT_IMPLEMENTED", …, status=501)`; `opencut/tools/dump_route_manifest.py:62-65` where `_DEPENDENCY_MARKERS` matches `_stub_503(` and wins over the inline 501; the same file's comments already state that handlers delegating to a terminal `NotImplementedError` adapter are stubs
+  Touches: `opencut/tools/dump_route_manifest.py`, `opencut/_generated/route_manifest.json`, `opencut/_generated/feature_readiness.json`, `opencut/model_cards.py`, `README.md` route counts, `tests/`
+  Acceptance: A handler whose success path is an unconditional 501 classifies as `stub` regardless of any earlier dependency marker; the shipped-route count and every advertised total are regenerated from the corrected classification; a test asserts no route is simultaneously `dependency-gated` and unconditionally 501; `feature_readiness.json` regenerates in the same gate as `route_manifest.json` so the two manifests cannot drift on separate clocks.
+  Complexity: S
+
+- [ ] P1 — F323 — Bias the ASR decoder with the project glossary instead of correcting after the fact
+  Why: The project glossary is applied as a post-hoc find/replace over finished transcripts, so a mis-recognised proper noun that does not match the replacement rule survives, while the transcription backend accepts decoder-level term biasing that would prevent the error — and every commercial competitor sells exactly this as "custom vocabulary".
+  Evidence: `opencut/core/captions.py:740` (`_apply_project_glossary`) and `:745` (`apply_glossary_to_result`); `model.transcribe(...)` at `opencut/core/captions.py:930,1227,1241,1353` passes no `initial_prompt` or `hotwords`; `faster-whisper>=1.1,<2` (`pyproject.toml:69`) supports both; https://www.submagic.co/pricing (custom vocabulary, Business tier); https://news.ycombinator.com/item?id=44886647 (proper-noun and homophone complaints)
+  Touches: `opencut/core/captions.py`, `opencut/core/transcript_corrections.py`, `opencut/utils/config.py` (`CaptionConfig`), `opencut/core/asr_router.py`, caption routes, `tests/`
+  Acceptance: Glossary terms are passed to the decoder as `hotwords`/`initial_prompt` where the active backend supports it, with a documented length cap and safe truncation; the post-hoc correction pass remains as a second layer; backends without biasing degrade silently to today's behaviour and report which layer was used; a fixture proves a glossary term is recognised at the decoder rather than repaired afterwards.
+  Complexity: S
+
+- [ ] P1 — F324 — Unify the two panels' i18n key namespaces
+  Why: The CEP panel's `en.json` holds 2,868 keys and the UXP panel's 1,927, of which exactly 26 are shared — so the panels maintain two independent translation namespaces for largely the same product, and the only Spanish locale belongs to the panel no installer ships, meaning any future locale must be translated twice.
+  Evidence: measured key counts across `extension/com.opencut.panel/client/locales/en.json`, `extension/com.opencut.uxp/locales/en.json`, `extension/com.opencut.uxp/locales/es.json` (26-key intersection); 1,773 `data-i18n` attributes in the CEP markup vs 875 in UXP; `command-center.css` ships as two unrelated files under one name in both panels while `studio-workbench-v2.css`/`.js` are byte-identical copies with no generator
+  Touches: `extension/com.opencut.panel/client/locales/`, `extension/com.opencut.uxp/locales/`, `scripts/i18n_lint.py`, `scripts/lint_locales.py`, both `index.html` files, `tests/`
+  Acceptance: Shared concepts resolve to one canonical key namespace consumed by both panels, with panel-specific keys explicitly namespaced and justified; the locale lint fails on a key that exists in one panel and has an unnamespaced twin in the other; adding a locale requires translating each string once; the duplicated design-system assets are either generated from a single source or covered by a drift test.
+  Note: distinct from the blocked "Localize the Python/CLI backend and add panel locales beyond en/es" item in `Roadmap_Blocked.md` — this ships no new translations and needs no human translator; it is the static refactor that makes that blocked item affordable when it unblocks.
+  Complexity: M
 
 ### P2
 
@@ -17,6 +62,34 @@ scheme (highest prior allocation: F302).
   Touches: `opencut/core/caption_burnin.py`, `opencut/core/smart_render.py`, `opencut/routes/captions.py`, `tests/test_smart_render_transactional.py`
   Acceptance: Re-burning after a caption edit re-encodes only the affected segments and stream-copies the remainder, with the unchanged regions bit-identical to the prior render; a changed-caption job on a multi-segment fixture measurably beats the full re-encode; falling back to a whole-file render is automatic and reported when segment boundaries cannot be honoured.
   Complexity: L
+
+- [ ] P2 — F325 — Scope silence detection to in/out points and add a tighten-don't-delete mode
+  Why: `detect_silences()` takes no time range, so silence work always spans the whole file with no way to honour an in/out selection, and the only outcomes are hard cut or speed-up — while the most-voted open Premiere idea in this area asks for exactly range scoping plus "shorten pauses to N seconds", and Adobe's staff answer ("use Text-Based Editing") was rejected by the requester.
+  Evidence: `opencut/core/silence.py:37` (`detect_silences(filepath, threshold_db, min_duration, file_duration)`), `:139` (`detect_silences_vad`), `:580` (`speed_up_silences`); `:428` (`filter_smart_pauses`) already covers keeping dramatic pauses but not scoping or tightening; https://community.adobe.com/t5/premiere-pro-ideas/feature-request-apply-silence-detection-and-removal-only-between-in-out-points/idi-p/15448602 (2025-08-07, Open for Voting); https://community.adobe.com/t5/premiere-pro-ideas/automatically-remove-silence-from-a-video/idi-p/13577633
+  Touches: `opencut/core/silence.py`, `opencut/routes/audio.py`, `opencut/cli.py`, both panels' cut surfaces, `extension/com.opencut.panel/host/index.jsx` (in/out read), `tests/`
+  Acceptance: Detection accepts an optional `[start, end]` range and returns segments only within it, with timestamps still absolute to the source; a `tighten` mode shortens each detected silence to a target duration instead of removing it; the panels pass the sequence's current in/out points when a selection exists; existing whole-file behaviour is unchanged when no range is supplied.
+  Complexity: M
+
+- [ ] P2 — F326 — Guard long-file ASR repetition loops
+  Why: Whisper-family decoders degrade on hour-plus audio into looping a single phrase for the remainder of the file, and OpenCut passes no decoder threshold and runs no post-hoc detection — so the failure produces a plausible-looking, silently wrong transcript that the next stage happily deletes footage from.
+  Evidence: `opencut/core/captions.py` contains no `compression_ratio_threshold`, `no_speech_threshold`, `condition_on_previous_text`, or repetition check (grep returns nothing); https://lobste.rs/s/ddssxd/captioning_all_my_youtube_videos_with_ai (2-hour talk repeating one phrase after ~45 minutes); https://news.ycombinator.com/item?id=44886647 (chunk-boundary and long-form degradation); https://community.adobe.com/bug-reports-733/transcription-has-stopped-working-properly-after-latest-update-1627635 (same failure shape in Premiere 26.x)
+  Touches: `opencut/core/captions.py`, `opencut/core/asr_router.py`, `opencut/core/asr_provenance.py`, `opencut/utils/config.py`, `tests/`
+  Acceptance: Backends that expose decoder thresholds receive explicit values rather than defaults; a backend-independent post-pass flags runs of near-identical consecutive segments and marks the affected span as low-confidence in the result and in ASR provenance; a synthetic long-form fixture with an induced loop is detected and reported; detection never silently discards transcript content.
+  Complexity: M
+
+- [ ] P2 — F327 — Record upstream maintenance status per engine and stop auto-installing abandoned packages
+  Why: A runtime code path pip-installs DeepFilterNet, whose newest PyPI release is 2023-08-31 and whose repository has not been pushed since 2024-10-17, and neither the engine registry nor the model cards carry any field that could tell a user they are installing dead software — while the project already reasons this way informally in route comments.
+  Evidence: `opencut/core/audio_pro.py:529` (`ensure_package("df", "deepfilternet")`); https://pypi.org/pypi/deepfilternet/json (0.5.6, 2023-08-31); https://github.com/Rikorose/DeepFilterNet (last push 2024-10-17); `opencut/routes/audio.py:457` already comments that the separation default was changed to "the maintained backend"; `opencut/core/engine_registry.py` has no maintenance/upstream field and `opencut/model_cards.py` has no DeepFilterNet card; https://pypi.org/pypi/faster-whisper/json (1.2.1, 2025-10-31); https://github.com/modelscope/ClearerVoice-Studio (last push 2025-08-14)
+  Touches: `opencut/core/engine_registry.py`, `opencut/model_cards.py`, `opencut/_generated/model_cards.json`, `opencut/core/audio_pro.py`, `opencut/checks.py`, `docs/MODELS.md`, `tests/`
+  Acceptance: Every third-party engine entry records last upstream release, last repository activity, and a dated maintenance verdict with its source URL; engines marked unmaintained are never a default, warn before an on-demand install, and say so in `/system/dependencies` and the panel; a test fails when an engine is a default while marked unmaintained; the dates are re-verifiable from the recorded URLs rather than asserted.
+  Complexity: M
+
+- [ ] P2 — F328 — Ratchet the direct-surface ratio so new routes cannot ship unreachable
+  Why: The repo's own manifest reports 280 of 1,568 shipped routes reachable from any first-party surface (17.9%), 1,288 integration-only, and zero routes whose primary surface is the CLI — so every wave adds API faster than it adds product, and the ratio is measured but nothing stops it falling.
+  Evidence: `opencut/_generated/route_manifest.json` → `surface_coverage.summary` (`direct_surface_routes: 280`, `integration_only_routes: 1288`, `coverage_percent: 17.9`, `primary_counts.cli: 0`); 19 CLI commands in `opencut/cli.py`; 88 MCP tools in `opencut/_generated/mcp_server_registry.json`; the gate at `surface_coverage.gate` only asserts every route is classified, never that the ratio holds
+  Touches: `opencut/tools/dump_route_manifest.py`, `scripts/release_smoke.py`, `opencut/cli.py`, `opencut/core/mcp_tools.py`, `opencut/core/command_palette.py`, `tests/`
+  Acceptance: The release gate fails when `coverage_percent` falls below the value recorded at the time the ratchet lands; a new route must either declare a surface or carry an explicit `integration-only` justification that the gate records; the report names the largest integration-only route families so a triage or deprecation decision has data behind it.
+  Complexity: M
 
 ### P3
 
@@ -39,4 +112,25 @@ scheme (highest prior allocation: F302).
   Evidence: https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation; `docs/WINDOWS_CODESIGNING.md`, `docs/RELEASE_PROVENANCE.md`; `scripts/sbom.py`
   Touches: `README.md`, `docs/WINDOWS_CODESIGNING.md`, `docs/RELEASE_PROVENANCE.md`, `scripts/release_gate.py`
   Acceptance: Installation documentation states plainly that artifacts are unsigned, shows the exact SmartScreen path to proceed, and gives the verification command; the release gate emits SHA-256 digests for every artifact into the release metadata so the published digests can be checked against the download.
+  Complexity: S
+
+- [ ] P3 — F329 — Document the Premiere 2026 "Extensions (Legacy)" location and probe it at install time
+  Why: Premiere 2026 moved CEP panels under a separate **Extensions (Legacy)** menu, and neither the README nor `docs/` mentions it anywhere — this is the most predictable support question for a CEP-primary product and it has already stranded two comparable projects publicly with "extension not loading" reports that were really menu-location confusion.
+  Evidence: grep for "Legacy" across `README.md` and `docs/*.md` returns nothing; `README.md:65` claims CEP support for "Premiere Pro 2019 or later" with no version-specific note; https://github.com/tmoroney/auto-subs/issues/571 (2026-06-06, extension absent from Window > Extensions on PPro 2026); https://github.com/leancoderkavy/premiere-pro-mcp/issues/14
+  Touches: `README.md`, `docs/` (installation guidance), `Install.ps1`, `install.py`, `OpenCut.iss`, `installer/src/OpenCut.Installer/Services/InstallEngine.cs`
+  Acceptance: Installation documentation states where the panel appears on Premiere 2026+ versus earlier versions; the installer reports the detected Premiere major version and the expected menu path in its completion output; the same sentence appears in the panel's own connection-failure guidance.
+  Complexity: S
+
+- [ ] P3 — F330 — Make the release-gate lint and test configuration the one the editor applies
+  Why: `[tool.ruff]` declares only `line-length` and `target-version` with no `lint` section, so an editor-integrated ruff applies its default rule set while the gate applies a different, narrower one defined in two other files — and `[tool.pytest.ini_options]` sets no `testpaths` and no `--strict-markers` across 10,751 tests in 346 modules, so a mistyped marker silently selects nothing.
+  Evidence: `pyproject.toml:267-269`; `.pre-commit-config.yaml` (ruff `--select E,F,I --ignore E501,E402`); `scripts/release_smoke.py` repeats the same selection independently; `[tool.pytest.ini_options]` sets only `addopts` and two markers
+  Touches: `pyproject.toml`, `.pre-commit-config.yaml`, `scripts/release_smoke.py`, `DEVELOPMENT.md`, `CONTRIBUTING.md`
+  Acceptance: The ruff rule selection lives in `pyproject.toml` and both the pre-commit hook and the release smoke read it rather than restating it; pytest declares `testpaths` and `--strict-markers`; running the editor's ruff and the gate's ruff on the same tree produces the same findings.
+  Complexity: S
+
+- [ ] P3 — F331 — Pin OpenTimelineIO against the 0.19 bundle rewrite and contract-test the export path
+  Why: The declared ceiling `opentimelineio>=0.17,<1` will silently admit 0.19, which moves `otioz`/`otiod` bundle handling out of Python into the C++ core — a behaviour change to a shipped export path — and the project has already been bitten once by an OTIO minor bump renaming `MediaReferencePolicy` enum members between 0.15 and 0.17.
+  Evidence: `pyproject.toml:170,230`; `opencut/export/otio_export.py:547,566-567` (the enum-naming workaround); `opencut/export/otio_compat.py` reports the runtime version but pins and asserts nothing; https://github.com/AcademySoftwareFoundation/OpenTimelineIO/releases (0.18.1, 2025-11-09, still flagged prerelease, no release in 9 months)
+  Touches: `pyproject.toml`, `requirements*.txt`, `opencut/export/otio_compat.py`, `opencut/export/otio_export.py`, `scripts/check_dependency_matrix.py`, `tests/`
+  Acceptance: The OTIO specifier bounds the tested minor line rather than an open `<1`; a contract test round-trips an OTIOZ bundle and asserts the media-reference policy and bundle layout, failing on an untested OTIO minor; `otio_compat` records the verified-against version alongside the runtime version.
   Complexity: S
