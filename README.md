@@ -496,7 +496,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 - **Connection-aware UI** -- Buttons disable when server is offline, re-enable on reconnect
 - **Near-complete feature parity** with CEP panel including depth effects, emotion highlights, B-roll, chat editor, social upload, engine preferences, and WebSocket bridge
 
-> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. CEP support in Premiere Pro ends approximately September 2026. The UXP panel is the future-facing option. See `docs/UXP_MIGRATION.md` for the migration plan.
+> **Premiere 26 compatibility:** Both CEP (`[13.0, 99.9]` host range) and UXP (`minVersion 25.6`) panels cover Premiere 26.x. [Adobe's November 2025 guidance](https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md) plans dual support for a calendar year after Premiere Pro 25.6, implying an approximately November 2026 planning horizon rather than an announced removal date. OpenCut maintains CEP reliability and security while completing the UXP migration.
 
 ---
 
@@ -913,7 +913,7 @@ also has a direct Python scripting bridge.
 A: `git pull` and restart the server. Or download the latest exe from [Releases](https://github.com/SysAdminDoc/OpenCut/releases).
 
 **Q: What's the difference between the CEP and UXP panels?**
-A: The CEP panel supports Premiere Pro 2019+ and has full feature coverage. The UXP panel is for Premiere Pro 25.6+ using Adobe's modern platform. Both connect to the same backend. CEP will be deprecated by Adobe around September 2026.
+A: The CEP panel is the current full-feature surface for Premiere Pro 2019+; the UXP panel targets Premiere Pro 25.6+ on Adobe's modern platform. Both connect to the same backend. Adobe's November 2025 guidance plans dual CEP/UXP support for a calendar year, so OpenCut uses approximately November 2026 as a planning horizon—not an announced removal date—and continues CEP security, reliability, and user-blocking fixes while migrating the remaining features.
 
 **Q: How do I choose between AI backends?**
 A: Go to Settings > AI Engine Preferences. Each feature domain (silence, transcription, TTS, etc.) has a dropdown showing available backends with quality and speed ratings. The default "Auto" mode picks the highest-priority available engine.

@@ -9,13 +9,6 @@ the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
 
 ### P1
 
-- [ ] P1 — F321 — Correct the CEP end-of-life date and re-derive the panel investment policy from it
-  Why: The ledger asserts CEP EOL "approximately 2026-09" and uses it to justify freezing two CEP tabs, but Adobe's own current statement puts removal roughly a calendar year after Premiere 25.6 (~2026-11); the date is stale, unsourced, two months pessimistic, and is actively starving the only panel every installer ships.
-  Evidence: `extension/PANEL_PARITY.json` (`$adobe_cep_eol: "approximately 2026-09"`, `$updated: 2026-05-25`, "do not invest further" on the `export` and `nlp` tabs); https://github.com/Adobe-CEP/Samples/blob/master/PProPanel/ReadMe.md — "Last Updated: November 2025", "As of Premiere Pro 25.6, CEP extensions to Premiere Pro have been superseded by UXP Extensibility", "the plan is to support both CEP and UXP for a calendar year, after which we will remove support for CEP extensibilty"; https://community.adobe.com/questions-606/cep-uxp-roadmap-should-developers-stop-building-cep-plugins-and-what-happens-to-existing-ones-1614807 (2026-01-08, unanswered)
-  Touches: `extension/PANEL_PARITY.json`, `docs/UXP_MIGRATION.md`, `README.md`, `tests/test_panel_tab_parity.py`
-  Acceptance: The ledger cites the Adobe statement verbatim with its source URL and retrieval date instead of an unsourced estimate; the two frozen CEP tabs are re-justified against the corrected horizon; a test fails if the recorded EOL claim carries no source URL.
-  Complexity: S
-
 - [ ] P1 — F322 — Stop classifying hardcoded-501 handlers as `dependency-gated`
   Why: Five routes return 503 when their dependency is absent and a hardcoded 501 when it is present, so installing the dependency never makes them work — yet the manifest labels them `dependency-gated` (a class its own comment defines as "fully implemented but require an optional dependency") and counts them inside the 1,568 shipped-route total the README advertises.
   Evidence: `opencut/routes/wave_h_routes.py:491` (`/video/upscale/flashvsr`), `:522` (`/video/inpaint/rose`), `:540` (`/video/matte/sammie`), `:558` (`/audio/tts/omnivoice`), `:582` (`/video/style/reezsynth`) — each `_stub_503(...)` then `error_response("NOT_IMPLEMENTED", …, status=501)`; `opencut/tools/dump_route_manifest.py:62-65` where `_DEPENDENCY_MARKERS` matches `_stub_503(` and wins over the inline 501; the same file's comments already state that handlers delegating to a terminal `NotImplementedError` adapter are stubs
