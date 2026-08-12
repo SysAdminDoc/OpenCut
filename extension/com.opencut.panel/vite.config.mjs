@@ -43,6 +43,7 @@ const classicScriptFiles = [
   "panel-bootstrap-token.js",
   "job-runtime.js",
   "job-lifecycle.js",
+  "host-write-verification.js",
   "component-utils.js",
   "announce-utils.js",
   "cep-theme.js",

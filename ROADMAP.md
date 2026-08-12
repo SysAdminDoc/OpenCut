@@ -7,15 +7,6 @@ Actionable work only. Historical and completed roadmap material is archived in C
 Added 2026-08-10 and extended 2026-08-11 from the research passes recorded in `RESEARCH.md`. IDs continue
 the existing F-number scheme (highest prior allocation before 2026-08-11: F318).
 
-### P0
-
-- [ ] P0 — F319 — Prove every Premiere write-back actually mutated the sequence
-  Why: All host mutations are fire-and-forget — `ocApplySequenceCuts` reports `applied` from its own loop counter and the UXP path treats a non-throwing `rippleDelete` as success — while an independent Premiere bridge measured that on Premiere 26.3 `ripple_delete`, `razor`, and `ComponentParam.setValue()` return success and mutate nothing, so the product's headline capability can fail completely without anything noticing.
-  Evidence: https://github.com/leancoderkavy/premiere-pro-mcp/issues/21 (2026-07-21, PPro 26.3); `extension/com.opencut.uxp/main.js:1005` (`await seq.rippleDelete(startTick, endTick)`); `extension/com.opencut.panel/host/index.jsx:1827` (`ocApplySequenceCuts`); `extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts:96-103`; a repo-wide grep for `verifyWrite|readBack|confirmApplied|assertApplied` returns nothing
-  Touches: `extension/com.opencut.panel/host/index.jsx`, `extension/com.opencut.uxp/main.js`, `extension/com.opencut.uxp/bolt-webview/src/api/premierepro.ts`, `extension/com.opencut.panel/client/main.js` (result surfacing), `opencut/core/issue_report.py`, `tests/`
-  Acceptance: Every mutating host call captures a pre-state and re-reads post-state through a *different* API than the one that wrote it (track-item count / clip boundaries / marker set), returns a verified count distinct from the attempted count, and surfaces an explicit "reported success but nothing changed" failure instead of a success toast; the diagnostic bundle records host version, the attempted and verified counts, and the read-back method so a user's report answers whether 26.x no-ops; unverifiable operations are named as unverified rather than counted as applied.
-  Complexity: M
-
 ### P1
 
 - [ ] P1 — F320 — Gate CEP→UXP parity at the feature level, not the tab level

@@ -13,6 +13,7 @@ the user to review the generated report before opening the URL.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import platform
@@ -189,6 +190,7 @@ def bundle(
     log_tail_lines: int = 200,
     include_crash: bool = True,
     include_logs: bool = True,
+    host_diagnostics: Any = None,
 ) -> Dict[str, Any]:
     """Assemble a report bundle. Returns ``{title, body, url, size_bytes}``.
 
@@ -216,6 +218,26 @@ def bundle(
         f"- Platform: {platform.system()} {platform.release()}\n"
         f"- Python: {platform.python_version()}\n"
     )
+
+    if host_diagnostics:
+        try:
+            diagnostic_text = json.dumps(
+                host_diagnostics,
+                indent=2,
+                sort_keys=True,
+                default=str,
+            )
+        except (TypeError, ValueError):
+            diagnostic_text = str(host_diagnostics)
+        # Host results can carry project-tree samples. Keep the public issue
+        # body bounded while preserving the fields F319 needs: host version,
+        # attempted/reported/verified counts, status, and read-back method.
+        diagnostic_text = _redact_sensitive_text(diagnostic_text[:12_000])
+        parts.append(
+            "## Premiere host-write verification\n\n```json\n"
+            + diagnostic_text
+            + "\n```\n"
+        )
 
     if include_crash:
         tail = _tail_file(crash_path, max_bytes=20_000)

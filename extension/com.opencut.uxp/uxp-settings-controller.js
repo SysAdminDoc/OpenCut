@@ -11,6 +11,7 @@ export function createUxpSettingsController({
   getLocalFileSystem = async () => null,
   isBackendConnected: isBackendConnectedFn = () => false,
   openExternalUrl = async () => false,
+  getHostDiagnostics = () => null,
   onWorkspaceAction = () => {},
 } = {}) {
   const document = documentRef;
@@ -20,6 +21,7 @@ export function createUxpSettingsController({
   const UIController = { showToast };
   const getUxpLocalFileSystem = getLocalFileSystem;
   const openHttpsExternalUrl = openExternalUrl;
+  const readHostDiagnostics = getHostDiagnostics;
   const isBackendConnected = isBackendConnectedFn;
   const handleWorkspaceAction = onWorkspaceAction;
   const t = translate;
@@ -238,6 +240,7 @@ export function createUxpSettingsController({
         include_crash: true,
         include_logs: true,
         log_tail_lines: 200,
+        host_diagnostics: readHostDiagnostics(),
       });
       if (!response?.ok) {
         throw new Error(responseError(
@@ -308,6 +311,7 @@ export function createUxpSettingsController({
           include_crash: true,
           include_logs: true,
           log_tail_lines: 200,
+          host_diagnostics: readHostDiagnostics(),
         });
         if (!response?.ok) {
           throw new Error(responseError(

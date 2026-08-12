@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generated_at": "2026-08-11T16:02:16Z",
+  "generated_at": "2026-08-12T15:31:13Z",
   "total_routes": 1593,
   "shipped_route_count": 1568,
   "blueprint_count": 107,
@@ -27179,6 +27179,7 @@
         "extension/com.opencut.uxp/uxp-bootstrap.js",
         "extension/com.opencut.uxp/uxp-components.js",
         "extension/com.opencut.uxp/uxp-gpu-selection-controller.js",
+        "extension/com.opencut.uxp/uxp-host-write-verification.js",
         "extension/com.opencut.uxp/uxp-i18n.js",
         "extension/com.opencut.uxp/uxp-sequence-index-controller.js",
         "extension/com.opencut.uxp/uxp-settings-controller.js",
