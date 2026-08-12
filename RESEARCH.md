@@ -63,6 +63,11 @@ Top opportunities, priority order:
     shipped routes reachable from any first-party surface (17.9%), 1,288 integration-only, and
     `primary_counts.cli = 0`.
 
+Two dependency findings arrived after the above was drafted and rank alongside items 4–6: the per-CVE
+FFmpeg matrix grades 4 of ~16 advisories from the same 2026-07 disclosure batch, and `urllib3>=2.6.3` — a
+floor the project chose for security reasons — sits below two High-severity advisories fixed in 2.7.0.
+Both are detailed under Security below and queued as F332 and F334.
+
 Confidence labels: **Verified** = confirmed in this tree or against a primary source during this pass;
 **Likely** = strong multi-signal inference still needing implementation validation;
 **Needs live validation** = cannot be closed headlessly.
@@ -208,6 +213,28 @@ ignores in/out points (Adobe's staff answer: use Text-Based Editing; the request
   `opencut/core/captions.py`. Whisper's degradation on hour-plus audio (looping a single phrase for the
   remainder of the file) is a well-documented failure that produces a plausible-looking, silently wrong
   transcript — the worst shape for a tool whose next step is deleting footage based on it.
+- **The per-CVE FFmpeg matrix grades a quarter of its own batch — Verified.** F304 replaced the snapshot
+  date heuristic with fix-commit ancestry grading, but `opencut/core/ffmpeg_provenance.py` names only
+  CVE-2026-64832, -64833, -64835, and -66041 from a disclosure batch of roughly sixteen High-severity
+  FFmpeg advisories published 2026-07-22→24 against "FFmpeg through 8.1.2". Twelve appear nowhere in the
+  repository, including CVE-2026-64831 (Vulkan HEVC hardware decoder, stack overflow), CVE-2026-64830
+  (VobSub demuxer heap overflow), CVE-2026-66040 (native PNG/APNG encoder heap OOB write), and
+  CVE-2026-66036 (`vf_hqdn3d` OOB write) — all in codepaths this product drives directly. The pinned
+  snapshot may well contain every fix; the defect is that the gate reports a clear per-CVE verdict from
+  partial coverage, which is the same honesty failure the readiness system exists to prevent.
+- **The FFmpeg release lane is closed against a version that never shipped — Verified.**
+  `ffmpeg_provenance.py:56-57` sets `RELEASE_FLOOR = (8, 1, 3)` and comments that the lane "remains closed
+  until upstream publishes 8.1.3". Upstream released **9.0 "Lei" on 2026-08-04** instead; 8.1.2
+  (2026-06-17) closed the 8.1 line. Every source install is therefore steered to a dated git-master
+  snapshot. Note for whoever opens the lane: the 9.0 branch was cut from master on 2026-06-26, *before*
+  the July fix commits landed, so a 2026-08-04 release date is not evidence the fixes are present —
+  it needs the same ancestry check the matrix applies to the snapshot.
+- **The urllib3 floor is itself vulnerable — Verified.** `pyproject.toml:86` pins `urllib3>=2.6.3` with an
+  inline rationale citing CVE-2026-21441. Two further High-severity advisories published 2026-05-11 are
+  fixed only in 2.7.0: CVE-2026-44431 (sensitive headers forwarded across origins on proxied low-level
+  redirects, `>=1.23, <2.7.0`) and CVE-2026-44432 (decompression-bomb bypass in parts of the streaming
+  API, `>=2.6.0, <2.7.0`). Confirmed against the GitHub Advisory API this pass. Pillow (`>=12.3.0,<13`)
+  and Werkzeug (`>=3.1.6`) floors were checked in the same pass and are correct for their 2026 advisories.
 - **Panel error swallowing persists in the CEP monolith — Verified.** `backend-client.js` is now clean,
   but `extension/com.opencut.panel/client/main.js` still holds 41 empty `catch (e) {}` blocks, and
   `opencut/` holds 226 `except Exception: pass` sites. This is why the single open external bug arrived
@@ -324,6 +351,19 @@ signing, cloud inference, metered credits, or multi-user state contradicts them 
 - **Add an offline mode.** Local-by-default is the existing posture with `OPENCUT_LOCAL_ONLY` and an
   audithook egress guard; the optional-model install paths are the only network dependency and they are
   already explicit. Source: repository evidence.
+- **Migrate the MCP server to the 2026-07-28 specification.** Already done: `opencut/mcp_server.py:1785`
+  declares the stateless 2026-07-28 revision, implements `server/discover`, stamps `resultType` on every
+  result, and serves `tasks/get|update|cancel` — ahead of the deprecation clock on Roots, Sampling, and
+  Logging. Source: MCP specification changelog.
+- **Add a Python 3.14 free-threaded build.** OpenCut's parallelism is already in FFmpeg subprocesses and
+  GIL-releasing C extensions (CTranslate2, ONNX Runtime, torch), so free-threading buys almost nothing
+  while costing 5–10% single-thread throughput and requiring every native wheel to be re-qualified; torch
+  ships 3.14t on Linux only and PyInstaller makes no free-threaded claim. Source: PEP 779, torch 2.13
+  release notes, PyInstaller CHANGES.
+- **Adopt WebGPU in the CEP panel.** CEP 12 runs Chromium 99 and WebGPU shipped at milestone 113, so it is
+  unavailable there; the UXP panel is the only surface where it could land, and that work is gated behind
+  the blocked live-host lane. WebCodecs (milestone 94) *is* reachable in CEP 12 and is noted as a future
+  option for in-panel scrub decode, not proposed as work. Source: Chrome platform status.
 
 ## Sources
 
@@ -371,6 +411,10 @@ signing, cloud inference, metered credits, or multi-user state contradicts them 
 - https://github.com/AcademySoftwareFoundation/OpenTimelineIO/issues/343
 - https://github.com/OpenTimelineIO/otio-aaf-adapter/releases
 - https://github.com/ZFTurbo/Music-Source-Separation-Training · https://huggingface.co/spaces/hf-audio/open_asr_leaderboard
+- https://ffmpeg.org/download.html · https://nvd.nist.gov/vuln/search (cpe:2.3:a:ffmpeg:ffmpeg, 2026-07)
+- https://github.com/advisories/GHSA-qccp-gfcp-xxvc · https://github.com/advisories/GHSA-mf9v-mfxr-j63j
+- https://modelcontextprotocol.io/specification/2026-07-28/changelog · https://peps.python.org/pep-0779/
+- https://developer.adobe.com/premiere-pro/uxp/changelog/ · https://chromestatus.com/feature/5669293909868544
 
 ## Open Questions
 
