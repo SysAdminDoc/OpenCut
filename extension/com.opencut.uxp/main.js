@@ -34,6 +34,7 @@ import { createUxpUpdateController } from "./uxp-update-controller.js";
 import { createUxpSettingsController } from "./uxp-settings-controller.js";
 import { createSequenceIndexFilterController } from "./uxp-sequence-index-controller.js";
 import { createTranscriptCorrectionController } from "./uxp-transcript-correction-controller.js";
+import { createHostWriteVerifier } from "./uxp-host-write-verification.js";
 
 function escapeHtmlForUiController(str) {
   return escapeHtmlValue(str);
@@ -877,6 +878,10 @@ const PProBridge = (() => {
       return { ok: false, reason: "No active sequence or UXP API unavailable." };
     }
     try {
+      const beforeResult = await _sequenceMarkerObjects();
+      const beforeFingerprints = beforeResult.ok
+        ? beforeResult.markers.map(item => JSON.stringify(item.info))
+        : [];
       const markerList = await seq.getMarkerList();
       for (const m of markers) {
         await markerList.createMarker(m.time);
@@ -889,7 +894,27 @@ const PProBridge = (() => {
           }
         } catch (_) { /* color/name not critical */ }
       }
-      return { ok: true, count: markers.length };
+      const afterResult = await _sequenceMarkerObjects();
+      const afterFingerprints = afterResult.ok
+        ? afterResult.markers.map(item => JSON.stringify(item.info))
+        : [];
+      const canVerify = beforeResult.ok && afterResult.ok;
+      const verified = canVerify ? _fingerprintAddedCount(beforeFingerprints, afterFingerprints) : null;
+      const status = _verificationStatus(markers.length, verified, canVerify);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", count: markers.length },
+        {
+          action: "ocAddSequenceMarkers",
+          attempted: markers.length,
+          reported: markers.length,
+          verified,
+          status,
+          readBackMethod: canVerify ? "Sequence marker-list traversal fingerprint diff" : "unavailable: marker-list traversal",
+          beforeState: { marker_count: beforeFingerprints.length },
+          afterState: { marker_count: afterFingerprints.length },
+          detail: "createMarker() writes are verified by re-reading marker objects through getMarkers()/iterator APIs.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] addMarkers failed:", e.message);
       return { ok: false, reason: e.message };
@@ -970,6 +995,7 @@ const PProBridge = (() => {
     if (!fingerprints.length) return { ok: false, reason: "No marker fingerprints supplied.", removed: 0 };
     const result = await _sequenceMarkerObjects();
     if (!result.ok) return result;
+    const beforeFingerprints = result.markers.map(item => JSON.stringify(item.info));
     let removed = 0;
     for (const item of result.markers) {
       if (!fingerprints.some(fp => _markerMatches(item.info, fp))) continue;
@@ -983,7 +1009,27 @@ const PProBridge = (() => {
         console.warn("[PProBridge] removeSequenceMarkers skipped marker:", e.message);
       }
     }
-    return { ok: true, removed };
+    const afterResult = await _sequenceMarkerObjects();
+    const afterFingerprints = afterResult.ok
+      ? afterResult.markers.map(item => JSON.stringify(item.info))
+      : [];
+    const canVerify = afterResult.ok;
+    const verified = canVerify ? _fingerprintDeltaCount(beforeFingerprints, afterFingerprints) : null;
+    const status = _verificationStatus(removed, verified, canVerify);
+    return await _attachHostWriteVerification(
+      { ok: status !== "failed", removed },
+      {
+        action: "ocRemoveSequenceMarkers",
+        attempted: fingerprints.length,
+        reported: removed,
+        verified,
+        status,
+        readBackMethod: canVerify ? "Sequence marker-list traversal fingerprint diff" : "unavailable: marker-list traversal",
+        beforeState: { marker_count: beforeFingerprints.length },
+        afterState: { marker_count: afterFingerprints.length },
+        detail: "Marker deletion is verified by re-reading the marker list after removeMarker()/delete().",
+      }
+    );
   }
 
   /**
@@ -998,13 +1044,39 @@ const PProBridge = (() => {
     try {
       // Sort descending so removal doesn't shift earlier cut points
       const sorted = [...cuts].sort((a, b) => b.start - a.start);
+      let beforeAll = await _sequenceTrackSnapshot(seq);
+      let canVerify = beforeAll !== null;
+      let verifiedCuts = 0;
       for (const cut of sorted) {
+        const beforeCut = canVerify ? await _sequenceTrackSnapshot(seq) : null;
         // UXP uses ticks internally; 254016000000 ticks/sec in Premiere
         const startTick = Math.round(cut.start * 254016000000);
         const endTick   = Math.round(cut.end   * 254016000000);
         await seq.rippleDelete(startTick, endTick);
+        if (canVerify) {
+          const afterCut = await _sequenceTrackSnapshot(seq);
+          if (afterCut === null) canVerify = false;
+          else if (_fingerprintDeltaCount(beforeCut, afterCut) > 0 ||
+              _fingerprintAddedCount(beforeCut, afterCut) > 0) verifiedCuts += 1;
+        }
       }
-      return { ok: true, applied: sorted.length };
+      const afterAll = canVerify ? await _sequenceTrackSnapshot(seq) : null;
+      if (afterAll === null) canVerify = false;
+      const status = _verificationStatus(sorted.length, canVerify ? verifiedCuts : null, canVerify);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", applied: sorted.length },
+        {
+          action: "ocApplySequenceCuts",
+          attempted: sorted.length,
+          reported: sorted.length,
+          verified: canVerify ? verifiedCuts : null,
+          status,
+          readBackMethod: canVerify ? "video/audio track-item boundary fingerprint diff per cut" : "unavailable: track-item traversal",
+          beforeState: { track_item_count: beforeAll?.length ?? null },
+          afterState: { track_item_count: afterAll?.length ?? null },
+          detail: "Each rippleDelete() is followed by a fresh track-item walk; a non-throwing call with no boundary/count change fails explicitly.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] applyCuts failed:", e.message);
       return { ok: false, reason: e.message };
@@ -1140,11 +1212,15 @@ const PProBridge = (() => {
       const projList = await ppro.app.getProjectList();
       if (!projList || projList.length === 0) return { ok: false, reason: "No open project" };
       const proj = projList[0];
+      const root = await proj.getRootItem?.();
+      const beforeTree = root ? await _walkProjectTree(root) : [];
+      const beforeMediaPaths = beforeTree
+        .map(entry => String(entry.mediaPath || "").replace(/\\/g, "/").toLowerCase())
+        .filter(Boolean);
 
       // If binName specified, find or create it
       if (binName) {
         try {
-          const root = await proj.getRootItem();
           const children = await root.getItems();
           let targetBin = null;
           for (const child of (children || [])) {
@@ -1160,12 +1236,54 @@ const PProBridge = (() => {
       }
 
       const imported = await proj.importFiles(filePaths);
-      return { ok: true, imported: imported ? filePaths.length : 0 };
+      const reported = imported === false ? 0 : filePaths.length;
+      const afterTree = root ? await _walkProjectTree(root) : [];
+      const canVerify = Boolean(root);
+      const afterMediaPaths = afterTree
+        .map(entry => String(entry.mediaPath || "").replace(/\\/g, "/").toLowerCase())
+        .filter(Boolean);
+      const verified = canVerify
+        ? Math.min(filePaths.length, _fingerprintAddedCount(beforeMediaPaths, afterMediaPaths))
+        : null;
+      let status = _verificationStatus(reported, verified, canVerify);
+      if (filePaths.length > 0 && reported === 0 && Number(verified || 0) === 0) status = "failed";
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", imported: reported },
+        {
+          action: "importFiles",
+          attempted: filePaths.length,
+          reported,
+          verified,
+          status,
+          readBackMethod: canVerify ? "project root recursive media-path lookup" : "unavailable: project root traversal",
+          beforeState: { project_item_count: beforeTree.length },
+          afterState: { project_item_count: afterTree.length },
+          detail: "Imported media paths must be newly present in a fresh project-tree walk after Project.importFiles().",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] importFiles failed:", e.message);
       return { ok: false, reason: e.message };
     }
   }
+
+  const {
+    attach: _attachHostWriteVerification,
+    ensure: _ensureHostWriteVerification,
+    fingerprintAddedCount: _fingerprintAddedCount,
+    fingerprintDeltaCount: _fingerprintDeltaCount,
+    projectSequenceSnapshot: _projectSequenceSnapshot,
+    projectTreeSnapshot: _projectTreeSnapshot,
+    sequenceTrackSnapshot: _sequenceTrackSnapshot,
+    verificationStatus: _verificationStatus,
+    verifySubsequenceCreation: _verifySubsequenceCreation,
+  } = createHostWriteVerifier({
+    getPPro: () => ppro,
+    trackListEntries: _trackListEntries,
+    trackItems: _trackItems,
+    itemField: _captionItemField,
+    timeValueToSeconds: _timeValueToSeconds,
+  });
 
   /**
    * Import a generated FCP 7 XML timeline into the project.
@@ -1181,11 +1299,31 @@ const PProBridge = (() => {
     try {
       const context = await _projectRoot();
       if (!context?.proj) return { ok: false, reason: "No open project" };
+      const beforeTree = context.root ? await _walkProjectTree(context.root) : [];
       await context.proj.importFiles([outputPath]);
       const normalized = String(outputPath).replace(/\\/g, "/");
       const filename = normalized.split("/").pop() || "OpenCut Interchange.xml";
       const sequenceName = filename.replace(/\.[^.]+$/, "");
-      return { ok: true, imported: 1, outputPath, sequence_name: sequenceName };
+      const afterTree = context.root ? await _walkProjectTree(context.root) : [];
+      const canVerify = Boolean(context.root);
+      const verified = canVerify
+        ? Math.min(1, _fingerprintAddedCount(_projectTreeSnapshot(beforeTree), _projectTreeSnapshot(afterTree)))
+        : null;
+      const status = _verificationStatus(1, verified, canVerify);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", imported: 1, outputPath, sequence_name: sequenceName },
+        {
+          action: "importTimelineInterchange",
+          attempted: 1,
+          reported: 1,
+          verified,
+          status,
+          readBackMethod: canVerify ? "project root recursive identity/path fingerprint diff" : "unavailable: project root traversal",
+          beforeState: { project_item_count: beforeTree.length },
+          afterState: { project_item_count: afterTree.length },
+          detail: "A non-throwing XML import is accepted only when a fresh project-tree walk finds a new item.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] importTimelineInterchange failed:", e.message);
       return { ok: false, reason: e.message };
@@ -1214,6 +1352,7 @@ const PProBridge = (() => {
       const context = await _projectRoot();
       if (!context?.root) return { ok: false, reason: "No open project", renamed: 0 };
       const tree = await _walkProjectTree(context.root);
+      const renameEvidence = [];
       let renamed = 0;
       for (const rename of renames) {
         const newName = rename.newName ?? rename.name ?? rename.to;
@@ -1224,10 +1363,44 @@ const PProBridge = (() => {
           (rename.oldName && entry.name === rename.oldName)
         );
         if (!target?.item?.setName) continue;
+        renameEvidence.push({
+          nodeId: target.nodeId,
+          mediaPath: target.mediaPath,
+          oldName: target.name,
+          newName: String(newName),
+        });
         await target.item.setName(String(newName));
         renamed += 1;
       }
-      return { ok: true, renamed };
+      const afterTree = await _walkProjectTree(context.root);
+      let verified = 0;
+      const verifiableRenames = renameEvidence.filter(item => item.nodeId || item.mediaPath).length;
+      for (const evidence of renameEvidence) {
+        const target = afterTree.find(entry =>
+          (evidence.nodeId && entry.nodeId === evidence.nodeId) ||
+          (evidence.mediaPath && entry.mediaPath === evidence.mediaPath)
+        );
+        if (target?.name === evidence.newName && evidence.oldName !== evidence.newName) verified += 1;
+      }
+      const status = verifiableRenames === 0
+        ? "unverified"
+        : (verifiableRenames < renamed ? "partial" : _verificationStatus(renamed, verified, true));
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", renamed },
+        {
+          action: "ocBatchRenameProjectItems",
+          attempted: renames.length,
+          reported: renamed,
+          verified,
+          status,
+          readBackMethod: verifiableRenames > 0
+            ? "project root recursive stable identity and getName() read-back"
+            : "unavailable: stable project-item identity",
+          beforeState: { project_item_count: tree.length, already_matching_names: renameEvidence.filter(item => item.oldName === item.newName).length },
+          afterState: { project_item_count: afterTree.length, matching_names: verified },
+          detail: "Each setName() call is verified by re-walking the project tree and reading the target name.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] batchRenameProjectItems failed:", e.message);
       return { ok: false, reason: e.message, renamed: 0 };
@@ -1241,6 +1414,7 @@ const PProBridge = (() => {
     try {
       const context = await _projectRoot();
       if (!context?.root) return { ok: false, reason: "No open project", created: 0 };
+      const beforeTree = await _walkProjectTree(context.root);
       let created = 0;
       for (const rule of bins) {
         const name = String(rule.name ?? rule.bin ?? rule.label ?? "").trim();
@@ -1250,7 +1424,24 @@ const PProBridge = (() => {
         else return { ok: false, reason: "Project does not expose bin creation.", created };
         created += 1;
       }
-      return { ok: true, created };
+      const afterTree = await _walkProjectTree(context.root);
+      const added = _fingerprintAddedCount(_projectTreeSnapshot(beforeTree), _projectTreeSnapshot(afterTree));
+      const verified = Math.min(created, added);
+      const status = _verificationStatus(created, verified, true);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", created },
+        {
+          action: "ocCreateSmartBins",
+          attempted: bins.length,
+          reported: created,
+          verified,
+          status,
+          readBackMethod: "project root recursive folder fingerprint diff",
+          beforeState: { project_item_count: beforeTree.length },
+          afterState: { project_item_count: afterTree.length },
+          detail: "createBin() calls are verified by a fresh project-tree walk.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] createSmartBins failed:", e.message);
       return { ok: false, reason: e.message, created: 0 };
@@ -1273,7 +1464,28 @@ const PProBridge = (() => {
       else if (target.item.remove) await target.item.remove();
       else if (context.proj.deleteItem) await context.proj.deleteItem(target.item);
       else return { ok: false, reason: "Project item does not expose delete/remove.", removed: 0 };
-      return { ok: true, removed: 1 };
+      const afterTree = await _walkProjectTree(context.root);
+      const stillPresent = afterTree.some(entry =>
+        (parsed.nodeId && entry.nodeId === parsed.nodeId) ||
+        (parsed.path && (entry.mediaPath === parsed.path || entry.path === parsed.path)) ||
+        (parsed.name && entry.name === parsed.name)
+      );
+      const verified = stillPresent ? 0 : 1;
+      const status = _verificationStatus(1, verified, true);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", removed: 1 },
+        {
+          action: "removeImportedProjectItem",
+          attempted: 1,
+          reported: 1,
+          verified,
+          status,
+          readBackMethod: "project root recursive identity/path lookup",
+          beforeState: { project_item_count: tree.length, item_present: true },
+          afterState: { project_item_count: afterTree.length, item_present: stillPresent },
+          detail: "delete/remove calls are verified by ensuring the target identity is absent from a fresh tree walk.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] removeImportedProjectItem failed:", e.message);
       return { ok: false, reason: e.message, removed: 0 };
@@ -1632,11 +1844,38 @@ const PProBridge = (() => {
     const seq = await getActiveSequence();
     if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable." };
     try {
+      let beforeSeconds = null;
+      try {
+        const beforePosition = await seq.getPlayerPosition?.();
+        beforeSeconds = _timeValueToSeconds(beforePosition);
+      } catch (_) { beforeSeconds = null; }
       if (seq.setPlayerPosition) await seq.setPlayerPosition(_secondsToTicks(seconds));
       else if (seq.setPlayheadPosition) await seq.setPlayheadPosition(_secondsToTicks(seconds));
       else if (ppro?.SourceMonitor?.setPosition) await ppro.SourceMonitor.setPosition(seconds);
       else return { ok: false, reason: "No supported playhead positioning API is available." };
-      return { ok: true, seconds };
+      let afterSeconds = null;
+      try {
+        const afterPosition = await seq.getPlayerPosition?.();
+        afterSeconds = _timeValueToSeconds(afterPosition);
+      } catch (_) { afterSeconds = null; }
+      const canVerify = beforeSeconds != null && afterSeconds != null;
+      const verified = canVerify && Math.abs(afterSeconds - seconds) <= 0.001 &&
+        Math.abs(afterSeconds - beforeSeconds) > 0.001 ? 1 : 0;
+      const status = _verificationStatus(1, verified, canVerify);
+      return await _attachHostWriteVerification(
+        { ok: status !== "failed", seconds },
+        {
+          action: "ocSetSequencePlayhead",
+          attempted: 1,
+          reported: 1,
+          verified: canVerify ? verified : null,
+          status,
+          readBackMethod: canVerify ? "Sequence.getPlayerPosition()" : "unavailable: Sequence.getPlayerPosition()",
+          beforeState: { seconds: beforeSeconds },
+          afterState: { seconds: afterSeconds },
+          detail: "The requested position is re-read independently after the set call.",
+        }
+      );
     } catch (e) {
       console.warn("[PProBridge] setSequencePlayhead failed:", e.message);
       return { ok: false, reason: e.message };
@@ -1667,6 +1906,8 @@ const PProBridge = (() => {
       return { ok: false, reason: "A valid start/end range in seconds is required." };
     }
     const ignoreTrackTargeting = parsed.ignoreTrackTargeting !== false;
+    const subsequenceProject = await _projectRoot();
+    const sequencesBefore = await _projectSequenceSnapshot(subsequenceProject?.proj);
     let originalRange = null;
     try {
       originalRange = await _readSequenceRange(seq);
@@ -1748,7 +1989,10 @@ const PProBridge = (() => {
         restoration,
       };
     }
-    return { ...operationResult, rangeVerification, restoration };
+    const completed = { ...operationResult, rangeVerification, restoration };
+    return operationResult?.ok
+      ? await _verifySubsequenceCreation(completed, { project: subsequenceProject?.proj, beforeSequences: sequencesBefore, rangeVerification, restoration })
+      : completed;
   }
 
   function _encoderManager() {
@@ -1960,6 +2204,7 @@ const PProBridge = (() => {
     exportAafSequence,
     executeHostAction,
     hostActionStatus,
+    ensureHostWriteVerification: _ensureHostWriteVerification,
   };
 })();
 
@@ -2012,6 +2257,7 @@ const transcriptCorrectionController = createTranscriptCorrectionController({
     updateCaptionsWorkspaceSummary();
   },
 });
+let _latestHostWriteVerificationUxp = null;
 async function runCheckpointedUxpHostWrite(spec, writeHost) {
   if (runtimeState.backendVersion &&
       !isVersionAtLeast(runtimeState.backendVersion, CHECKPOINT_MIN_BACKEND_VERSION)) {
@@ -2047,6 +2293,13 @@ async function runCheckpointedUxpHostWrite(spec, writeHost) {
     result = { ok: false, reason: err?.message || String(err) };
   }
 
+  if (result?.ok && !result?.host_write_verification) {
+    result = await PProBridge.ensureHostWriteVerification(spec.action, result);
+  }
+  if (result?.host_write_verification) {
+    _latestHostWriteVerificationUxp = result.host_write_verification;
+  }
+
   if (!result?.ok) {
     await BackendClient.post(`/journal/checkpoints/${encodeURIComponent(checkpoint.transaction_id)}/recovery-failed`, {
       error: result?.reason || t("uxp.journal.host_write_failed", "Host write failed"),
@@ -2054,6 +2307,17 @@ async function runCheckpointedUxpHostWrite(spec, writeHost) {
     });
     await loadJournalRecoveryUxp();
     return result || { ok: false, reason: t("uxp.journal.host_write_failed", "Host write failed") };
+  }
+
+  if (["unverified", "partial"].includes(result?.verification_status)) {
+    UIController.showToast(
+      result.warning || formatI18n(
+        "uxp.journal.host_write_unverified",
+        "Premiere accepted {action}, but independent read-back is {status}. Review the recovery diagnostics before relying on it.",
+        { action: spec.label || spec.action, status: result.verification_status },
+      ),
+      "warning"
+    );
   }
 
   const inverse = typeof spec.inverseFromResult === "function"
@@ -2123,6 +2387,7 @@ const UxpSettingsController = createUxpSettingsController({
   getLocalFileSystem: getUxpLocalFileSystem,
   isBackendConnected,
   openExternalUrl: openHttpsExternalUrl,
+  getHostDiagnostics: () => _latestHostWriteVerificationUxp,
   onWorkspaceAction: handleWorkspaceAction,
 });
 

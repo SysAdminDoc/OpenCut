@@ -238,6 +238,24 @@ class TestIssueReport(unittest.TestCase):
         self.assertIn("Smoke", result["title"])
         self.assertGreater(result["size_bytes"], 0)
 
+    def test_bundle_includes_bounded_host_write_verification(self):
+        from opencut.core.issue_report import bundle
+
+        diagnostics = {
+            "schema": "opencut.host_write_verification.v1",
+            "host_version": "26.3.0",
+            "attempted_count": 2,
+            "reported_count": 2,
+            "verified_count": 0,
+            "verification_status": "failed",
+            "read_back_method": "video/audio track-item boundary fingerprint diff",
+        }
+        result = bundle(host_diagnostics=diagnostics)
+        self.assertIn("Premiere host-write verification", result["body"])
+        self.assertIn('"host_version": "26.3.0"', result["body"])
+        self.assertIn('"verified_count": 0', result["body"])
+        self.assertIn("track-item boundary fingerprint diff", result["body"])
+
     def test_bundle_scrubs_home_paths(self):
         from opencut.core import issue_report
         home = os.path.expanduser("~")
@@ -536,6 +554,25 @@ class TestWaveHRoutes(unittest.TestCase):
         self.assertNotIn("url", body)
         self.assertNotIn("secret-value", body["body"])
         self.assertNotIn("C:\\Users\\private", body["body"])
+
+    def test_support_bundle_carries_host_write_read_back_evidence(self):
+        r = self.client.post(
+            "/system/support-bundle",
+            json={
+                "host_diagnostics": {
+                    "host_version": "26.3.0",
+                    "attempted_count": 1,
+                    "reported_count": 1,
+                    "verified_count": 0,
+                    "verification_status": "failed",
+                    "read_back_method": "marker set diff",
+                }
+            },
+            headers=self._h(),
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Premiere host-write verification", r.get_json()["body"])
+        self.assertIn('"host_version": "26.3.0"', r.get_json()["body"])
 
     def test_demo_list(self):
         r = self.client.get("/system/demo/list")

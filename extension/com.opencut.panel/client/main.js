@@ -2335,8 +2335,7 @@
             jsx('importFileToProject("' + escPath(path) + '", "' + escPath(bin || t("premiere.bin_output", "OpenCut Output")) + '")', cb);
         },
         autoImport: function (path, type) {
-            if (!cs || typeof cs.evalScript !== "function") return;
-            cs.evalScript('autoImportResult("' + escPath(path) + '", "' + escPath(type || "output") + '")');
+            if (!cs || typeof cs.evalScript !== "function") return; jsx('autoImportResult("' + escPath(path) + '", "' + escPath(type || "output") + '")', function (result) { OpenCutHostWriteVerification.parse(result, { action: "autoImportResult" }, t, showToast); });
         },
         isProjectSaved: function (cb) {
             jsx("isProjectSaved()", cb);
@@ -2359,7 +2358,7 @@
             jsx("ocRemoveImportedItem('" + escSingleQuote(json) + "')", cb);
         },
         setPlayhead: function (seconds, cb) {
-            jsx("ocSetSequencePlayhead(" + Number(seconds || 0) + ")", cb);
+            if (!cs || typeof cs.evalScript !== "function") { if (cb) cb(null); return; } jsx("ocSetSequencePlayhead(" + Number(seconds || 0) + ")", function (result) { var parsed = OpenCutHostWriteVerification.parse(result, { action: "ocSetSequencePlayhead" }, t, showToast); if (cb) cb(JSON.stringify(parsed)); });
         }
     };
 
@@ -11885,9 +11884,7 @@
             function settleHostResult(result) {
                 if (settled) return;
                 settled = true;
-                var parsed;
-                try { parsed = JSON.parse(result || "{}"); }
-                catch (parseErr) { parsed = { error: result || parseErr.message }; }
+                var parsed = OpenCutHostWriteVerification.parse(result, spec, t, showToast);
                 var txid = checkpoint.transaction_id;
                 if (parsed.error) {
                     api("POST", "/journal/checkpoints/" + encodeURIComponent(txid) + "/recovery-failed", {
@@ -18034,7 +18031,8 @@
                         description: desc || "",
                         log_tail_lines: 200,
                         include_crash: true,
-                        include_logs: true
+                        include_logs: true,
+                        host_diagnostics: OpenCutHostWriteVerification.latest()
                     }, function (err, data) {
                         if (err || !data || !data.url) {
                             showToast(t("toast.issue_bundle_failed", "Could not assemble issue bundle"), "error");

@@ -1716,6 +1716,7 @@
   "uxp.journal.create_bins_label": "Crear {count} contenedor(es) inteligente(s)",
   "uxp.journal.diagnostics_failed": "No se pudieron cargar los diagnósticos de recuperación.",
   "uxp.journal.host_write_failed": "Error de escritura en el host",
+  "uxp.journal.host_write_unverified": "Premiere aceptó {action}, pero la lectura de verificación es {status}. Revisa los diagnósticos de recuperación antes de confiar en el resultado.",
   "uxp.journal.interrupted": "Interrumpido",
   "uxp.journal.interrupted_count_title": "{count} escritura(s) de host interrumpida(s) requieren revisión.",
   "uxp.journal.recovery": "Recuperación de línea de tiempo",

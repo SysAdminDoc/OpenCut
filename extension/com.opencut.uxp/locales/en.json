@@ -1716,6 +1716,7 @@
   "uxp.journal.create_bins_label": "Create {count} smart bin(s)",
   "uxp.journal.diagnostics_failed": "Could not load recovery diagnostics.",
   "uxp.journal.host_write_failed": "Host write failed",
+  "uxp.journal.host_write_unverified": "Premiere accepted {action}, but independent read-back is {status}. Review the recovery diagnostics before relying on it.",
   "uxp.journal.interrupted": "Interrupted",
   "uxp.journal.interrupted_count_title": "{count} interrupted host write(s) need review.",
   "uxp.journal.recovery": "Timeline Recovery",

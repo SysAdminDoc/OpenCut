@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Fixed - Premiere host writes prove their effect
+
+- CEP, UXP, and Bolt host mutations now return one read-back contract with
+  Premiere version, attempted/reported/verified counts, and the independent
+  API used to inspect the result. A non-throwing host call that leaves the
+  timeline or project unchanged fails explicitly instead of producing a
+  success toast; host operations without a stable read API are labelled
+  unverified. The latest evidence is included in issue and support bundles.
+
 ### Added - APV (IETF RFC 9924) mezzanine encode
 
 - `POST /video/encode/apv` and `GET /video/encode/apv/info` expose the APV

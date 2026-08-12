@@ -43,7 +43,14 @@ MAIN_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
 BACKEND_CLIENT_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "backend-client.js"
 TRANSCRIPT_CORRECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "transcript-correction-controller.js"
 GPU_SELECTION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "gpu-selection-controller.js"
-RUNTIME_JS_SOURCES = (MAIN_JS, BACKEND_CLIENT_JS, TRANSCRIPT_CORRECTION_JS, GPU_SELECTION_JS)
+HOST_WRITE_VERIFICATION_JS = ROOT / "extension" / "com.opencut.panel" / "client" / "host-write-verification.js"
+RUNTIME_JS_SOURCES = (
+    MAIN_JS,
+    BACKEND_CLIENT_JS,
+    TRANSCRIPT_CORRECTION_JS,
+    GPU_SELECTION_JS,
+    HOST_WRITE_VERIFICATION_JS,
+)
 
 # The historic dead-key cleanup is complete. Keep the floor at zero so new
 # unused locale keys fail the gate immediately.

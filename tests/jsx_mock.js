@@ -126,6 +126,13 @@ function TrackItem(opts) {
 }
 TrackItem.prototype.remove = function (ripple, align) {
     this._removed = true;
+    if (this._track && this._track.clips) {
+        var index = this._track.clips._items.indexOf(this);
+        if (index >= 0) {
+            this._track.clips._items.splice(index, 1);
+            this._track.clips.numItems = this._track.clips._items.length;
+        }
+    }
 };
 
 /** Track mock */
@@ -134,6 +141,9 @@ function Track(clips, opts) {
     this.clips = _makeItemCollection(clips || []);
     this._failInsert = !!opts.failInsert || !!opts.insertThrows;
     this._inserted = [];
+    for (var i = 0; i < this.clips._items.length; i++) {
+        this.clips._items[i]._track = this;
+    }
 }
 Track.prototype.insertClip = function (projectItem, time) {
     if (this._failInsert) {
@@ -146,6 +156,7 @@ Track.prototype.insertClip = function (projectItem, time) {
         projectItem: projectItem || null
     });
     this.clips._items.push(clip);
+    clip._track = this;
     this.clips.numItems = this.clips._items.length;
     this._inserted.push(clip);
     return true;
@@ -180,6 +191,7 @@ TrackCollection.prototype.addTrack = function (track) {
 /** Marker mock */
 function MarkerMock(time) {
     this.start = new Time(time);
+    this.time = this.start;
     this.end = new Time(time);
     this.name = "";
     this.type = 0;
@@ -197,6 +209,18 @@ MarkersCollection.prototype.createMarker = function (time) {
     this._markers.push(m);
     this.numMarkers = this._markers.length;
     return m;
+};
+MarkersCollection.prototype.getFirstMarker = function () {
+    return this._markers.length ? this._markers[0] : null;
+};
+MarkersCollection.prototype.getNextMarker = function (marker) {
+    var index = this._markers.indexOf(marker);
+    return index >= 0 && index + 1 < this._markers.length ? this._markers[index + 1] : null;
+};
+MarkersCollection.prototype.deleteMarker = function (marker) {
+    var index = this._markers.indexOf(marker);
+    if (index >= 0) this._markers.splice(index, 1);
+    this.numMarkers = this._markers.length;
 };
 
 /** Sequence mock */
@@ -216,9 +240,14 @@ function Sequence(opts) {
     this.end = opts.end ? new Time(opts.end) : new Time(60);
     this.frameSizeHorizontal = opts.width || 1920;
     this.frameSizeVertical = opts.height || 1080;
+    this._playerPosition = new Time(0);
 }
 Sequence.prototype.getPlayerPosition = function () {
-    return new Time(0);
+    return this._playerPosition;
+};
+Sequence.prototype.setPlayerPosition = function (value) {
+    var ticks = value && value.ticks != null ? Number(value.ticks) : Number(value);
+    this._playerPosition = new Time(ticks / 254016000000);
 };
 Sequence.prototype.addCaptionTrack = function () {
     if (this._captionAddFails) {
@@ -377,7 +406,23 @@ describe("ocApplySequenceCuts", function () {
         var result = JSON.parse(ocApplySequenceCuts(JSON.stringify(cuts)));
         assert(!result.error, "should not error: " + result.error);
         assertEqual(result.applied, 2, "should remove 2 clips (1 video + 1 audio)");
+        assertEqual(result.attempted_count, 2, "should report attempted clip removals separately");
+        assertEqual(result.verified_count, 2, "track collection read-back should verify both removals");
+        assertEqual(result.verification_status, "verified");
+        assertEqual(result.host_version, "25.6.0-mock");
         assertEqual(result.errors.length, 0, "no per-clip errors");
+    });
+
+    it("should fail when Premiere reports removals but track read-back is unchanged", function () {
+        app = buildMockApp();
+        app.project.activeSequence.videoTracks[0].clips[0].remove = function () {};
+        app.project.activeSequence.audioTracks[0].clips[0].remove = function () {};
+        var result = JSON.parse(ocApplySequenceCuts(JSON.stringify([{ start: 0, end: 10 }])));
+        assertEqual(result.applied, 2, "the write API reported both calls as accepted");
+        assertEqual(result.verified_count, 0, "independent track read-back should find no mutation");
+        assertEqual(result.verification_status, "failed");
+        assertEqual(result.error_code, "HOST_WRITE_NOT_APPLIED");
+        assert(result.error.indexOf("reported success") !== -1, "no-op failure should be explicit");
     });
 
     it("should handle multiple cuts sorted in reverse", function () {
@@ -447,10 +492,24 @@ describe("ocBatchRenameProjectItems", function () {
         ];
         var result = JSON.parse(ocBatchRenameProjectItems(JSON.stringify(renames)));
         assertEqual(result.renamed, 2, "should rename 2 items");
+        assertEqual(result.verified_count, 2, "project tree read-back should verify both names");
+        assertEqual(result.verification_status, "verified");
         assertEqual(result.errors.length, 0, "no errors");
         // Verify actual name change on the mock objects
         assertEqual(app.project.rootItem.children[0].name, "Main_Interview.mp4");
         assertEqual(app.project.rootItem.children[2].name, "Background_Music.wav");
+    });
+
+    it("should not verify a rename that reasserts the existing name", function () {
+        app = buildMockApp();
+        var currentName = app.project.rootItem.children[0].name;
+        var result = JSON.parse(ocBatchRenameProjectItems(JSON.stringify([
+            { nodeId: "node-001", newName: currentName }
+        ])));
+        assertEqual(result.reported_count, 1, "the assignment was reported");
+        assertEqual(result.verified_count, 0, "unchanged names are not mutations");
+        assertEqual(result.verification_status, "failed");
+        assertEqual(result.error_code, "HOST_WRITE_NOT_APPLIED");
     });
 
     it("should report error for missing nodeId", function () {
@@ -501,6 +560,8 @@ describe("ocAddSequenceMarkers", function () {
         ];
         var result = JSON.parse(ocAddSequenceMarkers(JSON.stringify(markers)));
         assertEqual(result.added, 3);
+        assertEqual(result.verified_count, 3, "marker iterator read-back should verify additions");
+        assertEqual(result.verification_status, "verified");
         assertEqual(result.errors.length, 0);
         // Check the markers were created on the sequence mock
         var seq = app.project.activeSequence;
@@ -566,6 +627,9 @@ describe("ocAddNativeCaptionTrack", function () {
         assertEqual(result.fallback_path, "");
         assertEqual(result.host.bridge, "cep");
         assertEqual(result.host_version, "25.6.0-mock");
+        assertEqual(result.verification_status, "partial");
+        assertEqual(result.caption_content_verification, "unverified");
+        assertEqual(result.unverified_caption_count, 2);
     });
 
     it("should skip invalid segments (end <= start)", function () {
@@ -715,6 +779,37 @@ describe("ocAddNativeCaptionTrack", function () {
             }
         }
         assert(found, "OpenCut Captions bin should exist");
+    });
+});
+
+describe("legacy project import write-back", function () {
+
+    it("should verify a newly imported media path", function () {
+        app = buildMockApp();
+        var result = JSON.parse(importFileToProject("/outputs/clean.wav", "OpenCut Output"));
+        assertEqual(result.reported_count, 1, "the import call should be reported");
+        assertEqual(result.verified_count, 1, "a fresh project-tree lookup should find the path");
+        assertEqual(result.verification_status, "verified");
+        assertEqual(result.host_version, "25.6.0-mock");
+    });
+
+    it("should fail a non-throwing import that creates no project item", function () {
+        app = buildMockApp();
+        app.project.importFiles = function () {};
+        var result = JSON.parse(importFileToProject("/outputs/noop.wav", "OpenCut Output"));
+        assertEqual(result.reported_count, 1, "Premiere accepted the import call");
+        assertEqual(result.verified_count, 0, "the project tree remained unchanged");
+        assertEqual(result.verification_status, "failed");
+        assertEqual(result.error_code, "HOST_WRITE_NOT_APPLIED");
+    });
+
+    it("should report an already imported path as a verified no-write", function () {
+        app = buildMockApp();
+        var result = JSON.parse(importFileToProject("/media/Interview.mp4", "OpenCut Output"));
+        assertEqual(result.attempted_count, 0);
+        assertEqual(result.reported_count, 0);
+        assertEqual(result.verified_count, 0);
+        assertEqual(result.verification_status, "verified");
     });
 });
 

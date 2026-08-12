@@ -215,6 +215,13 @@ API_CATALOGUE = (
         aliases=("Sequence.getName",),
     ),
     _capability(
+        "Sequence.getPlayerPosition",
+        "Sequence",
+        "getPlayerPosition",
+        fallback="Mark playhead writes unverified when the position cannot be read back.",
+        aliases=("Sequence.getPlayerPosition",),
+    ),
+    _capability(
         "Sequence.getEnd",
         "Sequence",
         "getEnd",

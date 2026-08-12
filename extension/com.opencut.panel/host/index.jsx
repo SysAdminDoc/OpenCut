@@ -362,6 +362,8 @@ function importXMLToProject(xmlPath) {
         if (!xmlFile.exists) {
             return JSON.stringify({ error: "XML file not found: " + xmlPath });
         }
+        var xmlPresenceBefore = _ocProjectPathPresence([xmlPath]);
+        var xmlSequencesBefore = _ocSequenceSnapshot();
         
         // Track how many sequences we had before import
         var seqCountBefore = 0;
@@ -399,11 +401,11 @@ function importXMLToProject(xmlPath) {
                 if (newSeq) {
                     app.project.openSequence(newSeq.sequenceID);
                     _ocLog("Opened sequence: " + newSeq.name);
-                    return JSON.stringify({ 
+                    return JSON.stringify(_ocAttachInterchangeImportVerification({
                         success: true, 
                         message: "Imported and opened sequence: " + newSeq.name,
                         sequence_name: newSeq.name
-                    });
+                    }, "importXMLToProject", xmlPath, xmlPresenceBefore, xmlSequencesBefore));
                 }
             } catch (e2) {
                 _ocLog("Could not open new sequence: " + e2.toString());
@@ -423,11 +425,11 @@ function importXMLToProject(xmlPath) {
                             // Open this sequence
                             app.project.openSequence(item.sequenceID);
                             _ocLog("Found and opened: " + item.name);
-                            return JSON.stringify({
+                            return JSON.stringify(_ocAttachInterchangeImportVerification({
                                 success: true,
                                 message: "Opened sequence: " + item.name,
                                 sequence_name: item.name
-                            });
+                            }, "importXMLToProject", xmlPath, xmlPresenceBefore, xmlSequencesBefore));
                         }
                     }
                 } catch (e3) {}
@@ -436,10 +438,10 @@ function importXMLToProject(xmlPath) {
             _ocLog("Search error: " + e4.toString());
         }
         
-        return JSON.stringify({ 
+        return JSON.stringify(_ocAttachInterchangeImportVerification({
             success: true, 
             message: "XML imported. Look for the new sequence in Project panel." 
-        });
+        }, "importXMLToProject", xmlPath, xmlPresenceBefore, xmlSequencesBefore));
     } catch (e) {
         _ocLog("importXMLToProject error: " + e.toString());
         return JSON.stringify({ error: "Import failed: " + e.toString() });
@@ -527,6 +529,8 @@ function importAndOpenXml(filePath) {
         var file = new File(filePath);
         if (!file.exists) return JSON.stringify({ error: "File not found: " + filePath });
 
+        var openXmlPresenceBefore = _ocProjectPathPresence([filePath]);
+        var openXmlSequencesBefore = _ocSequenceSnapshot();
         var seqCountBefore = 0;
         try { seqCountBefore = app.project.sequences.numSequences; } catch (e) {}
 
@@ -541,10 +545,22 @@ function importAndOpenXml(filePath) {
             var newSeq = app.project.sequences[seqCountAfter - 1];
             if (newSeq) {
                 app.project.openSequence(newSeq.sequenceID);
-                return JSON.stringify({ success: true, sequenceName: newSeq.name });
+                return JSON.stringify(_ocAttachInterchangeImportVerification(
+                    { success: true, sequenceName: newSeq.name },
+                    "importAndOpenXml",
+                    filePath,
+                    openXmlPresenceBefore,
+                    openXmlSequencesBefore
+                ));
             }
         }
-        return JSON.stringify({ success: true, sequenceName: "" });
+        return JSON.stringify(_ocAttachInterchangeImportVerification(
+            { success: true, sequenceName: "" },
+            "importAndOpenXml",
+            filePath,
+            openXmlPresenceBefore,
+            openXmlSequencesBefore
+        ));
     } catch (e) {
         return JSON.stringify({ error: e.toString() });
     }
@@ -688,6 +704,7 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
     // Remove file extension for cleaner name
     clipName = clipName.replace(/\.[^.]+$/, "");
     var seqName = "OpenCut - " + clipName;
+    var editSequencesBefore = _ocSequenceSnapshot();
 
     // Create a new sequence
     try {
@@ -765,15 +782,60 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
     }
 
     if (insertedCount === 0) {
-        return JSON.stringify({ error: "Could not insert any clips. Your Premiere version may not support this method. Use Import XML instead." });
+        var emptyEditSequencesAfter = _ocSequenceSnapshot();
+        var canVerifyEmptySequence = editSequencesBefore !== null && emptyEditSequencesAfter !== null;
+        var verifiedEmptySequence = canVerifyEmptySequence ? Math.min(
+            1,
+            _ocFingerprintAddedCount(editSequencesBefore, emptyEditSequencesAfter)
+        ) : null;
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { error: "Could not insert any clips. Your Premiere version may not support this method. Use Import XML instead." },
+            _ocHostWriteVerification(
+                "applyEditsToTimeline",
+                1 + segments.length,
+                1,
+                verifiedEmptySequence,
+                _ocVerificationStatus(1, verifiedEmptySequence, canVerifyEmptySequence),
+                canVerifyEmptySequence ? "Project.sequences fingerprint diff" : "unavailable: Project.sequences",
+                { sequence_count: editSequencesBefore === null ? null : editSequencesBefore.length },
+                { sequence_count: emptyEditSequencesAfter === null ? null : emptyEditSequencesAfter.length, track_item_count: 0 },
+                "The sequence creation was re-read, but no requested segment insertion succeeded."
+            )
+        ));
     }
 
-    return JSON.stringify({
-        success: true,
+    var editSequencesAfter = _ocSequenceSnapshot();
+    var editClipsAfter = _ocSequenceClipSnapshot(seq);
+    var canVerifyEditSequence = editSequencesBefore !== null && editSequencesAfter !== null;
+    var canVerifyEditClips = editClipsAfter !== null;
+    var verifiedEditSequence = canVerifyEditSequence ? Math.min(
+        1,
+        _ocFingerprintAddedCount(editSequencesBefore, editSequencesAfter)
+    ) : 0;
+    var verifiedEditClips = canVerifyEditClips ? Math.min(insertedCount, editClipsAfter.length) : 0;
+    var reportedEditWrites = 1 + insertedCount;
+    var verifiedEditWrites = verifiedEditSequence + verifiedEditClips;
+    var canVerifyEditWrites = canVerifyEditSequence || canVerifyEditClips;
+    var editStatus = _ocVerificationStatus(reportedEditWrites, verifiedEditWrites, canVerifyEditWrites);
+    return JSON.stringify(_ocAttachHostWriteVerification({
+        success: editStatus !== "failed",
         sequenceName: seqName,
         segments: insertedCount,
         duration: timelinePos
-    });
+    }, _ocHostWriteVerification(
+        "applyEditsToTimeline",
+        1 + segments.length,
+        reportedEditWrites,
+        canVerifyEditWrites ? verifiedEditWrites : null,
+        editStatus,
+        canVerifyEditWrites ? "Project.sequences plus video/audio track-item traversal" : "unavailable: sequence and track traversal",
+        { sequence_count: editSequencesBefore === null ? null : editSequencesBefore.length, track_item_count: 0 },
+        {
+            sequence_count: editSequencesAfter === null ? null : editSequencesAfter.length,
+            track_item_count: editClipsAfter === null ? null : editClipsAfter.length
+        },
+        "The new sequence and inserted clip boundaries are re-read after createNewSequence()/insertClip()."
+    )));
 }
 
 
@@ -818,6 +880,387 @@ function _ocHostVersionInfo() {
         version: version,
         build: build
     };
+}
+
+
+// F319 — all host mutations return the same independently-read verification
+// contract.  Keep this ES3-compatible: ExtendScript in legacy Premiere hosts
+// cannot parse let/const, arrow functions, Set, or Map.
+function _ocHostWriteVerification(action, attempted, reported, verified, status, readBackMethod, beforeState, afterState, detail) {
+    var host = _ocHostVersionInfo();
+    return {
+        schema: "opencut.host_write_verification.v1",
+        action: action || "unknown",
+        host_version: host.version,
+        host: host,
+        attempted_count: attempted == null ? null : Number(attempted),
+        reported_count: reported == null ? null : Number(reported),
+        verified_count: verified == null ? null : Number(verified),
+        verification_status: status || "unverified",
+        read_back_method: readBackMethod || "unavailable",
+        before_state: beforeState || null,
+        after_state: afterState || null,
+        detail: detail || ""
+    };
+}
+
+
+function _ocAttachHostWriteVerification(result, verification) {
+    result = result || {};
+    result.host_write_verification = verification;
+    result.attempted_count = verification.attempted_count;
+    result.reported_count = verification.reported_count;
+    result.verified_count = verification.verified_count;
+    result.verification_status = verification.verification_status;
+    result.read_back_method = verification.read_back_method;
+    result.host_version = result.host_version || verification.host_version;
+    result.host = result.host || verification.host;
+
+    if (verification.verification_status === "failed") {
+        result.success = false;
+        result.ok = false;
+        result.error_code = "HOST_WRITE_NOT_APPLIED";
+        result.error = result.error || "Premiere reported success but the independent read-back found no timeline or project change.";
+    } else if (verification.verification_status === "unverified") {
+        result.unverified = true;
+        result.warning = result.warning || "Premiere accepted the request, but this operation has no independent read-back API and remains unverified.";
+    } else if (verification.verification_status === "partial") {
+        result.warning = result.warning || "Premiere applied only part of the requested host write; review the verified count before continuing.";
+    }
+    return result;
+}
+
+
+function _ocFingerprintDeltaCount(beforeItems, afterItems) {
+    var remaining = {};
+    var i;
+    for (i = 0; i < afterItems.length; i++) {
+        var afterKey = String(afterItems[i]);
+        remaining[afterKey] = (remaining[afterKey] || 0) + 1;
+    }
+    var removed = 0;
+    for (i = 0; i < beforeItems.length; i++) {
+        var beforeKey = String(beforeItems[i]);
+        if (remaining[beforeKey]) {
+            remaining[beforeKey]--;
+        } else {
+            removed++;
+        }
+    }
+    return removed;
+}
+
+
+function _ocFingerprintAddedCount(beforeItems, afterItems) {
+    return _ocFingerprintDeltaCount(afterItems, beforeItems);
+}
+
+
+function _ocSequenceClipSnapshot(seq) {
+    if (!seq) return null;
+    var result = [];
+    var readable = false;
+    var kinds = ["video", "audio"];
+    var collections = [seq ? seq.videoTracks : null, seq ? seq.audioTracks : null];
+    for (var kindIndex = 0; kindIndex < collections.length; kindIndex++) {
+        var tracks = collections[kindIndex];
+        var trackCount = 0;
+        try {
+            trackCount = tracks ? tracks.numTracks : 0;
+            if (tracks && typeof trackCount === "number") readable = true;
+        } catch (e0) { trackCount = 0; }
+        for (var trackIndex = 0; trackIndex < trackCount; trackIndex++) {
+            var track = tracks[trackIndex];
+            var clipCount = 0;
+            try { clipCount = track && track.clips ? track.clips.numItems : 0; } catch (e1) { clipCount = 0; }
+            for (var clipIndex = 0; clipIndex < clipCount; clipIndex++) {
+                try {
+                    var clip = track.clips[clipIndex];
+                    if (!clip) continue;
+                    var start = clip.start && clip.start.seconds != null ? Number(clip.start.seconds) : 0;
+                    var end = clip.end && clip.end.seconds != null ? Number(clip.end.seconds) : 0;
+                    var nodeId = "";
+                    try { nodeId = clip.projectItem && clip.projectItem.nodeId ? String(clip.projectItem.nodeId) : ""; } catch (e2) {}
+                    result.push(kinds[kindIndex] + "|" + trackIndex + "|" + nodeId + "|" + String(clip.name || "") + "|" + start.toFixed(6) + "|" + end.toFixed(6));
+                } catch (e3) {
+                    _ocLog("clip read-back failed: " + e3.toString());
+                }
+            }
+        }
+    }
+    return readable ? result : null;
+}
+
+
+function _ocCaptionTrackSnapshot(seq) {
+    var result = [];
+    var tracks = null;
+    try { tracks = seq ? seq.captionTracks : null; } catch (e0) { tracks = null; }
+    if (!tracks) return null;
+    var trackCount = 0;
+    try { trackCount = tracks ? tracks.numTracks : 0; } catch (e1) { trackCount = 0; }
+    for (var trackIndex = 0; trackIndex < trackCount; trackIndex++) {
+        var track = tracks[trackIndex];
+        var clipCount = 0;
+        try { clipCount = track && track.clips ? track.clips.numItems : 0; } catch (e2) { clipCount = 0; }
+        for (var clipIndex = 0; clipIndex < clipCount; clipIndex++) {
+            try {
+                var clip = track.clips[clipIndex];
+                var start = clip && clip.start && clip.start.seconds != null ? Number(clip.start.seconds) : 0;
+                var end = clip && clip.end && clip.end.seconds != null ? Number(clip.end.seconds) : 0;
+                result.push("caption|" + trackIndex + "|" + String(clip && clip.name || "") + "|" + start.toFixed(6) + "|" + end.toFixed(6));
+            } catch (e3) {
+                _ocLog("caption read-back failed: " + e3.toString());
+            }
+        }
+    }
+    return result;
+}
+
+
+function _ocSequenceMarkerSnapshot(seq) {
+    var result = [];
+    var markers = null;
+    try { markers = seq ? seq.markers : null; } catch (e0) { markers = null; }
+    if (!markers || typeof markers.getFirstMarker !== "function" || typeof markers.getNextMarker !== "function") return null;
+    var marker = null;
+    try { marker = markers.getFirstMarker(); } catch (e1) { return null; }
+    while (marker) {
+        try {
+            var time = 0;
+            try {
+                if (marker.time && marker.time.seconds != null) time = Number(marker.time.seconds);
+                else if (marker.start && marker.start.seconds != null) time = Number(marker.start.seconds);
+            } catch (e2) {}
+            var label = "";
+            try { label = String(marker.name || marker.comments || ""); } catch (e3) {}
+            result.push(time.toFixed(6) + "|" + label);
+        } catch (e4) {
+            _ocLog("marker read-back failed: " + e4.toString());
+        }
+        try { marker = markers.getNextMarker(marker); } catch (e5) { marker = null; }
+    }
+    return result;
+}
+
+
+function _ocProjectItemSnapshot(parent, result, parentNodeId, depth) {
+    if (!result) result = [];
+    if (!parent || depth > 20) return result;
+    var childCount = 0;
+    try { childCount = parent.children.numItems; } catch (e0) { childCount = 0; }
+    for (var i = 0; i < childCount; i++) {
+        try {
+            var item = parent.children[i];
+            if (!item) continue;
+            var nodeId = String(item.nodeId || "");
+            var isBin = false;
+            try { isBin = item.type === 2; } catch (e1) {}
+            result.push((isBin ? "bin" : "item") + "|" + nodeId + "|" + String(item.name || "") + "|" + String(parentNodeId || ""));
+            if (isBin) _ocProjectItemSnapshot(item, result, nodeId, depth + 1);
+        } catch (e2) {
+            _ocLog("project read-back failed: " + e2.toString());
+        }
+    }
+    return result;
+}
+
+
+function _ocPropertyKeySnapshot(property) {
+    if (!property || typeof property.getKeys !== "function") return null;
+    try {
+        var keys = property.getKeys();
+        if (!keys || typeof keys.length !== "number") return [];
+        var result = [];
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            var seconds = key && key.seconds != null ? Number(key.seconds) : Number(key);
+            result.push(isNaN(seconds) ? String(key) : seconds.toFixed(6));
+        }
+        return result;
+    } catch (e) {
+        return null;
+    }
+}
+
+
+function _ocPropertyValueAtTime(property, keyTime) {
+    if (!property) return null;
+    try {
+        if (typeof property.getValueAtKey === "function") return property.getValueAtKey(keyTime);
+    } catch (e0) {}
+    try {
+        if (typeof property.getValueAtTime === "function") return property.getValueAtTime(keyTime);
+    } catch (e1) {}
+    return null;
+}
+
+
+function _ocScalarClose(actual, expected) {
+    var actualNumber = Number(actual);
+    var expectedNumber = Number(expected);
+    return !isNaN(actualNumber) && !isNaN(expectedNumber) && Math.abs(actualNumber - expectedNumber) <= 0.001;
+}
+
+
+function _ocTimeSeconds(value) {
+    if (value == null) return null;
+    try {
+        if (value.seconds != null) return Number(value.seconds);
+        if (value.ticks != null) return Number(value.ticks) / 254016000000;
+    } catch (e) {}
+    var numberValue = Number(value);
+    return isNaN(numberValue) ? null : numberValue;
+}
+
+
+function _ocPositionClose(actual, expectedX, expectedY) {
+    return actual && typeof actual.length === "number" && actual.length >= 2 &&
+        _ocScalarClose(actual[0], expectedX) && _ocScalarClose(actual[1], expectedY);
+}
+
+
+function _ocValuesEqual(left, right) {
+    if (left === right) return true;
+    if (left == null || right == null) return false;
+    try {
+        if (typeof left.length === "number" && typeof right.length === "number") {
+            if (left.length !== right.length) return false;
+            for (var i = 0; i < left.length; i++) {
+                if (!_ocScalarClose(left[i], right[i])) return false;
+            }
+            return true;
+        }
+    } catch (e) {}
+    return _ocScalarClose(left, right);
+}
+
+
+function _ocArrayContains(items, value) {
+    if (!items) return false;
+    for (var i = 0; i < items.length; i++) {
+        if (String(items[i]) === String(value)) return true;
+    }
+    return false;
+}
+
+
+function _ocVerificationStatus(reported, verified, canVerify) {
+    if (!canVerify) return "unverified";
+    if (Number(reported || 0) > 0 && Number(verified || 0) === 0) return "failed";
+    if (Number(verified || 0) < Number(reported || 0)) return "partial";
+    return "verified";
+}
+
+
+function _ocSequenceNameExists(name) {
+    var sequences = null;
+    try { sequences = app && app.project ? app.project.sequences : null; } catch (e0) { sequences = null; }
+    if (!sequences) return null;
+    var count = 0;
+    try { count = sequences.numSequences; } catch (e1) { return null; }
+    for (var i = 0; i < count; i++) {
+        try {
+            if (sequences[i] && String(sequences[i].name || "") === String(name || "")) return true;
+        } catch (e2) {}
+    }
+    return false;
+}
+
+
+function _ocProjectPathPresence(paths) {
+    var result = [];
+    for (var i = 0; i < paths.length; i++) {
+        var found = null;
+        try { found = _findProjectItemByPath(app.project.rootItem, paths[i], 0); } catch (e) { found = null; }
+        result.push(!!found);
+    }
+    return result;
+}
+
+
+function _ocNewProjectPathCount(beforePresence, afterPresence) {
+    var count = 0;
+    for (var i = 0; i < afterPresence.length; i++) {
+        if (!beforePresence[i] && afterPresence[i]) count++;
+    }
+    return count;
+}
+
+
+function _ocPresenceCount(presence) {
+    var count = 0;
+    for (var i = 0; i < presence.length; i++) if (presence[i]) count++;
+    return count;
+}
+
+
+function _ocSequenceSnapshot() {
+    var result = [];
+    var sequences = null;
+    try { sequences = app && app.project ? app.project.sequences : null; } catch (e0) { sequences = null; }
+    if (!sequences) return null;
+    var count = 0;
+    try { count = sequences.numSequences; } catch (e1) { return null; }
+    for (var i = 0; i < count; i++) {
+        try {
+            var sequence = sequences[i];
+            if (sequence) result.push(String(sequence.sequenceID || "") + "|" + String(sequence.name || ""));
+        } catch (e2) {}
+    }
+    return result;
+}
+
+
+function _ocAttachProjectImportVerification(result, action, paths, beforePresence, reported, detail) {
+    var afterPresence = _ocProjectPathPresence(paths);
+    var verified = _ocNewProjectPathCount(beforePresence, afterPresence);
+    var status = _ocVerificationStatus(reported, verified, true);
+    return _ocAttachHostWriteVerification(
+        result,
+        _ocHostWriteVerification(
+            action,
+            paths.length,
+            reported,
+            verified,
+            status,
+            "rootItem recursive media-path lookup",
+            { matching_paths: _ocPresenceCount(beforePresence) },
+            { matching_paths: _ocPresenceCount(afterPresence), newly_added_paths: verified },
+            detail || "Project.importFiles() is verified only when a requested media path appears in a fresh project-tree lookup."
+        )
+    );
+}
+
+
+function _ocAttachInterchangeImportVerification(result, action, path, beforePresence, beforeSequences) {
+    var afterPresence = _ocProjectPathPresence([path]);
+    var afterSequences = _ocSequenceSnapshot();
+    var canReadSequences = beforeSequences !== null && afterSequences !== null;
+    var newProjectItem = _ocNewProjectPathCount(beforePresence, afterPresence);
+    var newSequence = canReadSequences ? _ocFingerprintAddedCount(beforeSequences, afterSequences) : 0;
+    var verified = newProjectItem > 0 || newSequence > 0 ? 1 : 0;
+    var status = _ocVerificationStatus(1, verified, true);
+    return _ocAttachHostWriteVerification(
+        result,
+        _ocHostWriteVerification(
+            action,
+            1,
+            1,
+            verified,
+            status,
+            canReadSequences ? "rootItem media-path lookup plus Project.sequences fingerprint diff" : "rootItem media-path lookup",
+            {
+                matching_paths: _ocPresenceCount(beforePresence),
+                sequence_count: beforeSequences === null ? null : beforeSequences.length
+            },
+            {
+                matching_paths: _ocPresenceCount(afterPresence),
+                sequence_count: afterSequences === null ? null : afterSequences.length
+            },
+            "The non-throwing interchange import is successful only when a fresh project or sequence read finds a new object."
+        )
+    );
 }
 
 
@@ -978,9 +1421,14 @@ function importCaptions(captionPath) {
     // Check for active sequence
     var seq = null;
     try { seq = app.project.activeSequence; } catch (e) {}
+    var captionPresenceBefore = _ocProjectPathPresence([captionPath]);
+    var captionClipsBefore = _ocSequenceClipSnapshot(seq);
+    var captionTracksBefore = _ocCaptionTrackSnapshot(seq);
+    var captionTimelineBefore = (captionClipsBefore || []).concat(captionTracksBefore || []);
 
     // Step 1: Import the caption file into the project
     var importSuccess = false;
+    var captionImportReported = 0;
     var captionItem = null;
     try {
         // Check if already imported
@@ -996,6 +1444,7 @@ function importCaptions(captionPath) {
             app.project.importFiles(
                 [captionPath], false, targetBin, false
             );
+            captionImportReported = 1;
 
             // Poll for the imported item — Premiere may need time to register it
             var pollAttempts = 0;
@@ -1021,9 +1470,29 @@ function importCaptions(captionPath) {
 
     var placement = _ocPlaceCaptionItemInSequence(seq, captionItem);
     var host = _ocHostVersionInfo();
+    var captionPresenceAfter = _ocProjectPathPresence([captionPath]);
+    var captionClipsAfter = _ocSequenceClipSnapshot(seq);
+    var captionTracksAfter = _ocCaptionTrackSnapshot(seq);
+    var captionTimelineAfter = (captionClipsAfter || []).concat(captionTracksAfter || []);
+    var verifiedCaptionFileImport = _ocNewProjectPathCount(captionPresenceBefore, captionPresenceAfter);
+    var reportedCaptionPlacement = placement.added_to_timeline ? 1 : 0;
+    var canVerifyCaptionTimeline = (captionClipsBefore !== null && captionClipsAfter !== null) ||
+        (captionTracksBefore !== null && captionTracksAfter !== null);
+    var verifiedCaptionTimeline = canVerifyCaptionTimeline && reportedCaptionPlacement &&
+        _ocFingerprintAddedCount(captionTimelineBefore, captionTimelineAfter) > 0 ? 1 : 0;
+    var reportedCaptionImportWrites = captionImportReported + reportedCaptionPlacement;
+    var verifiedCaptionImportWrites = verifiedCaptionFileImport + verifiedCaptionTimeline;
+    var captionImportStatus = _ocVerificationStatus(
+        reportedCaptionImportWrites,
+        verifiedCaptionImportWrites,
+        captionImportReported > 0 || canVerifyCaptionTimeline
+    );
+    if (reportedCaptionPlacement && !canVerifyCaptionTimeline && captionImportReported === 0) {
+        captionImportStatus = "unverified";
+    }
 
-    return JSON.stringify({
-        success: true,
+    return JSON.stringify(_ocAttachHostWriteVerification({
+        success: captionImportStatus !== "failed",
         imported: true,
         addedToTimeline: placement.addedToTimeline,
         added_to_timeline: placement.added_to_timeline,
@@ -1038,7 +1507,23 @@ function importCaptions(captionPath) {
         host_version: host.version,
         host: host,
         message: placement.message
-    });
+    }, _ocHostWriteVerification(
+        "importCaptions",
+        (captionPresenceBefore[0] ? 0 : 1) + (seq ? 1 : 0),
+        reportedCaptionImportWrites,
+        captionImportStatus === "unverified" ? null : verifiedCaptionImportWrites,
+        captionImportStatus,
+        canVerifyCaptionTimeline ? "rootItem media-path lookup plus caption/video track collection diff" : "rootItem media-path lookup; timeline placement read-back unavailable",
+        {
+            matching_paths: _ocPresenceCount(captionPresenceBefore),
+            timeline_item_count: captionTimelineBefore.length
+        },
+        {
+            matching_paths: _ocPresenceCount(captionPresenceAfter),
+            timeline_item_count: captionTimelineAfter.length
+        },
+        "The caption asset and any reported sequence placement are independently re-read after import."
+    )));
 }
 
 
@@ -1087,15 +1572,16 @@ function importFileToProject(filePath, binName) {
     if (!f.exists) {
         return JSON.stringify({ error: "File not found: " + filePath });
     }
+    var filePresenceBefore = _ocProjectPathPresence([filePath]);
 
     // Check if already imported
     var existing = _findProjectItemByPath(app.project.rootItem, filePath, 0);
     if (existing) {
-        return JSON.stringify({
+        return JSON.stringify(_ocAttachProjectImportVerification({
             success: true,
             message: existing.name + " already in project.",
             name: existing.name
-        });
+        }, "importFileToProject", [], [], 0, "No host write was attempted because the media path was already present."));
     }
 
     var targetBin = _findOrCreateBin(binName);
@@ -1117,18 +1603,18 @@ function importFileToProject(filePath, binName) {
     var displayName = f.displayName || filePath.split(/[\/\\]/).pop();
 
     if (imported) {
-        return JSON.stringify({
+        return JSON.stringify(_ocAttachProjectImportVerification({
             success: true,
             message: "Imported: " + imported.name,
             name: imported.name
-        });
+        }, "importFileToProject", [filePath], filePresenceBefore, 1));
     }
 
-    return JSON.stringify({
+    return JSON.stringify(_ocAttachProjectImportVerification({
         success: true,
         message: "Imported: " + displayName,
         name: displayName
-    });
+    }, "importFileToProject", [filePath], filePresenceBefore, 1));
 }
 
 
@@ -1171,6 +1657,7 @@ function importFilesToProject(filePathsJson, binName) {
     if (validPaths.length === 0) {
         return JSON.stringify({ error: "No valid files found" });
     }
+    var batchPresenceBefore = _ocProjectPathPresence(validPaths);
 
     var targetBin = _findOrCreateBin(binName);
     if (!targetBin) targetBin = app.project.rootItem;
@@ -1188,13 +1675,13 @@ function importFilesToProject(filePathsJson, binName) {
     try { itemsAfter = targetBin.children.numItems; } catch (e) { /* ignore */ }
     var actualImported = itemsAfter - itemsBefore;
 
-    return JSON.stringify({
-        success: actualImported > 0,
+    return JSON.stringify(_ocAttachProjectImportVerification({
+        success: true,
         message: "Imported " + actualImported + " of " + validPaths.length + " file(s) to " + binName,
         imported: actualImported,
         requested: validPaths.length,
         failed: failed.length
-    });
+    }, "importFilesToProject", validPaths, batchPresenceBefore, validPaths.length));
 }
 
 
@@ -1216,17 +1703,18 @@ function importCaptionOverlay(overlayPath) {
     if (!overlayFile.exists) {
         return JSON.stringify({ error: "Overlay file not found: " + overlayPath });
     }
+    var overlayPresenceBefore = _ocProjectPathPresence([overlayPath]);
 
     // Check if already imported
     try {
         var overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
         if (overlayItem) {
-            return JSON.stringify({
+            return JSON.stringify(_ocAttachProjectImportVerification({
                 success: true,
                 message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video.",
                 nodeId: overlayItem.nodeId || "",
                 path: overlayPath
-            });
+            }, "importCaptionOverlay", [], [], 0, "No host write was attempted because the overlay path was already present."));
         }
 
         // Import into an OpenCut Overlays bin
@@ -1246,12 +1734,12 @@ function importCaptionOverlay(overlayPath) {
         }
 
         if (overlayItem) {
-            return JSON.stringify({
+            return JSON.stringify(_ocAttachProjectImportVerification({
                 success: true,
                 message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video.",
                 nodeId: overlayItem.nodeId || "",
                 path: overlayPath
-            });
+            }, "importCaptionOverlay", [overlayPath], overlayPresenceBefore, 1));
         }
 
         // If we can't find it by path, check the bin for the most recent item
@@ -1259,17 +1747,17 @@ function importCaptionOverlay(overlayPath) {
             try {
                 var numItems = overlayBin.children.numItems;
                 if (numItems > 0) {
-                    return JSON.stringify({
+                    return JSON.stringify(_ocAttachProjectImportVerification({
                         success: true,
                         message: "Caption overlay imported to OpenCut Overlays bin. Drag it onto V2 above your video."
-                    });
+                    }, "importCaptionOverlay", [overlayPath], overlayPresenceBefore, 1));
                 }
             } catch (e2) {}
         }
 
-        return JSON.stringify({
+        return JSON.stringify(_ocAttachProjectImportVerification({
             error: "Import may have failed. Check the OpenCut Overlays bin, or try File > Import and select: " + overlayPath
-        });
+        }, "importCaptionOverlay", [overlayPath], overlayPresenceBefore, 1));
     } catch (e) {
         return JSON.stringify({ error: "importCaptionOverlay: " + e.toString() });
     }
@@ -1497,6 +1985,7 @@ function autoImportResult(filePath, jobType) {
     if (!f.exists) {
         return JSON.stringify({ error: "File not found: " + filePath });
     }
+    var autoImportPresenceBefore = _ocProjectPathPresence([filePath]);
 
     // Determine the bin name based on job type
     var binName = "OpenCut Output";
@@ -1516,7 +2005,14 @@ function autoImportResult(filePath, jobType) {
     // Check if already imported
     var existing = _findProjectItemByPath(app.project.rootItem, filePath, 0);
     if (existing) {
-        return JSON.stringify({ success: true, message: "Already in project (" + binName + ")" });
+        return JSON.stringify(_ocAttachProjectImportVerification(
+            { success: true, message: "Already in project (" + binName + ")" },
+            "autoImportResult",
+            [],
+            [],
+            0,
+            "No host write was attempted because the output path was already present."
+        ));
     }
 
     var targetBin = _findOrCreateBin(binName);
@@ -1528,10 +2024,15 @@ function autoImportResult(filePath, jobType) {
         return JSON.stringify({ error: "Import failed: " + e.toString() });
     }
 
-    return JSON.stringify({
+    for (var autoImportPoll = 0; autoImportPoll < 20; autoImportPoll++) {
+        if (_findProjectItemByPath(app.project.rootItem, filePath, 0)) break;
+        $.sleep(50);
+    }
+
+    return JSON.stringify(_ocAttachProjectImportVerification({
         success: true,
         message: "Imported to " + binName
-    });
+    }, "autoImportResult", [filePath], autoImportPresenceBefore, 1));
 }
 
 
@@ -1704,6 +2205,7 @@ function ocAddSequenceMarkers(markersJSON) {
 
         var added = 0;
         var errors = [];
+        var beforeMarkers = _ocSequenceMarkerSnapshot(seq);
 
         var seqDuration = 0;
         try { seqDuration = seq.end ? Number(seq.end.seconds) : 0; } catch (e) {}
@@ -1746,7 +2248,25 @@ function ocAddSequenceMarkers(markersJSON) {
             }
         }
 
-        return JSON.stringify({ added: added, errors: errors });
+        var afterMarkers = _ocSequenceMarkerSnapshot(seq);
+        var canVerifyMarkers = beforeMarkers !== null && afterMarkers !== null;
+        var verifiedAdded = canVerifyMarkers ? _ocFingerprintAddedCount(beforeMarkers, afterMarkers) : null;
+        var addStatus = _ocVerificationStatus(added, verifiedAdded, canVerifyMarkers);
+        var addResult = _ocAttachHostWriteVerification(
+            { success: addStatus !== "failed", added: added, errors: errors },
+            _ocHostWriteVerification(
+                "ocAddSequenceMarkers",
+                items.length,
+                added,
+                verifiedAdded,
+                addStatus,
+                canVerifyMarkers ? "Sequence.markers iterator fingerprint diff" : "unavailable: Sequence.markers iterator",
+                { marker_count: beforeMarkers === null ? null : beforeMarkers.length },
+                { marker_count: afterMarkers === null ? null : afterMarkers.length },
+                canVerifyMarkers ? "Markers are created through createMarker() and verified through getFirstMarker()/getNextMarker()." : "This host does not expose an independently readable marker iterator."
+            )
+        );
+        return JSON.stringify(addResult);
     } catch (e) {
         _ocLog("ocAddSequenceMarkers error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -1842,7 +2362,16 @@ function ocApplySequenceCuts(cutsJSON) {
         }
 
         if (!cuts || cuts.length === 0) {
-            return JSON.stringify({ applied: 0, errors: [] });
+            return JSON.stringify(_ocAttachHostWriteVerification(
+                { success: true, applied: 0, errors: [] },
+                _ocHostWriteVerification(
+                    "ocApplySequenceCuts", 0, 0, 0, "verified",
+                    "videoTracks/audioTracks clip collection fingerprint diff",
+                    { clip_count: (_ocSequenceClipSnapshot(seq) || []).length },
+                    { clip_count: (_ocSequenceClipSnapshot(seq) || []).length },
+                    "No cut ranges were supplied."
+                )
+            ));
         }
 
         // Coerce cut times to numbers before sorting so NaN doesn't corrupt sort order
@@ -1854,7 +2383,9 @@ function ocApplySequenceCuts(cutsJSON) {
         cuts.sort(function (a, b) { return b.start - a.start; });
 
         var applied = 0;
+        var attemptedRemovals = 0;
         var errors = [];
+        var beforeClips = _ocSequenceClipSnapshot(seq);
 
         for (var ci = 0; ci < cuts.length; ci++) {
             var cut = cuts[ci];
@@ -1875,6 +2406,7 @@ function ocApplySequenceCuts(cutsJSON) {
                         var clipEnd = vClip.end ? Number(vClip.end.seconds) : 0;
                         // Remove clips fully contained within cut range (with 0.01s tolerance for floating-point)
                         if (clipStart >= cutStart - 0.01 && clipEnd <= cutEnd + 0.01) {
+                            attemptedRemovals++;
                             vClip.remove(false, true);
                             applied++;
                         }
@@ -1894,6 +2426,7 @@ function ocApplySequenceCuts(cutsJSON) {
                         var aClipStart = aClip.start ? Number(aClip.start.seconds) : 0;
                         var aClipEnd = aClip.end ? Number(aClip.end.seconds) : 0;
                         if (aClipStart >= cutStart - 0.01 && aClipEnd <= cutEnd + 0.01) {
+                            attemptedRemovals++;
                             aClip.remove(false, true);
                             applied++;
                         }
@@ -1905,7 +2438,25 @@ function ocApplySequenceCuts(cutsJSON) {
             }
         }
 
-        return JSON.stringify({ applied: applied, errors: errors });
+        var afterClips = _ocSequenceClipSnapshot(seq);
+        var canVerifyClips = beforeClips !== null && afterClips !== null;
+        var verifiedRemoved = canVerifyClips ? _ocFingerprintDeltaCount(beforeClips, afterClips) : null;
+        var cutStatus = _ocVerificationStatus(applied, verifiedRemoved, canVerifyClips);
+        var cutResult = _ocAttachHostWriteVerification(
+            { success: cutStatus !== "failed", applied: applied, errors: errors },
+            _ocHostWriteVerification(
+                "ocApplySequenceCuts",
+                attemptedRemovals,
+                applied,
+                verifiedRemoved,
+                cutStatus,
+                canVerifyClips ? "videoTracks/audioTracks clip collection fingerprint diff" : "unavailable: video/audio track collection traversal",
+                { clip_count: beforeClips === null ? null : beforeClips.length },
+                { clip_count: afterClips === null ? null : afterClips.length },
+                canVerifyClips ? "Clip.remove() reports are verified by re-walking both track collections and comparing clip boundaries." : "This host does not expose independently readable track collections."
+            )
+        );
+        return JSON.stringify(cutResult);
     } catch (e) {
         _ocLog("ocApplySequenceCuts error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2013,6 +2564,18 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
             return JSON.stringify({ error: "Cannot access motion properties: " + e.toString() });
         }
 
+        var scaleKeysBefore = _ocPropertyKeySnapshot(scaleProp);
+        var positionKeysBefore = _ocPropertyKeySnapshot(posProp);
+        var scaleValuesBefore = [];
+        var positionValuesBefore = [];
+        for (var beforeKeyIndex = 0; beforeKeyIndex < keyframes.length; beforeKeyIndex++) {
+            var beforeKeyTime = Number(keyframes[beforeKeyIndex].time) || 0;
+            scaleValuesBefore.push(_ocPropertyValueAtTime(scaleProp, beforeKeyTime));
+            positionValuesBefore.push(_ocPropertyValueAtTime(posProp, beforeKeyTime));
+        }
+        var attemptedWrites = keyframes.length * ((scaleProp ? 1 : 0) + (posProp ? 1 : 0));
+        var reportedWrites = 0;
+
         // Apply keyframes
         for (var ki = 0; ki < keyframes.length; ki++) {
             var kf = keyframes[ki];
@@ -2022,6 +2585,7 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
                 try {
                     scaleProp.addKey(kfTime);
                     scaleProp.setValueAtKey(kfTime, kf.scale !== undefined ? kf.scale : 100);
+                    reportedWrites++;
                 } catch (e) {
                     _ocLog("ocApplyClipKeyframes scale key error: " + e.toString());
                 }
@@ -2031,13 +2595,61 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
                 try {
                     posProp.addKey(kfTime);
                     posProp.setValueAtKey(kfTime, [kf.x || 0, kf.y || 0]);
+                    reportedWrites++;
                 } catch (e) {
                     _ocLog("ocApplyClipKeyframes position key error: " + e.toString());
                 }
             }
         }
 
-        return JSON.stringify({ success: true });
+        var scaleKeysAfter = _ocPropertyKeySnapshot(scaleProp);
+        var positionKeysAfter = _ocPropertyKeySnapshot(posProp);
+        var canReadScaleValues = !scaleProp || typeof scaleProp.getValueAtKey === "function" || typeof scaleProp.getValueAtTime === "function";
+        var canReadPositionValues = !posProp || typeof posProp.getValueAtKey === "function" || typeof posProp.getValueAtTime === "function";
+        var canReadKeys = canReadScaleValues && canReadPositionValues && !!(scaleProp || posProp);
+        var verifiedWrites = 0;
+        if (canReadKeys) {
+            for (var verifyKeyIndex = 0; verifyKeyIndex < keyframes.length; verifyKeyIndex++) {
+                var verifyKeyframe = keyframes[verifyKeyIndex];
+                var verifyTime = Number(verifyKeyframe.time) || 0;
+                var verifyTimeKey = verifyTime.toFixed(6);
+                if (scaleProp) {
+                    var scaleValueAfter = _ocPropertyValueAtTime(scaleProp, verifyTime);
+                    var scaleKeyAdded = scaleKeysBefore !== null && scaleKeysAfter !== null &&
+                        !_ocArrayContains(scaleKeysBefore, verifyTimeKey) && _ocArrayContains(scaleKeysAfter, verifyTimeKey);
+                    if (_ocScalarClose(scaleValueAfter, verifyKeyframe.scale !== undefined ? verifyKeyframe.scale : 100) &&
+                            (scaleKeyAdded || !_ocValuesEqual(scaleValuesBefore[verifyKeyIndex], scaleValueAfter))) verifiedWrites++;
+                }
+                if (posProp) {
+                    var positionValueAfter = _ocPropertyValueAtTime(posProp, verifyTime);
+                    var positionKeyAdded = positionKeysBefore !== null && positionKeysAfter !== null &&
+                        !_ocArrayContains(positionKeysBefore, verifyTimeKey) && _ocArrayContains(positionKeysAfter, verifyTimeKey);
+                    if (_ocPositionClose(positionValueAfter, verifyKeyframe.x || 0, verifyKeyframe.y || 0) &&
+                            (positionKeyAdded || !_ocValuesEqual(positionValuesBefore[verifyKeyIndex], positionValueAfter))) verifiedWrites++;
+                }
+            }
+        }
+        var keyStatus = _ocVerificationStatus(reportedWrites, verifiedWrites, canReadKeys);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: keyStatus !== "failed", keyframes_requested: keyframes.length },
+            _ocHostWriteVerification(
+                "ocApplyClipKeyframes",
+                attemptedWrites,
+                reportedWrites,
+                canReadKeys ? verifiedWrites : null,
+                keyStatus,
+                canReadKeys ? "ComponentParam getValueAtKey()/getValueAtTime() value read-back" : "unavailable: ComponentParam value read-back",
+                {
+                    scale_key_count: scaleKeysBefore === null ? null : scaleKeysBefore.length,
+                    position_key_count: positionKeysBefore === null ? null : positionKeysBefore.length
+                },
+                {
+                    scale_key_count: scaleKeysAfter === null ? null : scaleKeysAfter.length,
+                    position_key_count: positionKeysAfter === null ? null : positionKeysAfter.length
+                },
+                canReadKeys ? "setValueAtKey() writes were re-read through independent property value getters." : "This Premiere host does not expose keyframe value read-back through ExtendScript."
+            )
+        ));
     } catch (e) {
         _ocLog("ocApplyClipKeyframes error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2065,6 +2677,8 @@ function ocBatchRenameProjectItems(renamesJSON) {
 
         var renamed = 0;
         var errors = [];
+        var attemptedRenames = 0;
+        var renameNamesBefore = [];
 
         for (var i = 0; i < renames.length; i++) {
             var rename = renames[i];
@@ -2075,6 +2689,8 @@ function ocBatchRenameProjectItems(renamesJSON) {
                 }
                 var found = _findByNodeId(app.project.rootItem, rename.nodeId, 0);
                 if (found) {
+                    attemptedRenames++;
+                    renameNamesBefore[i] = String(found.name || "");
                     found.name = rename.newName;
                     renamed++;
                 } else {
@@ -2086,7 +2702,33 @@ function ocBatchRenameProjectItems(renamesJSON) {
             }
         }
 
-        return JSON.stringify({ renamed: renamed, errors: errors });
+        var verifiedRenames = 0;
+        for (var verifyIndex = 0; verifyIndex < renames.length; verifyIndex++) {
+            var verifyRename = renames[verifyIndex];
+            if (!verifyRename || !verifyRename.nodeId || !verifyRename.newName) continue;
+            try {
+                var verifiedItem = _findByNodeId(app.project.rootItem, verifyRename.nodeId, 0);
+                if (verifiedItem && String(verifiedItem.name || "") === String(verifyRename.newName) &&
+                        renameNamesBefore[verifyIndex] !== String(verifyRename.newName)) verifiedRenames++;
+            } catch (verifyError) {
+                _ocLog("ocBatchRenameProjectItems read-back error: " + verifyError.toString());
+            }
+        }
+        var renameStatus = _ocVerificationStatus(renamed, verifiedRenames, true);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: renameStatus !== "failed", renamed: renamed, errors: errors },
+            _ocHostWriteVerification(
+                "ocBatchRenameProjectItems",
+                attemptedRenames,
+                renamed,
+                verifiedRenames,
+                renameStatus,
+                "rootItem nodeId lookup and ProjectItem.name read-back",
+                { requested: renames.length },
+                { matching_names: verifiedRenames },
+                "ProjectItem.name assignments are verified by resolving each nodeId again from the project root."
+            )
+        ));
     } catch (e) {
         _ocLog("ocBatchRenameProjectItems error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2138,6 +2780,7 @@ function ocCreateSmartBins(rulesJSON) {
 
         var binsCreated = 0;
         var itemsMoved = 0;
+        var beforeProjectItems = _ocProjectItemSnapshot(app.project.rootItem, [], "root", 0);
 
         // Collect all media items from the project
         var mediaItems = [];
@@ -2231,7 +2874,33 @@ function ocCreateSmartBins(rulesJSON) {
             }
         }
 
-        return JSON.stringify({ bins_created: binsCreated, items_moved: itemsMoved });
+        var afterProjectItems = _ocProjectItemSnapshot(app.project.rootItem, [], "root", 0);
+        var verifiedProjectChanges = _ocFingerprintAddedCount(beforeProjectItems, afterProjectItems) +
+            _ocFingerprintDeltaCount(beforeProjectItems, afterProjectItems);
+        // A move changes both the old and new parent fingerprint, so two
+        // fingerprint changes represent one verified move. Added bins count
+        // once. Cap the evidence at the number of reported host mutations.
+        var reportedProjectChanges = binsCreated + itemsMoved;
+        var verifiedSmartBinWrites = Math.min(reportedProjectChanges, verifiedProjectChanges);
+        var smartBinStatus = _ocVerificationStatus(reportedProjectChanges, verifiedSmartBinWrites, true);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            {
+                success: smartBinStatus !== "failed",
+                bins_created: binsCreated,
+                items_moved: itemsMoved
+            },
+            _ocHostWriteVerification(
+                "ocCreateSmartBins",
+                rules.length,
+                reportedProjectChanges,
+                verifiedSmartBinWrites,
+                smartBinStatus,
+                "rootItem recursive project-tree fingerprint diff",
+                { project_item_count: beforeProjectItems.length },
+                { project_item_count: afterProjectItems.length },
+                "Bin creation and item moves are verified by re-walking project-item names, identities, and parent bins."
+            )
+        ));
     } catch (e) {
         _ocLog("ocCreateSmartBins error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2415,6 +3084,11 @@ function ocAddNativeCaptionTrack(srtJSON) {
         var imported = false;
         var warnings = [];
         var seq = null;
+        try { seq = app.project.activeSequence; } catch (eSeqBefore) { seq = null; }
+        var beforeCaptionProject = _ocProjectItemSnapshot(app.project.rootItem, [], "root", 0);
+        var beforeCaptionClips = _ocSequenceClipSnapshot(seq);
+        var beforeCaptionTracks = _ocCaptionTrackSnapshot(seq);
+        var beforeCaptionTimeline = (beforeCaptionClips || []).concat(beforeCaptionTracks || []);
 
         try {
             app.project.importFiles([tempFile.fsName], false, targetBin, false);
@@ -2443,6 +3117,24 @@ function ocAddNativeCaptionTrack(srtJSON) {
         }
         var host = _ocHostVersionInfo();
 
+        var afterCaptionProject = _ocProjectItemSnapshot(app.project.rootItem, [], "root", 0);
+        var afterCaptionClips = _ocSequenceClipSnapshot(seq);
+        var afterCaptionTracks = _ocCaptionTrackSnapshot(seq);
+        var afterCaptionTimeline = (afterCaptionClips || []).concat(afterCaptionTracks || []);
+        var verifiedCaptionImport = _ocFingerprintAddedCount(beforeCaptionProject, afterCaptionProject) > 0 ? 1 : 0;
+        var reportedCaptionPlacement = placement.added_to_timeline ? 1 : 0;
+        var canVerifyCaptionPlacement = (beforeCaptionClips !== null && afterCaptionClips !== null) ||
+            (beforeCaptionTracks !== null && afterCaptionTracks !== null);
+        var verifiedCaptionPlacement = canVerifyCaptionPlacement &&
+            _ocFingerprintAddedCount(beforeCaptionTimeline, afterCaptionTimeline) > 0 ? 1 : 0;
+        var reportedCaptionWrites = (imported ? 1 : 0) + reportedCaptionPlacement;
+        var verifiedCaptionWrites = verifiedCaptionImport + verifiedCaptionPlacement;
+        var captionWriteStatus = _ocVerificationStatus(reportedCaptionWrites, verifiedCaptionWrites, true);
+        // Premiere's CEP API can prove that the SRT asset and a timeline item
+        // exist, but it cannot enumerate imported cue text consistently. Name
+        // that limitation explicitly instead of treating srtIndex as verified.
+        if (captionWriteStatus === "verified" && srtIndex > 0) captionWriteStatus = "partial";
+
         var response = {
             success: true,
             captions_added: srtIndex,
@@ -2460,8 +3152,31 @@ function ocAddNativeCaptionTrack(srtJSON) {
             warning: _ocWarningsToString(placement.warnings),
             message: placement.message,
             host_version: host.version,
-            host: host
+            host: host,
+            caption_content_verification: "unverified",
+            unverified_caption_count: srtIndex
         };
+
+        response = _ocAttachHostWriteVerification(
+            response,
+            _ocHostWriteVerification(
+                "ocAddNativeCaptionTrack",
+                2,
+                reportedCaptionWrites,
+                verifiedCaptionWrites,
+                captionWriteStatus,
+                canVerifyCaptionPlacement ? "rootItem project-tree plus caption/video track collection diff" : "rootItem project-tree diff; timeline placement read-back unavailable",
+                {
+                    project_item_count: beforeCaptionProject.length,
+                    timeline_item_count: beforeCaptionTimeline.length
+                },
+                {
+                    project_item_count: afterCaptionProject.length,
+                    timeline_item_count: afterCaptionTimeline.length
+                },
+                "The imported asset and timeline placement were re-read; individual imported cue text is unavailable through a stable CEP read API and remains unverified."
+            )
+        );
 
         try { tempFile.remove(); } catch (e2) {}
         return JSON.stringify(response);
@@ -2594,10 +3309,34 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
             }
         } catch (e) {}
 
-        if (encodeError) {
-            return JSON.stringify({ error: "AME encode failed: " + encodeError });
-        }
-        return JSON.stringify({ success: true });
+        var restoredIn = null, restoredOut = null;
+        try { restoredIn = _ocTimeSeconds(seq.getInPoint()); } catch (eRestoreIn) {}
+        try { restoredOut = _ocTimeSeconds(seq.getOutPoint()); } catch (eRestoreOut) {}
+        var originalInSeconds = _ocTimeSeconds(origIn);
+        var originalOutSeconds = _ocTimeSeconds(origOut);
+        var rangeRestored = originalInSeconds !== null && originalOutSeconds !== null &&
+            restoredIn !== null && restoredOut !== null &&
+            _ocScalarClose(originalInSeconds, restoredIn) && _ocScalarClose(originalOutSeconds, restoredOut);
+        var exportResult = encodeError
+            ? { error: "AME encode failed: " + encodeError }
+            : { success: true };
+        exportResult.range_restored = rangeRestored;
+        exportResult = _ocAttachHostWriteVerification(
+            exportResult,
+            _ocHostWriteVerification(
+                "ocExportSequenceRange",
+                1,
+                encodeError ? 0 : 1,
+                null,
+                "unverified",
+                "unavailable: Adobe Media Encoder queue has no stable CEP read-back; sequence in/out restoration was re-read",
+                { in_seconds: originalInSeconds, out_seconds: originalOutSeconds },
+                { in_seconds: restoredIn, out_seconds: restoredOut, range_restored: rangeRestored },
+                "The temporary sequence range is independently checked after restoration, but CEP cannot prove that AME accepted or retained the queued export."
+            )
+        );
+
+        return JSON.stringify(exportResult);
     } catch (e) {
         _ocLog("ocExportSequenceRange error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2645,6 +3384,7 @@ function ocRemoveSequenceMarkers(fingerprintsJSON) {
         var seq = app.project.activeSequence;
         var markers = seq.markers;
         if (!markers) return JSON.stringify({ error: "Sequence has no markers collection" });
+        var beforeMarkerSnapshot = _ocSequenceMarkerSnapshot(seq);
 
         // Build a quick lookup by "time|comment" so we don't do O(N*M).
         var keyFor = function (t, c) {
@@ -2679,11 +3419,25 @@ function ocRemoveSequenceMarkers(fingerprintsJSON) {
             m = nextM;
         }
 
-        return JSON.stringify({
-            success: true,
+        var afterMarkerSnapshot = _ocSequenceMarkerSnapshot(seq);
+        var canVerifyMarkerRemoval = beforeMarkerSnapshot !== null && afterMarkerSnapshot !== null;
+        var verifiedRemovedMarkers = canVerifyMarkerRemoval ? _ocFingerprintDeltaCount(beforeMarkerSnapshot, afterMarkerSnapshot) : null;
+        var removeMarkerStatus = _ocVerificationStatus(removed, verifiedRemovedMarkers, canVerifyMarkerRemoval);
+        return JSON.stringify(_ocAttachHostWriteVerification({
+            success: removeMarkerStatus !== "failed",
             removed: removed,
             wanted: wanted
-        });
+        }, _ocHostWriteVerification(
+            "ocRemoveSequenceMarkers",
+            wanted,
+            removed,
+            verifiedRemovedMarkers,
+            removeMarkerStatus,
+            canVerifyMarkerRemoval ? "Sequence.markers iterator fingerprint diff" : "unavailable: Sequence.markers iterator",
+            { marker_count: beforeMarkerSnapshot === null ? null : beforeMarkerSnapshot.length },
+            { marker_count: afterMarkerSnapshot === null ? null : afterMarkerSnapshot.length },
+            canVerifyMarkerRemoval ? "deleteMarker() calls are verified by re-reading the sequence marker collection." : "This host does not expose an independently readable marker iterator."
+        )));
     } catch (e) {
         _ocLog("ocRemoveSequenceMarkers error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2700,7 +3454,8 @@ function ocUnrenameItems(mapJSON) {
             return JSON.stringify({ error: "Invalid renames" });
         }
 
-        var restored = 0, missed = 0;
+        var restored = 0, missed = 0, attemptedRestores = 0;
+        var restoreNamesBefore = [];
         for (var i = 0; i < renames.length; i++) {
             var entry = renames[i];
             if (!entry || !entry.oldName) { missed++; continue; }
@@ -2721,6 +3476,8 @@ function ocUnrenameItems(mapJSON) {
             }
             if (item) {
                 try {
+                    attemptedRestores++;
+                    restoreNamesBefore[i] = String(item.name || "");
                     item.name = entry.oldName;
                     restored++;
                 } catch (e2) {
@@ -2732,7 +3489,34 @@ function ocUnrenameItems(mapJSON) {
             }
         }
 
-        return JSON.stringify({ success: true, restored: restored, missed: missed });
+        var verifiedRestores = 0;
+        for (var verifyIndex = 0; verifyIndex < renames.length; verifyIndex++) {
+            var verifyEntry = renames[verifyIndex];
+            if (!verifyEntry || !verifyEntry.oldName) continue;
+            var verifyItem = null;
+            try {
+                if (verifyEntry.nodeId) verifyItem = _findByNodeId(app.project.rootItem, verifyEntry.nodeId, 0);
+                if (verifyItem && String(verifyItem.name || "") === String(verifyEntry.oldName) &&
+                        restoreNamesBefore[verifyIndex] !== String(verifyEntry.oldName)) verifiedRestores++;
+            } catch (verifyError) {
+                _ocLog("ocUnrenameItems read-back error: " + verifyError.toString());
+            }
+        }
+        var restoreStatus = _ocVerificationStatus(restored, verifiedRestores, true);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: restoreStatus !== "failed", restored: restored, missed: missed },
+            _ocHostWriteVerification(
+                "ocUnrenameItems",
+                attemptedRestores,
+                restored,
+                verifiedRestores,
+                restoreStatus,
+                "rootItem nodeId lookup and ProjectItem.name read-back",
+                { requested: renames.length },
+                { matching_names: verifiedRestores },
+                "Inverse names are verified by resolving each nodeId again after the write."
+            )
+        ));
     } catch (e) {
         _ocLog("ocUnrenameItems error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2768,20 +3552,42 @@ function ocRemoveImportedSequence(payloadJSON) {
         // numeric enum value 1 (= CLIP) when the identifier is missing.
         var _CLIP_TYPE = 1;
         try { if (typeof ProjectItemType !== "undefined" && ProjectItemType && ProjectItemType.CLIP != null) _CLIP_TYPE = ProjectItemType.CLIP; } catch (_eT) {}
+        var deletionReported = false;
         for (var j = 0; j < items.length; j++) {
             if (items[j].name === name && items[j].type === _CLIP_TYPE) {
                 try {
                     items[j].deleteAsset ? items[j].deleteAsset() : app.project.deleteSequence(target);
-                    return JSON.stringify({ success: true, removed: name });
+                    deletionReported = true;
+                    break;
                 } catch (e0) {}
             }
         }
-        try {
-            app.project.deleteSequence(target);
-            return JSON.stringify({ success: true, removed: name });
-        } catch (e1) {
-            return JSON.stringify({ error: "Could not delete: " + e1.toString() });
+        if (!deletionReported) {
+            try {
+                app.project.deleteSequence(target);
+                deletionReported = true;
+            } catch (e1) {
+                return JSON.stringify({ error: "Could not delete: " + e1.toString() });
+            }
         }
+        var sequenceStillExists = _ocSequenceNameExists(name);
+        var canVerifySequenceRemoval = sequenceStillExists !== null;
+        var verifiedSequenceRemoval = canVerifySequenceRemoval && !sequenceStillExists ? 1 : 0;
+        var sequenceRemovalStatus = _ocVerificationStatus(deletionReported ? 1 : 0, verifiedSequenceRemoval, canVerifySequenceRemoval);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: sequenceRemovalStatus !== "failed", removed: name },
+            _ocHostWriteVerification(
+                "ocRemoveImportedSequence",
+                1,
+                deletionReported ? 1 : 0,
+                canVerifySequenceRemoval ? verifiedSequenceRemoval : null,
+                sequenceRemovalStatus,
+                canVerifySequenceRemoval ? "Project.sequences name lookup" : "unavailable: Project.sequences",
+                { sequence_present: true },
+                { sequence_present: sequenceStillExists },
+                canVerifySequenceRemoval ? "The sequence list was re-read after deletion." : "This host did not expose a readable sequence collection."
+            )
+        ));
     } catch (e) {
         _ocLog("ocRemoveImportedSequence error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2801,29 +3607,62 @@ function ocSetSequencePlayhead(seconds) {
             return JSON.stringify({ error: "Invalid seconds" });
         }
         var seq = app.project.activeSequence;
+        var beforePlayhead = null;
+        try {
+            var beforePosition = seq.getPlayerPosition ? seq.getPlayerPosition() : null;
+            beforePlayhead = beforePosition && beforePosition.seconds != null ? Number(beforePosition.seconds) : null;
+        } catch (e0) { beforePlayhead = null; }
 
         // Try the modern setPlayerPosition(ticks_as_string) signature first.
         var ticks = Math.floor(secs * 254016000000);
+        var setReported = false;
         try {
             seq.setPlayerPosition(ticks.toString());
-            return JSON.stringify({ success: true, seconds: secs });
+            setReported = true;
         } catch (e1) {}
 
         // Fallback: some Premiere builds accept a Number
-        try {
-            seq.setPlayerPosition(ticks);
-            return JSON.stringify({ success: true, seconds: secs });
-        } catch (e2) {}
+        if (!setReported) {
+            try {
+                seq.setPlayerPosition(ticks);
+                setReported = true;
+            } catch (e2) {}
+        }
 
         // Last resort: cursor via Time object
-        try {
-            var t = {};
-            t.ticks = ticks.toString();
-            seq.setPlayerPosition(t);
-            return JSON.stringify({ success: true, seconds: secs });
-        } catch (e3) {
-            return JSON.stringify({ error: "setPlayerPosition failed on this Premiere version" });
+        if (!setReported) {
+            try {
+                var t = {};
+                t.ticks = ticks.toString();
+                seq.setPlayerPosition(t);
+                setReported = true;
+            } catch (e3) {
+                return JSON.stringify({ error: "setPlayerPosition failed on this Premiere version" });
+            }
         }
+        var afterPlayhead = null;
+        try {
+            var afterPosition = seq.getPlayerPosition ? seq.getPlayerPosition() : null;
+            afterPlayhead = afterPosition && afterPosition.seconds != null ? Number(afterPosition.seconds) : null;
+        } catch (e4) { afterPlayhead = null; }
+        var canVerifyPlayhead = beforePlayhead !== null && afterPlayhead !== null;
+        var verifiedPlayhead = canVerifyPlayhead && Math.abs(afterPlayhead - secs) <= 0.001 &&
+            Math.abs(afterPlayhead - beforePlayhead) > 0.001 ? 1 : 0;
+        var playheadStatus = _ocVerificationStatus(setReported ? 1 : 0, verifiedPlayhead, canVerifyPlayhead);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: playheadStatus !== "failed", seconds: secs },
+            _ocHostWriteVerification(
+                "ocSetSequencePlayhead",
+                1,
+                setReported ? 1 : 0,
+                canVerifyPlayhead ? verifiedPlayhead : null,
+                playheadStatus,
+                canVerifyPlayhead ? "Sequence.getPlayerPosition()" : "unavailable: Sequence.getPlayerPosition()",
+                { seconds: beforePlayhead },
+                { seconds: afterPlayhead },
+                "The playhead position is read independently after setPlayerPosition()."
+            )
+        ));
     } catch (e) {
         _ocLog("ocSetSequencePlayhead error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2851,7 +3690,23 @@ function ocRemoveImportedItem(payloadJSON) {
         } catch (eDel) {
             return JSON.stringify({ error: "deleteAsset failed: " + eDel.toString() });
         }
-        return JSON.stringify({ success: true, removed: nodeId });
+        var itemAfterDelete = _findByNodeId(app.project.rootItem, nodeId, 0);
+        var verifiedItemRemoval = itemAfterDelete ? 0 : 1;
+        var itemRemovalStatus = _ocVerificationStatus(1, verifiedItemRemoval, true);
+        return JSON.stringify(_ocAttachHostWriteVerification(
+            { success: itemRemovalStatus !== "failed", removed: nodeId },
+            _ocHostWriteVerification(
+                "ocRemoveImportedItem",
+                1,
+                1,
+                verifiedItemRemoval,
+                itemRemovalStatus,
+                "rootItem recursive nodeId lookup",
+                { item_present: true },
+                { item_present: !!itemAfterDelete },
+                "The project tree is re-walked by nodeId after deleteAsset()."
+            )
+        ));
     } catch (e) {
         _ocLog("ocRemoveImportedItem error: " + e.toString());
         return JSON.stringify({ error: e.toString() });

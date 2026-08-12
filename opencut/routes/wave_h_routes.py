@@ -295,6 +295,7 @@ def route_issue_report_bundle_post():
                                      min_val=10, max_val=2000),
             include_crash=safe_bool(data.get("include_crash"), True),
             include_logs=safe_bool(data.get("include_logs"), True),
+            host_diagnostics=data.get("host_diagnostics"),
         ))
     except Exception as exc:  # noqa: BLE001
         return safe_error(exc, "issue_report_bundle_post")
@@ -319,6 +320,7 @@ def route_support_bundle():
             ),
             include_crash=safe_bool(data.get("include_crash"), True),
             include_logs=safe_bool(data.get("include_logs"), True),
+            host_diagnostics=data.get("host_diagnostics"),
         )
         # A support export is intentionally a local artifact.  Do not expose
         # the pre-filled GitHub URL in the file or imply that anything was
