@@ -430,7 +430,7 @@ without returning transcript text.
 |---------|-------------|
 | Apply Cuts to Timeline | Remove silences, repeated takes, or custom ranges directly in the active sequence |
 | Beat Markers | Add detected beats as Premiere Pro sequence markers |
-| Multicam Auto-Switch | Speaker diarization to multicam cut list, applied directly to sequence |
+| Multicam Auto-Switch | Speaker diarization to multicam cut list, applied directly to sequence. Works from a single mixed audio track, so it does not need one isolated microphone per speaker. Cutting grammar controls: wide-shot cadence by cut count or elapsed time, cut-on-interruption toggle, and per-speaker minimum durations |
 | Clip Keyframes | Write scale/position keyframes for auto-zoom effects |
 | Batch Rename | Rename project panel clips with find/replace patterns |
 | Smart Bins | Auto-sort project items into bins by rule (name, type, duration) |

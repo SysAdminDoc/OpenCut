@@ -739,10 +739,33 @@ def video_multicam_cuts(job_id, filepath, data):
                             max_val=100,
                         )
 
+        # Cutting grammar. Every option is off by default, so an existing
+        # client keeps the previous behaviour without sending anything new.
+        _wide_track = data.get("wide_track")
         result = multicam.generate_multicam_cuts(
             effective_segments,
             speaker_to_track=effective_speaker_map,
             min_cut_duration=min_cut_duration,
+            wide_track=(
+                safe_int(_wide_track, 0, min_val=0, max_val=100)
+                if _wide_track is not None
+                else None
+            ),
+            wide_every_n_cuts=safe_int(
+                data.get("wide_every_n_cuts", 0), 0, min_val=0, max_val=100
+            ),
+            wide_every_seconds=safe_float(
+                data.get("wide_every_seconds", 0.0), 0.0, min_val=0.0, max_val=3600.0
+            ),
+            wide_duration=safe_float(
+                data.get("wide_duration", 2.0), 2.0, min_val=0.0, max_val=60.0
+            ),
+            cut_on_interruption=safe_bool(data.get("cut_on_interruption", True), True),
+            speaker_min_duration=(
+                data.get("speaker_min_duration")
+                if isinstance(data.get("speaker_min_duration"), dict)
+                else None
+            ),
         )
         cuts = result.get("cuts", []) if isinstance(result, dict) else result
         total_cuts = result.get("total_cuts", len(cuts)) if isinstance(result, dict) else len(cuts)
