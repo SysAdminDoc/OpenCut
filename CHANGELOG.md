@@ -20,6 +20,12 @@ record also lives in the git commit messages.
   what it found instead of piling more edits on top. Non-destructive mode never
   trims, since the point of it is keeping the media.
 
+- The older CEP panel had the same gap and now cuts the same ranges the same
+  way. Before this, a reviewed cut gave you a different timeline depending on
+  which panel you had open, and the one most people are running was the one
+  leaving cuts unmade. Both panels now refuse the same case for the same
+  reason, and both check the result against the clip boundaries they promised.
+
 ### Added - Repeat detection now says which take to keep
 
 - Finding repeated takes told you where they were but not which one was any

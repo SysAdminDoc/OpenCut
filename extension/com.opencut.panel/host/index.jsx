@@ -998,6 +998,215 @@ function _ocSequenceClipSnapshot(seq) {
 }
 
 
+/**
+ * Boundary slop for cut planning. Frame rounding must not push a clip that
+ * lines up with the cut onto the trim path.
+ */
+var OC_CUT_TOLERANCE_SECONDS = 0.01;
+
+
+/** Appends a message unless it is already in the list. */
+function _ocPushOnce(list, message) {
+    for (var i = 0; i < list.length; i++) {
+        if (list[i] === message) return;
+    }
+    list.push(message);
+}
+
+
+/**
+ * Decides what a cut range does to one clip, mirroring the UXP planner in
+ * extension/com.opencut.uxp/uxp-cut-planner.js so a reviewed cut produces the
+ * same timeline whichever panel is open.
+ *
+ * A clip the range covers is removed. A clip crossing one edge is trimmed back
+ * to that edge, with its source point pulled in by the same amount so the media
+ * outside the range keeps playing the frames it always did. A clip enclosing
+ * the whole range would need a razor, and cutting a hole in it by any other
+ * means loses media the operator kept, so it is refused and reported.
+ */
+function _ocPlanClipCut(clip, cutStart, cutEnd) {
+    var slop = OC_CUT_TOLERANCE_SECONDS;
+    var clipStart = null;
+    var clipEnd = null;
+    try {
+        clipStart = clip && clip.start && clip.start.seconds != null ? Number(clip.start.seconds) : null;
+        clipEnd = clip && clip.end && clip.end.seconds != null ? Number(clip.end.seconds) : null;
+    } catch (e0) { clipStart = null; clipEnd = null; }
+    if (clipStart === null || clipEnd === null || isNaN(clipStart) || isNaN(clipEnd)) {
+        return { action: "blocked", reason: "clip boundaries are unreadable" };
+    }
+    if (clipEnd <= cutStart + slop || clipStart >= cutEnd - slop) return { action: "none" };
+    if (clipStart >= cutStart - slop && clipEnd <= cutEnd + slop) return { action: "remove" };
+
+    var crossesStart = clipStart < cutStart - slop;
+    var crossesEnd = clipEnd > cutEnd + slop;
+    if (crossesStart && crossesEnd) {
+        return { action: "blocked", reason: "clip encloses the cut range and would need a razor" };
+    }
+
+    // The trim arithmetic assumes one second of source per second of timeline.
+    var speed = null;
+    try { speed = clip.speed == null ? null : Number(clip.speed); } catch (e1) { speed = null; }
+    if (speed !== null && !isNaN(speed) && Math.abs(speed - 1) > 0.000001) {
+        return { action: "blocked", reason: "clip is retimed, so a source-point trim would land off-frame" };
+    }
+
+    var inPoint = null;
+    var outPoint = null;
+    try {
+        inPoint = clip.inPoint && clip.inPoint.seconds != null ? Number(clip.inPoint.seconds) : null;
+        outPoint = clip.outPoint && clip.outPoint.seconds != null ? Number(clip.outPoint.seconds) : null;
+    } catch (e2) { inPoint = null; outPoint = null; }
+    if (inPoint === null || outPoint === null || isNaN(inPoint) || isNaN(outPoint)) {
+        return { action: "blocked", reason: "clip source in/out points are unreadable" };
+    }
+
+    if (crossesStart) {
+        return {
+            action: "trim_head",
+            start: clipStart,
+            end: cutStart,
+            inPoint: inPoint,
+            outPoint: outPoint - (clipEnd - cutStart)
+        };
+    }
+    return {
+        action: "trim_tail",
+        start: cutEnd,
+        end: clipEnd,
+        inPoint: inPoint + (cutEnd - clipStart),
+        outPoint: outPoint
+    };
+}
+
+
+/**
+ * Applies one planned trim. ExtendScript's boundary and source-point setters
+ * have behaved inconsistently across Premiere versions, so nothing here is
+ * trusted: the caller re-reads the clip and compares it against the boundaries
+ * this plan promised.
+ */
+function _ocApplyClipTrim(clip, plan) {
+    try {
+        var boundary = new Time();
+        var source = new Time();
+        if (plan.action === "trim_head") {
+            boundary.seconds = plan.end;
+            source.seconds = plan.outPoint;
+            clip.end = boundary;
+            clip.outPoint = source;
+        } else {
+            boundary.seconds = plan.start;
+            source.seconds = plan.inPoint;
+            clip.start = boundary;
+            clip.inPoint = source;
+        }
+        return true;
+    } catch (e) {
+        _ocLog("clip trim failed: " + e.toString());
+        return false;
+    }
+}
+
+
+/**
+ * Identity for a clip that survives a trim, so the read-back can find the same
+ * clip again. Boundaries are deliberately absent: they are what a trim changes.
+ */
+function _ocClipIdentity(kind, trackIndex, clip) {
+    var nodeId = "";
+    try { nodeId = clip.projectItem && clip.projectItem.nodeId ? String(clip.projectItem.nodeId) : ""; } catch (e) {}
+    return kind + "|" + trackIndex + "|" + nodeId + "|" + String(clip.name || "");
+}
+
+
+/**
+ * Every clip on the timeline keyed by the identity above, for checking a cut
+ * against the boundaries its plan predicted. An identity that appears twice is
+ * dropped, because confirming a trim against a lookalike is worse than
+ * reporting that it could not be confirmed.
+ */
+function _ocClipBoundsById(seq) {
+    if (!seq) return null;
+    var bounds = {};
+    var counts = {};
+    var readable = false;
+    var kinds = ["video", "audio"];
+    var collections = [seq.videoTracks, seq.audioTracks];
+    for (var kindIndex = 0; kindIndex < collections.length; kindIndex++) {
+        var tracks = collections[kindIndex];
+        var trackCount = 0;
+        try {
+            trackCount = tracks ? tracks.numTracks : 0;
+            if (tracks && typeof trackCount === "number") readable = true;
+        } catch (e0) { trackCount = 0; }
+        for (var trackIndex = 0; trackIndex < trackCount; trackIndex++) {
+            var track = tracks[trackIndex];
+            var clipCount = 0;
+            try { clipCount = track && track.clips ? track.clips.numItems : 0; } catch (e1) { clipCount = 0; }
+            for (var clipIndex = 0; clipIndex < clipCount; clipIndex++) {
+                try {
+                    var clip = track.clips[clipIndex];
+                    if (!clip) continue;
+                    var id = _ocClipIdentity(kinds[kindIndex], trackIndex, clip);
+                    counts[id] = (counts[id] || 0) + 1;
+                    bounds[id] = {
+                        start: clip.start && clip.start.seconds != null ? Number(clip.start.seconds) : null,
+                        end: clip.end && clip.end.seconds != null ? Number(clip.end.seconds) : null
+                    };
+                } catch (e2) {}
+            }
+        }
+    }
+    if (!readable) return null;
+    for (var key in counts) {
+        if (counts.hasOwnProperty(key) && counts[key] > 1) delete bounds[key];
+    }
+    return bounds;
+}
+
+
+/**
+ * Compares a fresh read against what the cut plans promised. Returns a list of
+ * human-readable mismatches; empty means every cut landed exactly.
+ *
+ * A moved clip keeps its duration, so its end lands where a trim never would.
+ * Without the end in this comparison, a setter that shifts instead of trimming
+ * would look like success.
+ */
+function _ocVerifyCutPlans(expectedTrims, expectedRemovals, bounds) {
+    var mismatches = [];
+    if (bounds === null) return mismatches;
+    var i;
+    for (i = 0; i < expectedRemovals.length; i++) {
+        if (bounds.hasOwnProperty(expectedRemovals[i])) {
+            mismatches.push("still present after removal: " + expectedRemovals[i]);
+        }
+    }
+    for (i = 0; i < expectedTrims.length; i++) {
+        var want = expectedTrims[i];
+        if (!bounds.hasOwnProperty(want.id)) {
+            mismatches.push("trimmed clip disappeared: " + want.id);
+            continue;
+        }
+        var got = bounds[want.id];
+        if (got.start === null || got.end === null) {
+            mismatches.push("clip unreadable after trim: " + want.id);
+            continue;
+        }
+        if (Math.abs(got.start - want.start) > OC_CUT_TOLERANCE_SECONDS ||
+            Math.abs(got.end - want.end) > OC_CUT_TOLERANCE_SECONDS) {
+            mismatches.push(
+                want.id + " expected " + want.start.toFixed(3) + "-" + want.end.toFixed(3) +
+                "s but read back " + got.start.toFixed(3) + "-" + got.end.toFixed(3) + "s"
+            );
+        }
+    }
+    return mismatches;
+}
+
+
 function _ocCaptionTrackSnapshot(seq) {
     var result = [];
     var tracks = null;
@@ -2401,7 +2610,12 @@ function ocApplySequenceCuts(cutsJSON) {
         var applied = 0;
         var attemptedRemovals = 0;
         var errors = [];
+        var refusals = [];
+        var trimCount = 0;
+        var expectedTrims = [];
+        var expectedRemovals = [];
         var beforeClips = _ocSequenceClipSnapshot(seq);
+        var kindNames = ["video", "audio"];
 
         for (var ci = 0; ci < cuts.length; ci++) {
             var cut = cuts[ci];
@@ -2411,65 +2625,89 @@ function ocApplySequenceCuts(cutsJSON) {
             // Validate numeric cut range before deleting anything
             if (isNaN(cutStart) || isNaN(cutEnd) || cutStart >= cutEnd) continue;
 
-            // Iterate video tracks
-            for (var vt = 0; vt < seq.videoTracks.numTracks; vt++) {
-                var vTrack = seq.videoTracks[vt];
-                // Walk backwards so removing an item doesn't shift the index
-                for (var vc = vTrack.clips.numItems - 1; vc >= 0; vc--) {
-                    try {
-                        var vClip = vTrack.clips[vc];
-                        var clipStart = vClip.start ? Number(vClip.start.seconds) : 0;
-                        var clipEnd = vClip.end ? Number(vClip.end.seconds) : 0;
-                        // Remove clips fully contained within cut range (with 0.01s tolerance for floating-point)
-                        if (clipStart >= cutStart - 0.01 && clipEnd <= cutEnd + 0.01) {
-                            attemptedRemovals++;
-                            if (disableOnly) { vClip.disabled = true; } else { vClip.remove(false, true); }
-                            applied++;
+            var trackCollections = [seq.videoTracks, seq.audioTracks];
+            for (var kindIndex = 0; kindIndex < trackCollections.length; kindIndex++) {
+                var tracks = trackCollections[kindIndex];
+                var kindName = kindNames[kindIndex];
+                for (var ti = 0; ti < tracks.numTracks; ti++) {
+                    var track = tracks[ti];
+                    // Walk backwards so removing an item doesn't shift the index
+                    for (var clipIndex = track.clips.numItems - 1; clipIndex >= 0; clipIndex--) {
+                        try {
+                            var clip = track.clips[clipIndex];
+                            if (!clip) continue;
+                            var plan = _ocPlanClipCut(clip, cutStart, cutEnd);
+                            if (plan.action === "none") continue;
+                            if (plan.action === "blocked") {
+                                _ocPushOnce(refusals, plan.reason);
+                                continue;
+                            }
+                            var identity = _ocClipIdentity(kindName, ti, clip);
+                            if (plan.action === "remove") {
+                                attemptedRemovals++;
+                                if (disableOnly) {
+                                    clip.disabled = true;
+                                } else {
+                                    clip.remove(false, true);
+                                    expectedRemovals.push(identity);
+                                }
+                                applied++;
+                                continue;
+                            }
+                            // A boundary-crossing clip can only be kept whole or
+                            // trimmed, and trimming destroys the very media
+                            // disable mode exists to preserve.
+                            if (disableOnly) {
+                                _ocPushOnce(refusals, "clip crosses a cut boundary; disabling it whole would mute media outside the range");
+                                continue;
+                            }
+                            if (_ocApplyClipTrim(clip, plan)) {
+                                trimCount++;
+                                applied++;
+                                expectedTrims.push({ id: identity, start: plan.start, end: plan.end });
+                            } else {
+                                _ocPushOnce(refusals, "clip boundary setters were refused by this host");
+                            }
+                        } catch (e) {
+                            errors.push(kindName + " track " + ti + " clip " + clipIndex + ": " + e.toString());
+                            _ocLog("ocApplySequenceCuts " + kindName + " error: " + e.toString());
                         }
-                    } catch (e) {
-                        errors.push("Video track " + vt + " clip " + vc + ": " + e.toString());
-                        _ocLog("ocApplySequenceCuts vTrack error: " + e.toString());
-                    }
-                }
-            }
-
-            // Iterate audio tracks
-            for (var at = 0; at < seq.audioTracks.numTracks; at++) {
-                var aTrack = seq.audioTracks[at];
-                for (var ac = aTrack.clips.numItems - 1; ac >= 0; ac--) {
-                    try {
-                        var aClip = aTrack.clips[ac];
-                        var aClipStart = aClip.start ? Number(aClip.start.seconds) : 0;
-                        var aClipEnd = aClip.end ? Number(aClip.end.seconds) : 0;
-                        if (aClipStart >= cutStart - 0.01 && aClipEnd <= cutEnd + 0.01) {
-                            attemptedRemovals++;
-                            if (disableOnly) { aClip.disabled = true; } else { aClip.remove(false, true); }
-                            applied++;
-                        }
-                    } catch (e) {
-                        errors.push("Audio track " + at + " clip " + ac + ": " + e.toString());
-                        _ocLog("ocApplySequenceCuts aTrack error: " + e.toString());
                     }
                 }
             }
         }
 
+        // Every cut said exactly where its clips should end up, so the read-back
+        // asserts that rather than settling for "something changed".
+        var planMismatches = _ocVerifyCutPlans(expectedTrims, expectedRemovals, _ocClipBoundsById(seq));
+        for (var mi = 0; mi < planMismatches.length; mi++) errors.push(planMismatches[mi]);
+
         var afterClips = _ocSequenceClipSnapshot(seq);
         var canVerifyClips = beforeClips !== null && afterClips !== null;
         var verifiedRemoved = canVerifyClips ? _ocFingerprintDeltaCount(beforeClips, afterClips) : null;
-        var cutStatus = _ocVerificationStatus(applied, verifiedRemoved, canVerifyClips);
+        // A trim leaves the clip in place with different boundaries, so it also
+        // shows up as a changed fingerprint; both count as an observed write.
+        var cutStatus = planMismatches.length
+            ? "failed"
+            : _ocVerificationStatus(applied, verifiedRemoved, canVerifyClips);
         var cutResult = _ocAttachHostWriteVerification(
             { success: cutStatus !== "failed", applied: applied, errors: errors },
             _ocHostWriteVerification(
                 "ocApplySequenceCuts",
-                attemptedRemovals,
+                attemptedRemovals + trimCount,
                 applied,
                 verifiedRemoved,
                 cutStatus,
-                canVerifyClips ? "videoTracks/audioTracks clip boundary and disabled-state fingerprint diff" : "unavailable: video/audio track collection traversal",
+                canVerifyClips ? "videoTracks/audioTracks clip boundary and disabled-state fingerprint diff, plus a check of every removed and trimmed clip against the boundaries its plan predicted" : "unavailable: video/audio track collection traversal",
                 { clip_count: beforeClips === null ? null : beforeClips.length },
-                { clip_count: afterClips === null ? null : afterClips.length, mode: disableOnly ? "disable" : "delete" },
-                canVerifyClips ? "Clip.remove() and Clip.disabled reports are verified by re-walking both track collections and comparing clip boundaries and disabled state; disabling leaves the clip count unchanged, so the disabled flag is part of the fingerprint." : "This host does not expose independently readable track collections."
+                {
+                    clip_count: afterClips === null ? null : afterClips.length,
+                    mode: disableOnly ? "disable" : "delete",
+                    removed: attemptedRemovals,
+                    trimmed: trimCount,
+                    refusals: refusals
+                },
+                canVerifyClips ? "Clips the range covers are removed and clips crossing one edge are trimmed back to it with their source point corrected, so the cut range ends up empty and nothing moves. A clip enclosing the whole range needs a razor ExtendScript does not offer and is refused. Every removal and trim is then checked against the boundaries its plan predicted, which is what tells a trim apart from a move; disabling leaves the clip count unchanged, so the disabled flag is part of the fingerprint." : "This host does not expose independently readable track collections."
             )
         );
         return JSON.stringify(cutResult);
