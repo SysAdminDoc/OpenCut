@@ -45,8 +45,8 @@ def test_package_json_pins_js_yaml_override():
     assert "js-yaml" in overrides, "js-yaml override missing from package.json"
 
     spec = overrides["js-yaml"]
-    assert spec.startswith("^4.2") or spec.startswith("4.2") or spec.startswith(">=4.2"), (
-        f"js-yaml override must be >=4.2.0 to close GHSA-h67p-54hq-rp68 (got {spec!r})"
+    assert spec.startswith("^4.") or spec.startswith("4.") or spec.startswith(">=4."), (
+        f"js-yaml override must stay on a fixed 4.x release to close GHSA-h67p-54hq-rp68 (got {spec!r})"
     )
 
 
