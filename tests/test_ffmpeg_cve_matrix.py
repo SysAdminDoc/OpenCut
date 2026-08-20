@@ -198,3 +198,26 @@ class TestClosedLaneIsStatedInCode:
         if not fp.RELEASE_LANE_OPEN:
             assert "git-master snapshot" in message
             assert "8.1.3" not in message.split(fp.RELEASE_LANE_CLOSED_REASON)[0]
+
+
+def test_every_graded_advisory_is_reported_in_the_public_constants():
+    """The matrix and the reported CVE/commit lists were separate sources.
+
+    `verify_ffmpeg_provenance.py` and the release metadata print
+    SECURITY_CVES / SECURITY_FIX_COMMITS, so an advisory graded in the matrix
+    but missing from those lists is silently absent from every report.
+    """
+    reported_cves = set(fp.SECURITY_CVES)
+    reported_commits = set(fp.SECURITY_FIX_COMMITS)
+    for advisory in fp.SECURITY_ADVISORIES:
+        assert advisory.cve in reported_cves, (
+            f"{advisory.cve} is graded but missing from SECURITY_CVES"
+        )
+        assert advisory.fix_commit in reported_commits, (
+            f"{advisory.cve} fix commit is graded but missing from SECURITY_FIX_COMMITS"
+        )
+
+
+def test_no_advisory_is_both_graded_and_listed_as_ungraded():
+    graded = {advisory.cve for advisory in fp.SECURITY_ADVISORIES}
+    assert graded.isdisjoint(set(fp.UNGRADED_ADVISORIES))
