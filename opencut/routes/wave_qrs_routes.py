@@ -44,6 +44,7 @@ from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error, too_many_items
 from opencut.jobs import _is_cancelled, _update_job, async_job
+from opencut.routes._common import _stub_503
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
@@ -658,12 +659,28 @@ def route_canary_info():
 def route_qwen3vl_analyze(job_id, filepath, data):
     """Multimodal video analysis (256k tokens, up to 2-hour clips)."""
     from opencut.core import multimodal_qwen3vl
-    if not multimodal_qwen3vl.check_transformers_available():
-        raise RuntimeError("transformers>=4.45 not installed. " + multimodal_qwen3vl.INSTALL_HINT)
+    if not multimodal_qwen3vl.check_qwen3vl_available():
+        return _stub_503(
+            "Qwen3-VL",
+            multimodal_qwen3vl.INSTALL_HINT,
+            code="MISSING_DEPENDENCY",
+            message="The local Ollama Qwen3-VL model is not available.",
+        )
     result = multimodal_qwen3vl.analyze(
         video_path=filepath,
         prompt=str(data.get("prompt") or "Summarise the video."),
         max_tokens=safe_int(data.get("max_tokens"), 1024, min_val=1, max_val=8192),
+        transcript_segments=data.get("transcript_segments") or [],
+        model=str(data.get("model") or "").strip() or None,
+        segment_duration=safe_float(
+            data.get("segment_duration"), 30.0, min_val=1.0, max_val=600.0,
+        ),
+        frames_per_segment=safe_int(
+            data.get("frames_per_segment"), 3, min_val=1, max_val=6,
+        ),
+        frame_interval=safe_float(
+            data.get("frame_interval"), 10.0, min_val=1.0, max_val=120.0,
+        ),
         on_progress=_prog_factory(job_id),
     )
     return _result_dict(result)
@@ -674,9 +691,13 @@ def route_qwen3vl_info():
     try:
         from opencut.core import multimodal_qwen3vl
         return jsonify({
-            "available": multimodal_qwen3vl.check_transformers_available(),
+            "available": multimodal_qwen3vl.check_qwen3vl_available(),
+            "model": multimodal_qwen3vl.DEFAULT_MODEL,
+            "ollama_base_url": multimodal_qwen3vl.DEFAULT_BASE_URL,
             "context_tokens": 256000,
             "licence": "Apache-2.0",
+            "supports_transcript": True,
+            "frame_sampling": "decision points per transcript segment",
             "install_hint": multimodal_qwen3vl.INSTALL_HINT,
         })
     except Exception as exc:

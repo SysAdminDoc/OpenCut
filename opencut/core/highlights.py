@@ -720,13 +720,25 @@ def extract_highlights_with_vision(
     if on_progress:
         on_progress(25, "Querying vision LLM for highlight analysis...")
 
-    # If the LLM supports vision, we could send frames as images
-    # For now, send frame timestamps as text context (works with all LLMs)
-    response = query_llm(
-        prompt=prompt,
-        config=llm_config,
-        system_prompt=_HIGHLIGHT_SYSTEM_PROMPT,
-    )
+    query_args = {
+        "prompt": prompt,
+        "config": llm_config,
+        "system_prompt": _HIGHLIGHT_SYSTEM_PROMPT,
+    }
+    # Ollama vision models accept the sampled JPEGs directly. Cloud providers
+    # keep the existing text-only path because their adapters use different
+    # image contracts and this feature is intended to stay local by default.
+    if frames and str(getattr(llm_config, "provider", "")).lower() == "ollama":
+        query_args["images"] = [frame["base64"] for frame in frames if frame.get("base64")]
+    try:
+        response = query_llm(**query_args)
+    except TypeError as exc:
+        # Preserve compatibility with third-party callers that still inject a
+        # narrow query_llm test double without the optional images argument.
+        if "images" not in query_args or "images" not in str(exc):
+            raise
+        query_args.pop("images", None)
+        response = query_llm(**query_args)
 
     if on_progress:
         on_progress(80, "Parsing highlights...")

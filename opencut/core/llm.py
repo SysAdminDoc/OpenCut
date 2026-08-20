@@ -85,15 +85,8 @@ def _http_json(url, data=None, headers=None, timeout=60):
         raise RuntimeError(f"Connection failed to {safe_url}: {exc.reason}") from exc
 
 
-def _query_ollama(prompt, system_prompt, config):
-    """Query Ollama local server."""
-    from urllib.parse import urlparse
-    parsed = urlparse(config.base_url)
-    if "@" in (parsed.netloc or ""):
-        raise RuntimeError("Ollama base_url must not contain userinfo (@ character)")
-    if parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
-        raise RuntimeError("Ollama base_url must point to localhost for security")
-    url = f"{config.base_url.rstrip('/')}/api/generate"
+def _ollama_generate_body(prompt, system_prompt, config, images=None):
+    """Build a local Ollama generate request, optionally with vision frames."""
     body = {
         "model": config.model,
         "prompt": prompt,
@@ -104,6 +97,27 @@ def _query_ollama(prompt, system_prompt, config):
             "num_predict": config.max_tokens,
         },
     }
+    if images:
+        body["images"] = list(images)
+    return body
+
+
+def _validate_ollama_base_url(base_url):
+    """Reject remote or credential-bearing Ollama URLs."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(base_url)
+    if "@" in (parsed.netloc or ""):
+        raise RuntimeError("Ollama base_url must not contain userinfo (@ character)")
+    if parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise RuntimeError("Ollama base_url must point to localhost for security")
+
+
+def _query_ollama(prompt, system_prompt, config):
+    """Query Ollama local server."""
+    _validate_ollama_base_url(config.base_url)
+    url = f"{config.base_url.rstrip('/')}/api/generate"
+    body = _ollama_generate_body(prompt, system_prompt, config)
 
     data = _http_json(url, data=body, timeout=180)
 
@@ -113,6 +127,45 @@ def _query_ollama(prompt, system_prompt, config):
         model=config.model,
         tokens_used=data.get("eval_count", 0),
     )
+
+
+def query_ollama_vision(
+    prompt,
+    images,
+    config=None,
+    system_prompt="",
+    on_progress=None,
+):
+    """Query a local Ollama vision model with base64-encoded JPEG frames.
+
+    Ollama accepts image data in the ``images`` array of ``/api/generate``.
+    The URL is restricted to loopback so video frames cannot be sent to a
+    remote service accidentally.
+    """
+    if config is None:
+        config = LLMConfig(model="qwen3-vl:8b")
+    if config.provider.lower().strip() != "ollama":
+        raise RuntimeError("Vision inference requires the local Ollama provider")
+    if not images:
+        raise ValueError("At least one base64 image is required for vision inference")
+
+    _validate_ollama_base_url(config.base_url)
+    if on_progress:
+        on_progress(10, f"Querying Ollama vision model ({config.model})...")
+
+    url = f"{config.base_url.rstrip('/')}/api/generate"
+    body = _ollama_generate_body(prompt, system_prompt, config, images=images)
+    data = _http_json(url, data=body, timeout=300)
+    response = LLMResponse(
+        text=data.get("response", ""),
+        provider="ollama",
+        model=config.model,
+        tokens_used=data.get("eval_count", 0),
+    )
+
+    if on_progress:
+        on_progress(100, "Ollama vision response received")
+    return response
 
 
 def _query_openai(prompt, system_prompt, config):
@@ -271,7 +324,7 @@ _PROVIDERS = {
 }
 
 
-def query_llm(prompt, config=None, system_prompt="", on_progress=None):
+def query_llm(prompt, config=None, system_prompt="", on_progress=None, images=None):
     """
     Send prompt to configured LLM provider.
 
@@ -280,6 +333,7 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
         config: LLMConfig instance. Uses defaults (Ollama) if None.
         system_prompt: Optional system instruction.
         on_progress: Progress callback(pct, msg).
+        images: Optional base64-encoded images for local Ollama vision models.
 
     Returns:
         LLMResponse with the model's reply.
@@ -316,7 +370,16 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
         on_progress(10, f"Querying {provider} ({config.model})...")
 
     try:
-        response = handler(prompt, system_prompt, config)
+        if images and provider == "ollama":
+            response = query_ollama_vision(
+                prompt,
+                images,
+                config=config,
+                system_prompt=system_prompt,
+                on_progress=None,
+            )
+        else:
+            response = handler(prompt, system_prompt, config)
     except Exception as exc:
         logger.error("LLM query failed (%s/%s): %s", provider, config.model, exc)
         return LLMResponse(
@@ -392,22 +455,20 @@ def check_llm_reachable(config=None):
     return result
 
 
-def list_ollama_models(base_url="http://localhost:11434"):
+def list_ollama_models(base_url="http://localhost:11434", timeout=10):
     """
     List available Ollama models.
 
     Args:
         base_url: Ollama server URL.
+        timeout: Request timeout in seconds.
 
     Returns:
         List of model name strings.
     """
-    from urllib.parse import urlparse
-    parsed = urlparse(base_url)
-    if parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
-        raise RuntimeError("Ollama base_url must point to localhost for security")
+    _validate_ollama_base_url(base_url)
     url = f"{base_url.rstrip('/')}/api/tags"
-    data = _http_json(url, timeout=10)
+    data = _http_json(url, timeout=timeout)
 
     models = []
     for m in data.get("models", []):

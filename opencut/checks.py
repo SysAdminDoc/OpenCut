@@ -264,6 +264,16 @@ def check_ollama_available():
     return result
 
 
+def check_qwen3vl_available():
+    """Check whether the local Ollama Qwen3-VL model is installed."""
+    try:
+        from opencut.core.multimodal_qwen3vl import check_qwen3vl_available as _check
+
+        return bool(_check())
+    except Exception:
+        return False
+
+
 def check_llm_available():
     """Check if any LLM provider is available (Ollama or API key configured)."""
     if check_ollama_available():

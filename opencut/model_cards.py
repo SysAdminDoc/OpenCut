@@ -596,6 +596,23 @@ CARDS: List[ModelCard] = [
         install_hint="install Ollama from https://ollama.ai",
         privacy="local-only",
     ),
+    ModelCard(
+        check_name="check_qwen3vl_available",
+        feature_id="video.analysis.qwen3vl",
+        label="Qwen3-VL local video understanding",
+        category="vision",
+        license="Apache-2.0",
+        upstream="https://ollama.com/library/qwen3-vl",
+        hardware="cpu/gpu",
+        install_hint="Install Ollama, then run: ollama pull qwen3-vl:8b",
+        privacy="local-only",
+        latency="slow; frame-sampled per transcript segment",
+        quality_notes="Transcript relevance is weighted at 65%; visual relevance is weighted at 35%.",
+        advisory_notes=[
+            "Ollama must be running on localhost.",
+            "Model weights are not bundled with OpenCut.",
+        ],
+    ),
     # ---- TTS / Voice (extras beyond audio bucket) --------------------
     ModelCard(
         check_name="check_elevenlabs_available",

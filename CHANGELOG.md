@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added: Local Qwen3-VL video scoring
+
+- `/analyze/video/qwen3vl` now uses a local Ollama vision model when the
+  requested Qwen3-VL model is installed. The route reports a dependency-gated
+  503 with an install hint when Ollama is unavailable.
+- Analysis samples decision-point frames for each transcript segment and
+  returns transcript and visual scores with a fixed 65% transcript, 35% visual
+  relevance blend. Highlights now send sampled frames to local Ollama vision
+  models without requiring an API key.
+- Added the Qwen3-VL model card and regenerated route, readiness, and model
+  inventories. The shipped route count is now 1,564, with 29 terminal stubs
+  remaining.
+
 ### Added - The largest route families now have named entry points
 
 - Added an `opencut surfaces` catalog for the CLI route command, ten command

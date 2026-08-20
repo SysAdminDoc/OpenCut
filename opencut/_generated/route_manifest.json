@@ -1,8 +1,8 @@
 {
   "version": 4,
-  "generated_at": "2026-08-20T19:31:51Z",
+  "generated_at": "2026-08-20T21:26:56Z",
   "total_routes": 1593,
-  "shipped_route_count": 1563,
+  "shipped_route_count": 1564,
   "blueprint_count": 107,
   "method_counts": {
     "DELETE": 18,
@@ -12,9 +12,9 @@
     "PUT": 2
   },
   "readiness_counts": {
-    "dependency-gated": 23,
+    "dependency-gated": 24,
     "implemented": 1540,
-    "stub": 30
+    "stub": 29
   },
   "blueprints": {
     "<app>": {
@@ -2621,7 +2621,7 @@
       ],
       "endpoint": "wave_qrs.route_qwen3vl_analyze",
       "blueprint": "wave_qrs",
-      "readiness": "stub",
+      "readiness": "dependency-gated",
       "surface_class": "integration-only",
       "surface_classes": [
         "integration-only"
@@ -27214,9 +27214,9 @@
       "integration-only"
     ],
     "summary": {
-      "shipped_routes": 1563,
+      "shipped_routes": 1564,
       "direct_surface_routes": 310,
-      "integration_only_routes": 1253,
+      "integration_only_routes": 1254,
       "coverage_percent": 19.8,
       "multi_surface_routes": 62,
       "primary_counts": {
