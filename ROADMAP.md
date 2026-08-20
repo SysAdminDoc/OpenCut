@@ -49,15 +49,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: The release gate fails when `coverage_percent` falls below the value recorded at the time the ratchet lands; a new route must either declare a surface or carry an explicit `integration-only` justification that the gate records; the report names the largest integration-only route families so a triage or deprecation decision has data behind it.
   Complexity: M
 
-- [ ] P2 — F333 — Decide the FFmpeg 9.0 release lane so users are not forced onto git-master snapshots
-  Why: `RELEASE_FLOOR` is `(8, 1, 3)` with the comment "the release lane remains closed until upstream publishes 8.1.3" — a version that never shipped, because upstream moved to 9.0 instead — so today every source installer must fetch a dated git-master snapshot, which is a harder and less auditable ask than a tagged release and leaves the documented release lane permanently dead.
-  Evidence: `opencut/core/ffmpeg_provenance.py:56-57` (`RELEASE_FLOOR = (8, 1, 3)`) and `:62` (`SNAPSHOT_FLOOR_DATE = "2026-07-06"`); https://ffmpeg.org/download.html — FFmpeg 9.0 "Lei" released 2026-08-04, branch cut from master 2026-06-26; 8.1.2 (2026-06-17) is the last 8.1 release and 8.0.3 (2026-06-18) closed the 8.0 branch; `README.md:110-118` and `Install.ps1` currently instruct users toward the gyan.dev git-master snapshot
-  Touches: `opencut/core/ffmpeg_provenance.py`, `scripts/verify_ffmpeg_provenance.py`, `README.md`, `Install.ps1`, `install.py`, `Dockerfile`, `docs/RELEASE_PROVENANCE.md`, `tests/`
-  Acceptance: The release lane either opens on a specific 9.x version proven by F332's per-CVE ancestry checks to carry every graded fix, or is documented as deliberately closed with the reason recorded in the module rather than a comment about an unshipped 8.1.3; the 9.0 branch point (2026-06-26, before the July fix commits landed on master) is explicitly accounted for rather than assumed, since a later release date does not by itself imply the fixes were backported; installation docs name whichever lane is supported.
-  Depends on: F332
-  Note (2026-08-20): upstream released 9.0.1 on 2026-08-12, so the 9.0 lane decision now has a patch release to grade against; the branch-point caveat (9.0 cut 2026-06-26, before the July fix commits) applies to 9.0.x until ancestry-checked.
-  Complexity: M
-
 - [ ] P2 — F339 — Add a "disable instead of delete" mode to cut-review write-back
   Why: Editors distrust destructive auto-cuts, and the reviewer-tested FireCut comparison specifically calls out the inability to disable or mark clips instead of removing them — while Premiere track items expose a settable disabled state and OpenCut's host layers currently have no disable path at all, so the review panel's only outcomes are delete or skip.
   Evidence: https://cutback.video/blog/the-best-auto-silence-removal-plugin-for-premiere-pro (FireCut "can't disable instead of delete"); https://www.freevisuals.net/post/firecut-ai-review (2026-07-20, no non-destructive option); grep for `.disabled`/disable in `extension/com.opencut.panel/host/index.jsx` returns nothing (2026-08-20)

@@ -10,6 +10,7 @@ claims more than it checked.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import re
 import sys
@@ -119,3 +120,81 @@ class TestDocumentedScopeMatchesTheMatrix:
                 f"SECURITY.md claims {overclaim!r} while "
                 f"{len(fp.UNGRADED_ADVISORIES)} advisories are ungraded"
             )
+
+
+class TestNewerReleaseIsNotAssumedFixed:
+    """F333 — "9.0.1 > 8.1.2, therefore it has the 8.1.2 fixes" is false.
+
+    The 9.0 series branched from master on 2026-06-26, before the July fix
+    commits landed. Version ordering says nothing about whether a branch cut
+    earlier received a backport, and the gate used to accept 9.0.x on ordering
+    alone.
+    """
+
+    def test_a_newer_series_branched_before_the_fix_is_refused(self):
+        result = fp.check_security_floor("ffmpeg version 9.0.1 Copyright (c) 2000-2026")
+        assert result["ok"] is False
+        assert "branched on" in result["reason"]
+        assert "not evidence" in result["reason"]
+
+    def test_a_later_patch_in_the_affected_series_is_accepted(self):
+        """8.1.3 would be the advisory's own declared fix."""
+        result = fp.check_security_floor("ffmpeg version 8.1.3 Copyright (c) 2000-2026")
+        assert result["ok"] is True
+
+    def test_the_affected_release_itself_still_fails(self):
+        assert fp.check_security_floor("ffmpeg version 8.1.2 Copyright")["ok"] is False
+
+    def test_recorded_backport_evidence_accepts_the_release(self):
+        advisory = fp.SECURITY_ADVISORIES[0]
+        target = (9, 0, 1)
+        assert fp._grade_newer_release(advisory, target)[0] is False
+
+        backported = dataclasses.replace(advisory, backported_in=(target,))
+        accepted, why = fp._grade_newer_release(backported, target)
+        assert accepted is True
+        assert "backport" in why
+
+    def test_a_series_branched_after_the_fix_is_accepted(self):
+        advisory = fp.SECURITY_ADVISORIES[0]
+        try:
+            fp.RELEASE_BRANCH_POINTS[(10, 0)] = "2027-01-01"
+            accepted, why = fp._grade_newer_release(advisory, (10, 0, 0))
+            assert accepted is True
+            assert "branched on 2027-01-01" in why
+        finally:
+            fp.RELEASE_BRANCH_POINTS.pop((10, 0), None)
+
+    def test_an_unrecorded_series_is_refused_not_assumed(self):
+        advisory = fp.SECURITY_ADVISORIES[0]
+        accepted, why = fp._grade_newer_release(advisory, (11, 4, 0))
+        assert accepted is False
+        assert "branch point is not recorded" in why
+
+    def test_the_pinned_snapshot_still_passes(self):
+        """The lane users are actually told to use must keep working."""
+        result = fp.check_security_floor(
+            "ffmpeg version 2026-08-03-git-01a25f74cc-full_build-www.gyan.dev Copyright"
+        )
+        assert result["ok"] is True
+
+
+class TestClosedLaneIsStatedInCode:
+    def test_the_closed_lane_carries_a_reason(self):
+        if not fp.RELEASE_LANE_OPEN:
+            assert "8.1.3 was never published" in fp.RELEASE_LANE_CLOSED_REASON
+            assert "branched" in fp.RELEASE_LANE_CLOSED_REASON
+
+    def test_provenance_reports_the_lane_state(self):
+        record = fp.provenance_record(banner="ffmpeg version 8.1.2 Copyright")
+        assert record["release_lane_open"] is fp.RELEASE_LANE_OPEN
+        assert record["release_branch_points"]["9.0"] == "2026-06-26"
+        if not fp.RELEASE_LANE_OPEN:
+            assert record["release_lane_note"]
+
+    def test_the_error_message_does_not_advertise_a_closed_lane(self):
+        grade = fp.check_security_floor("ffmpeg version 8.1.2 Copyright")
+        message = str(fp.FfmpegSecurityError("ffmpeg", grade))
+        if not fp.RELEASE_LANE_OPEN:
+            assert "git-master snapshot" in message
+            assert "8.1.3" not in message.split(fp.RELEASE_LANE_CLOSED_REASON)[0]

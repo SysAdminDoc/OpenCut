@@ -52,9 +52,48 @@ logger = logging.getLogger("opencut")
 # Provenance floor — the bundled binary must clear ONE of these lanes.
 # ---------------------------------------------------------------------------
 
-# Minimum acceptable *release* version. The four July-2026 advisories affect
-# 8.1.2, so the release lane remains closed until upstream publishes 8.1.3.
+# Lowest release that *could* clear the matrix, used for documentation and the
+# install message. Acceptance itself is decided per advisory by
+# SECURITY_ADVISORIES, never by this number alone.
+#
+# It stays on the 8.1 line because that is where a qualifying release would have
+# to appear: 8.1.3 would be a later patch in the affected series, i.e. the
+# advisories' own declared fix. Moving to 9.x instead of publishing it does not
+# make 9.x qualify — see RELEASE_BRANCH_POINTS and RELEASE_LANE_OPEN. No such
+# release exists today, which is why the lane is closed rather than merely unmet.
 RELEASE_FLOOR: tuple[int, int, int] = (8, 1, 3)
+
+# When each release series was branched from master, ISO ``YYYY-MM-DD``.
+#
+# This exists because "9.0.1 > 8.1.2, therefore 9.0.1 contains the 8.1.2 fixes"
+# is false. The 9.0 branch was cut on 2026-06-26, *before* the July fix commits
+# landed on master (2026-06-29 .. 2026-07-05), so a 9.0.x build carries those
+# fixes only if they were backported onto the branch. A later release number is
+# not evidence; the branch point is. A series absent from this table is treated
+# as unknown, which is refused rather than assumed.
+RELEASE_BRANCH_POINTS: dict[tuple[int, int], str] = {
+    (9, 0): "2026-06-26",
+}
+
+# Whether any *published tagged release* currently clears the advisory matrix.
+#
+# It does not, and this states why in code rather than leaving a comment about a
+# version that was never published:
+#   * 8.1.2 (2026-06-17) closed the 8.1 line and is affected by the July batch.
+#   * 8.1.3 was never released; upstream moved to 9.0.
+#   * 9.0 (2026-08-04) and 9.0.1 (2026-08-12) branched on 2026-06-26, before the
+#     July fix commits landed on master, and no backport onto that branch is on
+#     record here — so they are refused rather than assumed.
+# To open the lane: verify the fix commits are ancestors of the 9.0.x tag, add
+# each release to the matching advisory's ``backported_in``, and flip this flag.
+RELEASE_LANE_OPEN = False
+RELEASE_LANE_CLOSED_REASON = (
+    "No published FFmpeg release currently clears OpenCut's advisory matrix: "
+    "8.1.2 is affected by the July 2026 batch, 8.1.3 was never published, and "
+    "the 9.0 series branched on 2026-06-26 before those fixes landed on master "
+    "with no backport on record. Use a dated git-master snapshot until a 9.0.x "
+    "tag is shown to contain them."
+)
 
 # Minimum acceptable *git-master snapshot* date. The four July-2026 fixes
 # landed on master by 2026-06-29; the first dated Gyan full build after the
@@ -110,6 +149,10 @@ class CveAdvisory:
     #: Releases at or below this are affected; ``None`` means every release.
     affected_max_release: Optional[tuple[int, int, int]]
     capability_tokens: tuple[str, ...]
+    #: Releases from a *newer* series that are known to carry this fix as a
+    #: backport. Needed because a newer series branched before the fix landed
+    #: cannot be assumed to contain it. Empty means no backport is on record.
+    backported_in: tuple[tuple[int, int, int], ...] = ()
 
 
 #: Per-CVE acceptance matrix. Replaces the single global snapshot-date
@@ -353,6 +396,63 @@ def _advisory_applies(advisory: CveAdvisory, configure_line: str) -> Optional[bo
     return True
 
 
+def _series(version: tuple[int, int, int]) -> tuple[int, int]:
+    return (version[0], version[1])
+
+
+def _grade_newer_release(
+    advisory: CveAdvisory,
+    release: tuple[int, int, int],
+) -> tuple[bool, str]:
+    """Decide whether a release *numerically newer* than the affected one is fixed.
+
+    Within the same series a later patch is the advisory's own declared fix, so
+    ordering settles it. Across a series boundary it does not: a newer series
+    branched from master before the fix landed does not contain it, and shipping
+    later says nothing about a backport. That case needs the branch point or
+    explicit backport evidence, and is refused without either.
+    """
+    version = ".".join(map(str, release))
+    affected = advisory.affected_max_release
+    if affected is None:
+        return True, f"release {version} post-dates an advisory with no affected ceiling"
+
+    if _series(release) <= _series(affected):
+        return True, (
+            f"release {version} is a later patch in the {_series(affected)[0]}."
+            f"{_series(affected)[1]} series than the last affected release "
+            f"{'.'.join(map(str, affected))}, which is the advisory's declared fix"
+        )
+
+    if release in advisory.backported_in:
+        return True, (
+            f"release {version} is recorded as carrying a backport of "
+            f"{advisory.fix_commit[:10]}"
+        )
+
+    branch_point = RELEASE_BRANCH_POINTS.get(_series(release))
+    if branch_point and branch_point >= advisory.fix_landed:
+        return True, (
+            f"the {_series(release)[0]}.{_series(release)[1]} series branched on "
+            f"{branch_point}, at/after {advisory.fix_landed} when "
+            f"{advisory.fix_commit[:10]} landed on master"
+        )
+
+    if branch_point:
+        return False, (
+            f"release {version} is numerically newer, but the "
+            f"{_series(release)[0]}.{_series(release)[1]} series branched on "
+            f"{branch_point}, before {advisory.fix_landed} when "
+            f"{advisory.fix_commit[:10]} landed on master, and no backport is on "
+            f"record — a higher version number is not evidence the fix is present"
+        )
+    return False, (
+        f"release {version} belongs to the "
+        f"{_series(release)[0]}.{_series(release)[1]} series, whose branch point "
+        f"is not recorded, so it cannot be shown to contain {advisory.fix_commit[:10]}"
+    )
+
+
 def grade_advisory(
     advisory: CveAdvisory,
     rec: dict,
@@ -398,16 +498,17 @@ def grade_advisory(
     elif rec.get("release"):
         release = rec["release"]
         if advisory.affected_max_release is None or release > advisory.affected_max_release:
-            entry["status"] = "fixed"
-            entry["reason"] = (
-                f"release {'.'.join(map(str, release))} is newer than the last "
-                f"affected release {'.'.join(map(str, advisory.affected_max_release or ()))}"
+            verdict, why = _grade_newer_release(advisory, release)
+            if verdict:
+                entry["status"] = "fixed"
+                entry["reason"] = why
+                return entry
+            detail = why
+        else:
+            detail = (
+                f"release {'.'.join(map(str, release))} is at/below the last affected "
+                f"release {'.'.join(map(str, advisory.affected_max_release))}"
             )
-            return entry
-        detail = (
-            f"release {'.'.join(map(str, release))} is at/below the last affected "
-            f"release {'.'.join(map(str, advisory.affected_max_release))}"
-        )
     else:
         detail = "build token could not be classified as a release or a snapshot"
 
@@ -571,6 +672,12 @@ def provenance_record(banner: Optional[str] = None) -> dict:
             for adv in SECURITY_ADVISORIES
         ],
         "cves_addressed": list(SECURITY_CVES),
+        "release_lane_open": RELEASE_LANE_OPEN,
+        "release_lane_note": "" if RELEASE_LANE_OPEN else RELEASE_LANE_CLOSED_REASON,
+        "release_branch_points": {
+            f"{major}.{minor}": date
+            for (major, minor), date in sorted(RELEASE_BRANCH_POINTS.items())
+        },
         "bundled": None,
     }
     if banner is None:
@@ -599,9 +706,17 @@ class FfmpegSecurityError(RuntimeError):
             f"FFmpeg is unavailable because {binary!r} does not clear "
             f"{', '.join(unresolved)}: "
             f"{grade.get('reason') or 'version could not be verified'}. "
-            f"Install FFmpeg {'.'.join(map(str, RELEASE_FLOOR))}+, a git-master "
-            f"snapshot dated >= {SNAPSHOT_FLOOR_DATE}, or a build compiled "
-            f"without the affected components before processing media."
+            + (
+                f"Install FFmpeg {'.'.join(map(str, RELEASE_FLOOR))}+, a git-master "
+                f"snapshot dated >= {SNAPSHOT_FLOOR_DATE}, or a build compiled "
+                f"without the affected components before processing media."
+                if RELEASE_LANE_OPEN
+                else (
+                    f"Install a git-master snapshot dated >= {SNAPSHOT_FLOOR_DATE}, "
+                    f"or a build compiled without the affected components, before "
+                    f"processing media. {RELEASE_LANE_CLOSED_REASON}"
+                )
+            )
         )
 
 

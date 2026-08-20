@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Security - A newer FFmpeg release is no longer assumed to carry older fixes
+
+- The advisory gate accepted any release numerically above the last affected
+  one, so FFmpeg 9.0.1 passed on ordering alone. That inference is unsound: the
+  9.0 series branched from master on 2026-06-26, *before* the July 2026 fix
+  commits landed, so a 9.0.x build contains them only if they were backported.
+  Grading now distinguishes a later patch within the affected series (the
+  advisory's own declared fix) from a newer series, which needs its branch point
+  or recorded backport evidence and is refused without either. The release lane
+  is stated as deliberately closed in code with its reason, replacing a comment
+  about an 8.1.3 that upstream never published, and the README no longer tells
+  users to install a version that does not exist.
+
 ### Added - Dependencies report whether upstream is still alive
 
 - A package can install and import perfectly while being abandoned, and nothing
