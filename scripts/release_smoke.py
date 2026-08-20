@@ -11,6 +11,7 @@ Steps (in order):
 2. ``version-sync`` — `scripts/sync_version.py --check`
 3. ``generated-docs`` — README/MCP/model/readiness generated-doc drift bundle
 4. ``route-manifest`` — generated route manifest drift check
+4b. ``surface-ratchet`` — direct-surface coverage floor and unreachable-family gate
 5. ``api-aliases`` — generated /api alias manifest drift check
 6. ``feature-readiness`` — generated route/check readiness drift check
 7. ``model-cards`` — generated model/license card drift check
@@ -149,6 +150,29 @@ def step_route_manifest(_args: argparse.Namespace) -> StepResult:
         exit_code=result.returncode,
         duration_ms=duration,
         message="manifest in sync" if status == "ok" else "route manifest drift",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_surface_ratchet(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.dump_surface_ratchet", "--check", "--quiet"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "surface-ratchet",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "direct-surface coverage holds its recorded floor"
+            if status == "ok"
+            else "routes shipped with no first-party surface and no recorded reason"
+        ),
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
     )
@@ -1706,6 +1730,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("shared-locales", step_shared_locales, "Strings shown by both panels have one canonical source"),
     StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
+    StepDefinition("surface-ratchet", step_surface_ratchet, "Direct-surface coverage holds its floor; no new unreachable route families"),
     StepDefinition("performance-benchmark", step_performance_benchmark, "Validate optional benchmark receipts and same-host baselines"),
     StepDefinition("openapi-contract", step_openapi_contract, "Check typed OpenAPI contract manifest + coverage ratchet"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
