@@ -56,13 +56,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: Before write-back, the review panel reports the edit count and warns above a documented threshold; the user can merge cuts separated by less than N frames (provably reducing edit count on a fixture), switch to the shipped tighten mode (`tighten_silences`), or render consolidated media via smart_render instead of cutting the sequence; the warning threshold and rationale are documented.
   Complexity: M
 
-- [ ] P2 — F341 — Add multicam cutting grammar controls and benchmark the mixed-track workflow
-  Why: `generate_multicam_cuts` exposes a single knob (min_cut_duration), while the category leader AutoPod is distrusted for its wide-shot handling, cannot work from mixed/shared audio tracks, and leaves silence padding — and OpenCut's diarization-driven path already works from one mixed track but has no cutting grammar (wide-shot cadence, cut-on-interruption, per-speaker weighting) and nothing documents or proves the mixed-track advantage.
-  Evidence: `opencut/core/multicam.py:88` (only `min_cut_duration`); https://diyai.io/ai-tools/video-generation/reviews/autopod-review/ and https://vidpros.com/autopod-review-ai-editing-for-podcasts-worth-it/ (mixed-track failure, silence padding); `docs/RESEARCH_COMPETITIVE_TEARDOWN_2026-06-10.md` multicam-v2 gap (tunable wide-shot frequency), never regraded until 2026-08-20
-  Touches: `opencut/core/multicam.py`, `opencut/routes/video_core.py` (`/video/multicam-cuts`, `/video/multicam-xml`), multicam settings in `~/.opencut/multicam_config.json` wrappers, both panels' multicam surfaces, `tests/test_new_modules.py`
-  Acceptance: Cut generation accepts wide-shot cadence (a wide angle every N cuts or T seconds), a cut-on-interruption toggle, and per-speaker track weighting, with current defaults unchanged; a fixture proves cuts generate from a single mixed-audio track and the README/docs state it; grammar settings flow through both the cut list and the multicam XML export.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 — F350 — Rename the co-named per-panel assets so one filename means one file

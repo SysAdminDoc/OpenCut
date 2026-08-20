@@ -5,6 +5,19 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Multicam cutting grammar
+
+- Multicam switching exposed a single minimum-duration knob, which cannot
+  express the things editors actually distrust about automated multicam: it cut
+  only between talking heads and switched to every interruption. Cut generation
+  now takes a wide-shot cadence (by cut count, elapsed time, or both), a
+  cut-on-interruption toggle for overlapping speech, and per-speaker minimum
+  durations. An inserted wide takes its time from the shot it splits so the
+  timeline stays contiguous, and a shot too short to survive being split is
+  left alone. Every option is off by default. The README now states that
+  switching works from a single mixed audio track, which is the thing the
+  paid Premiere alternatives require isolated per-speaker microphones for.
+
 ### Added - Silence work can be scoped to in/out points, or tighten instead of cut
 
 - Silence detection took no time range, so it always spanned the whole file and
