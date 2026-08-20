@@ -12,14 +12,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P2
 
-- [ ] P2 — F357 — Clear or justify the seven npm advisories failing the release gate
-  Why: `npm-advisory` fails the gate on seven unwaived high advisories in the panel's dev toolchain, so the release cannot proceed. The checker deliberately refuses to pass them silently and asks for a recorded justification per entry, which is a judgement about accepted risk rather than something to rubber-stamp.
-  Evidence: `python scripts/release_smoke.py --only npm-advisory --json` lists `js-yaml` (GHSA-5p4m-2wfm-xmqj), `nanoid` (GHSA-2v37-7h3g-55p8), `brace-expansion` (GHSA-rgw5-rvv9-x895), plus `eslint`, `@eslint/config-array`, `@eslint/eslintrc` and `minimatch` with no GHSA id reported
-  Touches: `extension/com.opencut.panel/package.json`, `extension/com.opencut.panel/package-lock.json`, `extension/com.opencut.panel/scripts/check-advisories.mjs`, `docs/NODE_ADVISORIES.md`
-  Acceptance: Each advisory is either resolved by upgrading the dependency or recorded in the `ALLOWED` list with a written reason and a review date; `npm-advisory` passes. Prefer upgrading — these are dev dependencies, so the blast radius of a bump is the build, not the shipped panel.
-  Note: the four entries reporting no GHSA id come through a transitive path; resolve where they enter rather than waiving a bare package name, or the waiver will silently cover a future unrelated advisory in the same package.
-  Complexity: M
-
 - [ ] P2 — F358 — Diagnose the panel-rendered failure blocking the release gate
   Why: `panel-rendered` is the fourth step failing the release gate and the only one not yet characterised. The Playwright goldens have drifted 2 to 3 percent on this machine before without any CSS change, so this may be environmental, but it has not been confirmed and a release cannot be cut until it is one or the other.
   Evidence: `python scripts/release_gate.py verify` reports `release smoke failed: media-conformance, pip-audit, panel-rendered, npm-advisory`; media-conformance is fixed, the other two are F356 and F357
