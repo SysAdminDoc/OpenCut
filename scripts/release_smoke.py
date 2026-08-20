@@ -40,6 +40,7 @@ environment before `pip install -e .` has happened.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -1869,7 +1870,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"{step.name:<14} {step.description}")
         return 0
 
-    results = run_release_smoke(args, only=args.only or None, skip=args.skip or None)
+    # Several steps import opencut in-process, and importing the package prints
+    # its FFmpeg banner and temp-sweep notice. Under --json that lands on stdout
+    # ahead of the payload and makes the output unparseable, which is why
+    # release_gate.py could never read a receipt out of it. Send anything a step
+    # writes to stderr so stdout carries the JSON document and nothing else.
+    if args.json:
+        with contextlib.redirect_stdout(sys.stderr):
+            results = run_release_smoke(args, only=args.only or None, skip=args.skip or None)
+    else:
+        results = run_release_smoke(args, only=args.only or None, skip=args.skip or None)
     strict = getattr(args, "strict", False)
     status = overall_status(results, strict=strict)
     skipped_critical = skipped_critical_steps(results)

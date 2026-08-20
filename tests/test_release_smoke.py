@@ -450,3 +450,53 @@ def test_main_returns_nonzero_when_any_step_fails(monkeypatch):
     rc = module.main([])
 
     assert rc == 1
+
+
+def test_step_stdout_never_contaminates_the_json_document(monkeypatch, capsys):
+    """The release gate parses this stdout, so nothing else may land on it.
+
+    Several steps import opencut in-process, and importing the package prints
+    an FFmpeg banner and a temp-sweep notice. That went to stdout ahead of the
+    payload, so `release_gate.py verify` failed with "release smoke did not
+    emit valid JSON" and could never write a receipt.
+    """
+    module = load_module()
+
+    def _chatty_step(_args):
+        print(r"Bundled FFmpeg: C:\repos\OpenCut\ffmpeg")
+        print("temp_cleanup: removed 8 files / 40 dirs / 0.7 MB")
+        return module.StepResult("noop", "ok", message="trivial pass")
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [module.StepDefinition("noop", _chatty_step)],
+    )
+
+    rc = module.main(["--json"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert rc == 0
+    assert payload["steps"][0]["name"] == "noop"
+    # The step's chatter is not discarded, just moved off the parsed channel.
+    assert "Bundled FFmpeg" in captured.err
+
+
+def test_human_output_still_shows_step_chatter(monkeypatch, capsys):
+    """Only --json redirects; an operator reading the run keeps seeing output."""
+    module = load_module()
+
+    def _chatty_step(_args):
+        print("Bundled FFmpeg: somewhere")
+        return module.StepResult("noop", "ok", message="trivial pass")
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [module.StepDefinition("noop", _chatty_step)],
+    )
+
+    module.main([])
+
+    assert "Bundled FFmpeg" in capsys.readouterr().out
