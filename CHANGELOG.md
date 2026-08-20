@@ -5,6 +5,14 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Changed - Licence metadata follows the current packaging standard
+
+- The project declared its MIT licence in the form Python packaging deprecated,
+  alongside a classifier saying the same thing a second time. Both are now a
+  single SPDX expression with the licence file named explicitly, so tools that
+  read the package get one unambiguous answer instead of two partial ones.
+
+
 ### Added - Check what you downloaded
 
 - OpenCut is not code-signed, so Windows shows a warning on every install and

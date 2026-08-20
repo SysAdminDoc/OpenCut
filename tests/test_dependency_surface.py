@@ -368,3 +368,64 @@ def test_install_script_returns_nonzero_when_critical_verification_fails(monkeyp
     monkeypatch.setattr(module, "verify", lambda: False)
 
     assert module.main() == 1
+
+
+# ---------------------------------------------------------------------------
+# F317 — PEP 639 licence metadata
+# ---------------------------------------------------------------------------
+
+
+def test_licence_is_an_spdx_expression_not_the_deprecated_table():
+    project = _pyproject()["project"]
+
+    assert project["license"] == "MIT", (
+        "PEP 639 replaced the {text = ...} table with a plain SPDX expression"
+    )
+    assert project["license-files"] == ["LICENSE"]
+
+
+def test_the_deprecated_licence_classifier_is_gone():
+    """setuptools rejects declaring both an SPDX expression and the classifier."""
+    classifiers = _pyproject()["project"]["classifiers"]
+
+    assert not [value for value in classifiers if value.startswith("License ::")], classifiers
+
+
+def test_build_backend_floor_supports_pep_639():
+    requires = _pyproject()["build-system"]["requires"]
+    setuptools_pin = next(value for value in requires if value.startswith("setuptools"))
+    floor = re.search(r">=(\d+)", setuptools_pin)
+
+    assert floor is not None and int(floor.group(1)) >= 77, (
+        "SPDX license expressions need setuptools 77.0+; an older floor builds "
+        f"metadata that silently drops the licence. Got {setuptools_pin}"
+    )
+
+
+def test_built_metadata_carries_the_licence_expression(tmp_path):
+    """The declaration only matters if it survives into the wheel metadata."""
+    import email
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable, "-c",
+            "from setuptools.build_meta import prepare_metadata_for_build_wheel as p;"
+            "import sys; print(p(sys.argv[1]))",
+            str(tmp_path),
+        ],
+        capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=300,
+    )
+    if result.returncode != 0:
+        pytest.skip(f"metadata build unavailable: {result.stderr[-200:]}")
+
+    dist_info = result.stdout.strip().splitlines()[-1]
+    metadata = email.message_from_string(
+        (tmp_path / dist_info / "METADATA").read_text(encoding="utf-8")
+    )
+
+    assert metadata.get("License-Expression") == "MIT"
+    assert metadata.get_all("License-File") == ["LICENSE"]
+    # The legacy free-text header must not also be emitted.
+    assert metadata.get("License") is None
