@@ -252,12 +252,12 @@ def test_optional_dependency_security_floor_pins():
     torch_stack = _dep_names(extras["torch-stack"])
     assert torch_stack["torch"] == "torch>=2.10.0"
     assert torch_stack["torchvision"] == "torchvision>=0.25.0"
-    assert torch_stack["transformers"] == "transformers>=5.3"
+    assert torch_stack["transformers"] == "transformers>=5.10"
 
     depth = _dep_names(extras["depth"])
     assert depth["torch"] == "torch>=2.10.0"
     assert depth["torchvision"] == "torchvision>=0.25.0"
-    assert depth["transformers"] == "transformers>=5.3"
+    assert depth["transformers"] == "transformers>=5.10"
 
     # picklescan supply-chain scanner must ship in every pickle-weight lane.
     for extra in ("ai", "ai-gpu", "depth", "torch-stack"):
@@ -278,8 +278,8 @@ def test_transformers_security_floor_covers_every_declared_extra():
         for extra, requirements in extras.items()
     }
 
-    assert transformers_specs["torch-stack"] == "transformers>=5.3"
-    assert transformers_specs["depth"] == "transformers>=5.3"
+    assert transformers_specs["torch-stack"] == "transformers>=5.10"
+    assert transformers_specs["depth"] == "transformers>=5.10"
     assert {
         extra: spec
         for extra, spec in transformers_specs.items()
