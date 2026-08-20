@@ -67,12 +67,15 @@ def test_the_gate_covers_every_duplicated_panel_asset():
         # Co-named but genuinely separate implementations — CEP and UXP have
         # different hosts, cascade roots, and transport constraints, so these
         # were never copies and must not be gated as such. The shared name is a
-        # readability hazard rather than drift; renaming them per panel is
-        # tracked on the roadmap.
+        # readability hazard rather than drift.
+        #
+        # The three command-center stylesheets carried the same name at the same
+        # cascade position while being different files, which is how an edit
+        # lands in the wrong panel. The UXP copies are now uxp-prefixed, matching
+        # every other file in that directory, so the collision is gone. The same
+        # rename for backend-client.js waits on the route manifest, whose
+        # surface evidence cites the path.
         "backend-client.js",
-        "command-center.css",
-        "command-center-layout.css",
-        "command-center-tokens.css",
     }
     unguarded = sorted(duplicated - set(SHARED_ASSETS) - panel_specific)
 

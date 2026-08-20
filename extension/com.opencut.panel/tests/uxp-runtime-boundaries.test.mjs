@@ -834,16 +834,16 @@ describe("UXP source ownership", () => {
   it("keeps token and workspace layout rules outside component CSS", () => {
     const root = "../../com.opencut.uxp/";
     const index = readFileSync(new URL(`${root}index.html`, import.meta.url), "utf8");
-    const tokens = readFileSync(new URL(`${root}command-center-tokens.css`, import.meta.url), "utf8");
-    const layout = readFileSync(new URL(`${root}command-center-layout.css`, import.meta.url), "utf8");
-    const components = readFileSync(new URL(`${root}command-center.css`, import.meta.url), "utf8");
+    const tokens = readFileSync(new URL(`${root}uxp-command-center-tokens.css`, import.meta.url), "utf8");
+    const layout = readFileSync(new URL(`${root}uxp-command-center-layout.css`, import.meta.url), "utf8");
+    const components = readFileSync(new URL(`${root}uxp-command-center.css`, import.meta.url), "utf8");
     expect(tokens).toContain(":root,");
     expect(tokens).toContain("html.theme-darkest");
     expect(tokens).toContain("html.theme-dark");
     expect(tokens).toContain("html.theme-light");
     expect(layout).toContain(".oc-header {");
     expect(components).not.toContain(":root {");
-    expect(index.indexOf("command-center-tokens.css")).toBeLessThan(index.indexOf("command-center-layout.css"));
-    expect(index.indexOf("command-center-layout.css")).toBeLessThan(index.indexOf("command-center.css"));
+    expect(index.indexOf("uxp-command-center-tokens.css")).toBeLessThan(index.indexOf("uxp-command-center-layout.css"));
+    expect(index.indexOf("uxp-command-center-layout.css")).toBeLessThan(index.indexOf("uxp-command-center.css"));
   });
 });
