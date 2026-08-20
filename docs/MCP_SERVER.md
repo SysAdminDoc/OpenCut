@@ -282,3 +282,63 @@ tracked as the only remaining external action for F147.
 - `tests/test_mcp_registry_manifest.py` — committed-vs-live guard.
 - `tests/test_mcp_extended_tools.py` — generated extended-catalogue
   guard and opt-in dispatch coverage.
+
+## Agent skill
+
+<!-- agent-skill:start -->
+
+Generated from `opencut/_generated/mcp_server_registry.json` (88 tools). Regenerate with `python -m opencut.tools.dump_mcp_agent_skill`.
+
+### Conventions
+
+**A tool may hand back a job instead of a result**
+
+Every tool returns either a synchronous `result` object or a `job_id`. Poll `opencut_job_status` until the job reports `complete`, `error`, `interrupted`, or `cancelled`. Clients that declare the `io.modelcontextprotocol/tasks` extension get a task handle instead and should use `tasks/get`.
+
+Ignoring it: Treating the job acknowledgement as the finished result reports success for work that has not run yet, and the output file will not exist.
+
+**Propose edits, then apply them**
+
+Detection tools return ranges; they do not touch the timeline. Build a `opencut_review_bundle`, let a human accept or reject, and apply the outcome with `opencut_review_action`. Cut application offers a non-destructive mode that disables clips rather than deleting them.
+
+Ignoring it: Applying detected ranges straight to a sequence deletes a user's media on the strength of a heuristic, which is the failure editors distrust these tools for.
+
+**The catalogue is curated on purpose**
+
+Install, settings, and housekeeping routes are deliberately absent so an MCP client cannot reconfigure the backend. The route-shaped extended catalogue is off unless `OPENCUT_MCP_EXTENDED_TOOLS=1` is set.
+
+Ignoring it: Reaching for a missing capability through the REST surface bypasses the boundary that keeps an agent from changing the user's install.
+
+**Everything runs locally against real paths**
+
+Tools take filesystem paths on the machine running the backend and write output beside the input unless told otherwise. There is no upload step and no cloud key. Confirm a path exists before starting long work.
+
+Ignoring it: A path that only exists on the client produces a job that fails minutes in, after the user has waited for it.
+
+### Transcribe, review the cuts, export
+
+1. `opencut_transcribe` — Returns a job. Poll opencut_job_status for the transcript.
+2. `opencut_silence_remove` — Detects removable ranges. Nothing is applied yet.
+3. `opencut_review_bundle` — Packages the proposed ranges for a human decision.
+4. `opencut_review_action` — Applies the accepted ranges, or disables rather than deletes.
+5. `opencut_export_video` — Renders the result. Returns a job; poll it to completion.
+
+### Tool families
+
+**Cut and clean** (9): `opencut_auto_zoom`, `opencut_filler_remove`, `opencut_repeat_detect`, `opencut_scene_detect`, `opencut_silence_remove`, `opencut_speed_change`, `opencut_speed_ramp`, `opencut_timeline_beat_cut`, `opencut_trim_video`
+
+**Captions and transcript** (10): `opencut_adr_list`, `opencut_caption_animated`, `opencut_caption_burnin`, `opencut_caption_karaoke`, `opencut_caption_qc`, `opencut_caption_srt_import`, `opencut_caption_styled`, `opencut_caption_translate`, `opencut_chapters`, `opencut_transcribe`
+
+**Audio** (15): `opencut_audio_duck`, `opencut_audio_effects`, `opencut_audio_enhance`, `opencut_audio_isolate`, `opencut_audio_normalize`, `opencut_beat_markers`, `opencut_denoise_audio`, `opencut_denoise_video`, `opencut_elevenlabs_tts`, `opencut_generate_music`, `opencut_loudness_match`, `opencut_music_cue_sheet`, `opencut_separate_audio`, `opencut_spectral_match`, `opencut_tts`
+
+**Video and render** (27): `opencut_batch_export`, `opencut_blend_videos`, `opencut_chromakey`, `opencut_color_match`, `opencut_concat_videos`, `opencut_depth_map`, `opencut_dub_video`, `opencut_export_video`, `opencut_highlights`, `opencut_interpolate`, `opencut_letterbox`, `opencut_lut_apply`, `opencut_lut_generate`, `opencut_merge_videos`, `opencut_multicam_cuts`, `opencut_preview_frame`, `opencut_reframe_video`, `opencut_shorts_pipeline`, `opencut_smart_upscale`, `opencut_social_upload`, `opencut_sports_highlights`, `opencut_stabilize_video`, `opencut_style_transfer`, `opencut_transitions`, `opencut_upscale`, `opencut_vfx_sheet`, `opencut_video_fx`
+
+**Face and retouch** (4): `opencut_face_enhance`, `opencut_face_reshape`, `opencut_lipsync_echomimic`, `opencut_skin_retouch`
+
+**Footage and ingest** (5): `opencut_footage_search`, `opencut_index_footage`, `opencut_ingest_url`, `opencut_timeline_batch_rename`, `opencut_timeline_smart_bins`
+
+**Review and provenance** (5): `opencut_brand_kit`, `opencut_c2pa_provenance`, `opencut_marker_import`, `opencut_review_action`, `opencut_review_bundle`
+
+**Capability and jobs** (13): `opencut_capability_probe`, `opencut_chat_edit`, `opencut_dependencies`, `opencut_feature_state`, `opencut_federated_search`, `opencut_gpu_status`, `opencut_job_status`, `opencut_nlp_command`, `opencut_pip`, `opencut_semantic_search`, `opencut_system_info`, `opencut_workflow_presets`, `opencut_workflow_run`
+
+<!-- agent-skill:end -->
