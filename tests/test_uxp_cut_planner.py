@@ -24,6 +24,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 UXP_DIR = REPO_ROOT / "extension" / "com.opencut.uxp"
 PLANNER = UXP_DIR / "uxp-cut-planner.js"
 MAIN_JS = UXP_DIR / "main.js"
+# The cut path is budgeted out of the entrypoint and shares the planner
+# module: the route manifest globs this directory, so a new file there
+# cannot be committed while the manifest generator is mid-refactor.
+CUT_EXECUTOR = PLANNER
 
 
 @pytest.fixture(scope="module")
@@ -329,10 +333,18 @@ class TestCutPathWiring:
     """The typed action has to be reached the way Premiere requires."""
 
     def _source(self) -> str:
-        return MAIN_JS.read_text(encoding="utf-8", errors="replace")
+        return CUT_EXECUTOR.read_text(encoding="utf-8", errors="replace")
 
-    def test_main_imports_the_planner(self):
-        assert 'from "./uxp-cut-planner.js"' in self._source()
+    def test_the_executor_sits_beside_the_planner_it_applies(self):
+        source = self._source()
+        assert "export function planCutRemoval(" in source
+        assert "export function createCutExecutor(" in source
+
+    def test_the_entrypoint_delegates_to_the_executor(self):
+        """main.js is budgeted; the cut path has a single separable owner."""
+        main = MAIN_JS.read_text(encoding="utf-8", errors="replace")
+        assert 'import { createCutExecutor } from "./uxp-cut-planner.js";' in main
+        assert "CutExecutor.applyCuts(cuts, mode)" in main
 
     def test_cut_path_uses_the_typed_editor_action(self):
         source = self._source()
@@ -408,7 +420,7 @@ class TestCutPathWiring:
         source = self._source()
         start = source.index("async function _rippleDeleteFallback")
         body = source[start:start + 600]
-        assert "_secondsToTicks(cut.start)" in body
+        assert "secondsToTicks(cut.start)" in body
         assert "254016000000" not in body
 
 
@@ -416,7 +428,7 @@ class TestNonDestructiveCutMode:
     """F339 — reviewed cuts must have a reversible outcome."""
 
     def _source(self) -> str:
-        return MAIN_JS.read_text(encoding="utf-8", errors="replace")
+        return CUT_EXECUTOR.read_text(encoding="utf-8", errors="replace")
 
     def test_apply_cuts_accepts_a_mode(self):
         source = self._source()
@@ -447,7 +459,7 @@ class TestNonDestructiveCutMode:
         assert "if (!plan.removable) return { method: \"skipped\", note: plan.reason };" in body
 
     def test_mode_reaches_the_host_dispatch(self):
-        source = self._source()
+        source = MAIN_JS.read_text(encoding="utf-8", errors="replace")
         start = source.index('case "ocApplySequenceCuts"')
         assert "mode" in source[start:start + 200]
 

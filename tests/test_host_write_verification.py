@@ -13,6 +13,9 @@ CEP_VERIFICATION = (
     / "host-write-verification.js"
 )
 UXP_MAIN = ROOT / "extension" / "com.opencut.uxp" / "main.js"
+# The cut path is budgeted out of main.js and lives with its planner, but it is
+# the same bridge: a mutation must carry read-back evidence wherever it lives.
+UXP_CUT_EXECUTOR = ROOT / "extension" / "com.opencut.uxp" / "uxp-cut-planner.js"
 UXP_VERIFICATION = ROOT / "extension" / "com.opencut.uxp" / "uxp-host-write-verification.js"
 UXP_SETTINGS = ROOT / "extension" / "com.opencut.uxp" / "uxp-settings-controller.js"
 BOLT_API = (
@@ -75,7 +78,11 @@ def test_legacy_cep_imports_are_verified_in_the_host_bridge():
 
 
 def test_uxp_mutations_use_independent_read_back_helpers():
-    source = UXP_MAIN.read_text(encoding="utf-8")
+    source = (
+        UXP_MAIN.read_text(encoding="utf-8")
+        + "\n"
+        + UXP_CUT_EXECUTOR.read_text(encoding="utf-8")
+    )
     verifier = UXP_VERIFICATION.read_text(encoding="utf-8")
     for action in (
         "addMarkers",
