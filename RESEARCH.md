@@ -1,10 +1,10 @@
 # Research — OpenCut
 
-Date: 2026-08-20 — replaces all prior research (previous pass: 2026-08-11, v1.48.0).
+Date: 2026-08-20, replaces all prior research (previous pass: 2026-08-11, v1.48.0).
 
 ## Executive Summary
 
-OpenCut v1.48.0 is a local-first Premiere Pro automation backend: a loopback Flask service (1,593 routes,
+OpenCut v1.49.0 is a local-first Premiere Pro automation backend: a loopback Flask service (1,593 routes,
 1,564 shipped, 107 blueprints), a 19-command CLI, a 98-tool MCP server, CEP + UXP panels, a durable job
 engine, SQLite/FTS5 + federated media index, FFmpeg 8.x pipelines, optional local AI adapters, and
 OTIO/AAF/MLT interchange. Since the 2026-08-11 pass, F319 (host-write read-back verification), F320
@@ -105,8 +105,8 @@ Python 3.11–3.14. Windows: PyInstaller + WPF installer + Inno Setup, bundled p
 AppImage/Flatpak metadata. macOS: source lane. Premiere integration is CEP (primary — shipped by every
 installer; Adobe removal ~2026-11, with conflicting 2026 field reports of earlier breakage on Premiere
 2026 — Needs live validation) plus UXP (strategic, PPRO minVersion 25.6). Newest published artifact is
-v1.25.1 (2026-04-20) against a 1.48.0 tree; that gap gates every downstream channel and every marketing
-wedge this pass found.
+v1.49.0 (2026-08-20) now matches the source tree and carries the release composition and FFmpeg provenance
+evidence.
 
 ### Key integrations and data flows
 Panels/CLI/MCP submit validated commands to Flask routes; long work runs on bounded workers that persist
@@ -232,10 +232,8 @@ full editor; OpenCut's equivalent surfaces exist. Nothing new to build here.
 ### New findings this pass
 - **The only open external bug is a first-contact failure — Verified.** Issue #5 (2026-08-10), "Invalid
   or missing CSRF Token", blocks a real user at the panel's first mutation. The Unreleased CHANGELOG
-  records CSRF-bootstrap work, but nothing ties it to the reported scenario, no regression test names it,
-  and the README troubleshooting section does not mention the error string. Queued as F338. The deeper
-  problem: the fix helps nobody until a release ships (blocked item), because the reporter is necessarily
-  on v1.25.1 or a source checkout.
+  records CSRF-bootstrap work and the v1.49.0 release contains the fix. The reporter's installed version
+  still needs confirmation.
 - **Conflicting evidence on CEP loading in Premiere 2026 — Needs live validation.** Hyper Brew
   (2026-03-31) states CEP panels are no longer natively loaded in Premiere 2026 with no documented
   re-enable flag; auto-subs #571 reports the same from the field. Adobe's PProPanel ReadMe (Nov 2025)
@@ -299,9 +297,9 @@ of the gate.
    and F354 gives the ten largest integration-only families named CLI, palette, and curated MCP entry points.
 4. **Interchange seam.** OTIO `>=0.17,<1` still admits the 0.19 C++ bundle rewrite unpinned (F331,
    unchanged; 0.18.1 remains newest, still prerelease-flagged, 9+ months quiet).
-5. **Delivery seam — still the worst.** v1.25.1 (2026-04-20) vs 1.48.0 source. Every marketing wedge this
-   pass surfaced (CapCut price cliff, Play.ht shutdown, Descript refugees, plugin-roundup absence) is
-   unusable until this closes, and the CSRF fix for issue #5 is invisible to its own reporter.
+5. **Delivery seam was the worst.** The v1.49.0 installer now matches the source tree, so the stale-release
+   gap is closed. The remaining work is to put that release in front of users and confirm the CSRF fix with
+   the reporter.
 
 ### Refactor candidates
 - `core/silence.py` export path: no boundary fades (F335); range scoping and tighten mode already queued
