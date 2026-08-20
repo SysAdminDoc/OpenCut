@@ -1033,6 +1033,24 @@ const PProBridge = (() => {
     );
   }
 
+  const {
+    attach: _attachHostWriteVerification,
+    ensure: _ensureHostWriteVerification,
+    fingerprintAddedCount: _fingerprintAddedCount,
+    fingerprintDeltaCount: _fingerprintDeltaCount,
+    projectSequenceSnapshot: _projectSequenceSnapshot,
+    projectTreeSnapshot: _projectTreeSnapshot,
+    sequenceTrackSnapshot: _sequenceTrackSnapshot,
+    verificationStatus: _verificationStatus,
+    verifySubsequenceCreation: _verifySubsequenceCreation,
+  } = createHostWriteVerifier({
+    getPPro: () => ppro,
+    trackListEntries: _trackListEntries,
+    trackItems: _trackItems,
+    itemField: _captionItemField,
+    timeValueToSeconds: _timeValueToSeconds,
+  });
+
   // The cut path is its own owner in ./uxp-cut-planner.js; everything it needs
   // from this bridge is handed over explicitly.
   const CutExecutor = createCutExecutor({
@@ -1244,24 +1262,6 @@ const PProBridge = (() => {
       return { ok: false, reason: e.message };
     }
   }
-
-  const {
-    attach: _attachHostWriteVerification,
-    ensure: _ensureHostWriteVerification,
-    fingerprintAddedCount: _fingerprintAddedCount,
-    fingerprintDeltaCount: _fingerprintDeltaCount,
-    projectSequenceSnapshot: _projectSequenceSnapshot,
-    projectTreeSnapshot: _projectTreeSnapshot,
-    sequenceTrackSnapshot: _sequenceTrackSnapshot,
-    verificationStatus: _verificationStatus,
-    verifySubsequenceCreation: _verifySubsequenceCreation,
-  } = createHostWriteVerifier({
-    getPPro: () => ppro,
-    trackListEntries: _trackListEntries,
-    trackItems: _trackItems,
-    itemField: _captionItemField,
-    timeValueToSeconds: _timeValueToSeconds,
-  });
 
   /**
    * Import a generated FCP 7 XML timeline into the project.

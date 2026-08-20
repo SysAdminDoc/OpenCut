@@ -12,14 +12,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P2
 
-- [ ] P2 — F358 — Diagnose the panel-rendered failure blocking the release gate
-  Why: `panel-rendered` is the fourth step failing the release gate and the only one not yet characterised. The Playwright goldens have drifted 2 to 3 percent on this machine before without any CSS change, so this may be environmental, but it has not been confirmed and a release cannot be cut until it is one or the other.
-  Evidence: `python scripts/release_gate.py verify` reports `release smoke failed: media-conformance, pip-audit, panel-rendered, npm-advisory`; media-conformance is fixed, the other two are F356 and F357
-  Touches: `extension/com.opencut.panel/tests/rendered/`, `extension/com.opencut.panel/playwright.config.mjs`
-  Acceptance: The failure is identified as either a real regression, which is fixed, or as environment-driven rendering drift, which is recorded with the measured delta and handled so the gate stops failing on it. Do not update goldens to hide a real change — inspect the expected/actual/diff artifacts first.
-  Note: the suite needs more than three minutes for its 63 single-worker cases, so budget for that.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 — F354 — Give the largest integration-only route families a surface or a deprecation date
