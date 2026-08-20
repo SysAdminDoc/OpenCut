@@ -227,6 +227,10 @@ installs Python from the universal `requirements-release-lock.txt` with
 and generates the same resolved SBOM, notices, and composition manifest as the
 desktop release lanes.
 
+The release lane also carries a generated PEP 751 `pylock.toml`. Release smoke
+parses that file without contacting a package index and checks its package
+versions and artifact hashes against the universal release lock.
+
 **Option E -- Linux desktop package:**
 
 The repository includes Flatpak and AppImage packaging for local release builds,

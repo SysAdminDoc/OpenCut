@@ -279,7 +279,10 @@ gate give this repo unusually honest self-reporting for 575K lines. The June 202
 the capability inventory is effectively complete against the commercial field; `smart_render.py`,
 `morph_cut.py`, `paper_edit.py`, `script_to_roughcut.py`, `broll_suggest.py`, `virality_score.py`,
 `review_bundle.py`, and the dubbing/ASR adapter fleet mean most of what competitors paywall is already
-built. The deficit is reach: surfaces, releases, and proof.
+built. The deficit is reach: surfaces, releases, and proof. F352 now adds a
+generated PEP 751 lock for the release lane and verifies it offline against the
+existing hashed inputs, so lock generation does not become a network dependency
+of the gate.
 
 ### Main seams
 1. **Host-truth seam — instrumented, not yet answered.** F319 shipped read-back verification contracts
