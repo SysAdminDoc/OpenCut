@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11--3.14-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1563-orange)
-![Tests](https://img.shields.io/badge/Tests-14100+-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-14200+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json` and
 > reflects **shipped** routes only — each route is tagged
@@ -298,7 +298,7 @@ Premiere 26.x now ships Object Mask, Generative Extend, Media Intelligence searc
 | Cross-NLE export | OTIO clips, markers, and supported transitions to compatible adapters, plus MLT projects for Kdenlive and Shotcut | No bundled cross-NLE handoff; OpenCut adds interchange artifacts |
 | Repeated take detection | Jaccard-overlap transcript similarity with reviewable proposals | OpenCut adds a dedicated repeated-take pass |
 | Bulk transcript correction | Preview and apply literal find/replace edits with undo and a persisted per-project glossary | OpenCut adds transcript-wide correction controls |
-| Cut review panel | Human-in-loop approve/reject before applying or exporting ranges | Native editing controls; OpenCut adds a dedicated proposal/review pass |
+| Cut review panel | Human-in-loop approve/reject before applying or exporting ranges, applied destructively or as disabled clips | Native editing controls; OpenCut adds a dedicated proposal/review pass and a non-destructive apply |
 | Loudness and profanity reports | Explicit LUFS targets, batch measurement, and auditable bleep/mute ranges | Auto-Match Loudness and bulk bleep/mute; OpenCut adds reports and headless access |
 
 **No usage caps.** Unlike CapCut Pro ($240/yr, metered), Descript ($288-600/yr, credit burn), and Submagic ($468/yr, 40 videos/mo), OpenCut processes unlimited content for $0.
@@ -322,7 +322,7 @@ OpenCut v1.48.0 includes **1,563 shipped API routes** (implemented or dependency
 | Full Pipeline | One reviewable local pass for silence/filler ranges, captions, and zoom | Multi-stage |
 | Repeated Take Detection | Detect when speakers restart a sentence using transcript similarity (Jaccard overlap) | WhisperX |
 | Auto-Edit | Motion-based and audio-based automated rough cuts | auto-editor |
-| Cut Review Panel | Review and approve/reject individual cuts before applying to timeline | Built-in |
+| Cut Review Panel | Review and approve/reject individual cuts before applying to timeline, as a delete or a reversible disable | Built-in |
 
 Splicing two non-adjacent pieces of audio together can leave a click at the
 join. When OpenCut renders cut media itself it applies a short fade (5 ms by
@@ -444,7 +444,7 @@ without returning transcript text.
 
 | Feature | Description |
 |---------|-------------|
-| Apply Cuts to Timeline | Remove silences, repeated takes, or custom ranges directly in the active sequence |
+| Apply Cuts to Timeline | Remove silences, repeated takes, or custom ranges directly in the active sequence, or apply them as disabled clips so nothing is deleted |
 | Beat Markers | Add detected beats as Premiere Pro sequence markers |
 | Multicam Auto-Switch | Speaker diarization to multicam cut list, applied directly to sequence. Works from a single mixed audio track, so it does not need one isolated microphone per speaker. Cutting grammar controls: wide-shot cadence by cut count or elapsed time, cut-on-interruption toggle, and per-speaker minimum durations |
 | Clip Keyframes | Write scale/position keyframes for auto-zoom effects |
@@ -919,7 +919,7 @@ Missing, stale, skipped, failed, wrong-branch, source-drifted, or
 artifact-unsmoked evidence refuses the action. The driver never signs
 artifacts or pushes tags.
 
-14,100+ estimated tests across 354 root test files covering route smoke tests,
+14,200+ estimated tests across 355 root test files covering route smoke tests,
 core module unit tests, feature integration tests, plugin tests, and the
 ExtendScript mock harness.
 
@@ -988,7 +988,7 @@ extension/
     main.js          # UXP panel (~10,186 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (14,100+ estimated tests, 354 root test files)
+tests/               # pytest test suite (14,200+ estimated tests, 355 root test files)
 RESEARCH.md          # Current consolidated research conclusions
 ROADMAP.md           # Active open-work tracker
 docs/
