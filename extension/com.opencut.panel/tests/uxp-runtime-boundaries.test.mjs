@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createBackendClient } from "../../com.opencut.uxp/backend-client.js";
+import { createBackendClient } from "../../com.opencut.uxp/uxp-backend-client.js";
 import { bootstrapApplication, runBootstrapSteps } from "../../com.opencut.uxp/uxp-bootstrap.js";
 import { escapeHtml, safeDomIdSegment, setButtonBusy } from "../../com.opencut.uxp/uxp-components.js";
 import { createI18nRuntime } from "../../com.opencut.uxp/uxp-i18n.js";

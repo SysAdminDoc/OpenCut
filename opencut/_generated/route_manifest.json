@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generated_at": "2026-08-20T06:47:21Z",
+  "generated_at": "2026-08-20T16:58:20Z",
   "total_routes": 1593,
   "shipped_route_count": 1563,
   "blueprint_count": 107,
@@ -13627,8 +13627,8 @@
       ],
       "surface_evidence": [
         "extension/com.opencut.panel/client/main.js",
-        "extension/com.opencut.uxp/backend-client.js",
         "extension/com.opencut.uxp/main.js",
+        "extension/com.opencut.uxp/uxp-backend-client.js",
         "opencut/mcp_server.py"
       ]
     },
@@ -27170,12 +27170,12 @@
     "sources": {
       "panel": [
         "extension/com.opencut.panel/client/main.js",
-        "extension/com.opencut.uxp/backend-client.js",
         "extension/com.opencut.uxp/csinterface-shim.js",
         "extension/com.opencut.uxp/job-controller.js",
         "extension/com.opencut.uxp/main.js",
         "extension/com.opencut.uxp/studio-workbench-v2.js",
         "extension/com.opencut.uxp/udt-smoke.js",
+        "extension/com.opencut.uxp/uxp-backend-client.js",
         "extension/com.opencut.uxp/uxp-bootstrap.js",
         "extension/com.opencut.uxp/uxp-components.js",
         "extension/com.opencut.uxp/uxp-cut-planner.js",
