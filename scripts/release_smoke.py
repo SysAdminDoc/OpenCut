@@ -52,6 +52,11 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+#: pytest's exit code for "no tests were collected". A gate step that collects
+#: nothing has not proved its subject, so it must not be read as a plain failure
+#: or, worse, as a pass.
+PYTEST_NO_TESTS_COLLECTED = 5
 PANEL_DIR = REPO_ROOT / "extension" / "com.opencut.panel"
 
 
@@ -1696,12 +1701,29 @@ def step_media_conformance(args: argparse.Namespace) -> StepResult:
 
     cmd = [
         sys.executable, "-m", "pytest", "-q", "--tb=short",
+        # Every test in the corpus is marked integration or slow, and the
+        # project's default addopts deselect exactly those. Without this the
+        # step collected nothing, exited 5, and reported the corpus as failing
+        # while having proved nothing about it. Keep --strict-markers.
+        "--override-ini=addopts=--strict-markers",
         "tests/test_media_conformance.py",
     ]
     if getattr(args, "pytest_extra", None):
         cmd.extend(args.pytest_extra)
     result = _run(cmd, cwd=REPO_ROOT)
     duration = int((time.time() - start) * 1000)
+    # pytest exits 5 when it collected nothing. That is not a conformance
+    # failure, it is the step failing to run, and it needs to say which.
+    if result.returncode == PYTEST_NO_TESTS_COLLECTED:
+        return StepResult(
+            "media-conformance",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message="media corpus collected no tests; the step proved nothing",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
     status = "ok" if result.returncode == 0 else "fail"
     return StepResult(
         "media-conformance",

@@ -500,3 +500,38 @@ def test_human_output_still_shows_step_chatter(monkeypatch, capsys):
     module.main([])
 
     assert "Bundled FFmpeg" in capsys.readouterr().out
+
+
+def test_media_conformance_runs_the_corpus_the_default_addopts_deselect():
+    """The corpus is entirely integration/slow marked, which addopts drops.
+
+    Without the override the step collected nothing, exited 5, and reported
+    "media corpus conformance failed" while having proved nothing about it.
+    """
+    source = (REPO_ROOT / "scripts" / "release_smoke.py").read_text(encoding="utf-8")
+    start = source.index("def step_media_conformance")
+    body = source[start:source.index("STEPS: List[StepDefinition]")]
+
+    assert "--override-ini=addopts=--strict-markers" in body
+    assert "tests/test_media_conformance.py" in body
+
+
+def test_a_step_that_collected_nothing_says_so(monkeypatch):
+    """Exit 5 is "no tests ran", which is a different problem from a failure."""
+    module = load_module()
+
+    class _Result:
+        returncode = module.PYTEST_NO_TESTS_COLLECTED
+        stdout = "48 deselected in 0.34s"
+        stderr = ""
+
+    monkeypatch.setattr(module, "_run", lambda *a, **k: _Result())
+    monkeypatch.setattr(
+        module.sys, "executable", module.sys.executable, raising=False
+    )
+
+    result = module.step_media_conformance(argparse.Namespace(pytest_extra=None))
+
+    assert result.status == "fail"
+    assert "collected no tests" in result.message
+    assert "proved nothing" in result.message
