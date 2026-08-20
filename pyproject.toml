@@ -261,7 +261,11 @@ Documentation = "https://github.com/SysAdminDoc/OpenCut/wiki"
 include = ["opencut*"]
 
 [tool.pytest.ini_options]
-addopts = '-m "not integration and not slow"'
+# --strict-markers so a mistyped marker fails loudly instead of silently
+# selecting nothing, and testpaths so a bare `pytest` collects the suite
+# rather than walking the whole tree.
+addopts = '-m "not integration and not slow" --strict-markers'
+testpaths = ["tests"]
 markers = [
     "integration: requires real FFmpeg processing",
     "slow: tests that take >30 seconds",
@@ -270,3 +274,15 @@ markers = [
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+
+# The rule selection lives here so an editor-integrated ruff applies the same
+# rules the release gate does. It used to be stated only in
+# .pre-commit-config.yaml and scripts/release_smoke.py, so an editor ran ruff's
+# default rule set and disagreed with the gate about what was clean.
+# E501 (line length) and E402 (import position) are excluded deliberately: the
+# codebase uses long evidence comments and delayed imports for optional deps.
+[tool.ruff.lint]
+# B018 came from the release gate, which selected a strictly larger set than
+# the pre-commit hook did; the union is the honest floor.
+select = ["E", "F", "I", "B018"]
+ignore = ["E501", "E402"]

@@ -1072,8 +1072,10 @@ def step_ruff(_args: argparse.Namespace) -> StepResult:
             skipped_reason="ruff not installed",
             duration_ms=int((time.time() - start) * 1000),
         )
+    # Rule selection comes from [tool.ruff.lint] in pyproject.toml so the gate,
+    # the pre-commit hook, and an editor cannot disagree about what is clean.
     result = _run(
-        ["ruff", "check", "opencut/", "--select", "E,F,I,B018", "--ignore", "E501,E402"],
+        ["ruff", "check", "opencut/"],
         cwd=REPO_ROOT,
     )
     duration = int((time.time() - start) * 1000)
