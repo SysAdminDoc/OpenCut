@@ -47,9 +47,9 @@
   },
   "routes": {
     "blueprints": 107,
-    "shipped": 1568,
+    "shipped": 1563,
     "source": "opencut/_generated/route_manifest.json",
-    "stubs": 25,
+    "stubs": 30,
     "total": 1593
   },
   "runtime": {

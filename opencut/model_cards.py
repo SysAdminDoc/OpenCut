@@ -619,8 +619,11 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/k2-fsa/OmniVoice",
         hardware="gpu",
-        install_hint="pip install omnivoice",
+        install_hint="Route is not implemented; no supported install command yet.",
         privacy="local-only",
+        advisory_notes=[
+            "Strategic route stub; installing upstream does not make this route available."
+        ],
     ),
     ModelCard(
         check_name="check_voice_grammar_available",
@@ -676,9 +679,11 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/OpenImagingLab/FlashVSR",
         hardware="gpu (>= 12 GB VRAM)",
-        install_hint="pip install flashvsr (placeholder; see docs/MODELS.md)",
+        install_hint="Route is not implemented; no supported install command yet.",
         privacy="local-only",
-        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
+        advisory_notes=[
+            "Strategic route stub; installing upstream does not make this route available."
+        ],
     ),
     ModelCard(
         check_name="check_rose_available",
@@ -688,9 +693,11 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://rose2025-inpaint.github.io/",
         hardware="gpu",
-        install_hint="pip install rose-inpaint (placeholder; see docs/MODELS.md)",
+        install_hint="Route is not implemented; no supported install command yet.",
         privacy="local-only",
-        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
+        advisory_notes=[
+            "Strategic route stub; installing upstream does not make this route available."
+        ],
     ),
     ModelCard(
         check_name="check_sammie_available",
@@ -700,9 +707,11 @@ CARDS: List[ModelCard] = [
         license="MIT",
         upstream="https://github.com/Zarxrax/Sammie-Roto-2",
         hardware="gpu",
-        install_hint="pip install sammie-roto (placeholder; see docs/MODELS.md)",
+        install_hint="Route is not implemented; no supported install command yet.",
         privacy="local-only",
-        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
+        advisory_notes=[
+            "Strategic route stub; installing upstream does not make this route available."
+        ],
     ),
     ModelCard(
         check_name="check_reezsynth_available",
@@ -712,9 +721,11 @@ CARDS: List[ModelCard] = [
         license="Apache-2.0",
         upstream="https://github.com/FuouM/ReEzSynth",
         hardware="gpu",
-        install_hint="pip install reezsynth (placeholder; see docs/MODELS.md)",
+        install_hint="Route is not implemented; no supported install command yet.",
         privacy="local-only",
-        advisory_notes=["Readiness placeholder; check returns False until the implementation lands."],
+        advisory_notes=[
+            "Strategic route stub; installing upstream does not make this route available."
+        ],
     ),
     ModelCard(
         check_name="check_vidmuse_available",

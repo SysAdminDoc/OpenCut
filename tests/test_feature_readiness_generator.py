@@ -89,6 +89,20 @@ def test_dependency_gated_routes_produce_non_available_features():
     assert len(non_available) > 0, "expected at least one non-available generated record"
 
 
+def test_unconditional_501_features_remain_stubs_despite_info_routes():
+    payload = dump_feature_readiness.build_manifest()
+    records = {record["feature_id"]: record for record in payload["records"]}
+
+    for feature_id in (
+        "video.upscale.flashvsr",
+        "video.inpaint.rose",
+        "video.matte.sammie",
+        "audio.omnivoice",
+        "video.style.reezsynth",
+    ):
+        assert records[feature_id]["state"] == "stub"
+
+
 def test_derive_feature_state_logic():
     from opencut.tools.dump_feature_readiness import _derive_feature_state
 

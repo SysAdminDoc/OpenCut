@@ -370,13 +370,13 @@
       "license": "Apache-2.0",
       "upstream": "https://github.com/OpenImagingLab/FlashVSR",
       "hardware": "gpu (>= 12 GB VRAM)",
-      "install_hint": "pip install flashvsr (placeholder; see docs/MODELS.md)",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Readiness placeholder; check returns False until the implementation lands."
+        "Strategic route stub; installing upstream does not make this route available."
       ],
       "license_waiver": ""
     },
@@ -681,12 +681,14 @@
       "license": "Apache-2.0",
       "upstream": "https://github.com/k2-fsa/OmniVoice",
       "hardware": "gpu",
-      "install_hint": "pip install omnivoice",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": [],
+      "advisory_notes": [
+        "Strategic route stub; installing upstream does not make this route available."
+      ],
       "license_waiver": ""
     },
     {
@@ -733,13 +735,13 @@
       "license": "Apache-2.0",
       "upstream": "https://github.com/FuouM/ReEzSynth",
       "hardware": "gpu",
-      "install_hint": "pip install reezsynth (placeholder; see docs/MODELS.md)",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Readiness placeholder; check returns False until the implementation lands."
+        "Strategic route stub; installing upstream does not make this route available."
       ],
       "license_waiver": ""
     },
@@ -783,13 +785,13 @@
       "license": "Apache-2.0",
       "upstream": "https://rose2025-inpaint.github.io/",
       "hardware": "gpu",
-      "install_hint": "pip install rose-inpaint (placeholder; see docs/MODELS.md)",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Readiness placeholder; check returns False until the implementation lands."
+        "Strategic route stub; installing upstream does not make this route available."
       ],
       "license_waiver": ""
     },
@@ -853,13 +855,13 @@
       "license": "MIT",
       "upstream": "https://github.com/Zarxrax/Sammie-Roto-2",
       "hardware": "gpu",
-      "install_hint": "pip install sammie-roto (placeholder; see docs/MODELS.md)",
+      "install_hint": "Route is not implemented; no supported install command yet.",
       "privacy": "local-only",
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
       "advisory_notes": [
-        "Readiness placeholder; check returns False until the implementation lands."
+        "Strategic route stub; installing upstream does not make this route available."
       ],
       "license_waiver": ""
     },
