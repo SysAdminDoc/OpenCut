@@ -473,6 +473,59 @@ def _register_builtin_engines(reg: EngineRegistry):
         speed_rating="slow",
         quality_rating="high",
     ))
+    # F316 — the route's default separator model was already mel_band_roformer
+    # but it had no registry entry, so it never appeared in engine listings.
+    reg.register(EngineInfo(
+        name="mel_band_roformer",
+        domain="stem_separation",
+        display_name="Mel-Band RoFormer",
+        description=(
+            "Mel-band Roformer separator; higher reported vocal/drum quality "
+            "than BS-RoFormer. Reached through the pinned audio-separator "
+            "package (MIT); model weights are downloaded on first use."
+        ),
+        check_fn=lambda: importlib.util.find_spec("audio_separator") is not None,
+        priority=85,
+        vram_mb=1500,
+        speed_rating="slow",
+        quality_rating="high",
+        tags=["roformer", "default"],
+    ))
+    # F342 — the same backend also carries restoration checkpoints. They are
+    # separation models (they split an input into wanted/unwanted), which is
+    # why they live in this domain rather than a new one.
+    reg.register(EngineInfo(
+        name="uvr_denoise",
+        domain="stem_separation",
+        display_name="UVR Denoise",
+        description=(
+            "UVR denoise checkpoint: splits recorded noise from the dry signal. "
+            "Local alternative to metered cloud speech cleanup. Reached through "
+            "audio-separator (MIT); weights download on first use."
+        ),
+        check_fn=lambda: importlib.util.find_spec("audio_separator") is not None,
+        priority=40,
+        vram_mb=1200,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["restoration", "denoise"],
+    ))
+    reg.register(EngineInfo(
+        name="uvr_deverb",
+        domain="stem_separation",
+        display_name="UVR De-reverb",
+        description=(
+            "UVR de-reverb checkpoint: separates room reverb from the direct "
+            "signal, for dialogue recorded in a live room. Reached through "
+            "audio-separator (MIT); weights download on first use."
+        ),
+        check_fn=lambda: importlib.util.find_spec("audio_separator") is not None,
+        priority=40,
+        vram_mb=1200,
+        speed_rating="medium",
+        quality_rating="high",
+        tags=["restoration", "dereverb"],
+    ))
 
     # --- Depth Estimation ---
     reg.register(EngineInfo(

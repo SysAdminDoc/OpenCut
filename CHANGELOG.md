@@ -5,6 +5,15 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - Restoration and Mel-Band separators in the engine registry
+
+- The separator registry listed music-stem models only, while the route's own
+  default model had no registry entry at all and never appeared in engine
+  listings. Mel-Band RoFormer is now registered as the default-priority
+  separator, and the pinned audio-separator package's denoise and de-reverb
+  checkpoints are selectable through the same `model` parameter, with their
+  own output stems. Both are the local answer to metered cloud speech cleanup.
+
 ### Fixed - Long-file transcripts flag repetition loops
 
 - Whisper-family decoders degrade on hour-plus audio by looping one phrase for
