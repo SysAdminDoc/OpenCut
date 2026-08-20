@@ -378,3 +378,57 @@ def test_silence_cli_exposes_otio_schema_preflight(tmp_path):
     assert "schema OTIO_CORE:0.14.0" in result.output
     assert "Preflight passed" in result.output
     assert not (tmp_path / "source_opencut.otio").exists()
+
+
+# ---------------------------------------------------------------------------
+# F331 — bundle contract
+# ---------------------------------------------------------------------------
+
+
+def test_capabilities_report_names_the_verified_range():
+    """"Installed" and "tested against" are different facts."""
+    from opencut.export.otio_compat import (
+        VERIFIED_OTIO_RANGE,
+        _within_verified_range,
+        get_otio_capabilities,
+    )
+
+    report = get_otio_capabilities()
+    assert report["verified_range"] == list(VERIFIED_OTIO_RANGE)
+    assert report["runtime_is_verified"] is _within_verified_range(
+        report["runtime_version"]
+    )
+
+
+def test_otioz_bundle_layout_and_media_policy(tmp_path):
+    """Pin the bundle contract so an untested OTIO minor fails loudly.
+
+    The project has already been bitten by an OTIO minor renaming
+    MediaReferencePolicy enum members between 0.15 and 0.17, which raised
+    AttributeError at runtime in a shipped export path.
+    """
+    import zipfile
+
+    from opentimelineio.file_bundle_utils import MediaReferencePolicy
+
+    from opencut.export.otio_export import export_timeline_otioz
+
+    for name in ("ErrorIfNotFile", "MissingIfNotFile", "AllMissing"):
+        assert hasattr(MediaReferencePolicy, name), (
+            f"OTIO {otio.__version__} renamed MediaReferencePolicy.{name}; "
+            "the otioz export path depends on these members"
+        )
+
+    media = tmp_path / "clip.mov"
+    media.write_bytes(b"not real media, but a resolvable local file")
+    clips = [{"path": str(media), "start": 0.0, "end": 1.0, "name": "clip"}]
+    bundle = tmp_path / "out.otioz"
+
+    export_timeline_otioz(clips, str(bundle), bundle_media=False)
+
+    assert bundle.is_file()
+    with zipfile.ZipFile(bundle) as archive:
+        names = archive.namelist()
+    assert "content.otio" in names, names
+    # bundle_media=False must not copy the media in.
+    assert not any(name.startswith("media/") for name in names), names

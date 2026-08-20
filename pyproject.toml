@@ -170,7 +170,7 @@ mcp = [
     "mcp>=1.26,<2",
 ]
 otio = [
-    "opentimelineio>=0.17,<1",
+    "opentimelineio>=0.17,<0.19",
     # F126/F263 — adapters split out of core OTIO after 0.15; pin the AAF
     # adapter here so `opencut[otio]` keeps an Avid-compatible export
     # path without the user installing a second extra by hand. F263 refreshed
@@ -230,7 +230,7 @@ all = [
     # Legacy-only; see the [auto-edit] extra for why the native binary is
     # the supported path.
     "auto-editor>=29.3,<30",
-    "opentimelineio>=0.17,<1",
+    "opentimelineio>=0.17,<0.19",
     "otio-aaf-adapter>=2.0,<3",
     # RA-23 — floor the transitive web stack in the release-audited [all] lane
     # so a clean resolver (no requirements-lock.txt) cannot select vulnerable

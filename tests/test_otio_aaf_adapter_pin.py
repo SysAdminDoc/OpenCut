@@ -81,10 +81,25 @@ def test_aaf_adapter_spec_caps_below_3_and_floors_at_2():
 
 def test_otio_extra_floors_opentimelineio_for_current_aaf_adapter():
     body = _extras_block("otio")
-    assert "opentimelineio>=0.17,<1" in body, (
+    assert "opentimelineio>=0.17,<0.19" in body, (
         "otio-aaf-adapter 2.x requires OpenTimelineIO >=0.17; keep the "
         "`opencut[otio]` floor aligned so pip can resolve the extra."
     )
+
+
+def test_otio_ceiling_excludes_the_untested_bundle_rewrite():
+    """0.19 moves otioz/otiod bundling out of Python into the C++ core.
+
+    An open `<1` would admit that behaviour change into a shipped export
+    path without anyone testing it, which is how the MediaReferencePolicy
+    enum rename bit this project between 0.15 and 0.17.
+    """
+    from opencut.export.otio_compat import VERIFIED_OTIO_RANGE
+
+    body = _extras_block("otio")
+    assert "opentimelineio>=0.17,<1" not in body
+    low, high = VERIFIED_OTIO_RANGE
+    assert f"opentimelineio>={low},<{high}" in body
 
 
 def test_otio_export_handles_missing_adapter():
@@ -115,3 +130,14 @@ def test_otio_export_documents_install_hint():
         "otio_export.export_aaf must surface the F126 install hint in its "
         "ImportError message so users know which package to grab"
     )
+
+
+def test_verified_range_bounds_the_bundle_rewrite():
+    """Pure, so it runs on a machine without OpenTimelineIO installed."""
+    from opencut.export.otio_compat import _within_verified_range
+
+    assert _within_verified_range("0.17.0") is True
+    assert _within_verified_range("0.18.1") is True
+    # 0.19 moved otioz/otiod bundling out of Python into the C++ core.
+    assert _within_verified_range("0.19.0") is False
+    assert _within_verified_range("0.16.0") is False

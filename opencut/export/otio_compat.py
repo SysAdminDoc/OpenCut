@@ -14,6 +14,22 @@ import os
 from functools import lru_cache
 from typing import Any
 
+#: The OpenTimelineIO range this project's export path has actually been
+#: exercised against, mirrored by the `opencut[otio]` specifier. 0.19 moves
+#: otioz/otiod bundle handling out of Python and into the C++ core, which is a
+#: behaviour change to a shipped export path, so it stays outside the range
+#: until the bundle contract test has run against it.
+VERIFIED_OTIO_RANGE = ("0.17", "0.19")
+
+
+def verified_otio_range() -> tuple[str, str]:
+    return VERIFIED_OTIO_RANGE
+
+
+def _within_verified_range(version: str) -> bool:
+    low, high = (_version_key(bound) for bound in VERIFIED_OTIO_RANGE)
+    return low <= _version_key(version) < high
+
 
 class OTIOPreflightError(ValueError):
     """Raised when an OTIO write is unavailable or would be lossy."""
@@ -107,8 +123,14 @@ def get_otio_capabilities() -> dict[str, Any]:
             "version": version,
             "legacy": True,
         })
+    runtime_version = str(otio.__version__)
     return {
-        "runtime_version": str(otio.__version__),
+        "runtime_version": runtime_version,
+        # What is installed and what has been tested are different facts. The
+        # report carried only the former, so a runtime outside the exercised
+        # range looked identical to one inside it.
+        "verified_range": list(VERIFIED_OTIO_RANGE),
+        "runtime_is_verified": _within_verified_range(runtime_version),
         "adapters": adapters,
         "schema_targets": schema_targets,
     }
