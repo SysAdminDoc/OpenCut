@@ -782,6 +782,34 @@ def step_i18n_drift(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_shared_locales(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    script = REPO_ROOT / "scripts" / "sync_shared_locales.py"
+    if not script.exists():
+        return StepResult(
+            "shared-locales",
+            "skipped",
+            skipped_reason="scripts/sync_shared_locales.py missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([sys.executable, str(script), "--check"], cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "shared-locales",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "shared panel strings agree across both locales"
+            if status == "ok"
+            else "shared panel strings drifted, or new cross-panel duplication is unregistered"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_panel_parity(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     test_file = REPO_ROOT / "tests" / "test_panel_tab_parity.py"
@@ -1671,6 +1699,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
     StepDefinition("panel-feature-parity", step_panel_feature_parity, "Gate owner-classified CEP/UXP backend-route parity"),
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),
+    StepDefinition("shared-locales", step_shared_locales, "Strings shown by both panels have one canonical source"),
     StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("performance-benchmark", step_performance_benchmark, "Validate optional benchmark receipts and same-host baselines"),

@@ -5,6 +5,20 @@ record also lives in the git commit messages.
 
 ## Unreleased
 
+### Added - One canonical source for strings both panels show
+
+- The CEP and UXP panels kept independent locale namespaces sharing only 26 key
+  names, which hid the real overlap: 258 identical English strings sat under
+  different key names across 562 panel keys, so a new language meant
+  translating each of them twice and the copies drifted whenever one panel was
+  edited. `scripts/sync_shared_locales.py` now derives that shared set, records
+  which panel keys own each string, and fails release smoke when a mapped
+  string drifts apart or when new cross-panel duplication is left unregistered.
+  `--propagate LANG` writes one translated file into both panels, so a language
+  is translated once. Call sites are untouched — renaming hundreds of key
+  references across two panels would carry real regression risk for no
+  translator-visible gain.
+
 ### Fixed - One lint configuration for the editor, the hook, and the gate
 
 - `[tool.ruff]` declared only line length and target version, so an

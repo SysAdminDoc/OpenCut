@@ -10,14 +10,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
 
 ### P1
 
-- [ ] P1 — F324 — Unify the two panels' i18n key namespaces
-  Why: The CEP panel's `en.json` holds 2,880 keys and the UXP panel's 1,927, of which exactly 26 are shared — so the panels maintain two independent translation namespaces for largely the same product, and the only Spanish locale belongs to the panel no installer ships, meaning any future locale must be translated twice.
-  Evidence: measured key counts across `extension/com.opencut.panel/client/locales/en.json`, `extension/com.opencut.uxp/locales/en.json`, `extension/com.opencut.uxp/locales/es.json` (26-key intersection); 1,773 `data-i18n` attributes in the CEP markup vs 875 in UXP
-  Touches: `extension/com.opencut.panel/client/locales/`, `extension/com.opencut.uxp/locales/`, `scripts/i18n_lint.py`, `scripts/lint_locales.py`, both `index.html` files, `tests/`
-  Acceptance: Shared concepts resolve to one canonical key namespace consumed by both panels, with panel-specific keys explicitly namespaced and justified; the locale lint fails on a key that exists in one panel and has an unnamespaced twin in the other; adding a locale requires translating each string once.
-  Note: distinct from the blocked "Localize the Python/CLI backend and add panel locales beyond en/es" item in `Roadmap_Blocked.md` — this ships no new translations and needs no human translator; it is the static refactor that makes that blocked item affordable when it unblocks. The duplicated design-system assets that were part of this item are now covered by `tests/test_shared_panel_assets.py`, and the lint's file-scan boundary is fixed.
-  Complexity: M
-
 ### P2
 
 - [ ] P2 — F348 — Grade the twelve remaining July 2026 FFmpeg advisories
