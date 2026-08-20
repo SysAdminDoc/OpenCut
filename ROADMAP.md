@@ -79,13 +79,6 @@ IDs continue the existing F-number scheme (highest prior allocation before 2026-
   Acceptance: The OTIO specifier bounds the tested minor line rather than an open `<1`; a contract test round-trips an OTIOZ bundle and asserts the media-reference policy and bundle layout, failing on an untested OTIO minor; `otio_compat` records the verified-against version alongside the runtime version.
   Complexity: S
 
-- [ ] P3 — F347 — Normalize line endings so one-line edits stop producing whole-file diffs
-  Why: `core.autocrlf=false` and a `.gitattributes` that only covers `*.sh`/`*.command` mean git stores whatever byte sequence the writing tool emitted, and different editors push the same file in opposite directions — a one-key addition to `client/locales/en.json` landed as a 5,745-line diff and a README troubleshooting paragraph as 1,983 lines, which destroys reviewability and hides real changes inside mechanical churn.
-  Evidence: commit 72a795b6 (7 files, 4,137 insertions for ~70 lines of real content; `git diff --ignore-cr-at-eol --stat` reports 15/1/49); `.gitattributes` covers only 4 shell-script patterns; `git config core.autocrlf` is `false`; CLAUDE.md already records "CEP `main.js` is mixed CRLF/LF"; the 2026-08-12 in-flight refactor showed the same flip on `model_cards.py` and `dump_feature_readiness.py`
-  Touches: `.gitattributes`, then a single mechanical `git add --renormalize .` pass
-  Acceptance: `.gitattributes` declares the text/eol policy for the source types this repo actually edits (`*.py`, `*.js`, `*.json`, `*.md`, `*.css`, `*.html`, `*.jsx`) with binary types excluded; one renormalization commit lands separately from any content change and is labelled as mechanical; after it, editing one line in `en.json` produces a one-line diff; run it only when no other session has uncommitted work.
-  Complexity: S
-
 - [ ] P3 — F344 — Rank repeat clusters with a best-take recommendation
   Why: `repeat_detect` finds repeated sentences but ranks nothing, so review shows "these repeat" without "keep this one" — while AutoCut Repeat and Gling sell exactly the keep-best-take selection, and a heuristic (filler count, WPM stability, completion) with an optional LLM verdict layers cleanly on the existing detection output.
   Evidence: `opencut/core/repeat_detect.py` (detection and range merging only); https://github.com/rafcopy/auto-cut-agent (LLM-based take dedup in a UXP+local-server design, 2026-08-13); https://opentools.ai/tools/gling-ai (bad-take marking)
